@@ -170,6 +170,15 @@ namespace Viking.UI.WPF.ViewModels
             if (string.IsNullOrWhiteSpace(url))
                 return;
 
+            // Remove any existing entry with the same URL to avoid duplicates
+            var existingEntry = RecentVolumes.FirstOrDefault(v => 
+                string.Equals(v.VolumeXmlUrl, url, StringComparison.OrdinalIgnoreCase));
+            
+            if (existingEntry != null)
+            {
+                RecentVolumes.Remove(existingEntry);
+            }
+
             var volumeInfo = new VolumeInfo
             {
                 VolumeXmlUrl = url,
@@ -177,7 +186,8 @@ namespace Viking.UI.WPF.ViewModels
                 Organization = "Recent"
             };
             
-            RecentVolumes.Add(volumeInfo);
+            // Insert at the top of the list (most recent)
+            RecentVolumes.Insert(0, volumeInfo);
         }
 
         public void SelectMostRecentVolumeIfAvailable()
@@ -246,9 +256,8 @@ namespace Viking.UI.WPF.ViewModels
                 Trace.WriteLine($"[VolumeSelection] Identity API URL (port 6001): {identityApiUri}");
                 Trace.WriteLine($"[VolumeSelection] Full endpoint will be: {new Uri(identityApiUri, "Permissions/UserAccessibleVolumeTree")}");
 
-                var helper = new Viking.Tokens.IdentityServerHelper
+                var helper = new Viking.Tokens.IdentityApiHelper
                 {
-                    IdentityServerURL = identityUri,
                     IdentityApiURL = identityApiUri
                 };
 

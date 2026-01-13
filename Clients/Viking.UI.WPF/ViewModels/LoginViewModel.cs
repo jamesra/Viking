@@ -251,10 +251,9 @@ namespace Viking.UI.WPF.ViewModels
                     return;
                 }
 
-                var tokenHelper = new Viking.Tokens.IdentityServerHelper
+                var tokenHelper = new Viking.Tokens.BearerTokenHelper
                 {
                     IdentityServerURL = identityUri,
-                    IdentityApiURL = identityUri,
                     //ClientId = "Viking",
                     ClientId = "api",
                     ClientSecret = "Correct Horse Battery Staple" // Default secret, should be configured

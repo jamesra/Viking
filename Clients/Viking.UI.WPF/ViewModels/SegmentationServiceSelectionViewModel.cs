@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -24,6 +25,7 @@ namespace Viking.UI.WPF.ViewModels
         private SegmentationServiceTreeNode _selectedService;
         private string _manualServiceEndpoint;
         private bool _showManualEntry;
+        private bool _isSelectionMade = false;
 
         public SegmentationServiceSelectionViewModel(TokenResponse bearerToken, string identityServerUrl, string preselectedEndpoint = null)
         {
@@ -99,7 +101,9 @@ namespace Viking.UI.WPF.ViewModels
                         ManualServiceEndpoint = string.Empty;
                     }
                     OnPropertyChanged();
+                    // Notify that SelectedServiceEndpoint has changed
                     OnPropertyChanged(nameof(SelectedServiceEndpoint));
+                    // Raise command changed events to update button states
                     (SelectCommand as RelayCommand)?.RaiseCanExecuteChanged();
                     (CopyEndpointCommand as RelayCommand)?.RaiseCanExecuteChanged();
                 }
@@ -154,7 +158,16 @@ namespace Viking.UI.WPF.ViewModels
         public ICommand LoadServicesCommand { get; }
         public ICommand CopyEndpointCommand { get; }
 
-        private bool CanSelect => !IsLoading && (!string.IsNullOrWhiteSpace(ManualServiceEndpoint) || SelectedService?.Service != null);
+        private bool CanSelect
+        {
+            get
+            {
+                // Use SelectedServiceEndpoint which handles both manual entry and selected service endpoint
+                bool canSelect = !IsLoading && !string.IsNullOrWhiteSpace(SelectedServiceEndpoint);
+                Trace.WriteLine($"[SegmentationSelection] CanSelect check - IsLoading: {IsLoading}, SelectedServiceEndpoint: '{SelectedServiceEndpoint}', Result: {canSelect}");
+                return canSelect;
+            }
+        }
 
         public event EventHandler<SegmentationServiceSelectedEventArgs> SegmentationServiceSelected;
         public event EventHandler SegmentationSelectionSkipped;
@@ -252,9 +265,8 @@ namespace Viking.UI.WPF.ViewModels
                 Trace.WriteLine($"[SegmentationSelection] Identity API URL (port 6001): {identityApiUri}");
                 Trace.WriteLine($"[SegmentationSelection] Endpoint: {new Uri(identityApiUri, "Permissions/AccessibleSegmentationServices")}");
 
-                var helper = new Viking.Tokens.IdentityServerHelper
+                var helper = new Viking.Tokens.IdentityApiHelper
                 {
-                    IdentityServerURL = identityUri,
                     IdentityApiURL = identityApiUri
                 };
 
@@ -273,6 +285,13 @@ namespace Viking.UI.WPF.ViewModels
                     try
                     {
                         var serviceInfo = ParseServiceData(kvp.Key, kvp.Value);
+                        
+                        // Log warning if endpoint is missing
+                        if (string.IsNullOrWhiteSpace(serviceInfo.Endpoint))
+                        {
+                            Trace.WriteLine($"[SegmentationSelection] WARNING: Service {kvp.Key} ({serviceInfo.Name}) has no endpoint!");
+                        }
+                        
                         var node = new SegmentationServiceTreeNode
                         {
                             Name = serviceInfo.Name,
@@ -319,46 +338,58 @@ namespace Viking.UI.WPF.ViewModels
 
             try
             {
+                JsonElement rootElement;
+                
                 if (data is JsonElement jsonElement)
                 {
                     Trace.WriteLine($"[SegmentationSelection] Parsing service {id}, JSON: {jsonElement.GetRawText()}");
-
-                    if (jsonElement.TryGetProperty("name", out var nameElement))
-                    {
-                        serviceInfo.Name = nameElement.GetString();
-                    }
-
-                    if (jsonElement.TryGetProperty("description", out var descriptionElement))
-                    {
-                        serviceInfo.Description = descriptionElement.GetString();
-                    }
-
-                    if (jsonElement.TryGetProperty("endpoint", out var endpointElement))
-                    {
-                        serviceInfo.Endpoint = endpointElement.GetString();
-                    }
+                    rootElement = jsonElement;
                 }
                 else
                 {
                     var json = JsonSerializer.Serialize(data);
                     using var doc = JsonDocument.Parse(json);
-                    var root = doc.RootElement;
+                    rootElement = doc.RootElement;
+                }
 
-                    if (root.TryGetProperty("name", out var nameElement))
-                    {
-                        serviceInfo.Name = nameElement.GetString();
-                    }
+                // Extract name
+                if (rootElement.TryGetProperty("name", out var nameElement))
+                {
+                    serviceInfo.Name = nameElement.GetString();
+                }
 
-                    if (root.TryGetProperty("description", out var descriptionElement))
-                    {
-                        serviceInfo.Description = descriptionElement.GetString();
-                    }
+                // Extract description
+                if (rootElement.TryGetProperty("description", out var descriptionElement))
+                {
+                    serviceInfo.Description = descriptionElement.GetString();
+                }
 
-                    if (root.TryGetProperty("endpoint", out var endpointElement))
+                // Extract endpoint - check both root level and metadata dict (case-insensitive)
+                string endpoint = null;
+                
+                // First try root level (check both lowercase and capitalized)
+                if (rootElement.TryGetProperty("endpoint", out var endpointElement) || 
+                    rootElement.TryGetProperty("Endpoint", out endpointElement))
+                {
+                    endpoint = endpointElement.GetString();
+                }
+                
+                // If not found, check metadata dict (check both lowercase and capitalized)
+                if (string.IsNullOrWhiteSpace(endpoint) && rootElement.TryGetProperty("metadata", out var metadataElement))
+                {
+                    if (metadataElement.ValueKind == JsonValueKind.Object)
                     {
-                        serviceInfo.Endpoint = endpointElement.GetString();
+                        if (metadataElement.TryGetProperty("endpoint", out var metadataEndpointElement) ||
+                            metadataElement.TryGetProperty("Endpoint", out metadataEndpointElement))
+                        {
+                            endpoint = metadataEndpointElement.GetString();
+                        }
                     }
                 }
+                
+                serviceInfo.Endpoint = endpoint;
+                
+                Trace.WriteLine($"[SegmentationSelection] Service {id} - Name: {serviceInfo.Name}, Endpoint: {serviceInfo.Endpoint}");
             }
             catch (Exception ex)
             {
@@ -375,35 +406,42 @@ namespace Viking.UI.WPF.ViewModels
 
         private void SelectService()
         {
+            Trace.WriteLine($"[SegmentationSelection] SelectService called - SelectedService: {SelectedService?.Name}, Service: {SelectedService?.Service?.Name}, Endpoint: {SelectedService?.Service?.Endpoint}");
+            // Prevent execution if window is already closing 
+
             var endpoint = SelectedServiceEndpoint;
+            Trace.WriteLine($"[SegmentationSelection] SelectedServiceEndpoint: '{endpoint}'");
 
             if (string.IsNullOrWhiteSpace(endpoint))
             {
                 StatusMessage = "Segmentation service endpoint is not available. Please enter one manually.";
+                Trace.WriteLine($"[SegmentationSelection] ERROR: Endpoint is empty!");
                 return;
             }
 
             endpoint = endpoint.Trim();
 
-            Trace.WriteLine($"[SegmentationSelection] Selected endpoint: {endpoint}");
+            Trace.WriteLine($"[SegmentationSelection] Firing SegmentationServiceSelected event with endpoint: {endpoint}");
 
             SegmentationServiceSelected?.Invoke(this, new SegmentationServiceSelectedEventArgs
             {
                 Endpoint = endpoint,
                 IsNone = false
             });
+            
+            Trace.WriteLine($"[SegmentationSelection] Event fired successfully");
         }
 
         private void SelectNone()
         {
             Trace.WriteLine("[SegmentationSelection] User opted to skip segmentation service.");
 
-            SegmentationSelectionSkipped?.Invoke(this, EventArgs.Empty);
-            SegmentationServiceSelected?.Invoke(this, new SegmentationServiceSelectedEventArgs
+            SegmentationSelectionSkipped?.Invoke(this, EventArgs.Empty);            
+            /*SegmentationServiceSelected?.Invoke(this, new SegmentationServiceSelectedEventArgs
             {
                 Endpoint = null,
                 IsNone = true
-            });
+            });*/
         }
 
         private void Cancel()
@@ -543,6 +581,4 @@ namespace Viking.UI.WPF.ViewModels
         public string Endpoint { get; set; }
         public bool IsNone { get; set; }
     }
-}
-
-
+} 

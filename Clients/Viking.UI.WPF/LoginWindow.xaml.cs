@@ -60,9 +60,11 @@ namespace Viking.UI.WPF
         public bool ShowSegmentationServiceStage => CurrentStage == LoginStage.SegmentationServiceSelection;
 
         public string VolumeURL { get; private set; }
+        public string VolumeName { get; private set; }
         public string SegmentationServiceUrl { get; private set; }
         public NetworkCredential Credentials { get; private set; }
         public TokenResponse BearerToken { get; private set; }
+        public TokenResponse ApiToken { get; private set; }
 
         public string InitialSegmentationServiceUrl { get; set; }
 
@@ -116,9 +118,31 @@ namespace Viking.UI.WPF
             // This will be populated by the hosting application (Viking) via RecentVolumeUrls property
             if (RecentVolumeUrls != null && _volumeSelectionViewModel != null)
             {
-                foreach (var url in RecentVolumeUrls)
+                // Iterate in reverse order because AddRecentVolume inserts at position 0
+                // The most recent volume is at position 0 in RecentVolumeUrls, so we need
+                // to add it last so it ends up at position 0 in the RecentVolumes collection
+                for (int i = RecentVolumeUrls.Count - 1; i >= 0; i--)
                 {
-                    _volumeSelectionViewModel.AddRecentVolume(url, null);
+                    var entry = RecentVolumeUrls[i];
+                    if (string.IsNullOrWhiteSpace(entry))
+                        continue;
+                    
+                    // Parse entry format: "URL|Name" or just "URL"
+                    string url;
+                    string name = null;
+                    var pipeIndex = entry.IndexOf('|');
+                    if (pipeIndex >= 0)
+                    {
+                        url = entry.Substring(0, pipeIndex);
+                        if (pipeIndex + 1 < entry.Length)
+                            name = entry.Substring(pipeIndex + 1);
+                    }
+                    else
+                    {
+                        url = entry;
+                    }
+                    
+                    _volumeSelectionViewModel.AddRecentVolume(url, name);
                 }
                 
                 // Auto-select the most recent volume if available
@@ -133,6 +157,7 @@ namespace Viking.UI.WPF
         private async void OnVolumeSelected(object sender, VolumeSelectedEventArgs e)
         {
             VolumeURL = e.Url;
+            VolumeName = e.Name;
 
             // Validate the volume endpoint before proceeding
             bool isValid = await ValidateVolumeEndpointAsync(VolumeURL);
@@ -146,9 +171,16 @@ namespace Viking.UI.WPF
              
             await PerformVolumeAuthenticationAsync(e.Name, VolumeURL);
 
+            // Update the recent volumes list in the UI (remove duplicates and add to top)
+            if (_volumeSelectionViewModel != null)
+            {
+                _volumeSelectionViewModel.AddRecentVolume(VolumeURL, VolumeName);
+            }
+
             // Validation successful - proceed to segmentation selection
             ShowSegmentationSelectionStage();
         }
+
 
         private void UpdateViewModelStatus(bool isLoading, string message)
         {
@@ -214,10 +246,11 @@ namespace Viking.UI.WPF
 
                 SetViewModelStatusMessage($"Authenticating to volume '{volumeName}'...");
 
-                // Request volume-specific permissions token
-                var volumeToken = await RequestVolumePermissionsToken(volumeName, identityApiUrl, identityServerUrl);
+                // Request both API token and volume-specific permissions token
+                var (apiToken, volumeToken) = await RequestVolumePermissionsToken(volumeName, identityApiUrl, identityServerUrl);
 
-                // Replace the bearer token with the volume-specific one
+                // Store both tokens - ApiToken for Identity API queries, BearerToken for volume operations
+                ApiToken = apiToken;
                 BearerToken = volumeToken;
 
                 UpdateViewModelStatus(false, "Authentication successful!"); 
@@ -364,7 +397,8 @@ namespace Viking.UI.WPF
 
         private void InitializeSegmentationServiceViewModel(string preselectedEndpoint)
         {
-            _segmentationServiceSelectionViewModel = new SegmentationServiceSelectionViewModel(BearerToken, _loginViewModel.IdentityServerUrl, preselectedEndpoint);
+            // Use ApiToken for segmentation service queries (has permissions to query Identity API)
+            _segmentationServiceSelectionViewModel = new SegmentationServiceSelectionViewModel(ApiToken, _loginViewModel.IdentityServerUrl, preselectedEndpoint);
             _segmentationServiceSelectionViewModel.SegmentationServiceSelected += OnSegmentationServiceSelected;
             _segmentationServiceSelectionViewModel.SegmentationSelectionSkipped += OnSegmentationSelectionSkipped;
             _segmentationServiceSelectionViewModel.SelectionCancelled += OnSegmentationSelectionCancelled;
@@ -408,18 +442,16 @@ namespace Viking.UI.WPF
             }
         }
 
-        private async void OnSegmentationServiceSelected(object sender, SegmentationServiceSelectedEventArgs e)
+        private void OnSegmentationServiceSelected(object sender, SegmentationServiceSelectedEventArgs e)
         {
             SegmentationServiceUrl = e.Endpoint;
-            
-            DialogResult = true;
+            this.DialogResult = true;
         }
 
         private void OnSegmentationSelectionSkipped(object sender, EventArgs e)
         {
             SegmentationServiceUrl = null;
-
-            DialogResult = true;
+            this.DialogResult = true;
         }
 
         private void OnSegmentationSelectionCancelled(object sender, EventArgs e)
@@ -510,15 +542,20 @@ namespace Viking.UI.WPF
         /// <param name="identityApiUrl"></param>
         /// <param name="identityServerUrl"></param>
         /// <returns></returns>
-        private async Task<(Viking.Tokens.IdentityServerHelper, TokenResponse)> RequestApiToken(Uri identityApiUrl, Uri identityServerUrl)
+        private async Task<(Viking.Tokens.BearerTokenHelper, Viking.Tokens.IdentityApiHelper, TokenResponse)> RequestApiToken(Uri identityApiUrl, Uri identityServerUrl)
         {
             // Create helper for API calls (using 'api' client)
-            var apiTokenHelper = new Viking.Tokens.IdentityServerHelper
+            var apiTokenHelper = new Viking.Tokens.BearerTokenHelper
             {
                 IdentityServerURL = identityServerUrl,
-                IdentityApiURL = identityApiUrl,
                 ClientId = "api",
                 ClientSecret = "Correct Horse Battery Staple"
+            };
+
+            // Create IdentityApiHelper for API operations
+            var identityApiHelper = new Viking.Tokens.IdentityApiHelper
+            {
+                IdentityApiURL = identityApiUrl
             };
 
             // Get initial token to retrieve permissions
@@ -529,35 +566,35 @@ namespace Viking.UI.WPF
             }
 
             var idToken = idTokenResponse as TokenResponse;
-            return (apiTokenHelper, idToken);
+            return (apiTokenHelper, identityApiHelper, idToken);
         }
 
         /// <summary>
-        /// Returns a token with volume-specific permissions
+        /// Returns both the API token (for querying Identity API) and the volume-specific bearer token
         /// </summary>
         /// <param name="volumeName"></param>
         /// <param name="identityApiUrl"></param>
         /// <param name="identityServerUrl"></param>
-        /// <returns></returns>
-        private async Task<TokenResponse> RequestVolumePermissionsToken(string volumeName, Uri identityApiUrl, Uri identityServerUrl)
+        /// <returns>Tuple containing (apiToken, volumeToken)</returns>
+        private async Task<(TokenResponse apiToken, TokenResponse volumeToken)> RequestVolumePermissionsToken(string volumeName, Uri identityApiUrl, Uri identityServerUrl)
         {
             try
             {
-                IdentityServerHelper apiTokenHelper;
+                Viking.Tokens.BearerTokenHelper apiTokenHelper;
+                Viking.Tokens.IdentityApiHelper identityApiHelper;
                 TokenResponse apiToken = null;
-                (apiTokenHelper, apiToken) = await RequestApiToken(identityApiUrl, identityServerUrl);
+                (apiTokenHelper, identityApiHelper, apiToken) = await RequestApiToken(identityApiUrl, identityServerUrl);
 
                 // Create helper for Viking client token
-                var vikingTokenHelper = new Viking.Tokens.IdentityServerHelper
+                var vikingTokenHelper = new Viking.Tokens.BearerTokenHelper
                 {
                     IdentityServerURL = identityServerUrl,
-                    IdentityApiURL = identityApiUrl,
                     ClientId = "Viking",
                     ClientSecret = "Correct Horse Battery Staple"
                 };
                   
-                // Retrieve volume-specific permissions
-                string[] volumePermissions = await apiTokenHelper.RetrieveUserVolumePermissions(apiToken, volumeName);
+                // Retrieve volume-specific permissions using the API token
+                string[] volumePermissions = await identityApiHelper.RetrieveUserVolumePermissions(apiToken, volumeName);
                 if (volumePermissions == null || volumePermissions.Length == 0)
                 {
                     throw new Exception("User does not have permissions in volume");
@@ -578,7 +615,8 @@ namespace Viking.UI.WPF
                     throw new Exception($"Failed to get bearer token: {bearerTokenResponse?.Error}");
                 }
 
-                return bearerTokenResponse as TokenResponse;
+                var volumeToken = bearerTokenResponse as TokenResponse;
+                return (apiToken, volumeToken);
             }
             catch (Exception ex)
             {
