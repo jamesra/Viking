@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -795,15 +795,28 @@ namespace Viking
             if (!(obj is TextureReaderV2 Tobj))
                 return false;
 
-            if (Tobj.Filename != this.Filename)
-                return false;
-
-            return true;
+            return Tobj.Filename == this.Filename;
         }
 
         public override int GetHashCode()
         {
             return Filename.GetHashCode();
+        }
+
+        public static bool operator ==(TextureReaderV2 left, TextureReaderV2 right)
+        {
+            if (ReferenceEquals(left, right))
+                return true;
+
+            if (left is null || right is null)
+                return false;
+
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(TextureReaderV2 left, TextureReaderV2 right)
+        {
+            return !(left == right);
         }
 
         public bool UseMipMaps => this.MipMapLevels > 0;
