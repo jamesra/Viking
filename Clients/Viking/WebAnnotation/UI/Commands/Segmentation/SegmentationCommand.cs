@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Grpc.Core;
 using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
@@ -11,6 +11,7 @@ using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -37,7 +38,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
     internal class SegmentationCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
         #region Constants
-        private const double POINT_RADIUS = 5.0;
         private const double SIMPLIFICATION_TOLERANCE = 2.0; // pixels
         private const int DEFAULT_DEBOUNCE_MS = 500;
         #endregion
@@ -73,12 +73,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private int uploadedImageWidth;
         private int uploadedImageHeight;
         private CancellationTokenSource renderCancellationTokenSource;
+        private CancellationTokenSource linkedRenderCancellationTokenSource;
 
         // Server-side image caching
         private ulong? currentImageId;
         private CancellationTokenSource uploadCancellationTokenSource;
         private GridRectangle? uploadedImageBounds;
-        private bool isUploadingImage = false;
+        private int isUploadingImage = 0; // 0 = false, 1 = true (for Interlocked operations)
 
         // Rendering
         private readonly Color maskColor = new Color(255, 128, 0, 128); // Orange with transparency
@@ -294,7 +295,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         private void HandlePointDeletion(List<GridVector2> pointList, GridVector2 worldPos)
         {
-            GridVector2? pointToRemove = FindPointWithinRadius(pointList, worldPos, POINT_RADIUS);
+            GridVector2? pointToRemove = FindPointWithinRadius(pointList, worldPos, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius);
             if (pointToRemove.HasValue)
             {
                 pointList.Remove(pointToRemove.Value);
@@ -305,13 +306,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         private void HandleForegroundPointAddition(GridVector2 worldPos)
         {
-            // Check if clicking inside existing polygon to execute (finalize)
-            GridPolygon clickedPolygon = FindPolygonContainingPoint(worldPos);
-            if (clickedPolygon != null)
-            {
-                selectedPolygon = clickedPolygon;
-                Execute();
-                return;
+            //Check if we are clicking inside a foreground point
+            if(ForegroundPointsContain(worldPos))
+            { 
+                // Check if clicking inside existing polygon to execute (finalize)
+                GridPolygon clickedPolygon = FindPolygonContainingPoint(worldPos);
+                if (clickedPolygon != null)
+                {
+                    //Check if the user has selected a foreground point
+                
+                    selectedPolygon = clickedPolygon;
+                    Execute();
+                    return;
+                }
             }
 
             HandlePointAddition(foregroundPoints, worldPos);
@@ -325,7 +332,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private void HandlePointAddition(List<GridVector2> pointList, GridVector2 worldPos)
         {
             // Check for overlapping point
-            GridVector2? existingPoint = FindPointWithinRadius(pointList, worldPos, POINT_RADIUS);
+            GridVector2? existingPoint = FindPointWithinRadius(pointList, worldPos, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius);
             if (!existingPoint.HasValue)
             {
                 // Add point only if no overlap
@@ -342,7 +349,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             bool isFirstPoint = (foregroundPoints.Count + backgroundPoints.Count == 1);
             
-            if (isFirstPoint && !currentImageId.HasValue && !isUploadingImage)
+            // Check if already uploading using Interlocked
+            bool currentlyUploading = Interlocked.CompareExchange(ref isUploadingImage, 0, 0) != 0;
+            if (isFirstPoint && !currentImageId.HasValue && !currentlyUploading)
             {
                 Debug.WriteLine("First point placed, uploading image to server cache");
                 UploadCurrentImage().ContinueWith(task =>
@@ -408,6 +417,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 viewportBounds = currentBounds;
                 
                 // Cancel any ongoing render operation
+                linkedRenderCancellationTokenSource?.Cancel();
+                linkedRenderCancellationTokenSource?.Dispose();
+                linkedRenderCancellationTokenSource = null;
+
                 renderCancellationTokenSource?.Cancel();
                 
                 // Cancel any ongoing image upload
@@ -441,6 +454,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             // Only re-request segmentation if we have points and an uploaded image
             if (foregroundPoints.Count > 0 || backgroundPoints.Count > 0)
             {
+                if(backgroundPointsView != null)
+                    backgroundPointsView.PointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
+
+                if(foregroundPointsView != null)
+                    foregroundPointsView.PointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
                 Debug.WriteLine("Viewport settled with existing points, re-requesting segmentation");
                 
                 // Must invoke on UI thread
@@ -463,7 +481,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             // Update foreground points view (green circles)
             if (foregroundPoints.Count > 0)
             {
-                foregroundPointsView = new PointSetView(Color.Green, POINT_RADIUS)
+                foregroundPointsView = new PointSetView(Color.Green, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample)
                 {
                     Points = foregroundPoints.ToArray()
                 };
@@ -477,7 +495,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             // Update background points view (red circles)
             if (backgroundPoints.Count > 0)
             {
-                backgroundPointsView = new PointSetView(Color.Red, POINT_RADIUS)
+                backgroundPointsView = new PointSetView(Color.Red, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample)
                 {
                     Points = backgroundPoints.ToArray()
                 };
@@ -557,6 +575,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
             // Check each segment polygon to see if the point is inside
             return segmentPolygonViews.FirstOrDefault(polygonView => polygonView?.InputPolygon != null && polygonView.InputPolygon.Contains(worldPos))?.InputPolygon;
         }
+
+        /// <summary>
+        /// Returns the point that contains the worldPos parameter.  Otherwise null
+        /// </summary>
+        /// <param name="worldPos"></param>
+        /// <returns></returns>
+        private bool ForegroundPointsContain(GridVector2 worldPos)
+        {
+            return this.foregroundPointsView.Points.Any(p => GridCircle.Contains(p, foregroundPointsView.PointRadius, worldPos) == ShapeRelation.CONTAINED);
+        }
         #endregion
 
         #region Color Generation
@@ -630,10 +658,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <returns></returns>
         private async Task<bool> UploadCurrentImage()
         {
-            if (grpcClient == null || isUploadingImage)
+            if (grpcClient == null)
                 return false;
 
-            isUploadingImage = true;
+            // Atomically check and set isUploadingImage from 0 to 1
+            // Returns 0 if it was 0 (success), or 1 if it was already 1 (another upload in progress)
+            if (Interlocked.CompareExchange(ref isUploadingImage, 1, 0) != 0)
+                return false;
 
             try
             {
@@ -643,7 +674,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 uploadCancellationTokenSource = new CancellationTokenSource();
 
                 // Capture current viewport image
-                var (imageData, width, height) = await CaptureViewportImage();
+                var (imageData, width, height) = await CaptureViewportImage(uploadCancellationTokenSource.Token);
                 if (imageData == null || imageData.Length == 0)
                 {
                     Debug.WriteLine("Failed to capture viewport image for upload");
@@ -698,7 +729,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
             finally
             {
-                isUploadingImage = false;
+                Interlocked.Exchange(ref isUploadingImage, 0);
             }
 
             return false;
@@ -746,7 +777,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
 
             // If we don't have an uploaded image, upload one first
-            if (!currentImageId.HasValue && !isUploadingImage) 
+            bool currentlyUploading = Interlocked.CompareExchange(ref isUploadingImage, 0, 0) != 0;
+            if (!currentImageId.HasValue && !currentlyUploading) 
             {
                 Debug.WriteLine("No cached image ID, uploading image first");
                 await UploadCurrentImage().ContinueWith(async task =>
@@ -761,7 +793,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             // Wait for upload to complete if it's in progress
-            if (isUploadingImage)
+            if (currentlyUploading)
             {
                 Debug.WriteLine("Upload in progress, segmentation will be requested after upload completes");
                 return;
@@ -1005,11 +1037,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #endregion
 
         #region Image Capture
-        private async Task<(byte[] data, int width, int height)> CaptureViewportImage()
+        private async Task<(byte[] data, int width, int height)> CaptureViewportImage(CancellationToken cancellationToken)
         {
             try
             {
-                PrepareCancellationToken();
+                CancellationToken renderToken = PrepareCancellationToken(cancellationToken);
 
                 var (graphicsDevice, scene, width, height) = ValidateRenderingContext();
                 if (graphicsDevice == null || scene == null)
@@ -1017,7 +1049,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     return (null, 0, 0);
                 }
 
-                RenderTarget2D renderTarget = await RenderViewportToTexture(scene, width, height);
+                RenderTarget2D renderTarget = await RenderViewportToTexture(scene, width, height, renderToken);
                 if (renderTarget == null)
                 {
                     return (null, 0, 0);
@@ -1028,9 +1060,23 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     Color[] pixels = new Color[width * height];
                     renderTarget.GetData(pixels);
 
-                    byte[] pngData = EncodeToPng(graphicsDevice, renderTarget, pixels, width, height);
+                    byte[] pngData = EncodeToPng(renderTarget, pixels, width, height);
 
-                    Debug.WriteLine($"Viewport image captured as PNG ({pngData.Length} bytes)");
+                    // Validate the captured image
+                    var (isValid, errorMessage) = ValidateCapturedImage(pngData, width, height);
+                    if (!isValid)
+                    {
+                        Debug.WriteLine($"Captured image failed validation: {errorMessage}");
+                        return (null, 0, 0);
+                    }
+
+                    Debug.WriteLine($"Viewport image captured and validated as PNG ({pngData.Length} bytes, {width}x{height})");
+
+#if DEBUG
+                    // Save captured image to disk for debugging
+                    SaveCapturedImageToDisk(pngData, width, height);
+#endif
+
                     return (pngData, width, height);
                 }
                 finally
@@ -1050,12 +1096,178 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        private void PrepareCancellationToken()
+        /// <summary>
+        /// Validates that captured PNG image data is valid and can be decoded
+        /// </summary>
+        /// <param name="pngData">The PNG image data to validate</param>
+        /// <param name="expectedWidth">Expected width in pixels</param>
+        /// <param name="expectedHeight">Expected height in pixels</param>
+        /// <returns>Tuple with validation result and error message if invalid</returns>
+        private (bool isValid, string errorMessage) ValidateCapturedImage(byte[] pngData, int expectedWidth, int expectedHeight)
         {
+            if (pngData == null || pngData.Length == 0)
+            {
+                return (false, "Image validation failed: null or empty data");
+            }
+
+            // Check PNG magic bytes (89 50 4E 47 0D 0A 1A 0A)
+            if (pngData.Length < 8 || 
+                pngData[0] != 0x89 || pngData[1] != 0x50 || pngData[2] != 0x4E || pngData[3] != 0x47 ||
+                pngData[4] != 0x0D || pngData[5] != 0x0A || pngData[6] != 0x1A || pngData[7] != 0x0A)
+            {
+                return (false, "Image validation failed: invalid PNG signature");
+            }
+
+            // Verify minimum size constraints
+            if (expectedWidth <= 0 || expectedHeight <= 0)
+            {
+                return (false, $"Image validation failed: invalid dimensions {expectedWidth}x{expectedHeight}");
+            }
+
+            // Try to decode the PNG to verify it's valid
+            try
+            {
+                var graphicsDevice = Parent.Device;
+                if (graphicsDevice == null)
+                {
+                    return (false, "Image validation failed: GraphicsDevice is null");
+                }
+
+                Microsoft.Xna.Framework.Color[] pixelData = null;
+                using (var stream = new MemoryStream(pngData))
+                {
+                    using (var pngTexture = Texture2D.FromStream(graphicsDevice, stream))
+                    {
+                        int decodedWidth = pngTexture.Width;
+                        int decodedHeight = pngTexture.Height;
+
+                        // Verify dimensions match expectations
+                        if (decodedWidth != expectedWidth || decodedHeight != expectedHeight)
+                        {
+                            return (false, $"Image validation failed: dimension mismatch. Expected {expectedWidth}x{expectedHeight}, got {decodedWidth}x{decodedHeight}");
+                        }
+
+                        // Extract pixel data for content validation
+                        pixelData = new Microsoft.Xna.Framework.Color[decodedWidth * decodedHeight];
+                        pngTexture.GetData(pixelData);
+                    }
+                }
+
+                // Optional: Check pixel content for suspicious patterns
+                if (pixelData != null && pixelData.Length > 0)
+                {
+                    // Check if image is completely empty (all black or transparent)
+                    bool isAllBlack = true;
+                    bool isAllSame = true;
+                    Microsoft.Xna.Framework.Color firstPixel = pixelData[0];
+                    int nonTransparentPixels = 0;
+
+                    for (int i = 0; i < pixelData.Length; i++)
+                    {
+                        Microsoft.Xna.Framework.Color pixel = pixelData[i];
+                        
+                        // Check for non-black pixels
+                        if (pixel.R > 0 || pixel.G > 0 || pixel.B > 0)
+                        {
+                            isAllBlack = false;
+                        }
+
+                        // Check for non-transparent pixels
+                        if (pixel.A > 0)
+                        {
+                            nonTransparentPixels++;
+                        }
+
+                        // Check if all pixels are the same
+                        if (pixel.R != firstPixel.R || pixel.G != firstPixel.G || 
+                            pixel.B != firstPixel.B || pixel.A != firstPixel.A)
+                        {
+                            isAllSame = false;
+                            // Early exit if we've determined it's not all same
+                            if (!isAllBlack) break;
+                        }
+                    }
+
+                    // Warn if image appears suspicious (but don't fail validation)
+                    if (isAllBlack && nonTransparentPixels > 0)
+                    {
+                        Debug.WriteLine($"Warning: Captured image appears to be completely black ({nonTransparentPixels} non-transparent pixels)");
+                    }
+                    else if (isAllSame && pixelData.Length > 0)
+                    {
+                        Debug.WriteLine($"Warning: Captured image appears to be a solid color (R:{firstPixel.R}, G:{firstPixel.G}, B:{firstPixel.B}, A:{firstPixel.A})");
+                    }
+                }
+
+                Debug.WriteLine($"Image validation passed: {expectedWidth}x{expectedHeight}, {pngData.Length} bytes");
+                return (true, string.Empty);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Image validation failed: PNG decode error - {ex.Message}");
+            }
+        }
+
+        private CancellationToken PrepareCancellationToken(CancellationToken? externalToken = null)
+        {
+            // Cancel and dispose any existing linked token source
+            linkedRenderCancellationTokenSource?.Cancel();
+            linkedRenderCancellationTokenSource?.Dispose();
+            linkedRenderCancellationTokenSource = null;
+
+            // Cancel and recreate render cancellation token source
             renderCancellationTokenSource?.Cancel();
             renderCancellationTokenSource?.Dispose();
             renderCancellationTokenSource = new CancellationTokenSource();
+
+            // If external token provided, create linked token source
+            if (externalToken.HasValue)
+            {
+                linkedRenderCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
+                    externalToken.Value,
+                    renderCancellationTokenSource.Token);
+                return linkedRenderCancellationTokenSource.Token;
+            }
+
+            // Otherwise return the render token
+            return renderCancellationTokenSource.Token;
         }
+
+#if DEBUG
+        /// <summary>
+        /// Saves captured image to disk for debugging purposes
+        /// </summary>
+        /// <param name="pngData">The PNG image data to save</param>
+        /// <param name="width">Image width in pixels</param>
+        /// <param name="height">Image height in pixels</param>
+        private void SaveCapturedImageToDisk(byte[] pngData, int width, int height)
+        {
+            try
+            {
+                // Create directory in temp folder
+                string debugDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "VikingSegmentation");
+                if (!Directory.Exists(debugDir))
+                {
+                    Directory.CreateDirectory(debugDir);
+                }
+
+                // Create filename with timestamp
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                string filename = $"segmentation_capture_{timestamp}_{width}x{height}.png";
+                string filepath = System.IO.Path.Combine(debugDir, filename);
+
+                // Save the image
+                File.WriteAllBytes(filepath, pngData);
+
+                Debug.WriteLine($"Captured image saved to: {filepath}");
+            }
+            catch (Exception ex)
+            {
+                // Don't fail capture if save fails - just log the error
+                Debug.WriteLine($"Failed to save captured image to disk: {ex.Message}");
+            }
+        }
+#endif
 
         private (GraphicsDevice device, VikingXNA.Scene scene, int width, int height) ValidateRenderingContext()
         {
@@ -1085,7 +1297,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return (graphicsDevice, scene, width, height);
         }
 
-        private async Task<RenderTarget2D> RenderViewportToTexture(VikingXNA.Scene scene, int width, int height)
+        private async Task<RenderTarget2D> RenderViewportToTexture(VikingXNA.Scene scene, int width, int height, CancellationToken cancellationToken)
         {
             float centerX = scene.Camera.LookAt.X;
             float centerY = scene.Camera.LookAt.Y;
@@ -1093,24 +1305,37 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             Debug.WriteLine($"Rendering scene to texture: {width}x{height}, center: ({centerX}, {centerY}), section: {sectionZ}");
 
-            RenderTarget2D renderTarget = await Parent.RenderSceneToTexture(
-                scene,
-                centerX,
-                centerY,
-                sectionZ,
-                showOverlays: false,
-                asyncTextureLoad: false,
-                renderCancellationTokenSource.Token);
-
-            if (renderTarget == null)
+            try
             {
-                Debug.WriteLine("RenderSceneToTexture returned null");
-            }
+                RenderTarget2D renderTarget = await Parent.RenderSceneToTexture(
+                    scene,
+                    centerX,
+                    centerY,
+                    sectionZ,
+                    showOverlays: false,
+                    asyncTextureLoad: false,
+                    cancellationToken);
 
-            return renderTarget;
+                if (renderTarget == null)
+                {
+                    Debug.WriteLine("RenderSceneToTexture returned null");
+                }
+
+                return renderTarget;
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine("RenderSceneToTexture was cancelled");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"RenderSceneToTexture failed: {ex.Message}");
+                return null;
+            }
         }
 
-        private byte[] EncodeToPng(GraphicsDevice graphicsDevice, RenderTarget2D renderTarget, Color[] pixels, int width, int height)
+        private byte[] EncodeToPng(RenderTarget2D renderTarget, Color[] pixels, int width, int height)
         {
             bool isGrayscale = IsImageGrayscale(pixels);
 
@@ -1118,7 +1343,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 if (isGrayscale)
                 {
-                    EncodeGrayscalePng(graphicsDevice, pngStream, pixels, width, height);
+                    EncodeGrayscalePng(pngStream, pixels, width, height);
                 }
                 else
                 {
@@ -1129,24 +1354,52 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        private void EncodeGrayscalePng(GraphicsDevice graphicsDevice, MemoryStream pngStream, Color[] pixels, int width, int height)
+        private void EncodeGrayscalePng(MemoryStream pngStream, Color[] pixels, int width, int height)
         {
-            Texture2D grayscaleTexture = new Texture2D(graphicsDevice, width, height, false, SurfaceFormat.Color);
-            try
+            using (System.Drawing.Bitmap grayscaleBitmap = new System.Drawing.Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format8bppIndexed))
             {
-                Color[] grayscalePixels = new Color[width * height];
-                for (int i = 0; i < pixels.Length; i++)
+                // Set grayscale palette
+                System.Drawing.Imaging.ColorPalette palette = grayscaleBitmap.Palette;
+                for (int i = 0; i < 256; i++)
                 {
-                    byte gray = pixels[i].R; // Already grayscale, so R = G = B
-                    grayscalePixels[i] = new Color(gray, gray, gray, (byte)255);
+                    palette.Entries[i] = System.Drawing.Color.FromArgb(i, i, i);
                 }
-                grayscaleTexture.SetData(grayscalePixels);
-                grayscaleTexture.SaveAsPng(pngStream, width, height);
+                grayscaleBitmap.Palette = palette;
+
+                // Lock bitmap data
+                System.Drawing.Imaging.BitmapData bitmapData = grayscaleBitmap.LockBits(
+                    new System.Drawing.Rectangle(0, 0, width, height),
+                    System.Drawing.Imaging.ImageLockMode.WriteOnly,
+                    System.Drawing.Imaging.PixelFormat.Format8bppIndexed);
+
+                try
+                {
+                    // Copy grayscale pixel data (single channel)
+                    int stride = bitmapData.Stride;
+                    byte[] pixelBytes = new byte[pixels.Length];
+                    for (int i = 0; i < pixels.Length; i++)
+                    {
+                        pixelBytes[i] = pixels[i].R; // Use R channel as grayscale value
+                    }
+
+                    // Copy row by row (handles stride padding if any)
+                    for (int y = 0; y < height; y++)
+                    {
+                        Marshal.Copy(
+                            pixelBytes,
+                            y * width,
+                            bitmapData.Scan0 + (y * stride),
+                            width);
+                    }
+                }
+                finally
+                {
+                    grayscaleBitmap.UnlockBits(bitmapData);
+                }
+
+                // Save as PNG (will be single-channel grayscale)
+                grayscaleBitmap.Save(pngStream, System.Drawing.Imaging.ImageFormat.Png);
                 Debug.WriteLine("Image detected as grayscale, encoded as single-channel PNG");
-            }
-            finally
-            {
-                grayscaleTexture?.Dispose();
             }
         }
 
@@ -1617,9 +1870,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
             uploadedImageBounds = null;
             uploadedImageWidth = 0;
             uploadedImageHeight = 0;
-            isUploadingImage = false;
+            Interlocked.Exchange(ref isUploadingImage, 0);
             
             // Cancel and dispose of cancellation token sources
+            linkedRenderCancellationTokenSource?.Cancel();
+            linkedRenderCancellationTokenSource?.Dispose();
+            linkedRenderCancellationTokenSource = null;
+
             renderCancellationTokenSource?.Cancel();
             renderCancellationTokenSource?.Dispose();
             renderCancellationTokenSource = null;

@@ -1057,7 +1057,10 @@ namespace Viking.UI.Controls
 
         public async Task<RenderTarget2D> RenderSceneToTexture(VikingXNA.Scene TileScene, float CenterX, float CenterY, int Z, bool showOverlays, bool asyncTextureLoad, CancellationToken token)
         {
-            if(!asyncTextureLoad)
+            if (token.IsCancellationRequested)
+                return null; 
+
+            if (!asyncTextureLoad)
                 await PreloadSceneTexturesAsync(TileScene, Z, asyncTextureLoad, token);
             else
                 PreloadSceneTexturesAsync(TileScene, Z, asyncTextureLoad, token);
@@ -1068,7 +1071,10 @@ namespace Viking.UI.Controls
                 Application.DoEvents();
             }
             while (preloadTask.IsCompleted == false && preloadTask.IsFaulted == false && preloadTask.IsCanceled == false);
-            */   
+            */
+            if (token.IsCancellationRequested)
+                return null;
+
             SectionViewModel originalSection = this.Section;
 
             this.Section = State.volume.SectionViewModels[Z];
@@ -1081,6 +1087,10 @@ namespace Viking.UI.Controls
             // Use TaskCompletionSource to handle the asynchronous operation
             var taskCompletionSource = new TaskCompletionSource<bool>();
             var result = this.BeginInvoke(new Action(() => {
+
+                if (token.IsCancellationRequested)
+                    return;
+
                 var originalScene = this.Scene;
                 try
                 {
@@ -1104,8 +1114,11 @@ namespace Viking.UI.Controls
                 }
             }));
 
-            await taskCompletionSource.Task; 
-            
+            await taskCompletionSource.Task;
+
+            if (token.IsCancellationRequested)
+                return null;
+
             return renderTargetTile;
             
         } 
