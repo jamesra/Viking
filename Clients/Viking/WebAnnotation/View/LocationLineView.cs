@@ -158,7 +158,7 @@ namespace WebAnnotation.View
 
         public override bool IsVisible(VikingXNA.Scene scene)
         {
-            return LocationCanvasView.IsPolygonVisible(BoundingBox, scene);
+            return LocationCanvasView.IsPolygonVisible(BoundingBox, scene) && this.LineWidth >= SmallestRenderedSizeAccessor();
         }
 
         public virtual bool IsLabelVisible(Scene scene)
