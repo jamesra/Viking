@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
@@ -13,6 +13,10 @@ using Viking.VolumeModel;
 using WebAnnotationModel;
 using Viking.DependencyInjection;
 using Viking.Services.Grpc;
+using System.Linq;
+using Microsoft.Xna.Framework;
+using WebAnnotation.View;
+using VikingXNAGraphics;
 
 namespace WebAnnotation.ViewModel
 {
@@ -321,6 +325,15 @@ namespace WebAnnotation.ViewModel
                 menuShape.MenuItems.Add(menuSegmentCircle);
             }
 
+            // Add segmentation option for circles
+            if ((TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON || 
+                TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON) &&
+                Global.IsSegmentationServiceAvailable)
+            {
+                MenuItem menuSegmentPoly = new MenuItem("Resegment...", ContextMenu_SegmentPolygon);
+                menuShape.MenuItems.Add(menuSegmentPoly);
+            }
+
             menu.MenuItems.Add(menuShape);
         }
 
@@ -337,6 +350,16 @@ namespace WebAnnotation.ViewModel
             }
         }
 
+        protected void _AddRandomColorMenu(ContextMenu menu)
+        {
+            if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON ||
+                TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON)
+            {
+                MenuItem menuRandomColor = new MenuItem("Random Color", ContextMenu_RandomColor);
+                menu.MenuItems.Add(menuRandomColor);
+            }
+        }
+
         public override ContextMenu ContextMenu
         {
             get
@@ -348,6 +371,7 @@ namespace WebAnnotation.ViewModel
                 _AddTerminalOffEdgeMenus(menu);
                 _AddConvertShapeMenus(menu);
                 _AddSimplifyPolygonMenus(menu);
+                _AddRandomColorMenu(menu);
                 _AddDeleteMenu(menu);
 
                 return menu;
@@ -509,43 +533,47 @@ namespace WebAnnotation.ViewModel
         {
             try
             {
+                var parent = AnnotationOverlay.CurrentOverlay.Parent;
                 // Get the circle geometry
-                GridCircle circle = GetCircleFromLocation();
+                GridCircle mosaic_circle = GetCircleFromLocation();
                 
                 // Generate foreground points: center + 8 points at radius/2
                 List<GridVector2> foregroundPoints = new List<GridVector2>();
-                foregroundPoints.Add(circle.Center);
+                foregroundPoints.Add(mosaic_circle.Center);
                 
-                double innerRadius = circle.Radius / 2.0;
+                double innerRadius = mosaic_circle.Radius / 2.0;
                 for (int i = 0; i < 8; i++)
                 {
                     double angle = (2.0 * Math.PI * i) / 8.0;
-                    double x = circle.Center.X + innerRadius * Math.Cos(angle);
-                    double y = circle.Center.Y + innerRadius * Math.Sin(angle);
+                    double x = mosaic_circle.Center.X + innerRadius * Math.Cos(angle);
+                    double y = mosaic_circle.Center.Y + innerRadius * Math.Sin(angle);
                     foregroundPoints.Add(new GridVector2(x, y));
                 }
 
-                innerRadius = 3 * circle.Radius / 4.0;
+                innerRadius = 3 * mosaic_circle.Radius / 4.0;
                 for (int i = 0; i < 8; i++)
                 {
                     double angle = (2.0 * Math.PI * i) / 8.0;
-                    double x = circle.Center.X + innerRadius * Math.Cos(angle);
-                    double y = circle.Center.Y + innerRadius * Math.Sin(angle);
+                    double x = mosaic_circle.Center.X + innerRadius * Math.Cos(angle);
+                    double y = mosaic_circle.Center.Y + innerRadius * Math.Sin(angle);
                     foregroundPoints.Add(new GridVector2(x, y));
                 }
+
+                var success = parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(foregroundPoints.ToArray(), out var volume_points);
+                //Remove points that did not map
+                volume_points = volume_points.Where((p, i) => success[i]).ToArray();
 
                 // Create callback to update location shape
                 WebAnnotation.UI.Commands.Segmentation.SegmentationCommand.OnCommandSuccess callback = (outputPolygon) =>
                 {
-                    UpdateLocationShapeFromPolygon(outputPolygon);
+                    UpdateLocationShapeFromVolumePolygon(outputPolygon);
                 };
                 
                 // Launch segmentation command
-                var parent = AnnotationOverlay.CurrentOverlay.Parent;
                 var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
                 var segmentCommand = new WebAnnotation.UI.Commands.Segmentation.SegmentationCommand(
                     parent,
-                    foregroundPoints,
+                    volume_points,
                     Array.Empty<GridVector2>(), // no background points initially 
                     callback,
                     channelManager
@@ -557,6 +585,50 @@ namespace WebAnnotation.ViewModel
             {
                 Debug.WriteLine($"Error launching segmentation: {ex.Message}");
                 MessageBox.Show($"Failed to launch segmentation: {ex.Message}", 
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Launch segmentation command to convert a circle location to a polygon using AI segmentation
+        /// </summary>
+        protected void ContextMenu_SegmentPolygon(object sender, EventArgs e)
+        {
+            try
+            {
+                //ContextMenu menu = sender as ContextMenu;
+                if(this.modelObj.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON &&
+                   this.modelObj.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON)
+                    return;
+
+                // Get the circle geometry
+                GridPolygon poly = modelObj.VolumeShape.ToPolygon();
+                var medial_axis = Geometry.MedialAxisFinder.ApproximateMedialAxisImproved(poly);
+                var medial_axis_points = medial_axis.Points;
+                 
+                // Create callback to update location shape
+                WebAnnotation.UI.Commands.Segmentation.SegmentationCommand.OnCommandSuccess callback = (volume_poly) =>
+                {
+                   UpdateLocationShapeFromVolumePolygon(volume_poly);
+                };
+
+                // Launch segmentation command
+                var parent = AnnotationOverlay.CurrentOverlay.Parent;
+                var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
+                var segmentCommand = new WebAnnotation.UI.Commands.Segmentation.SegmentationCommand(
+                    parent,
+                    medial_axis_points,
+                    Array.Empty<GridVector2>(), // no background points initially 
+                    callback,
+                    channelManager
+                );
+
+                parent.CurrentCommand = segmentCommand;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error launching segmentation: {ex.Message}");
+                MessageBox.Show($"Failed to launch segmentation: {ex.Message}",
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -580,23 +652,42 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Update the location's shape from the segmented polygon and save
         /// </summary>
-        private void UpdateLocationShapeFromPolygon(GridPolygon polygon)
+        private void UpdateLocationShapeFromMosaicPolygon(GridPolygon mosaic_poly)
         {
             try
             {
                 // Convert location type to POLYGON
-                modelObj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON;
-                
-                // Get the section's transform
-                var section = AnnotationOverlay.CurrentOverlay.Parent.Section;
-                
-                // Convert polygon to SqlGeometry
-                Microsoft.SqlServer.Types.SqlGeometry mosaicGeometry = polygon.ToSqlGeometry();
-                
-                // Update the location's shape using the extension method
-                modelObj.SetShapeFromGeometryInSection(
-                    section.ActiveSectionToVolumeTransform, 
-                    mosaicGeometry);
+                var parent = AnnotationOverlay.CurrentOverlay.Parent;
+                modelObj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON;
+
+                modelObj.SetShapeFromGeometryInSection(parent.Section.ActiveSectionToVolumeTransform, mosaic_poly.ToSqlGeometry());
+                // Save the location
+                Store.Locations.Save();
+
+                Debug.WriteLine($"Successfully converted circle location {modelObj.ID} to polygon");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error updating location shape: {ex.Message}");
+                MessageBox.Show($"Failed to update location shape: {ex.Message}",
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Update the location's shape from the segmented polygon and save
+        /// </summary>
+        private void UpdateLocationShapeFromVolumePolygon(GridPolygon volume_poly)
+        {
+            try
+            {
+                // Convert location type to POLYGON
+                modelObj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON;
+
+                var parent = AnnotationOverlay.CurrentOverlay.Parent;
+                var mosaic_poly = parent.Section.ActiveSectionToVolumeTransform.TryMapShapeVolumeToSection(volume_poly);
+
+                modelObj.SetShapeFromGeometryInVolume(parent.Section.ActiveSectionToVolumeTransform, volume_poly.ToSqlGeometry()); 
                 
                 // Save the location
                 Store.Locations.Save();
@@ -628,6 +719,38 @@ namespace WebAnnotation.ViewModel
         protected void ContextMenu_OnDelete(object sender, EventArgs e)
         {
             Delete();
+        }
+
+        protected void ContextMenu_RandomColor(object sender, EventArgs e)
+        {
+            try
+            {
+                var overlay = AnnotationOverlay.CurrentOverlay;
+                if (overlay == null)
+                    return;
+
+                var sectionView = AnnotationOverlay.GetAnnotationsForSection((int)modelObj.Z);
+                if (sectionView == null)
+                    return;
+
+                if (sectionView.TryGetLocation(modelObj.ID, out LocationCanvasView locView))
+                {
+                    if (locView is LocationPolygonView polygonView)
+                    {
+                        // Generate random color while preserving alpha
+                        float currentAlpha = polygonView.Color.GetAlpha();
+                        Microsoft.Xna.Framework.Color newColor = Microsoft.Xna.Framework.Color.Black.Random().SetAlpha(currentAlpha);
+                        polygonView.Color = newColor;
+                        
+                        // Invalidate to trigger redraw
+                        overlay.Parent?.Invalidate();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error setting random color: {ex.Message}");
+            }
         }
 
 
