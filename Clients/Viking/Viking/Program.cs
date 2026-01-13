@@ -374,7 +374,7 @@ namespace Viking
                 }
 
                 // Remove duplicate entries by URL (checking both "URL" and "URL|Name" formats)
-                var volumeName = wpfLoginWindow.VolumeURL;
+                var volumeName = wpfLoginWindow.VolumeName;
                 var entriesToRemove = new List<string>();
                 foreach (string entry in settings.VolumeURLs)
                 {
