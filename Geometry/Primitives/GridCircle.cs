@@ -165,6 +165,23 @@ namespace Geometry
         }
 
         /// <summary>
+        /// Given a center and radius, returns true if p1 is contained in the circle
+        /// </summary>
+        /// <param name="cp">Circle center</param>
+        /// <param name="radius">Circle radius </param>
+        /// <param name="p1">Test point position</param>
+        public static ShapeRelation Contains(GridVector2 cp, double radius, GridVector2 p1)
+        {
+            var distance = GridVector2.Distance(cp, p1);
+            if(distance < radius)
+                return ShapeRelation.CONTAINED;
+            else if(distance == radius)
+                return ShapeRelation.TOUCHING;
+            else
+                return ShapeRelation.NONE;
+        }
+
+        /// <summary>
         /// Given three points on a circle, return true if the p1 is inside the circle.  Exactly on the circle is not 
         /// </summary>
         /// <param name="cp"></param>
