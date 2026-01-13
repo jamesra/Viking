@@ -51,8 +51,8 @@ namespace GeometryTests
             Assert.AreEqual(set[0], 5);
             Assert.AreEqual(set[set.Count - 1], 4);
 
-            Assert.IsTrue(set.Max() == maxIndex - 1);
-            Assert.IsTrue(set.Min() == minIndex);
+            Assert.AreEqual(maxIndex - 1, set.Max());
+            Assert.AreEqual(minIndex, set.Min());
         }
     }
 }
