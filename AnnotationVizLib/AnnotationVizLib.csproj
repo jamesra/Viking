@@ -5,7 +5,7 @@
 		<RootNamespace>AnnotationVizLib</RootNamespace>
 		<AssemblyName>AnnotationVizLib</AssemblyName>
 		<OutputType>Library</OutputType>
-		<LangVersion>9.0</LangVersion>
+		<LangVersion>12.0</LangVersion>
 		<SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
 		<Description>Cross-platform image processing library.</Description>
 	</PropertyGroup>

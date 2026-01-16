@@ -24,7 +24,7 @@
     <TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
     <NuGetTargetMoniker>.NETFramework,Version=v4.8.1</NuGetTargetMoniker>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
-    <LangVersion>9.0</LangVersion>
+    <LangVersion>12.0</LangVersion>
   </PropertyGroup>
   
   <!-- .NET 9.0-windows specific properties -->

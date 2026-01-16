@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<!-- Target .NET Framework 4.8 -->
 		<TargetFramework>net48</TargetFramework>
-		<LangVersion>9.0</LangVersion>
+		<LangVersion>12.0</LangVersion>
 		<NoWarn>$(NoWarn);CS0436;CA1014;CS3009;CS3001</NoWarn>
 		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
 		<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>

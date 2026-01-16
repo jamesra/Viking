@@ -19,7 +19,7 @@
 		<!-- Enable automatic binding redirects -->
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
 		<GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
-		<LangVersion>9.0</LangVersion>
+		<LangVersion>12.0</LangVersion>
 	</PropertyGroup>
 	<PropertyGroup> 
 		<!-- ClickOnce Deployment Properties -->

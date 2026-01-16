@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFrameworks>net48;</TargetFrameworks>
-    <LangVersion>9.0</LangVersion>
+    <LangVersion>12.0</LangVersion>
     <RootNamespace>WebAnnotationTests</RootNamespace>
     <AssemblyName>WebAnnotationTests</AssemblyName>
     <IsCodedUITest>false</IsCodedUITest>
