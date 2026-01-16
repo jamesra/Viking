@@ -152,55 +152,23 @@
 		<Message Text="Copied @(GraphicsContent-&gt;Count()) content files" Importance="high" />
 	</Target>	
 
-	<!-- Helper target to copy one module's files -->
+	<!-- Define the list of modules to process -->
+	<ItemGroup>
+		<ModuleToCopy Include="LocalBookmarks" />
+		<ModuleToCopy Include="Measurement" />
+		<ModuleToCopy Include="WebAnnotation" />
+	</ItemGroup>
+
+	<!-- Main target that processes each module using item batching -->
+	<!-- Run after Build and ensure project references are built first -->
 	<Target Name="CopyModules" AfterTargets="Build">
+		<!-- Process each module by calling CopySingleModule with the module name -->
+		<MSBuild Projects="$(MSBuildProjectFile)" Targets="CopySingleModule" Properties="ModuleName=%(ModuleToCopy.Identity)" />
+		
+		<!-- Copy shared DLLs once after all modules are processed -->
 		<PropertyGroup>
 			<ModulesSourceDir>$(MSBuildProjectDirectory)\Modules</ModulesSourceDir>
-			<ModulesTargetDir>$(TargetDir)\Modules</ModulesTargetDir>
-			<SourcePath>$(ModulesSourceDir)\$(ModuleName)\$(TargetFramework)</SourcePath>
-			<TargetPath>$(ModulesTargetDir)\$(ModuleName)</TargetPath>
 		</PropertyGroup>
-
-		<Message Text="Processing module: $(ModuleName)" Importance="high" />
-		<Message Text="Source: $(SourcePath) -&gt; Target: $(TargetPath)" Importance="high" />
-
-		<!-- Only proceed if source exists -->
-		<ItemGroup Condition="Exists('$(SourcePath)')">
-			<ModuleFiles Include="$(SourcePath)\**\*" />
-
-		</ItemGroup>
-
-		<Message Text="Found files for $(ModuleName): @(ModuleFiles-&gt;Count())" Importance="high" Condition="Exists('$(SourcePath)')" />
-		<Message Text="Skipping $(ModuleName) - no $(TargetFramework) folder found" Importance="normal" Condition="!Exists('$(SourcePath)')" />
-
-		<!-- Create target directory and copy files -->
-		<MakeDir Directories="$(TargetPath)" Condition="'@(ModuleFiles)' != ''" />
-
-		<!--<Copy SourceFiles="@(ModuleFiles)"
-          DestinationFiles="@(ModuleFiles->'$(TargetPath)\%(RecursiveDir)%(Filename)%(Extension)')"
-          Condition="'@(ModuleFiles)' != ''" /> -->
-		<RemoveDir Directories="$(TargetPath)\$(TargetFramework)\Modules" ContinueOnError="true" />
-		<ItemGroup>
-			<LocalBookmarksFilesToCopy Include="$(ModulesSourceDir)\LocalBookmarks\$(TargetFramework)\**" />
-			<MeasurementFilesToCopy Include="$(ModulesSourceDir)\Measurement\$(TargetFramework)\**" />
-			<WebAnnotationsFilesToCopy Include="$(ModulesSourceDir)\WebAnnotation\$(TargetFramework)\**" />
-			
-			<LocalBookmarksContentToCopy Include="$(ModulesSourceDir)\LocalBookmarks\$(TargetFramework)\Content\**" />
-			<MeasurementContentToCopy Include="$(ModulesSourceDir)\Measurement\$(TargetFramework)\Content\**" />
-			<WebAnnotationsContentToCopy Include="$(ModulesSourceDir)\WebAnnotation\$(TargetFramework)\Content\**" />
-		</ItemGroup>
-
-		<Message Text="Copying $(ModulesSourceDir)\WebAnnotation\$(TargetFramework) to $(ModulesTargetDir)\WebAnnotation\" Importance="high" />
-		
-		<Copy SourceFiles="@(LocalBookmarksFilesToCopy)" DestinationFolder="$(ModulesTargetDir)\LocalBookmarks\%(RecursiveDir)" />
-		<Copy SourceFiles="@(MeasurementFilesToCopy)" DestinationFolder="$(ModulesTargetDir)\Measurement\%(RecursiveDir)" />
-		<Copy SourceFiles="@(WebAnnotationsFilesToCopy)" DestinationFolder="$(ModulesTargetDir)\WebAnnotation\%(RecursiveDir)" />
-
-		<Message Text="Copying $(ModulesSourceDir)\LocalBookmarks\$(TargetFramework)\Content to $(TargetDir)\Content" Importance="high" />
-
-		<Copy SourceFiles="@(LocalBookmarksContentToCopy)" DestinationFolder="$(TargetDir)\Content" />
-		<Copy SourceFiles="@(MeasurementContentToCopy)" DestinationFolder="$(TargetDir)\Content" />
-		<Copy SourceFiles="@(WebAnnotationsContentToCopy)" DestinationFolder="$(TargetDir)\Content" />
 		
 		<!-- Copy Xml.Schema.Linq.dll to main output directory if it exists in any module -->
 		<ItemGroup>
@@ -216,10 +184,46 @@
 		<Copy SourceFiles="@(SystemMemoryFiles)" DestinationFolder="$(TargetDir)" Condition="'@(SystemMemoryFiles)' != ''" />
 		<Message Text="Copied System.Memory.dll to main output directory" Importance="normal" Condition="'@(SystemMemoryFiles)' != ''" />
 
-		<!-- Remove duplicate shared DLLs from modules -->
+		<!-- Remove duplicate shared DLLs from modules (once after all modules) -->
 		<CallTarget Targets="RemoveDuplicateDlls" />
+	</Target>
 
-		<Message Text="Copied $(ModuleName) module files" Importance="normal" Condition="'@(ModuleFiles)' != ''" />
+	<!-- Target to copy a single module's files -->
+	<Target Name="CopySingleModule">
+		<PropertyGroup>
+			<ModulesSourceDir>$(MSBuildProjectDirectory)\Modules</ModulesSourceDir>
+			<ModulesTargetDir>$(TargetDir)\Modules</ModulesTargetDir>
+			<SourcePath>$(ModulesSourceDir)\$(ModuleName)\$(Configuration)\$(TargetFramework)</SourcePath>
+			<TargetPath>$(ModulesTargetDir)\$(ModuleName)</TargetPath>
+		</PropertyGroup>
+
+		<Message Text="Processing module: $(ModuleName)" Importance="high" />
+		<Message Text="Source: $(SourcePath) -&gt; Target: $(TargetPath)" Importance="high" />
+
+		<!-- Check if module source exists -->
+		<Message Text="Warning: $(ModuleName) module not found at $(SourcePath)" Importance="high" Condition="!Exists('$(SourcePath)')" />
+		
+		<!-- Copy module files -->
+		<ItemGroup Condition="Exists('$(SourcePath)')">
+			<ModuleFilesToCopy Include="$(SourcePath)\**\*" Exclude="$(SourcePath)\**\*.pdb" />
+		</ItemGroup>
+		
+		<Message Text="Found @(ModuleFilesToCopy-&gt;Count()) files for $(ModuleName)" Importance="high" Condition="Exists('$(SourcePath)')" />
+		
+		<MakeDir Directories="$(TargetPath)" Condition="Exists('$(SourcePath)')" />
+		<RemoveDir Directories="$(TargetPath)\$(TargetFramework)\Modules" ContinueOnError="true" Condition="Exists('$(SourcePath)')" />
+		
+		<Copy SourceFiles="@(ModuleFilesToCopy)" DestinationFolder="$(TargetPath)\%(RecursiveDir)" Condition="'@(ModuleFilesToCopy)' != ''" SkipUnchangedFiles="true" />
+		
+		<!-- Copy module content files -->
+		<ItemGroup Condition="Exists('$(SourcePath)\Content')">
+			<ModuleContentToCopy Include="$(SourcePath)\Content\**" />
+		</ItemGroup>
+		
+		<Message Text="Copying $(SourcePath)\Content to $(TargetDir)\Content" Importance="high" Condition="Exists('$(SourcePath)\Content')" />
+		<Copy SourceFiles="@(ModuleContentToCopy)" DestinationFolder="$(TargetDir)\Content" Condition="'@(ModuleContentToCopy)' != ''" />
+		
+		<Message Text="Copied $(ModuleName) module files" Importance="normal" Condition="Exists('$(SourcePath)')" />
 	</Target>
 
 	<!-- Target to remove duplicate DLLs from modules -->

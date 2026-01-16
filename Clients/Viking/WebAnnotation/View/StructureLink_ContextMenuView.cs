@@ -29,35 +29,34 @@ namespace WebAnnotation.View
             modelObj = Store.StructureLinks[link];
         }
 
-        public static ContextMenu ContextMenuGenerator(IViewStructureLink link)
+        public static ContextMenuStrip ContextMenuGenerator(IViewStructureLink link)
         {
             StructureLink_CanvasContextMenuView contextMenuView = new StructureLink_CanvasContextMenuView(link.Key);
             return contextMenuView.ContextMenu;
         }
 
-        public System.Windows.Forms.ContextMenu ContextMenu
+        public System.Windows.Forms.ContextMenuStrip ContextMenu
         {
             get
             {
-                ContextMenu menu = new ContextMenu();
-                MenuItem menuFlip = new MenuItem("Flip Direction", ContextMenu_OnFlip);
-
-                MenuItem menuBidirectional = new MenuItem("Bidirectional", ContextMenu_OnBidirectional)
-                {
-                    Checked = modelObj.Bidirectional
-                };
-
-                MenuItem menuSeperator = new MenuItem();
-                MenuItem menuDelete = new MenuItem("Delete", ContextMenu_OnDelete);
-
+                ContextMenuStrip menu = new ContextMenuStrip();
+                
                 if (!modelObj.Bidirectional)
                 {
-                    menu.MenuItems.Add(menuFlip);
+                    ToolStripMenuItem menuFlip = new ToolStripMenuItem("Flip Direction");
+                    menuFlip.Click += ContextMenu_OnFlip;
+                    menu.Items.Add(menuFlip);
                 }
 
-                menu.MenuItems.Add(menuBidirectional);
-                menu.MenuItems.Add(menuSeperator);
-                menu.MenuItems.Add(menuDelete);
+                ToolStripMenuItem menuBidirectional = new ToolStripMenuItem("Bidirectional");
+                menuBidirectional.Checked = modelObj.Bidirectional;
+                menuBidirectional.Click += ContextMenu_OnBidirectional;
+                menu.Items.Add(menuBidirectional);
+
+                menu.Items.Add(new ToolStripSeparator());
+                ToolStripMenuItem menuDelete = new ToolStripMenuItem("Delete");
+                menuDelete.Click += ContextMenu_OnDelete;
+                menu.Items.Add(menuDelete);
 
                 return menu;
             }

@@ -54,12 +54,12 @@ namespace Viking.Common
         /// <summary>
         /// GetMenuFor returns a context menu for the passed DataObject or null
         /// </summary>
-        System.Windows.Forms.ContextMenu BuildMenuFor(IContextMenu Obj, System.Windows.Forms.ContextMenu Menu);
+        System.Windows.Forms.ContextMenuStrip BuildMenuFor(IContextMenu Obj, System.Windows.Forms.ContextMenuStrip Menu);
 
         /// <summary>
         /// GetMenuFor returns a context menu for the passed System.Type or null
         /// </summary>
-        System.Windows.Forms.ContextMenu BuildMenuFor(System.Type ObjType, System.Windows.Forms.ContextMenu Menu);
+        System.Windows.Forms.ContextMenuStrip BuildMenuFor(System.Type ObjType, System.Windows.Forms.ContextMenuStrip Menu);
     }
 
     /// <summary>
@@ -121,7 +121,7 @@ namespace Viking.Common
 
     public interface IContextMenu
     {
-        System.Windows.Forms.ContextMenu ContextMenu { get; }
+        System.Windows.Forms.ContextMenuStrip ContextMenu { get; }
     }
 
     public interface IUIObjectBasic 

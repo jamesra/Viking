@@ -149,7 +149,7 @@ namespace WebAnnotation.View
                     "Hold left click + drag on inscribed arrow: Create additional annotation for this structure linked to the annotation on the adjacent section."
                 };
 
-        public new ContextMenu ContextMenu => new Location_CanvasContextMenuView(ID).ContextMenu;
+        public new ContextMenuStrip ContextMenu => new Location_CanvasContextMenuView(ID).ContextMenu;
 
         public override GridRectangle BoundingBox => Circle.BoundingBox;
 

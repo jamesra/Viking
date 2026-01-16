@@ -8,7 +8,7 @@ using WebAnnotationModel;
 namespace WebAnnotation.ViewModel
 {
     [Viking.Common.UI.TreeViewVisible]
-    public class StructureType : Viking.Objects.UIObjBase, IViewStructureType
+    public class StructureType : Viking.Objects.UIObjBase, IViewStructureType, IContextMenu
     {
         public StructureTypeObj modelObj;
 
@@ -115,23 +115,29 @@ namespace WebAnnotation.ViewModel
 
         #region IUIObject Members
 
-        public override System.Windows.Forms.ContextMenu ContextMenu
+        public override System.Windows.Forms.ContextMenuStrip ContextMenu
         {
             get
             {
-                ContextMenu menu = new ContextMenu();
+                ContextMenuStrip menu = new ContextMenuStrip();
 
-                MenuItem newMenuItem = new MenuItem("New");
-                menu.MenuItems.Add(newMenuItem);
+                ToolStripMenuItem newMenuItem = new ToolStripMenuItem("New");
+                menu.Items.Add(newMenuItem);
 
-                newMenuItem.MenuItems.Add("Structure Type", ContextMenu_OnNewStructureType);
+                ToolStripMenuItem structureTypeItem = new ToolStripMenuItem("Structure Type");
+                structureTypeItem.Click += ContextMenu_OnNewStructureType;
+                newMenuItem.DropDownItems.Add(structureTypeItem);
 
                 if (modelObj.Children.Length == 0)
                 {
-                    menu.MenuItems.Add("Delete", ContextMenu_OnDelete);
+                    ToolStripMenuItem deleteItem = new ToolStripMenuItem("Delete");
+                    deleteItem.Click += ContextMenu_OnDelete;
+                    menu.Items.Add(deleteItem);
                 }
 
-                menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
+                ToolStripMenuItem propertiesItem = new ToolStripMenuItem("Properties");
+                propertiesItem.Click += ContextMenu_OnProperties;
+                menu.Items.Add(propertiesItem);
 
                 return menu;
             }

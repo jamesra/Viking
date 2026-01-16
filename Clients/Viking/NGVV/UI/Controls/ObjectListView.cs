@@ -406,11 +406,21 @@ namespace Viking.UI.BaseClasses
                 var contextObj = ContextMenuForItem(listItem);
                 if (contextObj != null)
                 {
-                    // Convert old ContextMenu to ContextMenuStrip items
-                    ContextMenu objectContextMenu = contextObj.ContextMenu;
+                    ContextMenuStrip objectContextMenu = contextObj.ContextMenu;
                     if (objectContextMenu != null)
                     {
-                        AddMenuItemsToContextMenuStrip(contextMenu, objectContextMenu);
+                        // Copy items from the object's context menu
+                        foreach (System.Windows.Forms.ToolStripItem item in objectContextMenu.Items)
+                        {
+                            if (item is System.Windows.Forms.ToolStripMenuItem menuItem)
+                            {
+                                contextMenu.Items.Add(CloneToolStripMenuItem(menuItem));
+                            }
+                            else if (item is System.Windows.Forms.ToolStripSeparator)
+                            {
+                                contextMenu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+                            }
+                        }
                     }
                 }
             }
@@ -456,41 +466,6 @@ namespace Viking.UI.BaseClasses
             return contextMenu;
         }
 
-        /// <summary>
-        /// Helper method to convert old ContextMenu items to ContextMenuStrip items
-        /// </summary>
-        private void AddMenuItemsToContextMenuStrip(System.Windows.Forms.ContextMenuStrip contextMenuStrip, System.Windows.Forms.ContextMenu contextMenu)
-        {
-            foreach (System.Windows.Forms.MenuItem menuItem in contextMenu.MenuItems)
-            {
-                var toolStripItem = ConvertMenuItemToToolStripMenuItem(menuItem);
-                contextMenuStrip.Items.Add(toolStripItem);
-            }
-        }
-
-        /// <summary>
-        /// Converts a MenuItem to a ToolStripMenuItem
-        /// </summary>
-        private System.Windows.Forms.ToolStripMenuItem ConvertMenuItemToToolStripMenuItem(System.Windows.Forms.MenuItem menuItem)
-        {
-            var toolStripItem = new System.Windows.Forms.ToolStripMenuItem(menuItem.Text);
-            toolStripItem.Enabled = menuItem.Enabled;
-            toolStripItem.Checked = menuItem.Checked;
-            
-            // Copy event handlers by invoking the original handler when the new one is clicked            
-            toolStripItem.Click += (sender, e) => {
-                // Create a MenuItem event args and invoke the original handler
-                menuItem.PerformClick();
-            };
-
-            // Convert sub-menu items recursively
-            foreach (System.Windows.Forms.MenuItem subMenuItem in menuItem.MenuItems)
-            {
-                toolStripItem.DropDownItems.Add(ConvertMenuItemToToolStripMenuItem(subMenuItem));
-            }
-
-            return toolStripItem;
-        }
 
         /// <summary>
         /// Extension method to clone a ToolStripMenuItem

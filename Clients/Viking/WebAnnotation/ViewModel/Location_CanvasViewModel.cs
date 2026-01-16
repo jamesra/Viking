@@ -28,12 +28,14 @@ namespace WebAnnotation.ViewModel
         }
 
 
-        public override ContextMenu ContextMenu
+        public override ContextMenuStrip ContextMenu
         {
             get
             {
-                ContextMenu menu = new ContextMenu();
-                menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
+                ContextMenuStrip menu = new ContextMenuStrip();
+                var propertiesItem = new ToolStripMenuItem("Properties");
+                propertiesItem.Click += ContextMenu_OnProperties;
+                menu.Items.Add(propertiesItem);
 
                 this._AddTerminalOffEdgeMenus(menu);
                 this.Parent.ContextMenu_AddUnverifiedBranchTerminals(menu);

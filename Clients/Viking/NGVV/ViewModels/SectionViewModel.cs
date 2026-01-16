@@ -209,12 +209,14 @@ namespace Viking.ViewModels
 
         void IUIObjectBasic.ShowProperties() => ShowPropertiesWindow();
 
-        public System.Windows.Forms.ContextMenu ContextMenu
+        public System.Windows.Forms.ContextMenuStrip ContextMenu
         {
             get
             {
-                System.Windows.Forms.ContextMenu menu = new System.Windows.Forms.ContextMenu(); 
-                menu.MenuItems.Add("Properties", ContextMenu_OnProperties); 
+                System.Windows.Forms.ContextMenuStrip menu = new System.Windows.Forms.ContextMenuStrip(); 
+                var propertiesItem = new System.Windows.Forms.ToolStripMenuItem("Properties");
+                propertiesItem.Click += ContextMenu_OnProperties;
+                menu.Items.Add(propertiesItem); 
                 return menu;
             }
         }

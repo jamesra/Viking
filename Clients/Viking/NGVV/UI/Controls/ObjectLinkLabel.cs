@@ -84,67 +84,6 @@ namespace Viking.UI.Controls
             }
         }
 
-        /// <summary>
-        /// Builds context menu strip for .NET 9.0 compatibility
-        /// </summary>
-        private System.Windows.Forms.ContextMenuStrip BuildContextMenuStrip()
-        {
-            if (_SourceObject is null)
-                return null;
-
-            var contextMenu = new System.Windows.Forms.ContextMenuStrip();
-
-            // Get the object's context menu and convert it to ContextMenuStrip
-            using (ContextMenu objectContextMenu = ((IContextMenu)_SourceObject).ContextMenu)
-            {
-                if (objectContextMenu != null)
-                {
-                    // Convert old ContextMenu items to ContextMenuStrip items
-                    foreach (System.Windows.Forms.MenuItem menuItem in objectContextMenu.MenuItems)
-                    {
-                        var toolStripItem = ConvertMenuItemToToolStripMenuItem(menuItem);
-                        contextMenu.Items.Add(toolStripItem);
-                    }
-                }
-            }
-
-            // Add separator if there are existing items
-            if (contextMenu.Items.Count > 0)
-            {
-                contextMenu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
-            }
-
-            // Add "Clear Link" option
-            var clearLinkItem = new System.Windows.Forms.ToolStripMenuItem("Clear Link");
-            clearLinkItem.Click += ContextMenuOnClear;
-            contextMenu.Items.Add(clearLinkItem);
-
-            return contextMenu;
-        }
-
-        /// <summary>
-        /// Converts a MenuItem to a ToolStripMenuItem
-        /// </summary>
-        private System.Windows.Forms.ToolStripMenuItem ConvertMenuItemToToolStripMenuItem(System.Windows.Forms.MenuItem menuItem)
-        {
-            var toolStripItem = new System.Windows.Forms.ToolStripMenuItem(menuItem.Text);
-            toolStripItem.Enabled = menuItem.Enabled;
-            toolStripItem.Checked = menuItem.Checked;
-            
-            // Copy event handlers by invoking the original handler when the new one is clicked
-            toolStripItem.Click += (sender, e) => {
-                // Create a MenuItem event args and invoke the original handler
-                menuItem.PerformClick();
-            };
-
-            // Convert sub-menu items recursively
-            foreach (System.Windows.Forms.MenuItem subMenuItem in menuItem.MenuItems)
-            {
-                toolStripItem.DropDownItems.Add(ConvertMenuItemToToolStripMenuItem(subMenuItem));
-            }
-
-            return toolStripItem;
-        }
 
         private void ContextMenuOnClear(object sender, EventArgs e)
         {
@@ -192,8 +131,29 @@ namespace Viking.UI.Controls
             {
                 if (e.Button == MouseButtons.Right)
                 {
-                    var contextMenu = BuildContextMenuStrip();
-                    if (contextMenu != null && contextMenu.Items.Count > 0)
+                    System.Windows.Forms.ContextMenuStrip contextMenu = null;
+                    if (_SourceObject is IContextMenu contextMenuObj)
+                    {
+                        contextMenu = contextMenuObj.ContextMenu;
+                    }
+
+                    if (contextMenu == null)
+                    {
+                        contextMenu = new System.Windows.Forms.ContextMenuStrip();
+                    }
+
+                    // Add separator if there are existing items
+                    if (contextMenu.Items.Count > 0)
+                    {
+                        contextMenu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+                    }
+
+                    // Add "Clear Link" option
+                    var clearLinkItem = new System.Windows.Forms.ToolStripMenuItem("Clear Link");
+                    clearLinkItem.Click += ContextMenuOnClear;
+                    contextMenu.Items.Add(clearLinkItem);
+
+                    if (contextMenu.Items.Count > 0)
                     {
                         contextMenu.Show(this, new Point(e.X, e.Y));
                     }

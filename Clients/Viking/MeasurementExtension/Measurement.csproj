@@ -35,16 +35,17 @@
 		<!-- Create Modules directory if it doesn't exist -->
 		<MakeDir Directories="$(ModulesDir)" Condition="!Exists('$(ModulesDir)')" />
 		<MakeDir Directories="$(ProjectModulesDir)" Condition="!Exists('$(ProjectModulesDir)')" />
-		<MakeDir Directories="$(ProjectModulesDir)\$(TargetFramework)" Condition="!Exists('$(ProjectModulesDir)\$(TargetFramework)')" />
+		<MakeDir Directories="$(ProjectModulesDir)\$(Configuration)" Condition="!Exists('$(ProjectModulesDir)\$(Configuration)')" />
+		<MakeDir Directories="$(ProjectModulesDir)\$(Configuration)\$(TargetFramework)" Condition="!Exists('$(ProjectModulesDir)\$(Configuration)\$(TargetFramework)')" />
 
 		<!-- Copy project output to Modules folder -->
 		<ItemGroup>
 			<FilesToCopy Include="$(OutputDirectory)**\*.*" Exclude="$(OutputDirectory)**\*.pdb" />
 		</ItemGroup>
-		<Message Text="Copying from $(OutputDirectory) to $(ProjectModulesDir)\$(TargetFramework)\" Importance="high" />
+		<Message Text="Copying from $(OutputDirectory) to $(ProjectModulesDir)\$(Configuration)\$(TargetFramework)\" Importance="high" />
 		<Message Text="Files to copy: @(FilesToCopy->Count())" Importance="normal" />
 
-		<Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(ProjectModulesDir)\$(TargetFramework)\%(RecursiveDir)" SkipUnchangedFiles="false" />
+		<Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(ProjectModulesDir)\$(Configuration)\$(TargetFramework)\%(RecursiveDir)" SkipUnchangedFiles="false" />
 	</Target>
 
 	<!-- Clean target to remove copied files when build is cleaned -->
@@ -53,7 +54,8 @@
 	<Target Name="CleanModules" AfterTargets="Clean">
 		<!-- Only clean if explicitly requested via CleanModules property -->
 		<!-- This prevents modules from being removed during Rebuild operations -->
-		<RemoveDir Directories="$(ProjectModulesDir)\$(TargetFramework)" Condition="'$(CleanModules)' == 'true'" />
+		<RemoveDir Directories="$(ProjectModulesDir)\$(Configuration)\$(TargetFramework)" Condition="'$(CleanModules)' == 'true'" />
+		<RemoveDir Directories="$(ProjectModulesDir)\$(Configuration)" Condition="'$(CleanModules)' == 'true' AND !Exists('$(ProjectModulesDir)\$(Configuration)\*')" />
 		<RemoveDir Directories="$(ProjectModulesDir)" Condition="'$(CleanModules)' == 'true' AND !Exists('$(ProjectModulesDir)\*')" />
 		<RemoveDir Directories="$(ModulesDir)" Condition="'$(CleanModules)' == 'true' AND !Exists('$(ModulesDir)\*')" />
 	</Target>

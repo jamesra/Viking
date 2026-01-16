@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows.Forms;
+using Viking.Common;
 using Viking.Common.UI;
 using WebAnnotationModel;
 
 namespace WebAnnotation.ViewModel
 {
-    public class Structure : Viking.Objects.UIObjBase, IEquatable<Structure>, IEqualityComparer<Structure>
+    public class Structure : Viking.Objects.UIObjBase, IEquatable<Structure>, IEqualityComparer<Structure>, IContextMenu
     {
         public StructureObj modelObj;
 
@@ -189,19 +190,25 @@ namespace WebAnnotation.ViewModel
             remove => modelObj.PropertyChanged -= value;
         }
 
-        public override ContextMenu ContextMenu
+        public override ContextMenuStrip ContextMenu
         {
             get
             {
-                ContextMenu menu = new ContextMenu();
+                ContextMenuStrip menu = new ContextMenuStrip();
                 if (Global.Export != null)
                 {
-                    menu.MenuItems.Add("Export Morphology To Tulip", ContextMenu_OnMorphology);
+                    var exportItem = new ToolStripMenuItem("Export Morphology To Tulip");
+                    exportItem.Click += ContextMenu_OnMorphology;
+                    menu.Items.Add(exportItem);
                 }
 
-                menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
-                menu.MenuItems.Add("");
-                menu.MenuItems.Add("Delete", ContextMenu_OnDelete);
+                var propertiesItem = new ToolStripMenuItem("Properties");
+                propertiesItem.Click += ContextMenu_OnProperties;
+                menu.Items.Add(propertiesItem);
+                menu.Items.Add(new ToolStripSeparator());
+                var deleteItem = new ToolStripMenuItem("Delete");
+                deleteItem.Click += ContextMenu_OnDelete;
+                menu.Items.Add(deleteItem);
 
                 return menu;
             }
@@ -250,22 +257,20 @@ namespace WebAnnotation.ViewModel
             Delete();
         }
 
-        public ContextMenu ContextMenu_AddUnverifiedBranchTerminals(ContextMenu menu)
+        public ContextMenuStrip ContextMenu_AddUnverifiedBranchTerminals(ContextMenuStrip menu)
         {
-            MenuItem menuUnverifiedBranchTerminals = new MenuItem("Unmarked process terminals");
-            menuUnverifiedBranchTerminals.MenuItems.Add(new MenuItem());
-            menuUnverifiedBranchTerminals.Select += OnSelectUnverifiedBranchTerminals;
-            menu.MenuItems.Add(menuUnverifiedBranchTerminals);
+            ToolStripMenuItem menuUnverifiedBranchTerminals = new ToolStripMenuItem("Unmarked process terminals");
+            menuUnverifiedBranchTerminals.DropDownOpening += OnDropDownOpeningUnverifiedBranchTerminals;
+            menu.Items.Add(menuUnverifiedBranchTerminals);
 
 
             return menu;
         }
 
-        private void OnSelectUnverifiedBranchTerminals(object sender, EventArgs e)
+        private void OnDropDownOpeningUnverifiedBranchTerminals(object sender, EventArgs e)
         {
-            MenuItem menuUnverifiedBranchTerminals = sender as MenuItem;
-            menuUnverifiedBranchTerminals.MenuItems.Clear();
-            menuUnverifiedBranchTerminals.Select -= OnSelectUnverifiedBranchTerminals;
+            ToolStripMenuItem menuUnverifiedBranchTerminals = sender as ToolStripMenuItem;
+            menuUnverifiedBranchTerminals.DropDownItems.Clear();
             bool HasMenuItems = _PopulateUnverifiedBranchTerminalsContextMenu(menuUnverifiedBranchTerminals);
 
             menuUnverifiedBranchTerminals.Enabled = HasMenuItems;
@@ -276,7 +281,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="rootMenuItem"></param>
         /// <returns>True if the menu was populated, otherwise false.</returns>
-        protected bool _PopulateUnverifiedBranchTerminalsContextMenu(MenuItem rootMenuItem)
+        protected bool _PopulateUnverifiedBranchTerminalsContextMenu(ToolStripMenuItem rootMenuItem)
         {
             //            long[] Loc_Ids = Store.Structures.GetUnfinishedBranches(this.ID);
             //            List<LocationObj> listLocations = Store.Locations.GetObjectsByIDs(Loc_Ids, true);
@@ -289,8 +294,8 @@ namespace WebAnnotation.ViewModel
             levels.Sort();
             foreach (double level in levels)
             {
-                MenuItem levelMenus = BuildContextMenusForLevel((long)level, dictSectionToLocations[level]);
-                rootMenuItem.MenuItems.Add(levelMenus);
+                ToolStripMenuItem levelMenus = BuildContextMenusForLevel((long)level, dictSectionToLocations[level]);
+                rootMenuItem.DropDownItems.Add(levelMenus);
             }
 
             return levels.Count > 0;
@@ -301,30 +306,28 @@ namespace WebAnnotation.ViewModel
             return "Radius: " + loc.Radius.ToString("F1") + " X: " + loc.Position.X.ToString("F0") + " Y: " + loc.Position.Y.ToString("F0");
         }
 
-        private MenuItem BuildContextMenusForLevel(long level, List<AnnotationService.Types.LocationPositionOnly> listObjs)
+        private ToolStripMenuItem BuildContextMenusForLevel(long level, List<AnnotationService.Types.LocationPositionOnly> listObjs)
         {
-            MenuItem rootMenuItem = null;
+            ToolStripMenuItem rootMenuItem = null;
             if (listObjs.Count == 1)
             {
                 AnnotationService.Types.LocationPositionOnly locObj = listObjs[0];
                 //For a single item do not create a submenu
                 string locString = _LocationToString(locObj);
-                rootMenuItem = new MenuItem(level.ToString("D4") + " - " + locString, ContextMenu_SelectUnbranchedLocation)
-                {
-                    Tag = locObj.ID
-                };
+                rootMenuItem = new ToolStripMenuItem(level.ToString("D4") + " - " + locString);
+                rootMenuItem.Tag = locObj.ID;
+                rootMenuItem.Click += ContextMenu_SelectUnbranchedLocation;
             }
             else
             {
-                rootMenuItem = new MenuItem(level.ToString("D4"));
+                rootMenuItem = new ToolStripMenuItem(level.ToString("D4"));
                 foreach (AnnotationService.Types.LocationPositionOnly locObj in listObjs)
                 {
                     string locString = _LocationToString(locObj);
-                    MenuItem subItem = new MenuItem(locString, ContextMenu_SelectUnbranchedLocation)
-                    {
-                        Tag = locObj.ID
-                    };
-                    rootMenuItem.MenuItems.Add(subItem);
+                    ToolStripMenuItem subItem = new ToolStripMenuItem(locString);
+                    subItem.Tag = locObj.ID;
+                    subItem.Click += ContextMenu_SelectUnbranchedLocation;
+                    rootMenuItem.DropDownItems.Add(subItem);
                 }
             }
 
@@ -349,7 +352,7 @@ namespace WebAnnotation.ViewModel
 
         protected void ContextMenu_SelectUnbranchedLocation(object sender, EventArgs e)
         {
-            MenuItem menu = sender as MenuItem;
+            ToolStripMenuItem menu = sender as ToolStripMenuItem;
             long locationID = (long)menu.Tag;
 
             LocationObj loc = Store.Locations.GetObjectByID(locationID);

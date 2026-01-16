@@ -267,17 +267,46 @@ namespace Viking.UI.Controls
             if (e.Button != MouseButtons.Right && e.Button != MouseButtons.Left)
             {
                 base.OnMouseDown(e);
+                return;
             }
 
             TreeNode MouseNode = this.GetNodeAt(new Point(e.X, e.Y));
 
             if (e.Button == MouseButtons.Right)
             {
-                var contextMenu = BuildContextMenuStrip(MouseNode);
+                // Select the node first so the context menu applies to the correct item
+                if (MouseNode != null)
+                {
+                    this.SelectedNode = MouseNode;
+                    UI.State.SelectedObject = MouseNode.Tag as IUIObject;
+                }
+
+                System.Windows.Forms.ContextMenuStrip contextMenu = null;
+
+                if (MouseNode != null)
+                {
+                    // Get context menu from the object associated with the node
+                    if (MouseNode.Tag is IContextMenu obj)
+                    {
+                        contextMenu = obj.ContextMenu;
+                    }
+                }
+                else
+                {
+                    // If we don't have a node, try to get the parent's context menu
+                    if (Parent != null && Parent.ContextMenuStrip != null)
+                    {
+                        contextMenu = Parent.ContextMenuStrip;
+                    }
+                }
+
                 if (contextMenu != null && contextMenu.Items.Count > 0)
                 {
                     contextMenu.Show(this, new Point(e.X, e.Y));
+                    return;
                 }
+
+                // Don't call base.OnMouseDown for right-clicks to prevent default selection behavior
             }
             else if (e.Button == MouseButtons.Left)
             {
@@ -288,69 +317,6 @@ namespace Viking.UI.Controls
             }
 
             base.OnMouseDown(e);
-        }
-
-        /// <summary>
-        /// Builds context menu strip for .NET 9.0 compatibility
-        /// </summary>
-        private System.Windows.Forms.ContextMenuStrip BuildContextMenuStrip(TreeNode mouseNode)
-        {
-            System.Windows.Forms.ContextMenuStrip contextMenuStrip = null;
-
-            if (mouseNode != null)
-            {
-                // Get context menu from the object associated with the node
-                if (mouseNode.Tag is IContextMenu obj)
-                {
-                    using (ContextMenu objectContextMenu = obj.ContextMenu)
-                    {
-                        if (objectContextMenu != null)
-                        {
-                            contextMenuStrip = new System.Windows.Forms.ContextMenuStrip();
-                            // Convert old ContextMenu items to ContextMenuStrip items
-                            foreach (System.Windows.Forms.MenuItem menuItem in objectContextMenu.MenuItems)
-                            {
-                                var toolStripItem = ConvertMenuItemToToolStripMenuItem(menuItem);
-                                contextMenuStrip.Items.Add(toolStripItem);
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // If we don't have a node, try to get the parent's context menu
-                if (Parent != null && Parent.ContextMenuStrip != null)
-                {
-                    contextMenuStrip = Parent.ContextMenuStrip;
-                }
-            }
-
-            return contextMenuStrip;
-        }
-
-        /// <summary>
-        /// Converts a MenuItem to a ToolStripMenuItem
-        /// </summary>
-        private System.Windows.Forms.ToolStripMenuItem ConvertMenuItemToToolStripMenuItem(System.Windows.Forms.MenuItem menuItem)
-        {
-            var toolStripItem = new System.Windows.Forms.ToolStripMenuItem(menuItem.Text);
-            toolStripItem.Enabled = menuItem.Enabled;
-            toolStripItem.Checked = menuItem.Checked;
-            
-            // Copy event handlers by invoking the original handler when the new one is clicked
-            toolStripItem.Click += (sender, e) => {
-                // Create a MenuItem event args and invoke the original handler
-                menuItem?.PerformClick();
-            };
-
-            // Convert sub-menu items recursively
-            foreach (System.Windows.Forms.MenuItem subMenuItem in menuItem.MenuItems)
-            {
-                toolStripItem.DropDownItems.Add(ConvertMenuItemToToolStripMenuItem(subMenuItem));
-            }
-
-            return toolStripItem;
         }
 
         public void AddObjects(IEnumerable<IUIObject> Objects)

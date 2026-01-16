@@ -122,7 +122,7 @@ namespace Viking.Objects
             return Viking.UI.Forms.PropertySheetForm.ShowDialog(this, ParentForm);
         }
 
-        public virtual System.Windows.Forms.ContextMenu ContextMenu => throw new NotImplementedException();
+        public virtual System.Windows.Forms.ContextMenuStrip ContextMenu => throw new NotImplementedException();
 
         public virtual System.Drawing.Image SmallThumbnail => throw new NotImplementedException();
 

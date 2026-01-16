@@ -81,7 +81,7 @@ namespace WebAnnotation.ViewModel
         }
     }
 
-    public delegate ContextMenu StructureLinkContextMenuGeneratorDelegate(IViewStructureLink key);
+    public delegate ContextMenuStrip StructureLinkContextMenuGeneratorDelegate(IViewStructureLink key);
 
     internal abstract class StructureLinkViewModelBase : Viking.Objects.UIObjBase, ICanvasGeometryView, IViewStructureLink, IContextMenu
     {
@@ -150,7 +150,7 @@ namespace WebAnnotation.ViewModel
             ContextMenuGenerator = StructureLink_CanvasContextMenuView.ContextMenuGenerator;
         }
 
-        public override System.Windows.Forms.ContextMenu ContextMenu
+        public override System.Windows.Forms.ContextMenuStrip ContextMenu
         {
             get
             {

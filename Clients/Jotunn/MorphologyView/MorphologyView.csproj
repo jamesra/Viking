@@ -86,10 +86,6 @@
       <Project>{d66a2153-e19a-4bb1-aa55-a5e8aa51e8ee}</Project>
       <Name>AnnotationInterfaces</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\AnnotationVizLibODataClient\AnnotationVizLibODataClient.csproj">
-      <Project>{b3a4f95d-a8ac-4094-9dda-22dc972d7e5d}</Project>
-      <Name>AnnotationVizLibODataClient</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\..\AnnotationVizLib\AnnotationVizLib.csproj">
       <Project>{a89a628b-3ffa-4271-b99a-e45c3d72d3e3}</Project>
       <Name>AnnotationVizLib</Name>

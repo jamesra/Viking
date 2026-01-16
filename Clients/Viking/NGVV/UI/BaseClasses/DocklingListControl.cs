@@ -135,9 +135,9 @@ namespace Viking.UI.BaseClasses
 
                 //If we clicked an item on the list, show the context menu for the item.
                 //Otherwise, show the generic context menu for the item type the list shows. 
-                ContextMenu menu = new ContextMenu();
+                ContextMenuStrip menu = new ContextMenuStrip();
                 menu = ExtensionManager.CreateContextMenuFromProviders(Item?.Tag, menu);
-                ExtensionManager.CreateContextMenuFromProviders(this.GetType(), menu);
+                menu = ExtensionManager.CreateContextMenuFromProviders(this.GetType(), menu);
                 menu.Show(this, PointToScreen(e.Location));
             }
         }

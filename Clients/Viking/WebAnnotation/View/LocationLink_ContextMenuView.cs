@@ -18,7 +18,7 @@ namespace WebAnnotation.View
         {
             if (SplitForm is null)
             { 
-                if (sender is MenuItem menuItem)
+                if (sender is ToolStripMenuItem menuItem)
                 {
                     if (menuItem.Tag is LocationLinkKey linkKey)
                     {
@@ -43,7 +43,7 @@ namespace WebAnnotation.View
 
         protected void ContextMenu_OnDelete(object sender, EventArgs e)
         {
-            if (sender is MenuItem menuItem)
+            if (sender is ToolStripMenuItem menuItem)
             {
                 if (menuItem.Tag is LocationLinkKey linkKey)
                 {
@@ -51,25 +51,26 @@ namespace WebAnnotation.View
                 }
             } 
         } 
-        public ContextMenu BuildMenuFor(object Obj, ContextMenu menu)
+        public ContextMenuStrip BuildMenuFor(object Obj, ContextMenuStrip menu)
         {
             if(menu is null)
                 return null;
 
             if (Obj is LocationLinkView link)
             {
-                MenuItem menuSeperator = new MenuItem();
-                MenuItem menuDelete = new MenuItem("Delete Link", ContextMenu_OnDelete);
+                menu.Items.Add(new ToolStripSeparator());
+                ToolStripMenuItem menuDelete = new ToolStripMenuItem("Delete Link");
                 menuDelete.Tag = link.Key;
+                menuDelete.Click += ContextMenu_OnDelete;
 
-                menu.MenuItems.Add(menuSeperator);
-                menu.MenuItems.Add(menuDelete);
+                menu.Items.Add(menuDelete);
 
-                menu.MenuItems.Add(menuSeperator);
+                menu.Items.Add(new ToolStripSeparator());
 
-                MenuItem menuSplit = new MenuItem("Split structure", ContextMenu_OnSplit);
+                ToolStripMenuItem menuSplit = new ToolStripMenuItem("Split structure");
                 menuSplit.Tag = link.Key;
-                menu.MenuItems.Add(menuSplit);
+                menuSplit.Click += ContextMenu_OnSplit;
+                menu.Items.Add(menuSplit);
 
                 return menu;
             }
@@ -77,7 +78,7 @@ namespace WebAnnotation.View
             return menu;
         }
 
-        public ContextMenu BuildMenuFor(Type ObjType, ContextMenu Menu)
+        public ContextMenuStrip BuildMenuFor(Type ObjType, ContextMenuStrip Menu)
         {
             return Menu;
         }

@@ -892,14 +892,14 @@ namespace Viking.Common
             return listProviders.ToArray(); 
         }
 
-        public static ContextMenu CreateContextMenuFromProviders(object Obj, ContextMenu Menu)
+        public static ContextMenuStrip CreateContextMenuFromProviders(object Obj, ContextMenuStrip Menu)
         {
             //Create a context menu for the object
             foreach (IProvideContextMenus Provider in ExtensionManager.CreateContextMenuProviders())
             {
                 try { 
 
-                    ContextMenu NewMenu = Provider.BuildMenuFor(Obj, Menu);
+                    ContextMenuStrip NewMenu = Provider.BuildMenuFor(Obj, Menu);
                 }
                 catch (NotImplementedException e)
                 {

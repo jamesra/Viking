@@ -38,23 +38,27 @@
 		<!-- Create Modules directory if it doesn't exist -->
 		<MakeDir Directories="$(ModulesDir)" Condition="!Exists('$(ModulesDir)')" />
 		<MakeDir Directories="$(ProjectModulesDir)" Condition="!Exists('$(ProjectModulesDir)')" />
-		<MakeDir Directories="$(ProjectModulesDir)\$(TargetFramework)" Condition="!Exists('$(ProjectModulesDir)\$(TargetFramework)')" />
+		<MakeDir Directories="$(ProjectModulesDir)\$(Configuration)" Condition="!Exists('$(ProjectModulesDir)\$(Configuration)')" />
+		<MakeDir Directories="$(ProjectModulesDir)\$(Configuration)\$(TargetFramework)" Condition="!Exists('$(ProjectModulesDir)\$(Configuration)\$(TargetFramework)')" />
 
 		<!-- Copy project output to Modules folder -->
 		<ItemGroup>
 			<FilesToCopy Include="$(OutputDirectory)**\*.*" Exclude="$(OutputDirectory)**\*.pdb" />
 		</ItemGroup>
-		<Message Text="Copying from $(OutputDirectory) to $(ProjectModulesDir)\$(TargetFramework)\" Importance="high" />
+		<Message Text="Copying from $(OutputDirectory) to $(ProjectModulesDir)\$(Configuration)\$(TargetFramework)\" Importance="high" />
 		<Message Text="Files to copy: @(FilesToCopy->Count())" Importance="normal" />
 		
-		<Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(ProjectModulesDir)\$(TargetFramework)\%(RecursiveDir)" SkipUnchangedFiles="false" />
+		<Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(ProjectModulesDir)\$(Configuration)\$(TargetFramework)\%(RecursiveDir)" SkipUnchangedFiles="false" />
 	</Target>
 
 	<!-- Clean target to remove copied files when build is cleaned -->
 	<Target Name="CleanModules" AfterTargets="Clean">
 
 		<!-- Remove the project-specific target framework folder -->
-		<RemoveDir Directories="$(ProjectModulesDir)\$(TargetFramework)" ContinueOnError="true" />
+		<RemoveDir Directories="$(ProjectModulesDir)\$(Configuration)\$(TargetFramework)" ContinueOnError="true" />
+
+		<!-- Remove the project-specific configuration folder if it's empty -->
+		<RemoveDir Directories="$(ProjectModulesDir)\$(Configuration)" Condition="!Exists('$(ProjectModulesDir)\$(Configuration)\*')" ContinueOnError="true" />
 
 		<!-- Remove the project-specific folder if it's empty -->
 		<RemoveDir Directories="$(ProjectModulesDir)" Condition="!Exists('$(ProjectModulesDir)\*')" ContinueOnError="true" />

@@ -16,7 +16,7 @@ using WebAnnotationModel;
 namespace WebAnnotation.ViewModel
 {
 
-    public delegate ContextMenu LocationLinkContextMenuGeneratorDelegate(IViewLocationLink key);
+    public delegate ContextMenuStrip LocationLinkContextMenuGeneratorDelegate(IViewLocationLink key);
 
     /// <summary>
     /// This class represents a link between locations. This object is a little unique because it is
@@ -303,7 +303,7 @@ namespace WebAnnotation.ViewModel
 
         #region IUIObjectBasic Members
 
-        public override System.Windows.Forms.ContextMenu ContextMenu
+        public override System.Windows.Forms.ContextMenuStrip ContextMenu
         {
             get
             {

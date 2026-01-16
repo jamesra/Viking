@@ -258,13 +258,28 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Updates opacity for polygons in the specified sections using parallel processing
+        /// Applies opacity to a view based on whether it has a parent structure
         /// </summary>
-        private static void UpdatePolygonOpacityForSections(
+        private static void ApplyOpacityToView(LocationCanvasView view, float parentlessOpacity, float withParentOpacity)
+        {
+            if (view is IColorView colorView)
+            {
+                bool hasParent = view.Parent?.ParentID.HasValue ?? false;
+                float targetOpacity = hasParent ? withParentOpacity : parentlessOpacity;
+
+                var currentColor = colorView.Color;
+                colorView.Color = currentColor.SetAlpha(targetOpacity);
+            }
+        }
+
+        /// <summary>
+        /// Updates opacity for views of a specific type in the specified sections using parallel processing
+        /// </summary>
+        private static void UpdateOpacityForSections<T>(
             IEnumerable<int> sectionNumbers,
             float parentlessOpacity,
             float withParentOpacity,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default) where T : LocationCanvasView, IColorView
         {
             if (Viking.UI.State.volume?.SectionViewModels == null)
                 return;
@@ -293,26 +308,29 @@ namespace WebAnnotation
                 MaxDegreeOfParallelism = Environment.ProcessorCount,
             };
 
-            Parallel.ForEach(sectionsToProcess, (sectionAnnotations) => 
+            Parallel.ForEach(sectionsToProcess, parallelOptions, sectionAnnotations =>
             {
                 try
                 {
-                    // Collect all polygon views from this section
-                    var polygonViews = sectionAnnotations.GetLocations()
-                        .OfType<LocationPolygonView>()
+                    // Collect all views of the specified type from this section
+                    var views = sectionAnnotations.GetLocations()
+                        .OfType<T>()
                         .ToList();
 
-                    if (polygonViews.Count == 0)
+                    if (views.Count == 0)
                         return;
 
-                    // Update all polygons in this section in parallel
-                    Parallel.ForEach(polygonViews, (polygonView) => 
+                    // Update all views in this section in parallel
+                    Parallel.ForEach(views, parallelOptions, view =>
                     {
-                        bool hasParent = polygonView.Parent.ParentID.HasValue;
-                        float targetOpacity = hasParent ? withParentOpacity : parentlessOpacity;
-
-                        var currentColor = polygonView.Color;
-                        polygonView.Color = currentColor.SetAlpha(targetOpacity);
+                        try
+                        {
+                            ApplyOpacityToView(view, parentlessOpacity, withParentOpacity);
+                        }
+                        catch
+                        {
+                            // Skip views that aren't ready for updates yet
+                        }
                     });
                 }
                 catch
@@ -320,6 +338,22 @@ namespace WebAnnotation
                     // Skip sections that have issues
                 }
             });
+        }
+
+        /// <summary>
+        /// Updates opacity for polygons in the specified sections using parallel processing
+        /// </summary>
+        private static void UpdatePolygonOpacityForSections(
+            IEnumerable<int> sectionNumbers,
+            float parentlessOpacity,
+            float withParentOpacity,
+            CancellationToken cancellationToken = default)
+        {
+            UpdateOpacityForSections<LocationPolygonView>(
+                sectionNumbers,
+                parentlessOpacity,
+                withParentOpacity,
+                cancellationToken);
         }
 
         /// <summary>
@@ -356,6 +390,33 @@ namespace WebAnnotation
         }
 
         /// <summary>
+        /// Helper method to collect visible section numbers (current and adjacent sections)
+        /// </summary>
+        private static List<int> GetVisibleSectionNumbers()
+        {
+            if (AnnotationOverlay.CurrentOverlay == null)
+                return new List<int>();
+
+            var overlay = AnnotationOverlay.CurrentOverlay;
+            var currentSection = overlay.Parent.Section;
+            
+            // Collect visible section numbers: current first, then adjacent
+            var visibleSectionNumbers = new List<int> { currentSection.Number };
+            
+            if (currentSection.ReferenceSectionAbove != null)
+            {
+                visibleSectionNumbers.Add(currentSection.ReferenceSectionAbove.Number);
+            }
+            
+            if (currentSection.ReferenceSectionBelow != null)
+            {
+                visibleSectionNumbers.Add(currentSection.ReferenceSectionBelow.Number);
+            }
+
+            return visibleSectionNumbers;
+        }
+
+        /// <summary>
         /// Updates opacity for circles in the specified sections using parallel processing
         /// </summary>
         private static void UpdateCircleOpacityForSections(
@@ -364,67 +425,11 @@ namespace WebAnnotation
             float withParentOpacity,
             CancellationToken cancellationToken = default)
         {
-            if (Viking.UI.State.volume?.SectionViewModels == null)
-                return;
-
-            // Collect sections that exist and have annotations loaded
-            var sectionsToProcess = new List<SectionAnnotationsView>();
-            
-            foreach (var sectionNumber in sectionNumbers)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                
-                SectionAnnotationsView sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(sectionNumber);
-                if (sectionAnnotations != null)
-                {
-                    sectionsToProcess.Add(sectionAnnotations);
-                }
-            }
-
-            if (sectionsToProcess.Count == 0)
-                return;
-
-            // Process all sections in parallel
-            var parallelOptions = new ParallelOptions
-            {
-                CancellationToken = cancellationToken,
-                MaxDegreeOfParallelism = Environment.ProcessorCount
-            };
-
-            Parallel.ForEach(sectionsToProcess, parallelOptions, sectionAnnotations =>
-            {
-                try
-                {
-                    // Collect all circle views from this section
-                    var circleViews = sectionAnnotations.GetLocations()
-                        .OfType<LocationCircleView>()
-                        .ToList();
-
-                    if (circleViews.Count == 0)
-                        return;
-
-                    // Update all circles in this section in parallel
-                    Parallel.ForEach(circleViews, parallelOptions, circleView =>
-                    {
-                        try
-                        {
-                            bool hasParent = circleView.Parent.ParentID.HasValue;
-                            float targetOpacity = hasParent ? withParentOpacity : parentlessOpacity;
-
-                            var currentColor = circleView.Color;
-                            circleView.Color = currentColor.SetAlpha(targetOpacity);
-                        }
-                        catch
-                        {
-                            // Skip circles that aren't ready for updates yet
-                        }
-                    });
-                }
-                catch
-                {
-                    // Skip sections that have issues
-                }
-            });
+            UpdateOpacityForSections<LocationCircleView>(
+                sectionNumbers,
+                parentlessOpacity,
+                withParentOpacity,
+                cancellationToken);
         }
 
         /// <summary>
@@ -472,20 +477,10 @@ namespace WebAnnotation
                 return;
 
             var overlay = AnnotationOverlay.CurrentOverlay;
-            var currentSection = overlay.Parent.Section;
+            var visibleSectionNumbers = GetVisibleSectionNumbers();
             
-            // Collect visible section numbers: current first, then adjacent
-            var visibleSectionNumbers = new List<int> { currentSection.Number };
-            
-            if (currentSection.ReferenceSectionAbove != null)
-            {
-                visibleSectionNumbers.Add(currentSection.ReferenceSectionAbove.Number);
-            }
-            
-            if (currentSection.ReferenceSectionBelow != null)
-            {
-                visibleSectionNumbers.Add(currentSection.ReferenceSectionBelow.Number);
-            }
+            if (visibleSectionNumbers.Count == 0)
+                return;
             
             // Update circles in visible sections
             UpdateCircleOpacityForSections(
@@ -510,20 +505,10 @@ namespace WebAnnotation
                 return;
 
             var overlay = AnnotationOverlay.CurrentOverlay;
-            var currentSection = overlay.Parent.Section;
+            var visibleSectionNumbers = GetVisibleSectionNumbers();
             
-            // Collect visible section numbers: current first, then adjacent
-            var visibleSectionNumbers = new List<int> { currentSection.Number };
-            
-            if (currentSection.ReferenceSectionAbove != null)
-            {
-                visibleSectionNumbers.Add(currentSection.ReferenceSectionAbove.Number);
-            }
-            
-            if (currentSection.ReferenceSectionBelow != null)
-            {
-                visibleSectionNumbers.Add(currentSection.ReferenceSectionBelow.Number);
-            }
+            if (visibleSectionNumbers.Count == 0)
+                return;
             
             // Update polygons in visible sections
             UpdatePolygonOpacityForSections(

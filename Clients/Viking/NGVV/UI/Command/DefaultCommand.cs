@@ -134,18 +134,18 @@ namespace Viking.UI.Commands
 
                 //Create a context menu and show it where the mouse clicked
                 //Right mouse button calls up context menu
-                ContextMenu menu = null;
+                ContextMenuStrip menu = null;
                 if (context_obj != null)
                     if(context_obj is IContextMenu menu_obj)
                     { 
                         menu = menu_obj.ContextMenu;
                         if(menu is null)
-                            menu = new ContextMenu();
+                            menu = new ContextMenuStrip();
                     }
                     else
-                        menu = new ContextMenu();
+                        menu = new ContextMenuStrip();
                 else
-                    menu = new ContextMenu();
+                    menu = new ContextMenuStrip();
 
                 //Talk to everyone who modifies context menus to see if they have a contribution
                 IProvideContextMenus[] ContextMenuProviders = ExtensionManager.CreateContextMenuProviders();

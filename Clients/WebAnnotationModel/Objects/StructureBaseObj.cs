@@ -340,7 +340,7 @@ namespace WebAnnotation.Objects
         }
 
 #if NET48
-        public virtual ContextMenu ContextMenu => null;
+        public virtual ContextMenuStrip ContextMenu => null;
 #endif
 
         public virtual Image SmallThumbnail => null;

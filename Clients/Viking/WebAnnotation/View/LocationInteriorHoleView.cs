@@ -64,23 +64,21 @@ namespace WebAnnotation.View
             }
         }
 
-        public ContextMenu ContextMenu
+        public ContextMenuStrip ContextMenu
         {
             get
             {
                 ViewModel.Location_ViewModelBase view_model = new WebAnnotation.ViewModel.Location_ViewModelBase(ID);
-                ContextMenu menu = new ContextMenu();
-                MenuItem simplify_item = new MenuItem("Simplify Polygon", view_model.ContextMenu_SimplifyPolygon)
-                {
-                    Tag = new int?(iInnerPolygon)
-                };
-                menu.MenuItems.Add(simplify_item);
+                ContextMenuStrip menu = new ContextMenuStrip();
+                ToolStripMenuItem simplify_item = new ToolStripMenuItem("Simplify Polygon");
+                simplify_item.Tag = new int?(iInnerPolygon);
+                simplify_item.Click += view_model.ContextMenu_SimplifyPolygon;
+                menu.Items.Add(simplify_item);
 
-                MenuItem remove_inner_poly = new MenuItem("Remove interior hole", view_model.ContextMenu_RemoveInnerPolygon)
-                {
-                    Tag = new int?(iInnerPolygon)
-                };
-                menu.MenuItems.Add(remove_inner_poly);
+                ToolStripMenuItem remove_inner_poly = new ToolStripMenuItem("Remove interior hole");
+                remove_inner_poly.Tag = new int?(iInnerPolygon);
+                remove_inner_poly.Click += view_model.ContextMenu_RemoveInnerPolygon;
+                menu.Items.Add(remove_inner_poly);
                 return menu;
             }
         }

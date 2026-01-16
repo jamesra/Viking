@@ -206,123 +206,121 @@ namespace WebAnnotation.ViewModel
             remove => modelObj.PropertyChanged -= value;
         }
 
-        protected ContextMenu _AddExportMenus(ContextMenu menu)
+        protected ContextMenuStrip _AddExportMenus(ContextMenuStrip menu)
         {
             if (Global.Export != null)
             {
-                MenuItem menuExport = new MenuItem("Export");
+                ToolStripMenuItem menuExport = new ToolStripMenuItem("Export");
 
                 _AddExportToTulipURL(menuExport);
 
-                menu.MenuItems.Add(menuExport);
+                menu.Items.Add(menuExport);
             }
 
             return menu;
         }
 
-        private void _AddExportToTulipURL(MenuItem menu)
+        private void _AddExportToTulipURL(ToolStripMenuItem menu)
         {
-            MenuItem menuTulipURL = new MenuItem("Tulip URL");
-            MenuItem menuMorphology = new MenuItem("Morphology", ContextMenu_ExportMorphology);
+            ToolStripMenuItem menuTulipURL = new ToolStripMenuItem("Tulip URL");
+            ToolStripMenuItem menuMorphology = new ToolStripMenuItem("Morphology");
+            menuMorphology.Click += ContextMenu_ExportMorphology;
 
-            menuTulipURL.MenuItems.Add(menuMorphology);
+            menuTulipURL.DropDownItems.Add(menuMorphology);
             _AddExportToTulipNetwork(menuTulipURL);
-            menu.MenuItems.Add(menuTulipURL);
+            menu.DropDownItems.Add(menuTulipURL);
         }
 
-        private void _AddExportToTulipNetwork(MenuItem menu)
+        private void _AddExportToTulipNetwork(ToolStripMenuItem menu)
         {
-            MenuItem menuNetwork = new MenuItem("Network", ContextMenu_ExportNetwork)
-            {
-                Tag = new long?() //Tag contains the number of hops
-            };
+            ToolStripMenuItem menuNetwork = new ToolStripMenuItem("Network");
+            menuNetwork.Tag = new long?(); //Tag contains the number of hops
+            menuNetwork.Click += ContextMenu_ExportNetwork;
 
-            MenuItem menuOneHop = new MenuItem("1 degree  of seperation", ContextMenu_ExportNetwork)
-            {
-                Tag = new long?(1)
-            };
-            MenuItem menuTwoHop = new MenuItem("2 degrees of seperation", ContextMenu_ExportNetwork)
-            {
-                Tag = new long?(2)
-            };
-            MenuItem menuThreeHop = new MenuItem("3 degrees of seperation", ContextMenu_ExportNetwork)
-            {
-                Tag = new long?(3)
-            };
-            MenuItem menuAllHop = new MenuItem("All connected", ContextMenu_ExportNetwork)
-            {
-                Tag = new long?()
-            };
+            ToolStripMenuItem menuOneHop = new ToolStripMenuItem("1 degree  of seperation");
+            menuOneHop.Tag = new long?(1);
+            menuOneHop.Click += ContextMenu_ExportNetwork;
+            ToolStripMenuItem menuTwoHop = new ToolStripMenuItem("2 degrees of seperation");
+            menuTwoHop.Tag = new long?(2);
+            menuTwoHop.Click += ContextMenu_ExportNetwork;
+            ToolStripMenuItem menuThreeHop = new ToolStripMenuItem("3 degrees of seperation");
+            menuThreeHop.Tag = new long?(3);
+            menuThreeHop.Click += ContextMenu_ExportNetwork;
+            ToolStripMenuItem menuAllHop = new ToolStripMenuItem("All connected");
+            menuAllHop.Tag = new long?();
+            menuAllHop.Click += ContextMenu_ExportNetwork;
 
-            menu.MenuItems.Add(menuNetwork);
+            menu.DropDownItems.Add(menuNetwork);
 
-            menuNetwork.MenuItems.Add(menuOneHop);
-            menuNetwork.MenuItems.Add(menuTwoHop);
-            menuNetwork.MenuItems.Add(menuThreeHop);
-            menuNetwork.MenuItems.Add(menuAllHop);
+            menuNetwork.DropDownItems.Add(menuOneHop);
+            menuNetwork.DropDownItems.Add(menuTwoHop);
+            menuNetwork.DropDownItems.Add(menuThreeHop);
+            menuNetwork.DropDownItems.Add(menuAllHop);
         }
 
-        protected ContextMenu _AddTerminalOffEdgeMenus(ContextMenu menu)
+        protected ContextMenuStrip _AddTerminalOffEdgeMenus(ContextMenuStrip menu)
         {
-            MenuItem menuExtensible = new MenuItem("Terminal", ContextMenu_OnTerminal);
-            MenuItem menuOffEdge = new MenuItem("Off Edge", ContextMenu_OnOffEdge);
+            ToolStripMenuItem menuExtensible = new ToolStripMenuItem("Terminal");
+            menuExtensible.Click += ContextMenu_OnTerminal;
+            ToolStripMenuItem menuOffEdge = new ToolStripMenuItem("Off Edge");
+            menuOffEdge.Click += ContextMenu_OnOffEdge;
 
             menuExtensible.Checked = modelObj.Terminal;
             menuOffEdge.Checked = modelObj.OffEdge;
 
-            menu.MenuItems.Add(menuExtensible);
-            menu.MenuItems.Add(menuOffEdge);
+            menu.Items.Add(menuExtensible);
+            menu.Items.Add(menuOffEdge);
 
             return menu;
         }
 
-        protected ContextMenu _AddDeleteMenu(ContextMenu menu)
+        protected ContextMenuStrip _AddDeleteMenu(ContextMenuStrip menu)
         {
-            MenuItem menuSeperator = new MenuItem();
-            MenuItem menuDelete = new MenuItem("Delete", ContextMenu_OnDelete);
+            menu.Items.Add(new ToolStripSeparator());
+            ToolStripMenuItem menuDelete = new ToolStripMenuItem("Delete");
+            menuDelete.Click += ContextMenu_OnDelete;
 
-            menu.MenuItems.Add(menuSeperator);
-            menu.MenuItems.Add(menuDelete);
+            menu.Items.Add(menuDelete);
 
             return menu;
         }
 
-        protected ContextMenu _AddCopyLocationIDMenu(ContextMenu menu)
+        protected ContextMenuStrip _AddCopyLocationIDMenu(ContextMenuStrip menu)
         {
-            MenuItem menuCopyLocationID = new MenuItem($"Copy Location ID: {ID}", ContextMenu_CopyLocationID);
-            menu.MenuItems.Add(menuCopyLocationID);
+            ToolStripMenuItem menuCopyLocationID = new ToolStripMenuItem($"Copy Location ID: {ID}");
+            menuCopyLocationID.Click += ContextMenu_CopyLocationID;
+            menu.Items.Add(menuCopyLocationID);
 
             return menu;
         }
 
-        protected void _AddConvertShapeMenus(ContextMenu menu)
+        protected void _AddConvertShapeMenus(ContextMenuStrip menu)
         {
-            MenuItem menuShape = new MenuItem("Change Shape");
+            ToolStripMenuItem menuShape = new ToolStripMenuItem("Change Shape");
 
             if (TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE)
             {
-                MenuItem menuOpenCurve = new MenuItem("Curve", ContextMenu_ConvertShape)
-                {
-                    Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE
-                };
-                menuShape.MenuItems.Add(menuOpenCurve);
+                ToolStripMenuItem menuOpenCurve = new ToolStripMenuItem("Curve");
+                menuOpenCurve.Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE;
+                menuOpenCurve.Click += ContextMenu_ConvertShape;
+                menuShape.DropDownItems.Add(menuOpenCurve);
             }
 
             if (TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE)
             {
-                MenuItem menuCircle = new MenuItem("Circle", ContextMenu_ConvertShape)
-                {
-                    Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE
-                };
-                menuShape.MenuItems.Add(menuCircle);
+                ToolStripMenuItem menuCircle = new ToolStripMenuItem("Circle");
+                menuCircle.Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
+                menuCircle.Click += ContextMenu_ConvertShape;
+                menuShape.DropDownItems.Add(menuCircle);
             }
 
             // Add segmentation option for circles
             if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE && 
                 Global.IsSegmentationServiceAvailable)
             {
-                MenuItem menuSegmentCircle = new MenuItem("Segment to Polygon...", ContextMenu_SegmentCircleToPolygon);
-                menuShape.MenuItems.Add(menuSegmentCircle);
+                ToolStripMenuItem menuSegmentCircle = new ToolStripMenuItem("Segment to Polygon...");
+                menuSegmentCircle.Click += ContextMenu_SegmentCircleToPolygon;
+                menuShape.DropDownItems.Add(menuSegmentCircle);
             }
 
             // Add segmentation option for circles
@@ -330,42 +328,45 @@ namespace WebAnnotation.ViewModel
                 TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON) &&
                 Global.IsSegmentationServiceAvailable)
             {
-                MenuItem menuSegmentPoly = new MenuItem("Resegment...", ContextMenu_SegmentPolygon);
-                menuShape.MenuItems.Add(menuSegmentPoly);
+                ToolStripMenuItem menuSegmentPoly = new ToolStripMenuItem("Resegment...");
+                menuSegmentPoly.Click += ContextMenu_SegmentPolygon;
+                menuShape.DropDownItems.Add(menuSegmentPoly);
             }
 
-            menu.MenuItems.Add(menuShape);
+            menu.Items.Add(menuShape);
         }
 
-        protected void _AddSimplifyPolygonMenus(ContextMenu menu)
+        protected void _AddSimplifyPolygonMenus(ContextMenuStrip menu)
         {
             if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON ||
                 TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON)
             {
-                MenuItem menuSimplify = new MenuItem("Simplify Shape", ContextMenu_SimplifyPolygon)
-                {
-                    Tag = new int?()
-                };
-                menu.MenuItems.Add(menuSimplify);
+                ToolStripMenuItem menuSimplify = new ToolStripMenuItem("Simplify Shape");
+                menuSimplify.Tag = new int?();
+                menuSimplify.Click += ContextMenu_SimplifyPolygon;
+                menu.Items.Add(menuSimplify);
             }
         }
 
-        protected void _AddRandomColorMenu(ContextMenu menu)
+        protected void _AddRandomColorMenu(ContextMenuStrip menu)
         {
             if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON ||
                 TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON)
             {
-                MenuItem menuRandomColor = new MenuItem("Random Color", ContextMenu_RandomColor);
-                menu.MenuItems.Add(menuRandomColor);
+                ToolStripMenuItem menuRandomColor = new ToolStripMenuItem("Random Color");
+                menuRandomColor.Click += ContextMenu_RandomColor;
+                menu.Items.Add(menuRandomColor);
             }
         }
 
-        public override ContextMenu ContextMenu
+        public override ContextMenuStrip ContextMenu
         {
             get
             {
-                ContextMenu menu = new ContextMenu();
-                menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
+                ContextMenuStrip menu = new ContextMenuStrip();
+                var propertiesItem = new ToolStripMenuItem("Properties");
+                propertiesItem.Click += ContextMenu_OnProperties;
+                menu.Items.Add(propertiesItem);
 
                 _AddCopyLocationIDMenu(menu);
                 _AddTerminalOffEdgeMenus(menu);
@@ -421,7 +422,7 @@ namespace WebAnnotation.ViewModel
 
         protected void ContextMenu_ExportNetwork(object sender, EventArgs e)
         {
-            MenuItem item = sender as MenuItem;
+            ToolStripMenuItem item = sender as ToolStripMenuItem;
             long? hops = item.Tag as long?;
 
             Global.Export.OpenNetwork(ParentID.Value, hops);
@@ -429,7 +430,7 @@ namespace WebAnnotation.ViewModel
 
         protected void ContextMenu_ConvertShape(object sender, EventArgs e)
         {
-            MenuItem item = sender as MenuItem;
+            ToolStripMenuItem item = sender as ToolStripMenuItem;
             Viking.AnnotationServiceTypes.Interfaces.LocationType targetShape = (Viking.AnnotationServiceTypes.Interfaces.LocationType)item.Tag;
 
             switch (targetShape)
@@ -451,7 +452,7 @@ namespace WebAnnotation.ViewModel
         public void ContextMenu_SimplifyPolygon(object sender, EventArgs e)
         {
             //If tag is None, we simplify the exterior.  If tag is a number, we simplify that internal polygon
-            MenuItem item = sender as MenuItem;
+            ToolStripMenuItem item = sender as ToolStripMenuItem;
             int? innerPoly = item.Tag is null ? new int?() : (int?)item.Tag;
 
             GridPolygon poly = modelObj.MosaicShape.ToPolygon();
@@ -495,7 +496,7 @@ namespace WebAnnotation.ViewModel
         public void ContextMenu_RemoveInnerPolygon(object sender, EventArgs e)
         {
             //If tag is None, we simplify the exterior.  If tag is a number, we simplify that internal polygon
-            MenuItem item = sender as MenuItem;
+            ToolStripMenuItem item = sender as ToolStripMenuItem;
             int? innerPoly = item.Tag is null ? new int?() : (int?)item.Tag;
 
             GridPolygon poly = modelObj.MosaicShape.ToPolygon();

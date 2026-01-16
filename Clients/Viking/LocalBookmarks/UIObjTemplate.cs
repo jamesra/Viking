@@ -75,19 +75,19 @@ namespace LocalBookmarks
             return _HashCode.Value; 
         }
         */
-        public override System.Windows.Forms.ContextMenu ContextMenu
+        public override System.Windows.Forms.ContextMenuStrip ContextMenu
         {
             get
             {
-                ContextMenu menu = new ContextMenu();
+                ContextMenuStrip menu = new ContextMenuStrip();
 
-                MenuItem menuProperties = new MenuItem("Properties...");
+                ToolStripMenuItem menuProperties = new ToolStripMenuItem("Properties...");
                 menuProperties.Click += OnPropertiesClick;
-                menu.MenuItems.Add(menuProperties);
+                menu.Items.Add(menuProperties);
 
-                MenuItem menuDelete = new MenuItem("Delete");
+                ToolStripMenuItem menuDelete = new ToolStripMenuItem("Delete");
                 menuDelete.Click += OnDeleteClick;
-                menu.MenuItems.Add(menuDelete);
+                menu.Items.Add(menuDelete);
 
                 return menu;
             }

@@ -3,8 +3,7 @@
 
 /outputDir:bin/$(Platform)
 /intermediateDir:obj/$(Platform)
-/platform:DesktopGL
-/config:
+/platform:Windows 
 /profile:HiDef
 /compress:False
 

@@ -14,7 +14,7 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
-    public delegate ContextMenu ContextMenuGeneratorDelegate(IViewLocation locationID);
+    public delegate ContextMenuStrip ContextMenuGeneratorDelegate(IViewLocation locationID);
 
     public abstract class LocationCanvasView : IComparable<LocationCanvasView>, IUIObjectBasic, ICanvasGeometryView, IEquatable<LocationCanvasView>,
                                                IMouseActionSupport, IPenActionSupport, IViewLocation, IHelpStrings, IContextMenu
@@ -269,7 +269,7 @@ namespace WebAnnotation.View
 
         public long? ParentID => modelObj.ParentID;
 
-        public ContextMenu ContextMenu
+        public ContextMenuStrip ContextMenu
         {
             get
             {

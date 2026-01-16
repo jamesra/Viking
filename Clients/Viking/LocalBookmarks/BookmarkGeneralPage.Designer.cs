@@ -38,17 +38,17 @@
             // labelComment
             // 
             labelComment.AutoSize = true;
-            labelComment.Location = new System.Drawing.Point(6, 162);
+            labelComment.Location = new System.Drawing.Point(6, 150);
             labelComment.Name = "labelComment";
-            labelComment.Size = new System.Drawing.Size(54, 13);
+            labelComment.Size = new System.Drawing.Size(95, 25);
             labelComment.TabIndex = 4;
             labelComment.Text = "Comment:";
             // 
             // textName
             // 
-            this.textName.Location = new System.Drawing.Point(48, 3);
+            this.textName.Location = new System.Drawing.Point(11, 34);
             this.textName.Name = "textName";
-            this.textName.Size = new System.Drawing.Size(229, 20);
+            this.textName.Size = new System.Drawing.Size(258, 31);
             this.textName.TabIndex = 1;
             // 
             // labelName
@@ -56,7 +56,7 @@
             this.labelName.AutoSize = true;
             this.labelName.Location = new System.Drawing.Point(6, 6);
             this.labelName.Name = "labelName";
-            this.labelName.Size = new System.Drawing.Size(38, 13);
+            this.labelName.Size = new System.Drawing.Size(63, 25);
             this.labelName.TabIndex = 2;
             this.labelName.Text = "Name:";
             // 
@@ -70,7 +70,7 @@
             // 
             // BookmarkGeneralPage
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.richComment);
             this.Controls.Add(labelComment);

@@ -8,7 +8,7 @@ namespace WebAnnotation.View
     {
         public Location_CanvasContextMenuView(long LocationID) : base(LocationID) { }
 
-        public static ContextMenu ContextMenuGenerator(IViewLocation loc)
+        public static ContextMenuStrip ContextMenuGenerator(IViewLocation loc)
         {
             Location_CanvasContextMenuView contextMenuView = null;
             try
@@ -17,20 +17,22 @@ namespace WebAnnotation.View
             }
             catch (ArgumentException)
             {
-                ContextMenu menu = new ContextMenu();
-                menu.MenuItems.Add($"Unable to load location {loc.ID}");
+                ContextMenuStrip menu = new ContextMenuStrip();
+                menu.Items.Add($"Unable to load location {loc.ID}");
                 return menu;
             }
 
             return contextMenuView.ContextMenu;
         }
 
-        public override ContextMenu ContextMenu
+        public override ContextMenuStrip ContextMenu
         {
             get
             {
-                ContextMenu menu = new ContextMenu();
-                menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
+                ContextMenuStrip menu = new ContextMenuStrip();
+                var propertiesItem = new ToolStripMenuItem("Properties");
+                propertiesItem.Click += ContextMenu_OnProperties;
+                menu.Items.Add(propertiesItem);
 
                 _AddExportMenus(menu);
                 _AddCopyLocationIDMenu(menu);

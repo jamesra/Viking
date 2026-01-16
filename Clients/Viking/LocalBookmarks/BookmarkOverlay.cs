@@ -143,77 +143,130 @@ namespace LocalBookmarks
 
         #endregion
 
-        public ContextMenu BuildMenuFor(IContextMenu Obj, ContextMenu Menu)
+        public ContextMenuStrip BuildMenuFor(IContextMenu Obj, ContextMenuStrip Menu) 
         { 
-            if (Menu == null) Menu = new ContextMenu();
+            if (Menu == null) Menu = new ContextMenuStrip();
 
             // Add a default menu item
-            Menu.MenuItems.Add(new MenuItem("Add Bookmark",
-                (sender, e) => {
-                    State.ViewerControl.CommandQueue.EnqueueCommand(typeof(CreateBookmarkCommand), State.ViewerControl, Global.FolderUIObjRoot);
-                }));
+            var addBookmarkItem = new ToolStripMenuItem("Add Bookmark");
+            addBookmarkItem.Click += (sender, e) => {
+                State.ViewerControl.CommandQueue.EnqueueCommand(typeof(CreateBookmarkCommand), State.ViewerControl, Global.FolderUIObjRoot);
+            };
+            Menu.Items.Add(addBookmarkItem);
 
             // If the object provides its own context menu, merge it
             if (Obj?.ContextMenu != null)
-                foreach (MenuItem item in Obj.ContextMenu.MenuItems)
-                    Menu.MenuItems.Add(item.CloneMenu());
+            {
+                foreach (ToolStripItem item in Obj.ContextMenu.Items)
+                {
+                    // Create a copy of the item
+                    if (item is ToolStripMenuItem menuItem)
+                    {
+                        Menu.Items.Add(CloneToolStripMenuItem(menuItem));
+                    }
+                    else if (item is ToolStripSeparator)
+                    {
+                        Menu.Items.Add(new ToolStripSeparator());
+                    }
+                }
+            }
 
             return Menu;
         }
 
-        public ContextMenu BuildMenuFor(object Obj, ContextMenu Menu)
+        private ToolStripMenuItem CloneToolStripMenuItem(ToolStripMenuItem original)
+        {
+            var clone = new ToolStripMenuItem(original.Text);
+            clone.Enabled = original.Enabled;
+            clone.Checked = original.Checked;
+            clone.Tag = original.Tag;
+            
+            // Clone event handlers by invoking the original handler when the new one is clicked
+            clone.Click += (sender, e) => {
+                original.PerformClick();
+            };
+
+            // Clone sub-menu items recursively
+            foreach (ToolStripItem subItem in original.DropDownItems)
+            {
+                if (subItem is ToolStripMenuItem subMenuItem)
+                {
+                    clone.DropDownItems.Add(CloneToolStripMenuItem(subMenuItem));
+                }
+                else if (subItem is ToolStripSeparator)
+                {
+                    clone.DropDownItems.Add(new ToolStripSeparator());
+                }
+            }
+
+            return clone;
+        }
+
+        public ContextMenuStrip BuildMenuFor(object Obj, ContextMenuStrip Menu)
         {
             if (Obj is null)
                 return Menu;
 
-            Menu ??= new ContextMenu(); 
+            Menu ??= new ContextMenuStrip(); 
 
             if (Obj.GetType() == typeof(FolderUIObj))
             { 
-                Menu.MenuItems.Add(new MenuItem("Delete Folder", (sender, e) =>
+                var deleteFolderItem = new ToolStripMenuItem("Delete Folder");
+                deleteFolderItem.Click += (sender, e) =>
                 {
                     // Logic to delete folder
-                }));
+                };
+                Menu.Items.Add(deleteFolderItem);
             }
             else if (Obj.GetType() == typeof(BookmarkUIObj))
             {
-                Menu.MenuItems.Add(new MenuItem("Properties", (sender, e) =>
+                var propertiesItem = new ToolStripMenuItem("Properties");
+                propertiesItem.Click += (sender, e) =>
                 {
                     // Logic to open bookmark
-                }));
+                };
+                Menu.Items.Add(propertiesItem);
 
-                Menu.MenuItems.Add(new MenuItem("Delete Bookmark", (sender, e) =>
+                var deleteBookmarkItem = new ToolStripMenuItem("Delete Bookmark");
+                deleteBookmarkItem.Click += (sender, e) =>
                 {
                     // Logic to delete bookmark
-                }));
+                };
+                Menu.Items.Add(deleteBookmarkItem);
             }
 
             return Menu;
         } 
 
-        public ContextMenu BuildMenuFor(Type ObjType, ContextMenu Menu)
+        public ContextMenuStrip BuildMenuFor(Type ObjType, ContextMenuStrip Menu)
         {
-            Menu ??= new ContextMenu();
+            Menu ??= new ContextMenuStrip();
 
             if (ObjType == typeof(FolderTreeControl))
             {
-                Menu.MenuItems.Add(new MenuItem("Create Folder", (sender, e) =>
+                var createFolderItem = new ToolStripMenuItem("Create Folder");
+                createFolderItem.Click += (sender, e) =>
                 {
                     Folder newFolder = new Folder();
                     newFolder.Name = "New Folder";
                     var newFolderUIObj = new FolderUIObj(Global.FolderUIObjRoot, newFolder);
-                })); 
+                };
+                Menu.Items.Add(createFolderItem);
             }
             else if (ObjType == typeof(BookmarkUIObj))
             {
-                Menu.MenuItems.Add(new MenuItem("Open Bookmark", (sender, e) =>
+                var openBookmarkItem = new ToolStripMenuItem("Open Bookmark");
+                openBookmarkItem.Click += (sender, e) =>
                 {
                     // Logic to open bookmark
-                }));
-                Menu.MenuItems.Add(new MenuItem("Delete Bookmark", (sender, e) =>
+                };
+                Menu.Items.Add(openBookmarkItem);
+                var deleteBookmarkItem = new ToolStripMenuItem("Delete Bookmark");
+                deleteBookmarkItem.Click += (sender, e) =>
                 {
                     // Logic to delete bookmark
-                }));
+                };
+                Menu.Items.Add(deleteBookmarkItem);
             }
 
             return Menu;

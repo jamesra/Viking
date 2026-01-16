@@ -172,23 +172,21 @@ namespace WebAnnotation.UI
 
         private void Tree_MouseDown(object sender, MouseEventArgs e)
         {
-
             if (e.Button == MouseButtons.Right)
             {
                 TreeNode node = Tree.GetNodeAt(e.Location);
 
+                // Only handle empty space clicks - node clicks are handled by ObjectTreeView.OnMouseDown
                 if (node == null)
                 {
                     Viking.UI.State.SelectedObject = null;
-                    ContextMenu menu = new ContextMenu();
+                    ContextMenuStrip menu = new ContextMenuStrip();
 
-                    MenuItem menuItem = new MenuItem("New", OnNewStructureType);
+                    ToolStripMenuItem menuItem = new ToolStripMenuItem("New");
+                    menuItem.Click += OnNewStructureType;
+                    menu.Items.Add(menuItem);
 
-                    menu.MenuItems.Add(menuItem);
-
-                    ContextMenu = menu;
-
-                    ContextMenu.Show(this, e.Location);
+                    menu.Show(Tree, e.Location);
                 }
             }
         }

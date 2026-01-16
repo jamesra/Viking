@@ -109,28 +109,34 @@ namespace LocalBookmarks
         /// <summary>
         /// Called when the selected node is null
         /// </summary>
-        public override ContextMenu ContextMenu
+        public ContextMenuStrip ContextMenu
         {
             get
             {
-                ContextMenu CMenu = base.ContextMenu;
-                if (CMenu == null)
-                    CMenu = new ContextMenu();
+                ContextMenuStrip CMenu = new ContextMenuStrip();
 
-                CMenu.MenuItems.Add(new TagMenuItem("Place Bookmark...", null, new EventHandler(ContextMenuOnNewRootBookmark)));
-                CMenu.MenuItems.Add(new TagMenuItem("New Folder", null, new EventHandler(ContextMenuOnNewRootFolder)));
+                ToolStripMenuItem bookmarkItem = new ToolStripMenuItem("Place Bookmark...");
+                bookmarkItem.Click += ContextMenuOnNewRootBookmark;
+                CMenu.Items.Add(bookmarkItem);
 
-                MenuItem ExportMenu = new MenuItem("Export");
-                CMenu.MenuItems.Add(ExportMenu);
+                ToolStripMenuItem folderItem = new ToolStripMenuItem("New Folder");
+                folderItem.Click += ContextMenuOnNewRootFolder;
+                CMenu.Items.Add(folderItem);
 
-                TagMenuItem ExportHTMLMenu = new TagMenuItem("HTML...", null, new EventHandler(ContextMenuOnExportHTML));
-                ExportMenu.MenuItems.Add(ExportHTMLMenu);
+                ToolStripMenuItem ExportMenu = new ToolStripMenuItem("Export");
+                CMenu.Items.Add(ExportMenu);
 
-                TagMenuItem ExportXMLMenu = new TagMenuItem("XML...", null, new EventHandler(ContextMenuOnExportXML));
-                ExportMenu.MenuItems.Add(ExportXMLMenu);
+                ToolStripMenuItem ExportHTMLMenu = new ToolStripMenuItem("HTML...");
+                ExportHTMLMenu.Click += ContextMenuOnExportHTML;
+                ExportMenu.DropDownItems.Add(ExportHTMLMenu);
 
-                MenuItem ImportMenu = new TagMenuItem("Import", null, new EventHandler(ContextMenuOnImportRootFolder));
-                CMenu.MenuItems.Add(ImportMenu);
+                ToolStripMenuItem ExportXMLMenu = new ToolStripMenuItem("XML...");
+                ExportXMLMenu.Click += ContextMenuOnExportXML;
+                ExportMenu.DropDownItems.Add(ExportXMLMenu);
+
+                ToolStripMenuItem ImportMenu = new ToolStripMenuItem("Import");
+                ImportMenu.Click += ContextMenuOnImportRootFolder;
+                CMenu.Items.Add(ImportMenu);
                 return CMenu;
             }
         }
@@ -335,15 +341,13 @@ namespace LocalBookmarks
                 if (node == null)
                 {
                     Viking.UI.State.SelectedObject = null;
-                    ContextMenu menu = new ContextMenu();
+                    ContextMenuStrip menu = new ContextMenuStrip();
 
-                    MenuItem menuItem = new MenuItem("New", ContextMenuOnNewRootFolder);
+                    ToolStripMenuItem menuItem = new ToolStripMenuItem("New");
+                    menuItem.Click += ContextMenuOnNewRootFolder;
+                    menu.Items.Add(menuItem);
 
-                    menu.MenuItems.Add(menuItem);
-
-                    ContextMenu = menu;
-
-                    ContextMenu.Show(this, e.Location);
+                    menu.Show(this, e.Location);
                 }
             }
         }

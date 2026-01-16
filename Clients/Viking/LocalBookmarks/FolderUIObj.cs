@@ -103,32 +103,38 @@ namespace LocalBookmarks
             }
         }
 
-        public override System.Windows.Forms.ContextMenu ContextMenu
+        public override System.Windows.Forms.ContextMenuStrip ContextMenu
         {
             get
             {
-                ContextMenu menu = base.ContextMenu;
+                ContextMenuStrip menu = base.ContextMenu;
 
-                MenuItem PlaceBookmarkMenu = new MenuItem("Place Bookmark...", new EventHandler(OnPlaceBookmark));
-                menu.MenuItems.Add(0, PlaceBookmarkMenu);
+                ToolStripMenuItem PlaceBookmarkMenu = new ToolStripMenuItem("Place Bookmark...");
+                PlaceBookmarkMenu.Click += OnPlaceBookmark;
+                menu.Items.Insert(0, PlaceBookmarkMenu);
 
-                MenuItem NewFolderMenu = new MenuItem("New Folder...", new EventHandler(OnNewFolder));
-                menu.MenuItems.Add(1, NewFolderMenu);
+                ToolStripMenuItem NewFolderMenu = new ToolStripMenuItem("New Folder...");
+                NewFolderMenu.Click += OnNewFolder;
+                menu.Items.Insert(1, NewFolderMenu);
 
-                //       MenuItem ImportMenu = new MenuItem("Import...", new EventHandler(OnImportXML));
-                //       menu.MenuItems.Add(2, ImportMenu);
+                //       ToolStripMenuItem ImportMenu = new ToolStripMenuItem("Import...");
+                //       ImportMenu.Click += OnImportXML;
+                //       menu.Items.Insert(2, ImportMenu);
 
-                MenuItem ExportMenu = new MenuItem("Export");
-                menu.MenuItems.Add(2, ExportMenu);
+                ToolStripMenuItem ExportMenu = new ToolStripMenuItem("Export");
+                menu.Items.Insert(2, ExportMenu);
 
-                MenuItem ExportHTMLMenu = new MenuItem("HTML...", new EventHandler(OnExportHTML));
-                ExportMenu.MenuItems.Add(ExportHTMLMenu);
+                ToolStripMenuItem ExportHTMLMenu = new ToolStripMenuItem("HTML...");
+                ExportHTMLMenu.Click += OnExportHTML;
+                ExportMenu.DropDownItems.Add(ExportHTMLMenu);
 
-                MenuItem ExportXMLMenu = new MenuItem("XML...", new EventHandler(OnExportXML));
-                ExportMenu.MenuItems.Add(ExportXMLMenu);
+                ToolStripMenuItem ExportXMLMenu = new ToolStripMenuItem("XML...");
+                ExportXMLMenu.Click += OnExportXML;
+                ExportMenu.DropDownItems.Add(ExportXMLMenu);
 
-                MenuItem ImportMenu = new MenuItem("Import", new EventHandler(OnImportXML));
-                menu.MenuItems.Add(3, ImportMenu);
+                ToolStripMenuItem ImportMenu = new ToolStripMenuItem("Import");
+                ImportMenu.Click += OnImportXML;
+                menu.Items.Insert(3, ImportMenu);
 
                 return menu;
             }
