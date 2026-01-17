@@ -39,28 +39,7 @@ namespace Viking
             Global.PrintAllocatedTextures();
             Global.PrintAllocatedTextureReaders();
         }
-
-        readonly Thread DiskCleanupThread = null;
-        readonly Thread TileViewModelThread = null;
-        readonly Thread TileThread = null;
-
-        private Thread CreateThread(string name, ThreadStart ThreadStartingFunction)
-        {
-            Thread T = new Thread(ThreadStartingFunction)
-            {
-                Name = name,
-                IsBackground = true,
-                Priority = ThreadPriority.BelowNormal
-            };
-
-            return T;
-        }
-
-        private void FreeThread(Thread T)
-        {
-
-        }
-
+           
         private void CacheCleaningTimer_Tick(object sender, EventArgs e)
         {
             //Fire off a thread to clean the disk
@@ -75,7 +54,7 @@ namespace Viking
 
             if (Viking.UI.State.volume != null)
             {
-                Viking.UI.State.volume.ReduceCacheFootprint(null);
+                Viking.UI.State.volume.ReduceCacheFootprint(null!); // null is valid parameter for this method
                 //ThreadPool.QueueUserWorkItem(Viking.UI.State.volume.ReduceCacheFootprint, null);
             }
 

@@ -3,6 +3,7 @@
     <OutputType>Library</OutputType>
     <TargetFrameworks>net48;</TargetFrameworks>
     <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
     <RootNamespace>WebAnnotationTests</RootNamespace>
     <AssemblyName>WebAnnotationTests</AssemblyName>
     <IsCodedUITest>false</IsCodedUITest>

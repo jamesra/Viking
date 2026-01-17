@@ -29,7 +29,7 @@ namespace Viking.UI
         /// This is not going in the right direction for supporting multiple viewer controls,
         /// but that is a major rewrite and I needed the extensions to work cleanly.
         /// </summary>
-        public static Viking.UI.Controls.SectionViewerControl ViewerControl => ViewerForm?.SectionControl;
+        public static Viking.UI.Controls.SectionViewerControl? ViewerControl => ViewerForm?.SectionControl;
 
 
         public static string CurrentMode = "";
@@ -43,7 +43,7 @@ namespace Viking.UI
         public static string userAccessLevel = "Exit";
 
         //User credentials used during authentication
-        public static Duende.IdentityModel.Client.TokenResponse UserBearerToken = null;
+        public static Duende.IdentityModel.Client.TokenResponse? UserBearerToken = null;
 
         public static System.Net.NetworkCredential UserCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
 
@@ -99,9 +99,9 @@ namespace Viking.UI
         #region Drag Drop Code
 
         public static System.Windows.Forms.MouseButtons DragDropButton;
-        private static IUIObject _DragDropObject;
+        private static IUIObject? _DragDropObject;
 
-        public static IUIObject DragDropObject
+        public static IUIObject? DragDropObject
         {
             get => _DragDropObject;
             set => _DragDropObject = value;
@@ -116,12 +116,12 @@ namespace Viking.UI
 
         #region Selection State
 
-        private static IUIObjectBasic _SelectedObject;
+        private static IUIObjectBasic? _SelectedObject;
 
         /// <summary>
         /// The currently selected object in the UI
         /// </summary>
-        public static IUIObjectBasic SelectedObject
+        public static IUIObjectBasic? SelectedObject
         {
             get => _SelectedObject;
             set

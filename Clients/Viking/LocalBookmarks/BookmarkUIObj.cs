@@ -12,8 +12,8 @@ namespace LocalBookmarks
     {
         internal static float LabelScaleFactor = 2.25f;
 
-        public VikingXNAGraphics.TextureOverlayView _shapeView;
-        public VikingXNAGraphics.LabelView _labelView;
+        public VikingXNAGraphics.TextureOverlayView? _shapeView;
+        public VikingXNAGraphics.LabelView? _labelView;
 
         public BookmarkUIObj(FolderUIObj parent)
         {

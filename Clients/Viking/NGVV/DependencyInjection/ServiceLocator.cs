@@ -10,8 +10,8 @@ namespace Viking.DependencyInjection
     public static class ServiceLocator
     {
         private static readonly object _lock = new object();
-        private static IServiceProvider _serviceProvider;
-        private static IServiceCollection _serviceCollection;
+        private static IServiceProvider? _serviceProvider;
+        private static IServiceCollection? _serviceCollection;
         private static bool _isInitialized;
 
         /// <summary>
@@ -28,7 +28,7 @@ namespace Viking.DependencyInjection
         public static void Initialize(IServiceProvider serviceProvider)
             => Initialize(serviceProvider, null);
 
-        public static void Initialize(IServiceProvider serviceProvider, IServiceCollection services)
+        public static void Initialize(IServiceProvider serviceProvider, IServiceCollection? services)
         {
             if (serviceProvider is null)
             {

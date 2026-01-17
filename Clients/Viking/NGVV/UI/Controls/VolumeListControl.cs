@@ -7,7 +7,7 @@ namespace Viking.UI.Controls
 {
     public partial class VolumeListControl : UserControl
     {
-        public string VolumeUrl
+        public string? VolumeUrl
         {
             get
             {
@@ -18,7 +18,7 @@ namespace Viking.UI.Controls
             }
         }
 
-        public string ServerUrl => listServers.SelectedItem?.ToString();
+        public string? ServerUrl => listServers.SelectedItem?.ToString();
 
         public string[] ServerUrls
         {

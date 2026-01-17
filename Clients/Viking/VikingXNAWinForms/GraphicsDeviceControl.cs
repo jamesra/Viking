@@ -37,7 +37,7 @@ namespace VikingXNAWinForms
 
         // However many GraphicsDeviceControl instances you have, they all share
         // the same underlying GraphicsDevice, managed by this helper service.
-        protected GraphicsDeviceService graphicsDeviceService;
+        protected GraphicsDeviceService? graphicsDeviceService;
 
         /// <summary>
         /// The winform is running in an STA thread.  If we take a lock on an STA thread other messages from
@@ -55,14 +55,14 @@ namespace VikingXNAWinForms
 
         readonly ServiceContainer services = new ServiceContainer();
 
-        private Microsoft.Xna.Framework.Content.ContentManager _Content;
+        private Microsoft.Xna.Framework.Content.ContentManager? _Content;
         public Microsoft.Xna.Framework.Content.ContentManager Content =>
             /*if (_Content is null)
                 {
                     _Content = new Microsoft.Xna.Framework.Content.ContentManager(this.Services);
                     _Content.RootDirectory = "Content";
                 }*/
-            graphicsDeviceService.Content;
+            graphicsDeviceService?.Content ?? throw new InvalidOperationException("GraphicsDeviceService is not initialized");
 
         #endregion
 
@@ -72,7 +72,7 @@ namespace VikingXNAWinForms
         /// <summary>
         /// Gets a GraphicsDevice that can be used to draw onto this control.
         /// </summary>
-        public GraphicsDevice Device
+        public GraphicsDevice? Device
         {
             get
             {
@@ -150,7 +150,7 @@ namespace VikingXNAWinForms
         /// </summary>
         protected override void OnPaint(PaintEventArgs e)
         {
-            string beginDrawError = BeginDraw();
+            string? beginDrawError = BeginDraw();
 
             if (PaintCallRefCount > 0 && string.IsNullOrEmpty(beginDrawError))
                 beginDrawError = "Viking is thinking, should be back in a few seconds.";
@@ -183,7 +183,7 @@ namespace VikingXNAWinForms
             else
             {
                 // If BeginDraw failed, show an error message using System.Drawing.
-                PaintUsingSystemDrawing(e.Graphics, beginDrawError);
+                PaintUsingSystemDrawing(e.Graphics, beginDrawError ?? "Unknown error");
             }
         }
 
@@ -193,7 +193,7 @@ namespace VikingXNAWinForms
         /// if this was not possible, which can happen if the graphics device is
         /// lost, or if we are running inside the Form designer.
         /// </summary>
-        string BeginDraw()
+        string? BeginDraw()
         {
             // If we have no graphics device, we must be running in the designer.
             if (graphicsDeviceService is null)
@@ -202,7 +202,7 @@ namespace VikingXNAWinForms
             }
 
             // Make sure the graphics device is big enough, and is not lost.
-            string deviceResetError = HandleDeviceReset();
+            string? deviceResetError = HandleDeviceReset();
 
             if (!string.IsNullOrEmpty(deviceResetError))
             {
@@ -214,6 +214,9 @@ namespace VikingXNAWinForms
             // largest of these controls. But what if we are currently drawing
             // a smaller control? To avoid unwanted stretching, we set the
             // viewport to only use the top left portion of the full backbuffer.
+            if (Device == null)
+                return "Graphics device is not available";
+
             Viewport viewport = new Viewport
             {
                 X = 0,
@@ -246,6 +249,9 @@ namespace VikingXNAWinForms
             try
             {
 #endif
+            if (Device == null)
+                return;
+
             Rectangle sourceRectangle = new Rectangle(0, 0, ClientSize.Width,
                                                             ClientSize.Height);
 
@@ -269,8 +275,11 @@ namespace VikingXNAWinForms
         /// that the device is not lost. Returns an error string if the device
         /// could not be reset.
         /// </summary>
-        string HandleDeviceReset()
+        string? HandleDeviceReset()
         {
+            if (Device == null)
+                return "Graphics device is not available";
+
             bool deviceNeedsReset = false;
 
             switch (Device.GraphicsDeviceStatus)
@@ -296,6 +305,9 @@ namespace VikingXNAWinForms
             // Do we need to reset the device?
             if (deviceNeedsReset)
             {
+                if (graphicsDeviceService == null)
+                    return "Graphics device service is not available";
+
                 try
                 {
                     graphicsDeviceService.ResetDevice(ClientSize.Width,

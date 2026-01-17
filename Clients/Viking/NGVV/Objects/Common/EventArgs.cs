@@ -84,7 +84,7 @@ namespace Viking.Common
     public class ViewChangeEventArgs
     {
         public string Text;
-        public string Catagory;
+        public string Catagory = string.Empty;
         public string TypeString;
         public bool Visible;
 

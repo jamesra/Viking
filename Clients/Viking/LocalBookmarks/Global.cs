@@ -52,7 +52,7 @@ namespace LocalBookmarks
             {
                 _BookmarkXMLDoc = value;
                 RecursivelyUpdateVolumePositions(FolderRoot);
-                FolderUIObjRoot = new FolderUIObj(null, FolderRoot);
+                FolderUIObjRoot = new FolderUIObj(null!, FolderRoot);
             }
         }
 
@@ -82,7 +82,7 @@ namespace LocalBookmarks
                 {
                     Viking.UI.State.MainThreadDispatcher.BeginInvoke(
                         RootBookmarkChanged,
-                        new object[] { null, new System.ComponentModel.PropertyChangedEventArgs("FolderUIObjRoot") });
+                        new object[] { null!, new System.ComponentModel.PropertyChangedEventArgs("FolderUIObjRoot") });
                 }
             }
         }
@@ -195,7 +195,7 @@ namespace LocalBookmarks
 
         #region IInitExtensions Members
 
-        public bool Initialize(IServiceProvider provider = null)
+        public bool Initialize(IServiceProvider? provider = null)
         {
             //Check if there is a local favorites XML file, if it does not exist, create it, we always return true
 

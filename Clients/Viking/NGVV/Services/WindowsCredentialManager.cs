@@ -23,7 +23,7 @@ namespace Viking.Services
         /// <param name="password">The password to save</param>
         /// <param name="serverUrl">Optional server URL for context</param>
         /// <returns>True if credentials were saved successfully</returns>
-        public static bool SaveCredentials(string username, string password, string serverUrl = null)
+        public static bool SaveCredentials(string username, string password, string? serverUrl = null)
         {
             if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
                 return false;
@@ -35,7 +35,7 @@ namespace Viking.Services
                 {
                     Username = username,
                     Password = password,
-                    ServerUrl = serverUrl,
+                    ServerUrl = serverUrl ?? string.Empty,
                     SavedAt = DateTime.UtcNow
                 };
 
@@ -97,7 +97,7 @@ namespace Viking.Services
         /// Retrieves user credentials from Windows Credential Manager.
         /// </summary>
         /// <returns>NetworkCredential if found, null otherwise</returns>
-        public static NetworkCredential GetCredentials()
+        public static NetworkCredential? GetCredentials()
         {
             try
             {

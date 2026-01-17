@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net48</TargetFramework>
 		<LangVersion>12.0</LangVersion>
+		<Nullable>enable</Nullable>
 		<NoWarn>$(NoWarn);CS0436;CA1014;CS3009;CS3001;CS3002;CS3003;CS3008</NoWarn>
 		<UseWindowsForms>true</UseWindowsForms>
 		<GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>

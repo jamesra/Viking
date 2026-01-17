@@ -37,9 +37,10 @@ namespace MeasurementExtension
         {
             Debug.Print("Measure Line");
 
-            Viking.UI.Controls.SectionViewerControl viewer = Viking.UI.State.ViewerControl;
+            Viking.UI.Controls.SectionViewerControl? viewer = Viking.UI.State.ViewerControl;
 
-            viewer.CommandQueue.EnqueueCommand<MeasureCommand>(viewer, Global.PixelWidth );
+            if (viewer != null)
+                viewer.CommandQueue.EnqueueCommand<MeasureCommand>(viewer, Global.PixelWidth );
         }
     }
 }

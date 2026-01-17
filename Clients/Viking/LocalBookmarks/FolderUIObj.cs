@@ -41,7 +41,7 @@ namespace LocalBookmarks
         {
             if (OnCreate != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null! });
             }
         }
         public static event EventHandler Create
@@ -116,10 +116,6 @@ namespace LocalBookmarks
                 ToolStripMenuItem NewFolderMenu = new ToolStripMenuItem("New Folder...");
                 NewFolderMenu.Click += OnNewFolder;
                 menu.Items.Insert(1, NewFolderMenu);
-
-                //       ToolStripMenuItem ImportMenu = new ToolStripMenuItem("Import...");
-                //       ImportMenu.Click += OnImportXML;
-                //       menu.Items.Insert(2, ImportMenu);
 
                 ToolStripMenuItem ExportMenu = new ToolStripMenuItem("Export");
                 menu.Items.Insert(2, ExportMenu);

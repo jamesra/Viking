@@ -14,7 +14,7 @@ namespace MeasurementExtension
     {
         GridVector2 Origin;
         private readonly LengthMeasurement PixelSize;
-        private readonly LabelView distanceLabel;
+        private readonly LabelView? distanceLabel;
 
         private static readonly string[] DefaultHelpStrings = new string[]
         {
@@ -84,7 +84,7 @@ namespace MeasurementExtension
         /// </summary>
         /// <param name="distance"></param>
         /// <returns>null if no value passed, otherwise as string describing the distance</returns>
-        private string DistanceToString(LengthMeasurement? distance)
+        private string? DistanceToString(LengthMeasurement? distance)
         {
             if (distance.HasValue)
             {
@@ -171,19 +171,22 @@ namespace MeasurementExtension
             DrawPosition += offset;
 
             //Draw the distance near the cursor
-            Parent.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
+            if (Parent.spriteBatch != null)
+            {
+                Parent.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
                
-            Parent.spriteBatch.DrawString(VikingXNAGraphics.Global.DefaultFont,
-                distanceLabelString,
-                new Vector2((float)DrawPosition.X, (float)DrawPosition.Y),
-                Color.DarkMagenta,
-                0,
-                new Vector2(0, 0),
-                fontScaleForVolume,
-                SpriteEffects.None,
-                0);
+                Parent.spriteBatch.DrawString(VikingXNAGraphics.Global.DefaultFont,
+                    distanceLabelString,
+                    new Vector2((float)DrawPosition.X, (float)DrawPosition.Y),
+                    Color.DarkMagenta,
+                    0,
+                    new Vector2(0, 0),
+                    fontScaleForVolume,
+                    SpriteEffects.None,
+                    0);
 
-            Parent.spriteBatch.End();
+                Parent.spriteBatch.End();
+            }
              
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }

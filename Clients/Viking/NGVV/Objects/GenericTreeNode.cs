@@ -12,12 +12,12 @@ namespace Viking.UI.Controls
     [Serializable]
     public class GenericTreeNode : System.Windows.Forms.TreeNode
     {
-        public new ObjectTreeView TreeView => base.TreeView as ObjectTreeView;
+        public new ObjectTreeView? TreeView => base.TreeView as ObjectTreeView;
 
-        public new GenericTreeNode Parent => base.Parent as GenericTreeNode;
+        public new GenericTreeNode? Parent => base.Parent as GenericTreeNode;
 
 
-        public IUIObject Object => this.Tag as IUIObject;
+        public IUIObject? Object => this.Tag as IUIObject;
 
         /// <summary>
         /// The first time we expand the node we set this value to true. Before then this node has a dummy child node under it. 

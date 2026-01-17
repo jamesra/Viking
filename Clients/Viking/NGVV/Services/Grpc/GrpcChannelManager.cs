@@ -12,8 +12,8 @@ namespace Viking.Services.Grpc
     {
         private readonly object _lock = new object();
         private readonly IGrpcServiceConfiguration _configuration;
-        private Channel _channel;
-        private string _currentServiceUrl;
+        private Channel? _channel;
+        private string? _currentServiceUrl;
 
         public GrpcChannelManager(IGrpcServiceConfiguration configuration)
         {
@@ -21,7 +21,7 @@ namespace Viking.Services.Grpc
         }
 
         /// <inheritdoc />
-        public Channel GetOrCreateChannel()
+        public Channel? GetOrCreateChannel()
         {
             string serviceUrl = _configuration.Endpoint();
 
@@ -87,7 +87,7 @@ namespace Viking.Services.Grpc
         /// </summary>
         /// <param name="rawEndpoint"></param>
         /// <returns></returns>
-        private static string FormatServiceUrl(string rawEndpoint)
+        private static string? FormatServiceUrl(string rawEndpoint)
         {
             if (string.IsNullOrWhiteSpace(rawEndpoint))
             {
@@ -100,7 +100,7 @@ namespace Viking.Services.Grpc
             bool containsScheme = trimmedEndpoint.IndexOf("://", StringComparison.Ordinal) >= 0;
             string endpointToParse = containsScheme ? trimmedEndpoint : $"http://{trimmedEndpoint}";
 
-            if (!Uri.TryCreate(endpointToParse, UriKind.Absolute, out Uri parsedUri))
+            if (!Uri.TryCreate(endpointToParse, UriKind.Absolute, out Uri? parsedUri) || parsedUri == null)
             {
                 return null;
             }

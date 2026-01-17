@@ -56,9 +56,9 @@ namespace Viking.ViewModels
         /// <summary>
         /// This should only be written via the texture member 
         /// </summary>
-        private Microsoft.Xna.Framework.Graphics.Texture2D _texture;
+        private Microsoft.Xna.Framework.Graphics.Texture2D? _texture;
 
-        Microsoft.Xna.Framework.Graphics.Texture2D texture
+        Microsoft.Xna.Framework.Graphics.Texture2D? texture
         {
             get
             { 

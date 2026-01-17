@@ -36,7 +36,7 @@ namespace Viking.Common
         /// <summary>
         /// Returns a single attribute of type from an object
         /// </summary>
-        public static Attribute GetAttribute(System.Type ObjType, System.Type AttribType)
+        public static Attribute? GetAttribute(System.Type ObjType, System.Type AttribType)
         {
             MemberInfo info = ObjType;
             Attribute[] aAttributes = (Attribute[])info.GetCustomAttributes(AttribType, true);

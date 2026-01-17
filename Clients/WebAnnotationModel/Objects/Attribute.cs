@@ -113,9 +113,13 @@ namespace WebAnnotationModel
             List<ObjAttribute> listAttrib = new List<ObjAttribute>();
             foreach (XElement attribElem in structureElem.Elements("Attrib"))
             {
+                XAttribute nameAttr = attribElem.Attribute("Name");
+                if (nameAttr == null || string.IsNullOrEmpty(nameAttr.Value))
+                    continue;
+
                 ObjAttribute a = new ObjAttribute
                 {
-                    Name = attribElem.Attribute("Name").Value
+                    Name = nameAttr.Value
                 };
                 if (attribElem.Attribute("Value") != null)
                 {

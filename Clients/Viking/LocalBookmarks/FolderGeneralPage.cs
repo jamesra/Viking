@@ -7,7 +7,7 @@ namespace LocalBookmarks
     [Viking.Common.PropertyPage(typeof(FolderUIObj))]
     public partial class FolderGeneralPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        FolderUIObj folder;
+        FolderUIObj? folder;
 
         public FolderGeneralPage()
         {
@@ -19,23 +19,32 @@ namespace LocalBookmarks
         protected override void OnShowObject(object Object)
         {
             folder = Object as FolderUIObj;
-            textName.Text = folder.Name;
-            btnColor.BackColor = folder.Color.ToSystemColor();
-            comboShape.Text = folder.Shape.ToShapeString();
+            if (folder != null)
+            {
+                textName.Text = folder.Name;
+                btnColor.BackColor = folder.Color.ToSystemColor();
+                comboShape.Text = folder.Shape.ToShapeString();
+            }
         }
 
         protected override void OnInitPage()
         {
-            textName.Text = folder.Name;
-            btnColor.BackColor = folder.Color.ToSystemColor();
-            comboShape.Text = folder.Shape.ToShapeString();
+            if (folder != null)
+            {
+                textName.Text = folder.Name;
+                btnColor.BackColor = folder.Color.ToSystemColor();
+                comboShape.Text = folder.Shape.ToShapeString();
+            }
         }
 
         protected override void OnSaveChanges()
         {
-            folder.Name = textName.Text;
-            folder.Color = btnColor.BackColor.ToXNAColor();
-            folder.Shape = comboShape.Text.ToShape();
+            if (folder != null)
+            {
+                folder.Name = textName.Text;
+                folder.Color = btnColor.BackColor.ToXNAColor();
+                folder.Shape = comboShape.Text.ToShape();
+            }
         }
 
         protected override void OnCancelChanges()

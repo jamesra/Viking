@@ -5,16 +5,16 @@
         
         
         #region Variables
-        private readonly System.EventHandler OnNewObjectEventHandler = null;
-        private readonly System.EventHandler BeforeAnyDeleteEventHandler = null;
-        private readonly System.EventHandler OnAnyDeleteEventHandler = null;
-        private readonly System.EventHandler OnAnySaveEventHandler = null;
+        private readonly System.EventHandler? OnNewObjectEventHandler = null;
+        private readonly System.EventHandler? BeforeAnyDeleteEventHandler = null;
+        private readonly System.EventHandler? OnAnyDeleteEventHandler = null;
+        private readonly System.EventHandler? OnAnySaveEventHandler = null;
 
-        protected System.EventHandler BeforeAnySaveEventHandler = null;
-        protected System.EventHandler BeforeDeleteEventHandler = null;
-        protected System.EventHandler OnDeleteEventHandler = null;
-        protected System.ComponentModel.PropertyChangedEventHandler OnValueChangeEventHandler = null;
-        protected System.EventHandler OnSaveEventHandler = null;
+        protected System.EventHandler? BeforeAnySaveEventHandler = null;
+        protected System.EventHandler? BeforeDeleteEventHandler = null;
+        protected System.EventHandler? OnDeleteEventHandler = null;
+        protected System.ComponentModel.PropertyChangedEventHandler? OnValueChangeEventHandler = null;
+        protected System.EventHandler? OnSaveEventHandler = null;
         #endregion
 
 

@@ -284,7 +284,7 @@ namespace Viking.ViewModels
 
         Type[] IUIObject.AssignableParentTypes => new Type[0];
 
-        void IUIObject.SetParent(IUIObject parent)
+        void IUIObject.SetParent(IUIObject? parent)
         {
             throw new NotImplementedException();
         }
@@ -358,7 +358,7 @@ namespace Viking.ViewModels
             }
         }
 
-        private void RaisePropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
+        private void RaisePropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

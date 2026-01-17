@@ -38,7 +38,7 @@ namespace VikingXNAWinForms
 
 
         // Singleton device service instance.
-        static GraphicsDeviceService singletonInstance;
+        static GraphicsDeviceService? singletonInstance;
 
 
         // Keep track of how many controls are sharing the singletonInstance.
@@ -99,7 +99,7 @@ namespace VikingXNAWinForms
         /// <summary>
         /// Gets a reference to the singleton instance.
         /// </summary>
-        public static GraphicsDeviceService AddRef(IntPtr windowHandle,
+        public static GraphicsDeviceService? AddRef(IntPtr windowHandle,
                                                    int width, int height)
         {
             // Increment the "how many controls sharing the device" reference count.
@@ -129,7 +129,7 @@ namespace VikingXNAWinForms
                 {
                     DeviceDisposing?.Invoke(this, EventArgs.Empty);
 
-                    graphicsDevice.Dispose();
+                    graphicsDevice?.Dispose();
                 }
 
                 graphicsDevice = null;
@@ -144,6 +144,9 @@ namespace VikingXNAWinForms
         /// </summary>
         public void ResetDevice(int width, int height)
         {
+            if (graphicsDevice == null)
+                throw new InvalidOperationException("Graphics device is not initialized");
+            
             System.Diagnostics.Debug.Assert(!graphicsDevice.IsDisposed, "Resetting disposed graphics device, why?");
             if (graphicsDevice.IsDisposed)
             {
@@ -170,12 +173,12 @@ namespace VikingXNAWinForms
         /// <summary>
         /// Gets the current graphics device.
         /// </summary>
-        public GraphicsDevice GraphicsDevice => graphicsDevice;
+        public GraphicsDevice? GraphicsDevice => graphicsDevice;
 
-        GraphicsDevice graphicsDevice;
+        GraphicsDevice? graphicsDevice;
 
         //Gets the content
-        public Microsoft.Xna.Framework.Content.ContentManager _Content;
+        public Microsoft.Xna.Framework.Content.ContentManager? _Content;
         public Microsoft.Xna.Framework.Content.ContentManager Content
         {
             get
@@ -200,9 +203,9 @@ namespace VikingXNAWinForms
 
 
         // IGraphicsDeviceService events.
-        public event EventHandler<System.EventArgs> DeviceCreated;
-        public event EventHandler<System.EventArgs> DeviceDisposing;
-        public event EventHandler<System.EventArgs> DeviceReset;
-        public event EventHandler<System.EventArgs> DeviceResetting;
+        public event EventHandler<System.EventArgs>? DeviceCreated;
+        public event EventHandler<System.EventArgs>? DeviceDisposing;
+        public event EventHandler<System.EventArgs>? DeviceReset;
+        public event EventHandler<System.EventArgs>? DeviceResetting;
     }
 }

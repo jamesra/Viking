@@ -8,6 +8,8 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
+#nullable disable
+
 namespace WebAnnotation.Service {
     using System.Runtime.Serialization;
     using System;

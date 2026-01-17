@@ -8,7 +8,7 @@ namespace Viking.UI.BaseClasses
 {
     public partial class DockingTreeControl : Viking.UI.BaseClasses.DockableUserControl
     {
-        protected TreeNode ContextMenuNode = null;
+        protected TreeNode? ContextMenuNode = null;
 
         public DockingTreeControl()
         {
@@ -35,7 +35,7 @@ namespace Viking.UI.BaseClasses
         #region Properties
 
         [Browsable(false)]
-        public IUIObject SelectedObject
+        public IUIObject? SelectedObject
         {
             get => Tree.SelectedObject;
             set => Tree.SelectedObject = value;

@@ -25,7 +25,7 @@ namespace Viking.UI.Commands
 
         public virtual ObservableCollection<string> ObservableHelpStrings => _ObservableHelpStrings; 
 
-        private object LastNearestObject = null;
+        private object? LastNearestObject = null;
 
         private string[] BuildHelpStrings()
         {

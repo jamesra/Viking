@@ -31,7 +31,7 @@ namespace LocalBookmarks
 
         static void OnHideBookmarksClick(object sender, EventArgs e)
         {
-            ToolStripMenuItem menuItem = sender as ToolStripMenuItem;
+            ToolStripMenuItem? menuItem = sender as ToolStripMenuItem;
             if (menuItem != null)
             {
                 Global.BookmarksVisible = !Global.BookmarksVisible;

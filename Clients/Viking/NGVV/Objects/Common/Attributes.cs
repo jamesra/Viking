@@ -48,7 +48,7 @@ namespace Viking.Common
         /// <summary>
         /// Object types that the command is active for
         /// </summary>
-        public System.Type ObjectType;
+        public System.Type? ObjectType;
 
         public CommandAttribute(System.Type ObjectType)
         {
@@ -155,10 +155,10 @@ namespace Viking.Common
 
         #region IComparable Members
 
-        public int CompareTo(object obj)
+        public int CompareTo(object? obj)
         {
-            VikingExtensionAttribute attrib = obj as VikingExtensionAttribute;
-            if (obj is null)
+            VikingExtensionAttribute? attrib = obj as VikingExtensionAttribute;
+            if (attrib is null)
                 return -1;
 
             return Name.CompareTo(attrib.Name);

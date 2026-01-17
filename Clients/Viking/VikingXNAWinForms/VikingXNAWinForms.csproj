@@ -15,6 +15,7 @@
 		<TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
 		<NuGetTargetMoniker>.NETFramework,Version=v4.8</NuGetTargetMoniker>
 		<LangVersion>12.0</LangVersion>
+		<Nullable>enable</Nullable>
 	</PropertyGroup>
 	
 	<!-- .NET 9.0-windows specific properties -->

@@ -44,7 +44,7 @@ namespace Viking.Common
     {
         public int SortIndex = 0;
         public bool AscendingSort = true;
-        public Type ColumnType = null;
+        public Type? ColumnType = null;
 
         public ListViewColumnSorter(int SortOnIndex, Type ColumnType)
         {
@@ -77,7 +77,7 @@ namespace Viking.Common
             if (SubB is null)
                 return -1;
 
-            if (ColumnType.IsNumericType())
+            if (ColumnType != null && ColumnType.IsNumericType())
             {
                 if (SubA.Tag is IConvertible convA && SubB.Tag is IConvertible convB)
                 {

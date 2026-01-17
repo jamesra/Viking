@@ -18,9 +18,9 @@ namespace Viking
     class TextureReaderV2 : IDisposable
     {
         readonly Uri Filename;
-        readonly string CacheFilename;
+        readonly string CacheFilename = string.Empty;
         GraphicsDevice graphicsDevice = null;
-        private Texture2D _Result = null;
+        private Texture2D? _Result = null;
         private ManualResetEvent DoneEvent = new ManualResetEvent(false);
         public bool FinishedReading = false;
         //        public RefreshDelegate RefreshMethod; 
@@ -78,9 +78,9 @@ namespace Viking
         /// By taking the texture you are responsible for calling dispose.
         /// </summary>
         /// <returns></returns>
-        public Texture2D GetTexture()
+        public Texture2D? GetTexture()
         {
-            Texture2D retVal;
+            Texture2D? retVal;
             try
             {
                 rwResultLock.EnterUpgradeableReadLock();

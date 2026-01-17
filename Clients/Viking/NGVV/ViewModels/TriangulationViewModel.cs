@@ -131,7 +131,7 @@ namespace Viking.ViewModels
 
         } 
 
-        LabelView[] _Labels = null;
+        LabelView[]? _Labels = null;
 
         LabelView[] Labels
         {

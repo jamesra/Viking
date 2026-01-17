@@ -2,7 +2,7 @@
 {
     class BookmarkTreeNode : Viking.UI.Controls.GenericTreeNode
     {
-        public BookmarkUIObj bookmark => this.Tag as BookmarkUIObj;
+        public BookmarkUIObj? bookmark => this.Tag as BookmarkUIObj;
 
 
         public BookmarkTreeNode(BookmarkUIObj folder)
@@ -12,7 +12,8 @@
 
         public override void OnDoubleClick()
         {
-            Viking.UI.State.ViewerControl.GoToLocation(new Microsoft.Xna.Framework.Vector2(
+            if (bookmark != null)
+                Viking.UI.State.ViewerControl.GoToLocation(new Microsoft.Xna.Framework.Vector2(
                                                                       (float)bookmark.X, (float)bookmark.Y)
                                                                       , bookmark.Z, bookmark.Downsample);
         }

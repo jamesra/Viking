@@ -12,8 +12,8 @@ namespace Viking.Common
             try
             {
                 string responseString = client.DownloadString(OCPServerURL);
-                string[] array = Newtonsoft.Json.JsonConvert.DeserializeObject<string[]>(responseString);
-                return array;
+                string[]? array = Newtonsoft.Json.JsonConvert.DeserializeObject<string[]>(responseString);
+                return array ?? Array.Empty<string>();
             }
             catch (WebException e)
             {

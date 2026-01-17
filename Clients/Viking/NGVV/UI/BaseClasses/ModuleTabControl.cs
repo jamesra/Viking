@@ -22,11 +22,13 @@ namespace Viking.UI.BaseClasses
                 try
                 {
 #endif
-                object Obj = Activator.CreateInstance(ModuleTabType);
-                Viking.Common.ITabExtension ITab = Obj as Viking.Common.ITabExtension;
+                object? Obj = Activator.CreateInstance(ModuleTabType);
+                if (Obj is not Viking.Common.ITabExtension tab)
+                    continue;
 
-                TabPage Page = ITab.GetPage();
-                this.TabsModules.TabPages.Add(Page);
+                TabPage? Page = tab.GetPage();
+                if (Page != null)
+                    this.TabsModules.TabPages.Add(Page);
 #if !DEBUG
                 }
                 catch (Exception Except)

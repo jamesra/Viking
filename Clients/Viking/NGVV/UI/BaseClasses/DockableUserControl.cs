@@ -26,7 +26,7 @@ namespace Viking.UI.BaseClasses
         /// <summary>
         /// If we host the control in it's own form this is a pointer to the parent form
         /// </summary>
-        private System.Windows.Forms.Form _StandaloneForm = null;
+        private System.Windows.Forms.Form? _StandaloneForm = null;
 
         public System.Windows.Forms.Form GetStandaloneForm()
         {

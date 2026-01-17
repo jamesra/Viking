@@ -65,7 +65,7 @@ namespace Viking
         /// <param name="MipMapLevels"></param>
         /// <param name="TextureSize"></param>
         /// <returns>null if TileView is in cache, otherwise true</returns>
-        protected TileView ConstructTile(TileViewModel tileViewModel,
+        protected TileView? ConstructTile(TileViewModel tileViewModel,
                                 string textureFileName,
                                 string cachedTextureFileName,
                                 string TransformName,

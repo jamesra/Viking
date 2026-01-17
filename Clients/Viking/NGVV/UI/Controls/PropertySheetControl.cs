@@ -10,7 +10,7 @@ namespace Viking.UI.Controls
 {
     public partial class PropertySheetControl : System.Windows.Forms.TabControl
     {
-        public System.Type DisplayType
+        public System.Type? DisplayType
         {
             get => _DisplayType;
             set
@@ -18,14 +18,15 @@ namespace Viking.UI.Controls
                 if (_DisplayType != value)
                 {
                     _DisplayType = value;
-                    SetDisplayType(value);
+                    if (value != null)
+                        SetDisplayType(value);
                 }
             }
         }
 
-        private System.Type _DisplayType = null;
+        private System.Type? _DisplayType = null;
 
-        public IUIObjectBasic ShownObject = null;
+        public IUIObjectBasic? ShownObject = null;
 
         [Browsable(false)]
         public Size MaxTabSize => _maxTabSize;

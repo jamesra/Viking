@@ -24,21 +24,21 @@ namespace Viking
     class CommandLineOptions
     {
         [Option('v', "Volume", Required = true, HelpText = "URL of VolumeXML file")]
-        public string VolumeURL { get; set; }
+        public string VolumeURL { get; set; } = string.Empty;
 
         [Option('u', "user", Default = "Anonymous", Required = false, HelpText = "URL of VolumeXML file")]
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         [Option('p', "pwd", Default = "connectome", Required = false, HelpText = "URL of VolumeXML file")]
-        public string Password { get; set; }
+        public string Password { get; set; } = string.Empty;
          
         //[Option('c', "position", Required = false, HelpText= "Position to start viewer at")] 
     }
 
     static class Program
     {
-        static System.IO.StreamWriter DebugLogFile = null;
-        public static TextWriter SynchronizedDebugWriter = null;
+        static System.IO.StreamWriter? DebugLogFile = null;
+        public static TextWriter? SynchronizedDebugWriter = null;
 
         public static string AppWebsite = "";
 
@@ -116,7 +116,7 @@ namespace Viking
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            ApplicationSettings appSettings = null;
+            ApplicationSettings? appSettings = null;
 
             var options = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
 
@@ -277,8 +277,8 @@ namespace Viking
 
             VikingApplicationContext context = new VikingApplicationContext(appSettings);
             context.Initialize();
-            
-            Application.Run(context);
+                        Application.Run(context);
+
 
             // Shutdown WPF Application instance if it exists
             if (System.Windows.Application.Current != null)
@@ -326,7 +326,7 @@ namespace Viking
             }
         }
 
-        private static ApplicationSettings ShowLoginWindow(string volumePath, string username = null, string password = null)
+        private static ApplicationSettings? ShowLoginWindow(string? volumePath, string? username = null, string? password = null)
         {
             // Use new WPF-based login system
             var wpfLoginWindow = new Viking.UI.WPF.LoginWindow();
@@ -478,7 +478,7 @@ namespace Viking
             }
         }
 
-        private static string GetAttributeValueCaseInsensitive(XElement element, string attributeName)
+        private static string? GetAttributeValueCaseInsensitive(XElement? element, string attributeName)
         {
             return element?
                 .Attributes()

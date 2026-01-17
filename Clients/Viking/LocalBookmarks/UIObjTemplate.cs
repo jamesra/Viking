@@ -117,9 +117,10 @@ namespace LocalBookmarks
 
         public override void SetParent(IUIObject parent)
         {
-            FolderUIObj parentFolder = parent as FolderUIObj;
+            FolderUIObj? parentFolder = parent as FolderUIObj;
 
-            Parent = parentFolder;
+            if (parentFolder != null)
+                Parent = parentFolder;
         }
 
     }

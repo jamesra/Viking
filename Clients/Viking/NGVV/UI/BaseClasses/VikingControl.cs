@@ -12,7 +12,7 @@ namespace Viking.UI.BaseClasses
         /// <summary> 
 		/// Required designer variable.
 		/// </summary>
-		private readonly System.ComponentModel.Container components = null;
+		private readonly System.ComponentModel.Container? components = null;
 
         public VikingControl()
         {

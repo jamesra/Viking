@@ -46,7 +46,7 @@ namespace Viking.Common
         /// <param name="height"></param>
         /// <param name="filename"></param>
         /// <returns></returns>
-        public static void Save(this Texture2D texture, String filename, ImageFormat format = null)
+        public static void Save(this Texture2D texture, String filename, ImageFormat? format = ImageFormat.Png)
         {
             Byte[] textureData = texture.ToRgbBytes();
             textureData.SaveBmp(texture.Width, texture.Height, filename, format);
@@ -60,7 +60,7 @@ namespace Viking.Common
         /// <param name="height"></param>
         /// <param name="filename"></param>
         /// <returns></returns>
-        public static Task SaveAsync(this Texture2D texture, String filename, ImageFormat format = null)
+        public static Task SaveAsync(this Texture2D texture, String filename, ImageFormat? format = null)
         {
             Byte[] textureData = texture.ToRgbBytes();
             return SaveBmpAsync(textureData, texture.Width, texture.Height, filename, format);
@@ -140,12 +140,12 @@ namespace Viking.Common
         /// <param name="height"></param>
         /// <param name="filename"></param>
         /// <returns></returns>
-        public static Task SaveBmpAsync(this byte[] textureData, int width, int height, string filename, ImageFormat format = null)
+        public static Task SaveBmpAsync(this byte[] textureData, int width, int height, string filename, ImageFormat? format = null)
         {
             return Task.Run(() => SaveBmp(textureData, width, height, filename, format));
         }
         
-        public static void SaveBmp(this byte[] textureData, int width, int height, string filename, ImageFormat format = null)
+        public static void SaveBmp(this byte[] textureData, int width, int height, string filename, ImageFormat? format = null)
         {
             if(format is null)
                 format = ImageFormat.Png;

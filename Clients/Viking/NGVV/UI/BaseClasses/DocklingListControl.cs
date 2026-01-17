@@ -9,7 +9,7 @@ namespace Viking.UI.BaseClasses
 {
     public partial class DockingListControl : Viking.UI.BaseClasses.DockableUserControl
     {
-        public object SelectedObject = null;
+        public object? SelectedObject = null;
 
         #region Colors
 
@@ -158,8 +158,8 @@ namespace Viking.UI.BaseClasses
 
         }
 
-        private readonly CancelEventHandler OnParentFormClosing = null;
-        private readonly Form _ParentForm = null;
+        private readonly CancelEventHandler? OnParentFormClosing = null;
+        private readonly Form? _ParentForm = null;
 
         protected virtual void parentForm_Closing(object sender, CancelEventArgs e)
         {

@@ -35,7 +35,7 @@ namespace Viking.Objects
         {
             if (OnBeforeSave != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnBeforeSave, new object[] { this, null });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnBeforeSave, new object?[] { this, null });
             }
         }
 
@@ -43,7 +43,7 @@ namespace Viking.Objects
         {
             if (OnAfterSave != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnAfterSave, new object[] { this, null });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnAfterSave, new object?[] { this, null });
             }
         }
 
@@ -51,7 +51,7 @@ namespace Viking.Objects
         {
             if (OnBeforeDelete != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnBeforeDelete, new object[] { this, null });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnBeforeDelete, new object?[] { this, null });
             }
         }
 
@@ -59,7 +59,7 @@ namespace Viking.Objects
         {
             if (OnAfterDelete != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnAfterDelete, new object[] { this, null });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnAfterDelete, new object?[] { this, null });
             }
         }
 
@@ -135,7 +135,7 @@ namespace Viking.Objects
 
         public virtual Type[] AssignableParentTypes => throw new NotImplementedException();
 
-        public virtual void SetParent(IUIObject parent)
+        public virtual void SetParent(IUIObject? parent)
         {
             throw new NotImplementedException();
         }

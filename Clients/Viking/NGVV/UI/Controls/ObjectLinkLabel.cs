@@ -22,8 +22,8 @@ namespace Viking.UI.Controls
             }
         }
 
-        private IUIObject _SourceObject;
-        private Type _Type;
+        private IUIObject? _SourceObject;
+        private Type? _Type;
 
         public ObjectLinkLabel()
         {
@@ -35,7 +35,7 @@ namespace Viking.UI.Controls
 
         }
 
-        public IUIObject SourceObject
+        public IUIObject? SourceObject
         {
             get => _SourceObject;
             set
@@ -58,7 +58,7 @@ namespace Viking.UI.Controls
             }
         }
 
-        public Type SourceType
+        public Type? SourceType
         {
             get => _Type;
             set
@@ -107,7 +107,13 @@ namespace Viking.UI.Controls
 
         protected override void OnDragDrop(System.Windows.Forms.DragEventArgs e)
         {
-            Debug.Assert(_Type != null);
+            if (UI.State.DragDropObject == null)
+                return;
+
+            Debug.Assert(_Type is not null);
+            if(_Type is null)
+                throw new NullReferenceException("Unexpected null type");
+             
             if (_Type.IsAssignableFrom(UI.State.DragDropObject.GetType()))
                 SourceObject = UI.State.DragDropObject as IUIObject;
             base.OnDragDrop(e);

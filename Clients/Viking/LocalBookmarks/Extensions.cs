@@ -38,7 +38,7 @@ namespace LocalBookmarks
             }
         }
 
-        public static Microsoft.Xna.Framework.Graphics.Texture2D ToTexture(this ShapeType shape)
+        public static Microsoft.Xna.Framework.Graphics.Texture2D? ToTexture(this ShapeType shape)
         {
             switch (shape)
             {

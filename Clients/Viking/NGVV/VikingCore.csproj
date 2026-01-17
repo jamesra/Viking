@@ -25,6 +25,7 @@
     <NuGetTargetMoniker>.NETFramework,Version=v4.8.1</NuGetTargetMoniker>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
     <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
   
   <!-- .NET 9.0-windows specific properties -->

@@ -6,7 +6,7 @@ namespace LocalBookmarks
 {
     static class MigrateV1ToV2
     {
-        public static connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd.XRoot Migrate(string BookmarkPath)
+        public static connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd.XRoot? Migrate(string BookmarkPath)
         {
             connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot oldRoot = connectomes.utah.edu.XSD.BookmarkSchema.xsd.XRoot.Load(BookmarkPath);
 

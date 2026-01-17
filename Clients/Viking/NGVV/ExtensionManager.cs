@@ -965,11 +965,11 @@ namespace Viking.Common
     /// </summary>
     internal class ExtensionLoadContext : IExtensionLoadContext
     {
-        private readonly XDocument _vikingXML;
-        private readonly XElement _volumeElement;
-        private readonly Viking.ViewModels.VolumeViewModel _volume;
+        private readonly XDocument? _vikingXML;
+        private readonly XElement? _volumeElement;
+        private readonly Viking.ViewModels.VolumeViewModel? _volume;
 
-        public ExtensionLoadContext(Viking.ViewModels.VolumeViewModel volume)
+        public ExtensionLoadContext(Viking.ViewModels.VolumeViewModel? volume)
         {
             _volume = volume;
             if (volume?.VolumeElement?.Document != null)
@@ -979,9 +979,9 @@ namespace Viking.Common
             }
         }
 
-        public XDocument VikingXML => _vikingXML;
+        public XDocument VikingXML => _vikingXML ?? throw new InvalidOperationException("VikingXML is not available");
 
-        public XElement VolumeElement => _volumeElement;
+        public XElement VolumeElement => _volumeElement ?? throw new InvalidOperationException("VolumeElement is not available");
 
         public string VolumeName
         {
@@ -1009,8 +1009,11 @@ namespace Viking.Common
     {
         int IComparer<Type>.Compare(Type x, Type y)
         {
-            PropertyPageAttribute attrib_x = Util.GetAttribute(x as Type, typeof(PropertyPageAttribute)) as PropertyPageAttribute;
-            PropertyPageAttribute attrib_y = Util.GetAttribute(y as Type, typeof(PropertyPageAttribute)) as PropertyPageAttribute;
+            PropertyPageAttribute? attrib_x = Util.GetAttribute(x, typeof(PropertyPageAttribute)) as PropertyPageAttribute;
+            PropertyPageAttribute? attrib_y = Util.GetAttribute(y, typeof(PropertyPageAttribute)) as PropertyPageAttribute;
+
+            if (attrib_x == null || attrib_y == null)
+                return 0;
 
             return attrib_x.Priority.CompareTo(attrib_y.Priority);
         }

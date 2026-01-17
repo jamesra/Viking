@@ -57,7 +57,7 @@ namespace MeasurementExtension
 
         }
 
-        private static async Task<XDocument> GetXMLFromUriAsync(Uri uri)
+        private static async Task<XDocument?> GetXMLFromUriAsync(Uri uri)
         {
             HttpClientHandler handler;
             

@@ -25,11 +25,11 @@ namespace VikingXNAWinForms
 
         public OverlayShaderEffect AnnotationOverlayEffect => DeviceEffectsStore<OverlayShaderEffect>.GetOrCreateForDevice(this.Device, this.Content);
 
-        public BasicEffect basicEffect;
+        public BasicEffect? basicEffect;
 
-        public TileLayoutEffect tileLayoutEffect;
-        public MergeHSVImagesEffect mergeHSVImagesEffect;
-        public ChannelOverlayEffect channelOverlayEffect;
+        public TileLayoutEffect? tileLayoutEffect;
+        public MergeHSVImagesEffect? mergeHSVImagesEffect;
+        public ChannelOverlayEffect? channelOverlayEffect;
 
         public readonly uint MaxTextureWidth = 4096;
         public readonly uint MaxTextureHeight = 4096;
@@ -38,8 +38,8 @@ namespace VikingXNAWinForms
 
         #region Fonts
 
-        public Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch = null;
-        public Microsoft.Xna.Framework.Graphics.SpriteFont fontArial = null;
+        public Microsoft.Xna.Framework.Graphics.SpriteBatch? spriteBatch = null;
+        public Microsoft.Xna.Framework.Graphics.SpriteFont? fontArial = null;
 
         static readonly Dictionary<string, Vector2> LabelToSize = new Dictionary<string, Vector2>();
 
@@ -62,7 +62,7 @@ namespace VikingXNAWinForms
 
         #endregion
 
-        private Scene _scene;
+        private Scene? _scene;
         /// <summary>
         /// Combination of the viewport and a camera used to draw this control
         /// </summary>
@@ -111,6 +111,8 @@ namespace VikingXNAWinForms
         /// </summary>
         private void InitializeTransform()
         {
+            if (Device == null)
+                throw new InvalidOperationException("Graphics device is not initialized");
 
             this.Scene = new VikingXNA.Scene(Device.Viewport, this.Camera);
 
@@ -167,7 +169,7 @@ namespace VikingXNAWinForms
         /// <summary>
         /// Objects used to render screenshots
         /// </summary>
-        RenderTarget2D ScreenshotRenderTarget;
+        RenderTarget2D? ScreenshotRenderTarget;
 
         protected override void Initialize()
         {
@@ -235,6 +237,9 @@ namespace VikingXNAWinForms
 
             Microsoft.Xna.Framework.Graphics.PackedVector.Byte4[] data = new Microsoft.Xna.Framework.Graphics.PackedVector.Byte4[Width * Height];
 
+            if (Device == null)
+                return data;
+
             try
             {
                 // Initialize our RenderTarget
@@ -254,17 +259,19 @@ namespace VikingXNAWinForms
 
                 Device.SetRenderTarget(null);
 
-
-
-                data = new Microsoft.Xna.Framework.Graphics.PackedVector.Byte4[ScreenshotRenderTarget.Width * ScreenshotRenderTarget.Height];
-                ScreenshotRenderTarget.GetData<Microsoft.Xna.Framework.Graphics.PackedVector.Byte4>(data);
+                if (ScreenshotRenderTarget != null)
+                {
+                    data = new Microsoft.Xna.Framework.Graphics.PackedVector.Byte4[ScreenshotRenderTarget.Width * ScreenshotRenderTarget.Height];
+                    ScreenshotRenderTarget.GetData<Microsoft.Xna.Framework.Graphics.PackedVector.Byte4>(data);
+                }
 
 
                 //         Draw(); 
             }
             finally
             {
-                Device.SetRenderTarget(null);
+                if (Device != null)
+                    Device.SetRenderTarget(null);
 
                 if (ScreenshotRenderTarget != null)
                 {
@@ -284,26 +291,35 @@ namespace VikingXNAWinForms
 
         protected override void Draw()
         {
-            Draw(this.Scene, null);
+            if (this.Scene != null)
+                Draw(this.Scene, null);
         }
 
-        private DepthStencilState DefaultDepthState = null;
-        private BlendState DefaultBlendState = null;
+        private DepthStencilState? DefaultDepthState = null;
+        private BlendState? DefaultBlendState = null;
 
         private void UpdateEffectMatricies(Scene drawnScene)
         {
             Matrix worldViewProj = drawnScene.WorldViewProj;
 
             //Enables some basic effect characteristics, such as vertex coloring and default lighting.
-            basicEffect.Projection = drawnScene.Projection;
-            basicEffect.View = drawnScene.Camera.View;
-            basicEffect.World = drawnScene.World;
+            if (basicEffect != null)
+            {
+                basicEffect.Projection = drawnScene.Projection;
+                basicEffect.View = drawnScene.Camera.View;
+                basicEffect.World = drawnScene.World;
+            }
 
-            tileLayoutEffect.WorldViewProjMatrix = worldViewProj;
-            this.channelOverlayEffect.WorldViewProjMatrix = worldViewProj;
-            this.mergeHSVImagesEffect.WorldViewProjMatrix = worldViewProj;
-            this.AnnotationOverlayEffect.WorldViewProjMatrix = worldViewProj;
-            this.PolygonOverlayEffect.WorldViewProjMatrix = worldViewProj;
+            if (tileLayoutEffect != null)
+                tileLayoutEffect.WorldViewProjMatrix = worldViewProj;
+            if (this.channelOverlayEffect != null)
+                this.channelOverlayEffect.WorldViewProjMatrix = worldViewProj;
+            if (this.mergeHSVImagesEffect != null)
+                this.mergeHSVImagesEffect.WorldViewProjMatrix = worldViewProj;
+            if (this.AnnotationOverlayEffect != null)
+                this.AnnotationOverlayEffect.WorldViewProjMatrix = worldViewProj;
+            if (this.PolygonOverlayEffect != null)
+                this.PolygonOverlayEffect.WorldViewProjMatrix = worldViewProj;
         }
 
         /// <summary>
@@ -311,8 +327,11 @@ namespace VikingXNAWinForms
         /// </summary>
         /// <param name="drawnScene"></param>
         /// <param name="renderTarget"></param>
-        protected void Draw(Scene drawnScene, RenderTarget2D renderTarget)
+        protected void Draw(Scene drawnScene, RenderTarget2D? renderTarget)
         {
+            if (Device == null)
+                return;
+
             Device.SetRenderTarget(renderTarget);
             try
             {
@@ -324,7 +343,8 @@ namespace VikingXNAWinForms
                 Device.Viewport = drawnScene.Viewport;
             }
 
-            AnnotationOverlayEffect.RenderTargetSize = drawnScene.Viewport;
+            if (AnnotationOverlayEffect != null)
+                AnnotationOverlayEffect.RenderTargetSize = drawnScene.Viewport;
             this.LumaOverlayLineManager.RenderTargetSize = drawnScene.Viewport;
 
 #if DEBUG
@@ -361,7 +381,7 @@ namespace VikingXNAWinForms
 
             Device.BlendState = DefaultBlendState;
 
-            SamplerState sampleState = Device.SamplerStates[0];
+            SamplerState? sampleState = Device?.SamplerStates[0];
 
             if (sampleState is null || sampleState.IsDisposed ||
                 (sampleState.AddressU != TextureAddressMode.Clamp || sampleState.AddressV != TextureAddressMode.Clamp))
@@ -393,7 +413,7 @@ namespace VikingXNAWinForms
                 Device.RasterizerState.IsDisposed ||
                 Device.RasterizerState.CullMode != CullMode.None)
             {
-                RasterizerState rState = null;
+                RasterizerState? rState = null;
                 try
                 {
                     rState = new RasterizerState
@@ -497,6 +517,9 @@ namespace VikingXNAWinForms
             }
             //Figure out how much we have to scale the downsample to keep the same scene in view if minimizing
 
+            if (Device == null)
+                return;
+
             Viewport viewport = Device.Viewport;
             if (Device != null)
             {
@@ -505,7 +528,8 @@ namespace VikingXNAWinForms
                 if (viewport.Width != ClientBounds.Width ||
                     viewport.Height != ClientBounds.Height)
                 {
-                    this.graphicsDeviceService.ResetDevice(ClientRectangle.Width, ClientRectangle.Height);
+                    if (this.graphicsDeviceService != null)
+                        this.graphicsDeviceService.ResetDevice(ClientRectangle.Width, ClientRectangle.Height);
                 }
             }
 
@@ -514,7 +538,8 @@ namespace VikingXNAWinForms
 
             //Trace.WriteLine("Projection Bounds: " + ProjRect.ToString() + " Client Rect: " + ClientRectangle.ToString());
 
-            scene.Viewport = Device.Viewport;
+            if (Device != null)
+                scene.Viewport = Device.Viewport;
         }
 
         private void InitializeComponent()

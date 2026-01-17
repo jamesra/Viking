@@ -13,29 +13,55 @@ using VikingXNAWinForms;
 
 namespace Viking.UI.Commands
 {
+
+    public interface ICommandQueueEntry
+    {
+        /// <summary>
+        /// Depending on the type of entry this call will return an existing command object or create a new one. 
+        /// Should be called only once
+        /// </summary>
+        /// <returns></returns> 
+        Command GetOrCreateCommand();
+    }
+
     /// <summary>
     /// An entry either contains an existing command object or the type and constructor parameters to create a new command
     /// </summary>
-    public readonly struct CommandQueueEntry 
-    {
-        public readonly System.Type CommandType;
-        public readonly Object[] Args;
+    public readonly struct CommandQueueEntry : ICommandQueueEntry
+    { 
         public readonly Command commandObj;
-
-        public CommandQueueEntry(System.Type type, Object[] args)
-        {
-            this.CommandType = type; 
-            this.Args = args;
-            this.commandObj = null; 
-        }
+         
 
         public CommandQueueEntry(Command command)
-        {
-            this.CommandType = null; 
-            this.Args = null;
-            this.commandObj = command;
-            
+        { 
+            this.commandObj = command; 
         }
+
+        public Command GetOrCreateCommand()
+        {
+            return commandObj;
+        }
+    }
+
+    /// <summary>
+    /// An entry either contains an existing command object or the type and constructor parameters to create a new command
+    /// </summary>
+    public readonly struct CommandConstructorQueueEntry : ICommandQueueEntry
+    {
+        public readonly System.Type CommandType;
+        public readonly Object[] Args; 
+
+        public CommandConstructorQueueEntry(System.Type type, object[]? args)
+        {
+            this.CommandType = type;
+            this.Args = args ?? Array.Empty<Object>();
+        }
+         
+        public Command GetOrCreateCommand()
+        {
+            return Activator.CreateInstance(CommandType, Args) as Command ?? throw new NullReferenceException($"Failed to create command of type {CommandType}"); 
+        }
+
     }
 
     public class CommandInjectedEventHandler : System.EventArgs
@@ -48,12 +74,13 @@ namespace Viking.UI.Commands
             this.injectedCommand = injectedCommand;
             this.SaveCurrentCommand = SaveCurrentCommand;
         }
+
     }
 
 
     public class CommandQueue
     {
-        private readonly Queue<CommandQueueEntry> _CommandQueue = new Queue<CommandQueueEntry>();
+        private readonly Queue<ICommandQueueEntry> _CommandQueue = new Queue<ICommandQueueEntry>();
 
         public System.Collections.Specialized.NotifyCollectionChangedEventHandler OnQueueChanged;
         public delegate void CommandInjectedHandler(object sender, CommandInjectedEventHandler e);
@@ -62,7 +89,8 @@ namespace Viking.UI.Commands
                 
         public void EnqueueCommand(System.Type CommandType)
         {
-            EnqueueCommand(CommandType, new Object[] { Viking.UI.State.ViewerControl });
+            var viewerControl = Viking.UI.State.ViewerControl;
+            EnqueueCommand(CommandType, new Object[] { viewerControl! });
         }
 
         /// <summary>
@@ -73,7 +101,7 @@ namespace Viking.UI.Commands
         /// <param name="Args"></param>
         public void EnqueueCommand(System.Type CommandType, params object[] Args)
         {
-            CommandQueueEntry entry = new CommandQueueEntry(CommandType, Args);
+            ICommandQueueEntry entry = new CommandConstructorQueueEntry(CommandType, Args);
             _CommandQueue.Enqueue(entry);
             OnQueueChanged(this, new System.Collections.Specialized.NotifyCollectionChangedEventArgs(System.Collections.Specialized.NotifyCollectionChangedAction.Add, entry));
         }
@@ -86,7 +114,7 @@ namespace Viking.UI.Commands
         /// <param name="Args"></param>
         public void EnqueueCommand<T>(params object[] Args)
         {
-            CommandQueueEntry entry = new CommandQueueEntry(typeof(T), Args);
+            ICommandQueueEntry entry = new CommandConstructorQueueEntry(typeof(T), Args);
             _CommandQueue.Enqueue(entry);
             OnQueueChanged(this, new System.Collections.Specialized.NotifyCollectionChangedEventArgs(System.Collections.Specialized.NotifyCollectionChangedAction.Add, entry));
         }
@@ -113,22 +141,16 @@ namespace Viking.UI.Commands
         /// Pop the next command of the queue.  If the queue is empty, return the default command
         /// </summary>
         /// <returns></returns>
-        public Command Pop()
+        public Command? Pop()
         {
-            Command newCommand = null;
-
             //Check if there is a command in the queue
             if (_CommandQueue.Count != 0)
             {
-                CommandQueueEntry nextCommand = _CommandQueue.Dequeue();
-
-                if (nextCommand.commandObj != null)
-                    newCommand = nextCommand.commandObj;
-                else
-                    newCommand = Activator.CreateInstance(nextCommand.CommandType, nextCommand.Args) as Command;
+                ICommandQueueEntry nextCommand = _CommandQueue.Dequeue();
+                return nextCommand.GetOrCreateCommand();
             }
 
-            return newCommand;
+            return null;
         }
 
         /// <summary>
@@ -137,7 +159,7 @@ namespace Viking.UI.Commands
         /// <returns></returns>
         public void Push(Command command)
         {
-            List<CommandQueueEntry> existingQueue = new List<CommandQueueEntry>(_CommandQueue.ToArray());
+            List<ICommandQueueEntry> existingQueue = new List<ICommandQueueEntry>(_CommandQueue.ToArray());
             existingQueue.Insert(0, new CommandQueueEntry(command)); 
             _CommandQueue.Clear();
             foreach (CommandQueueEntry e in existingQueue)

@@ -1,3 +1,5 @@
+#nullable disable
+
 using System;
 using System.Collections.Specialized;
 using System.Configuration;
@@ -34,7 +36,13 @@ namespace Viking.Properties
                     SerializeAs = serializeAs,
                     DefaultValue = null
                 };
-                property.Attributes.Add(typeof(UserScopedSettingAttribute), new UserScopedSettingAttribute());
+                
+                // Check if UserScopedSettingAttribute already exists before adding
+                if (!property.Attributes.Contains(typeof(UserScopedSettingAttribute)))
+                {
+                    property.Attributes.Add(typeof(UserScopedSettingAttribute), new UserScopedSettingAttribute());
+                }
+                
                 Properties.Add(property);
                 Reload();
             }

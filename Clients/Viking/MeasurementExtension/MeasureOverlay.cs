@@ -11,7 +11,7 @@ namespace MeasurementExtension
     [Viking.Common.SectionOverlay("Scale Bar")]
     public class MeasureOverlay : Viking.Common.ISectionOverlayExtension
     {
-        private SectionViewerControl Parent; 
+        private SectionViewerControl? Parent; 
 
         public static double MeasureBarWidthScreenTargetFraction = 0.15;
         public static double MeasureBarWidthScreenMinimumFraction = 0.075;
@@ -26,7 +26,7 @@ namespace MeasurementExtension
           
         public void Draw(GraphicsDevice graphicsDevice, Scene scene, Texture BackgroundLuma, Texture BackgroundColors, ref int NextStencilValue)
         {
-            if (!Measurement.Properties.Settings.Default.ShowScaleBar)
+            if (!Measurement.Properties.Settings.Default.ShowScaleBar || Parent == null)
                 return; 
 
             double ViewWidthInPixels = scene.VisibleWorldBounds.Width;
@@ -79,7 +79,8 @@ namespace MeasurementExtension
                 FontSize = BarHeightInPixels * 0.9
             };
 
-            LabelView.Draw(Parent.spriteBatch, VikingXNAGraphics.Global.DefaultFont, scene,  new LabelView[] { label });
+            if (Parent.spriteBatch != null)
+                LabelView.Draw(Parent.spriteBatch, VikingXNAGraphics.Global.DefaultFont, scene,  new LabelView[] { label });
         }
 
         public int DrawOrder()
@@ -92,7 +93,7 @@ namespace MeasurementExtension
             return "Scale Bar";
         }
 
-        public object ObjectAtPosition(GridVector2 WorldPosition, out double distance)
+        public object? ObjectAtPosition(GridVector2 WorldPosition, out double distance)
         {
             distance = double.MaxValue;
             return null;

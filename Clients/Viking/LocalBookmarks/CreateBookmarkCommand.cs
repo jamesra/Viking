@@ -10,7 +10,7 @@ namespace LocalBookmarks
         GridVector2 bookmarkPosition;
         FolderUIObj ParentFolder;
 
-        VikingXNAGraphics.TextureCircleView circleView;
+        VikingXNAGraphics.TextureCircleView? circleView;
 
         public CreateBookmarkCommand(Viking.UI.Controls.SectionViewerControl parent, FolderUIObj parentFolder)
             : base(parent)

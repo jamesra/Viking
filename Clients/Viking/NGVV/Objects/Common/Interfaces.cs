@@ -194,7 +194,7 @@ namespace Viking.Common
         /// Add ourselves to the passed parent as a child object
         /// </summary>
         /// <param name="parent"></param>
-        void SetParent(IUIObject parent);
+        void SetParent(IUIObject? parent);
 
         #endregion
 
