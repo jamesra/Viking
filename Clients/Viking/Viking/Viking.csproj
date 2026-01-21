@@ -11,10 +11,11 @@
     <ManifestTimestampUrl>http://timestamp.digicert.com</ManifestTimestampUrl>
     <ProductName>Viking</ProductName>
     <PublisherName>Marc Lab</PublisherName>
-    <ApplicationVersion>1.2.2.0</ApplicationVersion>
-    <FileVersion>1.2.2.0</FileVersion>
-    <AssemblyVersion>1.2.2.0</AssemblyVersion>
-    <Deterministic>True</Deterministic>
+		<ApplicationVersion>1.2.2.0</ApplicationVersion>
+		<FileVersion>1.2.2.0</FileVersion>
+		<AssemblyVersion>1.2.2.0</AssemblyVersion>
+		<Deterministic>True</Deterministic>
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <NoWarn>$(NoWarn);CS0436;CA1014;CS3009</NoWarn>
     <!-- Enable automatic binding redirects -->
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>

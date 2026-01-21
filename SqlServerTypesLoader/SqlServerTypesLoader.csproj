@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
     <AssemblyName>SqlServerTypesLoader</AssemblyName>
     <RootNamespace>SqlServerTypesLoader</RootNamespace>
     <Description>SDK for loading SQL Server native spatial assemblies</Description>

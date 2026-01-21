@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFrameworks>net48;</TargetFrameworks>
@@ -24,7 +24,7 @@
     <TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
     <NuGetTargetMoniker>.NETFramework,Version=v4.8.1</NuGetTargetMoniker>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
-    <LangVersion>12.0</LangVersion>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   

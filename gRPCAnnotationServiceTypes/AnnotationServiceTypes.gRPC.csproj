@@ -1,7 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
     <RootNamespace>Viking.AnnotationServiceTypes.gRPC.V1</RootNamespace>
     <AssemblyName>AnnotationServiceTypes.gRPC</AssemblyName>
   </PropertyGroup>

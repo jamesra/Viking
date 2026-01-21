@@ -1,5 +1,6 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
+	<LangVersion>latest</LangVersion>
 		<OutputType>Library</OutputType>
 		<TargetFramework>net9.0-windows</TargetFramework>
 		<RootNamespace>VikingXNAGraphics</RootNamespace>

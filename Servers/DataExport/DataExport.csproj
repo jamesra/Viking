@@ -1,6 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
     <RootNamespace>DataExport</RootNamespace>
     <AssemblyName>DataExport</AssemblyName>
     <Company>Microsoft</Company>
@@ -14,9 +15,9 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.OData.Client" Version="8.1.0" />
     <PackageReference Include="Microsoft.OData.Core" Version="8.1.0" />
     <PackageReference Include="Microsoft.OData.Edm" Version="8.1.0" />

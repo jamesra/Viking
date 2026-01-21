@@ -1,9 +1,9 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<!-- Target .NET Framework 4.8 -->
 		<TargetFramework>net48</TargetFramework>
-		<LangVersion>12.0</LangVersion>
+		<LangVersion>latest</LangVersion>
 		<NoWarn>$(NoWarn);CS0436;CA1014;CS3009;CS3001</NoWarn>
 		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
 		<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>

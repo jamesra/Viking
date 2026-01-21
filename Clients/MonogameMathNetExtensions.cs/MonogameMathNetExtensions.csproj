@@ -1,6 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
     <RootNamespace>MonogameMathNetExtensions</RootNamespace>
     <AssemblyName>MonogameMathNetExtensions</AssemblyName>
     <AssemblyTitle>MonogameMathNetExtensions</AssemblyTitle>

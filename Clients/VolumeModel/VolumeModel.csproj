@@ -9,7 +9,7 @@
   <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
     <TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
     <NuGetTargetMoniker>.NETFramework,Version=v4.8</NuGetTargetMoniker>
-    <LangVersion>12.0</LangVersion>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

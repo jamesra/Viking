@@ -1,13 +1,14 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFrameworks>net48;net9.0</TargetFrameworks>
 		<RootNamespace>AnnotationVizLib</RootNamespace>
 		<AssemblyName>AnnotationVizLib</AssemblyName>
 		<OutputType>Library</OutputType>
-		<LangVersion>12.0</LangVersion>
+		<LangVersion>latest</LangVersion>
 		<SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
 		<Description>Cross-platform image processing library.</Description>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj" />

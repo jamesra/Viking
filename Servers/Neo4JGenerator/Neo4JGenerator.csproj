@@ -1,5 +1,6 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+  <LangVersion>latest</LangVersion>
     <OutputType>Exe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
     <RootNamespace>Neo4JGenerator</RootNamespace>
@@ -15,6 +16,7 @@
     <PackageReference Include="Microsoft.OData.Core" Version="8.1.0" />
     <PackageReference Include="Microsoft.OData.Edm" Version="8.1.0" />
     <PackageReference Include="Microsoft.Spatial" Version="8.1.0" />
+    <PackageReference Include="Simple.OData.V4.Client" Version="6.0.1" />
     <PackageReference Include="System.IO" Version="4.3.0" />
     <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
   </ItemGroup>
