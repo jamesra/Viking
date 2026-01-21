@@ -1,4 +1,4 @@
-﻿// #define USEASPMEMBERSHIP
+// #define USEASPMEMBERSHIP
 
 using CommandLine;
 using System;
@@ -13,10 +13,12 @@ using System.Windows.Forms;
 using CommandLine.Text;
 using Viking.UI.Forms;
 using VikingCoreResources = Viking.Properties.Resources;
-using Squirrel;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Linq;
+using Viking.UI.WPF;
+using Velopack;
 
 
 namespace Viking
@@ -31,7 +33,7 @@ namespace Viking
 
         [Option('p', "pwd", Default = "connectome", Required = false, HelpText = "URL of VolumeXML file")]
         public string Password { get; set; } = string.Empty;
-         
+
         //[Option('c', "position", Required = false, HelpText= "Position to start viewer at")] 
     }
 
@@ -65,7 +67,7 @@ namespace Viking
 
             return installedValue != 0;
         }
-        
+
         /// <summary>
         /// Check the known registry entries for an XNA install
         /// </summary>
@@ -83,9 +85,30 @@ namespace Viking
         /// </summary>
         [STAThread]
         static void Main(string[] args)
-        {  
-            // Check for Squirrel updates
-            CheckForUpdates();
+        {
+            // Velopack must run first to handle setup/uninstall/update hooks
+            // Configure update notifications and automatic update checking
+            VelopackApp.Build()
+                .OnFirstRun((version) => {
+                    // This runs only the first time the app is launched after a fresh install
+                    Trace.WriteLine($"[Velopack] First run detected - Version {version}");
+                })
+                .OnAfterUpdate((version) => {
+                    // This runs the first time the app is launched after an update
+                    Trace.WriteLine($"[Velopack] Update detected - New version {version} installed");
+                    MessageBox.Show(
+                        $"Viking has been updated to version {version}!\n\n" +
+                        "You are now running the latest version.",
+                        "Update Complete",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
+                })
+                .Run();
+            
+            // Check for updates in the background after application startup
+            // This runs asynchronously and won't block the UI
+            Task.Run(async () => await CheckForUpdatesAsync());
 
             //ConfigureHighDpiMode();
             Application.EnableVisualStyles();
@@ -97,7 +120,7 @@ namespace Viking
             Trace.WriteLine("Current Directory: " + System.Environment.CurrentDirectory, "Viking");
             Trace.WriteLine("Application Directory: " + execAssembly.Location, "Viking");
 
-            var culture = CultureInfo.CreateSpecificCulture("en-US");
+            CultureInfo culture = CultureInfo.CreateSpecificCulture("en-US");
             CultureInfo.DefaultThreadCurrentCulture = culture;
 
 #if DEBUG
@@ -107,8 +130,8 @@ namespace Viking
             //Change to the executing assemblies directory so we can load modules correctly
             //  System.Environment.CurrentDirectory = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
-                                SqlServerTypesLoader.Loader.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
-             
+            SqlServerTypesLoader.Loader.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+
 
             System.Threading.ThreadPool.GetMaxThreads(out int workThreads, out int portThreads);
             System.Net.ServicePointManager.DefaultConnectionLimit = workThreads;
@@ -191,30 +214,27 @@ namespace Viking
             //   Logon nag screen, I've only added this tiny code here, and made a logon form in 
             //  Viking/UI/forms
 
-            options.WithParsed(o =>
-            {
-                appSettings = TryBypassSplash(o);
-            }).WithNotParsed(errors =>
+            options.WithParsed(o => appSettings = TryBypassSplash(o)).WithNotParsed(errors =>
             {
                 // Create a new help text with error information
-                var errorHelpText = HelpText.AutoBuild(options);
+                HelpText errorHelpText = HelpText.AutoBuild(options);
                 errorHelpText.AddPreOptionsLine("ERROR: Unable to parse command line arguments.");
                 errorHelpText.AddPreOptionsLine("The following errors occurred:");
-                
+
                 foreach (var error in errors)
                 {
                     errorHelpText.AddPreOptionsLine($"  {error}");
                 }
-                
+
                 errorHelpText.AddPreOptionsLine("");
                 Console.WriteLine(errorHelpText);
-                
+
                 // Show login window as fallback
                 appSettings = ShowLoginWindow(null, null, null);
             });
 
             //Close the program if no settings were provided or the volume is missing
-            if (appSettings == null || string.IsNullOrWhiteSpace(appSettings.VolumeURL))
+            if (appSettings is null || string.IsNullOrWhiteSpace(appSettings.VolumeURL))
                 return;
             /*
 #if !USEASPMEMBERSHIP
@@ -275,16 +295,13 @@ namespace Viking
             }
             */
 
-            VikingApplicationContext context = new VikingApplicationContext(appSettings);
+            VikingApplicationContext context = new(appSettings);
             context.Initialize();
-                        Application.Run(context);
+            Application.Run(context);
 
 
             // Shutdown WPF Application instance if it exists
-            if (System.Windows.Application.Current != null)
-            {
-                System.Windows.Application.Current.Shutdown();
-            }
+            System.Windows.Application.Current?.Shutdown();
 
             SynchronizedDebugWriter?.Close();
             DebugLogFile?.Close();
@@ -318,28 +335,28 @@ namespace Viking
 
             MathNet.Numerics.Control.MaxDegreeOfParallelism = numMathProcs;
             bool MKLSuccess = Geometry.Global.TryUseNativeMKL();
-            if(MKLSuccess)
+            if (MKLSuccess)
                 Console.WriteLine("Success loading MKL Library");
             else
-            { 
-                Console.WriteLine("Unable to load MKL Libarry"); 
+            {
+                Console.WriteLine("Unable to load MKL Libarry");
             }
         }
 
         private static ApplicationSettings? ShowLoginWindow(string? volumePath, string? username = null, string? password = null)
         {
             // Use new WPF-based login system
-            var wpfLoginWindow = new Viking.UI.WPF.LoginWindow();
-            var appSettings = new ApplicationSettings();
+            LoginWindow wpfLoginWindow = new();
+            ApplicationSettings appSettings = new();
             var settings = Viking.Properties.Settings.Default;
-            
+
             // Provide recent volume URLs from settings
             wpfLoginWindow.RecentVolumeUrls = settings.VolumeURLs;
             wpfLoginWindow.RecentSegmentationServiceUrls = settings.SegmentationServiceUrls;
 
             var initialSegmentationUrl = settings.LastSegmentationServiceUrl;
             wpfLoginWindow.InitialSegmentationServiceUrl = string.IsNullOrWhiteSpace(initialSegmentationUrl) ? null : initialSegmentationUrl;
-            
+
             var result = wpfLoginWindow.ShowDialog();
 
             if (result != true)
@@ -367,51 +384,43 @@ namespace Viking
 
             if (!string.IsNullOrEmpty(appSettings.VolumeURL))
             {
-                if (settings.VolumeURLs == null)
+                if (settings.VolumeURLs is null)
                 {
-                    settings.VolumeURLs = new System.Collections.Specialized.StringCollection();
+                    settings.VolumeURLs = [];
                     settingsChanged = true;
                 }
 
                 // Remove duplicate entries by URL (checking both "URL" and "URL|Name" formats)
                 var volumeName = wpfLoginWindow.VolumeName;
-                var entriesToRemove = new List<string>();
+                List<string> entriesToRemove = [];
                 foreach (string entry in settings.VolumeURLs)
                 {
                     if (string.IsNullOrWhiteSpace(entry))
                         continue;
-                    
+
                     // Parse entry to extract URL
-                    var parts = entry.Split(new[] { '|' }, 2);
+                    var parts = entry.Split(['|'], 2);
                     var entryUrl = parts[0];
-                    
+
                     // If URLs match, mark for removal
                     if (string.Equals(entryUrl, appSettings.VolumeURL, StringComparison.OrdinalIgnoreCase))
                     {
                         entriesToRemove.Add(entry);
                     }
                 }
-                
+
                 foreach (var entry in entriesToRemove)
                 {
                     settings.VolumeURLs.Remove(entry);
                 }
 
                 // Format entry: "URL|Name" or just "URL" if name is null/empty
-                string entryToAdd;
-                if (!string.IsNullOrWhiteSpace(volumeName))
-                {
-                    entryToAdd = $"{appSettings.VolumeURL}|{volumeName}";
-                }
-                else
-                {
-                    entryToAdd = appSettings.VolumeURL;
-                }
+                string entryToAdd = !string.IsNullOrWhiteSpace(volumeName) ? $"{appSettings.VolumeURL}|{volumeName}" : appSettings.VolumeURL;
 
                 // Insert at top of list (most recent)
                 settings.VolumeURLs.Insert(0, entryToAdd);
                 settingsChanged = true;
-                
+
                 System.Diagnostics.Trace.WriteLine($"[Viking] Saved volume to recent volumes: {entryToAdd}");
             }
 
@@ -423,7 +432,7 @@ namespace Viking
 
             if (!string.IsNullOrWhiteSpace(selectedSegmentationUrl))
             {
-                var history = settings.SegmentationServiceUrls ?? new StringCollection();
+                var history = settings.SegmentationServiceUrls ?? [];
                 if (history.Contains(selectedSegmentationUrl))
                 {
                     history.Remove(selectedSegmentationUrl);
@@ -443,7 +452,7 @@ namespace Viking
 
         private static void PopulateAnnotationUrlFromVolume(ApplicationSettings appSettings)
         {
-            if (appSettings == null ||
+            if (appSettings is null ||
                 !string.IsNullOrWhiteSpace(appSettings.AnnotationURL) ||
                 string.IsNullOrWhiteSpace(appSettings.VolumeURL))
             {
@@ -457,7 +466,7 @@ namespace Viking
                     .GetResult();
 
                 var volumeElement = Viking.VolumeModel.Volume.GetVolumeElement(volumeDocument);
-                if (volumeElement == null)
+                if (volumeElement is null)
                 {
                     return;
                 }
@@ -488,21 +497,21 @@ namespace Viking
 
         [Conditional("DEBUG")]
         private static void CreateDebugListener()
-        { 
+        {
             string LogPath = System.Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Viking\\Logs";
             if (!Directory.Exists(LogPath))
                 Directory.CreateDirectory(LogPath);
 
-            string FileName = LogPath +"\\" + DateTime.Now.ToString("MM.dd.yyyy HH.mm.ss") + ".log";
+            string FileName = LogPath + "\\" + DateTime.Now.ToString("MM.dd.yyyy HH.mm.ss") + ".log";
 
             DebugLogFile = System.IO.File.CreateText(FileName);
 
             TextWriter SynchronizedDebugWriter = StreamWriter.Synchronized(DebugLogFile);
 
-            TextWriterTraceListener Listener = new TextWriterTraceListener(SynchronizedDebugWriter, "Viking Log Listener"); 
+            TextWriterTraceListener Listener = new(SynchronizedDebugWriter, "Viking Log Listener");
             Trace.Listeners.Add(Listener);
             Trace.Listeners.Add(Listener);
-            
+
             /*ConsoleTraceListener DebugOutputListener = new ConsoleTraceListener(true);
             Trace.Listeners.Add(DebugOutputListener);
             Debug.Listeners.Add(DebugOutputListener);*/
@@ -514,18 +523,18 @@ namespace Viking
         }
 
         private static void TestCultureNumberParsing()
-        { 
+        {
             NumberFormatInfo current1 = CultureInfo.CurrentCulture.NumberFormat;
-             
+
             Debug.WriteLine("Decimal separator: " + current1.NumberDecimalSeparator);
             Debug.WriteLine("Group separator:   " + current1.NumberGroupSeparator);
 
-            string[] testStrings = {"3,800000000000e+01",
+            string[] testStrings = ["3,800000000000e+01",
                                     "3.800000000000e+01",
                                     "3.80e+01",
-                                    "38"};
+                                    "38"];
 
-            foreach(string number in testStrings)
+            foreach (string number in testStrings)
             {
                 try
                 {
@@ -535,41 +544,6 @@ namespace Viking
                 {
                     Debug.WriteLine($"Could not parse {number}\n{e}");
                 }
-            }
-        }
-
-        /// <summary>
-        /// Check for Squirrel updates and apply them if available
-        /// </summary>
-        private static void CheckForUpdates()
-        {
-            try
-            {
-                using (var mgr = new UpdateManager("http://codepharm.net/viking/releases/"))
-                {
-                    var updateInfo = mgr.CheckForUpdate().Result;
-                    if (updateInfo.ReleasesToApply.Any())
-                    {
-                        Trace.WriteLine($"Found {updateInfo.ReleasesToApply.Count} updates to apply", "Viking");
-                        
-                        // Apply updates
-                        mgr.UpdateApp().Wait();
-                        
-                        Trace.WriteLine("Updates applied successfully, restarting application", "Viking");
-                        
-                        // Restart the application
-                        UpdateManager.RestartApp();
-                    }
-                    else
-                    {
-                        Trace.WriteLine("No updates available", "Viking");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine($"Error checking for updates: {ex.Message}", "Viking");
-                // Continue with application startup even if update check fails
             }
         }
 
@@ -583,7 +557,7 @@ namespace Viking
                 {
                     Type highDpiModeType = setHighDpiMode.GetParameters()[0].ParameterType;
                     object perMonitorV2Value = Enum.Parse(highDpiModeType, "PerMonitorV2");
-                    setHighDpiMode.Invoke(null, new[] { perMonitorV2Value });
+                    setHighDpiMode.Invoke(null, [perMonitorV2Value]);
                     return;
                 }
             }
@@ -618,5 +592,61 @@ namespace Viking
 
         [DllImport("Shcore.dll")]
         private static extern int SetProcessDpiAwareness(int awareness);
+
+        /// <summary>
+        /// Checks for available updates from the update server.
+        /// Runs in the background and doesn't block the UI.
+        /// </summary>
+        private static async Task CheckForUpdatesAsync()
+        {
+            try
+            {
+                // Get the update URL from your deployment server
+                string updateUrl = "https://websvc.codepharm.net/Software/Viking";
+                
+                using (var mgr = new UpdateManager(updateUrl))
+                {
+                    var updateInfo = await mgr.CheckForUpdatesAsync();
+                    
+                    if (updateInfo == null)
+                    {
+                        Trace.WriteLine("[Velopack] No updates available - running latest version");
+                    }
+                    else
+                    {
+                        var currentVersion = mgr.CurrentVersion;
+                        var newVersion = updateInfo.TargetFullRelease.Version;
+                        
+                        Trace.WriteLine($"[Velopack] Update available: {currentVersion} -> {newVersion}");
+                        
+                        // Optionally notify user about available update
+                        // You can uncomment this if you want to prompt users to update:
+                        /*
+                        var result = MessageBox.Show(
+                            $"A new version of Viking ({newVersion}) is available.\n\n" +
+                            $"Current version: {currentVersion}\n\n" +
+                            "Would you like to download and install it now?",
+                            "Update Available",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Question
+                        );
+                        
+                        if (result == DialogResult.Yes)
+                        {
+                            await mgr.DownloadUpdatesAsync(updateInfo, (progress) => {
+                                // Optional: Show download progress
+                            });
+                            UpdateManager.RestartApp("--updated");
+                        }
+                        */
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Silently handle update check failures - don't disrupt user experience
+                Trace.WriteLine($"[Velopack] Error checking for updates: {ex.Message}");
+            }
+        }
     }
 }

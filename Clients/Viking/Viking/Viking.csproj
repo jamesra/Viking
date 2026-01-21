@@ -1,279 +1,223 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
-	<PropertyGroup>
-		<OutputType>WinExe</OutputType>
-		<TargetFramework>net48</TargetFramework>
-		<RootNamespace>Viking</RootNamespace>
-		<AssemblyName>Viking</AssemblyName>
-		<ApplicationIcon>Viking.ico</ApplicationIcon>
-		<UseWPF>true</UseWPF>
-		<UseWindowsForms>true</UseWindowsForms>
-		<SignAssembly>false</SignAssembly>
-		<ManifestTimestampUrl>http://timestamp.digicert.com</ManifestTimestampUrl>
-		<AssemblyOriginatorKeyFile>Viking_1_TemporaryKey.pfx</AssemblyOriginatorKeyFile>
-		<ProductName>Viking</ProductName>
-		<PublisherName>Marc Lab</PublisherName>
-		<ApplicationVersion>1.2.0.0</ApplicationVersion>
-		<FileVersion>1.2.0.0</FileVersion>
-		<Deterministic>True</Deterministic>
-		<NoWarn>$(NoWarn);CS0436;CA1014;CS3009</NoWarn> 
-		<!-- Enable automatic binding redirects -->
-		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-		<GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
-		<LangVersion>12.0</LangVersion>
-		<Nullable>enable</Nullable>
-	</PropertyGroup>
-	<PropertyGroup> 
-		<!-- ClickOnce Deployment Properties -->
-		<PublishUrl>http://codepharm.net/viking/</PublishUrl>
-		<InstallUrl>http://codepharm.net/viking/</InstallUrl>
-		<UpdateUrl>http://codepharm.net/viking/</UpdateUrl>
-		<Install>true</Install>
-		<ApplicationRevision>1</ApplicationRevision>
-		<ApplicationVersion>1.2.0.0</ApplicationVersion>
-		<BootstrapperEnabled>true</BootstrapperEnabled>
-		<GenerateManifests>true</GenerateManifests>
-		<ManifestCertificateThumbprint></ManifestCertificateThumbprint>
-		<ManifestKeyFile>Viking_1_TemporaryKey.pfx</ManifestKeyFile>
-		<MapFileExtensions>true</MapFileExtensions>
-		<OpenBrowserOnPublish>false</OpenBrowserOnPublish>
-		<PublishReadyToRun>false</PublishReadyToRun>
-		<PublishSingleFile>false</PublishSingleFile>
-		<SelfContained>false</SelfContained>
-		<UpdateEnabled>true</UpdateEnabled>
-		<UpdateMode>Foreground</UpdateMode>
-		<UpdateRequired>false</UpdateRequired>
-		<WebPageFileName>Publish.html</WebPageFileName>
-	</PropertyGroup>
-	<ItemGroup>
-		<PackageReference Include="CommandLineParser" Version="2.9.1" />
-		<PackageReference Include="EntityFramework" Version="6.5.1" />
-		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
-		<PackageReference Include="squirrel.windows" Version="2.0.1" />
-		<PackageReference Include="System.Buffers" Version="4.6.1" />
-		<PackageReference Include="System.Memory" Version="4.6.3" />
-		<PackageReference Include="LinqToXsd" Version="2.0.2" />
-		<PackageReference Include="protobuf-net" Version="3.2.56" />
-		<PackageReference Include="protobuf-net.ServiceModel" Version="3.2.52" />
-	</ItemGroup>
-	<ItemGroup>
-		<ProjectReference Include="..\NGVV\VikingCore.csproj" />
-		<ProjectReference Include="..\..\..\SqlServerTypesLoader\SqlServerTypesLoader.csproj" />
-		<ProjectReference Include="..\..\Viking.UI.WPF\Viking.UI.WPF.csproj" />
-		
-		<!-- Module projects - built as plugins, not direct references -->
-		<ProjectReference Include="..\WebAnnotation\WebAnnotation.csproj">
-			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-		</ProjectReference>
-		<ProjectReference Include="..\LocalBookmarks\LocalBookmarks.csproj">
-			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-		</ProjectReference>
-		<ProjectReference Include="..\MeasurementExtension\Measurement.csproj">
-			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-		</ProjectReference>
-	</ItemGroup>
-	<ItemGroup>
-		<Content Include="app.config" />
-	</ItemGroup>
-	<ItemGroup>
-		<None Remove="Modules\**\System.Memory.dll" />
-		<None Remove="System.Memory.4.6.3\**" />
-		<None Remove="System.Runtime.CompilerServices.Unsafe.6.1.2\**" />
-		<None Remove="System.Numerics.Vectors.4.6.1\**" />
-		<None Remove="System.Buffers.4.6.1\**" />
-	</ItemGroup>
-	<!-- Ensure native SQL Server Types DLLs are copied to output -->
-	<ItemGroup>
-		<None Include="SqlServerTypes\x64\msvcr120.dll">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Include="SqlServerTypes\x64\SqlServerSpatial140.dll">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Include="SqlServerTypes\x64\SqlServerSpatial160.dll">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Include="SqlServerTypes\x86\msvcr120.dll">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Include="SqlServerTypes\x86\SqlServerSpatial140.dll">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Include="SqlServerTypes\x86\SqlServerSpatial160.dll">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-	</ItemGroup>
-	<ItemGroup>
-	  <Compile Update="Properties\Settings.Designer.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	    <DependentUpon>Settings.settings</DependentUpon>
-	  </Compile>
-	</ItemGroup>
-	<ItemGroup>
-	  <None Update="build.log">
-	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-	  </None>
-	  <None Update="Properties\Settings.settings">
-	    <Generator>SettingsSingleFileGenerator</Generator>
-	    <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-	  </None>
-	</ItemGroup>
-	<!--
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>Viking</RootNamespace>
+    <AssemblyName>Viking</AssemblyName>
+    <ApplicationIcon>Viking.ico</ApplicationIcon>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <SignAssembly>False</SignAssembly>
+    <ManifestTimestampUrl>http://timestamp.digicert.com</ManifestTimestampUrl>
+    <ProductName>Viking</ProductName>
+    <PublisherName>Marc Lab</PublisherName>
+    <ApplicationVersion>1.2.2.0</ApplicationVersion>
+    <FileVersion>1.2.2.0</FileVersion>
+    <AssemblyVersion>1.2.2.0</AssemblyVersion>
+    <Deterministic>True</Deterministic>
+    <NoWarn>$(NoWarn);CS0436;CA1014;CS3009</NoWarn>
+    <!-- Enable automatic binding redirects -->
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser" Version="2.9.1" />
+    <PackageReference Include="EntityFramework" Version="6.5.1" />
+    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+    <PackageReference Include="System.Buffers" Version="4.6.1" />
+    <PackageReference Include="System.Memory" Version="4.6.3" />
+    <PackageReference Include="LinqToXsd" Version="2.0.2" />
+    <PackageReference Include="protobuf-net" Version="3.2.56" />
+    <PackageReference Include="protobuf-net.ServiceModel" Version="3.2.52" />
+    <PackageReference Include="Velopack" Version="0.0.1298" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NGVV\VikingCore.csproj" />
+    <ProjectReference Include="..\..\..\SqlServerTypesLoader\SqlServerTypesLoader.csproj" />
+    <ProjectReference Include="..\..\Viking.UI.WPF\Viking.UI.WPF.csproj" />
+    <!-- Module projects - built as plugins, not direct references -->
+    <ProjectReference Include="..\WebAnnotation\WebAnnotation.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\LocalBookmarks\LocalBookmarks.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\MeasurementExtension\Measurement.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="app.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="Modules\**\System.Memory.dll" />
+    <None Remove="System.Memory.4.6.3\**" />
+    <None Remove="System.Runtime.CompilerServices.Unsafe.6.1.2\**" />
+    <None Remove="System.Numerics.Vectors.4.6.1\**" />
+    <None Remove="System.Buffers.4.6.1\**" />
+  </ItemGroup>
+  <!-- Ensure native SQL Server Types DLLs are copied to output -->
+  <ItemGroup>
+    <None Include="SqlServerTypes\x64\msvcr120.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="SqlServerTypes\x64\SqlServerSpatial140.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="SqlServerTypes\x64\SqlServerSpatial160.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="SqlServerTypes\x86\msvcr120.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="SqlServerTypes\x86\SqlServerSpatial140.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="SqlServerTypes\x86\SqlServerSpatial160.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="build.log">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <!--
 	<PropertyGroup>
 		<TargetDir>$(MSBuildProjectDirectory)\bin\$(\$(OutputPath)</TargetDir>
 	</PropertyGroup>
 	-->
-
-	<!-- Post-build event to create debug output file -->
-	<Target Name="CreateDebugOutputFile" AfterTargets="Build">
-		<WriteLinesToFile File="$(OutputPath)debug_output.txt" Lines="Debug output will be captured here when Viking runs" Overwrite="true" />
-	</Target>
-	<PropertyGroup>
-		
-		<PlatformTarget>AnyCPU</PlatformTarget>
-		<Title>Viking</Title>
-
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-	  <IsPublishable>True</IsPublishable>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-	  <IsPublishable>True</IsPublishable>
-	</PropertyGroup>
-
-	<Target Name="CopyGraphicsContent" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net48'">
-		<Message Text="Copying graphics content to output directory..." Importance="high" />
-		
-		<ItemGroup>
-			<GraphicsContent Include="..\..\VikingXNAGraphics\bin\$(Configuration)\net48\Content\**\*.xnb" />
-		</ItemGroup>
-		
-		<Copy SourceFiles="@(GraphicsContent)" DestinationFolder="$(TargetDir)\Content\%(RecursiveDir)" SkipUnchangedFiles="true" />
-		
-		<Message Text="Copied @(GraphicsContent-&gt;Count()) content files" Importance="high" />
-	</Target>	
-
-	<!-- Define the list of modules to process -->
-	<ItemGroup>
-		<ModuleToCopy Include="LocalBookmarks" />
-		<ModuleToCopy Include="Measurement" />
-		<ModuleToCopy Include="WebAnnotation" />
-	</ItemGroup>
-
-	<!-- Main target that processes each module using item batching -->
-	<!-- Run after Build and ensure project references are built first -->
-	<Target Name="CopyModules" AfterTargets="Build">
-		<!-- Process each module by calling CopySingleModule with the module name -->
-		<MSBuild Projects="$(MSBuildProjectFile)" Targets="CopySingleModule" Properties="ModuleName=%(ModuleToCopy.Identity)" />
-		
-		<!-- Copy shared DLLs once after all modules are processed -->
-		<PropertyGroup>
-			<ModulesSourceDir>$(MSBuildProjectDirectory)\Modules</ModulesSourceDir>
-		</PropertyGroup>
-		
-		<!-- Copy Xml.Schema.Linq.dll to main output directory if it exists in any module -->
-		<ItemGroup>
-			<XmlSchemaLinqFiles Include="$(ModulesSourceDir)\**\Xml.Schema.Linq.dll" />
-		</ItemGroup>
-		<Copy SourceFiles="@(XmlSchemaLinqFiles)" DestinationFolder="$(TargetDir)" Condition="'@(XmlSchemaLinqFiles)' != ''" />
-		<Message Text="Copied Xml.Schema.Linq.dll to main output directory" Importance="normal" Condition="'@(XmlSchemaLinqFiles)' != ''" />
-
-		<!-- Copy System.Memory.dll to main output directory if it exists in any module -->
-		<ItemGroup>
-			<SystemMemoryFiles Include="$(ModulesSourceDir)\**\System.Memory.dll" />
-		</ItemGroup>
-		<Copy SourceFiles="@(SystemMemoryFiles)" DestinationFolder="$(TargetDir)" Condition="'@(SystemMemoryFiles)' != ''" />
-		<Message Text="Copied System.Memory.dll to main output directory" Importance="normal" Condition="'@(SystemMemoryFiles)' != ''" />
-
-		<!-- Remove duplicate shared DLLs from modules (once after all modules) -->
-		<CallTarget Targets="RemoveDuplicateDlls" />
-	</Target>
-
-	<!-- Target to copy a single module's files -->
-	<Target Name="CopySingleModule">
-		<PropertyGroup>
-			<ModulesSourceDir>$(MSBuildProjectDirectory)\Modules</ModulesSourceDir>
-			<ModulesTargetDir>$(TargetDir)\Modules</ModulesTargetDir>
-			<SourcePath>$(ModulesSourceDir)\$(ModuleName)\$(Configuration)\$(TargetFramework)</SourcePath>
-			<TargetPath>$(ModulesTargetDir)\$(ModuleName)</TargetPath>
-		</PropertyGroup>
-
-		<Message Text="Processing module: $(ModuleName)" Importance="high" />
-		<Message Text="Source: $(SourcePath) -&gt; Target: $(TargetPath)" Importance="high" />
-
-		<!-- Check if module source exists -->
-		<Message Text="Warning: $(ModuleName) module not found at $(SourcePath)" Importance="high" Condition="!Exists('$(SourcePath)')" />
-		
-		<!-- Copy module files -->
-		<ItemGroup Condition="Exists('$(SourcePath)')">
-			<ModuleFilesToCopy Include="$(SourcePath)\**\*" Exclude="$(SourcePath)\**\*.pdb" />
-		</ItemGroup>
-		
-		<Message Text="Found @(ModuleFilesToCopy-&gt;Count()) files for $(ModuleName)" Importance="high" Condition="Exists('$(SourcePath)')" />
-		
-		<MakeDir Directories="$(TargetPath)" Condition="Exists('$(SourcePath)')" />
-		<RemoveDir Directories="$(TargetPath)\$(TargetFramework)\Modules" ContinueOnError="true" Condition="Exists('$(SourcePath)')" />
-		
-		<Copy SourceFiles="@(ModuleFilesToCopy)" DestinationFolder="$(TargetPath)\%(RecursiveDir)" Condition="'@(ModuleFilesToCopy)' != ''" SkipUnchangedFiles="true" />
-		
-		<!-- Copy module content files -->
-		<ItemGroup Condition="Exists('$(SourcePath)\Content')">
-			<ModuleContentToCopy Include="$(SourcePath)\Content\**" />
-		</ItemGroup>
-		
-		<Message Text="Copying $(SourcePath)\Content to $(TargetDir)\Content" Importance="high" Condition="Exists('$(SourcePath)\Content')" />
-		<Copy SourceFiles="@(ModuleContentToCopy)" DestinationFolder="$(TargetDir)\Content" Condition="'@(ModuleContentToCopy)' != ''" />
-		
-		<Message Text="Copied $(ModuleName) module files" Importance="normal" Condition="Exists('$(SourcePath)')" />
-	</Target>
-
-	<!-- Target to remove duplicate DLLs from modules -->
-	<Target Name="RemoveDuplicateDlls" AfterTargets="CopyModules">
-		<PropertyGroup>
-			<ModulesDir>$(TargetDir)\Modules</ModulesDir>
-		</PropertyGroup>
-		
-		<!-- Get all DLLs from the main TargetDir -->
-		<ItemGroup>
-			<MainAppDlls Include="$(TargetDir)*.dll" />
-			<MainAppPdbs Include="$(TargetDir)*.pdb" />
-			<MainAppConfigs Include="$(TargetDir)*.dll.config" />
-		</ItemGroup>
-		
-		<!-- First, collect all DLLs in modules -->
-		<ItemGroup>
-			<AllModuleDlls Include="$(ModulesDir)\**\*.dll" />
-			<AllModulePdbs Include="$(ModulesDir)\**\*.pdb" />
-			<AllModuleConfigs Include="$(ModulesDir)\**\*.dll.config" />
-		</ItemGroup>
-		
-		<!-- Filter to find only those that exist in main app directory -->
-		<ItemGroup>
-			<DuplicateDlls Include="@(AllModuleDlls)" Condition="Exists('$(TargetDir)%(Filename)%(Extension)')" />
-			<DuplicatePdbs Include="@(AllModulePdbs)" Condition="Exists('$(TargetDir)%(Filename)%(Extension)')" />
-			<DuplicateConfigs Include="@(AllModuleConfigs)" Condition="Exists('$(TargetDir)%(Filename)%(Extension)')" />
-		</ItemGroup>
-		
-		<Message Text="Found @(MainAppDlls-&gt;Count()) DLLs in main app directory $(TargetDir)" Importance="high" />
-		<Message Text="Found @(DuplicateDlls-&gt;Count()) duplicate DLLs in modules to remove in $(ModulesDir)" Importance="high" />
-		
-		<!-- Delete all duplicate DLLs from modules -->
-		<Delete Files="@(DuplicateDlls)" Condition="'@(DuplicateDlls)' != ''" ContinueOnError="true" />
-		<Message Text="Removed @(DuplicateDlls-&gt;Count()) duplicate DLLs from modules" Importance="high" />
-		
-		<Delete Files="@(DuplicatePdbs)" Condition="'@(DuplicatePdbs)' != ''" ContinueOnError="true" />
-		<Message Text="Removed @(DuplicatePdbs-&gt;Count()) duplicate PDBs from modules" Importance="high" />
-		
-		<Delete Files="@(DuplicateConfigs)" Condition="'@(DuplicateConfigs)' != ''" ContinueOnError="true" />
-		<Message Text="Removed @(DuplicateConfigs-&gt;Count()) duplicate DLL.CONFIGs from modules" Importance="high" />
-	</Target>
-
-	<Target Name="CleanModules" AfterTargets="Clean">
-		<PropertyGroup>
-			<ModulesDir>$(TargetDir)\Modules</ModulesDir>
-		</PropertyGroup>
-		<!-- Remove the project-specific target framework folder -->
-		<RemoveDir Directories="$(ModulesDir)" ContinueOnError="true" />
- 
-	</Target>
+  <!-- Post-build event to create debug output file -->
+  <Target Name="CreateDebugOutputFile" AfterTargets="Build">
+    <WriteLinesToFile File="$(OutputPath)debug_output.txt" Lines="Debug output will be captured here when Viking runs" Overwrite="true" />
+  </Target>
+  <PropertyGroup>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Title>Viking</Title>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <IsPublishable>True</IsPublishable>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <IsPublishable>True</IsPublishable>
+  </PropertyGroup>
+  <Target Name="CopyGraphicsContent" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net48'">
+    <Message Text="Copying graphics content to output directory..." Importance="high" />
+    <ItemGroup>
+      <GraphicsContent Include="..\..\VikingXNAGraphics\bin\$(Configuration)\net48\Content\**\*.xnb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(GraphicsContent)" DestinationFolder="$(TargetDir)\Content\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Message Text="Copied @(GraphicsContent-&gt;Count()) content files" Importance="high" />
+  </Target>
+  <!-- Define the list of modules to process -->
+  <ItemGroup>
+    <ModuleToCopy Include="LocalBookmarks" />
+    <ModuleToCopy Include="Measurement" />
+    <ModuleToCopy Include="WebAnnotation" />
+  </ItemGroup>
+  <!-- Main target that processes each module using item batching -->
+  <!-- Run after Build and ensure project references are built first -->
+  <Target Name="CopyModules" AfterTargets="Build">
+    <!-- Process each module by calling CopySingleModule with the module name -->
+    <MSBuild Projects="$(MSBuildProjectFile)" Targets="CopySingleModule" Properties="ModuleName=%(ModuleToCopy.Identity)" />
+    <!-- Copy shared DLLs once after all modules are processed -->
+    <PropertyGroup>
+      <ModulesSourceDir>$(MSBuildProjectDirectory)\Modules</ModulesSourceDir>
+    </PropertyGroup>
+    <!-- Copy Xml.Schema.Linq.dll to main output directory if it exists in any module -->
+    <ItemGroup>
+      <XmlSchemaLinqFiles Include="$(ModulesSourceDir)\**\Xml.Schema.Linq.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(XmlSchemaLinqFiles)" DestinationFolder="$(TargetDir)" Condition="'@(XmlSchemaLinqFiles)' != ''" />
+    <Message Text="Copied Xml.Schema.Linq.dll to main output directory" Importance="normal" Condition="'@(XmlSchemaLinqFiles)' != ''" />
+    <!-- Copy System.Memory.dll to main output directory if it exists in any module -->
+    <ItemGroup>
+      <SystemMemoryFiles Include="$(ModulesSourceDir)\**\System.Memory.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(SystemMemoryFiles)" DestinationFolder="$(TargetDir)" Condition="'@(SystemMemoryFiles)' != ''" />
+    <Message Text="Copied System.Memory.dll to main output directory" Importance="normal" Condition="'@(SystemMemoryFiles)' != ''" />
+    <!-- Remove duplicate shared DLLs from modules (once after all modules) -->
+    <CallTarget Targets="RemoveDuplicateDlls" />
+  </Target>
+  <!-- Target to copy a single module's files -->
+  <Target Name="CopySingleModule">
+    <PropertyGroup>
+      <ModulesSourceDir>$(MSBuildProjectDirectory)\Modules</ModulesSourceDir>
+      <ModulesTargetDir>$(TargetDir)\Modules</ModulesTargetDir>
+      <SourcePath>$(ModulesSourceDir)\$(ModuleName)\$(Configuration)\$(TargetFramework)</SourcePath>
+      <TargetPath>$(ModulesTargetDir)\$(ModuleName)</TargetPath>
+    </PropertyGroup>
+    <Message Text="Processing module: $(ModuleName)" Importance="high" />
+    <Message Text="Source: $(SourcePath) -&gt; Target: $(TargetPath)" Importance="high" />
+    <!-- Check if module source exists -->
+    <Message Text="Warning: $(ModuleName) module not found at $(SourcePath)" Importance="high" Condition="!Exists('$(SourcePath)')" />
+    <!-- Copy module files -->
+    <ItemGroup Condition="Exists('$(SourcePath)')">
+      <ModuleFilesToCopy Include="$(SourcePath)\**\*" Exclude="$(SourcePath)\**\*.pdb" />
+    </ItemGroup>
+    <Message Text="Found @(ModuleFilesToCopy-&gt;Count()) files for $(ModuleName)" Importance="high" Condition="Exists('$(SourcePath)')" />
+    <MakeDir Directories="$(TargetPath)" Condition="Exists('$(SourcePath)')" />
+    <RemoveDir Directories="$(TargetPath)\$(TargetFramework)\Modules" ContinueOnError="true" Condition="Exists('$(SourcePath)')" />
+    <Copy SourceFiles="@(ModuleFilesToCopy)" DestinationFolder="$(TargetPath)\%(RecursiveDir)" Condition="'@(ModuleFilesToCopy)' != ''" SkipUnchangedFiles="true" />
+    <!-- Copy module content files -->
+    <ItemGroup Condition="Exists('$(SourcePath)\Content')">
+      <ModuleContentToCopy Include="$(SourcePath)\Content\**" />
+    </ItemGroup>
+    <Message Text="Copying $(SourcePath)\Content to $(TargetDir)\Content" Importance="high" Condition="Exists('$(SourcePath)\Content')" />
+    <Copy SourceFiles="@(ModuleContentToCopy)" DestinationFolder="$(TargetDir)\Content" Condition="'@(ModuleContentToCopy)' != ''" />
+    <Message Text="Copied $(ModuleName) module files" Importance="normal" Condition="Exists('$(SourcePath)')" />
+  </Target>
+  <!-- Target to remove duplicate DLLs from modules -->
+  <Target Name="RemoveDuplicateDlls" AfterTargets="CopyModules">
+    <PropertyGroup>
+      <ModulesDir>$(TargetDir)\Modules</ModulesDir>
+    </PropertyGroup>
+    <!-- Get all DLLs from the main TargetDir -->
+    <ItemGroup>
+      <MainAppDlls Include="$(TargetDir)*.dll" />
+      <MainAppPdbs Include="$(TargetDir)*.pdb" />
+      <MainAppConfigs Include="$(TargetDir)*.dll.config" />
+    </ItemGroup>
+    <!-- First, collect all DLLs in modules -->
+    <ItemGroup>
+      <AllModuleDlls Include="$(ModulesDir)\**\*.dll" />
+      <AllModulePdbs Include="$(ModulesDir)\**\*.pdb" />
+      <AllModuleConfigs Include="$(ModulesDir)\**\*.dll.config" />
+    </ItemGroup>
+    <!-- Filter to find only those that exist in main app directory -->
+    <ItemGroup>
+      <DuplicateDlls Include="@(AllModuleDlls)" Condition="Exists('$(TargetDir)%(Filename)%(Extension)')" />
+      <DuplicatePdbs Include="@(AllModulePdbs)" Condition="Exists('$(TargetDir)%(Filename)%(Extension)')" />
+      <DuplicateConfigs Include="@(AllModuleConfigs)" Condition="Exists('$(TargetDir)%(Filename)%(Extension)')" />
+    </ItemGroup>
+    <Message Text="Found @(MainAppDlls-&gt;Count()) DLLs in main app directory $(TargetDir)" Importance="high" />
+    <Message Text="Found @(DuplicateDlls-&gt;Count()) duplicate DLLs in modules to remove in $(ModulesDir)" Importance="high" />
+    <!-- Delete all duplicate DLLs from modules -->
+    <Delete Files="@(DuplicateDlls)" Condition="'@(DuplicateDlls)' != ''" ContinueOnError="true" />
+    <Message Text="Removed @(DuplicateDlls-&gt;Count()) duplicate DLLs from modules" Importance="high" />
+    <Delete Files="@(DuplicatePdbs)" Condition="'@(DuplicatePdbs)' != ''" ContinueOnError="true" />
+    <Message Text="Removed @(DuplicatePdbs-&gt;Count()) duplicate PDBs from modules" Importance="high" />
+    <Delete Files="@(DuplicateConfigs)" Condition="'@(DuplicateConfigs)' != ''" ContinueOnError="true" />
+    <Message Text="Removed @(DuplicateConfigs-&gt;Count()) duplicate DLL.CONFIGs from modules" Importance="high" />
+  </Target>
+  <Target Name="CleanModules" AfterTargets="Clean">
+    <PropertyGroup>
+      <ModulesDir>$(TargetDir)\Modules</ModulesDir>
+    </PropertyGroup>
+    <!-- Remove the project-specific target framework folder -->
+    <RemoveDir Directories="$(ModulesDir)" ContinueOnError="true" />
+  </Target>
 </Project>
