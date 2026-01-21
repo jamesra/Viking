@@ -32,7 +32,7 @@
 
 param(
     [string]$ReleasesDir = "releases",
-    [string]$ReleaseUrl = "https://websvc.codepharm.net/Software/Viking",
+    [string]$ReleaseUrl = "http://websvc.codepharm.net/Software/Viking",
     [ValidateSet("WebDAV", "FTP", "SCP", "Copy")]
     [string]$DeploymentMethod = "Copy",
     [string]$ServerPath = ""
@@ -272,7 +272,7 @@ if ($deploymentSuccessful -and $newVersion) {
 }
 Write-Host ""
 Write-Host "Users can now:" -ForegroundColor Yellow
-Write-Host "1. Download Setup.exe from: $ReleaseUrl/Setup.exe" -ForegroundColor White
+Write-Host "1. Download Setup.exe from: $ReleaseUrl/Viking-win-Setup.exe" -ForegroundColor White
 Write-Host "2. Install Viking using the setup file" -ForegroundColor White
 Write-Host "3. The application will automatically check for updates from this location" -ForegroundColor White
 Write-Host ""

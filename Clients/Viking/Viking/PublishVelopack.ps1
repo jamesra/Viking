@@ -111,6 +111,213 @@ if (-not $signtoolPath) {
 
 Write-Host "Found signtool: $signtoolPath" -ForegroundColor Gray
 
+# Helper function to display progress in Velopack-style format
+function Write-VelopackProgress {
+    param(
+        [string]$Activity,
+        [int]$PercentComplete,
+        [TimeSpan]$ElapsedTime
+    )
+    
+    # Calculate number of dashes (40 total for the bar)
+    $dashCount = [math]::Round(($PercentComplete / 100) * 40)
+    $dashes = "-" * [math]::Min($dashCount, 40)
+    $spaces = " " * [math]::Max(0, 40 - $dashCount)
+    
+    # Format elapsed time as hh:mm:ss (matching Velopack's format)
+    $hours = [int]$ElapsedTime.TotalHours
+    $minutes = $ElapsedTime.Minutes
+    $seconds = $ElapsedTime.Seconds
+    $elapsedStr = "{0:D2}:{1:D2}:{2:D2}" -f $hours, $minutes, $seconds
+    
+    # Write progress line
+    $progressLine = "$Activity $dashes$spaces $PercentComplete% $elapsedStr"
+    Write-Host $progressLine -NoNewline
+    Write-Host "`r" -NoNewline
+}
+
+# Helper function to check if a file is signed
+function Test-FileSigned {
+    param([string]$FilePath)
+    
+    if (-not (Test-Path $FilePath)) {
+        return $false
+    }
+    
+    # Use signtool verify to check if file is signed
+    # Suppress all output (stdout and stderr) and check exit code
+    # signtool returns 0 if signed, non-zero if unsigned (which is expected)
+    # Temporarily change error action to prevent any error handling issues
+    $oldErrorAction = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "SilentlyContinue"
+        $null = & $signtoolPath verify /pa "$FilePath" *>$null
+        $isSigned = $LASTEXITCODE -eq 0
+    } catch {
+        # If verify fails for any reason, assume unsigned
+        $isSigned = $false
+    } finally {
+        $ErrorActionPreference = $oldErrorAction
+    }
+    return $isSigned
+}
+
+# Helper function to get unsigned files from a list
+function Get-UnsignedFiles {
+    param([string[]]$FilePaths)
+    
+    $unsignedFiles = @()
+    $totalFiles = $FilePaths.Count
+    $currentFile = 0
+    
+    foreach ($filePath in $FilePaths) {
+        $currentFile++
+        $percentComplete = [math]::Round(($currentFile / $totalFiles) * 100)
+        Write-Progress -Activity "Checking signed files" -Status "File $currentFile of $totalFiles ($percentComplete%)" -PercentComplete $percentComplete
+        
+        if (-not (Test-FileSigned -FilePath $filePath)) {
+            $unsignedFiles += $filePath
+        }
+    }
+    
+    Write-Progress -Activity "Checking signed files" -Completed
+    return $unsignedFiles
+}
+
+# Helper function to sign files in a batch
+function Sign-FilesBatch {
+    param(
+        [string[]]$FilePaths,
+        [int]$AttemptNumber = 1,
+        [int]$MaxAttempts = 10,
+        [switch]$CheckUnsignedAfterFailure = $false
+    )
+    
+    if ($FilePaths.Count -eq 0) {
+        return @{ Success = $true; UnsignedFiles = @() }
+    }
+    
+    $totalFiles = $FilePaths.Count
+    
+    if ($AttemptNumber -eq 1) {
+        Write-Host "Signing $totalFiles file(s) in batch (you will be prompted for PIN once)..." -ForegroundColor Gray
+        Write-Host "Please enter your YubiKey PIN when prompted..." -ForegroundColor Yellow
+    } else {
+        Write-Host "Batch signing attempt $AttemptNumber of $MaxAttempts ($totalFiles file(s))..." -ForegroundColor Gray
+        Write-Host "Please enter your YubiKey PIN when prompted..." -ForegroundColor Yellow
+    }
+    
+    # Show progress indicator in Velopack style
+    $activityName = "Code-sign application"
+    $startTime = Get-Date
+    $signedCount = 0
+    
+    Write-Host ""
+    
+    # Start progress at 0%
+    Write-VelopackProgress -Activity $activityName -PercentComplete 0 -ElapsedTime (New-TimeSpan)
+    
+    # Capture signtool output and parse progress from "Successfully signed:" messages
+    # Suppress terminating errors so we can handle them gracefully and continue with retries
+    $hasError = $false
+    $signtoolExitCode = 0
+    
+    try {
+        # Temporarily change error action to continue so signtool errors don't stop the script
+        $oldErrorAction = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        
+        & $signtoolPath sign `
+            /sha1 $CertificateThumbprint `
+            /t $TimestampUrl `
+            /fd SHA256 `
+            $FilePaths 2>&1 | ForEach-Object {
+                # Parse output line by line
+                $line = $_
+                
+                # Check if this line indicates a successfully signed file
+                if ($line -match "Successfully signed:\s+(.+)") {
+                    $signedCount++
+                    $percentComplete = [math]::Round(($signedCount / $totalFiles) * 100)
+                    $elapsedTime = (Get-Date) - $startTime
+                    
+                    # If we had an error, move to a new line before updating progress
+                    if ($hasError) {
+                        Write-Host ""
+                        $hasError = $false
+                    }
+                    
+                    # Update progress bar with current progress
+                    Write-VelopackProgress -Activity $activityName -PercentComplete $percentComplete -ElapsedTime $elapsedTime
+                }
+                elseif ($line -match "Error|Warning|SignTool Error") {
+                    # Error messages - output on a new line and mark that we had an error
+                    if (-not $hasError) {
+                        Write-Host "" # Move to new line first
+                    }
+                    Write-Host $line
+                    $hasError = $true
+                }
+            }
+        
+        # Capture the exit code
+        $signtoolExitCode = $LASTEXITCODE
+        
+        # Restore error action preference
+        $ErrorActionPreference = $oldErrorAction
+    }
+    catch {
+        # If we catch an exception, capture it but don't stop execution
+        $signtoolExitCode = $LASTEXITCODE
+        if ($hasError -eq $false) {
+            Write-Host ""
+        }
+        Write-Host $_.Exception.Message
+        $hasError = $true
+    }
+    finally {
+        # Ensure error action is restored
+        $ErrorActionPreference = "Stop"
+    }
+    
+    # If we ended with an error, move to a new line before final progress update
+    if ($hasError) {
+        Write-Host ""
+    }
+    
+    # Set LASTEXITCODE for the calling code to check
+    $global:LASTEXITCODE = $signtoolExitCode
+    
+    # Update progress to 100% after completion
+    $elapsedTime = (Get-Date) - $startTime
+    Write-VelopackProgress -Activity $activityName -PercentComplete 100 -ElapsedTime $elapsedTime
+    Write-Host "" # New line after progress
+    
+    if ($signtoolExitCode -eq 0) {
+        # First attempt succeeded, assume all files are signed (don't check individually)
+        return @{ Success = $true; UnsignedFiles = @() }
+    } else {
+        # Signing failed
+        if ($CheckUnsignedAfterFailure) {
+            # Only check which files are unsigned on first failure (slow operation)
+            Write-Host "Batch signing failed. Checking which files are still unsigned..." -ForegroundColor Yellow
+            $stillUnsigned = Get-UnsignedFiles -FilePaths $FilePaths
+            if ($stillUnsigned.Count -gt 0) {
+                Write-Host "Found $($stillUnsigned.Count) unsigned file(s). Failed file(s):" -ForegroundColor Yellow
+                foreach ($failedFile in $stillUnsigned) {
+                    $fileName = [System.IO.Path]::GetFileName($failedFile)
+                    Write-Host "  - $fileName" -ForegroundColor Yellow
+                }
+            }
+            return @{ Success = $false; UnsignedFiles = $stillUnsigned }
+        } else {
+            # On retries, assume all files in the list are still unsigned (already checked)
+            Write-Host "Batch signing failed. Retrying $($FilePaths.Count) file(s)..." -ForegroundColor Yellow
+            return @{ Success = $false; UnsignedFiles = $FilePaths }
+        }
+    }
+}
+
 # Step 3: Get version from project if not provided
 if ([string]::IsNullOrWhiteSpace($Version)) {
     Write-Host ""
@@ -222,77 +429,48 @@ if ($filesToSign.Count -eq 0) {
     # Build file list for signtool
     $filePaths = $filesToSign | ForEach-Object { $_.FullName }
     
-    # Sign all files in a single signtool invocation to minimize PIN prompts
-    Write-Host "Signing all files in one batch (you will be prompted for PIN once)..." -ForegroundColor Gray
-    Write-Host "Please enter your YubiKey PIN when prompted..." -ForegroundColor Yellow
+    # Sign all files in batches, retrying only unsigned files
+    $unsignedFiles = $filePaths
+    $maxAttempts = 10
+    $attempt = 1
+    $allSigned = $false
     
-    & $signtoolPath sign `
-        /sha1 $CertificateThumbprint `
-        /t $TimestampUrl `
-        /fd SHA256 `
-        $filePaths
-    
-    $exitCode = $LASTEXITCODE
-    
-    # If signing failed, retry failed files individually
-    if ($exitCode -ne 0) {
-        Write-Host "" -ForegroundColor Yellow
-        Write-Host "Initial batch signing failed. Attempting to retry failed files individually..." -ForegroundColor Yellow
-        Write-Host "This may require additional PIN entries." -ForegroundColor Yellow
-        Write-Host "" -ForegroundColor Yellow
+    while ($attempt -le $maxAttempts -and $unsignedFiles.Count -gt 0) {
+        # Only check unsigned files on first failure, not on retries
+        $checkUnsigned = ($attempt -eq 1)
+        $result = Sign-FilesBatch -FilePaths $unsignedFiles -AttemptNumber $attempt -MaxAttempts $maxAttempts -CheckUnsignedAfterFailure:$checkUnsigned
         
-        $retrySuccess = 0
-        $retryFailed = 0
-        $failedFiles = @()
-        
-        # Retry each file individually with up to 3 attempts
-        foreach ($filePath in $filePaths) {
-            $retryAttempt = 0
-            $fileSigned = $false
-            
-            while ($retryAttempt -lt 3 -and -not $fileSigned) {
-                $retryAttempt++
-                
-                if ($retryAttempt -gt 1) {
-                    Write-Host "Retry attempt $retryAttempt of 3 for: $([System.IO.Path]::GetFileName($filePath))" -ForegroundColor Gray
-                    Start-Sleep -Milliseconds 500  # Brief pause between retries
-                }
-                
-                & $signtoolPath sign `
-                    /sha1 $CertificateThumbprint `
-                    /t $TimestampUrl `
-                    /fd SHA256 `
-                    "$filePath" `
-                    | Out-Null
-                
-                if ($LASTEXITCODE -eq 0) {
-                    $retrySuccess++
-                    $fileSigned = $true
-                } else {
-                    if ($retryAttempt -eq 3) {
-                        $retryFailed++
-                        $failedFiles += $filePath
-                        Write-Host "  Failed after 3 attempts: $([System.IO.Path]::GetFileName($filePath))" -ForegroundColor Red
-                    }
-                }
-            }
+        if ($result.Success) {
+            $allSigned = $true
+            break
         }
         
-        if ($retryFailed -gt 0) {
-            Write-Host "" -ForegroundColor Red
-            Write-Host "Error: Failed to sign $retryFailed file(s) after retries:" -ForegroundColor Red
-            foreach ($failedFile in $failedFiles) {
-                Write-Host "  - $failedFile" -ForegroundColor Red
+        $unsignedFiles = $result.UnsignedFiles
+        
+        if ($unsignedFiles.Count -gt 0) {
+            $attempt++
+            if ($attempt -le $maxAttempts) {
+                Write-Host "" -ForegroundColor Yellow
+                Write-Host "Attempt $($attempt - 1) failed. $($unsignedFiles.Count) file(s) remain unsigned. Retrying..." -ForegroundColor Yellow
+                Start-Sleep -Seconds 1  # Brief pause between batch retries
             }
-            Write-Host "" -ForegroundColor Red
-            Write-Host "Check your YubiKey is connected and functioning properly." -ForegroundColor Yellow
-            exit 1
-        } else {
-            Write-Host "" -ForegroundColor Green
-            Write-Host "Successfully signed all files after retries ($retrySuccess files retried)!" -ForegroundColor Green
+        }
+    }
+    
+    if ($allSigned) {
+        Write-Host "Successfully pre-signed $($filesToSign.Count) files!" -ForegroundColor Green
+        if ($attempt -gt 1) {
+            Write-Host "(Completed after $attempt batch attempt(s))" -ForegroundColor Gray
         }
     } else {
-        Write-Host "Successfully pre-signed $($filesToSign.Count) files!" -ForegroundColor Green
+        Write-Host "" -ForegroundColor Red
+        Write-Host "Error: Failed to sign $($unsignedFiles.Count) file(s) after $maxAttempts batch attempts:" -ForegroundColor Red
+        foreach ($failedFile in $unsignedFiles) {
+            Write-Host "  - $failedFile" -ForegroundColor Red
+        }
+        Write-Host "" -ForegroundColor Red
+        Write-Host "Check your YubiKey is connected and functioning properly." -ForegroundColor Yellow
+        exit 1
     }
 }
 
