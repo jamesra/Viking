@@ -26,6 +26,7 @@ using WebAnnotation.ViewModel;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 using Viking.DependencyInjection;
 using Viking.Services.Grpc;
+using Viking.gRPC.SegmentationServiceTypes.V1;
 
 namespace WebAnnotation.UI.Commands.Segmentation
 {
@@ -44,14 +45,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         #region Fields
         // Point collections
-        private readonly List<GridVector2> foregroundPoints = new List<GridVector2>();
-        private readonly List<GridVector2> backgroundPoints = new List<GridVector2>();
+        private readonly List<GridVector2> foregroundPoints = [];
+        private readonly List<GridVector2> backgroundPoints = [];
 
         // Monographics views for rendering
         private PointSetView foregroundPointsView;
         private PointSetView backgroundPointsView;
         private TextureOverlayView maskOverlayView;
-        private List<SolidPolygonView> segmentPolygonViews = new List<SolidPolygonView>();
+        private readonly List<SolidPolygonView> segmentPolygonViews = [];
 
         // gRPC client - channel is now shared via Global.SegmentationChannelManager
         private SegmentationServiceTypes.SegmentationService.SegmentationServiceClient grpcClient;
@@ -82,10 +83,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private int isUploadingImage = 0; // 0 = false, 1 = true (for Interlocked operations)
 
         // Rendering
-        private readonly Color maskColor = new Color(255, 128, 0, 128); // Orange with transparency
-        
+        private readonly Color maskColor = new(255, 128, 0, 128); // Orange with transparency
+
         // Configuration 
-        private readonly int debounceMs; 
+        private readonly int debounceMs;
 
         // Structure type for created annotations
         //private readonly StructureTypeObj structureType;
@@ -101,29 +102,27 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #endregion
 
         #region Help Strings
-        public new static string[] DefaultMouseHelpStrings = new string[]
-        {
+        public new static string[] DefaultMouseHelpStrings =
+        [
             "Left-click: Add foreground point (green)",
             "Left-click inside polygon: Finalize and create annotation",
             "Middle-click: Remove nearest point",
             "Right-click: Add background point (red)",
             "Shift + Left-click: Delete foreground point",
             "Shift + Right-click: Delete background point"
-        };
+        ];
 
         public string[] HelpStrings
         {
             get
             {
-                List<string> s = new List<string>();
-                s.AddRange(DefaultMouseHelpStrings);
-                s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
+                List<string> s = [.. DefaultMouseHelpStrings, .. Viking.UI.Commands.Command.DefaultKeyHelpStrings];
                 s.Sort();
-                return s.ToArray();
+                return [.. s];
             }
         }
 
-        public ObservableCollection<string> ObservableHelpStrings => new ObservableCollection<string>(HelpStrings);
+        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
 
 
         /// <summary>
@@ -138,17 +137,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region Constructor
         public SegmentationCommand(SectionViewerControl parent,
             //StructureType type = null,
-            OnCommandSuccess success_callback = null,
-            IGrpcChannelManager grpcChannelManager = null) : base(parent)
+            OnCommandSuccess? success_callback = null,
+            IGrpcChannelManager? grpcChannelManager = null) : base(parent)
         {
             this.success_callback = success_callback;
             //structureType = type?.modelObj ?? (Viking.UI.State.SelectedObject as StructureType)?.modelObj;
-            
+
             // Load configuration - fallback to VolumeXML if not in AppSettings 
-            debounceMs = int.TryParse(ConfigurationManager.AppSettings["SegmentationDebounceMs"], out var ms) ? ms : DEFAULT_DEBOUNCE_MS; 
+            debounceMs = int.TryParse(ConfigurationManager.AppSettings["SegmentationDebounceMs"], out var ms) ? ms : DEFAULT_DEBOUNCE_MS;
 
             Parent.Cursor = Cursors.Cross;
-            
+
             // Initialize viewport bounds
             viewportBounds = GetCurrentViewportBounds();
         }
@@ -160,8 +159,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             IEnumerable<GridVector2> initialForegroundPoints,
             IEnumerable<GridVector2> initialBackgroundPoints,
             //StructureType type = null,
-            OnCommandSuccess success_callback = null,
-            IGrpcChannelManager grpcChannelManager = null) : this(parent, success_callback, grpcChannelManager)
+            OnCommandSuccess? success_callback = null,
+            IGrpcChannelManager? grpcChannelManager = null) : this(parent, success_callback, grpcChannelManager)
         {
             // Populate initial points
             if (initialForegroundPoints != null)
@@ -184,30 +183,30 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 // Use shared gRPC channel from service locator
                 var channel = ServiceLocator.GrpcChannelManager?.GetOrCreateChannel();
-                if (channel == null)
+                if (channel is null)
                 {
                     throw new InvalidOperationException("Segmentation service URL is not configured");
                 }
-                
+
                 grpcClient = new SegmentationServiceTypes.SegmentationService.SegmentationServiceClient(channel);
 
                 Debug.WriteLine($"SegmentationCommand activated. Using shared channel to {channel.ResolvedTarget}");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Failed to initialize gRPC client: {ex.Message}"); 
+                Debug.WriteLine($"Failed to initialize gRPC client: {ex.Message}");
             }
 
             // Check if we have initial points from constructor
             bool hasInitialPoints = foregroundPoints.Count > 0 || backgroundPoints.Count > 0;
-            
+
             // Clear any existing state (only if no initial points were provided)
             if (!hasInitialPoints)
             {
                 foregroundPoints.Clear();
                 backgroundPoints.Clear();
             }
-            
+
             lastViewBounds = GetCurrentViewportBounds();
             UpdatePointViews();
 
@@ -234,13 +233,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             // Cancel any ongoing upload
             uploadCancellationTokenSource?.Cancel();
-            
+
             // Delete the current image from server cache
             if (currentImageId.HasValue)
             {
                 DeleteCurrentImage();
             }
-            
+
             // Clean up resources
             CleanupCommand();
 
@@ -250,7 +249,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             panZoomDebounceTimer?.Dispose();
             panZoomDebounceTimer = null;
-            
+
             uploadCancellationTokenSource?.Dispose();
             uploadCancellationTokenSource = null;
 
@@ -278,7 +277,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
             else if (e.Button.Right())
             {
-                if(shiftHeld)
+                if (shiftHeld)
                     HandlePointDeletion(backgroundPoints, worldPos);
                 else
                     HandleBackgroundPointAddition(worldPos);
@@ -307,14 +306,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private void HandleForegroundPointAddition(GridVector2 worldPos)
         {
             //Check if we are clicking inside a foreground point
-            if(ForegroundPointsContain(worldPos))
-            { 
+            if (ForegroundPointsContain(worldPos))
+            {
                 // Check if clicking inside existing polygon to execute (finalize)
                 GridPolygon clickedPolygon = FindPolygonContainingPoint(worldPos);
                 if (clickedPolygon != null)
                 {
                     //Check if the user has selected a foreground point
-                
+
                     selectedPolygon = clickedPolygon;
                     Execute();
                     return;
@@ -324,10 +323,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             HandlePointAddition(foregroundPoints, worldPos);
         }
 
-        private void HandleBackgroundPointAddition(GridVector2 worldPos)
-        {
-            HandlePointAddition(backgroundPoints, worldPos);
-        }
+        private void HandleBackgroundPointAddition(GridVector2 worldPos) => HandlePointAddition(backgroundPoints, worldPos);
 
         private void HandlePointAddition(List<GridVector2> pointList, GridVector2 worldPos)
         {
@@ -348,7 +344,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private void UploadImageAndRequestSegmentation()
         {
             bool isFirstPoint = (foregroundPoints.Count + backgroundPoints.Count == 1);
-            
+
             // Check if already uploading using Interlocked
             bool currentlyUploading = Interlocked.CompareExchange(ref isUploadingImage, 0, 0) != 0;
             if (isFirstPoint && !currentImageId.HasValue && !currentlyUploading)
@@ -386,10 +382,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             base.OnMouseMove(sender, e);
-            
+
             // Check if viewport has changed (pan/zoom)
             CheckForViewportChange();
-            
+
             Parent.Invalidate();
         }
 
@@ -409,29 +405,29 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private void CheckForViewportChange()
         {
             GridRectangle currentBounds = GetCurrentViewportBounds();
-            
+
             // Check if viewport has changed significantly
             if (!AreViewportBoundsSimilar(lastViewBounds, currentBounds))
             {
                 lastViewBounds = currentBounds;
                 viewportBounds = currentBounds;
-                
+
                 // Cancel any ongoing render operation
                 linkedRenderCancellationTokenSource?.Cancel();
                 linkedRenderCancellationTokenSource?.Dispose();
                 linkedRenderCancellationTokenSource = null;
 
                 renderCancellationTokenSource?.Cancel();
-                
+
                 // Cancel any ongoing image upload
                 uploadCancellationTokenSource?.Cancel();
-                
+
                 // Delete the current image from server cache asynchronously
                 if (currentImageId.HasValue)
                 {
                     DeleteCurrentImage();
                 }
-                
+
                 // Restart debounce timer
                 panZoomDebounceTimer?.Stop();
                 panZoomDebounceTimer?.Start();
@@ -454,19 +450,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
             // Only re-request segmentation if we have points and an uploaded image
             if (foregroundPoints.Count > 0 || backgroundPoints.Count > 0)
             {
-                if(backgroundPointsView != null)
-                    backgroundPointsView.PointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
+                backgroundPointsView?.PointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
 
-                if(foregroundPointsView != null)
-                    foregroundPointsView.PointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
+                foregroundPointsView?.PointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
                 Debug.WriteLine("Viewport settled with existing points, re-requesting segmentation");
-                
+
                 // Must invoke on UI thread
                 Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
-                {
                     // RequestSegmentation will handle uploading if needed
-                    RequestSegmentation();
-                }));
+                    RequestSegmentation()));
             }
             else
             {
@@ -483,7 +475,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 foregroundPointsView = new PointSetView(Color.Green, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample)
                 {
-                    Points = foregroundPoints.ToArray()
+                    Points = [.. foregroundPoints]
                 };
                 foregroundPointsView.UpdateViews();
             }
@@ -497,7 +489,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 backgroundPointsView = new PointSetView(Color.Red, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample)
                 {
-                    Points = backgroundPoints.ToArray()
+                    Points = [.. backgroundPoints]
                 };
                 backgroundPointsView.UpdateViews();
             }
@@ -570,21 +562,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        private GridPolygon FindPolygonContainingPoint(GridVector2 worldPos)
-        {
+        private GridPolygon FindPolygonContainingPoint(GridVector2 worldPos) =>
             // Check each segment polygon to see if the point is inside
-            return segmentPolygonViews.FirstOrDefault(polygonView => polygonView?.InputPolygon != null && polygonView.InputPolygon.Contains(worldPos))?.InputPolygon;
-        }
+            segmentPolygonViews.FirstOrDefault(polygonView => polygonView?.InputPolygon != null && polygonView.InputPolygon.Contains(worldPos))?.InputPolygon;
 
         /// <summary>
         /// Returns the point that contains the worldPos parameter.  Otherwise null
         /// </summary>
         /// <param name="worldPos"></param>
         /// <returns></returns>
-        private bool ForegroundPointsContain(GridVector2 worldPos)
-        {
-            return this.foregroundPointsView.Points.Any(p => GridCircle.Contains(p, foregroundPointsView.PointRadius, worldPos) == ShapeRelation.CONTAINED);
-        }
+        private bool ForegroundPointsContain(GridVector2 worldPos) => this.foregroundPointsView.Points.Any(p => GridCircle.Contains(p, foregroundPointsView.PointRadius, worldPos) == ShapeRelation.CONTAINED);
         #endregion
 
         #region Color Generation
@@ -623,8 +610,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
             else
             {
-                float q = lightness < 0.5f 
-                    ? lightness * (1 + saturation) 
+                float q = lightness < 0.5f
+                    ? lightness * (1 + saturation)
                     : lightness + saturation - lightness * saturation;
                 float p = 2 * lightness - q;
 
@@ -658,7 +645,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <returns></returns>
         private async Task<bool> UploadCurrentImage()
         {
-            if (grpcClient == null)
+            if (grpcClient is null)
                 return false;
 
             // Atomically check and set isUploadingImage from 0 to 1
@@ -675,14 +662,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
                 // Capture current viewport image
                 var (imageData, width, height) = await CaptureViewportImage(uploadCancellationTokenSource.Token);
-                if (imageData == null || imageData.Length == 0)
+                if (imageData is null || imageData.Length == 0)
                 {
                     Debug.WriteLine("Failed to capture viewport image for upload");
                     return false;
                 }
 
                 // Build gRPC upload request
-                var uploadRequest = new SegmentationServiceTypes.UploadImageRequest
+                UploadImageRequest uploadRequest = new()
                 {
                     ImageData = Google.Protobuf.ByteString.CopyFrom(imageData),
                     Width = width,
@@ -692,10 +679,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 Debug.WriteLine($"Uploading image to server cache: {width}x{height}, {imageData.Length} bytes");
 
                 // Call gRPC service with cancellation token and timeout
-                var callOptions = new CallOptions(
+                CallOptions callOptions = new(
                     deadline: DateTime.UtcNow.AddSeconds(30),
                     cancellationToken: uploadCancellationTokenSource.Token);
-                
+
                 var uploadResponse = await grpcClient.UploadImageAsync(uploadRequest, callOptions);
 
                 // Store the image ID, bounds, and dimensions
@@ -704,7 +691,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 uploadedImageWidth = width;
                 uploadedImageHeight = height;
 
-                Debug.WriteLine($"Image uploaded successfully: ID={currentImageId}, dimensions={width}x{height}"); 
+                Debug.WriteLine($"Image uploaded successfully: ID={currentImageId}, dimensions={width}x{height}");
                 return true;
             }
             catch (OperationCanceledException)
@@ -737,7 +724,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         private async Task DeleteCurrentImage()
         {
-            if (!currentImageId.HasValue || grpcClient == null)
+            if (!currentImageId.HasValue || grpcClient is null)
                 return;
 
             ulong imageIdToDelete = currentImageId.Value;
@@ -746,7 +733,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             try
             {
-                var deleteRequest = new SegmentationServiceTypes.DeleteImageRequest
+                DeleteImageRequest deleteRequest = new()
                 {
                     ImageId = imageIdToDelete
                 };
@@ -754,7 +741,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 Debug.WriteLine($"Deleting image from server cache: ID={imageIdToDelete}");
 
                 // Call gRPC service with timeout (fire and forget, don't block UI)
-                var callOptions = new CallOptions(deadline: DateTime.UtcNow.AddSeconds(5));
+                CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(5));
                 var deleteResponse = await grpcClient.DeleteImageAsync(deleteRequest, callOptions);
 
                 Debug.WriteLine($"Image deleted from cache: ID={imageIdToDelete}, success={deleteResponse.Success}");
@@ -770,7 +757,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region gRPC Segmentation
         private async Task RequestSegmentation()
         {
-            if (isSegmenting || grpcClient == null)
+            if (isSegmenting || grpcClient is null)
                 return;
 
             if (foregroundPoints.Count == 0 && backgroundPoints.Count == 0)
@@ -778,12 +765,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             // If we don't have an uploaded image, upload one first
             bool currentlyUploading = Interlocked.CompareExchange(ref isUploadingImage, 0, 0) != 0;
-            if (!currentImageId.HasValue && !currentlyUploading) 
+            if (!currentImageId.HasValue && !currentlyUploading)
             {
                 Debug.WriteLine("No cached image ID, uploading image first");
                 await UploadCurrentImage().ContinueWith(async task =>
                 {
-                    if(!task.Result)
+                    if (!task.Result)
                         return;
 
                     await RequestSegmentation();
@@ -802,19 +789,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
             isSegmenting = true;
 
             try
-            { 
+            {
                 var request = BuildSegmentationRequest();
                 Debug.WriteLine($"Sending segmentation request with image ID {currentImageId}: {uploadedImageWidth}x{uploadedImageHeight}, {foregroundPoints.Count} fg, {backgroundPoints.Count} bg points");
 
                 // Call gRPC service with timeout
-                var callOptions = new CallOptions(deadline: DateTime.UtcNow.AddSeconds(30));
+                CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(30));
                 var response = await grpcClient.SegmentImageAsync(request, callOptions);
 
                 // Process response on UI thread
-                await Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
-                {
-                    ProcessSegmentationResponse(response);
-                }));
+                await Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() => ProcessSegmentationResponse(response)));
             }
             catch (RpcException rpcEx)
             {
@@ -833,9 +817,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Builds a gRPC segmentation request from current points
         /// </summary>
-        private SegmentationServiceTypes.SegmentationRequest BuildSegmentationRequest()
+        private SegmentationServiceTypes.SegmentationRequest? BuildSegmentationRequest()
         {
-            var request = new SegmentationServiceTypes.SegmentationRequest
+            if (!currentImageId.HasValue) return null;
+            SegmentationRequest request = new()
             {
                 ImageId = currentImageId.Value,
                 MultimaskOutput = false
@@ -880,29 +865,26 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (rpcEx.StatusCode == StatusCode.NotFound)
             {
                 Debug.WriteLine($"Image not found in cache (evicted/expired), re-uploading and retrying: {rpcEx.Status.Detail}");
-                
+
                 // Clear the image ID
                 currentImageId = null;
                 uploadedImageBounds = null;
 
                 // Re-upload the image and retry segmentation
                 if (await UploadCurrentImage())
-                { 
+                {
                     var request = BuildSegmentationRequest();
-                    var callOptions = new CallOptions(deadline: DateTime.UtcNow.AddSeconds(30));
+                    CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(30));
                     var response = await grpcClient.SegmentImageAsync(request, callOptions);
 
                     // Process response on UI thread
-                    await Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
-                    {
-                        ProcessSegmentationResponse(response);
-                    }));
+                    await Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() => ProcessSegmentationResponse(response)));
                 }
             }
             else
             {
                 Debug.WriteLine($"gRPC error: {rpcEx.Status.Detail}");
-                MessageBox.Show($"Segmentation service error: {rpcEx.Status.Detail}", 
+                MessageBox.Show($"Segmentation service error: {rpcEx.Status.Detail}",
                     "Service Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -949,16 +931,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 foreach (var protoPolygon in segment.Polygons)
                 {
                     GridPolygon gridPolygon = ConvertProtoPolygonToGridPolygon(protoPolygon, response);
-                    
+
                     if (gridPolygon != null && gridPolygon.ExteriorRing.Length >= 3)
                     {
                         // Generate a distinct color for this polygon
                         Color polygonColor = GenerateDistinctColor(polygonIndex, totalPolygons);
-                        
+
                         // Create a SolidPolygonView
-                        SolidPolygonView polygonView = new SolidPolygonView(gridPolygon, polygonColor);
+                        SolidPolygonView polygonView = new(gridPolygon, polygonColor);
                         segmentPolygonViews.Add(polygonView);
-                        
+
                         polygonIndex++;
                     }
                     else
@@ -975,13 +957,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Converts a protobuf polygon to GridPolygon with Y-axis inversion
         /// </summary>
         private GridPolygon ConvertProtoPolygonToGridPolygon(
-            SegmentationServiceTypes.Polygon protoPolygon, 
+            SegmentationServiceTypes.Polygon protoPolygon,
             SegmentationServiceTypes.SegmentationResponse response)
         {
             try
-            { 
+            {
                 // Invert Y coordinates: Viking uses bottom-left origin, server uses top-left
-                var invertedProtoPolygon = new SegmentationServiceTypes.Polygon
+                Polygon invertedProtoPolygon = new()
                 {
                     Points = { protoPolygon.Points.Select(p => new SegmentationServiceTypes.Point
                     {
@@ -993,7 +975,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
             catch (ArgumentException)
             {
-                return null; 
+                return null;
             }
         }
 
@@ -1029,7 +1011,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     uploadedImageWidth,
                     uploadedImageHeight
                 );
-                GridRectangle segmentBounds = new GridRectangle(topLeft, bottomRight);
+                GridRectangle segmentBounds = new(topLeft, bottomRight);
                 maskOverlayView = new TextureOverlayView(maskTexture, segmentBounds, maskColor);
             }
         }
@@ -1037,20 +1019,20 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #endregion
 
         #region Image Capture
-        private async Task<(byte[] data, int width, int height)> CaptureViewportImage(CancellationToken cancellationToken)
+        private async Task<(byte[]? data, int width, int height)> CaptureViewportImage(CancellationToken cancellationToken)
         {
             try
             {
                 CancellationToken renderToken = PrepareCancellationToken(cancellationToken);
 
                 var (graphicsDevice, scene, width, height) = ValidateRenderingContext();
-                if (graphicsDevice == null || scene == null)
+                if (graphicsDevice is null || scene is null)
                 {
                     return (null, 0, 0);
                 }
 
                 RenderTarget2D renderTarget = await RenderViewportToTexture(scene, width, height, renderToken);
-                if (renderTarget == null)
+                if (renderTarget is null)
                 {
                     return (null, 0, 0);
                 }
@@ -1105,13 +1087,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <returns>Tuple with validation result and error message if invalid</returns>
         private (bool isValid, string errorMessage) ValidateCapturedImage(byte[] pngData, int expectedWidth, int expectedHeight)
         {
-            if (pngData == null || pngData.Length == 0)
+            if (pngData is null || pngData.Length == 0)
             {
                 return (false, "Image validation failed: null or empty data");
             }
 
             // Check PNG magic bytes (89 50 4E 47 0D 0A 1A 0A)
-            if (pngData.Length < 8 || 
+            if (pngData.Length < 8 ||
                 pngData[0] != 0x89 || pngData[1] != 0x50 || pngData[2] != 0x4E || pngData[3] != 0x47 ||
                 pngData[4] != 0x0D || pngData[5] != 0x0A || pngData[6] != 0x1A || pngData[7] != 0x0A)
             {
@@ -1128,29 +1110,27 @@ namespace WebAnnotation.UI.Commands.Segmentation
             try
             {
                 var graphicsDevice = Parent.Device;
-                if (graphicsDevice == null)
+                if (graphicsDevice is null)
                 {
                     return (false, "Image validation failed: GraphicsDevice is null");
                 }
 
                 Microsoft.Xna.Framework.Color[] pixelData = null;
-                using (var stream = new MemoryStream(pngData))
+                using (MemoryStream stream = new(pngData))
                 {
-                    using (var pngTexture = Texture2D.FromStream(graphicsDevice, stream))
+                    using Texture2D pngTexture = Texture2D.FromStream(graphicsDevice, stream);
+                    int decodedWidth = pngTexture.Width;
+                    int decodedHeight = pngTexture.Height;
+
+                    // Verify dimensions match expectations
+                    if (decodedWidth != expectedWidth || decodedHeight != expectedHeight)
                     {
-                        int decodedWidth = pngTexture.Width;
-                        int decodedHeight = pngTexture.Height;
-
-                        // Verify dimensions match expectations
-                        if (decodedWidth != expectedWidth || decodedHeight != expectedHeight)
-                        {
-                            return (false, $"Image validation failed: dimension mismatch. Expected {expectedWidth}x{expectedHeight}, got {decodedWidth}x{decodedHeight}");
-                        }
-
-                        // Extract pixel data for content validation
-                        pixelData = new Microsoft.Xna.Framework.Color[decodedWidth * decodedHeight];
-                        pngTexture.GetData(pixelData);
+                        return (false, $"Image validation failed: dimension mismatch. Expected {expectedWidth}x{expectedHeight}, got {decodedWidth}x{decodedHeight}");
                     }
+
+                    // Extract pixel data for content validation
+                    pixelData = new Microsoft.Xna.Framework.Color[decodedWidth * decodedHeight];
+                    pngTexture.GetData(pixelData);
                 }
 
                 // Optional: Check pixel content for suspicious patterns
@@ -1165,7 +1145,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     for (int i = 0; i < pixelData.Length; i++)
                     {
                         Microsoft.Xna.Framework.Color pixel = pixelData[i];
-                        
+
                         // Check for non-black pixels
                         if (pixel.R > 0 || pixel.G > 0 || pixel.B > 0)
                         {
@@ -1179,7 +1159,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                         }
 
                         // Check if all pixels are the same
-                        if (pixel.R != firstPixel.R || pixel.G != firstPixel.G || 
+                        if (pixel.R != firstPixel.R || pixel.G != firstPixel.G ||
                             pixel.B != firstPixel.B || pixel.A != firstPixel.A)
                         {
                             isAllSame = false;
@@ -1272,14 +1252,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private (GraphicsDevice device, VikingXNA.Scene scene, int width, int height) ValidateRenderingContext()
         {
             var graphicsDevice = Parent.Device;
-            if (graphicsDevice == null)
+            if (graphicsDevice is null)
             {
                 Debug.WriteLine("GraphicsDevice is null");
                 return (null, null, 0, 0);
             }
 
             var scene = Parent.Scene;
-            if (scene == null)
+            if (scene is null)
             {
                 Debug.WriteLine("Scene is null");
                 return (null, null, 0, 0);
@@ -1316,7 +1296,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     asyncTextureLoad: false,
                     cancellationToken);
 
-                if (renderTarget == null)
+                if (renderTarget is null)
                 {
                     Debug.WriteLine("RenderSceneToTexture returned null");
                 }
@@ -1339,68 +1319,64 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             bool isGrayscale = IsImageGrayscale(pixels);
 
-            using (MemoryStream pngStream = new MemoryStream())
+            using MemoryStream pngStream = new();
+            if (isGrayscale)
             {
-                if (isGrayscale)
-                {
-                    EncodeGrayscalePng(pngStream, pixels, width, height);
-                }
-                else
-                {
-                    EncodeColorPng(renderTarget, pngStream, width, height);
-                }
-
-                return pngStream.ToArray();
+                EncodeGrayscalePng(pngStream, pixels, width, height);
             }
+            else
+            {
+                EncodeColorPng(renderTarget, pngStream, width, height);
+            }
+
+            return pngStream.ToArray();
         }
 
         private void EncodeGrayscalePng(MemoryStream pngStream, Color[] pixels, int width, int height)
         {
-            using (System.Drawing.Bitmap grayscaleBitmap = new System.Drawing.Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format8bppIndexed))
+            using System.Drawing.Bitmap grayscaleBitmap = new(width, height, System.Drawing.Imaging.PixelFormat.Format8bppIndexed);
+            // Set grayscale palette
+            System.Drawing.Imaging.ColorPalette palette = grayscaleBitmap.Palette;
+            for (int i = 0; i < 256; i++)
             {
-                // Set grayscale palette
-                System.Drawing.Imaging.ColorPalette palette = grayscaleBitmap.Palette;
-                for (int i = 0; i < 256; i++)
-                {
-                    palette.Entries[i] = System.Drawing.Color.FromArgb(i, i, i);
-                }
-                grayscaleBitmap.Palette = palette;
-
-                // Lock bitmap data
-                System.Drawing.Imaging.BitmapData bitmapData = grayscaleBitmap.LockBits(
-                    new System.Drawing.Rectangle(0, 0, width, height),
-                    System.Drawing.Imaging.ImageLockMode.WriteOnly,
-                    System.Drawing.Imaging.PixelFormat.Format8bppIndexed);
-
-                try
-                {
-                    // Copy grayscale pixel data (single channel)
-                    int stride = bitmapData.Stride;
-                    byte[] pixelBytes = new byte[pixels.Length];
-                    for (int i = 0; i < pixels.Length; i++)
-                    {
-                        pixelBytes[i] = pixels[i].R; // Use R channel as grayscale value
-                    }
-
-                    // Copy row by row (handles stride padding if any)
-                    for (int y = 0; y < height; y++)
-                    {
-                        Marshal.Copy(
-                            pixelBytes,
-                            y * width,
-                            bitmapData.Scan0 + (y * stride),
-                            width);
-                    }
-                }
-                finally
-                {
-                    grayscaleBitmap.UnlockBits(bitmapData);
-                }
-
-                // Save as PNG (will be single-channel grayscale)
-                grayscaleBitmap.Save(pngStream, System.Drawing.Imaging.ImageFormat.Png);
-                Debug.WriteLine("Image detected as grayscale, encoded as single-channel PNG");
+                palette.Entries[i] = System.Drawing.Color.FromArgb(i, i, i);
             }
+            grayscaleBitmap.Palette = palette;
+
+            // Lock bitmap data
+            System.Drawing.Imaging.BitmapData bitmapData = grayscaleBitmap.LockBits(
+                new System.Drawing.Rectangle(0, 0, width, height),
+                System.Drawing.Imaging.ImageLockMode.WriteOnly,
+                System.Drawing.Imaging.PixelFormat.Format8bppIndexed);
+
+            try
+            {
+                // Copy grayscale pixel data (single channel)
+                int stride = bitmapData.Stride;
+                byte[] pixelBytes = new byte[pixels.Length];
+                for (int i = 0; i < pixels.Length; i++)
+                {
+                    pixelBytes[i] = pixels[i].R; // Use R channel as grayscale value
+                }
+
+                // Copy row by row (handles stride padding if any)
+                for (int y = 0; y < height; y++)
+                {
+                    Marshal.Copy(
+                        pixelBytes,
+                        y * width,
+                        bitmapData.Scan0 + (y * stride),
+                        width);
+                }
+            }
+            finally
+            {
+                grayscaleBitmap.UnlockBits(bitmapData);
+            }
+
+            // Save as PNG (will be single-channel grayscale)
+            grayscaleBitmap.Save(pngStream, System.Drawing.Imaging.ImageFormat.Png);
+            Debug.WriteLine("Image detected as grayscale, encoded as single-channel PNG");
         }
 
         private void EncodeColorPng(RenderTarget2D renderTarget, MemoryStream pngStream, int width, int height)
@@ -1427,41 +1403,39 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             try
             {
-                if (pngBytes == null || pngBytes.Length == 0)
+                if (pngBytes is null || pngBytes.Length == 0)
                 {
                     Debug.WriteLine("Empty PNG mask data");
                     return (null, 0, 0);
                 }
 
                 // Load PNG using Texture2D.FromStream
-                using (var stream = new MemoryStream(pngBytes))
+                using MemoryStream stream = new(pngBytes);
+                var graphicsDevice = Parent.Device;
+                if (graphicsDevice is null)
                 {
-                    var graphicsDevice = Parent.Device;
-                    if (graphicsDevice == null)
-                    {
-                        Debug.WriteLine("Graphics device is null");
-                        return (null, 0, 0);
-                    }
-
-                    Texture2D pngTexture = Texture2D.FromStream(graphicsDevice, stream);
-                    int width = pngTexture.Width;
-                    int height = pngTexture.Height;
-
-                    // Extract pixel data as grayscale
-                    Color[] pixels = new Color[width * height];
-                    pngTexture.GetData(pixels);
-
-                    // Convert to grayscale byte array (0 or 255)
-                    byte[] maskData = new byte[width * height];
-                    for (int i = 0; i < pixels.Length; i++)
-                    {
-                        // Use R channel since PNG is grayscale (R=G=B)
-                        maskData[i] = pixels[i].R;
-                    }
-
-                    pngTexture.Dispose();
-                    return (maskData, width, height);
+                    Debug.WriteLine("Graphics device is null");
+                    return (null, 0, 0);
                 }
+
+                Texture2D pngTexture = Texture2D.FromStream(graphicsDevice, stream);
+                int width = pngTexture.Width;
+                int height = pngTexture.Height;
+
+                // Extract pixel data as grayscale
+                Color[] pixels = new Color[width * height];
+                pngTexture.GetData(pixels);
+
+                // Convert to grayscale byte array (0 or 255)
+                byte[] maskData = new byte[width * height];
+                for (int i = 0; i < pixels.Length; i++)
+                {
+                    // Use R channel since PNG is grayscale (R=G=B)
+                    maskData[i] = pixels[i].R;
+                }
+
+                pngTexture.Dispose();
+                return (maskData, width, height);
             }
             catch (Exception ex)
             {
@@ -1475,10 +1449,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             try
             {
                 var graphicsDevice = Parent.Device;
-                if (graphicsDevice == null || maskData == null || maskData.Length != width * height)
+                if (graphicsDevice is null || maskData is null || maskData.Length != width * height)
                     return null;
 
-                Texture2D texture = new Texture2D(graphicsDevice, width, height);
+                Texture2D texture = new(graphicsDevice, width, height);
                 Color[] pixels = new Color[width * height];
 
                 for (int i = 0; i < maskData.Length; i++)
@@ -1499,7 +1473,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         private bool IsPointInsideMask(GridVector2 worldPos)
         {
-            if (currentMaskData == null || maskWidth == 0 || maskHeight == 0)
+            if (currentMaskData is null || maskWidth == 0 || maskHeight == 0)
                 return false;
 
             try
@@ -1540,10 +1514,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Converts world coordinates to screen pixel coordinates
         /// </summary>
-        private GridVector2 WorldToScreen(GridVector2 worldPos)
-        {
-            return Parent.WorldToScreen(worldPos.X, worldPos.Y);
-        }
+        private GridVector2 WorldToScreen(GridVector2 worldPos) => Parent.WorldToScreen(worldPos.X, worldPos.Y);
 
         /// <summary>
         /// Gets the current viewport bounds in world coordinates
@@ -1608,13 +1579,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             // Save current depth buffer state
             var previousDepthStencilState = graphicsDevice.DepthStencilState;
-            
+
 #if DEBUG
             // Draw mask overlay if available (using TextureOverlayView) - DEBUG only
-            if (maskOverlayView != null)
-            {
-                maskOverlayView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
-            }
+            maskOverlayView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
 #endif
 
             // Draw segment polygons first (underneath points)
@@ -1630,7 +1598,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             const float FLASH_RATE_SECONDS = 3.0f; // Time for one complete pulse cycle
             DateTime now = DateTime.UtcNow;
             float elapsedSeconds = (now.Second * 1000 + now.Millisecond) / 1000f;
-            
+
             // Calculate pulsing alpha values using sine/cosine for smooth animation
             double phaseAngle = ((elapsedSeconds % FLASH_RATE_SECONDS) / FLASH_RATE_SECONDS) * 2 * Math.PI;
             double foregroundPulse = Math.Sin(phaseAngle);
@@ -1658,9 +1626,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region Command Execution
         protected override void Execute()
         {
-            if (selectedPolygon == null)
+            if (selectedPolygon is null)
             {
-                MessageBox.Show("No polygon selected. Please click inside a segmented polygon to finalize.", 
+                MessageBox.Show("No polygon selected. Please click inside a segmented polygon to finalize.",
                     "No Polygon Selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -1670,7 +1638,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 // Validate polygon
                 if (selectedPolygon.ExteriorRing.Length < 3)
                 {
-                    MessageBox.Show("Invalid polygon (less than 3 points).", 
+                    MessageBox.Show("Invalid polygon (less than 3 points).",
                         "Invalid Polygon", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
@@ -1682,12 +1650,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
                 // Clean up and deactivate
                 CleanupCommand();
-                Deactivated = true; 
+                Deactivated = true;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error executing segmentation command: {ex.Message}");
-                MessageBox.Show($"Error creating annotation: {ex.Message}", 
+                MessageBox.Show($"Error creating annotation: {ex.Message}",
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
@@ -1698,7 +1666,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             // Extract contour points from binary mask
             List<GridVector2> contourPoints = ExtractContourFromMask(maskData, width, height);
-            
+
             if (contourPoints.Count < 3)
             {
                 Debug.WriteLine("Not enough contour points extracted");
@@ -1717,7 +1685,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private List<GridVector2> ExtractContourFromMask(byte[] maskData, int width, int height)
         {
             // Simple boundary extraction: find pixels on the edge of the mask
-            List<GridVector2> boundaryPixels = new List<GridVector2>();
+            List<GridVector2> boundaryPixels = [];
 
             for (int y = 1; y < height - 1; y++)
             {
@@ -1757,8 +1725,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             // Simple ordering: start from leftmost point and find nearest unvisited neighbors
             // For production, implement proper contour following
-            List<GridVector2> ordered = new List<GridVector2>();
-            HashSet<GridVector2> remaining = new HashSet<GridVector2>(points);
+            List<GridVector2> ordered = [];
+            HashSet<GridVector2> remaining = [.. points];
 
             // Start with leftmost point
             GridVector2 current = points.OrderBy(p => p.X).First();
@@ -1777,14 +1745,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return ordered;
         }
 
-        public static void CreateAnnotationFromPolygon(Viking.UI.Controls.SectionViewerControl Parent, StructureType type, GridPolygon polygon)
+        public static void CreateAnnotationFromPolygon(Viking.UI.Controls.SectionViewerControl Parent, StructureType? type, GridPolygon polygon)
         {
             StructureTypeObj typeObj = GetDefaultStructureType(type);
             // Create structure
-            StructureObj newStruct = new StructureObj(typeObj);
+            StructureObj newStruct = new(typeObj);
 
             // Create location with polygon type
-            LocationObj newLocation = new LocationObj(
+            LocationObj newLocation = new(
                 newStruct,
                 Parent.Section.Number,
                 Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON);
@@ -1799,11 +1767,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 // Enqueue command to save the structure
                 Parent.CommandQueue.EnqueueCommand(
                     typeof(CreateNewStructureCommand),
-                    new object[] { Parent, newStruct, newLocation });
+                    [Parent, newStruct, newLocation]);
             }
             catch (ArgumentException e)
             {
-                MessageBox.Show($"Could not create polygon: {e.Message}", 
+                MessageBox.Show($"Could not create polygon: {e.Message}",
                     "Error Creating Annotation", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -1813,14 +1781,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
-        private static StructureTypeObj GetDefaultStructureType(StructureType type = null)
+        private static StructureTypeObj GetDefaultStructureType(StructureType? type = null)
         {
-            if(type is not null)
+            if (type is not null)
                 return type.modelObj;
 
             // Try to get from state
-            StructureType result = Viking.UI.State.SelectedObject as StructureType;
-            if(result is null)
+            if (Viking.UI.State.SelectedObject is not StructureType result)
             {
                 return Store.StructureTypes[1];
             }
@@ -1845,10 +1812,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             maskTexture?.Dispose();
             maskTexture = null;
             selectedPolygon = null;
-            
+
             // Trigger redraw to update display
             Parent.Invalidate();
-            
+
             Debug.WriteLine("Segmentation results cleared (no foreground points remaining)");
         }
 
@@ -1864,14 +1831,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
             maskOverlayView = null;
             segmentPolygonViews.Clear();
             selectedPolygon = null;
-            
+
             // Clear server-side cache references and dimensions
             currentImageId = null;
             uploadedImageBounds = null;
             uploadedImageWidth = 0;
             uploadedImageHeight = 0;
             Interlocked.Exchange(ref isUploadingImage, 0);
-            
+
             // Cancel and dispose of cancellation token sources
             linkedRenderCancellationTokenSource?.Cancel();
             linkedRenderCancellationTokenSource?.Dispose();
@@ -1880,7 +1847,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             renderCancellationTokenSource?.Cancel();
             renderCancellationTokenSource?.Dispose();
             renderCancellationTokenSource = null;
-            
+
             uploadCancellationTokenSource?.Cancel();
             uploadCancellationTokenSource?.Dispose();
             uploadCancellationTokenSource = null;

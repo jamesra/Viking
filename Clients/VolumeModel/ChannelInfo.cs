@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Xml.Linq;
@@ -24,10 +24,7 @@ namespace Viking.VolumeModel
         //For compatability with older version of VikingXML, the first channel with a grey color is considered the background for multi-channel blending
         public bool Greyscale => (Color.B == Color.G) && (Color.B == Color.R);
 
-        public override string ToString()
-        {
-            return "R: " + this.Color.R.ToString() + " G: " + this.Color.G.ToString() + " B: " + this.Color.B.ToString();
-        }
+        public override string ToString() => "R: " + this.Color.R.ToString() + " G: " + this.Color.G.ToString() + " B: " + this.Color.B.ToString();
 
         /// <summary>
         /// Which section we should load the channel from
@@ -48,7 +45,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// The color to map the images to
         /// </summary>
-        public Geometry.Graphics.Color Color = new Geometry.Graphics.Color(1f, 1f, 1f);
+        public Geometry.Graphics.Color Color = new(1f, 1f, 1f);
 
         public System.Drawing.Color FormColor
         {
@@ -72,7 +69,7 @@ namespace Viking.VolumeModel
 
         public object Clone()
         {
-            ChannelInfo clone = new ChannelInfo
+            ChannelInfo clone = new()
             {
                 ChannelName = this.ChannelName,
                 Color = this.Color,
@@ -93,12 +90,12 @@ namespace Viking.VolumeModel
         public static ChannelInfo[] FromXML(XElement elemChannelInfo)
         {
             if (elemChannelInfo is null)
-                return new ChannelInfo[0];
+                return [];
 
-            List<ChannelInfo> channels = new List<ChannelInfo>();
+            List<ChannelInfo> channels = [];
             foreach (XNode node in elemChannelInfo.Nodes())
             {
-                if (!(node is XElement elem))
+                if (node is not XElement elem)
                     continue;
 
                 switch (elem.Name.LocalName)
@@ -158,7 +155,7 @@ namespace Viking.VolumeModel
 
                         if (CreateChannel)
                         {
-                            ChannelInfo newChannel = new ChannelInfo
+                            ChannelInfo newChannel = new()
                             {
                                 ChannelName = Channel,
                                 Color = ChannelColor,
@@ -171,7 +168,7 @@ namespace Viking.VolumeModel
                 }
             }
 
-            return channels.ToArray();
+            return [.. channels];
         }
 
         public static bool TryParseColor(string Color, out Geometry.Graphics.Color Output)

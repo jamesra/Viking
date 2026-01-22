@@ -6,17 +6,11 @@
     /// Add is called after the object is added to the store
     /// Remove is called before the object is removed from the store
     /// </summary>
-    public class AddUpdateRemoveKeyEventArgs : System.EventArgs
+    public class AddUpdateRemoveKeyEventArgs(long ID, AddUpdateRemoveKeyEventArgs.Action action) : System.EventArgs
     {
         public enum Action { ADD, UPDATE, REMOVE };
-        public readonly Action ChangeAction;
-        public readonly long ID;
-
-        public AddUpdateRemoveKeyEventArgs(long ID, Action action)
-        {
-            this.ChangeAction = action;
-            this.ID = ID;
-        }
+        public readonly Action ChangeAction = action;
+        public readonly long ID = ID;
     }
     public delegate void AddUpdateRemoveKeyEventHandler(object sender, AddUpdateRemoveKeyEventArgs e);
 

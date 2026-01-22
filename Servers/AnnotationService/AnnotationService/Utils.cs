@@ -8,12 +8,12 @@ namespace Annotation
     {
         public static List<long[]> SortAndChunk(this ICollection<long> IDs, uint maxchunksize)
         {
-            List<long> list_IDs = IDs.ToList();
+            List<long> list_IDs = [.. IDs];
             list_IDs.Sort();
             int numChunks = (int)Math.Ceiling((float)IDs.Count / (float)maxchunksize);
             int chunk_size = (int)Math.Ceiling((float)IDs.Count / numChunks);
 
-            List<long[]> output = new List<long[]>(numChunks);
+            List<long[]> output = new(numChunks);
 
             while (list_IDs.Count > 0)
             {

@@ -1,4 +1,4 @@
-﻿using AnnotationVizLib;
+using AnnotationVizLib;
 using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -22,8 +22,7 @@ namespace AnnotationVizLibTests
         }
 
 
-        internal static double[] DistancesToDesmosomesForSubgraph(MorphologyGraph cell_graph)
-        {
+        internal static double[] DistancesToDesmosomesForSubgraph(MorphologyGraph cell_graph) =>
             // TODO: This method uses internal APIs and non-existent methods
             // Commenting out for now to get build working
             /*
@@ -65,8 +64,7 @@ namespace AnnotationVizLibTests
 
             return distances;
             */
-            return new double[0]; // Placeholder return
-        }
+            []; // Placeholder return
 
 
         /// <summary>
@@ -75,27 +73,27 @@ namespace AnnotationVizLibTests
         public static void TestBranchAndTerminalProcessSelection(MorphologyGraph graph)
         {
             //Find all of the terminals
-            SortedSet<ulong> branchIDs = new SortedSet<ulong>(graph.GetBranchPointIDs());
+            SortedSet<ulong> branchIDs = [.. graph.GetBranchPointIDs()];
             Assert.IsTrue(branchIDs.Count > 0);
-            SortedSet<ulong> terminalIDs = new SortedSet<ulong>(graph.GetTerminalIDs());
+            SortedSet<ulong> terminalIDs = [.. graph.GetTerminalIDs()];
             Assert.IsTrue(terminalIDs.Count > 0);
-            SortedSet<ulong> processIDs = new SortedSet<ulong>(graph.GetProcessIDs());
+            SortedSet<ulong> processIDs = [.. graph.GetProcessIDs()];
             Assert.IsTrue(processIDs.Count > 0);
 
-            SortedSet<ulong> intersection = new SortedSet<ulong>(branchIDs.Intersect(terminalIDs));
-            Assert.IsTrue(intersection.Count == 0);
-            intersection = new SortedSet<ulong>(terminalIDs.Intersect(branchIDs));
-            Assert.IsTrue(intersection.Count == 0);
+            SortedSet<ulong> intersection = [.. branchIDs.Intersect(terminalIDs)];
+            Assert.AreEqual(0, intersection.Count);
+            intersection = [.. terminalIDs.Intersect(branchIDs)];
+            Assert.AreEqual(0, intersection.Count);
 
-            intersection = new SortedSet<ulong>(terminalIDs.Intersect(processIDs));
-            Assert.IsTrue(intersection.Count == 0);
-            intersection = new SortedSet<ulong>(processIDs.Intersect(terminalIDs));
-            Assert.IsTrue(intersection.Count == 0);
+            intersection = [.. terminalIDs.Intersect(processIDs)];
+            Assert.AreEqual(0, intersection.Count);
+            intersection = [.. processIDs.Intersect(terminalIDs)];
+            Assert.AreEqual(0, intersection.Count);
 
-            intersection = new SortedSet<ulong>(branchIDs.Intersect(processIDs));
-            Assert.IsTrue(intersection.Count == 0);
-            intersection = new SortedSet<ulong>(processIDs.Intersect(branchIDs));
-            Assert.IsTrue(intersection.Count == 0);
+            intersection = [.. branchIDs.Intersect(processIDs)];
+            Assert.AreEqual(0, intersection.Count);
+            intersection = [.. processIDs.Intersect(branchIDs)];
+            Assert.AreEqual(0, intersection.Count);
 
             List<ulong[]> processes = graph.Processes();
             Assert.IsTrue(processes.Count > 1);
@@ -107,11 +105,11 @@ namespace AnnotationVizLibTests
             Geometry.GridBox bbox = graph.BoundingBox;
 
             //Ensure the bbox contains all of the centers of the morphology nodes
-            GridVector3[] centers = graph.Nodes.Select(n => n.Value.Center).ToArray();
+            GridVector3[] centers = [.. graph.Nodes.Select(n => n.Value.Center)];
             GridBox node_center_bbox = GridBox.GetBoundingBox(centers);
 
             Assert.IsTrue(bbox.Contains(node_center_bbox));
-        } 
+        }
 
         public static void SaveGraph(string Filename, MorphologyGraph graph)
         {
@@ -127,8 +125,7 @@ namespace AnnotationVizLibTests
             */
         }
 
-        public static MorphologyGraph LoadGraph(string Filename)
-        { 
+        public static MorphologyGraph LoadGraph(string Filename) =>
             // TODO: BinaryFormatter is obsolete in .NET 9.0
             // Need to implement alternative deserialization method
             /*
@@ -140,10 +137,9 @@ namespace AnnotationVizLibTests
                 return graph;
             }
             */
-            return null; // Placeholder return
-        }
-    } 
-     
+            null; // Placeholder return
+    }
+
     /// <summary>
     /// Tests higher level operations on Morphology graphs
     /// </summary>
@@ -196,7 +192,7 @@ namespace AnnotationVizLibTests
         [ClassInitialize()]
         public static void InitializeSharedGraph(TestContext testContext)
         {
-            
+
         }
 
         [TestMethod]
@@ -204,7 +200,7 @@ namespace AnnotationVizLibTests
         {
             SharedGraph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
             Assert.IsNotNull(SharedGraph);
-            Assert.IsTrue(SharedGraph.Subgraphs.Count > 0);
+            Assert.IsTrue(!SharedGraph.Subgraphs.IsEmpty);
 
             string SavedGraphFullPath = "C:\\Temp\\180.bin";
 
@@ -216,23 +212,23 @@ namespace AnnotationVizLibTests
             Assert.Equals(SharedGraph.Nodes.Count, loadedGraph.Nodes.Count);
             Assert.Equals(SharedGraph.Edges.Count, loadedGraph.Edges.Count);
 
-            foreach(MorphologyNode n in SharedGraph.Nodes.Values)
+            foreach (MorphologyNode n in SharedGraph.Nodes.Values)
             {
                 Assert.IsTrue(loadedGraph.Nodes.ContainsKey(n.Key));
-                Assert.IsTrue(loadedGraph.Nodes[n.Key].Edges.Count == n.Edges.Count);
+                Assert.AreEqual(n.Edges.Count, loadedGraph.Nodes[n.Key].Edges.Count);
             }
         }
-         
+
         [TestMethod]
         public void TestDistanceMeasurement()
         {
             SharedGraph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
             Assert.IsNotNull(SharedGraph);
-            Assert.IsTrue(SharedGraph.Subgraphs.Count > 0);
+            Assert.IsTrue(!SharedGraph.Subgraphs.IsEmpty);
 
             SharedGraph.ConnectIsolatedSubgraphs();
             var subgraphs = MorphologyGraph.IsolatedSubgraphs(SharedGraph.Subgraphs.Values.First());
-            Assert.IsTrue(subgraphs.Count == 1);
+            Assert.AreEqual(1, subgraphs.Count);
 
             MorphologyGraph cell_graph = SharedGraph.Subgraphs.Values.First();
 
@@ -246,13 +242,13 @@ namespace AnnotationVizLibTests
         [TestMethod]
         public void TestBulkDistanceMeasurement()
         {
-            var client = new Simple.OData.Client.ODataClient(GraphTestShared.ODataEndpoint);
+            Simple.OData.Client.ODataClient client = new(GraphTestShared.ODataEndpoint);
 
             var T = client.FindEntriesAsync("Structures/ConnectomeODataV4.DistinctLabels");
-            
+
             T.Wait();
 
-            List<string> labels = new List<string>(T.Result.Count());
+            List<string> labels = new(T.Result.Count());
 
             foreach (IDictionary<string, object> dict in T.Result)
             {
@@ -266,13 +262,13 @@ namespace AnnotationVizLibTests
             if (System.IO.File.Exists(OutputPath))
                 System.IO.File.Delete(OutputPath);
 
-            string[] distinctLabels = labels.ToArray(); //.Distinct().ToArray();
+            string[] distinctLabels = [.. labels]; //.Distinct().ToArray();
 
-            Dictionary<string, IDictionary<ulong, double[]>> LabelDict = new Dictionary<string, IDictionary<ulong, double[]>>();
-            
+            Dictionary<string, IDictionary<ulong, double[]>> LabelDict = [];
+
             foreach (string label in distinctLabels)
             {
-                if(label != null)
+                if (label != null)
                     LabelDict[label] = BulkMeasureForLabel(label);
             }
 
@@ -281,52 +277,52 @@ namespace AnnotationVizLibTests
 
         public static void ConvertDictionaryToMatlab(IDictionary<string, IDictionary<ulong, double[]>> dict, string OutputFile)
         {
-            
+
         }
 
         public static IDictionary<ulong, double[]> BulkMeasureForLabel(string Label)
         {
-            Dictionary<ulong, double[]> distanceForLabel = new Dictionary<ulong, double[]>();
+            Dictionary<ulong, double[]> distanceForLabel = [];
             if (Label is null)
                 return distanceForLabel;
 
             string LowerLabel = Label.ToLower();
 
-            ODataClient.ConnectomeDataModel.Container container = new ODataClient.ConnectomeDataModel.Container(new Uri(GraphTestShared.ODataEndpoint));
+            ODataClient.ConnectomeDataModel.Container container = new(new Uri(GraphTestShared.ODataEndpoint));
             //var IDsAndLabels = container.Structures.Select(s => new { ID = s.ID, Label = s.Label }).Where(s => s.Label.ToLower().Equals(Label.ToLower()));
-            long[] IDs = container.Structures.Where(s => s.Label == Label).AsEnumerable().Select(s => s.ID).ToArray();
-            
+            long[] IDs = [.. container.Structures.Where(s => s.Label == Label).AsEnumerable().Select(s => s.ID)];
+
             MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(IDs, true, new Uri(GraphTestShared.ODataEndpoint));
 
-            SortedSet<ulong> TargetTypes = new SortedSet<ulong>(new ulong[] { 85 }); //Adherens
-            SortedSet<ulong> SourceTypes = new SortedSet<ulong>(new ulong[] { 28,34,35,73 });
-            
+            SortedSet<ulong> TargetTypes = [85]; //Adherens
+            SortedSet<ulong> SourceTypes = [28, 34, 35, 73];
+
             foreach (ulong TargetType in TargetTypes)
             {
                 double[] Distances;
-                SortedSet<ulong> T = new SortedSet<ulong>
-                {
+                SortedSet<ulong> T =
+                [
                     TargetType
-                };
+                ];
                 Distances = MeasureDistances(graph, SourceTypes, TargetTypes);
 
                 distanceForLabel[TargetType] = Distances;
-            //    WriteDistanceResultsToMatlabFile(Label + "_T" + TargetType.ToString(), Distances, OutputPath);
+                //    WriteDistanceResultsToMatlabFile(Label + "_T" + TargetType.ToString(), Distances, OutputPath);
             }
 
             return distanceForLabel;
-        } 
+        }
 
         public static double[] MeasureDistances(MorphologyGraph graph, SortedSet<ulong> SourceTypes, SortedSet<ulong> TargetTypes)
         {
-            List<double> accumulated_distances = new List<double>();
+            List<double> accumulated_distances = [];
             foreach (MorphologyGraph cell_graph in graph.Subgraphs.Values)
             {
-                double[] distances = MorphologyGraph.DistancesBetweenSubgraphsByType(cell_graph, SourceTypes, TargetTypes).Select(p => p.Distance).ToArray();
+                double[] distances = [.. MorphologyGraph.DistancesBetweenSubgraphsByType(cell_graph, SourceTypes, TargetTypes).Select(p => p.Distance)];
                 accumulated_distances.AddRange(distances);
             }
 
-            return accumulated_distances.ToArray();
+            return [.. accumulated_distances];
         }
 
         /// <summary>
@@ -335,10 +331,7 @@ namespace AnnotationVizLibTests
         /// <param name="Variable"></param>
         /// <param name="distances"></param>
         /// <param name="Filename"></param>
-        public static void WriteDistanceResultsToMatlabFile(string Variable, double[] distances, string Filename)
-        {
-            System.IO.File.AppendAllText(Filename, string.Format("\n{0} = {1};\n", Variable, distances.ToMatlab()));
-        }
+        public static void WriteDistanceResultsToMatlabFile(string Variable, double[] distances, string Filename) => System.IO.File.AppendAllText(Filename, string.Format("\n{0} = {1};\n", Variable, distances.ToMatlab()));
 
     }
 
@@ -347,9 +340,9 @@ namespace AnnotationVizLibTests
     /// </summary>
     [TestClass]
     public class ODataMorphologyGraphTest
-    { 
+    {
         public ODataMorphologyGraphTest()
-        { 
+        {
         }
 
         private TestContext testContextInstance;
@@ -399,12 +392,12 @@ namespace AnnotationVizLibTests
 
             SharedGraph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
             Assert.IsNotNull(SharedGraph);
-            Assert.IsTrue(SharedGraph.Subgraphs.Count > 0);
-            
+            Assert.IsTrue(!SharedGraph.Subgraphs.IsEmpty);
+
             SharedGraph.ConnectIsolatedSubgraphs();
             var subgraphs = MorphologyGraph.IsolatedSubgraphs(SharedGraph.Subgraphs.Values.First());
-            Assert.IsTrue(subgraphs.Count == 1);
-            
+            Assert.AreEqual(1, subgraphs.Count);
+
         }
 
         public static UnitsAndScale.Scale DefaultScale()
@@ -413,35 +406,29 @@ namespace AnnotationVizLibTests
                                       new UnitsAndScale.AxisUnits(2.18, "nm"),
                                       new UnitsAndScale.AxisUnits(90, "nm"));
         }
-        
+
         [TestMethod]
         public void GenerateODataMorphologyGraph()
         {
             StructureMorphologyColorMap colormap = AnnotationVizLibTests.TestUtils.LoadColorMap("Resources/ExportColorMapping");
 
-            Assert.IsTrue(SharedGraph.Subgraphs.First().Value.Subgraphs.Count > 0);
+            Assert.IsTrue(!SharedGraph.Subgraphs.First().Value.Subgraphs.IsEmpty);
 
             MorphologyTLPView tlpGraph = AnnotationVizLib.MorphologyTLPView.ToTLP(SharedGraph, DefaultScale(), colormap, GraphTestShared.ExportEndpoint);
-            
+
             string TLPFileFullPath = "C:\\Temp\\180_OData.tlp";
 
             tlpGraph.SaveTLP(TLPFileFullPath);
         }
-        
+
         /// <summary>
         /// Test measuring distance along a process, or distance between two types of child graphs.
         /// </summary>
         [TestMethod]
-        public void TestBranchTerminalProcessSelection()
-        {
-            GraphTestShared.TestBranchAndTerminalProcessSelection(SharedGraph.Subgraphs.First().Value);
-        }
+        public void TestBranchTerminalProcessSelection() => GraphTestShared.TestBranchAndTerminalProcessSelection(SharedGraph.Subgraphs.First().Value);
 
         [TestMethod]
-        public void TestMorphologyGraphBoundingBox()
-        {
-            GraphTestShared.TestMorphologyGraphBoundingBox(SharedGraph.Subgraphs.First().Value);
-        }
+        public void TestMorphologyGraphBoundingBox() => GraphTestShared.TestMorphologyGraphBoundingBox(SharedGraph.Subgraphs.First().Value);
 
         [TestMethod]
         public void TestStickFigureMorphologyGraph()
@@ -461,16 +448,16 @@ namespace AnnotationVizLibTests
             tlpGraph.SaveTLP(TLPFileFullPath);
 
             //Ensure the graph only has endpoints and branches
-            SortedSet<ulong> branchIDs = new SortedSet<ulong>(graph.Subgraphs.First().Value.GetBranchPointIDs());
-            SortedSet<ulong> terminalIDs = new SortedSet<ulong>(graph.Subgraphs.First().Value.GetTerminalIDs());
-            SortedSet<ulong> processIDs = new SortedSet<ulong>(graph.Subgraphs.First().Value.GetProcessIDs());
-            Assert.IsTrue(terminalIDs.Count + branchIDs.Count == graph.Subgraphs.First().Value.Nodes.Count);
-            Assert.IsTrue(processIDs.Count  == 0);
+            SortedSet<ulong> branchIDs = [.. graph.Subgraphs.First().Value.GetBranchPointIDs()];
+            SortedSet<ulong> terminalIDs = [.. graph.Subgraphs.First().Value.GetTerminalIDs()];
+            SortedSet<ulong> processIDs = [.. graph.Subgraphs.First().Value.GetProcessIDs()];
+            Assert.AreEqual(graph.Subgraphs.First().Value.Nodes.Count, terminalIDs.Count + branchIDs.Count);
+            Assert.AreEqual(0, processIDs.Count);
         }
-         
-        
+
+
     }
-     
+
     /// <summary>
     /// Summary description for MotifGraphTest
     /// </summary>
@@ -526,21 +513,21 @@ namespace AnnotationVizLibTests
 
             SharedGraph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
             Assert.IsNotNull(SharedGraph);
-            Assert.IsTrue(SharedGraph.Subgraphs.Count > 0);
+            Assert.IsTrue(!SharedGraph.Subgraphs.IsEmpty);
 
             SharedGraph.ConnectIsolatedSubgraphs();
             var subgraphs = MorphologyGraph.IsolatedSubgraphs(SharedGraph.Subgraphs.Values.First());
-            Assert.IsTrue(subgraphs.Count == 1);
-             
-            Assert.IsTrue(SharedGraph.Subgraphs.First().Value.Subgraphs.Count > 0);
+            Assert.AreEqual(1, subgraphs.Count);
+
+            Assert.IsTrue(!SharedGraph.Subgraphs.First().Value.Subgraphs.IsEmpty);
 
         }
-         
+
         [TestMethod]
         public void GenerateSimpleODataMorphologyGraph()
         {
             StructureMorphologyColorMap colormap = AnnotationVizLibTests.TestUtils.LoadColorMap("Resources/ExportColorMapping");
-             
+
             MorphologyTLPView tlpGraph = AnnotationVizLib.MorphologyTLPView.ToTLP(SharedGraph, SharedGraph.scale, colormap, GraphTestShared.ExportEndpoint);
 
             string TLPFileFullPath = "C:\\Temp\\180_SimpleOData.tlp";
@@ -552,16 +539,10 @@ namespace AnnotationVizLibTests
         /// Test measuring distance along a process, or distance between two types of child graphs.
         /// </summary>
         [TestMethod]
-        public void TestBranchTerminalProcessSelection()
-        {
-            GraphTestShared.TestBranchAndTerminalProcessSelection(SharedGraph.Subgraphs.First().Value);
-        }
+        public void TestBranchTerminalProcessSelection() => GraphTestShared.TestBranchAndTerminalProcessSelection(SharedGraph.Subgraphs.First().Value);
 
         [TestMethod]
-        public void TestMorphologyGraphBoundingBox()
-        {
-            GraphTestShared.TestMorphologyGraphBoundingBox(SharedGraph.Subgraphs.First().Value);
-        }
+        public void TestMorphologyGraphBoundingBox() => GraphTestShared.TestMorphologyGraphBoundingBox(SharedGraph.Subgraphs.First().Value);
 
         /*
         [TestMethod]
@@ -716,11 +697,11 @@ namespace AnnotationVizLibTests
 
             SharedGraph = AnnotationVizLib.WCFClient.WCFMorphologyFactory.FromWCF(new long[] { 180 }, true, GraphTestShared.WCFEndpoint, GraphTestShared.userCredentials);
             Assert.IsNotNull(SharedGraph);
-            Assert.IsTrue(SharedGraph.Subgraphs.Count > 0);
+            Assert.IsTrue(!SharedGraph.Subgraphs.IsEmpty);
 
             SharedGraph.ConnectIsolatedSubgraphs();
             var subgraphs = MorphologyGraph.IsolatedSubgraphs(SharedGraph.Subgraphs.Values.First());
-            Assert.IsTrue(subgraphs.Count == 1);
+            Assert.AreEqual(1, subgraphs.Count);
 
         }
 
@@ -747,16 +728,10 @@ namespace AnnotationVizLibTests
         /// Test measuring distance along a process, or distance between two types of child graphs.
         /// </summary>
         [TestMethod]
-        public void TestBranchTerminalProcessSelection()
-        {
-            GraphTestShared.TestBranchAndTerminalProcessSelection(SharedGraph.Subgraphs.First().Value);
-        }
+        public void TestBranchTerminalProcessSelection() => GraphTestShared.TestBranchAndTerminalProcessSelection(SharedGraph.Subgraphs.First().Value);
 
         [TestMethod]
-        public void TestMorphologyGraphBoundingBox()
-        {
-            GraphTestShared.TestMorphologyGraphBoundingBox(SharedGraph.Subgraphs.First().Value);
-        }
+        public void TestMorphologyGraphBoundingBox() => GraphTestShared.TestMorphologyGraphBoundingBox(SharedGraph.Subgraphs.First().Value);
 
 
 

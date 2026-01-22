@@ -1,4 +1,7 @@
-﻿using System.Windows.Media;
+﻿using System;
+using System.Threading.Tasks;
+using System.Windows.Media;
+using Viking.Common;
 
 namespace Viking.VolumeViewModel
 {
@@ -31,6 +34,19 @@ namespace Viking.VolumeViewModel
         {
             BrushCacheEntry cacheEntry = new BrushCacheEntry(key, value);
             return cacheEntry; 
+        }
+
+        protected override BrushCacheEntry CreateEntry(string key, Func<string, Brush> valueFactory)
+        {
+            Brush value = valueFactory(key);
+            BrushCacheEntry cacheEntry = new BrushCacheEntry(key, value);
+            return cacheEntry;
+        }
+
+        protected override Task<BrushCacheEntry> CreateEntryAsync(string key, Brush value)
+        {
+            BrushCacheEntry cacheEntry = new BrushCacheEntry(key, value);
+            return Task.FromResult(cacheEntry);
         }
     }
 }

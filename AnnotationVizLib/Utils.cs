@@ -1,14 +1,11 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace AnnotationVizLib
 {
 
     public static class Utils<T>
     {
-        private static int NumberOfChunks(int totalsize, int Chunksize)
-        {
-            return (totalsize / Chunksize) + ((totalsize % Chunksize == 0) ? 0 : 1);
-        }
+        private static int NumberOfChunks(int totalsize, int Chunksize) => (totalsize / Chunksize) + ((totalsize % Chunksize == 0) ? 0 : 1);
 
         public static List<T>[] SplitListIntoChunks(List<T> input, int Chunksize)
         {
@@ -26,7 +23,7 @@ namespace AnnotationVizLib
                 {
                     int iStartRange = (i * Chunksize);
                     int rangeCount = iStartRange + Chunksize > input.Count ? input.Count - iStartRange : Chunksize;
-                    arrayOfLists[i] = new List<T>(input.GetRange(iStartRange, rangeCount));
+                    arrayOfLists[i] = [.. input.GetRange(iStartRange, rangeCount)];
                 }
             }
 

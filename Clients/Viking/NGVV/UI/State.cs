@@ -18,10 +18,7 @@ namespace Viking.UI
 
         public static Viking.UI.Forms.SectionViewerForm ViewerForm;
 
-        public static void InvalidateViewerControl()
-        {
-            ViewerControl?.Invalidate();
-        }
+        public static void InvalidateViewerControl() => ViewerControl?.Invalidate();
 
         /// <summary>
         /// The section viewer control for creating commands
@@ -34,7 +31,7 @@ namespace Viking.UI
 
         public static string CurrentMode = "";
 
-        
+
 
         //Stores userAccessLevel for the profided credentials: Include: Admin, Modify, Read
         public static string[] UserAccessLevel;
@@ -45,9 +42,9 @@ namespace Viking.UI
         //User credentials used during authentication
         public static Duende.IdentityModel.Client.TokenResponse? UserBearerToken = null;
 
-        public static System.Net.NetworkCredential UserCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
+        public static System.Net.NetworkCredential UserCredentials = new("anonymous", "connectome");
 
-        public static readonly System.Net.NetworkCredential AnonymousCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
+        public static readonly System.Net.NetworkCredential AnonymousCredentials = new("anonymous", "connectome");
 
         private static readonly string CacheSubPath = "Cache";
         public static readonly string CachePath = System.Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Viking\\" + CacheSubPath;
@@ -66,10 +63,7 @@ namespace Viking.UI
             }
         }
 
-        public static string GetVolumeCachePath(string VolumeName)
-        {
-            return System.IO.Path.Combine(CachePath, VolumeName);
-        }
+        public static string GetVolumeCachePath(string VolumeName) => System.IO.Path.Combine(CachePath, VolumeName);
 
         public static string TextureCachePath => System.IO.Path.Combine(State.VolumeCachePath, "Textures");
 
@@ -111,7 +105,7 @@ namespace Viking.UI
         /// When an image is dragged we want to draw the image relative to where the
         /// image center was when the person started the drag operation. 
         /// </summary>
-        public static System.Drawing.Point DragDropOrigin = new System.Drawing.Point(0, 0);
+        public static System.Drawing.Point DragDropOrigin = new(0, 0);
         #endregion 
 
         #region Selection State
@@ -130,7 +124,7 @@ namespace Viking.UI
                 _SelectedObject = value;
                 if (FireEvent && ItemSelected != null)
                 {
-                    Viking.Common.ObjectSelectedEventArgs Args = new Viking.Common.ObjectSelectedEventArgs(value);
+                    Viking.Common.ObjectSelectedEventArgs Args = new(value);
                     ItemSelected(value, Args);
                 }
                 if (value != null)
@@ -168,7 +162,7 @@ namespace Viking.UI
         /// </summary>
         public static bool ShowTileMesh = false;
 
-        private static VolumeViewModel _volume = null;
+        private static VolumeViewModel? _volume = null;
 
         /// <summary>
         /// The volume currently being viewed
@@ -182,7 +176,7 @@ namespace Viking.UI
         /// <summary>
         /// Arguments passed to Viking on startup
         /// </summary>
-        public static System.Collections.Specialized.NameValueCollection StartupArguments = new System.Collections.Specialized.NameValueCollection();
+        public static System.Collections.Specialized.NameValueCollection StartupArguments = [];
 
     }
 }

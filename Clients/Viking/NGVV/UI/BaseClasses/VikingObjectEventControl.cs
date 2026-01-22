@@ -1,9 +1,9 @@
-﻿namespace Viking.UI.BaseClasses
+namespace Viking.UI.BaseClasses
 {
     public partial class VikingObjectEventControl : VikingControl
-    {  
-        
-        
+    {
+
+
         #region Variables
         private readonly System.EventHandler? OnNewObjectEventHandler = null;
         private readonly System.EventHandler? BeforeAnyDeleteEventHandler = null;
@@ -56,15 +56,9 @@
         {
         }
 
-        protected virtual void OnObjectDelete(object sender, System.EventArgs e)
-        {
-            Refresh();
-        }
+        protected virtual void OnObjectDelete(object sender, System.EventArgs e) => Refresh();
 
-        protected virtual void OnAnySave(object sender, System.EventArgs e)
-        {
-            Refresh();
-        }
+        protected virtual void OnAnySave(object sender, System.EventArgs e) => Refresh();
 
         protected virtual void BeforeAnySave(object sender, System.EventArgs e)
         {

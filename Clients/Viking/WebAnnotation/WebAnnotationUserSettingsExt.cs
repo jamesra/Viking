@@ -12,7 +12,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd
         {
             get
             {
-                KeysConverter conv = new KeysConverter();
+                KeysConverter conv = new();
                 return (Keys)conv.ConvertFrom(KeyName);
 
             }
@@ -32,9 +32,9 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd
         {
             get
             {
-                if (Tags == null)
+                if (Tags is null)
                 {
-                    return new string[0];
+                    return [];
                 }
 
                 return Tags.Split(';');

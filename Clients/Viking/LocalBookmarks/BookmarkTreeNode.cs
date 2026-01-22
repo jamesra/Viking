@@ -1,14 +1,8 @@
 ﻿namespace LocalBookmarks
 {
-    class BookmarkTreeNode : Viking.UI.Controls.GenericTreeNode
+    class BookmarkTreeNode(BookmarkUIObj folder) : Viking.UI.Controls.GenericTreeNode(folder)
     {
         public BookmarkUIObj? bookmark => this.Tag as BookmarkUIObj;
-
-
-        public BookmarkTreeNode(BookmarkUIObj folder)
-            : base(folder)
-        {
-        }
 
         public override void OnDoubleClick()
         {

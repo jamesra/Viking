@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows.Forms;
 using Viking.AnnotationServiceTypes;
 using Viking.Common;
@@ -8,16 +8,16 @@ using WebAnnotationModel;
 namespace WebAnnotation.View
 {
     public class LocationLink_CanvasContextMenuView : IProvideContextMenus
-    {  
+    {
         public LocationLink_CanvasContextMenuView()
         {
         }
-         
-        private static WebAnnotation.UI.SplitStructuresForm SplitForm = null;
+
+        private static WebAnnotation.UI.SplitStructuresForm? SplitForm = null;
         protected void ContextMenu_OnSplit(object sender, EventArgs e)
         {
             if (SplitForm is null)
-            { 
+            {
                 if (sender is ToolStripMenuItem menuItem)
                 {
                     if (menuItem.Tag is LocationLinkKey linkKey)
@@ -36,10 +36,7 @@ namespace WebAnnotation.View
 
         }
 
-        private static void OnSplitFormClosed(object sender, FormClosedEventArgs e)
-        {
-            SplitForm = null;
-        }
+        private static void OnSplitFormClosed(object sender, FormClosedEventArgs e) => SplitForm = null;
 
         protected void ContextMenu_OnDelete(object sender, EventArgs e)
         {
@@ -49,26 +46,30 @@ namespace WebAnnotation.View
                 {
                     Store.LocationLinks.DeleteLink(linkKey.A, linkKey.B);
                 }
-            } 
-        } 
+            }
+        }
         public ContextMenuStrip BuildMenuFor(object Obj, ContextMenuStrip menu)
         {
-            if(menu is null)
+            if (menu is null)
                 return null;
 
             if (Obj is LocationLinkView link)
             {
                 menu.Items.Add(new ToolStripSeparator());
-                ToolStripMenuItem menuDelete = new ToolStripMenuItem("Delete Link");
-                menuDelete.Tag = link.Key;
+                ToolStripMenuItem menuDelete = new("Delete Link")
+                {
+                    Tag = link.Key
+                };
                 menuDelete.Click += ContextMenu_OnDelete;
 
                 menu.Items.Add(menuDelete);
 
                 menu.Items.Add(new ToolStripSeparator());
 
-                ToolStripMenuItem menuSplit = new ToolStripMenuItem("Split structure");
-                menuSplit.Tag = link.Key;
+                ToolStripMenuItem menuSplit = new("Split structure")
+                {
+                    Tag = link.Key
+                };
                 menuSplit.Click += ContextMenu_OnSplit;
                 menu.Items.Add(menuSplit);
 
@@ -78,9 +79,6 @@ namespace WebAnnotation.View
             return menu;
         }
 
-        public ContextMenuStrip BuildMenuFor(Type ObjType, ContextMenuStrip Menu)
-        {
-            return Menu;
-        }
+        public ContextMenuStrip BuildMenuFor(Type ObjType, ContextMenuStrip Menu) => Menu;
     }
 }

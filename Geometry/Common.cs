@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -17,20 +17,18 @@ namespace Geometry
             {
                 stream.Seek(0, System.IO.SeekOrigin.Begin);
             }
-             
-            List<string> lines = new List<string>(); 
 
-            using (System.IO.StreamReader MosaicStream = new System.IO.StreamReader(stream))
+            List<string> lines = [];
+
+            using System.IO.StreamReader MosaicStream = new(stream);
+            string line = MosaicStream.ReadLine();
+            while (line != null)
             {
-                string line = MosaicStream.ReadLine();
-                while (line != null)
-                {
-                    lines.Add(line);
-                    line = MosaicStream.ReadLine();
-                } 
-
-                return lines.ToArray();
+                lines.Add(line);
+                line = MosaicStream.ReadLine();
             }
+
+            return [.. lines];
         }
 
         public static async Task<string[]> ToLinesAsync(this System.IO.Stream stream)
@@ -49,23 +47,19 @@ namespace Geometry
                     bytesRead += await stream.ReadAsync(buffer, bytesRead, (int)stream.Length - bytesRead);
                 }
 
-                using (System.IO.StreamReader MosaicStream = new System.IO.StreamReader(new MemoryStream(buffer, false)))
-                {
-                    string streamData = await MosaicStream.ReadToEndAsync();
-                    return streamData.ToLines();
-                }
+                using System.IO.StreamReader MosaicStream = new(new MemoryStream(buffer, false));
+                string streamData = await MosaicStream.ReadToEndAsync();
+                return streamData.ToLines();
             }
             else
             {
-                using (System.IO.StreamReader MosaicStream = new System.IO.StreamReader(stream))
-                {
-                    string streamData = await MosaicStream.ReadToEndAsync();
-                    return streamData.ToLines();
-                }
-            } 
+                using System.IO.StreamReader MosaicStream = new(stream);
+                string streamData = await MosaicStream.ReadToEndAsync();
+                return streamData.ToLines();
+            }
         }
 
-        private static readonly Regex splitLinesRegex = new Regex(@"\r\n|\r|\n", RegexOptions.Compiled);
+        private static readonly Regex splitLinesRegex = new(@"\r\n|\r|\n", RegexOptions.Compiled);
         public static string[] ToLines(this string input)
         {
             if (input is null)
@@ -77,7 +71,7 @@ namespace Geometry
                 lines[i] = lines[i].Trim();
             }
 
-            return lines; 
+            return lines;
         }
     }
 }

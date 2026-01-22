@@ -54,9 +54,9 @@ namespace GeometryTests
         [TestMethod]
         public void TestGridBoxIntersectsAndContains()
         {
-            GridVector3 BotLeftA = new GridVector3(10, -50, 25);
-            GridVector3 TopRightA = new GridVector3(20, -20, 50);
-            GridBox boxA = new GridBox(BotLeftA, TopRightA);
+            GridVector3 BotLeftA = new(10, -50, 25);
+            GridVector3 TopRightA = new(20, -20, 50);
+            GridBox boxA = new(BotLeftA, TopRightA);
 
             bool success = boxA.Contains(new GridVector3(10, -20, 25));
             Assert.IsTrue(success);
@@ -72,9 +72,9 @@ namespace GeometryTests
 
             //--------------------------------------------------------------
 
-            GridVector3 BotLeftB = new GridVector3(15, -40, 10);
-            GridVector3 TopRightB = new GridVector3(25, 0, 26);
-            GridBox boxBOverlaps = new GridBox(BotLeftB, TopRightB);
+            GridVector3 BotLeftB = new(15, -40, 10);
+            GridVector3 TopRightB = new(25, 0, 26);
+            GridBox boxBOverlaps = new(BotLeftB, TopRightB);
             success = boxA.Intersects(boxBOverlaps);
             Assert.IsTrue(success);
 
@@ -83,9 +83,9 @@ namespace GeometryTests
 
             //--------------------------------------------------------------
 
-            GridVector3 BotLeftC = new GridVector3(0, -60, 20);
-            GridVector3 TopRightC = new GridVector3(25, -10, 60);
-            GridBox boxCContainsA = new GridBox(BotLeftC, TopRightC);
+            GridVector3 BotLeftC = new(0, -60, 20);
+            GridVector3 TopRightC = new(25, -10, 60);
+            GridBox boxCContainsA = new(BotLeftC, TopRightC);
             success = boxCContainsA.Contains(boxA);
             Assert.IsTrue(success);
 
@@ -94,9 +94,9 @@ namespace GeometryTests
 
             //--------------------------------------------------------------
 
-            GridVector3 BotLeftD = new GridVector3(-1000, 100, 50);
-            GridVector3 TopRightD = new GridVector3(-900, 200, 60);
-            GridBox boxDNoOverlap = new GridBox(BotLeftD, TopRightD);
+            GridVector3 BotLeftD = new(-1000, 100, 50);
+            GridVector3 TopRightD = new(-900, 200, 60);
+            GridBox boxDNoOverlap = new(BotLeftD, TopRightD);
             success = boxDNoOverlap.Contains(boxA);
             Assert.IsFalse(success);
 
@@ -113,10 +113,10 @@ namespace GeometryTests
         [TestMethod]
         public void TestGridBoxScale()
         {
-            double[] original_mins = new double[] { -20, -20, 50 };
-            GridVector3 BotLeftA = new GridVector3(-20, -20, 50);
-            GridVector3 TopRightA = new GridVector3(0, 20, 150);
-            GridBox boxA = new GridBox(BotLeftA, TopRightA);
+            double[] original_mins = [-20, -20, 50];
+            GridVector3 BotLeftA = new(-20, -20, 50);
+            GridVector3 TopRightA = new(0, 20, 150);
+            GridBox boxA = new(BotLeftA, TopRightA);
 
             //--------------------------------------------------------------
             Assert.IsTrue(boxA.minVals.Select((val, i) => (original_mins[i]) == val).All(b => b));
@@ -124,8 +124,8 @@ namespace GeometryTests
             /*Scale the rectangle and test again*/
             boxA = boxA.Scale(2);
 
-            double[] scaled_mins = new double[] { -30, -40, 0 };
-            double[] scaled_maxs = new double[] { 10, 40, 200 };
+            double[] scaled_mins = [-30, -40, 0];
+            double[] scaled_maxs = [10, 40, 200];
             Assert.IsTrue(boxA.minVals.Select((val, i) => (scaled_mins[i]) == val).All(b => b));
             Assert.IsTrue(boxA.maxVals.Select((val, i) => (scaled_maxs[i]) == val).All(b => b));
 
@@ -138,17 +138,17 @@ namespace GeometryTests
         [TestMethod]
         public void TestGridBoxUnion()
         {
-            GridVector3 BotLeftA = new GridVector3(-10, -10, -10);
-            GridVector3 TopRightA = new GridVector3(10, 10, 10);
-            GridBox boxA = new GridBox(BotLeftA, TopRightA);
+            GridVector3 BotLeftA = new(-10, -10, -10);
+            GridVector3 TopRightA = new(10, 10, 10);
+            GridBox boxA = new(BotLeftA, TopRightA);
 
-            GridVector3 BotLeftB = new GridVector3(-10, -100, 900);
-            GridVector3 TopRightB = new GridVector3(10, 100, 1000);
-            GridBox boxB = new GridBox(BotLeftB, TopRightB);
+            GridVector3 BotLeftB = new(-10, -100, 900);
+            GridVector3 TopRightB = new(10, 100, 1000);
+            GridBox boxB = new(BotLeftB, TopRightB);
 
-            GridVector3 BotLeftAB = new GridVector3(-10, -100, -10);
-            GridVector3 TopRightAB = new GridVector3(10, 100, 1000);
-            GridBox boxAB = new GridBox(BotLeftAB, TopRightAB);
+            GridVector3 BotLeftAB = new(-10, -100, -10);
+            GridVector3 TopRightAB = new(10, 100, 1000);
+            GridBox boxAB = new(BotLeftAB, TopRightAB);
 
             var result = boxA.Union(boxB, out var expanded);
             Assert.IsTrue(expanded);
@@ -158,11 +158,11 @@ namespace GeometryTests
         [TestMethod]
         public void TestGridBoxOfPoints()
         {
-            GridVector3 BotLeftA = new GridVector3(-10, -10, -10);
-            GridVector3 TopRightA = new GridVector3(10, 10, 10);
-            GridBox boxA = new GridBox(BotLeftA, TopRightA);
+            GridVector3 BotLeftA = new(-10, -10, -10);
+            GridVector3 TopRightA = new(10, 10, 10);
+            GridBox boxA = new(BotLeftA, TopRightA);
 
-            GridVector3[] points = { BotLeftA, TopRightA, GridVector3.Zero };
+            GridVector3[] points = [BotLeftA, TopRightA, GridVector3.Zero];
             GridBox pointsBox = points.BoundingBox();
 
             Assert.AreEqual(boxA, pointsBox);
@@ -171,18 +171,18 @@ namespace GeometryTests
         [TestMethod]
         public void TestGridBoxTranslate()
         {
-            GridVector3 BotLeftA = new GridVector3(-10, -10, -10);
-            GridVector3 TopRightA = new GridVector3(10, 10, 10);
-            GridBox boxA = new GridBox(BotLeftA, TopRightA);
+            GridVector3 BotLeftA = new(-10, -10, -10);
+            GridVector3 TopRightA = new(10, 10, 10);
+            GridBox boxA = new(BotLeftA, TopRightA);
 
-            GridVector3 translation = new GridVector3(1, 5, 10);
+            GridVector3 translation = new(1, 5, 10);
 
             GridBox translatedBox = boxA.Translate(translation);
 
             Assert.AreEqual(translatedBox.MinCorner, boxA.MinCorner + translation);
-            Assert.AreEqual(translatedBox.MaxCorner.coords[0], 11);
-            Assert.AreEqual(translatedBox.MaxCorner.coords[1], 15);
-            Assert.AreEqual(translatedBox.MaxCorner.coords[2], 20);
+            Assert.AreEqual(11, translatedBox.MaxCorner.coords[0]);
+            Assert.AreEqual(15, translatedBox.MaxCorner.coords[1]);
+            Assert.AreEqual(20, translatedBox.MaxCorner.coords[2]);
         }
     }
 }

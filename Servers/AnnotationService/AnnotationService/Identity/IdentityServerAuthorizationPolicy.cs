@@ -8,17 +8,11 @@ namespace Annotation.Identity
 {
     public class IdentityServerAuthorizationPolicy : IAuthorizationPolicy
     {
-        private string id = Guid.NewGuid().ToString();
+        private readonly string id = Guid.NewGuid().ToString();
 
-        public string Id
-        {
-            get { return id; }
-        }
+        public string Id => id;
 
-        public ClaimSet Issuer
-        {
-            get { return ClaimSet.System; }
-        }
+        public ClaimSet Issuer => ClaimSet.System;
 
         public bool Evaluate(EvaluationContext evaluationContext, ref object state)
         {
@@ -30,9 +24,9 @@ namespace Annotation.Identity
             }
 
             // If no principal is set, create an anonymous one
-            if (principal == null)
+            if (principal is null)
             {
-                principal = new GenericPrincipal(new GenericIdentity("Anonymous"), new string[] { "Read" });
+                principal = new GenericPrincipal(new GenericIdentity("Anonymous"), ["Read"]);
                 evaluationContext.Properties["Principal"] = principal;
             }
 

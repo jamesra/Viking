@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ namespace VikingXNA
 {
     public class Camera : INotifyPropertyChanged
     {
-        private Vector3 _LookAt = new Vector3(0, 0, 0);
+        private Vector3 _LookAt = new(0, 0, 0);
 
         private float _Pan = MathHelper.ToRadians(0f);
         private float _Tilt = MathHelper.ToRadians(0f);
@@ -40,14 +40,14 @@ namespace VikingXNA
             _View = Matrix.CreateLookAt(transformedPos, _LookAt, Vector3.UnitY);
         }
 
-        
+
         public float Pan
         {
             get => MathHelper.ToDegrees(_Pan);
             set
             {
                 _Pan = MathHelper.ToRadians(value);
-                CallOnPropertyChanged(new PropertyChangedEventArgs("Pan"));
+                CallOnPropertyChanged(new PropertyChangedEventArgs(nameof(Pan)));
             }
         }
 
@@ -63,19 +63,19 @@ namespace VikingXNA
 
                 _Tilt = MathHelper.ToRadians(value);
 
-                CallOnPropertyChanged(new PropertyChangedEventArgs("Tilt"));
+                CallOnPropertyChanged(new PropertyChangedEventArgs(nameof(Tilt)));
 
             }
         }
 
         public Vector2 LookAt
         {
-            get => new Vector2(_LookAt.X, _LookAt.Y);
+            get => new(_LookAt.X, _LookAt.Y);
             set
             {
-                _LookAt = new Vector3(value, Vector3.Backward.Z); 
+                _LookAt = new Vector3(value, Vector3.Backward.Z);
                 UpdateViewMatrix();
-                CallOnPropertyChanged(new PropertyChangedEventArgs("LookAt"));
+                CallOnPropertyChanged(new PropertyChangedEventArgs(nameof(LookAt)));
             }
         }
 
@@ -93,11 +93,11 @@ namespace VikingXNA
                     val = 0.0f;
 
                 _Rotation = val;
-                CallOnPropertyChanged(new PropertyChangedEventArgs("Rotation"));
+                CallOnPropertyChanged(new PropertyChangedEventArgs(nameof(Rotation)));
             }
         }
 
-       
+
         public virtual double Downsample
         {
             set
@@ -111,7 +111,7 @@ namespace VikingXNA
                 if (_Downsample != value)
                 {
                     _Downsample = value;
-                    CallOnPropertyChanged(new PropertyChangedEventArgs("Downsample"));
+                    CallOnPropertyChanged(new PropertyChangedEventArgs(nameof(Downsample)));
                 }
             }
             get => _Downsample;
@@ -119,9 +119,6 @@ namespace VikingXNA
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public void CallOnPropertyChanged(PropertyChangedEventArgs e)
-        {
-            PropertyChanged?.Invoke(this, e);
-        }
+        public void CallOnPropertyChanged(PropertyChangedEventArgs e) => PropertyChanged?.Invoke(this, e);
     }
 }

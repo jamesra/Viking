@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Drawing;
 using System.Threading.Tasks;
@@ -14,12 +14,12 @@ namespace Viking.UI.Forms
         int Progress = 0;
         int MaxProgress = 100;
         DateTime startTime;
-        DateTime endVolumeLoadTime;
-        DateTime endExtensionLoadTime;
+        readonly DateTime endVolumeLoadTime;
+        readonly DateTime endExtensionLoadTime;
 
         readonly string VolumePath;
 
-        private Task _Task = null;
+        private Task? _Task = null;
 
         /// <summary>
         /// The task we are reporting on until it finishes
@@ -30,30 +30,31 @@ namespace Viking.UI.Forms
             set
             {
                 _Task = value;
-                if(_Task != null)
+                if (_Task != null)
                 {
                     LoadVolumeWorker.RunWorkerAsync();
                 }
-            } }
+            }
+        }
 
         /// <summary>
         /// Using the built-in Dialog result always seems to return DialogResult.Cancel
         /// </summary>
         public DialogResult Result = DialogResult.Cancel;
 
-        public IProgressReporter progressReporter {get; private set; }
+        public IProgressReporter progressReporter { get; private set; }
 
         public SplashForm()
         {
             InitializeComponent();
-             
+
             progressReporter = new ProgressReporter(info =>
             {
                 this.LabelInfo.Text = info.Message as String;
                 this.Progress = (int)Math.Round(info.Progress);
                 this.MaxProgress = (int)Math.Round(info.MaxProgress);
                 PanelProgress.Invalidate();
-            }); 
+            });
         }
 
         private void SplashForm_Load(object sender, EventArgs e)
@@ -90,22 +91,20 @@ namespace Viking.UI.Forms
 
         private void PanelProgress_Paint(object sender, PaintEventArgs e)
         {
-            using (SolidBrush FillBrush = new SolidBrush(Color.Blue))
-            {
-                RectangleF Rect = new Rectangle(new Point(0, 0), PanelProgress.Size);
-                Rect.Width *= (float)(Progress / (float)MaxProgress);
-                e.Graphics.Clear(Color.LightGray);
-                e.Graphics.FillRectangle(FillBrush, Rect);
-            }
+            using SolidBrush FillBrush = new(Color.Blue);
+            RectangleF Rect = new Rectangle(new Point(0, 0), PanelProgress.Size);
+            Rect.Width *= (float)(Progress / (float)MaxProgress);
+            e.Graphics.Clear(Color.LightGray);
+            e.Graphics.FillRectangle(FillBrush, Rect);
         }
 
         private void backgroundWorker_DoWork(object sender, DoWorkEventArgs e)
-        {  
+        {
             //Wait for the volume to initialize
-            if(TrackedTask != null)
-            { 
-                while(TrackedTask.Wait(500) == false)
-                { 
+            if (TrackedTask != null)
+            {
+                while (TrackedTask.Wait(500) == false)
+                {
                     Application.DoEvents();
                 }
             }
@@ -113,7 +112,7 @@ namespace Viking.UI.Forms
             {
                 throw new ArgumentException("Running background worker without a task to wait on");
             }
-            
+
         }
 
         private void backgroundWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
@@ -127,7 +126,7 @@ namespace Viking.UI.Forms
             PanelProgress.Invalidate();
         }
 
-        
+
         private void backgroundWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             this.LabelInfo.Text = "Task completed";

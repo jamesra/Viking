@@ -1,4 +1,4 @@
-﻿
+﻿using System;
 using Microsoft.Xna.Framework;
 using VikingXNAGraphics;
 using WebAnnotation.UI.Actions;
@@ -20,7 +20,7 @@ namespace WebAnnotation.UI.ActionViews
         }
         public void CreateDefaultVisuals()
         {
-            SolidPolygonView view = new SolidPolygonView(model.NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Color.Green.SetAlpha(0.5f));
+            SolidPolygonView view = new(model.NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Color.Green.SetAlpha(0.5f));
             Passive = view;
             Active = new SolidPolygonView(model.NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Color.Green.SetAlpha(1f));
         }
@@ -36,13 +36,14 @@ namespace WebAnnotation.UI.ActionViews
 
         public ChangeToPolylineActionView(ChangeToPolylineAction action)
         {
+            if (action == null) throw new ArgumentNullException(nameof(action));
             model = action;
             CreateDefaultVisuals();
         }
 
         public void CreateDefaultVisuals()
         {
-            PolyLineView view = new PolyLineView(model.NewVolumePolyline.Smooth(Global.NumClosedCurveInterpolationPoints),
+            PolyLineView view = new(model.NewVolumePolyline.Smooth(Global.NumClosedCurveInterpolationPoints),
                 Color.Green.SetAlpha(0.5f));
             Passive = view;
             Active = new PolyLineView(model.NewVolumePolyline.Smooth(Global.NumClosedCurveInterpolationPoints),

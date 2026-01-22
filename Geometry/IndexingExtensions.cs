@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace Geometry
 {
@@ -40,42 +40,25 @@ namespace Geometry
         }
     }
 
-    public readonly struct Combo<T>
+    public readonly struct Combo<T>(T a, T b, int I, int J)
     {
-        public readonly int iA;
-        public readonly int iB;
-        public readonly T A;
-        public readonly T B;
-
-        public Combo(T a, T b, int I, int J)
-        {
-            iA = I;
-            iB = J;
-            A = a;
-            B = b;
-        }
+        public readonly int iA = I;
+        public readonly int iB = J;
+        public readonly T A = a;
+        public readonly T B = b;
 
         public override bool Equals(object obj)
-        {  
-            if(obj is Combo<T> other)
+        {
+            if (obj is Combo<T> other)
                 return other.iA == this.iA && other.iB == this.iB;
 
             return false;
         }
 
-        public override int GetHashCode()
-        {
-            return (iA * 23) + iB;
-        }
+        public override int GetHashCode() => (iA * 23) + iB;
 
-        public static bool operator ==(Combo<T> left, Combo<T> right)
-        {
-            return left.Equals(right);
-        }
+        public static bool operator ==(Combo<T> left, Combo<T> right) => left.Equals(right);
 
-        public static bool operator !=(Combo<T> left, Combo<T> right)
-        {
-            return !(left == right);
-        }
+        public static bool operator !=(Combo<T> left, Combo<T> right) => !(left == right);
     }
 }

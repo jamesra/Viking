@@ -58,14 +58,16 @@ namespace Annotation.Identity
 
         protected override object CreateBehavior()
         {
-            var behavior = new IdentityServerBehavior();
-            behavior.Authority = this.Authority;
-            behavior.Audience = this.Audience;
-            behavior.RequireHttps = this.RequireHttps;
-            behavior.ValidateIssuer = this.ValidateIssuer;
-            behavior.ValidateAudience = this.ValidateAudience;
-            behavior.ValidateLifetime = this.ValidateLifetime;
-            behavior.ClockSkew = TimeSpan.Parse(this.ClockSkew);
+            IdentityServerBehavior behavior = new()
+            {
+                Authority = this.Authority,
+                Audience = this.Audience,
+                RequireHttps = this.RequireHttps,
+                ValidateIssuer = this.ValidateIssuer,
+                ValidateAudience = this.ValidateAudience,
+                ValidateLifetime = this.ValidateLifetime,
+                ClockSkew = TimeSpan.Parse(this.ClockSkew)
+            };
             return behavior;
         }
 

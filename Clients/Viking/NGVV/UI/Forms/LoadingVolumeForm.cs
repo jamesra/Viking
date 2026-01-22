@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -21,7 +21,7 @@ namespace Viking.UI.Forms
         private int Progress = 0;
         private int MaxProgress = 100;
         private DateTime startTime;
-        private DateTime endLoadTime;
+        private readonly DateTime endLoadTime;
         private readonly string VolumePath;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private Task _loadingTask;
@@ -58,33 +58,33 @@ namespace Viking.UI.Forms
             try
             {
                 // Create progress reporter for UI updates
-                var progress = new Progress<ProgressInfo>(UpdateProgress);
+                Progress<ProgressInfo> progress = new(UpdateProgress);
 
-                var progressReporter = new ProgressReporter(progress);
-                 
+                ProgressReporter progressReporter = new(progress);
+
                 // Run volume loading on background thread
                 var volume = await Volume.CreateAsync(volumeUrl, UI.State.CachePath, progressReporter, token);
-                 
+
                 // Create view model on UI thread
                 await Task.Factory.StartNew(() =>
                 {
                     State.volume = new VolumeViewModel(volume);
-                }, token, TaskCreationOptions.None, 
+                }, token, TaskCreationOptions.None,
                     TaskScheduler.FromCurrentSynchronizationContext());
 
                 progressReporter.Report(new ProgressInfo("Loading extensions...", 85, 100));
-                    
+
                 // Load extensions
                 ExtensionManager.LoadExtensions(progressReporter);
 
                 progressReporter.Report(new ProgressInfo("Complete!", 100, 100));
-                      
+
                 // Success - close form
                 await Task.Factory.StartNew(() =>
                 {
                     this.Result = DialogResult.OK;
                     this.Close();
-                }, token, TaskCreationOptions.None, 
+                }, token, TaskCreationOptions.None,
                    TaskScheduler.FromCurrentSynchronizationContext());
             }
             catch (OperationCanceledException)
@@ -94,7 +94,7 @@ namespace Viking.UI.Forms
                 {
                     this.Result = DialogResult.Cancel;
                     this.Close();
-                }, CancellationToken.None, TaskCreationOptions.None, 
+                }, CancellationToken.None, TaskCreationOptions.None,
                    TaskScheduler.FromCurrentSynchronizationContext());
             }
             catch (Exception ex)
@@ -102,11 +102,11 @@ namespace Viking.UI.Forms
                 // Handle errors
                 await Task.Factory.StartNew(() =>
                 {
-                    MessageBox.Show($"Error loading volume: {ex.Message}", 
+                    MessageBox.Show($"Error loading volume: {ex.Message}",
                         "Loading Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     this.Result = DialogResult.Cancel;
                     this.Close();
-                }, CancellationToken.None, TaskCreationOptions.None, 
+                }, CancellationToken.None, TaskCreationOptions.None,
                    TaskScheduler.FromCurrentSynchronizationContext());
             }
         }
@@ -127,13 +127,11 @@ namespace Viking.UI.Forms
 
         private void PanelProgress_Paint(object sender, PaintEventArgs e)
         {
-            using (SolidBrush FillBrush = new SolidBrush(Color.Blue))
-            {
-                RectangleF Rect = new Rectangle(new Point(0, 0), PanelProgress.Size);
-                Rect.Width = Rect.Width * (float)(Progress / (float)MaxProgress);
-                e.Graphics.Clear(Color.LightGray);
-                e.Graphics.FillRectangle(FillBrush, Rect);
-            }
+            using SolidBrush FillBrush = new(Color.Blue);
+            RectangleF Rect = new Rectangle(new Point(0, 0), PanelProgress.Size);
+            Rect.Width = Rect.Width * (float)(Progress / (float)MaxProgress);
+            e.Graphics.Clear(Color.LightGray);
+            e.Graphics.FillRectangle(FillBrush, Rect);
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
@@ -143,10 +141,7 @@ namespace Viking.UI.Forms
             base.OnFormClosing(e);
         }
 
-        private void btnCancel_Click(object sender, EventArgs e)
-        {
-            _cancellationTokenSource?.Cancel();
-        }
+        private void btnCancel_Click(object sender, EventArgs e) => _cancellationTokenSource?.Cancel();
 
 
     }

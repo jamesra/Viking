@@ -63,7 +63,7 @@ namespace TriangleNet.Meshing.Algorithm
             int heapsize;
             bool check4events, farrightflag = false;
 
-            splaynodes = new List<SplayNode>();
+            splaynodes = [];
             splayroot = null;
 
             heapsize = points.Count;
@@ -305,16 +305,11 @@ namespace TriangleNet.Meshing.Algorithm
             notdone = leftchild < heapsize;
             while (notdone)
             {
-                if ((heap[leftchild].ykey < eventy) ||
+                smallest = (heap[leftchild].ykey < eventy) ||
                     ((heap[leftchild].ykey == eventy)
-                     && (heap[leftchild].xkey < eventx)))
-                {
-                    smallest = leftchild;
-                }
-                else
-                {
-                    smallest = eventnum;
-                }
+                     && (heap[leftchild].xkey < eventx))
+                    ? leftchild
+                    : eventnum;
                 rightchild = leftchild + 1;
                 if (rightchild < heapsize)
                 {
@@ -603,7 +598,7 @@ namespace TriangleNet.Meshing.Algorithm
             double ccwabc;
             double xac, yac, xbc, ybc;
             double aclen2, bclen2;
-            Point searchpoint = new Point(); // TODO: mesh.nextras
+            Point searchpoint = new(); // TODO: mesh.nextras
             Otri dummytri = default;
 
             ccwabc = predicates.CounterClockwise(pa, pb, pc);
@@ -772,14 +767,9 @@ namespace TriangleNet.Meshing.Algorithm
         /// to handle the pointer magic of the original code (casting a sweep event 
         /// to vertex etc.).
         /// </summary>
-        class SweepEventVertex : Vertex
+        class SweepEventVertex(SweepLine.SweepEvent e) : Vertex
         {
-            public readonly SweepEvent evt;
-
-            public SweepEventVertex(SweepEvent e)
-            {
-                evt = e;
-            }
+            public readonly SweepEvent evt = e;
         }
 
         /// <summary>

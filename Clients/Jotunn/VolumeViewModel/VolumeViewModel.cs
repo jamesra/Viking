@@ -71,7 +71,7 @@ namespace Viking.VolumeViewModel
 
         public ChannelInfo[] DefaultChannels { get { return _Volume.DefaultChannels; } set { _Volume.DefaultChannels = value; } }
 
-        public string[] ChannelNames { get { return _Volume.ChannelNames; } }
+        public string[] ChannelNames { get { return Volume.ChannelNames; } }
 
         public XDocument VolumeXML { get { return _Volume.VolumeElement.Document; } }
 

@@ -1,4 +1,4 @@
-﻿using CommandLine;
+using CommandLine;
 using CommandLine.Text;
 using Microsoft.Extensions.Logging;
 using System;
@@ -20,20 +20,20 @@ namespace MonogameTestbed
     /// <summary>
     /// The main class.
     /// </summary>
-    public static class Program
+    public static partial class Program
     {
-        [DllImport("kernel32.dll", SetLastError = true)]
+        [LibraryImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool AllocConsole();
+        internal static partial bool AllocConsole();
 
-        [DllImport("kernel32.dll", SetLastError = true)]
+        [LibraryImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool FreeConsole();
+        internal static partial bool FreeConsole();
 
 
-        static System.IO.StreamWriter DebugLogFile = null; 
+        static System.IO.StreamWriter DebugLogFile = null;
 
-        public class CommandLineOptions
+        public partial class CommandLineOptions
         {
             /// <summary>
             /// The raw StructureID arguments
@@ -88,7 +88,7 @@ namespace MonogameTestbed
                 }
             }
 
-            [Option('b', "boundaries", Required = false, HelpText="TypeID's defining surfaces boundaries to include in output", Separator = ' ', Default = null)]
+            [Option('b', "boundaries", Required = false, HelpText = "TypeID's defining surfaces boundaries to include in output", Separator = ' ', Default = null)]
             public IEnumerable<ulong> BoundaryIDs { get; set; }
 
             /// <summary>
@@ -125,9 +125,9 @@ namespace MonogameTestbed
             public bool ShowHelp { get; set; }
 
 
-            private static readonly Regex IntegerRegex = new Regex(@"^(\d+)$");
-            private static readonly Regex IntegerRangeRegex = new Regex(@"^(\d+)\-(\d+)$");
-            private static readonly Regex IntegerOrIntegerRangeRegex = new Regex(@"^((\d+)\-(\d+))|(\d+)$");
+            private static readonly Regex IntegerRegex = MyRegex();
+            private static readonly Regex IntegerRangeRegex = new(@"^(\d+)\-(\d+)$");
+            private static readonly Regex IntegerOrIntegerRangeRegex = new(@"^((\d+)\-(\d+))|(\d+)$");
 
             /// <summary>
             /// Convert a number string, or a string of two integers seperated by a hyphen to a list of integers
@@ -141,10 +141,10 @@ namespace MonogameTestbed
                 try
                 {
                     ulong SectionNumber = System.Convert.ToUInt64(input);
-                    listNumbers = new List<ulong>
-                    {
+                    listNumbers =
+                    [
                         SectionNumber
-                    };
+                    ];
                     return listNumbers;
                 }
                 catch (FormatException e)
@@ -183,16 +183,13 @@ namespace MonogameTestbed
                 return match.Success;
             }
 
-            private static List<ulong> InputParameterListToIDs(IEnumerable<string> input)
-            {
-                return input.SelectMany(param => InputParameterListToIDs(param)).ToList();
-            }
+            private static List<ulong> InputParameterListToIDs(IEnumerable<string> input) => [.. input.SelectMany(param => InputParameterListToIDs(param))];
 
             private static List<ulong> InputParameterListToIDs(string input)
             {
-                List<ulong> listNumbers = new List<ulong>();
+                List<ulong> listNumbers = [];
 
-                foreach (string chunk in input.Split(new char[] { ',', ';' }).Select(s => s.Trim())
+                foreach (string chunk in input.Split([',', ';']).Select(s => s.Trim())
                              .Where(s => !string.IsNullOrWhiteSpace(s)))
                 {
                     if (IsIntegerOrIntegerRange(chunk))
@@ -221,7 +218,7 @@ namespace MonogameTestbed
 
             private static List<ulong> ParseFile(string filename)
             {
-                List<ulong> results = new List<ulong>();
+                List<ulong> results = [];
                 if (System.IO.File.Exists(filename))
                 {
                     try
@@ -264,6 +261,9 @@ namespace MonogameTestbed
                 this.LocationIDs = InputParameterListToIDs(LocationIDParams);
                 this.StructureIDs = InputParameterListToIDs(StructureIDParams);
             }
+
+            [GeneratedRegex(@"^(\d+)$")]
+            private static partial Regex MyRegex();
         }
 
         public static CommandLineOptions options;
@@ -275,7 +275,7 @@ namespace MonogameTestbed
         static string LogFullPath => System.IO.Path.Combine(LogPath, LogFile);
 
         static TextWriter SynchronizedLogWriter = null;
-        static TextWriterTraceListener LogListener = null;
+        static readonly TextWriterTraceListener LogListener = null;
         static ILoggerFactory LoggerFactory = null;
         static ILogger Logger = null;
 
@@ -289,7 +289,7 @@ namespace MonogameTestbed
             bool HaveConsole = false;
             try
             {
-                HaveConsole = AllocConsole(); 
+                HaveConsole = AllocConsole();
 
 #if DEBUG
                 Console.WriteLine($"App Domain Base Directory: {AppDomain.CurrentDomain.BaseDirectory}");
@@ -311,8 +311,8 @@ namespace MonogameTestbed
                     .WithNotParsed(errors =>
                     {
                         // Create a new help text with error information
-                        var errorHelpText = HelpText.AutoBuild<CommandLineOptions>(result);
-                        errorHelpText.AddPreOptionsLine("Aborting: Unable to parse command line arguments"); 
+                        HelpText errorHelpText = HelpText.AutoBuild<CommandLineOptions>(result);
+                        errorHelpText.AddPreOptionsLine("Aborting: Unable to parse command line arguments");
                         errorHelpText.AddPreOptionsLine($"Arguments: {string.Join(' ', args)}");
                         errorHelpText.AddPreOptionsLine("");
                         Console.WriteLine(errorHelpText);
@@ -322,16 +322,16 @@ namespace MonogameTestbed
                         // Exit with error code
                         Environment.Exit(1);
                     });
-                
-                if(result.Tag == CommandLine.ParserResultType.NotParsed)
+
+                if (result.Tag == CommandLine.ParserResultType.NotParsed)
                 {
                     // If parsing failed, we exit
                     return;
                 }
 
                 // Build help text - we know parsing succeeded at this point
-                var helpText = HelpText.AutoBuild<CommandLineOptions>(result, null, null);
-                
+                HelpText helpText = HelpText.AutoBuild<CommandLineOptions>(result, null, null);
+
 
                 //If no parameters were supplied or help was requested then print help
                 if (Program.options.ShowHelp)
@@ -353,7 +353,7 @@ namespace MonogameTestbed
                     CreateLogger();
                 }
 
-                if(Program.options.Verbose)
+                if (Program.options.Verbose)
                 {
                     LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
                     {
@@ -361,43 +361,43 @@ namespace MonogameTestbed
                         builder.SetMinimumLevel(LogLevel.Debug);
                     });
                     Logger = LoggerFactory.CreateLogger("MonogameTestbed");
-                    
+
                     Logger.LogInformation("Displaying trace messages");
                     Logger.LogDebug("Displaying debug messages");
-                } 
+                }
 
 
                 if (args.Length == 0)
                     Console.WriteLine(helpText);
 
-                
+
                 InitializeMathnet();
 
-                using (var game = new MonoTestbed())
-                    game.Run();
+                using MonoTestbed game = new();
+                game.Run();
             }
             finally
             {
                 if (HaveConsole)
                     FreeConsole();
 
-                if(Program.options is not null)
-                { 
+                if (Program.options is not null)
+                {
                     if (Program.options.Log)
                     {
                         StopLogger();
                     }
 
-                    if(Program.options.Verbose)
+                    if (Program.options.Verbose)
                     {
                         LoggerFactory?.Dispose();
                         LoggerFactory = null;
                         Logger = null;
-                    } 
+                    }
                 }
             }
         }
-        
+
         /// <summary>
         /// Initialize the Mathnet Numerics lib
         /// </summary>
@@ -410,16 +410,16 @@ namespace MonogameTestbed
             MathNet.Numerics.Control.MaxDegreeOfParallelism = numMathProcs;
             Geometry.Global.TryUseNativeMKL();
         }
-         
+
         private static void CreateLogger()
-        {  
+        {
             if (!Directory.Exists(LogPath))
                 Directory.CreateDirectory(LogPath);
-             
+
             DebugLogFile = System.IO.File.CreateText(LogFullPath);
 
             SynchronizedLogWriter = StreamWriter.Synchronized(DebugLogFile);
-            
+
             LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
             {
                 builder.AddDebug();
@@ -431,18 +431,15 @@ namespace MonogameTestbed
 
         private static void StopLogger()
         {
-            if(LoggerFactory != null)
+            if (LoggerFactory != null)
             {
                 LoggerFactory.Dispose();
                 LoggerFactory = null;
                 Logger = null;
             }
-            
-            if(SynchronizedLogWriter != null)
-            {
-                SynchronizedLogWriter.Close();
-                SynchronizedLogWriter = null;
-            }
+
+            SynchronizedLogWriter?.Close();
+            SynchronizedLogWriter = null;
         }
 
 

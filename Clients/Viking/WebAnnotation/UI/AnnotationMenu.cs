@@ -11,44 +11,45 @@ using VikingXNAGraphics;
 using WebAnnotation.UI;
 using WebAnnotation.View;
 using WebAnnotation.ViewModel;
+using WebAnnotation.WPF.Forms;
 
 namespace WebAnnotation
 {
     [MenuAttribute("Annotation")]
     internal class AnnotationMenu : Viking.Common.IMenuFactory
     {
-        private static FindStructureNumberForm _FindStructureNumberForm = null;
-        private static MergeStructuresForm _MergeStructuresForm = null;
-        private static WebAnnotation.WPF.Forms.AnnotationPreferencesDialog _preferencesDialog = null;
+        private static FindStructureNumberForm? _FindStructureNumberForm = null;
+        private static MergeStructuresForm? _MergeStructuresForm = null;
+        private static WebAnnotation.WPF.Forms.AnnotationPreferencesDialog? _preferencesDialog = null;
         private static ToolStripMenuItem menuPenMode;
         private static CancellationTokenSource _opacityUpdateCancellationTokenSource;
         private static System.Threading.Timer _circleOpacityUpdateTimer;
-        private static readonly object _circleOpacityUpdateLock = new object();
+        private static readonly object _circleOpacityUpdateLock = new();
         private static double _pendingCircleOpacityParentless;
         private static double _pendingCircleOpacityWithParent;
 
         System.Windows.Forms.ToolStripItem Viking.Common.IMenuFactory.CreateMenuItem()
         {
             //Create a menu containing each of our bookmarks
-            ToolStripMenuItem menuRoot = new ToolStripMenuItem("Annotation");
+            ToolStripMenuItem menuRoot = new("Annotation");
 
-            ToolStripMenuItem menuFavoriteTypes = new ToolStripMenuItem("Choose Favorited Structure Types");
+            ToolStripMenuItem menuFavoriteTypes = new("Choose Favorited Structure Types");
             menuFavoriteTypes.Click += OnChooseFavoriteStructureTypes;
             menuRoot.DropDownItems.Add(menuFavoriteTypes);
 
-            ToolStripMenuItem menuPreferences = new ToolStripMenuItem("Preferences...");
+            ToolStripMenuItem menuPreferences = new("Preferences...");
             menuPreferences.Click += OnPreferences;
             menuRoot.DropDownItems.Add(menuPreferences);
 
             if (Global.Export != null)
             {
                 //Create the option to hide bookmarks on the display
-                ToolStripMenuItem menuExport = new ToolStripMenuItem("Export");
+                ToolStripMenuItem menuExport = new("Export");
 
                 //Create the option to hide bookmarks on the display
-                ToolStripMenuItem menuExportMotifs = new ToolStripMenuItem("Motifs");
+                ToolStripMenuItem menuExportMotifs = new("Motifs");
 
-                ToolStripMenuItem menuExportMotifTLP = new ToolStripMenuItem("To Tulip Format");
+                ToolStripMenuItem menuExportMotifTLP = new("To Tulip Format");
                 menuExportMotifTLP.Click += OnExportMotifsTLP;
 
 
@@ -82,8 +83,8 @@ namespace WebAnnotation
         public static void OnChooseFavoriteStructureTypes(object sender, EventArgs e)
         {
             Debug.Print("OnChooseFavoriteStructureTypes");
-            UI.Forms.SelectStructureTypeForm StructureIDChoiceForm = new WebAnnotation.UI.Forms.SelectStructureTypeForm();
-            Annotation.ViewModels.FavoriteStructureIDsViewModel favorite_view_model = new Annotation.ViewModels.FavoriteStructureIDsViewModel(Global.UserFavoriteStructureTypes);
+            UI.Forms.SelectStructureTypeForm StructureIDChoiceForm = new();
+            Annotation.ViewModels.FavoriteStructureIDsViewModel favorite_view_model = new(Global.UserFavoriteStructureTypes);
             StructureIDChoiceForm.DataContext = favorite_view_model;
             StructureIDChoiceForm.Show();
         }
@@ -91,7 +92,7 @@ namespace WebAnnotation
         public static void OnPreferences(object sender, EventArgs e)
         {
             Debug.Print("OnPreferences");
-            
+
             // If dialog already exists and is open, just focus it
             if (_preferencesDialog != null && !_preferencesDialog.IsClosed)
             {
@@ -100,7 +101,7 @@ namespace WebAnnotation
             }
 
             // Create ViewModel and load current settings
-            var viewModel = new WebAnnotation.WPF.Forms.AnnotationPreferencesDialogViewModel();
+            AnnotationPreferencesDialogViewModel viewModel = new();
             viewModel.LoadCurrentSettings(
                 Global.AnnotationSettings.NumSectionsInMemory,
                 Global.AnnotationSettings.NumSectionsLoading,
@@ -131,18 +132,18 @@ namespace WebAnnotation
                 // Cancel previous task if running
                 _opacityUpdateCancellationTokenSource?.Cancel();
                 _opacityUpdateCancellationTokenSource?.Dispose();
-                
+
                 // Create new cancellation token source
                 _opacityUpdateCancellationTokenSource = new CancellationTokenSource();
-                
+
                 // Start async update task
-                _ = Task.Run(() => 
+                _ = Task.Run(() =>
                 {
                     try
                     {
                         UpdateVisibleSectionPolygonOpacity(
-                            parentlessOpacity, 
-                            withParentOpacity, 
+                            parentlessOpacity,
+                            withParentOpacity,
                             _opacityUpdateCancellationTokenSource.Token);
                     }
                     catch (OperationCanceledException)
@@ -164,7 +165,7 @@ namespace WebAnnotation
                 {
                     _pendingCircleOpacityParentless = parentlessOpacity;
                     _pendingCircleOpacityWithParent = withParentOpacity;
-                    
+
                     _circleOpacityUpdateTimer?.Dispose();
                     _circleOpacityUpdateTimer = new System.Threading.Timer(_ =>
                     {
@@ -173,17 +174,17 @@ namespace WebAnnotation
                             _opacityUpdateCancellationTokenSource?.Cancel();
                             _opacityUpdateCancellationTokenSource?.Dispose();
                             _opacityUpdateCancellationTokenSource = new CancellationTokenSource();
-                            
+
                             double parentless = _pendingCircleOpacityParentless;
                             double withParent = _pendingCircleOpacityWithParent;
-                            
-                            _ = Task.Run(() => 
+
+                            _ = Task.Run(() =>
                             {
                                 try
                                 {
                                     UpdateVisibleSectionCircleOpacity(
-                                        parentless, 
-                                        withParent, 
+                                        parentless,
+                                        withParent,
                                         _opacityUpdateCancellationTokenSource.Token);
                                 }
                                 catch (OperationCanceledException) { }
@@ -198,11 +199,11 @@ namespace WebAnnotation
             };
 
             _preferencesDialog = new WebAnnotation.WPF.Forms.AnnotationPreferencesDialog(viewModel);
-            
+
             // Wire up event handlers to save settings
             _preferencesDialog.ApplyClicked += (s, args) => SaveSettingsFromViewModel(viewModel);
             _preferencesDialog.OkClicked += (s, args) => SaveSettingsFromViewModel(viewModel);
-            
+
             _preferencesDialog.Show(); // Modeless dialog
         }
 
@@ -221,17 +222,17 @@ namespace WebAnnotation
             Global.AnnotationSettings.SegmentationPointRadius = viewModel.SegmentationPointRadius;
             Global.AnnotationSettings.PolygonPointRadius = viewModel.PolygonPointRadius;
             Global.AnnotationSettings.SmallestRenderedSize = viewModel.SmallestRenderedSize;
-            
+
             // Update static accessor properties
             VikingXNAGraphics.CircleView.SmallestRenderedSizeAccessor = () => Global.AnnotationSettings.SmallestRenderedSize;
             WebAnnotation.View.LocationCanvasView.SmallestRenderedSizeAccessor = () => Global.AnnotationSettings.SmallestRenderedSize;
-            
+
             float oldParentlessOpacity = Global.AnnotationSettings.PolygonOpacityParentless;
             float oldWithParentOpacity = Global.AnnotationSettings.PolygonOpacityWithParent;
-            
+
             Global.AnnotationSettings.PolygonOpacityParentless = (float)viewModel.PolygonOpacityParentless;
             Global.AnnotationSettings.PolygonOpacityWithParent = (float)viewModel.PolygonOpacityWithParent;
-            
+
             // Update all polygons in memory if opacity has changed
             if (oldParentlessOpacity != Global.AnnotationSettings.PolygonOpacityParentless ||
                 oldWithParentOpacity != Global.AnnotationSettings.PolygonOpacityWithParent)
@@ -240,13 +241,13 @@ namespace WebAnnotation
                     Global.AnnotationSettings.PolygonOpacityParentless,
                     Global.AnnotationSettings.PolygonOpacityWithParent);
             }
-            
+
             float oldCircleOpacityParentless = Global.AnnotationSettings.CircleOpacityParentless;
             float oldCircleOpacityWithParent = Global.AnnotationSettings.CircleOpacityWithParent;
-            
+
             Global.AnnotationSettings.CircleOpacityParentless = (float)viewModel.CircleOpacityParentless;
             Global.AnnotationSettings.CircleOpacityWithParent = (float)viewModel.CircleOpacityWithParent;
-            
+
             // Update all circles in memory if opacity has changed
             if (oldCircleOpacityParentless != Global.AnnotationSettings.CircleOpacityParentless ||
                 oldCircleOpacityWithParent != Global.AnnotationSettings.CircleOpacityWithParent)
@@ -281,16 +282,16 @@ namespace WebAnnotation
             float withParentOpacity,
             CancellationToken cancellationToken = default) where T : LocationCanvasView, IColorView
         {
-            if (Viking.UI.State.volume?.SectionViewModels == null)
+            if (Viking.UI.State.volume?.SectionViewModels is null)
                 return;
 
             // Collect sections that exist and have annotations loaded
-            var sectionsToProcess = new List<SectionAnnotationsView>();
-            
+            List<SectionAnnotationsView> sectionsToProcess = [];
+
             foreach (var sectionNumber in sectionNumbers)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                
+
                 SectionAnnotationsView sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(sectionNumber);
                 if (sectionAnnotations != null)
                 {
@@ -302,7 +303,7 @@ namespace WebAnnotation
                 return;
 
             // Process all sections in parallel
-            var parallelOptions = new ParallelOptions
+            ParallelOptions parallelOptions = new()
             {
                 CancellationToken = cancellationToken,
                 MaxDegreeOfParallelism = Environment.ProcessorCount,
@@ -313,9 +314,7 @@ namespace WebAnnotation
                 try
                 {
                     // Collect all views of the specified type from this section
-                    var views = sectionAnnotations.GetLocations()
-                        .OfType<T>()
-                        .ToList();
+                    List<T> views = [.. sectionAnnotations.GetLocations().OfType<T>()];
 
                     if (views.Count == 0)
                         return;
@@ -363,25 +362,22 @@ namespace WebAnnotation
             float parentlessOpacity,
             float withParentOpacity)
         {
-            if (Viking.UI.State.volume?.SectionViewModels == null)
+            if (Viking.UI.State.volume?.SectionViewModels is null)
                 return;
 
             try
             {
                 // Get all section numbers that might have annotations loaded
                 var allSectionNumbers = Viking.UI.State.volume.SectionViewModels.Keys;
-                
+
                 // Update polygons in all sections
                 UpdatePolygonOpacityForSections(
                     allSectionNumbers,
                     parentlessOpacity,
                     withParentOpacity);
-                
+
                 // Trigger redraw
-                if (AnnotationOverlay.CurrentOverlay != null)
-                {
-                    AnnotationOverlay.CurrentOverlay.InvalidateParent();
-                }
+                AnnotationOverlay.CurrentOverlay?.InvalidateParent();
             }
             catch (Exception ex)
             {
@@ -394,20 +390,20 @@ namespace WebAnnotation
         /// </summary>
         private static List<int> GetVisibleSectionNumbers()
         {
-            if (AnnotationOverlay.CurrentOverlay == null)
-                return new List<int>();
+            if (AnnotationOverlay.CurrentOverlay is null)
+                return [];
 
             var overlay = AnnotationOverlay.CurrentOverlay;
             var currentSection = overlay.Parent.Section;
-            
+
             // Collect visible section numbers: current first, then adjacent
-            var visibleSectionNumbers = new List<int> { currentSection.Number };
-            
+            List<int> visibleSectionNumbers = [currentSection.Number];
+
             if (currentSection.ReferenceSectionAbove != null)
             {
                 visibleSectionNumbers.Add(currentSection.ReferenceSectionAbove.Number);
             }
-            
+
             if (currentSection.ReferenceSectionBelow != null)
             {
                 visibleSectionNumbers.Add(currentSection.ReferenceSectionBelow.Number);
@@ -439,25 +435,22 @@ namespace WebAnnotation
             float parentlessOpacity,
             float withParentOpacity)
         {
-            if (Viking.UI.State.volume?.SectionViewModels == null)
+            if (Viking.UI.State.volume?.SectionViewModels is null)
                 return;
 
             try
             {
                 // Get all section numbers that might have annotations loaded
                 var allSectionNumbers = Viking.UI.State.volume.SectionViewModels.Keys;
-                
+
                 // Update circles in all sections
                 UpdateCircleOpacityForSections(
                     allSectionNumbers,
                     parentlessOpacity,
                     withParentOpacity);
-                
+
                 // Trigger redraw
-                if (AnnotationOverlay.CurrentOverlay != null)
-                {
-                    AnnotationOverlay.CurrentOverlay.InvalidateParent();
-                }
+                AnnotationOverlay.CurrentOverlay?.InvalidateParent();
             }
             catch (Exception ex)
             {
@@ -469,26 +462,26 @@ namespace WebAnnotation
         /// Updates opacity for visible section circle views in real-time for preview using parallel processing
         /// </summary>
         private static void UpdateVisibleSectionCircleOpacity(
-            double parentlessOpacity, 
-            double withParentOpacity, 
+            double parentlessOpacity,
+            double withParentOpacity,
             CancellationToken cancellationToken)
         {
-            if (AnnotationOverlay.CurrentOverlay == null)
+            if (AnnotationOverlay.CurrentOverlay is null)
                 return;
 
             var overlay = AnnotationOverlay.CurrentOverlay;
             var visibleSectionNumbers = GetVisibleSectionNumbers();
-            
+
             if (visibleSectionNumbers.Count == 0)
                 return;
-            
+
             // Update circles in visible sections
             UpdateCircleOpacityForSections(
                 visibleSectionNumbers,
                 (float)parentlessOpacity,
                 (float)withParentOpacity,
                 cancellationToken);
-            
+
             // Trigger redraw on UI thread
             overlay.InvalidateParent();
         }
@@ -497,26 +490,26 @@ namespace WebAnnotation
         /// Updates opacity for visible section polygon views in real-time for preview using parallel processing
         /// </summary>
         private static void UpdateVisibleSectionPolygonOpacity(
-            double parentlessOpacity, 
-            double withParentOpacity, 
+            double parentlessOpacity,
+            double withParentOpacity,
             CancellationToken cancellationToken)
         {
-            if (AnnotationOverlay.CurrentOverlay == null)
+            if (AnnotationOverlay.CurrentOverlay is null)
                 return;
 
             var overlay = AnnotationOverlay.CurrentOverlay;
             var visibleSectionNumbers = GetVisibleSectionNumbers();
-            
+
             if (visibleSectionNumbers.Count == 0)
                 return;
-            
+
             // Update polygons in visible sections
             UpdatePolygonOpacityForSections(
                 visibleSectionNumbers,
                 (float)parentlessOpacity,
                 (float)withParentOpacity,
                 cancellationToken);
-            
+
             // Trigger redraw on UI thread
             overlay.InvalidateParent();
         }
@@ -526,7 +519,7 @@ namespace WebAnnotation
         {
             Debug.Print("OnShowPenInputWindow");
 
-            if (Global.PenAnnotationForm == null || Global.PenAnnotationForm.IsDisposed)
+            if (Global.PenAnnotationForm is null || Global.PenAnnotationForm.IsDisposed)
             {
                 Global.PenAnnotationForm = new UI.Forms.PenAnnotationViewForm(Viking.UI.State.ViewerForm.Section);
                 Global.PenAnnotationForm.Show();
@@ -538,10 +531,7 @@ namespace WebAnnotation
         }
 
         [MenuItem("Open Last Modified Location")]
-        public static void GoToLastModifiedLocation(object sender, EventArgs e)
-        {
-            AnnotationOverlay.GotoLastModifiedLocation();
-        }
+        public static void GoToLastModifiedLocation(object sender, EventArgs e) => AnnotationOverlay.GotoLastModifiedLocation();
 
         public static void OnPenMode(object sender, EventArgs e)
         {
@@ -554,7 +544,7 @@ namespace WebAnnotation
         {
             Debug.Print("Show Structure");
 
-            if (_FindStructureNumberForm == null)
+            if (_FindStructureNumberForm is null)
             {
                 _FindStructureNumberForm = new FindStructureNumberForm();
             }
@@ -588,7 +578,7 @@ namespace WebAnnotation
         {
             Debug.Print("Merge Structures");
 
-            if (_MergeStructuresForm == null)
+            if (_MergeStructuresForm is null)
             {
                 _MergeStructuresForm = new MergeStructuresForm();
             }
@@ -602,12 +592,7 @@ namespace WebAnnotation
         }
 
         [MenuItem("Export")]
-        public static void Export(object sender, EventArgs e)
-        {
-            Debug.Print("Export");
-
-
-        }
+        public static void Export(object sender, EventArgs e) => Debug.Print("Export");
 
 
     }

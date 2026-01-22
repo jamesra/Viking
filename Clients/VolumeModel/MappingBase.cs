@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -94,7 +94,7 @@ namespace Viking.VolumeModel
     /// <summary>
     /// Mapping base encapsulates the transforms required to map all tiles in a section to mosaic or volume space
     /// </summary>
-    public abstract class MappingBase : IVolumeToSectionTransform
+    public abstract class MappingBase(Section section, string name, string Prefix, string Postfix) : IVolumeToSectionTransform
     {
         /// <summary>
         /// This records the modified date of the file the transform was loaded from
@@ -103,7 +103,7 @@ namespace Viking.VolumeModel
 
         protected DateTime _LastModified = DateTime.MinValue;
 
-        public readonly string Name;
+        public readonly string Name = name;
 
         /// <summary>
         /// This is the name, based on the "name" tag in the XML, which should be unique from all other MappingBase objects
@@ -125,12 +125,12 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Prefix to prepend to all tile file names
         /// </summary>
-        internal readonly string TilePrefix;
+        internal readonly string TilePrefix = Prefix;
 
         /// <summary>
         /// Postfix to append to all tile file names
         /// </summary>
-        internal readonly string TilePostfix;
+        internal readonly string TilePostfix = Postfix;
 
         public abstract GridRectangle ControlBounds
         {
@@ -212,24 +212,12 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Called when there is a need to free the memory used by the object, but keep the object alive
         /// </summary>
-        public virtual Task FreeMemory()
-        {
-            return Task.CompletedTask;
-        }
+        public virtual Task FreeMemory() => Task.CompletedTask;
 
         /// <summary>
         /// The section to which the mapping applies
         /// </summary>
-        protected readonly Section Section;
-
-        public MappingBase(Section section, string name, string Prefix, string Postfix)
-        {
-            this.Name = name;
-            this.Section = section;
-            this.TilePrefix = Prefix;
-            this.TilePostfix = Postfix;
-            this._ID = Interlocked.Increment(ref _NextID);
-        }
+        protected readonly Section Section = section;
 
         public abstract Task Initialize(CancellationToken token);
 
@@ -243,13 +231,13 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         protected List<MappingGridVector2> VisibleBoundsCorners(GridRectangle VisibleBounds)
         {
-            GridVector2[] volumeRectCorners = new GridVector2[] {   VisibleBounds.LowerLeft,
+            GridVector2[] volumeRectCorners = [   VisibleBounds.LowerLeft,
                                                                     VisibleBounds.LowerRight,
                                                                     VisibleBounds.UpperLeft,
-                                                                    VisibleBounds.UpperRight };
+                                                                    VisibleBounds.UpperRight ];
             var mapped = TryVolumeToSection(volumeRectCorners, out var mosaicRectCorners);
 
-            List<MappingGridVector2> mappedMosaicCorners = mosaicRectCorners.Select((p, i) => new MappingGridVector2(volumeRectCorners[i], mosaicRectCorners[i])).Where((p, i) => mapped[i]).ToList();
+            List<MappingGridVector2> mappedMosaicCorners = [.. mosaicRectCorners.Select((p, i) => new MappingGridVector2(volumeRectCorners[i], mosaicRectCorners[i])).Where((p, i) => mapped[i])];
             return mappedMosaicCorners;
         }
 
@@ -269,10 +257,7 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         public virtual System.Threading.Tasks.Task<TilePyramid> VisibleTilesAsync(GridRectangle VisibleBounds,
                                                  double DownSample
-                                                 )
-        {
-            return System.Threading.Tasks.Task<TilePyramid>.Run(() => VisibleTiles(VisibleBounds, DownSample));
-        }
+                                                 ) => System.Threading.Tasks.Task<TilePyramid>.Run(() => VisibleTiles(VisibleBounds, DownSample));
 
 
         /// <summary>
@@ -359,7 +344,7 @@ namespace Viking.VolumeModel
         }
         */
 
-        private readonly long _ID;
+        private readonly long _ID = Interlocked.Increment(ref _NextID);
         private static long _NextID = 0;
         public long ID => _ID;
 

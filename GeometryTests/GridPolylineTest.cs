@@ -1,4 +1,4 @@
-﻿using FsCheck;
+using FsCheck;
 using Geometry;
 using GeometryTests.FSCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -78,12 +78,12 @@ namespace GeometryTests
         public void TestOperations()
         {
             GeometryArbitraries.Register();
-              
+
             Configuration config = Configuration.VerboseThrowOnFailure;
             config.StartSize = 32;
             config.MaxNbOfTest = 1;
 
-            PolylineSpec spec = new PolylineSpec(AXIS.X);
+            PolylineSpec spec = new(AXIS.X);
             spec.ToProperty().Check(config);
             //
             // TODO: Add test logic here

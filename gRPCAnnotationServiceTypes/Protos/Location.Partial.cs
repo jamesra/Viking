@@ -7,38 +7,38 @@ using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
 {
-    public partial class Location : ILocation, IChangeAction
+    public partial class Location : ILocationReadOnly, IChangeAction
     {
-        // ILocation interface implementation
-        ulong ILocation.ID => (ulong)this.Id;
+        // ILocationReadOnly interface implementation
+        ulong ILocationReadOnly.ID => (ulong)this.Id;
 
-        ulong ILocation.ParentID => this.HasParentId ? (ulong)this.ParentId : 0;
+        ulong ILocationReadOnly.ParentID => this.HasParentId ? (ulong)this.ParentId : 0;
 
-        bool ILocation.Terminal => this.Terminal;
+        bool ILocationReadOnly.Terminal => this.Terminal;
 
-        bool ILocation.OffEdge => this.OffEdge;
+        bool ILocationReadOnly.OffEdge => this.OffEdge;
 
         // These properties don't exist in the protobuf, so return default values
-        bool ILocation.IsVericosityCap => false;
+        bool ILocationReadOnly.IsVericosityCap => false;
 
-        bool ILocation.IsUntraceable => false;
+        bool ILocationReadOnly.IsUntraceable => false;
 
-        IDictionary<string, string> ILocation.Attributes => 
+        IDictionary<string, string> ILocationReadOnly.Attributes => 
             string.IsNullOrEmpty(this.Attributes) ? new Dictionary<string, string>() : 
             ParseAttributesFromString(this.Attributes);
 
         // This property doesn't exist in the protobuf, so calculate from section
-        long ILocation.UnscaledZ => this.Section;
+        long ILocationReadOnly.UnscaledZ => this.Section;
 
         // This property doesn't exist in the protobuf, use attributes instead
-        string ILocation.TagsXml => this.Attributes ?? string.Empty;
+        string ILocationReadOnly.TagsXml => this.Attributes ?? string.Empty;
 
-        LocationType ILocation.TypeCode => (LocationType)(int)this.TypeCode;
+        LocationType ILocationReadOnly.TypeCode => (LocationType)(int)this.TypeCode;
 
         // This property doesn't exist in the protobuf, use section as fallback
-        double ILocation.Z => this.Section;
+        double ILocationReadOnly.Z => this.Section;
 
-        Microsoft.SqlServer.Types.SqlGeometry ILocation.Geometry => 
+        Microsoft.SqlServer.Types.SqlGeometry ILocationReadOnly.Geometry => 
             this.VolumeShape?.Text != null ? 
             Microsoft.SqlServer.Types.SqlGeometry.Parse(this.VolumeShape.Text) :
             Microsoft.SqlServer.Types.SqlGeometry.Null;
@@ -48,7 +48,7 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
         DBACTION IChangeAction.DBAction { get => _DBAction; set => _DBAction = value; }
 
         // IEquatable implementation
-        bool IEquatable<ILocation>.Equals(ILocation other)
+        bool IEquatable<ILocationReadOnly>.Equals(ILocationReadOnly other)
         {
             if (ReferenceEquals(this, other))
                 return true;

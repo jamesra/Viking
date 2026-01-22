@@ -7,6 +7,6 @@ namespace Viking.Common
 {
     public static class SharedResources
     {
-        public static HttpClient HttpClient = new HttpClient();
+        public static HttpClient HttpClient = new();
     }
 }

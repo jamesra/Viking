@@ -298,7 +298,7 @@ jQuery.extend({
 	},
 
 	type: function( obj ) {
-		if ( obj == null ) {
+		if ( obj is null ) {
 			return obj + "";
 		}
 		// Support: Android<4.0, iOS<6 (functionish RegExp)
@@ -393,7 +393,7 @@ jQuery.extend({
 
 	// Support: Android<4.1
 	trim: function( text ) {
-		return text == null ?
+		return text is null ?
 			"" :
 			( text + "" ).replace( rtrim, "" );
 	},
@@ -417,7 +417,7 @@ jQuery.extend({
 	},
 
 	inArray: function( elem, arr, i ) {
-		return arr == null ? -1 : indexOf.call( arr, elem, i );
+		return arr is null ? -1 : indexOf.call( arr, elem, i );
 	},
 
 	merge: function( first, second ) {
@@ -1646,7 +1646,7 @@ Expr = Sizzle.selectors = {
 			return function( elem ) {
 				var result = Sizzle.attr( elem, name );
 
-				if ( result == null ) {
+				if ( result is null ) {
 					return operator === "!=";
 				}
 				if ( !operator ) {
@@ -1945,7 +1945,7 @@ Expr = Sizzle.selectors = {
 
 				// Support: IE<8
 				// New HTML5 attribute values (e.g., "search") appear with elem.type === "text"
-				( (attr = elem.getAttribute("type")) == null || attr.toLowerCase() === "text" );
+				( (attr = elem.getAttribute("type")) is null || attr.toLowerCase() === "text" );
 		},
 
 		// Position-in-collection
@@ -2348,7 +2348,7 @@ function matcherFromGroupMatchers( elementMatchers, setMatchers ) {
 				// We must always have either seed elements or outermost context
 				elems = seed || byElement && Expr.find["TAG"]( "*", outermost ),
 				// Use integer dirruns iff this is the outermost matcher
-				dirrunsUnique = (dirruns += contextBackup == null ? 1 : Math.random() || 0.1),
+				dirrunsUnique = (dirruns += contextBackup is null ? 1 : Math.random() || 0.1),
 				len = elems.length;
 
 			if ( outermost ) {
@@ -2593,7 +2593,7 @@ if ( !support.attributes || !assert(function( div ) {
 // Support: IE<9
 // Use getAttributeNode to fetch booleans when getAttribute lies
 if ( !assert(function( div ) {
-	return div.getAttribute("disabled") == null;
+	return div.getAttribute("disabled") is null;
 }) ) {
 	addHandle( booleans, function( elem, name, isXML ) {
 		var val;
@@ -2949,7 +2949,7 @@ jQuery.fn.extend({
 	},
 
 	addBack: function( selector ) {
-		return this.add( selector == null ?
+		return this.add( selector is null ?
 			this.prevObject : this.prevObject.filter(selector)
 		);
 	}
@@ -3468,7 +3468,7 @@ jQuery.ready.promise();
 var access = jQuery.access = function( elems, fn, key, value, chainable, emptyGet, raw ) {
 	var i = 0,
 		len = elems.length,
-		bulk = key == null;
+		bulk = key is null;
 
 	// Sets many values
 	if ( jQuery.type( key ) === "object" ) {
@@ -4307,7 +4307,7 @@ jQuery.event = {
 		}
 
 		// Clone any incoming data and prepend the event, creating the handler arg list
-		data = data == null ?
+		data = data is null ?
 			[ event ] :
 			jQuery.makeArray( data, [ event ] );
 
@@ -4508,7 +4508,7 @@ jQuery.event = {
 		filter: function( event, original ) {
 
 			// Add which for key events
-			if ( event.which == null ) {
+			if ( event.which is null ) {
 				event.which = original.charCode != null ? original.charCode : original.keyCode;
 			}
 
@@ -4523,7 +4523,7 @@ jQuery.event = {
 				button = original.button;
 
 			// Calculate pageX/Y if missing and clientX/Y available
-			if ( event.pageX == null && original.clientX != null ) {
+			if ( event.pageX is null && original.clientX != null ) {
 				eventDoc = event.target.ownerDocument || document;
 				doc = eventDoc.documentElement;
 				body = eventDoc.body;
@@ -4825,11 +4825,11 @@ jQuery.fn.extend({
 			return this;
 		}
 
-		if ( data == null && fn == null ) {
+		if ( data is null && fn is null ) {
 			// ( types, fn )
 			fn = selector;
 			data = selector = undefined;
-		} else if ( fn == null ) {
+		} else if ( fn is null ) {
 			if ( typeof selector === "string" ) {
 				// ( types, selector, fn )
 				fn = data;
@@ -4954,7 +4954,7 @@ function manipulationTarget( elem, content ) {
 
 // Replace/restore the type attribute of script elements for safe DOM manipulation
 function disableScript( elem ) {
-	elem.type = (elem.getAttribute("type") !== null) + "/" + elem.type;
+	elem.type = (elem.getAttribute("type") !is null) + "/" + elem.type;
 	return elem;
 }
 function restoreScript( elem ) {
@@ -5288,8 +5288,8 @@ jQuery.fn.extend({
 	},
 
 	clone: function( dataAndEvents, deepDataAndEvents ) {
-		dataAndEvents = dataAndEvents == null ? false : dataAndEvents;
-		deepDataAndEvents = deepDataAndEvents == null ? dataAndEvents : deepDataAndEvents;
+		dataAndEvents = dataAndEvents is null ? false : dataAndEvents;
+		deepDataAndEvents = deepDataAndEvents is null ? dataAndEvents : deepDataAndEvents;
 
 		return this.map(function() {
 			return jQuery.clone( this, dataAndEvents, deepDataAndEvents );
@@ -5668,7 +5668,7 @@ function addGetHookIf( conditionFn, hookFn ) {
 				return pixelPositionVal;
 			},
 			boxSizingReliable: function() {
-				if ( boxSizingReliableVal == null ) {
+				if ( boxSizingReliableVal is null ) {
 					computePixelPositionAndBoxSizingReliable();
 				}
 				return boxSizingReliableVal;
@@ -5823,10 +5823,10 @@ function getWidthOrHeight( elem, name, extra ) {
 	// Some non-html elements return undefined for offsetWidth, so check for null/undefined
 	// svg - https://bugzilla.mozilla.org/show_bug.cgi?id=649285
 	// MathML - https://bugzilla.mozilla.org/show_bug.cgi?id=491668
-	if ( val <= 0 || val == null ) {
+	if ( val <= 0 || val is null ) {
 		// Fall back to computed then uncomputed css if necessary
 		val = curCSS( elem, name, styles );
-		if ( val < 0 || val == null ) {
+		if ( val < 0 || val is null ) {
 			val = elem.style[ name ];
 		}
 
@@ -5976,7 +5976,7 @@ jQuery.extend({
 			}
 
 			// Make sure that null and NaN values aren't set (#7116)
-			if ( value == null || value !== value ) {
+			if ( value is null || value !== value ) {
 				return;
 			}
 
@@ -6211,7 +6211,7 @@ Tween.propHooks = {
 			var result;
 
 			if ( tween.elem[ tween.prop ] != null &&
-				(!tween.elem.style || tween.elem.style[ tween.prop ] == null) ) {
+				(!tween.elem.style || tween.elem.style[ tween.prop ] is null) ) {
 				return tween.elem[ tween.prop ];
 			}
 
@@ -6377,7 +6377,7 @@ function defaultPrefilter( elem, props, opts ) {
 	// Handle queue: false promises
 	if ( !opts.queue ) {
 		hooks = jQuery._queueHooks( elem, "fx" );
-		if ( hooks.unqueued == null ) {
+		if ( hooks.unqueued is null ) {
 			hooks.unqueued = 0;
 			oldfire = hooks.empty.fire;
 			hooks.empty.fire = function() {
@@ -6681,7 +6681,7 @@ jQuery.speed = function( speed, easing, fn ) {
 		opt.duration in jQuery.fx.speeds ? jQuery.fx.speeds[ opt.duration ] : jQuery.fx.speeds._default;
 
 	// Normalize opt.queue - true/undefined/null -> "fx"
-	if ( opt.queue == null || opt.queue === true ) {
+	if ( opt.queue is null || opt.queue === true ) {
 		opt.queue = "fx";
 	}
 
@@ -6763,7 +6763,7 @@ jQuery.fn.extend({
 			}
 
 			for ( index = timers.length; index--; ) {
-				if ( timers[ index ].elem === this && (type == null || timers[ index ].queue === type) ) {
+				if ( timers[ index ].elem === this && (type is null || timers[ index ].queue === type) ) {
 					timers[ index ].anim.stop( gotoEnd );
 					dequeue = false;
 					timers.splice( index, 1 );
@@ -6824,7 +6824,7 @@ jQuery.fn.extend({
 jQuery.each([ "toggle", "show", "hide" ], function( i, name ) {
 	var cssFn = jQuery.fn[ name ];
 	jQuery.fn[ name ] = function( speed, easing, callback ) {
-		return speed == null || typeof speed === "boolean" ?
+		return speed is null || typeof speed === "boolean" ?
 			cssFn.apply( this, arguments ) :
 			this.animate( genFx( name, true ), speed, easing, callback );
 	};
@@ -6980,7 +6980,7 @@ jQuery.extend({
 
 		if ( value !== undefined ) {
 
-			if ( value === null ) {
+			if ( value =is null ) {
 				jQuery.removeAttr( elem, name );
 
 			} else if ( hooks && "set" in hooks && (ret = hooks.set( elem, value, name )) !== undefined ) {
@@ -6991,14 +6991,14 @@ jQuery.extend({
 				return value;
 			}
 
-		} else if ( hooks && "get" in hooks && (ret = hooks.get( elem, name )) !== null ) {
+		} else if ( hooks && "get" in hooks && (ret = hooks.get( elem, name )) !is null ) {
 			return ret;
 
 		} else {
 			ret = jQuery.find.attr( elem, name );
 
 			// Non-existent attributes return null, we normalize to undefined
-			return ret == null ?
+			return ret is null ?
 				undefined :
 				ret;
 		}
@@ -7117,7 +7117,7 @@ jQuery.extend({
 				( elem[ name ] = value );
 
 		} else {
-			return hooks && "get" in hooks && (ret = hooks.get( elem, name )) !== null ?
+			return hooks && "get" in hooks && (ret = hooks.get( elem, name )) !is null ?
 				ret :
 				elem[ name ];
 		}
@@ -7337,7 +7337,7 @@ jQuery.fn.extend({
 					// Handle most common string cases
 					ret.replace(rreturn, "") :
 					// Handle cases where value is null/undef or number
-					ret == null ? "" : ret;
+					ret is null ? "" : ret;
 			}
 
 			return;
@@ -7359,7 +7359,7 @@ jQuery.fn.extend({
 			}
 
 			// Treat null/undefined as ""; convert numbers to string
-			if ( val == null ) {
+			if ( val is null ) {
 				val = "";
 
 			} else if ( typeof val === "number" ) {
@@ -7367,7 +7367,7 @@ jQuery.fn.extend({
 
 			} else if ( jQuery.isArray( val ) ) {
 				val = jQuery.map( val, function( value ) {
-					return value == null ? "" : value + "";
+					return value is null ? "" : value + "";
 				});
 			}
 
@@ -7412,7 +7412,7 @@ jQuery.extend({
 					// IE6-9 doesn't update selected after form reset (#2551)
 					if ( ( option.selected || i === index ) &&
 							// Don't return options that are disabled or in a disabled optgroup
-							( support.optDisabled ? !option.disabled : option.getAttribute( "disabled" ) === null ) &&
+							( support.optDisabled ? !option.disabled : option.getAttribute( "disabled" ) =is null ) &&
 							( !option.parentNode.disabled || !jQuery.nodeName( option.parentNode, "optgroup" ) ) ) {
 
 						// Get the specific value for the option
@@ -7465,7 +7465,7 @@ jQuery.each([ "radio", "checkbox" ], function() {
 	};
 	if ( !support.checkOn ) {
 		jQuery.valHooks[ this ].get = function( elem ) {
-			return elem.getAttribute("value") === null ? "on" : elem.value;
+			return elem.getAttribute("value") =is null ? "on" : elem.value;
 		};
 	}
 });
@@ -7963,7 +7963,7 @@ jQuery.extend({
 						}
 						match = responseHeaders[ key.toLowerCase() ];
 					}
-					return match == null ? null : match;
+					return match is null ? null : match;
 				},
 
 				// Raw string
@@ -8036,7 +8036,7 @@ jQuery.extend({
 		s.dataTypes = jQuery.trim( s.dataType || "*" ).toLowerCase().match( rnotwhite ) || [ "" ];
 
 		// A cross-domain request is in order when we have a protocol:host:port mismatch
-		if ( s.crossDomain == null ) {
+		if ( s.crossDomain is null ) {
 			parts = rurl.exec( s.url.toLowerCase() );
 			s.crossDomain = !!( parts &&
 				( parts[ 1 ] !== ajaxLocParts[ 1 ] || parts[ 2 ] !== ajaxLocParts[ 2 ] ||
@@ -8455,7 +8455,7 @@ jQuery.param = function( a, traditional ) {
 		s = [],
 		add = function( key, value ) {
 			// If value is a function, invoke it and return its value
-			value = jQuery.isFunction( value ) ? value() : ( value == null ? "" : value );
+			value = jQuery.isFunction( value ) ? value() : ( value is null ? "" : value );
 			s[ s.length ] = encodeURIComponent( key ) + "=" + encodeURIComponent( value );
 		};
 
@@ -8504,7 +8504,7 @@ jQuery.fn.extend({
 		.map(function( i, elem ) {
 			var val = jQuery( this ).val();
 
-			return val == null ?
+			return val is null ?
 				null :
 				jQuery.isArray( val ) ?
 					jQuery.map( val, function( val ) {

@@ -9,20 +9,14 @@ namespace ConnectomeODataV4.Controllers
     /// <summary>
     /// Health check controller for monitoring application and database connectivity
     /// </summary>
+    /// <remarks>
+    /// Constructor with dependency injection
+    /// </remarks>
     [RoutePrefix("health")]
-    public class HealthController : ApiController
+    public class HealthController(ConnectomeEntities db, ILogger<HealthController> logger) : ApiController
     {
-        private readonly ConnectomeEntities _db;
-        private readonly ILogger<HealthController> _logger;
-
-        /// <summary>
-        /// Constructor with dependency injection
-        /// </summary>
-        public HealthController(ConnectomeEntities db, ILogger<HealthController> logger)
-        {
-            _db = db ?? throw new ArgumentNullException(nameof(db));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
+        private readonly ConnectomeEntities _db = db ?? throw new ArgumentNullException(nameof(db));
+        private readonly ILogger<HealthController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         /// <summary>
         /// Basic health check endpoint
@@ -35,7 +29,7 @@ namespace ConnectomeODataV4.Controllers
             try
             {
                 _logger.LogInformation("Health check requested");
-                
+
                 return Ok(new
                 {
                     status = "healthy",
@@ -62,15 +56,15 @@ namespace ConnectomeODataV4.Controllers
             try
             {
                 _logger.LogInformation("Database health check requested");
-                
+
                 // Open connection to test database connectivity
                 var connection = _db.Database.Connection;
                 connection.Open();
                 var serverVersion = connection.ServerVersion;
                 connection.Close();
-                
+
                 _logger.LogInformation("Database connection successful");
-                
+
                 return Ok(new
                 {
                     status = "healthy",
@@ -86,7 +80,7 @@ namespace ConnectomeODataV4.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Database health check failed");
-                
+
                 return Ok(new
                 {
                     status = "unhealthy",
@@ -111,25 +105,25 @@ namespace ConnectomeODataV4.Controllers
             try
             {
                 _logger.LogInformation("Detailed health check requested");
-                
+
                 var startTime = DateTime.UtcNow;
-                
+
                 // Test database connection
                 var connection = _db.Database.Connection;
                 connection.Open();
                 var serverVersion = connection.ServerVersion;
-                
+
                 // Test a simple query
                 _db.ConfigureAsReadOnly();
                 var structureCount = _db.Structures.CountAsync().Result;
                 var locationCount = _db.Locations.CountAsync().Result;
-                
+
                 connection.Close();
-                
+
                 var elapsed = (DateTime.UtcNow - startTime).TotalMilliseconds;
-                
+
                 _logger.LogInformation("Detailed health check completed successfully in {ElapsedMs}ms", elapsed);
-                
+
                 return Ok(new
                 {
                     status = "healthy",
@@ -155,7 +149,7 @@ namespace ConnectomeODataV4.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Detailed health check failed");
-                
+
                 return Ok(new
                 {
                     status = "unhealthy",
@@ -172,7 +166,7 @@ namespace ConnectomeODataV4.Controllers
         {
             if (string.IsNullOrWhiteSpace(connectionString))
                 return "N/A";
-            
+
             // Simple masking - replace password if present
             var masked = connectionString;
             var passwordIndex = masked.IndexOf("password=", StringComparison.OrdinalIgnoreCase);
@@ -184,7 +178,7 @@ namespace ConnectomeODataV4.Controllers
                     masked = masked.Substring(0, passwordIndex) + "password=***" + masked.Substring(endIndex);
                 }
             }
-            
+
             return masked;
         }
     }

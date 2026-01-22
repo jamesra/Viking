@@ -32,20 +32,20 @@ namespace Viking.Common
         //        public Settings Settings = new Settings();
 
         //Font Info 
-        public Font SchematicNameFont = new Font("Arial Black", 10);
-        public Font SchematicLinkFont = new Font("Arial Black", 8);
-        public Font Font = new Font("Arial", 9);
+        public Font SchematicNameFont = new("Arial Black", 10);
+        public Font SchematicLinkFont = new("Arial Black", 8);
+        public Font Font = new("Arial", 9);
 
         //Part Placement variable
         public double PartRotationModulus = 15.0;
 
         //Size information for thumbnail images
-        public Size SizeLargeThumb = new Size(32, 32);
-        public Size SizeSmallThumb = new Size(16, 16);
+        public Size SizeLargeThumb = new(32, 32);
+        public Size SizeSmallThumb = new(16, 16);
 
-        public Size SizeLargeLinkThumb = new Size(64, 32);
-        public Size SizeSmallLinkThumb = new Size(48, 16);
+        public Size SizeLargeLinkThumb = new(64, 32);
+        public Size SizeSmallLinkThumb = new(48, 16);
 
-        public Size SizeSchematicThumb = new Size(256, 256);
+        public Size SizeSchematicThumb = new(256, 256);
     }
 }

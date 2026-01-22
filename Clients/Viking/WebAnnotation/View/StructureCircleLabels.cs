@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using System;
 using VikingXNAGraphics;
@@ -15,7 +15,7 @@ namespace WebAnnotation.View
         public LabelView StructureLabelView;
         public LabelView StructureAttributeView;
         public LabelView ParentStructureLabelView;
-        private readonly LocationObj locationObj = null;
+        private readonly LocationObj? locationObj = null;
         private GridCircle VolumeCircle;
         private readonly bool ShowAttributeLabels = true;
 
@@ -43,7 +43,7 @@ namespace WebAnnotation.View
 
         protected string StructureIDLabelWithTypeCode(StructureObj obj)
         {
-            if (obj == null)
+            if (obj is null)
             {
                 return "";
             }
@@ -73,7 +73,7 @@ namespace WebAnnotation.View
 
         protected string TagLabel()
         {
-            if (locationObj.Parent == null)
+            if (locationObj.Parent is null)
             {
                 return "";
             }
@@ -95,7 +95,7 @@ namespace WebAnnotation.View
         protected string StructureLabel()
         {
             string InfoLabel = "";
-            if (locationObj.Parent == null)
+            if (locationObj.Parent is null)
             {
                 return InfoLabel;
             }
@@ -122,7 +122,7 @@ namespace WebAnnotation.View
             if (ShowAttributeLabels)
             {
                 string Label = StructureLabel();
-                if (Label == null || Label?.Length == 0)
+                if (Label is null || Label?.Length == 0)
                 {
                     StructureLabelView = null;
                 }
@@ -136,7 +136,7 @@ namespace WebAnnotation.View
                 }
 
                 string Tags = TagLabel();
-                if (Tags == null || Tags?.Length == 0)
+                if (Tags is null || Tags?.Length == 0)
                 {
                     StructureAttributeView = null;
                 }
@@ -165,10 +165,7 @@ namespace WebAnnotation.View
             }
         }
 
-        public bool IsLabelVisible(VikingXNA.Scene scene)
-        {
-            return StructureIDLabelView.IsVisible(scene);
-        }
+        public bool IsLabelVisible(VikingXNA.Scene scene) => StructureIDLabelView.IsVisible(scene);
 
         /// <summary>
         /// Draw the text for the location at the specified screen coordinates
@@ -182,12 +179,12 @@ namespace WebAnnotation.View
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
                               VikingXNA.Scene scene)
         {
-            if (font == null)
+            if (font is null)
             {
                 throw new ArgumentNullException("font");
             }
 
-            if (spriteBatch == null)
+            if (spriteBatch is null)
             {
                 throw new ArgumentNullException("spriteBatch");
             }

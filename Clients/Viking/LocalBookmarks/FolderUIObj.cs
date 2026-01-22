@@ -1,4 +1,5 @@
-﻿using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
+using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
+using Geometry.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -7,7 +8,7 @@ using System.Windows.Forms;
 using Viking.Common;
 using Viking.UI.Controls;
 using VikingXNAGraphics;
- 
+
 namespace LocalBookmarks
 {
 
@@ -41,7 +42,7 @@ namespace LocalBookmarks
         {
             if (OnCreate != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null! });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, [this, null!]);
             }
         }
         public static event EventHandler Create
@@ -51,43 +52,43 @@ namespace LocalBookmarks
         }
 
 
-        private List<FolderUIObj> _Folders = null;
+        private List<FolderUIObj>? _Folders = null;
         [Viking.Common.UI.ThisToManyRelationAttribute()]
         public FolderUIObj[] Folders
         {
             get
             {
-                if (_Folders == null)
+                if (_Folders is null)
                 {
                     _Folders = new List<FolderUIObj>(Data.Folders.Count);
                     foreach (Folder folder in Data.Folders)
                     {
-                        FolderUIObj child = new FolderUIObj(this, folder);
+                        FolderUIObj child = new(this, folder);
                         _Folders.Add(child);
                     }
                 }
 
-                return _Folders.ToArray();
+                return [.. _Folders];
             }
         }
 
-        private List<BookmarkUIObj> _Bookmarks = null;
+        private List<BookmarkUIObj>? _Bookmarks = null;
         [Viking.Common.UI.ThisToManyRelationAttribute()]
         public BookmarkUIObj[] Bookmarks
         {
             get
             {
-                if (_Bookmarks == null)
+                if (_Bookmarks is null)
                 {
                     _Bookmarks = new List<BookmarkUIObj>(Data.Bookmarks.Count);
                     foreach (Bookmark bookmark in Data.Bookmarks)
                     {
-                        BookmarkUIObj child = new BookmarkUIObj(this, bookmark);
+                        BookmarkUIObj child = new(this, bookmark);
                         _Bookmarks.Add(child);
                     }
                 }
 
-                return _Bookmarks.ToArray();
+                return [.. _Bookmarks];
             }
         }
 
@@ -97,8 +98,7 @@ namespace LocalBookmarks
             set
             {
                 Data.Name = value;
-                if (Data.Name == null)
-                    Data.Name = "";
+                Data.Name ??= "";
                 ValueChangedEvent("Name");
             }
         }
@@ -109,26 +109,26 @@ namespace LocalBookmarks
             {
                 ContextMenuStrip menu = base.ContextMenu;
 
-                ToolStripMenuItem PlaceBookmarkMenu = new ToolStripMenuItem("Place Bookmark...");
+                ToolStripMenuItem PlaceBookmarkMenu = new("Place Bookmark...");
                 PlaceBookmarkMenu.Click += OnPlaceBookmark;
                 menu.Items.Insert(0, PlaceBookmarkMenu);
 
-                ToolStripMenuItem NewFolderMenu = new ToolStripMenuItem("New Folder...");
+                ToolStripMenuItem NewFolderMenu = new("New Folder...");
                 NewFolderMenu.Click += OnNewFolder;
                 menu.Items.Insert(1, NewFolderMenu);
 
-                ToolStripMenuItem ExportMenu = new ToolStripMenuItem("Export");
+                ToolStripMenuItem ExportMenu = new("Export");
                 menu.Items.Insert(2, ExportMenu);
 
-                ToolStripMenuItem ExportHTMLMenu = new ToolStripMenuItem("HTML...");
+                ToolStripMenuItem ExportHTMLMenu = new("HTML...");
                 ExportHTMLMenu.Click += OnExportHTML;
                 ExportMenu.DropDownItems.Add(ExportHTMLMenu);
 
-                ToolStripMenuItem ExportXMLMenu = new ToolStripMenuItem("XML...");
+                ToolStripMenuItem ExportXMLMenu = new("XML...");
                 ExportXMLMenu.Click += OnExportXML;
                 ExportMenu.DropDownItems.Add(ExportXMLMenu);
 
-                ToolStripMenuItem ImportMenu = new ToolStripMenuItem("Import");
+                ToolStripMenuItem ImportMenu = new("Import");
                 ImportMenu.Click += OnImportXML;
                 menu.Items.Insert(3, ImportMenu);
 
@@ -154,7 +154,7 @@ namespace LocalBookmarks
             {
                 if (Shape == ShapeType.INHERIT)
                 {
-                    if (Parent == null)
+                    if (Parent is null)
                     {
                         return BookmarkOverlay.DefaultTexture;
                     }
@@ -179,9 +179,9 @@ namespace LocalBookmarks
                     return _Color.Value;
                 }
 
-                if (Data.Color == null)
+                if (Data.Color is null)
                 {
-                    if (Parent == null)
+                    if (Parent is null)
                     {
                         return Global.DefaultColor;
                     }
@@ -193,7 +193,7 @@ namespace LocalBookmarks
 
                 try
                 {
-                    var gColor = Geometry.Graphics.Color.FromInteger(Data.Color);
+                    Color gColor = Geometry.Graphics.Color.FromInteger(Data.Color);
                     _Color = new Microsoft.Xna.Framework.Color((int)gColor.R, (int)gColor.G, (int)gColor.B, (int)gColor.A);
                     return _Color.Value;
                 }
@@ -205,12 +205,6 @@ namespace LocalBookmarks
             }
             set
             {
-                if (value == null)
-                {
-                    Data.Color = null;
-                    _Color = new Microsoft.Xna.Framework.Color();
-                }
-
                 Data.Color = value.ToHexString();
                 _Color = value;
                 ValueChangedEvent("Color");
@@ -238,8 +232,7 @@ namespace LocalBookmarks
         /// <param name="child"></param>
         internal void AddChild(object child)
         {
-            FolderUIObj childFolder = child as FolderUIObj;
-            if (childFolder != null)
+            if (child is FolderUIObj childFolder)
             {
                 if (false == Folders.Contains(childFolder))
                     _Folders.Add(childFolder);
@@ -247,8 +240,7 @@ namespace LocalBookmarks
                     Data.Folders.Add(childFolder.Data);
             }
 
-            BookmarkUIObj childBookmark = child as BookmarkUIObj;
-            if (childBookmark != null)
+            if (child is BookmarkUIObj childBookmark)
             {
                 if (false == Bookmarks.Contains(childBookmark))
                     _Bookmarks.Add(childBookmark);
@@ -266,15 +258,13 @@ namespace LocalBookmarks
         /// <param name="child"></param>
         internal void RemoveChild(object child)
         {
-            FolderUIObj childFolder = child as FolderUIObj;
-            if (childFolder != null)
+            if (child is FolderUIObj childFolder)
             {
                 Data.Folders.Remove(childFolder.Data);
                 _Folders.Remove(childFolder);
             }
 
-            BookmarkUIObj childBookmark = child as BookmarkUIObj;
-            if (childBookmark != null)
+            if (child is BookmarkUIObj childBookmark)
             {
                 Data.Bookmarks.Remove(childBookmark.Data);
                 _Bookmarks.Remove(childBookmark);
@@ -289,8 +279,10 @@ namespace LocalBookmarks
 
         public override Viking.UI.Controls.GenericTreeNode CreateNode()
         {
-            GenericTreeNode node = new GenericTreeNode(this);
-            node.Name = this.Name;
+            GenericTreeNode node = new(this)
+            {
+                Name = this.Name
+            };
             return node;
         }
 
@@ -323,8 +315,8 @@ namespace LocalBookmarks
         /// <param name="e"></param>
         protected void OnPlaceBookmark(object sender, EventArgs e)
         {
-            Viking.UI.State.ViewerControl.CommandQueue.EnqueueCommand(typeof(CreateBookmarkCommand), new object[]{ Viking.UI.State.ViewerControl,
-                                                                                                    this});
+            Viking.UI.State.ViewerControl.CommandQueue.EnqueueCommand(typeof(CreateBookmarkCommand), [ Viking.UI.State.ViewerControl,
+                                                                                                    this]);
         }
 
         #region Context Menu
@@ -336,35 +328,39 @@ namespace LocalBookmarks
         /// <param name="e"></param>
         protected void OnNewFolder(object sender, EventArgs e)
         {
-            FolderUIObj newFolder = new FolderUIObj(this);
-            newFolder.Name = "New Folder";
+            FolderUIObj newFolder = new(this)
+            {
+                Name = "New Folder"
+            };
 
             newFolder.Save();
         }
 
         protected void OnImportXML(object sender, EventArgs e)
         {
-            OpenFileDialog fileDialog = new OpenFileDialog();
-            fileDialog.DefaultExt = ".xml";
-            fileDialog.FileName = this.Name;
-            fileDialog.AddExtension = true;
-            fileDialog.AutoUpgradeEnabled = true;
-            fileDialog.CheckFileExists = true;
-            fileDialog.Multiselect = false;
-            fileDialog.Title = "Import Bookmark XML File";
+            OpenFileDialog fileDialog = new()
+            {
+                DefaultExt = ".xml",
+                FileName = this.Name,
+                AddExtension = true,
+                AutoUpgradeEnabled = true,
+                CheckFileExists = true,
+                Multiselect = false,
+                Title = "Import Bookmark XML File"
+            };
 
             if (DialogResult.OK == fileDialog.ShowDialog())
             {
                 Folder newFolder = Folder.Load(fileDialog.FileName);
                 foreach (Folder f in newFolder.Folders)
                 {
-                    FolderUIObj newFolderUI = new FolderUIObj(this, f);
+                    FolderUIObj newFolderUI = new(this, f);
                     this.AddChild(newFolderUI);
                 }
 
                 foreach (Bookmark b in newFolder.Bookmarks)
                 {
-                    BookmarkUIObj newBookmarkUI = new BookmarkUIObj(this, b);
+                    BookmarkUIObj newBookmarkUI = new(this, b);
                     this.AddChild(newBookmarkUI);
                 }
 
@@ -375,18 +371,20 @@ namespace LocalBookmarks
 
         public void ExportHTML(string Filename)
         {
-            HTMLExporter exporter = new HTMLExporter(this);
+            HTMLExporter exporter = new(this);
             exporter.WriteHTML(Filename);
         }
 
         protected void OnExportHTML(object sender, EventArgs e)
         {
-            SaveFileDialog fileDialog = new SaveFileDialog();
-            fileDialog.AutoUpgradeEnabled = true;
-            fileDialog.DefaultExt = ".html";
-            fileDialog.FileName = this.Name;
-            fileDialog.OverwritePrompt = true;
-            fileDialog.Title = "Export Bookmark HTML File";
+            SaveFileDialog fileDialog = new()
+            {
+                AutoUpgradeEnabled = true,
+                DefaultExt = ".html",
+                FileName = this.Name,
+                OverwritePrompt = true,
+                Title = "Export Bookmark HTML File"
+            };
 
             if (DialogResult.OK == fileDialog.ShowDialog())
             {
@@ -396,12 +394,14 @@ namespace LocalBookmarks
 
         protected void OnExportXML(object sender, EventArgs e)
         {
-            SaveFileDialog fileDialog = new SaveFileDialog();
-            fileDialog.AutoUpgradeEnabled = true;
-            fileDialog.DefaultExt = ".xml";
-            fileDialog.FileName = this.Name;
-            fileDialog.OverwritePrompt = true;
-            fileDialog.Title = "Export Bookmark XML File";
+            SaveFileDialog fileDialog = new()
+            {
+                AutoUpgradeEnabled = true,
+                DefaultExt = ".xml",
+                FileName = this.Name,
+                OverwritePrompt = true,
+                Title = "Export Bookmark XML File"
+            };
 
             if (DialogResult.OK == fileDialog.ShowDialog())
             {

@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -9,7 +9,7 @@ namespace WebAnnotation.WPF.Controls
     /// Interaction logic for DropList.xaml
     /// </summary>
     public partial class DropList : ListBox
-    {  
+    {
         public ICommand DropCommand
         {
             get => (ICommand)GetValue(DropCommandProperty);
@@ -28,16 +28,16 @@ namespace WebAnnotation.WPF.Controls
 
         private void OnListDrop(object sender, DragEventArgs e)
         {
-            if(this.DropCommand == null)
-            { 
+            if (this.DropCommand is null)
+            {
                 e.Handled = false;
                 return;
             }
 
-            if(false == DropCommand.CanExecute(e.Data.GetData(typeof(IStructureTypeReadOnly))))
+            if (false == DropCommand.CanExecute(e.Data.GetData(typeof(IStructureTypeReadOnly))))
             {
                 e.Handled = false;
-                return; 
+                return;
             }
 
             DropCommand.Execute(e.Data.GetData(typeof(IStructureTypeReadOnly)));
@@ -45,7 +45,7 @@ namespace WebAnnotation.WPF.Controls
 
         private void OnListDragOver(object sender, DragEventArgs e)
         {
-            if (this.DropCommand == null)
+            if (this.DropCommand is null)
             {
                 e.Handled = false;
                 e.Effects = DragDropEffects.None;

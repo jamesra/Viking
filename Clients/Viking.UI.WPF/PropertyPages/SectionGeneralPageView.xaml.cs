@@ -39,8 +39,10 @@ namespace Viking.UI.WPF.PropertyPages
 
         private void LoadNotes(string notes)
         {
-            TextRange range = new TextRange(NotesBox.Document.ContentStart, NotesBox.Document.ContentEnd);
-            range.Text = string.Empty;
+            TextRange range = new(NotesBox.Document.ContentStart, NotesBox.Document.ContentEnd)
+            {
+                Text = string.Empty
+            };
 
             if (string.IsNullOrWhiteSpace(notes))
             {
@@ -49,7 +51,7 @@ namespace Viking.UI.WPF.PropertyPages
 
             try
             {
-                using MemoryStream stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(notes));
+                using MemoryStream stream = new(System.Text.Encoding.UTF8.GetBytes(notes));
                 range.Load(stream, DataFormats.Rtf);
             }
             catch
@@ -60,8 +62,8 @@ namespace Viking.UI.WPF.PropertyPages
 
         private void PopulateReferenceLists()
         {
-            List<int> above = new List<int>();
-            List<int> below = new List<int>();
+            List<int> above = [];
+            List<int> below = [];
             int currentNumber = (int)_section.Number;
 
             if (_sectionMap != null)
@@ -87,16 +89,16 @@ namespace Viking.UI.WPF.PropertyPages
 
             AboveList.ItemsSource = above;
             BelowList.ItemsSource = below;
-              
+
             // Get the volume's local directory for settings
             string volumeLocalDir = GetVolumeLocalDirectory();
-            
+
             // Load persisted settings
             var allSettings = SectionReferenceSettings.LoadForVolume(volumeLocalDir);
-            
+
             int? aboveNumber = null;
             int? belowNumber = null;
-            
+
             // Check if we have persisted settings for this section
             if (allSettings.TryGetValue(currentNumber, out var persistedRefs))
             {
@@ -108,7 +110,7 @@ namespace Viking.UI.WPF.PropertyPages
                 // No persisted settings, check if already set in the section model
                 aboveNumber = GetSectionNumber(_section.ReferenceSectionAbove as VolumeSection);
                 belowNumber = GetSectionNumber(_section.ReferenceSectionBelow as VolumeSection);
-                
+
                 // If not set in model, auto-select adjacent sections (defaults)
                 if (!aboveNumber.HasValue)
                 {
@@ -118,7 +120,7 @@ namespace Viking.UI.WPF.PropertyPages
                         aboveNumber = defaultAbove;
                     }
                 }
-                
+
                 if (!belowNumber.HasValue)
                 {
                     int defaultBelow = currentNumber - 1;
@@ -143,24 +145,21 @@ namespace Viking.UI.WPF.PropertyPages
             }
         }
 
-        private static int? GetSectionNumber(VolumeSection section)
-        {
-            return section?.Number;
-        }
+        private static int? GetSectionNumber(VolumeSection section) => section?.Number;
 
         private string GetVolumeLocalDirectory()
         {
             try
             {
                 dynamic volume = _section?.VolumeViewModel;
-                if (volume == null)
+                if (volume is null)
                 {
                     return null;
                 }
 
                 // Access the Volume object through the ViewModel
                 dynamic volumeModel = volume.Volume;
-                if (volumeModel == null)
+                if (volumeModel is null)
                 {
                     return null;
                 }

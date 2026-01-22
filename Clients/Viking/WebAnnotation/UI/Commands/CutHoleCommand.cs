@@ -7,29 +7,29 @@ namespace WebAnnotation.UI.Commands
 {
     internal class CutHoleCommand : Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
-        private readonly MeshView<VertexPositionColor> meshView = null;
+        private readonly MeshView<VertexPositionColor>? meshView = null;
 
-        public static string[] DefaultCutHoleHelpStrings = new string[]
-        {
+        public static string[] DefaultCutHoleHelpStrings =
+        [
             "CTRL+Click another curve: Copy control points",
             "Middle Button click: Reset to original size",
             "Hold Right click and drag: Rotate",
             "Mouse Wheel: Change annotation size",
             "SHIFT + Scroll wheel: Scale annotation size slowly"
-        };
+        ];
 
         public virtual string[] HelpStrings
         {
             get
             {
-                List<string> s = new List<string>(CutHoleCommand.DefaultCutHoleHelpStrings);
+                List<string> s = [.. CutHoleCommand.DefaultCutHoleHelpStrings];
                 s.AddRange(TranslateScaleCommandBase.DefaultMouseHelpStrings);
                 s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
                 s.Sort();
-                return s.ToArray();
+                return [.. s];
             }
         }
 
-        public ObservableCollection<string> ObservableHelpStrings => new ObservableCollection<string>(HelpStrings);
+        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
     }
 }

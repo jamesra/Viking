@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System.Collections.Generic;
 using System;
 using System.Collections;
@@ -59,7 +59,7 @@ public class PolylineVertexEnum : IEnumerator<PolylineIndex>, IEnumerator, IEnum
         }
     }
 
-    public void Dispose() { GC.SuppressFinalize(this); }
+    public void Dispose() => GC.SuppressFinalize(this);
 
     /// <summary>
     /// Go to the next index, if the shape is closed we do not return the closed index twice. 
@@ -120,18 +120,9 @@ public class PolylineVertexEnum : IEnumerator<PolylineIndex>, IEnumerator, IEnum
         return new PolylineIndex?();
     }
 
-    public void Reset()
-    {
-        curIndex = new PolylineIndex?();
-    }
+    public void Reset() => curIndex = new PolylineIndex?();
 
-    public IEnumerator GetEnumerator()
-    {
-        return (IEnumerator<PolylineIndex>)this;
-    }
+    public IEnumerator GetEnumerator() => (IEnumerator<PolylineIndex>)this;
 
-    IEnumerator<PolylineIndex> IEnumerable<PolylineIndex>.GetEnumerator()
-    {
-        return (IEnumerator<PolylineIndex>)this;
-    }
+    IEnumerator<PolylineIndex> IEnumerable<PolylineIndex>.GetEnumerator() => (IEnumerator<PolylineIndex>)this;
 }

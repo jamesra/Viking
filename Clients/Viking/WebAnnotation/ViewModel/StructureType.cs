@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Specialized;
 using System.Windows.Forms;
 using Viking.Common;
@@ -8,19 +8,15 @@ using WebAnnotationModel;
 namespace WebAnnotation.ViewModel
 {
     [Viking.Common.UI.TreeViewVisible]
-    public class StructureType : Viking.Objects.UIObjBase, IViewStructureType, IContextMenu
+    public class StructureType(StructureTypeObj data) : Viking.Objects.UIObjBase, IViewStructureType, IContextMenu
     {
-        public StructureTypeObj modelObj;
+        public StructureTypeObj modelObj = data;
 
-        public override int GetHashCode()
-        {
-            return modelObj.GetHashCode();
-        }
+        public override int GetHashCode() => modelObj.GetHashCode();
 
         public override bool Equals(object obj)
         {
-            StructureType Obj = obj as StructureType;
-            if (Obj != null)
+            if (obj is StructureType Obj)
             {
                 return modelObj.Equals(Obj.modelObj);
             }
@@ -34,10 +30,7 @@ namespace WebAnnotation.ViewModel
             return false;
         }
 
-        public override string ToString()
-        {
-            return modelObj.Name;
-        }
+        public override string ToString() => modelObj.Name;
 
         public StructureType Parent
         {
@@ -108,34 +101,29 @@ namespace WebAnnotation.ViewModel
             set => modelObj.Code = value;
         }
 
-        public StructureType(StructureTypeObj data)
-        {
-            modelObj = data;
-        }
-
         #region IUIObject Members
 
         public override System.Windows.Forms.ContextMenuStrip ContextMenu
         {
             get
             {
-                ContextMenuStrip menu = new ContextMenuStrip();
+                ContextMenuStrip menu = new();
 
-                ToolStripMenuItem newMenuItem = new ToolStripMenuItem("New");
+                ToolStripMenuItem newMenuItem = new("New");
                 menu.Items.Add(newMenuItem);
 
-                ToolStripMenuItem structureTypeItem = new ToolStripMenuItem("Structure Type");
+                ToolStripMenuItem structureTypeItem = new("Structure Type");
                 structureTypeItem.Click += ContextMenu_OnNewStructureType;
                 newMenuItem.DropDownItems.Add(structureTypeItem);
 
                 if (modelObj.Children.Length == 0)
                 {
-                    ToolStripMenuItem deleteItem = new ToolStripMenuItem("Delete");
+                    ToolStripMenuItem deleteItem = new("Delete");
                     deleteItem.Click += ContextMenu_OnDelete;
                     menu.Items.Add(deleteItem);
                 }
 
-                ToolStripMenuItem propertiesItem = new ToolStripMenuItem("Properties");
+                ToolStripMenuItem propertiesItem = new("Properties");
                 propertiesItem.Click += ContextMenu_OnProperties;
                 menu.Items.Add(propertiesItem);
 
@@ -159,16 +147,13 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        public override Viking.UI.Controls.GenericTreeNode CreateNode()
-        {
-            return new Viking.UI.Controls.GenericTreeNode(this);
-        }
+        public override Viking.UI.Controls.GenericTreeNode CreateNode() => new Viking.UI.Controls.GenericTreeNode(this);
 
         public override int TreeImageIndex => 0;
 
         public override int TreeSelectedImageIndex => 0;
 
-        public override Type[] AssignableParentTypes => new Type[] { typeof(StructureType) };
+        public override Type[] AssignableParentTypes => [typeof(StructureType)];
 
         public override void SetParent(IUIObject parent)
         {
@@ -187,8 +172,8 @@ namespace WebAnnotation.ViewModel
 
         protected void ContextMenu_OnNewStructureType(object sender, EventArgs e)
         {
-            StructureTypeObj newType = new StructureTypeObj(modelObj);
-            StructureType newTypeView = new StructureType(newType);
+            StructureTypeObj newType = new(modelObj);
+            StructureType newTypeView = new(newType);
             DialogResult result = Viking.UI.Forms.PropertySheetForm.ShowDialog(newTypeView, null);
 
             if (result != DialogResult.Cancel)
@@ -207,15 +192,9 @@ namespace WebAnnotation.ViewModel
         }
 
 
-        protected void ContextMenu_OnProperties(object sender, EventArgs e)
-        {
-            Viking.UI.Forms.PropertySheetForm.Show(this);
-        }
+        protected void ContextMenu_OnProperties(object sender, EventArgs e) => Viking.UI.Forms.PropertySheetForm.Show(this);
 
-        protected void ContextMenu_OnDelete(object sender, EventArgs e)
-        {
-            Delete();
-        }
+        protected void ContextMenu_OnDelete(object sender, EventArgs e) => Delete();
 
         public override void Delete()
         {

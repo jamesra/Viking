@@ -14,7 +14,7 @@ namespace AnnotationVizLib.WCFClient
 
             UnitsAndScale.IScale scale = Queries.GetScale().ToGeometryScale();
 
-            MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
+            MorphologyGraph rootGraph = new(0, scale);
 
             MorphologyForStructures(rootGraph, StructureIDs, include_children, scale);
 
@@ -31,11 +31,11 @@ namespace AnnotationVizLib.WCFClient
             if (StructureIDs is null)
                 return;
 
-            Structure[] structures = Queries.GetStructuresByIDs(StructureIDs.ToArray(), include_children);
+            Structure[] structures = Queries.GetStructuresByIDs([.. StructureIDs], include_children);
 
             Queries.PopulateStructureTypes();
 
-            System.Threading.Tasks.ParallelOptions o = new System.Threading.Tasks.ParallelOptions
+            System.Threading.Tasks.ParallelOptions o = new()
             {
                 MaxDegreeOfParallelism = 8
             };
@@ -85,7 +85,7 @@ namespace AnnotationVizLib.WCFClient
                 return null;
             }
 
-            MorphologyGraph graph = new MorphologyGraph((ulong)locations[0].ParentID, scale, new WCFStructureAdapter(s));
+            MorphologyGraph graph = new((ulong)locations[0].ParentID, scale, new WCFStructureAdapter(s));
 
             foreach (Location loc in locations)
             {

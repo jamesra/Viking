@@ -31,9 +31,9 @@ namespace TriangleNet.Topology.DCEL
         {
             if (initialize)
             {
-                vertices = new List<Vertex>();
-                edges = new List<HalfEdge>();
-                faces = new List<Face>();
+                vertices = [];
+                edges = [];
+                faces = [];
             }
         }
 
@@ -205,7 +205,7 @@ namespace TriangleNet.Topology.DCEL
         public void ResolveBoundaryEdges()
         {
             // Maps vertices to leaving boundary edge.
-            var map = new Dictionary<int, HalfEdge>();
+            Dictionary<int, HalfEdge> map = [];
 
             // TODO: parallel?
             foreach (var edge in this.edges)
@@ -238,7 +238,7 @@ namespace TriangleNet.Topology.DCEL
         /// </remarks>
         protected virtual IEnumerable<IEdge> EnumerateEdges()
         {
-            var edges = new List<IEdge>(this.edges.Count / 2);
+            List<IEdge> edges = new(this.edges.Count / 2);
 
             foreach (var edge in this.edges)
             {

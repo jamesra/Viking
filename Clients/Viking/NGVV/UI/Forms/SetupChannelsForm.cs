@@ -9,7 +9,7 @@ namespace Viking.UI.Forms
     {
         private readonly WpfChannelSetup _channelControl;
 
-        public ChannelInfo[] ChannelInfo => _channelControl?.Channels ?? Array.Empty<ChannelInfo>();
+        public ChannelInfo[] ChannelInfo => _channelControl?.Channels ?? [];
 
         internal SetupChannelsForm(ChannelInfo[] Channels, string[] ChannelNames)
         {

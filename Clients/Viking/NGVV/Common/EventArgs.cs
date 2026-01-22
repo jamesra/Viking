@@ -9,33 +9,20 @@ using Viking.ViewModels;
 namespace Viking.Common
 {
 
-    public class SectionChangedEventArgs : System.EventArgs
+    public class SectionChangedEventArgs(SectionViewModel newSection, SectionViewModel oldSection) : System.EventArgs
     {
-        public SectionViewModel NewSection;
-        public SectionViewModel OldSection;
-
-        public SectionChangedEventArgs(SectionViewModel newSection, SectionViewModel oldSection)
-        {
-            this.NewSection = newSection;
-            this.OldSection = oldSection;
-        }
+        public SectionViewModel NewSection = newSection;
+        public SectionViewModel OldSection = oldSection;
     }
     public delegate Task SectionChangedEventHandler(object sender, SectionChangedEventArgs e, CancellationToken token);
 
-    public class ReferenceSectionChangedEventArgs : System.EventArgs
+    public class ReferenceSectionChangedEventArgs(SectionViewModel changedSection,
+        long? oldReference,
+        long? newReference) : System.EventArgs
     {
-        public SectionViewModel ChangedSection;
-        public long? OldReferenceSection;
-        public long? NewReferenceSection;
-
-        public ReferenceSectionChangedEventArgs(SectionViewModel changedSection,
-            long? oldReference,
-            long? newReference)
-        {
-            this.ChangedSection = changedSection;
-            this.OldReferenceSection = oldReference;
-            this.NewReferenceSection = newReference;
-        }
+        public SectionViewModel ChangedSection = changedSection;
+        public long? OldReferenceSection = oldReference;
+        public long? NewReferenceSection = newReference;
     }
 
     public delegate void ReferenceSectionChangedEventHandler(object sender, ReferenceSectionChangedEventArgs e);

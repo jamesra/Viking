@@ -34,9 +34,9 @@ namespace Viking.UI.Controls
         private Size _maxTabSize = Size.Empty;
 
         [Browsable(false)]
-        public IPropertyPage[] IPropertyPages => IPageArray.ToArray();
+        public IPropertyPage[] IPropertyPages => [.. IPageArray];
 
-        protected List<IPropertyPage> IPageArray = new List<IPropertyPage>();
+        protected List<IPropertyPage> IPageArray = [];
 
         public PropertySheetControl()
         {

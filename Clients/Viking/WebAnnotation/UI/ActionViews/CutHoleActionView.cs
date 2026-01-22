@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+using Microsoft.Xna.Framework;
 using VikingXNAGraphics;
 using WebAnnotation.UI.Actions;
 
@@ -6,9 +7,9 @@ namespace WebAnnotation.UI.ActionViews
 {
     internal class CutHoleActionView : IActionView, IIconTexture
     {
-        public IRenderable Passive { get; set; } = null;
+        public IRenderable Passive { get; set; } = null!;
 
-        public IRenderable Active { get; set; } = null;
+        public IRenderable Active { get; set; } = null!;
 
         public BuiltinTexture Icon { get; set; } = BuiltinTexture.Minus;
 
@@ -16,13 +17,14 @@ namespace WebAnnotation.UI.ActionViews
 
         public CutHoleActionView(CutHoleAction action)
         {
+            if (action == null) throw new ArgumentNullException(nameof(action));
             model = action;
             CreateDefaultVisuals();
         }
 
         public void CreateDefaultVisuals()
         {
-            SolidPolygonView view = new SolidPolygonView(model.NewSmoothVolumeInteriorPolygon, Color.Black.SetAlpha(0.5f));
+            SolidPolygonView view = new(model.NewSmoothVolumeInteriorPolygon, Color.Black.SetAlpha(0.5f));
             Passive = view;
             Active = new SolidPolygonView(model.NewSmoothVolumeInteriorPolygon, Color.Black.SetAlpha(1f));
         }

@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,10 +12,10 @@ namespace Viking.VolumeModel
     {
         public static GridRectangle? ApproximateVisibleMosaicBounds(this GridRectangle VisibleWorldBounds, IVolumeToSectionTransform mapper)
         {
-            GridVector2[] VolumeRectCorners = new GridVector2[] { VisibleWorldBounds.LowerLeft, VisibleWorldBounds.LowerRight, VisibleWorldBounds.UpperLeft, VisibleWorldBounds.UpperRight };
+            GridVector2[] VolumeRectCorners = [VisibleWorldBounds.LowerLeft, VisibleWorldBounds.LowerRight, VisibleWorldBounds.UpperLeft, VisibleWorldBounds.UpperRight];
             bool[] mapped = mapper.TryVolumeToSection(VolumeRectCorners, out GridVector2[] MosaicRectCorners);
 
-            GridVector2[] MappedMosaicCorners = MosaicRectCorners.Where((p, i) => mapped[i]).ToArray();
+            GridVector2[] MappedMosaicCorners = [.. MosaicRectCorners.Where((p, i) => mapped[i])];
 
             if (MappedMosaicCorners.Length == 4)
             {
@@ -62,7 +62,7 @@ namespace Viking.VolumeModel
         private static GridRectangle? EstimateMosaicRectangle(bool[] IsMapped, GridVector2[] points, GridRectangle VisibleWorldBounds)
         {
             //If we map at least three corners we know we can construct a reasonable approximation of the correct rectangle in mosaic space
-            GridVector2[] ValidPoints = points.Where((p, i) => IsMapped[i]).ToArray();
+            GridVector2[] ValidPoints = [.. points.Where((p, i) => IsMapped[i])];
             double MinX = ValidPoints.Min(p => p.X);
             double MaxX = ValidPoints.Max(p => p.X);
             double MaxY = ValidPoints.Max(p => p.Y);
@@ -122,33 +122,18 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="mappedCorners"></param>
         /// <returns></returns>
-        private static bool OppositeCornersMapped(bool[] mappedCorners)
-        {
-            return (mappedCorners[0] && mappedCorners[2]) || (mappedCorners[1] && mappedCorners[3]);
-        }
+        private static bool OppositeCornersMapped(bool[] mappedCorners) => (mappedCorners[0] && mappedCorners[2]) || (mappedCorners[1] && mappedCorners[3]);
     }
 
     public static class VolumeToSectionMappingExtensions
     {
-        public static bool[] TrySectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points, out GridVector2[] output)
-        {
-            return mapper.TrySectionToVolume(points.Select(p => new GridVector2(p.X, p.Y)).ToArray(), out output);
-        }
+        public static bool[] TrySectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points, out GridVector2[] output) => mapper.TrySectionToVolume([.. points.Select(p => new GridVector2(p.X, p.Y))], out output);
 
-        public static GridVector2[] SectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points)
-        {
-            return mapper.SectionToVolume(points.Select(p => new GridVector2(p.X, p.Y)).ToArray());
-        }
+        public static GridVector2[] SectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points) => mapper.SectionToVolume([.. points.Select(p => new GridVector2(p.X, p.Y))]);
 
-        public static bool[] TryVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points, out GridVector2[] output)
-        {
-            return mapper.TryVolumeToSection(points.Select(p => new GridVector2(p.X, p.Y)).ToArray(), out output);
-        }
+        public static bool[] TryVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points, out GridVector2[] output) => mapper.TryVolumeToSection([.. points.Select(p => new GridVector2(p.X, p.Y))], out output);
 
-        public static GridVector2[] VolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points)
-        {
-            return mapper.VolumeToSection(points.Select(p => new GridVector2(p.X, p.Y)).ToArray());
-        }
+        public static GridVector2[] VolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points) => mapper.VolumeToSection([.. points.Select(p => new GridVector2(p.X, p.Y))]);
 
         public static GridPolygon TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, GridPolygon shape)
         {
@@ -159,7 +144,7 @@ namespace Viking.VolumeModel
                 return null;
             }
 
-            GridPolygon transformed_polygon = new GridPolygon(VolumePositions);
+            GridPolygon transformed_polygon = new(VolumePositions);
 
             if (shape.HasInteriorRings)
             {
@@ -182,7 +167,7 @@ namespace Viking.VolumeModel
                 return null;
             }
 
-            GridPolygon transformed_polygon = new GridPolygon(SectionPositions);
+            GridPolygon transformed_polygon = new(SectionPositions);
 
             if (shape.HasInteriorRings)
             {
@@ -205,7 +190,7 @@ namespace Viking.VolumeModel
                 return null;
             }
 
-            GridPolyline transformed_shape = new GridPolyline(VolumePositions, shape.AllowsSelfIntersection);
+            GridPolyline transformed_shape = new(VolumePositions, shape.AllowsSelfIntersection);
 
             return transformed_shape;
         }
@@ -219,7 +204,7 @@ namespace Viking.VolumeModel
                 return null;
             }
 
-            GridPolyline transformed_shape = new GridPolyline(SectionPositions, shape.AllowsSelfIntersection);
+            GridPolyline transformed_shape = new(SectionPositions, shape.AllowsSelfIntersection);
 
             return transformed_shape;
         }

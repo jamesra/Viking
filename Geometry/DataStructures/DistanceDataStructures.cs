@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -7,28 +7,15 @@ using System.Linq;
 namespace Geometry
 {
 
-    public readonly struct DistanceToPoint<T> : IComparable<DistanceToPoint<T>>, IEquatable<DistanceToPoint<T>>
+    public readonly struct DistanceToPoint<T>(GridVector2 point, double distance, T value) : IComparable<DistanceToPoint<T>>, IEquatable<DistanceToPoint<T>>
     {
-        public readonly GridVector2 Point;
-        public readonly double Distance;
-        public readonly T Value;
+        public readonly GridVector2 Point = point;
+        public readonly double Distance = distance;
+        public readonly T Value = value;
 
-        public DistanceToPoint(GridVector2 point, double distance, T value)
-        {
-            Point = point;
-            Distance = distance;
-            Value = value;
-        }
+        public int CompareTo(DistanceToPoint<T> other) => this.Distance.CompareTo(other.Distance);
 
-        public int CompareTo(DistanceToPoint<T> other)
-        {
-            return this.Distance.CompareTo(other.Distance);
-        }
-
-        public override int GetHashCode()
-        {
-            return Point.GetHashCode() ^ Distance.GetHashCode();
-        }
+        public override int GetHashCode() => Point.GetHashCode() ^ Distance.GetHashCode();
 
         public override bool Equals(object obj)
         {
@@ -38,45 +25,21 @@ namespace Geometry
             return false;
         }
 
-        public bool Equals(DistanceToPoint<T> other)
-        {
-            return this.Distance.Equals(other.Distance) && this.Point == other.Point;
-        }
+        public bool Equals(DistanceToPoint<T> other) => this.Distance.Equals(other.Distance) && this.Point == other.Point;
 
-        public override string ToString()
-        {
-            return $"{Point} {Distance}";
-        }
+        public override string ToString() => $"{Point} {Distance}";
 
-        public static bool operator ==(DistanceToPoint<T> left, DistanceToPoint<T> right)
-        {
-            return left.Equals(right);
-        }
+        public static bool operator ==(DistanceToPoint<T> left, DistanceToPoint<T> right) => left.Equals(right);
 
-        public static bool operator !=(DistanceToPoint<T> left, DistanceToPoint<T> right)
-        {
-            return !(left == right);
-        }
+        public static bool operator !=(DistanceToPoint<T> left, DistanceToPoint<T> right) => !(left == right);
 
-        public static bool operator <(DistanceToPoint<T> left, DistanceToPoint<T> right)
-        {
-            return left.CompareTo(right) < 0;
-        }
+        public static bool operator <(DistanceToPoint<T> left, DistanceToPoint<T> right) => left.CompareTo(right) < 0;
 
-        public static bool operator <=(DistanceToPoint<T> left, DistanceToPoint<T> right)
-        {
-            return left.CompareTo(right) <= 0;
-        }
+        public static bool operator <=(DistanceToPoint<T> left, DistanceToPoint<T> right) => left.CompareTo(right) <= 0;
 
-        public static bool operator >(DistanceToPoint<T> left, DistanceToPoint<T> right)
-        {
-            return left.CompareTo(right) > 0;
-        }
+        public static bool operator >(DistanceToPoint<T> left, DistanceToPoint<T> right) => left.CompareTo(right) > 0;
 
-        public static bool operator >=(DistanceToPoint<T> left, DistanceToPoint<T> right)
-        {
-            return left.CompareTo(right) >= 0;
-        }
+        public static bool operator >=(DistanceToPoint<T> left, DistanceToPoint<T> right) => left.CompareTo(right) >= 0;
     }
 
     /// <summary>
@@ -84,9 +47,9 @@ namespace Geometry
     /// Indexing is per entry, not for a distance value
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class DistanceList<T>
+    public class DistanceList<T>(int capacity)
     {
-        public SortedList<double, List<DistanceToPoint<T>>> Data = null;
+        public SortedList<double, List<DistanceToPoint<T>>> Data = new(capacity);
 
         /// <summary>
         /// 
@@ -94,14 +57,9 @@ namespace Geometry
         public double MaxDistance = double.MinValue;
         public int Count;
 
-        public DistanceList(int capacity)
-        {
-            Data = new SortedList<double, List<Geometry.DistanceToPoint<T>>>(capacity);
-        }
-
         public void Add(GridVector2 point, double distance, T value)
         {
-            DistanceToPoint<T> item = new DistanceToPoint<T>(point, distance, value);
+            DistanceToPoint<T> item = new(point, distance, value);
             Add(item);
         }
 
@@ -121,7 +79,7 @@ namespace Geometry
                 this.MaxDistance = item.Distance;
             }
 
-            List<DistanceToPoint<T>> newList = new List<DistanceToPoint<T>>(2)
+            List<DistanceToPoint<T>> newList = new(2)
             {
                 item
             };
@@ -158,16 +116,12 @@ namespace Geometry
 
     }
 
-    public class FixedSizeDistanceList<T> : DistanceList<T>
+    public class FixedSizeDistanceList<T>(int capacity) : DistanceList<T>(capacity)
     {
         /// <summary>
         /// The list should contain at most MaxCapacity entries, though equidistant points may allow the number of entries to exceed this value.
         /// </summary>
-        public readonly int MaxCapacity;
-        public FixedSizeDistanceList(int capacity) : base(capacity)
-        {
-            MaxCapacity = capacity;
-        }
+        public readonly int MaxCapacity = capacity;
 
         /// <summary>
         /// Adds an item to the list only if it is under the capacity limit OR if it is a closer distance than an existing item in the list
@@ -226,9 +180,6 @@ namespace Geometry
 
     public class DistanceToPointSorter<T> : IComparer<DistanceToPoint<T>>
     {
-        public int Compare(DistanceToPoint<T> x, DistanceToPoint<T> y)
-        {
-            return x.Distance.CompareTo(y.Distance);
-        }
+        public int Compare(DistanceToPoint<T> x, DistanceToPoint<T> y) => x.Distance.CompareTo(y.Distance);
     }
 }

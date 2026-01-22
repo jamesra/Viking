@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -16,7 +16,7 @@ namespace Geometry
         /// The index of the polygon 
         /// </summary>
         public readonly int iPoly;
-          
+
         /// <summary>
         /// The index of the inner polygon, or no value if part of the external border
         /// </summary>
@@ -32,7 +32,7 @@ namespace Geometry
         int? IShapeIndex.iInnerShape => iInnerPoly;
         int IShapeIndex.iShape => iPoly;
         int IShapeIndex.iVertex => iVertex;
-        int IShapeIndex.NumUnique => NumUniqueInRing;  
+        int IShapeIndex.NumUnique => NumUniqueInRing;
         IShapeIndex IShapeIndex.Next => Next;
         IShapeIndex IShapeIndex.Previous => Previous;
         IShapeIndex IShapeIndex.FirstVertexInShape => FirstInRing;
@@ -89,7 +89,7 @@ namespace Geometry
         }
 
 
-        
+
 
         public override bool Equals(object obj)
         {
@@ -111,7 +111,7 @@ namespace Geometry
         // override object.Equals
         public bool Equals(IShapeIndex other)
         {
-            if(other.ShapeType != ShapeType2D.POLYGON)
+            if (other.ShapeType != ShapeType2D.POLYGON)
                 return false;
 
             if (other.iShape != this.iPoly)
@@ -159,7 +159,7 @@ namespace Geometry
         }
 
         public static bool operator ==(PolygonIndex A, PolygonIndex B)
-        {  
+        {
             if (A.iPoly != B.iPoly)
             {
                 return false;
@@ -181,14 +181,11 @@ namespace Geometry
             return true;
         }
 
-        public static bool operator !=(PolygonIndex A, PolygonIndex B)
-        {
-            return !(A == B);
-        }
+        public static bool operator !=(PolygonIndex A, PolygonIndex B) => !(A == B);
 
         public static bool operator ==(PolygonIndex A, IShapeIndex B)
         {
-            if(B.ShapeType != ShapeType2D.POLYGON)
+            if (B.ShapeType != ShapeType2D.POLYGON)
                 return false;
 
             if (A.iPoly != B.iShape)
@@ -212,10 +209,7 @@ namespace Geometry
             return true;
         }
 
-        public static bool operator !=(PolygonIndex A, IShapeIndex B)
-        {
-            return !(A == B);
-        }
+        public static bool operator !=(PolygonIndex A, IShapeIndex B) => !(A == B);
 
         // override object.GetHashCode
         public override int GetHashCode()
@@ -234,7 +228,7 @@ namespace Geometry
         {
             if (other.ShapeType != ShapeType2D.POLYGON)
                 return other.ShapeType.CompareTo(ShapeType2D.POLYGON);
-             
+
             if (this.iPoly != other.iShape)
                 return this.iPoly.CompareTo(other.iShape);
 
@@ -269,15 +263,9 @@ namespace Geometry
             return this.iVertex.CompareTo(other.iVertex);
         }
 
-        public bool IsFirstIndexInRing()
-        {
-            return this.iVertex == 0 || iVertex == this.NumUniqueInRing; //The latter case should not happen
-        }
+        public bool IsFirstIndexInRing() => this.iVertex == 0 || iVertex == this.NumUniqueInRing; //The latter case should not happen
 
-        public bool IsLastIndexInRing()
-        {
-            return this.iVertex == this.NumUniqueInRing - 1;
-        }
+        public bool IsLastIndexInRing() => this.iVertex == this.NumUniqueInRing - 1;
 
         /// <summary>
         /// Return the specified point, ignoring the iPoly attribute
@@ -307,7 +295,7 @@ namespace Geometry
             {
                 return Point(poly);
             }
-            
+
             throw new ArgumentException("Shape must be a GridPolygon to use this method");
         }
 
@@ -339,7 +327,7 @@ namespace Geometry
                 return Polygons[iPoly].ExteriorRing[iVertex];
             }
         }
-          
+
         public GridVector2 Point(in IReadOnlyList<IShape2D> shapes)
         {
             if (shapes[iPoly] is GridPolygon poly)
@@ -354,10 +342,10 @@ namespace Geometry
         {
             if (shapes.TryGetValue(iPoly, out var shape))
             {
-                if(shape is GridPolygon poly)
+                if (shape is GridPolygon poly)
                 {
                     return Point(poly);
-                }   
+                }
             }
             else { throw new ArgumentException("Index of shape not in dictionary"); }
 
@@ -369,20 +357,11 @@ namespace Geometry
         /// </summary>
         /// <param name="Polygon"></param>
         /// <returns></returns>
-        public void SetPoint(GridPolygon Polygon, GridVector2 value)
-        {
-            Polygon[this] = value;
-        }
+        public void SetPoint(GridPolygon Polygon, GridVector2 value) => Polygon[this] = value;
 
-        public void SetPoint(IReadOnlyList<GridPolygon> Polygons, GridVector2 value)
-        {
-            Polygons[iPoly][this] = value;
-        }
+        public void SetPoint(IReadOnlyList<GridPolygon> Polygons, GridVector2 value) => Polygons[iPoly][this] = value;
 
-        public void SetPoint(IReadOnlyDictionary<int, GridPolygon> Polygons, GridVector2 value)
-        {
-            Polygons[iPoly][this] = value;
-        }
+        public void SetPoint(IReadOnlyDictionary<int, GridPolygon> Polygons, GridVector2 value) => Polygons[iPoly][this] = value;
 
 
         /// <summary>
@@ -390,30 +369,18 @@ namespace Geometry
         /// </summary>
         /// <param name="Polygon"></param>
         /// <returns></returns>
-        public GridLineSegment Segment(GridPolygon Polygon)
-        {
-            return new GridLineSegment(Point(Polygon), Next.Point(Polygon));
-        }
+        public GridLineSegment Segment(GridPolygon Polygon) => new GridLineSegment(Point(Polygon), Next.Point(Polygon));
 
-        public GridLineSegment Segment(IReadOnlyList<GridPolygon> Polygons)
-        {
-            return new GridLineSegment(Point(Polygons), Next.Point(Polygons));
-        }
+        public GridLineSegment Segment(IReadOnlyList<GridPolygon> Polygons) => new GridLineSegment(Point(Polygons), Next.Point(Polygons));
 
-        public GridLineSegment Segment(IReadOnlyDictionary<int, GridPolygon> Polygons)
-        {
-            return new GridLineSegment(Point(Polygons), Next.Point(Polygons));
-        }
+        public GridLineSegment Segment(IReadOnlyDictionary<int, GridPolygon> Polygons) => new GridLineSegment(Point(Polygons), Next.Point(Polygons));
 
         /// <summary>
         /// Returns the polygon the index refers to
         /// </summary>
         /// <param name="poly"></param>
         /// <returns></returns>
-        public GridPolygon Polygon(GridPolygon poly)
-        {
-            return this.IsInner ? poly.InteriorPolygons[iInnerPoly.Value] : poly;
-        }
+        public GridPolygon Polygon(GridPolygon poly) => this.IsInner ? poly.InteriorPolygons[iInnerPoly.Value] : poly;
 
         /// <summary>
         /// Returns the polygon the index refers to
@@ -474,7 +441,7 @@ namespace Geometry
             int iNext = NextVertexInRing();
 
             //Should I reverse the order for interior polygons?
-            return new GridVector2[] { ring[iPrevious], ring[iNext] };
+            return [ring[iPrevious], ring[iNext]];
         }
 
         /// <summary>
@@ -482,30 +449,21 @@ namespace Geometry
         /// </summary>
         /// <param name="polygons"></param>
         /// <returns></returns>
-        public GridVector2[] ConnectedVerticies(IReadOnlyList<GridPolygon> polygons)
-        {
-            return ConnectedVerticies(GetRing(polygons));
-        }
+        public GridVector2[] ConnectedVerticies(IReadOnlyList<GridPolygon> polygons) => ConnectedVerticies(GetRing(polygons));
 
         /// <summary>
         /// Returns the verticies before and after this index
         /// </summary>
         /// <param name="polygons"></param>
         /// <returns></returns>
-        public GridVector2[] ConnectedVerticies(IReadOnlyList<IShape2D> polygons)
-        {
-            return ConnectedVerticies(GetRing(polygons));
-        }
+        public GridVector2[] ConnectedVerticies(IReadOnlyList<IShape2D> polygons) => ConnectedVerticies(GetRing(polygons));
 
         /// <summary>
         /// Returns the verticies before and after this index
         /// </summary>
         /// <param name="polygons"></param>
         /// <returns></returns>
-        public GridVector2[] ConnectedVerticies(IReadOnlyDictionary<int, GridPolygon> polygons)
-        {
-            return ConnectedVerticies(GetRing(polygons));
-        }
+        public GridVector2[] ConnectedVerticies(IReadOnlyDictionary<int, GridPolygon> polygons) => ConnectedVerticies(GetRing(polygons));
 
         public GridLineSegment[] ConnectedSegments(GridVector2[] ring)
         {
@@ -513,9 +471,9 @@ namespace Geometry
             int iNext = PreviousVertexInRing();
 
             //Should I reverse the order for interior polygons?
-            return new GridLineSegment[] {
-                new GridLineSegment(ring[iPrevious], ring[iVertex]),
-                new GridLineSegment(ring[iVertex], ring[iNext]) };
+            return [
+                new(ring[iPrevious], ring[iVertex]),
+                new(ring[iVertex], ring[iNext]) ];
         }
 
         public GridLineSegment[] ConnectedSegments(IReadOnlyList<GridPolygon> polygons)
@@ -538,7 +496,7 @@ namespace Geometry
         public GridVector2 GetOrientation(in GridPolygon poly)
         {
             GridVector2[] adjacent = this.ConnectedVerticies(GetRing(poly));
-            GridLineSegment line = new GridLineSegment(adjacent[0], adjacent[1]);
+            GridLineSegment line = new(adjacent[0], adjacent[1]);
             return line.Normal;
         }
 
@@ -548,33 +506,33 @@ namespace Geometry
         /// <param name="poly"></param>
         /// <returns></returns>
         public GridVector2 GetOrientation(in IReadOnlyList<IShape2D> Shapes)
-        { 
+        {
             GridVector2[] adjacent = this.ConnectedVerticies(GetRing(Shapes));
-            GridLineSegment line = new GridLineSegment(adjacent[0], adjacent[1]);
+            GridLineSegment line = new(adjacent[0], adjacent[1]);
             return line.Normal;
         }
 
         /// <summary>
         /// Returns the index of the beginning of the current ring
         /// </summary>
-        public PolygonIndex FirstInRing => new PolygonIndex(this.iPoly, this.iInnerPoly, 0, this.NumUniqueInRing);
+        public PolygonIndex FirstInRing => new(this.iPoly, this.iInnerPoly, 0, this.NumUniqueInRing);
 
         /// <summary>
         /// Returns the index of the end of the current ring
         /// </summary>
-        public PolygonIndex LastInRing => new PolygonIndex(this.iPoly, this.iInnerPoly, this.NumUniqueInRing - 1, this.NumUniqueInRing);
+        public PolygonIndex LastInRing => new(this.iPoly, this.iInnerPoly, this.NumUniqueInRing - 1, this.NumUniqueInRing);
 
         /// <summary>
         /// Return the next index after this one, staying within the same ring
         /// </summary>
         /// <returns></returns>
-        public PolygonIndex Next => new PolygonIndex(this.iPoly, this.iInnerPoly, this.NextVertexInRing(), this.NumUniqueInRing);
+        public PolygonIndex Next => new(this.iPoly, this.iInnerPoly, this.NextVertexInRing(), this.NumUniqueInRing);
 
         /// <summary>
         /// Return the previous index after this one, staying within the same ring
         /// </summary>
         /// <returns></returns>
-        public PolygonIndex Previous => new PolygonIndex(this.iPoly, this.iInnerPoly, this.PreviousVertexInRing(), this.NumUniqueInRing);
+        public PolygonIndex Previous => new(this.iPoly, this.iInnerPoly, this.PreviousVertexInRing(), this.NumUniqueInRing);
 
         private int NextVertexInRing()
         {
@@ -606,15 +564,9 @@ namespace Geometry
             throw new ArgumentException("Shape must be a grid polygon.");
         }
 
-        internal GridVector2[] GetRing(IReadOnlyList<GridPolygon> Polygons)
-        {
-            return this.GetRing(Polygons[this.iPoly]);
-        }
+        internal GridVector2[] GetRing(IReadOnlyList<GridPolygon> Polygons) => this.GetRing(Polygons[this.iPoly]);
 
-        internal GridVector2[] GetRing(IReadOnlyDictionary<int, GridPolygon> Polygons)
-        {
-            return this.GetRing(Polygons[this.iPoly]);
-        }
+        internal GridVector2[] GetRing(IReadOnlyDictionary<int, GridPolygon> Polygons) => this.GetRing(Polygons[this.iPoly]);
 
         internal GridVector2[] GetRing(GridPolygon polygon)
         {
@@ -649,11 +601,7 @@ namespace Geometry
         /// <param name="B"></param>
         /// <param name="poly"></param>
         /// <returns></returns>
-        public static bool IsBorderLine(PolygonIndex A, PolygonIndex B, GridPolygon poly)
-        {
-            return A.AreAdjacent(B);
-
-            /*
+        public static bool IsBorderLine(PolygonIndex A, PolygonIndex B, GridPolygon poly) => A.AreAdjacent(B);/*
             //TODO: Add unit test
             System.Diagnostics.Debug.Assert(A.iPoly == B.iPoly, "LineIsOnBorder should only called for indicies into the same polygon");
             if (A.iPoly != B.iPoly)
@@ -704,7 +652,6 @@ namespace Geometry
 
             return diff == RingLength - 2;
             */
-        }
 
         public override string ToString()
         {
@@ -717,13 +664,13 @@ namespace Geometry
         public static PolygonIndex[] SortByRing(PolygonIndex[] verts)
         {
             Array.Sort(verts);
-            List<PolygonIndex> listIndex = new List<PolygonIndex>(verts.Length);
+            List<PolygonIndex> listIndex = new(verts.Length);
 
             foreach (var poly in verts.GroupBy(v => v.iPoly))
             {
                 foreach (var ring in poly.GroupBy(v => v.iInnerPoly))
                 {
-                    PolygonIndex[] ringArray = ring.ToArray();
+                    PolygonIndex[] ringArray = [.. ring];
                     Array.Sort(ringArray);
 
                     //If this is not the complete ring make sure our sort is not breaking the ring at the wraparound point
@@ -759,7 +706,7 @@ namespace Geometry
                 }
             }
 
-            return listIndex.ToArray();
+            return [.. listIndex];
         }
 
         /// <summary>
@@ -767,20 +714,14 @@ namespace Geometry
         /// </summary>
         /// <param name="old"></param>
         /// <returns></returns>
-        public PolygonIndex Reindex(int iPoly)
-        {
-            return new PolygonIndex(iPoly, this.iInnerPoly, this.iVertex, this.NumUniqueInRing);
-        }
+        public PolygonIndex Reindex(int iPoly) => new PolygonIndex(iPoly, this.iInnerPoly, this.iVertex, this.NumUniqueInRing);
 
         /// <summary>
         /// Return a copy of this PointIndex with a different size of ring
         /// </summary>
         /// <param name="old"></param>
         /// <returns></returns>
-        public PolygonIndex ReindexToSize(int numUniqueInRing)
-        {
-            return new PolygonIndex(this.iPoly, this.iInnerPoly, this.iVertex, numUniqueInRing);
-        }
+        public PolygonIndex ReindexToSize(int numUniqueInRing) => new PolygonIndex(this.iPoly, this.iInnerPoly, this.iVertex, numUniqueInRing);
 
         /// <summary>
         /// Return a copy of this PointIndex with a different size of ring
@@ -788,10 +729,7 @@ namespace Geometry
         /// </summary>
         /// <param name="old"></param>
         /// <returns></returns>
-        public PolygonIndex ReindexToSize(GridPolygon poly)
-        {
-            return this.ReindexToSize(this.Polygon(poly).ExteriorRing.Length - 1);
-        }
+        public PolygonIndex ReindexToSize(GridPolygon poly) => this.ReindexToSize(this.Polygon(poly).ExteriorRing.Length - 1);
 
         /// <summary>
         /// Return a copy of this PointIndex with a different size of ring
@@ -799,11 +737,9 @@ namespace Geometry
         /// </summary>
         /// <param name="old"></param>
         /// <returns></returns>
-        public PolygonIndex ReindexToSize(IReadOnlyList<GridPolygon> Polygons)
-        {
+        public PolygonIndex ReindexToSize(IReadOnlyList<GridPolygon> Polygons) =>
             //return this.ReindexToSize(this.Polygon(Polygons).ExteriorRing.Length - 1);
-            return new PolygonIndex(this.iPoly, this.iInnerPoly, this.iVertex, this.Polygon(Polygons).ExteriorRing.Length - 1); 
-        }
+            new PolygonIndex(this.iPoly, this.iInnerPoly, this.iVertex, this.Polygon(Polygons).ExteriorRing.Length - 1);
 
         /// <summary>
         /// Return a copy of this PointIndex that refers to the inner polygon index as an exterior polygon coordinate
@@ -840,9 +776,6 @@ namespace Geometry
             return new PolygonIndex(iPoly, iInner, this.iVertex, this.NumUniqueInRing);
         }
 
-        public object Clone()
-        {
-            return new PolygonIndex(iPoly, iInnerPoly, iVertex, NumUniqueInRing);
-        }
+        public object Clone() => new PolygonIndex(iPoly, iInnerPoly, iVertex, NumUniqueInRing);
     }
 }

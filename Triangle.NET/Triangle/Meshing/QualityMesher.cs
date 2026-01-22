@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="QualityMesher.cs">
 // Original Triangle code by Jonathan Richard Shewchuk, http://www.cs.cmu.edu/~quake/triangle.html
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
@@ -105,10 +105,7 @@ namespace TriangleNet.Meshing
         /// Add a bad subsegment to the queue.
         /// </summary>
         /// <param name="badseg">Bad subsegment.</param>
-        public void AddBadSubseg(BadSubseg badseg)
-        {
-            badsubsegs.Enqueue(badseg);
-        }
+        public void AddBadSubseg(BadSubseg badseg) => badsubsegs.Enqueue(badseg);
 
         #region Check
 
@@ -730,14 +727,9 @@ namespace TriangleNet.Meshing
                 // for mesh refinement.
                 // TODO: NewLocation doesn't work for refinement. Why? Maybe 
                 // reset VertexType?
-                if (behavior.fixedArea || behavior.VarArea)
-                {
-                    newloc = predicates.FindCircumcenter(borg, bdest, bapex, ref xi, ref eta, behavior.offconstant);
-                }
-                else
-                {
-                    newloc = newLocation.FindLocation(borg, bdest, bapex, ref xi, ref eta, true, badotri);
-                }
+                newloc = behavior.fixedArea || behavior.VarArea
+                    ? predicates.FindCircumcenter(borg, bdest, bapex, ref xi, ref eta, behavior.offconstant)
+                    : newLocation.FindLocation(borg, bdest, bapex, ref xi, ref eta, true, badotri);
 
                 // Check whether the new vertex lies on a triangle vertex.
                 if (((newloc.x == borg.x) && (newloc.y == borg.y)) ||
@@ -754,7 +746,7 @@ namespace TriangleNet.Meshing
                 {
                     // The new vertex must be in the interior, and therefore is a
                     // free vertex with a marker of zero.
-                    Vertex newvertex = new Vertex(newloc.x, newloc.y, 0
+                    Vertex newvertex = new(newloc.x, newloc.y, 0
 #if USE_ATTRIBS
                         , mesh.nextras
 #endif

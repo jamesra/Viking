@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace AnnotationVizLib
@@ -6,21 +6,12 @@ namespace AnnotationVizLib
     /// <summary>
     /// We build pre-defined dictionaries that map an attribute, such as a node label, to a set of other properties we wish to add to a view of a graph node, such as color, size,and shape.
     /// </summary>
-    public readonly struct AttributeMap
+    public readonly struct AttributeMap(string key, SortedList<string, string> attributes)
     {
-        public readonly string Key;
-        public readonly SortedList<string, string> Attributes;
+        public readonly string Key = key;
+        public readonly SortedList<string, string> Attributes = attributes;
 
-        public AttributeMap(string key, SortedList<string, string> attributes)
-        {
-            Key = key;
-            Attributes = attributes;
-        }
-
-        public override string ToString()
-        {
-            return Key.ToString() + " - " + Attributes.ToString();
-        }
+        public override string ToString() => Key.ToString() + " - " + Attributes.ToString();
     }
 
     /// <summary>
@@ -39,7 +30,7 @@ namespace AnnotationVizLib
         public static IDictionary<string, string> AttribsForLabel(string label, IList<AttributeMap> LabelToAttribMap)
         {
 
-            SortedDictionary<string, string> entity_attributes = new SortedDictionary<string, string>();
+            SortedDictionary<string, string> entity_attributes = [];
 
             if (label is null)
                 return entity_attributes;

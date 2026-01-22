@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -26,19 +26,13 @@ namespace Geometry.Meshing
             IEdgeKey[] _edges = new IEdgeKey[iVerts.Length];
             for (int i = 0; i < iVerts.Length; i++)
             {
-                if (i < iVerts.Length - 1)
-                    _edges[i] = new EdgeKey(iVerts[i], iVerts[i + 1]);
-                else
-                    _edges[i] = new EdgeKey(iVerts[i], iVerts[0]);
+                _edges[i] = i < iVerts.Length - 1 ? new EdgeKey(iVerts[i], iVerts[i + 1]) : new EdgeKey(iVerts[i], iVerts[0]);
             }
 
             return _edges;
         }
 
-        public static IFace Create(IEnumerable<int> vertex_indicies)
-        {
-            return new Face(vertex_indicies);
-        }
+        public static IFace Create(IEnumerable<int> vertex_indicies) => new Face(vertex_indicies);
 
         /// <summary>
         /// Duplicate functions are used to create a copy of the face, with index numbers adjusted by the offset, without any edge data.
@@ -49,19 +43,19 @@ namespace Geometry.Meshing
         /// <returns></returns>
         public static Face CreateOffsetCopy(Face oldFace, int offset)
         {
-            Face newFace = new Meshing.Face(oldFace.iVerts.Select(VertIndex => VertIndex + offset));
+            Face newFace = new(oldFace.iVerts.Select(VertIndex => VertIndex + offset));
             return newFace;
         }
 
         public static Face CreateOffsetCopy(Face oldFace, IEnumerable<int> vertex_indicies)
         {
-            Face newFace = new Meshing.Face(vertex_indicies);
+            Face newFace = new(vertex_indicies);
             return newFace;
         }
 
         public static IFace CreateOffsetCopy(IFace oldFace, IEnumerable<int> vertex_indicies)
         {
-            Face newFace = new Meshing.Face(vertex_indicies);
+            Face newFace = new(vertex_indicies);
             return newFace;
         }
 
@@ -72,16 +66,16 @@ namespace Geometry.Meshing
                 throw new ArgumentException("Vertex indicies must be unique");
             }
 
-            _iVerts = (new int[] { A, B, C }).ToImmutableArray();
-            _Edges = CalculateEdges().ToImmutableArray();
+            _iVerts = [.. (new int[] { A, B, C })];
+            _Edges = [.. CalculateEdges()];
 
-            SortedSet<int> s = new SortedSet<int>(_iVerts);
+            SortedSet<int> s = [.. _iVerts];
             if (s.Count != iVerts.Length)
             {
                 throw new ArgumentException("Vertex indicies must be unique");
             }
 
-            _sorted_verts = s.ToImmutableArray();
+            _sorted_verts = [.. s];
         }
 
         public Face(int A, int B, int C, int D)
@@ -93,16 +87,16 @@ namespace Geometry.Meshing
                 throw new ArgumentException("Vertex indicies must be unique");
             }
 
-            _iVerts = (new int[] { A, B, C, D }).ToImmutableArray();
-            _Edges = CalculateEdges().ToImmutableArray();
+            _iVerts = [.. (new int[] { A, B, C, D })];
+            _Edges = [.. CalculateEdges()];
 
-            SortedSet<int> s = new SortedSet<int>(_iVerts);
+            SortedSet<int> s = [.. _iVerts];
             if (s.Count != iVerts.Length)
             {
                 throw new ArgumentException("Vertex indicies must be unique");
             }
 
-            _sorted_verts = s.ToImmutableArray();
+            _sorted_verts = [.. s];
         }
 
         /// <summary>
@@ -112,7 +106,7 @@ namespace Geometry.Meshing
         /// <param name="edges"></param>
         protected Face(IEnumerable<int> vertex_indicies, IEnumerable<IEdgeKey> edges) : this(vertex_indicies)
         {
-            this._Edges = edges.ToImmutableArray();
+            this._Edges = [.. edges];
         }
 
         public Face(IEnumerable<long> vertex_indicies) : this(vertex_indicies.Select(i => (int)i).ToArray())
@@ -122,8 +116,8 @@ namespace Geometry.Meshing
 
         public Face(IEnumerable<int> vertex_indicies)
         {
-            _iVerts = vertex_indicies.ToImmutableArray();
-            SortedSet<int> s = new SortedSet<int>(iVerts);
+            _iVerts = [.. vertex_indicies];
+            SortedSet<int> s = [.. iVerts];
             if (s.Count != iVerts.Length)
             {
                 throw new ArgumentException("Vertex indicies must be unique");
@@ -132,8 +126,8 @@ namespace Geometry.Meshing
             if (iVerts.Length < 3 || iVerts.Length > 4)
                 throw new ArgumentException("A face must have at least 3 verticies and currently no more than 4.  The 4 limit is negiotiable.");
 
-            _Edges = CalculateEdges().ToImmutableArray();
-            _sorted_verts = s.ToImmutableArray();
+            _Edges = [.. CalculateEdges()];
+            _sorted_verts = [.. s];
         }
 
         /// <summary>
@@ -143,7 +137,7 @@ namespace Geometry.Meshing
         /// <returns></returns>
         public IEdgeKey[] SharedEdges(Face other)
         {
-            IEdgeKey[] shared = this.Edges.Intersect(other.Edges).ToArray();
+            IEdgeKey[] shared = [.. this.Edges.Intersect(other.Edges)];
             return shared;
         }
 
@@ -163,19 +157,13 @@ namespace Geometry.Meshing
             return _hashcode.Value;
         }
 
-        public override string ToString()
-        {
-            return string.Join(",", this.iVerts);
-        }
+        public override string ToString() => string.Join(",", this.iVerts);
 
         /// <summary>
         /// Reverse the order of verticies to flip the orientation of the face
         /// </summary>
         /// <returns></returns>
-        public Face Flip()
-        {
-            return new Face(this.iVerts.Reverse());
-        }
+        public Face Flip() => new Face(this.iVerts.Reverse());
 
         public static bool operator ==(Face A, Face B)
         {
@@ -188,7 +176,7 @@ namespace Geometry.Meshing
         public static bool operator !=(Face A, Face B)
         {
             if (A is null)
-                return !(B is null);
+                return B is not null;
 
             return !A.Equals(B);
         }
@@ -205,10 +193,7 @@ namespace Geometry.Meshing
 
         public bool IsQuad => iVerts.Length == 4;
 
-        public int CompareTo(Face other)
-        {
-            return CompareTo(other as IFace);
-        }
+        public int CompareTo(Face other) => CompareTo(other as IFace);
 
         public int CompareTo(IFace other)
         {
@@ -229,10 +214,7 @@ namespace Geometry.Meshing
             return 0;
         }
 
-        public bool Equals(Face other)
-        {
-            return Equals(other as IFace);
-        }
+        public bool Equals(Face other) => Equals(other as IFace);
 
         /// <summary>
         /// Equals ignores clockwise or counter-clockwise at this time
@@ -260,7 +242,7 @@ namespace Geometry.Meshing
 
         public virtual IFace Clone()
         {
-            var f = new Face(this.iVerts, this.Edges);
+            Face f = new(this.iVerts, this.Edges);
             return f;
         }
     }

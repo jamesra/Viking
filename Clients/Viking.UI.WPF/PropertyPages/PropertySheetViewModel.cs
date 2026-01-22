@@ -5,7 +5,7 @@ namespace Viking.UI.WPF.PropertyPages
 {
     internal sealed class PropertySheetViewModel
     {
-        public ObservableCollection<PropertyPageHost> Pages { get; } = new ObservableCollection<PropertyPageHost>();
+        public ObservableCollection<PropertyPageHost> Pages { get; } = [];
 
         public object Target { get; private set; }
 

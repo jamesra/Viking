@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using SqlGeometryUtils;
 using System;
@@ -26,10 +26,7 @@ namespace WebAnnotation.ViewModel
     {
         public readonly LocationLinkKey Key;
 
-        public override int GetHashCode()
-        {
-            return Key.GetHashCode();
-        }
+        public override int GetHashCode() => Key.GetHashCode();
 
         public override bool Equals(object obj)
         {
@@ -38,8 +35,7 @@ namespace WebAnnotation.ViewModel
                 return true;
             }
 
-            LocationLinkView obj_link = obj as LocationLinkView;
-            if ((object)obj_link != null)
+            if (obj is LocationLinkView obj_link)
             {
                 return Key.Equals(obj_link.Key);
             }
@@ -60,7 +56,7 @@ namespace WebAnnotation.ViewModel
                 return true;
             }
 
-            if ((object)A != null)
+            if (A is not null)
             {
                 return A.Equals(B);
             }
@@ -75,7 +71,7 @@ namespace WebAnnotation.ViewModel
                 return false;
             }
 
-            if ((object)A != null)
+            if (A is not null)
             {
                 return !A.Equals(B);
             }
@@ -83,10 +79,7 @@ namespace WebAnnotation.ViewModel
             return true;
         }
 
-        public override string ToString()
-        {
-            return Key.ToString() + " Sections: " + MinSection.ToString() + "-" + MaxSection.ToString();
-        }
+        public override string ToString() => Key.ToString() + " Sections: " + MinSection.ToString() + "-" + MaxSection.ToString();
 
         /// <summary>
         /// LocationOnSection is the location on the section being viewed
@@ -103,7 +96,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         public int Z;
 
-        public LineView lineView = null;
+        public LineView? lineView = null;
 
         private Color _Color;
 
@@ -114,10 +107,7 @@ namespace WebAnnotation.ViewModel
             set
             {
                 _Color = value;
-                if (lineView != null)
-                {
-                    lineView.Color = value;
-                }
+                lineView?.Color = value;
             }
         }
 
@@ -128,10 +118,7 @@ namespace WebAnnotation.ViewModel
             set
             {
                 _Color.SetAlpha(value);
-                if (lineView != null)
-                {
-                    lineView.Color = lineView.Color.SetAlpha(value);
-                }
+                lineView?.Color = lineView.Color.SetAlpha(value);
             }
         }
 
@@ -142,9 +129,9 @@ namespace WebAnnotation.ViewModel
 
         public GridRectangle BoundingBox => GridRectangle.Pad(LineSegment.BoundingBox, LineRadius);
 
-        public Geometry.GridLineSegment LineSegment => new Geometry.GridLineSegment(A.Center, B.Center);
+        public Geometry.GridLineSegment LineSegment => new(A.Center, B.Center);
 
-        public LocationLinkContextMenuGeneratorDelegate ContextMenuGenerator = null;
+        public LocationLinkContextMenuGeneratorDelegate? ContextMenuGenerator = null;
 
         protected IVolumeTransformProvider mapProvider;
 
@@ -162,12 +149,12 @@ namespace WebAnnotation.ViewModel
 
         public LocationLinkView(LocationObj LocOne, LocationObj LocTwo, int Z, IVolumeTransformProvider mapProvider) : this(new LocationLinkKey(LocOne.ID, LocTwo.ID), Z, mapProvider)
         {
-            if (LocOne == null)
+            if (LocOne is null)
             {
                 throw new ArgumentNullException("LocOne");
             }
 
-            if (LocTwo == null)
+            if (LocTwo is null)
             {
                 throw new ArgumentNullException("LocTwo");
             }
@@ -221,7 +208,7 @@ namespace WebAnnotation.ViewModel
             //GridVector2 sourceVolumePosition = sourceMapper.SectionToVolume(A.Position);
             //GridVector2 targetVolumePosition = targetMapper.SectionToVolume(B.Position); 
 
-            LineView line = new LineView(A.Center, B.Center, LineWidth, Color, LineStyle.Standard);
+            LineView line = new(A.Center, B.Center, LineWidth, Color, LineStyle.Standard);
             return line;
         }
 
@@ -320,10 +307,7 @@ namespace WebAnnotation.ViewModel
 
         LocationLinkKey IViewLocationLink.Key => Key;
 
-        public override void Save()
-        {
-            throw new NotImplementedException();
-        }
+        public override void Save() => throw new NotImplementedException();
 
         #endregion
 
@@ -362,10 +346,7 @@ namespace WebAnnotation.ViewModel
             return true;
         }
 
-        public bool IsVisible(Scene scene)
-        {
-            return Math.Min(LineSegment.Length, LineWidth) / scene.Camera.Downsample > 2.0;
-        }
+        public bool IsVisible(Scene scene) => Math.Min(LineSegment.Length, LineWidth) / scene.Camera.Downsample > 2.0;
 
         public bool Contains(GridVector2 Position)
         {
@@ -373,10 +354,7 @@ namespace WebAnnotation.ViewModel
             return (d - LineRadius) <= 0;
         }
 
-        public bool Intersects(GridLineSegment line)
-        {
-            return LineSegment.Intersects(line);
-        }
+        public bool Intersects(GridLineSegment line) => LineSegment.Intersects(line);
 
         public double Distance(GridVector2 Position)
         {
@@ -384,15 +362,9 @@ namespace WebAnnotation.ViewModel
             return d < 0 ? 0 : d;
         }
 
-        public double Distance(Microsoft.SqlServer.Types.SqlGeometry shape)
-        {
-            return LineSegment.ToSqlGeometry().STDistance(shape).Value;
-        }
+        public double Distance(Microsoft.SqlServer.Types.SqlGeometry shape) => LineSegment.ToSqlGeometry().STDistance(shape).Value;
 
-        public double DistanceFromCenterNormalized(GridVector2 Position)
-        {
-            return LineSegment.DistanceToPoint(Position) / LineRadius;
-        }
+        public double DistanceFromCenterNormalized(GridVector2 Position) => LineSegment.DistanceToPoint(Position) / LineRadius;
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
                           VikingXNA.Scene scene,
@@ -401,14 +373,14 @@ namespace WebAnnotation.ViewModel
                           OverlayShaderEffect overlayEffect,
                           IEnumerable<LocationLinkView> listToDraw)
         {
-            LineView[] linesToDraw = listToDraw.Select(l => l.lineView).ToArray();
+            LineView[] linesToDraw = [.. listToDraw.Select(l => l.lineView)];
 
             LineView.Draw(device, scene, lineManager, linesToDraw);
         }
 
         public bool Equals(LocationLinkView other)
         {
-            if ((object)other == null)
+            if (other is null)
             {
                 return false;
             }

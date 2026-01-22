@@ -25,7 +25,7 @@ namespace Geometry
 
         public const float EpsilonSquared = Global.Epsilon * Global.Epsilon;
 
-        public static readonly Random Random = new Random();
+        public static readonly Random Random = new();
 
         public static int GetRandomRequestDelay() => Random.Next(800, 1200);
 
@@ -64,19 +64,16 @@ namespace Geometry
                     System.Diagnostics.Trace.WriteLine($"Geometry: Unable to load Native OpenBLAS library. {e.Message}");
                     return false;
                 }
-            }  
-            
-            return false; 
+            }
+
+            return false;
         }
 
-        public static bool IsCacheFileValid(string CacheStosPath, DateTime time)
-        {
-            return IsCacheFileValid(CacheStosPath, new DateTime[] { time });
-        }
+        public static bool IsCacheFileValid(string CacheStosPath, DateTime time) => IsCacheFileValid(CacheStosPath, [time]);
 
         public static bool IsCacheFileValid(string CacheStosPath, ICollection<DateTime> times)
         {
-            var fInfo = new FileInfo(CacheStosPath);
+            FileInfo fInfo = new(CacheStosPath);
             if (false == fInfo.Exists)
                 return false;
 
@@ -102,10 +99,7 @@ namespace Geometry
             return false;
         }
 
-        public static uint NumCurveInterpolationPoints(bool Closed)
-        {
-            return Closed ? NumClosedCurveInterpolationPoints : NumOpenCurveInterpolationPoints;
-        }
+        public static uint NumCurveInterpolationPoints(bool Closed) => Closed ? NumClosedCurveInterpolationPoints : NumOpenCurveInterpolationPoints;
 
         //TODO: Choose number of points based on distance between control points
         public static readonly uint NumOpenCurveInterpolationPoints = 3;

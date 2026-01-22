@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using ConnectomeDataModel;
 using Microsoft.AspNet.OData.Batch;
 using Microsoft.AspNet.OData.Builder;
@@ -14,7 +14,7 @@ namespace ConnectomeODataV4
 
         public static void Register(HttpConfiguration config)
         {
-            
+
             // Web API configuration and services
             // Modern JSON serialization configuration
             var json = config.Formatters.JsonFormatter;
@@ -32,7 +32,7 @@ namespace ConnectomeODataV4
 
             // Web API routes 
             config.MapHttpAttributeRoutes();
-            
+
             // Configure OData query options
             config.Count().Filter().OrderBy().Expand().Select().MaxTop(null);
 
@@ -50,7 +50,7 @@ namespace ConnectomeODataV4
                 routePrefix: null,
                 model: edmModel,
                 batchHandler: odataBatchHandler);
-                         
+
             // Fallback Web API route
             config.Routes.MapHttpRoute(
                 name: "api",
@@ -64,24 +64,24 @@ namespace ConnectomeODataV4
         public static System.Linq.IQueryable<LocationLink> StructureLocationLinks(long ID)
         {
             // This creates a memory leak - DbContext is never disposed
-            ConnectomeEntities db = new ConnectomeEntities();
+            ConnectomeEntities db = new();
             return db.StructureLocationLinks(ID);
         }
 
 
         public static Microsoft.OData.Edm.IEdmModel GetModel()
         {
-            ODataConventionModelBuilder builder = new ODataConventionModelBuilder
+            ODataConventionModelBuilder builder = new()
             {
                 Namespace = "ConnectomeODataV4"
             };
 
             builder.EntitySet<StructureType>("StructureTypes");
             builder.EntitySet<Structure>("Structures");
-            builder.EntitySet<Location>("Locations"); 
+            builder.EntitySet<Location>("Locations");
 
             AddStructureSpatialView(builder);
-             
+
             AddScaleType(builder);
             AddStructureLinks(builder);
             AddPermittedStructureLinks(builder);
@@ -112,15 +112,15 @@ namespace ConnectomeODataV4
 
             builder.Function("Scale").Returns<UnitsAndScale.Scale>();
         }
-         
-        private static Microsoft.OData.Edm.IEdmModel AddStructureLocationLinks(ODataConventionModelBuilder builder, IEdmModel edmModel)
-        {  
-            var structures = edmModel.EntityContainer.FindEntitySet("Structures") as EdmEntitySet;
-            var locationLinks = edmModel.EntityContainer.FindEntitySet("LocationLinks") as EdmEntitySet;
-            var structType = structures.EntityType() as EdmEntityType;
-            var locLinksType = locationLinks.EntityType() as EdmEntityType;
 
-            var structLocLinksProperty = new EdmNavigationPropertyInfo
+        private static Microsoft.OData.Edm.IEdmModel AddStructureLocationLinks(ODataConventionModelBuilder builder, IEdmModel edmModel)
+        {
+            EdmEntitySet structures = edmModel.EntityContainer.FindEntitySet("Structures") as EdmEntitySet;
+            EdmEntitySet locationLinks = edmModel.EntityContainer.FindEntitySet("LocationLinks") as EdmEntitySet;
+            EdmEntityType structType = structures.EntityType() as EdmEntityType;
+            EdmEntityType locLinksType = locationLinks.EntityType() as EdmEntityType;
+
+            EdmNavigationPropertyInfo structLocLinksProperty = new()
             {
                 TargetMultiplicity = Microsoft.OData.Edm.EdmMultiplicity.Many,
                 Target = locLinksType,
@@ -131,19 +131,19 @@ namespace ConnectomeODataV4
 
             var navigationProperty = structType.AddUnidirectionalNavigation(structLocLinksProperty);
             structures.AddNavigationTarget(navigationProperty, locationLinks);
-            
-            return edmModel; 
+
+            return edmModel;
         }
-        
+
 
         private static Microsoft.OData.Edm.IEdmModel AddLocation(IEdmModel edmModel)
-        { 
-            var locations = edmModel.EntityContainer.FindEntitySet("Locations") as EdmEntitySet;
-            var locationLinks = edmModel.EntityContainer.FindEntitySet("LocationLinks") as EdmEntitySet;
-            var locationType = locations.EntityType() as EdmEntityType;
-            var locLinksType = locationLinks.EntityType() as EdmEntityType;
+        {
+            EdmEntitySet locations = edmModel.EntityContainer.FindEntitySet("Locations") as EdmEntitySet;
+            EdmEntitySet locationLinks = edmModel.EntityContainer.FindEntitySet("LocationLinks") as EdmEntitySet;
+            EdmEntityType locationType = locations.EntityType() as EdmEntityType;
+            EdmEntityType locLinksType = locationLinks.EntityType() as EdmEntityType;
 
-            var LocLinksProperty = new EdmNavigationPropertyInfo
+            EdmNavigationPropertyInfo LocLinksProperty = new()
             {
                 TargetMultiplicity = Microsoft.OData.Edm.EdmMultiplicity.Many,
                 Target = locLinksType,
@@ -183,29 +183,29 @@ namespace ConnectomeODataV4
 
         public static void AddDistinctLabelFunctions(ODataModelBuilder builder)
         {
-            
+
             var Distinct = builder.EntityType<Structure>().Collection.Function("DistinctLabels");
-            
-            Distinct.ReturnsCollection<string>();  
+
+            Distinct.ReturnsCollection<string>();
         }
 
 
         public static void AddNetworkFunctions(ODataModelBuilder builder)
         {
             //builder.EntitySet<Structure>("Structures");
-            
+
             var NetworkIDsFuncConfig = builder.Function("Network");
             NetworkIDsFuncConfig.CollectionParameter<long>("IDs");
             NetworkIDsFuncConfig.Parameter<int>("Hops");
             NetworkIDsFuncConfig.ReturnsCollectionFromEntitySet<Structure>("Structures");
             NetworkIDsFuncConfig.Namespace = null;
-/*            
-            var NetworkCellsFuncConfig = builder.Function("NetworkCells");
-            NetworkCellsFuncConfig.CollectionParameter<long>("IDs");
-            NetworkCellsFuncConfig.Parameter<int>("Hops");
-            NetworkCellsFuncConfig.ReturnsCollectionFromEntitySet<Structure>("Structures");
-            NetworkCellsFuncConfig.Namespace = null;
-*/
+            /*            
+                        var NetworkCellsFuncConfig = builder.Function("NetworkCells");
+                        NetworkCellsFuncConfig.CollectionParameter<long>("IDs");
+                        NetworkCellsFuncConfig.Parameter<int>("Hops");
+                        NetworkCellsFuncConfig.ReturnsCollectionFromEntitySet<Structure>("Structures");
+                        NetworkCellsFuncConfig.Namespace = null;
+            */
             /*
             var StructuresNetworkFuncConfig = builder.EntityType<Structure>().Collection.Function("Network");
             StructuresNetworkFuncConfig.CollectionParameter<long>("IDs");
@@ -219,13 +219,13 @@ namespace ConnectomeODataV4
             NetworkChildStructuresFuncConfig.Parameter<int>("Hops");
             NetworkChildStructuresFuncConfig.ReturnsCollectionFromEntitySet<Structure>("Structures");
             NetworkChildStructuresFuncConfig.Namespace = null;
-             
+
             var NetworkStructureLinksFuncConfig = builder.Function("NetworkLinks");
             NetworkStructureLinksFuncConfig.CollectionParameter<long>("IDs");
             NetworkStructureLinksFuncConfig.Parameter<int>("Hops");
             NetworkStructureLinksFuncConfig.ReturnsCollectionFromEntitySet<StructureLink>("StructureLinks");
             NetworkStructureLinksFuncConfig.Namespace = null;
-            
+
             var StructuresLocationLinkFuncConfig = builder.Function("StructureLocationLinks");
             StructuresLocationLinkFuncConfig.Parameter<long>("StructureID");
             StructuresLocationLinkFuncConfig.ReturnsCollectionFromEntitySet<LocationLink>("LocationLinks");

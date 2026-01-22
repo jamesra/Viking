@@ -23,14 +23,9 @@ using System;
 namespace Viking.Common.UI
 {
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-    public sealed class ColumnAttribute : System.Attribute
+    public sealed class ColumnAttribute(string columnName) : System.Attribute
     {
-        public string ColumnName;
-
-        public ColumnAttribute(string columnName)
-        {
-            this.ColumnName = columnName;
-        }
+        public string ColumnName = columnName;
     }
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]

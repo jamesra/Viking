@@ -9,7 +9,7 @@ namespace Viking.DependencyInjection
     /// </summary>
     public static class ServiceLocator
     {
-        private static readonly object _lock = new object();
+        private static readonly object _lock = new();
         private static IServiceProvider? _serviceProvider;
         private static IServiceCollection? _serviceCollection;
         private static bool _isInitialized;
@@ -65,7 +65,7 @@ namespace Viking.DependencyInjection
         /// Resolve a service from the container, returning null if it is missing.
         /// </summary>
         /// <typeparam name="T">Type of service to resolve.</typeparam>
-        public static T GetService<T>() => ServiceProvider.GetService<T>();
+        public static T? GetService<T>() => ServiceProvider.GetService<T>();
 
         /// <summary>
         /// Convenience accessor for the shared <see cref="IGrpcChannelManager"/> instance.

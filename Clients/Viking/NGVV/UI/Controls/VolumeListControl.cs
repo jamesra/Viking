@@ -24,12 +24,12 @@ namespace Viking.UI.Controls
         {
             get
             {
-                List<string> servers = new List<string>();
+                List<string> servers = [];
                 foreach (object item in listServers.Items)
                 {
                     servers.Add(item.ToString());
                 }
-                return servers.ToArray();
+                return [.. servers];
             }
         }
 
@@ -48,7 +48,7 @@ namespace Viking.UI.Controls
 
         private void btnAdd_Click(object sender, EventArgs e)
         {
-            InputBox input = new InputBox("Enter URL for volume server", "http://", VolumeListControl.IsServerValid);
+            InputBox input = new("Enter URL for volume server", "http://", VolumeListControl.IsServerValid);
             if (input.ShowDialog() != DialogResult.OK)
                 return;
 
@@ -59,7 +59,7 @@ namespace Viking.UI.Controls
 
         private string EnsureServerFormattingCorrect(string server)
         {
-            Uri serverURI = new Uri(server);
+            Uri serverURI = new(server);
             server = serverURI.ToString();
             if (server[server.Length - 1] != '/')
                 server += '/';
@@ -79,7 +79,7 @@ namespace Viking.UI.Controls
         {
             try
             {
-                Uri ServerURI = new Uri(text);
+                Uri ServerURI = new(text);
             }
             catch (UriFormatException)
             {

@@ -46,7 +46,7 @@
 		
 		<Exec
 			Command="&quot;C:\Program Files (x86)\MSBuild\MonoGame\v3.0\Tools\MGCB.exe&quot; /@:&quot;Content.mgcb&quot; /platform:Windows /outputDir:&quot;bin/Windows&quot; /intermediateDir:&quot;obj/Windows&quot;"
-			WorkingDirectory="$(MSBuildThisFileDirectory)Content" />
+			WorkingDirectory="$(MSBuildThisFileDirectory)Content" StandardOutputImportance="High" StandardErrorImportance="High" />
 		
 		<!-- Create timestamp file to track when content was built -->
 		<Touch Files="$(MSBuildThisFileDirectory)Content\bin\Windows\.mgcb_timestamp" AlwaysCreate="true" />

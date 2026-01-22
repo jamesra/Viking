@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -37,7 +37,7 @@ namespace Viking.Common
             Byte[] textureData = texture.ToRgbBytes();
             return ToBmpAsync(textureData, texture.Width, texture.Height);
         }
-        
+
         /// <summary>
         /// Save a texture as a file
         /// </summary>
@@ -46,10 +46,10 @@ namespace Viking.Common
         /// <param name="height"></param>
         /// <param name="filename"></param>
         /// <returns></returns>
-        public static void Save(this Texture2D texture, String filename, ImageFormat? format = ImageFormat.Png)
+        public static void Save(this Texture2D texture, String filename, ImageFormat? format = null)
         {
             Byte[] textureData = texture.ToRgbBytes();
-            textureData.SaveBmp(texture.Width, texture.Height, filename, format);
+            textureData.SaveBmp(texture.Width, texture.Height, filename, format ?? ImageFormat.Png);
         }
 
         /// <summary>
@@ -78,13 +78,13 @@ namespace Viking.Common
         public static Bitmap ToBmp(this byte[] textureData, int width, int height)
         {
             BitmapData lockedBmpData = null;
-            Bitmap bmp = new Bitmap(
+            Bitmap bmp = new(
                 width, height,
-                System.Drawing.Imaging.PixelFormat.Format32bppArgb); 
+                System.Drawing.Imaging.PixelFormat.Format32bppArgb);
             try
-            {  
-                
-                Rectangle rect = new Rectangle(0, 0, bmp.Width, bmp.Height);
+            {
+
+                Rectangle rect = new(0, 0, bmp.Width, bmp.Height);
                 lockedBmpData = bmp.LockBits(
                     rect,
                     System.Drawing.Imaging.ImageLockMode.WriteOnly,
@@ -105,14 +105,14 @@ namespace Viking.Common
                     }
                 }
 
-                bmp.UnlockBits(lockedBmpData);  
+                bmp.UnlockBits(lockedBmpData);
                 lockedBmpData = null;
             }
             catch (Exception e)
             {
-                if(lockedBmpData != null)
+                if (lockedBmpData != null)
                     bmp.UnlockBits(lockedBmpData);
-                
+
                 throw;
             }
 
@@ -127,10 +127,7 @@ namespace Viking.Common
         /// <param name="height"></param>
         /// <param name="filename"></param>
         /// <returns></returns>
-        public static Task<Bitmap> ToBmpAsync(this byte[] textureData, int width, int height)
-        {
-            return Task.Run(() => ToBmp(textureData, width, height));
-        }
+        public static Task<Bitmap> ToBmpAsync(this byte[] textureData, int width, int height) => Task.Run(() => ToBmp(textureData, width, height));
 
         /// <summary>
         /// Save ARGB bytes to a bitmap file
@@ -140,20 +137,14 @@ namespace Viking.Common
         /// <param name="height"></param>
         /// <param name="filename"></param>
         /// <returns></returns>
-        public static Task SaveBmpAsync(this byte[] textureData, int width, int height, string filename, ImageFormat? format = null)
-        {
-            return Task.Run(() => SaveBmp(textureData, width, height, filename, format));
-        }
-        
+        public static Task SaveBmpAsync(this byte[] textureData, int width, int height, string filename, ImageFormat? format = null) => Task.Run(() => SaveBmp(textureData, width, height, filename, format));
+
         public static void SaveBmp(this byte[] textureData, int width, int height, string filename, ImageFormat? format = null)
         {
-            if(format is null)
-                format = ImageFormat.Png;
-            
-            using (Bitmap bmp = textureData.ToBmp(width, height))
-            {
-                bmp.Save(filename, format);
-            }
-        } 
+            format ??= ImageFormat.Png;
+
+            using Bitmap bmp = textureData.ToBmp(width, height);
+            bmp.Save(filename, format);
+        }
     }
 }

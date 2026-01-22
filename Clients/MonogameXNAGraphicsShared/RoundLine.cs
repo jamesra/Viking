@@ -72,10 +72,7 @@ namespace RoundLineCode
             theta = (float)Math.Atan2(delta.Y, delta.X);
         }
 
-        public override string ToString()
-        {
-            return string.Format("{0},{1} - {2},{3} rho:{4} theta:{5}", P0.X, P0.Y, P1.X, P1.Y, Rho, Theta);
-        }
+        public override string ToString() => string.Format("{0},{1} - {2},{3} rho:{4} theta:{5}", P0.X, P0.Y, P1.X, P1.Y, Rho, Theta);
     };
 
 
@@ -97,31 +94,21 @@ namespace RoundLineCode
 
 
     // A vertex type for drawing RoundLines, including an instance index
-    struct RoundLineVertex
+    struct RoundLineVertex(Vector3 pos, Vector2 norm, Vector2 tex, float index)
     {
-        public Vector3 pos;
-        public Vector2 rhoTheta;
-        public Vector2 scaleTrans;
-        public float index;
-
-
-        public RoundLineVertex(Vector3 pos, Vector2 norm, Vector2 tex, float index)
-        {
-            this.pos = pos;
-            this.rhoTheta = norm;
-            this.scaleTrans = tex;
-            this.index = index;
-        }
-
+        public Vector3 pos = pos;
+        public Vector2 rhoTheta = norm;
+        public Vector2 scaleTrans = tex;
+        public float index = index;
         public static int SizeInBytes = 8 * sizeof(float);
 
-        public static VertexElement[] VertexElements = new VertexElement[]
-            {
-                new VertexElement(0, VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
-                new VertexElement(12, VertexElementFormat.Vector2, VertexElementUsage.Normal, 0),
-                new VertexElement(20, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0),
-                new VertexElement(28, VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 1),
-            };
+        public static VertexElement[] VertexElements =
+            [
+                new(0, VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
+                new(12, VertexElementFormat.Vector2, VertexElementUsage.Normal, 0),
+                new(20, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0),
+                new(28, VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 1),
+            ];
     }
 
 
@@ -215,10 +202,7 @@ namespace RoundLineCode
             }
         }
 
-        public bool IsTechnique(string name)
-        {
-            return TechniqueNames.Contains(name);
-        }
+        public bool IsTechnique(string name) => TechniqueNames.Contains(name);
 
         /// <summary>
         /// Create a mesh for a RoundLine.
@@ -358,10 +342,10 @@ namespace RoundLineCode
         /// to the back buffer.  Then apply an empirically-determined mapping to get
         /// a good BlurThreshold for such lines.
         /// </summary>
-        public float ComputeBlurThreshold(float lineRadius, Matrix viewProjMatrix, float viewportWidth)
+        public static float ComputeBlurThreshold(float lineRadius, Matrix viewProjMatrix, float viewportWidth)
         {
-            Vector4 lineRadiusTestBase = new Vector4(0, 0, 0, 1);
-            Vector4 lineRadiusTest = new Vector4(lineRadius, 0, 0, 1);
+            Vector4 lineRadiusTestBase = new(0, 0, 0, 1);
+            Vector4 lineRadiusTest = new(lineRadius, 0, 0, 1);
             Vector4 delta = lineRadiusTest - lineRadiusTestBase;
             Vector4 output = Vector4.Transform(delta, viewProjMatrix);
             output.X *= viewportWidth;
@@ -385,10 +369,7 @@ namespace RoundLineCode
             viewProjMatrixParameter.SetValue(viewProjMatrix);
             timeParameter.SetValue(time);
 
-            if (techniqueName is null)
-                effect.CurrentTechnique = effect.Techniques["Standard"];
-            else
-                effect.CurrentTechnique = effect.Techniques[techniqueName];
+            effect.CurrentTechnique = techniqueName is null ? effect.Techniques["Standard"] : effect.Techniques[techniqueName];
 
             VikingXNAGraphics.DeviceStateManager.SaveDeviceState(this.device);
 
@@ -409,10 +390,7 @@ namespace RoundLineCode
             viewProjMatrixParameter.SetValue(viewProjMatrix);
             timeParameter.SetValue(time);
 
-            if (techniqueName is null)
-                effect.CurrentTechnique = effect.Techniques["Standard"];
-            else
-                effect.CurrentTechnique = effect.Techniques[techniqueName];
+            effect.CurrentTechnique = techniqueName is null ? effect.Techniques["Standard"] : effect.Techniques[techniqueName];
 
             VikingXNAGraphics.DeviceStateManager.SaveDeviceState(this.device);
 
@@ -437,7 +415,7 @@ namespace RoundLineCode
             translationData[iData++] = new Vector4(roundLine.P0.X,
                                                  roundLine.P0.Y,
                                                  roundLine.Rho,
-                                                 roundLine.Theta); 
+                                                 roundLine.Theta);
             instanceDataParameter.SetValue(translationData);
 
             foreach (EffectPass pass in effect.CurrentTechnique.Passes)
@@ -467,7 +445,7 @@ namespace RoundLineCode
         /// </summary>
         public void Draw(IEnumerable<RoundLine> roundLines, float lineRadius, Color lineColor, Matrix viewProjMatrix,
             float time, string techniqueName)
-        {            
+        {
             device.SetVertexBuffer(vb);
             device.Indices = ib;
 
@@ -477,15 +455,12 @@ namespace RoundLineCode
             lineRadiusParameter.SetValue(lineRadius);
             blurThresholdParameter.SetValue(DefaultBlurThreshold);
 
-            if (techniqueName is null)
-                effect.CurrentTechnique = effect.Techniques["Standard"];
-            else
-                effect.CurrentTechnique = effect.Techniques[techniqueName];
-            
+            effect.CurrentTechnique = techniqueName is null ? effect.Techniques["Standard"] : effect.Techniques[techniqueName];
+
             int iData = 0;
             int numInstancesThisDraw = 0;
             foreach (RoundLine roundLine in roundLines)
-            {                
+            {
                 translationData[iData++] = new Vector4(roundLine.P0.X,
                                                  roundLine.P0.Y,
                                                  roundLine.Rho,
@@ -521,7 +496,7 @@ namespace RoundLineCode
                 numInstancesThisDraw = 0;
                 //NumLinesDrawn += numInstancesThisDraw;
             }
-            
+
         }
 
     }

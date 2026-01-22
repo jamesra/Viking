@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationService.Types;
 using Geometry;
 using Microsoft.SqlServer.Types;
@@ -17,39 +17,29 @@ namespace WebAnnotationModel
     {
         public static bool AllowsClosed2DShape(this LocationType value)
         {
-            switch (value)
+            return value switch
             {
-                case LocationType.POLYGON:
-                case LocationType.CURVEPOLYGON:
-                case LocationType.CLOSEDCURVE:
-                    return true;
-                default:
-                    return false;
-            }
+                LocationType.POLYGON or LocationType.CURVEPOLYGON or LocationType.CLOSEDCURVE => true,
+                _ => false,
+            };
         }
 
         public static bool AllowsInteriorHoles(this LocationType value)
         {
-            switch (value)
+            return value switch
             {
-                case LocationType.POLYGON:
-                case LocationType.CURVEPOLYGON:
-                    return true;
-                default:
-                    return false;
-            }
+                LocationType.POLYGON or LocationType.CURVEPOLYGON => true,
+                _ => false,
+            };
         }
 
         public static bool AllowsOpen2DShape(this LocationType value)
         {
-            switch (value)
+            return value switch
             {
-                case LocationType.POLYLINE:
-                case LocationType.OPENCURVE:
-                    return true;
-                default:
-                    return false;
-            }
+                LocationType.POLYLINE or LocationType.OPENCURVE => true,
+                _ => false,
+            };
         }
     }
 
@@ -60,21 +50,17 @@ namespace WebAnnotationModel
             if (string.IsNullOrEmpty(propertyName))
                 return true;
 
-            switch (propertyName)
+            return propertyName switch
             {
-                case "Position":
-                    return true;
-                case "WorldPosition":
-                    return true;
+                "Position" => true,
+                "WorldPosition" => true,
                 //case "VolumePosition":
                 //    return true;
                 //case "VolumeShape":
                 //  return true;
-                case "MosaicShape":
-                    return true;
-                default:
-                    return false;
-            }
+                "MosaicShape" => true,
+                _ => false,
+            };
         }
 
         public static bool IsGeometryProperty(string propertyName)
@@ -82,19 +68,15 @@ namespace WebAnnotationModel
             if (string.IsNullOrEmpty(propertyName))
                 return true;
 
-            switch (propertyName)
+            return propertyName switch
             {
                 //case "VolumeShape":
                 //  return true;
-                case "MosaicShape":
-                    return true;
-                case "Radius":
-                    return true;
-                case "Width":
-                    return true;
-                default:
-                    return false;
-            }
+                "MosaicShape" => true,
+                "Radius" => true,
+                "Width" => true,
+                _ => false,
+            };
         }
 
         public static bool IsTerminalProperty(string propertyName)
@@ -102,17 +84,13 @@ namespace WebAnnotationModel
             if (string.IsNullOrEmpty(propertyName))
                 return true;
 
-            switch (propertyName)
+            return propertyName switch
             {
-                case "Terminal":
-                    return true;
-                case "OffEdge":
-                    return true;
-                case "Attributes":
-                    return true;
-                default:
-                    return false;
-            }
+                "Terminal" => true,
+                "OffEdge" => true,
+                "Attributes" => true,
+                _ => false,
+            };
         }
 
         public override long ID => Data.ID;
@@ -122,10 +100,7 @@ namespace WebAnnotationModel
         /// In this case make sure we always return the same hash code.  As a result this is called for each object only once.
         /// </summary>
         /// <returns></returns>
-        protected override int GenerateHashCode()
-        {
-            return (int)(ID % int.MaxValue);
-        }
+        protected override int GenerateHashCode() => (int)(ID % int.MaxValue);
 
         public string Label
         {
@@ -261,15 +236,11 @@ namespace WebAnnotationModel
 
         private static GridVector2 CenterOfLocationShape(LocationType type, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
-            switch (type)
+            return type switch
             {
-                case LocationType.POINT:
-                case LocationType.CIRCLE:
-                case LocationType.ELLIPSE:
-                    return shape.BoundingBox().Center;
-                default:
-                    return shape.Centroid();
-            }
+                LocationType.POINT or LocationType.CIRCLE or LocationType.ELLIPSE => shape.BoundingBox().Center,
+                _ => shape.Centroid(),
+            };
         }
 
         /// <summary>
@@ -365,10 +336,7 @@ namespace WebAnnotationModel
         /// </summary>
         public bool VolumePositionHasBeenCalculated => this.VolumeTransformID.HasValue;
 
-        public void ResetVolumePositionHasBeenCalculated()
-        {
-            this.VolumeTransformID = new int?();
-        }
+        public void ResetVolumePositionHasBeenCalculated() => this.VolumeTransformID = new int?();
 
         private double CalculateRadius(Microsoft.SqlServer.Types.SqlGeometry shape)
         {
@@ -516,7 +484,7 @@ namespace WebAnnotationModel
         /// </summary>
         public string Username => Data.Username;
 
-        private readonly object LinkLock = new object();
+        private readonly object LinkLock = new();
 
         private ObservableCollection<long> _ObservableLinks = null;
         private ReadOnlyObservableCollection<long> _ReadOnlyObservableLinks = null;
@@ -528,9 +496,9 @@ namespace WebAnnotationModel
                 lock (LinkLock)
                 {
                     if (_ObservableLinks is null)
-                        return new long[0];
+                        return [];
 
-                    return _ObservableLinks.ToArray();
+                    return [.. _ObservableLinks];
                 }
             }
         }
@@ -547,14 +515,7 @@ namespace WebAnnotationModel
                 {
                     if (_ObservableLinks is null)
                     {
-                        if (Data.Links != null)
-                        {
-                            _ObservableLinks = new ObservableCollection<long>(Data.Links);
-                        }
-                        else
-                        {
-                            _ObservableLinks = new ObservableCollection<long>();
-                        }
+                        _ObservableLinks = Data.Links != null ? new ObservableCollection<long>(Data.Links) : [];
 
                         _ReadOnlyObservableLinks = new ReadOnlyObservableCollection<long>(_ObservableLinks);
                     }
@@ -621,7 +582,7 @@ namespace WebAnnotationModel
 
                 _ObservableLinks.Add(ID);
 
-                this.Data.Links = this._ObservableLinks.ToArray();
+                this.Data.Links = [.. this._ObservableLinks];
             }
         }
 
@@ -641,10 +602,7 @@ namespace WebAnnotationModel
 
                 _ObservableLinks.Remove(ID);
 
-                if (_ObservableLinks.Count > 0)
-                    this.Data.Links = this._ObservableLinks.ToArray();
-                else
-                    this.Data.Links = null;
+                this.Data.Links = _ObservableLinks.Count > 0 ? [.. this._ObservableLinks] : null;
 
             }
         }
@@ -688,20 +646,14 @@ namespace WebAnnotationModel
         /// <summary>
         /// True if the location is a vericosity cap, this terminates a process in a structure
         /// </summary>
-        public bool VericosityCap
-        {
-            get { return Attributes.Any(a => a.Name == "Varicosity Cap"); }
-        }
-        
+        public bool VericosityCap => Attributes.Any(a => a.Name == "Varicosity Cap");
+
         /// <summary>
         /// True if the location indicates a boundary beyond which the structure cannot be traced
         /// </summary>
-        public bool Untraceable
-        {
-            get { return Attributes.Any(a => a.Name == "Untraceable"); }
-        }
+        public bool Untraceable => Attributes.Any(a => a.Name == "Untraceable");
 
-        public DateTime LastModified => new DateTime(Data.LastModified, DateTimeKind.Utc);
+        public DateTime LastModified => new(Data.LastModified, DateTimeKind.Utc);
 
         List<ObjAttribute> _Attributes = null;
 
@@ -710,10 +662,7 @@ namespace WebAnnotationModel
             get
             {
 
-                if (_Attributes is null)
-                {
-                    _Attributes = ObjAttribute.Parse(Data.AttributesXml);
-                }
+                _Attributes ??= ObjAttribute.Parse(Data.AttributesXml);
 
                 return _Attributes;
             }
@@ -771,8 +720,8 @@ namespace WebAnnotationModel
         /// <param name="tag"></param>
         public bool ToggleAttribute(string tag, string value = null)
         {
-            ObjAttribute attrib = new ObjAttribute(tag, value);
-            List<ObjAttribute> listAttributes = this.Attributes.ToList();
+            ObjAttribute attrib = new(tag, value);
+            List<ObjAttribute> listAttributes = [.. this.Attributes];
             bool InList = listAttributes.ToggleAttribute(tag, value);
             this.Attributes = listAttributes;
             return InList;
@@ -882,11 +831,9 @@ namespace WebAnnotationModel
         */
 
         protected static event EventHandler OnCreate;
-        protected void CallOnCreate()
-        {
+        protected void CallOnCreate() =>
             //Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null });
             OnCreate?.Invoke(this, null);
-        }
 
         bool IEquatable<ILocationReadOnly>.Equals(ILocationReadOnly other)
         {

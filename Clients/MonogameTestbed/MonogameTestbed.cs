@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -14,7 +14,7 @@ using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {
-    
+
 
     enum TestMode
     {
@@ -26,12 +26,12 @@ namespace MonogameTestbed
         LINESTYLES,
         CURVESTYLES,
         CLOSEDCURVE,
-        POLYGON2D, 
+        POLYGON2D,
         POLYGONINTERSECTION,
         MESH,
         GEOMETRY,
         MORPHOLOGY,
-        TRIANGLEALGORITHM, 
+        TRIANGLEALGORITHM,
         BRANCHPORT,
         POLYWRAPPING,
         BRANCHASSIGNMENT,
@@ -50,35 +50,35 @@ namespace MonogameTestbed
         readonly GraphicsDeviceManager graphics;
         public SpriteBatch spriteBatch;
 
-        public RoundLineManager lineManager = new RoundLineCode.RoundLineManager();
-        public CurveManager curveManager = new CurveManager();
+        public RoundLineManager lineManager = new();
+        public CurveManager curveManager = new();
         public VikingXNA.Scene Scene;
         public VikingXNA.Camera Camera;
         public SpriteFont fontArial;
         public BasicEffect basicEffect;
         public OverlayShaderEffect overlayEffect;
-        readonly CurveTest curveTest = new CurveTest();
-        readonly CurveViewTest curveViewTest = new CurveViewTest();
-        readonly LabelViewsTest labelTest = new LabelViewsTest();
-        readonly LineViewStylesTest lineStyleTest = new LineViewStylesTest();
-        readonly CurveViewStylesTest curveStyleTest = new CurveViewStylesTest();
-        readonly CurveSimplificationTest curveSimplificationTest = new CurveSimplificationTest();
-        readonly ClosedCurveViewTest closedCurveTest = new ClosedCurveViewTest();
-        readonly Polygon2DTest polygon2DTest = new Polygon2DTest();
+        readonly CurveTest curveTest = new();
+        readonly CurveViewTest curveViewTest = new();
+        readonly LabelViewsTest labelTest = new();
+        readonly LineViewStylesTest lineStyleTest = new();
+        readonly CurveViewStylesTest curveStyleTest = new();
+        readonly CurveSimplificationTest curveSimplificationTest = new();
+        readonly ClosedCurveViewTest closedCurveTest = new();
+        readonly Polygon2DTest polygon2DTest = new();
         //readonly MeshTest meshTest = new MeshTest();
-        readonly GeometryTest geometryTest = new GeometryTest();
+        readonly GeometryTest geometryTest = new();
         //readonly MorphologyTest morphologyTest = new MorphologyTest();
         //readonly TriangleAlgorithmTest triangleTest = new TriangleAlgorithmTest();
-        readonly BranchPointTest branchTest = new BranchPointTest(); 
-        readonly BranchAssignmentTest brachAssignmentTest = new BranchAssignmentTest();
-        readonly Delaunay2DTest delaunay2DTest = new Delaunay2DTest();
-        readonly Delaunay3DTest delaunay3DTest = new Delaunay3DTest();
-        readonly BajajAssignmentTest bajajTest = new BajajAssignmentTest();
-        readonly BajajMultiAssignmentTest bajajMultiTest = new BajajMultiAssignmentTest();
-        readonly VikingDelaunay2DTest constrainedDelaunay2DTest = new VikingDelaunay2DTest();
-        readonly PolygonIntersectionTest polygonIntersectionTest = new PolygonIntersectionTest();
-        readonly LabeledRectangleTests labeledRectangleTests = new LabeledRectangleTests();
-        readonly SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
+        readonly BranchPointTest branchTest = new();
+        readonly BranchAssignmentTest brachAssignmentTest = new();
+        readonly Delaunay2DTest delaunay2DTest = new();
+        readonly Delaunay3DTest delaunay3DTest = new();
+        readonly BajajAssignmentTest bajajTest = new();
+        readonly BajajMultiAssignmentTest bajajMultiTest = new();
+        readonly VikingDelaunay2DTest constrainedDelaunay2DTest = new();
+        readonly PolygonIntersectionTest polygonIntersectionTest = new();
+        readonly LabeledRectangleTests labeledRectangleTests = new();
+        readonly SortedDictionary<TestMode, IGraphicsTest> listTests = [];
 
         /// <summary>
         /// Test to run at startup
@@ -105,17 +105,19 @@ namespace MonogameTestbed
         public MonoTestbed()
         {
             SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
-            
+
             // Preload MonoGame native DLLs for Visual Studio debugger
             LoadMonoGameNativeLibraries();
-            
-            graphics = new GraphicsDeviceManager(this);
-            graphics.GraphicsProfile= GraphicsProfile.HiDef;
-            					VikingXNAGraphics.Global.Content = this.Content;
+
+            graphics = new GraphicsDeviceManager(this)
+            {
+                GraphicsProfile = GraphicsProfile.HiDef
+            };
+            VikingXNAGraphics.Global.Content = this.Content;
             graphics.PreparingDeviceSettings += graphics_PreparingDeviceSettings;
             Content.RootDirectory = "Content";
         }
-        
+
         private static void LoadMonoGameNativeLibraries()
         {
             try
@@ -123,12 +125,12 @@ namespace MonogameTestbed
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 string sdl2Path = System.IO.Path.Combine(baseDir, "SDL2.dll");
                 string openalPath = System.IO.Path.Combine(baseDir, "openal.dll");
-                
+
                 if (System.IO.File.Exists(sdl2Path))
                 {
                     System.Runtime.InteropServices.NativeLibrary.Load(sdl2Path);
                 }
-                
+
                 if (System.IO.File.Exists(openalPath))
                 {
                     System.Runtime.InteropServices.NativeLibrary.Load(openalPath);
@@ -141,7 +143,7 @@ namespace MonogameTestbed
         }
 
         private void graphics_PreparingDeviceSettings(object sender, PreparingDeviceSettingsEventArgs e)
-        {  
+        {
             graphics.PreferredBackBufferWidth = desired_screen_width;
             graphics.PreferredBackBufferHeight = desired_screen_height;
             graphics.PreferMultiSampling = true;
@@ -173,7 +175,7 @@ namespace MonogameTestbed
 #endif
 
             this.IsMouseVisible = true;
-            
+
             // Initialize GPU synchronization after the window and graphics device are set up
             GpuSynchronizationManager.Initialize();
         }
@@ -192,13 +194,13 @@ namespace MonogameTestbed
             //Load the default font
             var fontData = DeviceFontStore.GetOrCreateForDevice(GraphicsDevice, Content);
 
-            Camera = new VikingXNA.Camera { Downsample = 0.5, LookAt = new Vector2(0, 0) }; 
+            Camera = new VikingXNA.Camera { Downsample = 0.5, LookAt = new Vector2(0, 0) };
             Scene = new VikingXNA.Scene(graphics.GraphicsDevice.Viewport, Camera);
 
             lineManager.Init(GraphicsDevice, Content);
             curveManager.Init(GraphicsDevice, Content);
 
-            RasterizerState state = new RasterizerState
+            RasterizerState state = new()
             {
                 CullMode = CullMode.None
             };
@@ -221,7 +223,7 @@ namespace MonogameTestbed
             listTests.Add(TestMode.GEOMETRY, geometryTest);
             //listTests.Add(TestMode.MORPHOLOGY, morphologyTest);
             //listTests.Add(TestMode.TRIANGLEALGORITHM, triangleTest);
-            listTests.Add(TestMode.BRANCHPORT, branchTest); 
+            listTests.Add(TestMode.BRANCHPORT, branchTest);
             listTests.Add(TestMode.BRANCHASSIGNMENT, brachAssignmentTest);
             listTests.Add(TestMode.DELAUNAY2D, delaunay2DTest);
             listTests.Add(TestMode.DELAUNAY3D, delaunay3DTest);
@@ -229,7 +231,7 @@ namespace MonogameTestbed
             listTests.Add(TestMode.BAJAJMULTITEST, bajajMultiTest);
             listTests.Add(TestMode.CONSTRAINEDDELAUNAY2D, constrainedDelaunay2DTest);
             listTests.Add(TestMode.POLYGONINTERSECTION, polygonIntersectionTest);
-            
+
         }
 
         /// <summary>
@@ -253,7 +255,7 @@ namespace MonogameTestbed
             */
 
             Matrix WorldViewProj = Scene.WorldViewProj;
-            
+
             PolygonOverlayEffect polyEffect = DeviceEffectsStore<PolygonOverlayEffect>.GetOrCreateForDevice(this.GraphicsDevice, Content);
             polyEffect.WorldViewProjMatrix = WorldViewProj;
 
@@ -322,23 +324,23 @@ namespace MonogameTestbed
                 this.Mode = TestMode.POLYGONINTERSECTION;
             if (keyboardState.IsKeyDown(Keys.NumPad0) || keyboardState.IsKeyDown(Keys.D0))
                 this.Mode = TestMode.LABELED_RECTANGLES;
-            
+
             if (!listTests.ContainsKey(Mode))
             {
                 Console.WriteLine("Test not found: " + Mode);
                 this.Mode = StartMode;
                 return;
             }
-            
+
             if (!listTests[Mode].Initialized)
             {
                 listTests[Mode].Init(this);
                 Debug.Assert(listTests[Mode].Initialized);
             }
 
-            if(StartMode != this.Mode)
+            if (StartMode != this.Mode)
             {
-                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperRight, anchor: Anchor.TopRight, scaleFontWithScene : true);
+                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperRight, anchor: Anchor.TopRight, scaleFontWithScene: true);
             }
         }
 
@@ -358,7 +360,7 @@ namespace MonogameTestbed
         protected override void UnloadContent()
         {
             // TODO: Unload any non ContentManager content here
-            foreach(var test in listTests.Values)
+            foreach (var test in listTests.Values)
             {
                 test.UnloadContent(this);
             }
@@ -394,7 +396,7 @@ namespace MonogameTestbed
             //meshView.Update(gameTime); 
 
             listTests[Mode].Update();
-            
+
             base.Update(gameTime);
         }
 
@@ -418,7 +420,7 @@ namespace MonogameTestbed
 
             // TODO: Add your drawing code here
 
-            RasterizerState state = new RasterizerState
+            RasterizerState state = new()
             {
                 CullMode = CullMode.None
             };
@@ -427,14 +429,14 @@ namespace MonogameTestbed
 
             //SamplerState sampler = new SamplerState();
             GraphicsDevice.RasterizerState = state;
-            
-           // spriteBatch.Begin();
-           if(!listTests[Mode].Initialized)
-           {
+
+            // spriteBatch.Begin();
+            if (!listTests[Mode].Initialized)
+            {
                 listTests[Mode].Init(this);
                 testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperLeft, anchor: Anchor.CenterRight, scaleFontWithScene: false);
                 Debug.Assert(listTests[Mode].Initialized);
-           }
+            }
 
             listTests[Mode].Draw(this);
             /*
@@ -449,9 +451,9 @@ namespace MonogameTestbed
             base.Draw(gameTime);
         }
 
-        protected RenderTarget2D DrawToRenderTarget(GraphicsDevice device, Action<GraphicsDevice> drawAction)
+        protected static RenderTarget2D DrawToRenderTarget(GraphicsDevice device, Action<GraphicsDevice> drawAction)
         {
-            RenderTarget2D target = new RenderTarget2D(device, device.Viewport.Width, device.Viewport.Height);
+            RenderTarget2D target = new(device, device.Viewport.Width, device.Viewport.Height);
 
             RenderTargetBinding[] oldRenderTargets = device.GetRenderTargets();
             device.SetRenderTarget(target);
@@ -489,10 +491,7 @@ namespace MonogameTestbed
         {
         }
 
-        public void Update()
-        {
-            CurveAngle += GamePad.GetState(PlayerIndex.One).ThumbSticks.Right.X;
-        }
+        public void Update() => CurveAngle += GamePad.GetState(PlayerIndex.One).ThumbSticks.Right.X;
 
         public void Draw(MonoTestbed window)
         {
@@ -501,28 +500,28 @@ namespace MonogameTestbed
             string TechniqueName = "AnimatedLinear";
             float time = DateTime.Now.Millisecond / 1000.0f;
 
-            RoundLine line = new RoundLine(new Vector2((float)(-50.0f * Math.Cos(CurveAngle)), (float)(-50.0f * Math.Sin(CurveAngle)) + 50.0f),
+            RoundLine line = new(new Vector2((float)(-50.0f * Math.Cos(CurveAngle)), (float)(-50.0f * Math.Sin(CurveAngle)) + 50.0f),
                                            new Vector2((float)(50.0f * Math.Cos(CurveAngle)), (float)(50.0f * Math.Sin(CurveAngle)) + 50.0f));
             window.lineManager.Draw(new RoundLine[] { line }, 16, Color.Red, ViewProjMatrix, time, labelTexture);
 
             GridVector2[] cps = CreateTestCurveLagrange(CurveAngle, 100, new GridVector2(-150, 0));
-            RoundCurve.RoundCurve curve = new RoundCurve.RoundCurve(cps, false);
+            RoundCurve.RoundCurve curve = new(cps, false);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { curve }, 16, Color.Blue, ViewProjMatrix, time, labelTexture);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { curve }, 16, Color.Blue, ViewProjMatrix, time, TechniqueName);
 
             GridVector2[] cpsCatmull = CreateTestCurveCatmull(CurveAngle, 100, new GridVector2(150, 0));
-            RoundCurve.RoundCurve CatmullCurve = new RoundCurve.RoundCurve(cpsCatmull, false);
+            RoundCurve.RoundCurve CatmullCurve = new(cpsCatmull, false);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { CatmullCurve }, 16, Color.Blue, ViewProjMatrix, time, labelTexture);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { CatmullCurve }, 16, Color.Blue, ViewProjMatrix, time, TechniqueName);
-             
+
         }
 
-        public Texture2D CreateTextureForLabel(string label, GraphicsDevice device,
+        public static Texture2D CreateTextureForLabel(string label, GraphicsDevice device,
                               SpriteBatch spriteBatch,
                               SpriteFont font)
         {
             Vector2 labelDimensions = font.MeasureString(label);
-            RenderTarget2D target = new RenderTarget2D(device, (int)labelDimensions.X * 2, (int)labelDimensions.Y * 2);
+            RenderTarget2D target = new(device, (int)labelDimensions.X * 2, (int)labelDimensions.Y * 2);
 
             RenderTargetBinding[] oldRenderTargets = device.GetRenderTargets();
             device.SetRenderTarget(target);
@@ -539,29 +538,29 @@ namespace MonogameTestbed
 
         private static GridVector2[] CreateTestCurve(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-width,width),
-                                                   new GridVector2(-width * Math.Cos(angle), -width * Math.Sin(angle)),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            GridVector2[] cps = [new(-width,width),
+                                                   new(-width * Math.Cos(angle), -width * Math.Sin(angle)),
+                                                   new(0,0),
+                                                   new(width,0) ];
             return cps;
         }
 
         private static GridVector2[] CreateTestCurveLagrange(double angle, double width, GridVector2 origin)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
-                                                   new GridVector2(0, width),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            GridVector2[] cps = [new(width,width),
+                                                   new(0, width),
+                                                   new(0,0),
+                                                   new(width,0) ];
             GridVector2[] curvePoints = Geometry.Lagrange.FitCurve(cps, 30);
             return curvePoints.Translate(origin);
         }
 
         private static GridVector2[] CreateTestCurveCatmull(double angle, double width, GridVector2 origin)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
-                                                   new GridVector2(0, width),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            GridVector2[] cps = [new(width,width),
+                                                   new(0, width),
+                                                   new(0,0),
+                                                   new(width,0) ];
 
             GridVector2[] curvePoints = cps.CalculateCurvePoints(30, true);
             return curvePoints.Translate(origin);
@@ -587,7 +586,7 @@ namespace MonogameTestbed
         {
             _initialized = true;
 
-            GridVector2[] cps = CreateTestCurveLagrange(0, 100, new GridVector2(-100,0));
+            GridVector2[] cps = CreateTestCurveLagrange(0, 100, new GridVector2(-100, 0));
             curveViewLagrange = new CurveView(cps, Color.Red, false);
             leftLagrangeCurveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, false);
             rightLagrangeCurveLabel = new CurveLabel("C 1485", cps, Color.PaleGoldenrod, false);
@@ -620,54 +619,54 @@ namespace MonogameTestbed
             leftLagrangeCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(leftLagrangeCurveLabel.Text.Length / totalLabelLength);
             rightLagrangeCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(rightLagrangeCurveLabel.Text.Length / totalLabelLength);
 
-            CurveView.Draw(window.GraphicsDevice, scene,  OverlayStyle.Alpha, time, new CurveView[] { curveViewLagrange, curveViewCatmull });
-            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, new CurveLabel[] { leftLagrangeCurveLabel, rightLagrangeCurveLabel, leftCatmullCurveLabel, rightCatmullCurveLabel});
+            CurveView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, time, [curveViewLagrange, curveViewCatmull]);
+            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, [leftLagrangeCurveLabel, rightLagrangeCurveLabel, leftCatmullCurveLabel, rightCatmullCurveLabel]);
 
         }
 
         private static GridVector2[] CreateTestCurve(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-width,width),
-                                                   new GridVector2(-width * Math.Cos(angle), -width * Math.Sin(angle)),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            GridVector2[] cps = [new(-width,width),
+                                                   new(-width * Math.Cos(angle), -width * Math.Sin(angle)),
+                                                   new(0,0),
+                                                   new(width,0) ];
             return cps;
         }
 
         private static GridVector2[] CreateTestCurve2(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
-                                                   new GridVector2(0, width),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            GridVector2[] cps = [new(width,width),
+                                                   new(0, width),
+                                                   new(0,0),
+                                                   new(width,0) ];
             return cps;
         }
 
         private static GridVector2[] CreateTestCurve3(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-100,100),
-                                                   new GridVector2(-50, 0),
-                                                   new GridVector2(0,100),
-                                                   new GridVector2(100,0) };
+            GridVector2[] cps = [new(-100,100),
+                                                   new(-50, 0),
+                                                   new(0,100),
+                                                   new(100,0) ];
             return cps;
         }
 
         private static GridVector2[] CreateTestCurveLagrange(double angle, double width, GridVector2 origin)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
-                                                   new GridVector2(0, width),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            GridVector2[] cps = [new(width,width),
+                                                   new(0, width),
+                                                   new(0,0),
+                                                   new(width,0) ];
             return cps.Translate(origin);
         }
 
         private static GridVector2[] CreateTestCurveCatmull(double angle, double width, GridVector2 origin)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
-                                                   new GridVector2(0, width),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
-            
+            GridVector2[] cps = [new(width,width),
+                                                   new(0, width),
+                                                   new(0,0),
+                                                   new(width,0) ];
+
             return cps.Translate(origin);
         }
     }
@@ -711,7 +710,7 @@ namespace MonogameTestbed
 
             window.spriteBatch.Begin();
 
-            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, new CurveLabel[] { curveLabel });
+            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, [curveLabel]);
             labelView.Draw(window.spriteBatch, window.fontArial, window.Scene);
 
             window.spriteBatch.End();
@@ -722,27 +721,27 @@ namespace MonogameTestbed
 
         private static GridVector2[] CreateTestCurve(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-width,width),
-                                                   new GridVector2(-width * Math.Cos(angle), -width * Math.Sin(angle)),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            GridVector2[] cps = [new(-width,width),
+                                                   new(-width * Math.Cos(angle), -width * Math.Sin(angle)),
+                                                   new(0,0),
+                                                   new(width,0) ];
             return cps;
         }
 
         private static GridVector2[] CreateTestCurve2(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
-                                                   new GridVector2(0, width),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            GridVector2[] cps = [new(width,width),
+                                                   new(0, width),
+                                                   new(0,0),
+                                                   new(width,0) ];
             return cps;
         }
 
         private static GridVector2[] CreateTestCurve3(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-50, 0),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(100,0) };
+            GridVector2[] cps = [new(-50, 0),
+                                                   new(0,0),
+                                                   new(100,0) ];
             return cps;
         }
     }
@@ -751,8 +750,8 @@ namespace MonogameTestbed
     {
         public string Title => this.GetType().Name;
 
-        readonly List<LineView> listLineViews = new List<LineView>();
-        readonly List<LabelView> listLabelViews = new List<LabelView>();
+        readonly List<LineView> listLineViews = [];
+        readonly List<LabelView> listLabelViews = [];
 
         bool _initialized = false;
         public bool Initialized => _initialized;
@@ -774,8 +773,8 @@ namespace MonogameTestbed
 
             foreach (LineStyle style in Enum.GetValues(typeof(LineStyle)))
             {
-                GridVector2 source = new GridVector2(MinX, Y);
-                GridVector2 dest = new GridVector2(MaxX, Y);
+                GridVector2 source = new(MinX, Y);
+                GridVector2 dest = new(MaxX, Y);
                 listLineViews.Add(new LineView(source, dest, lineWidth, Color.Blue, style));
 
                 Y += YStep;
@@ -800,10 +799,10 @@ namespace MonogameTestbed
             Matrix ViewProjMatrix = scene.ViewProj;
             float time = DateTime.Now.Millisecond / 1000.0f;
 
-            LineView.Draw(window.GraphicsDevice, scene, window.lineManager, listLineViews.ToArray());
+            LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. listLineViews]);
 
             window.spriteBatch.Begin();
-            listLabelViews.ForEach(lv => { lv.Draw(window.spriteBatch, window.fontArial, scene); });
+            listLabelViews.ForEach(lv => lv.Draw(window.spriteBatch, window.fontArial, scene));
             window.spriteBatch.End();
         }
     }
@@ -813,8 +812,8 @@ namespace MonogameTestbed
     {
         public string Title => this.GetType().Name;
 
-        readonly List<CurveView> listLineViews = new List<CurveView>();
-        readonly List<LabelView> listLabelViews = new List<LabelView>();
+        readonly List<CurveView> listLineViews = [];
+        readonly List<LabelView> listLabelViews = [];
 
 
         bool _initialized = false;
@@ -836,9 +835,9 @@ namespace MonogameTestbed
 
             foreach (LineStyle style in Enum.GetValues(typeof(LineStyle)))
             {
-                GridVector2 source = new GridVector2(MinX, Y);
-                GridVector2 mid = new GridVector2(MinX + (MaxX - MinX / 2.0), Y - 30);
-                GridVector2 dest = new GridVector2(MaxX, Y);
+                GridVector2 source = new(MinX, Y);
+                GridVector2 mid = new(MinX + (MaxX - MinX / 2.0), Y - 30);
+                GridVector2 dest = new(MaxX, Y);
 
                 listLineViews.Add(new CurveView(new GridVector2[] { source, mid, dest }, Color.Blue, false, MonoTestbed.NumCurveInterpolations, lineWidth: YStep / 1.5, lineStyle: style));
 
@@ -863,12 +862,12 @@ namespace MonogameTestbed
             Matrix ViewProjMatrix = scene.ViewProj;
             float time = DateTime.Now.Millisecond / 1000.0f;
 
-            
 
-            CurveView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, time, this.listLineViews.ToArray());
+
+            CurveView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, time, [.. this.listLineViews]);
 
             window.spriteBatch.Begin();
-            listLabelViews.ForEach(lv => { lv.Draw(window.spriteBatch, window.fontArial, scene); });
+            listLabelViews.ForEach(lv => lv.Draw(window.spriteBatch, window.fontArial, scene));
             window.spriteBatch.End();
         }
     }
@@ -878,7 +877,7 @@ namespace MonogameTestbed
         public string Title => this.GetType().Name;
         CurveView curveView;
         CurveLabel curveLabel;
-        bool _initialized = false; 
+        bool _initialized = false;
         public bool Initialized => _initialized;
 
         public Task Init(MonoTestbed window)
@@ -892,10 +891,7 @@ namespace MonogameTestbed
             return Task.CompletedTask;
         }
 
-        public void UnloadContent(MonoTestbed window)
-        {
-            window.Scene.SaveCamera(TestMode.CLOSEDCURVE);
-        }
+        public void UnloadContent(MonoTestbed window) => window.Scene.SaveCamera(TestMode.CLOSEDCURVE);
 
         public void Update()
         {
@@ -909,19 +905,19 @@ namespace MonogameTestbed
 
             curveLabel.Alignment = RoundCurve.HorizontalAlignment.Left;
 
-            CurveView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, time, new CurveView[] { curveView });
-            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, new CurveLabel[] { curveLabel });
+            CurveView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, time, [curveView]);
+            CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, [curveLabel]);
 
         }
 
         private static GridVector2[] CreateTestCurve(double height, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-width,0),
-                                                   new GridVector2(-width / 2.0, -height/4),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width / 2.0, height),
-                                                   new GridVector2(width,0),
-                                                   new GridVector2(0,-height)};
+            GridVector2[] cps = [new(-width,0),
+                                                   new(-width / 2.0, -height/4),
+                                                   new(0,0),
+                                                   new(width / 2.0, height),
+                                                   new(width,0),
+                                                   new(0,-height)];
             return cps;
         }
     }

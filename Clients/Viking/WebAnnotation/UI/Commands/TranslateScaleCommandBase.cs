@@ -11,12 +11,12 @@ namespace WebAnnotation.UI.Commands
 {
     internal abstract class TranslateScaleCommandBase : AnnotationCommandBase
     {
-        public new static string[] DefaultMouseHelpStrings = new string[] {
+        public new static string[] DefaultMouseHelpStrings = [
            "Hold Left+Click Drag to move",
            "Release Left button to place",
            "Scroll wheel: Change size",
            "SHIFT + Scroll wheel: Change size slowly"
-        };
+        ];
 
         protected Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
@@ -37,7 +37,7 @@ namespace WebAnnotation.UI.Commands
         protected abstract void OnSizeScaleChanged();
 
         protected GridVector2 OriginalVolumePosition;
-        protected GridVector2 VolumePositionDeltaSum = new GridVector2(0, 0);
+        protected GridVector2 VolumePositionDeltaSum = new(0, 0);
 
         public abstract double AnnotationRadius { get; }
 
@@ -50,7 +50,7 @@ namespace WebAnnotation.UI.Commands
         }
 
         protected GridVector2 OriginalMosaicPosition;
-        protected GridVector2 MosaicPositionDeltaSum = new GridVector2(0, 0);
+        protected GridVector2 MosaicPositionDeltaSum = new(0, 0);
 
         /// <summary>
         /// Position of mosaic origin after applying this translation command

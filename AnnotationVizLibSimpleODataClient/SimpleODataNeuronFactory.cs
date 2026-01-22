@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Simple.OData.Client;
 using System;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ namespace AnnotationVizLib.SimpleOData
     public class SimpleODataNeuronFactory
     {
         static SortedDictionary<ulong, StructureType> IDToStructureType = null;
-        readonly SortedDictionary<ulong, Structure> IDToStructure = new SortedDictionary<ulong, Structure>();
+        readonly SortedDictionary<ulong, Structure> IDToStructure = [];
 
         readonly NeuronGraph graph;
 
@@ -21,10 +21,10 @@ namespace AnnotationVizLib.SimpleOData
 
         public static NeuronGraph FromOData(ICollection<long> StructureIDs, uint numHops, Uri Endpoint)
         {
-            ODataClientSettings s = new ODataClientSettings();
-            Simple.OData.Client.ODataClient client = new Simple.OData.Client.ODataClient(Endpoint);
+            ODataClientSettings s = new();
+            Simple.OData.Client.ODataClient client = new(Endpoint);
             var scale = client.GetScale();
-            SimpleODataNeuronFactory graphFactory = new SimpleODataNeuronFactory();
+            SimpleODataNeuronFactory graphFactory = new();
 
             if (StructureIDs is null)
                 return graphFactory.graph;
@@ -50,10 +50,7 @@ namespace AnnotationVizLib.SimpleOData
                 //Find the parent in the dictionary
                 Structure parent = NetworkStructures[child.ParentID.Value];
 
-                if (parent.Children is null)
-                {
-                    parent.Children = new List<Structure>();
-                }
+                parent.Children ??= [];
 
                 parent.Children.Add(child);
             }
@@ -64,21 +61,15 @@ namespace AnnotationVizLib.SimpleOData
             foreach (StructureLink sl in listNetworkEdges)
             {
                 if (graphFactory.IDToStructure.TryGetValue(sl.SourceID, out var Source))
-                {  
-                    if (Source.SourceOfLinks is null)
-                    {
-                        Source.SourceOfLinks = new List<StructureLink>();
-                    }
+                {
+                    Source.SourceOfLinks ??= [];
 
                     Source.SourceOfLinks.Add(sl);
                 }
 
                 if (graphFactory.IDToStructure.TryGetValue(sl.TargetID, out var Target))
                 {
-                    if (Target.TargetOfLinks is null)
-                    {
-                        Target.TargetOfLinks = new List<StructureLink>();
-                    }
+                    Target.TargetOfLinks ??= [];
 
                     Target.TargetOfLinks.Add(sl);
                 }
@@ -93,7 +84,7 @@ namespace AnnotationVizLib.SimpleOData
 
         private static IDictionary<ulong, Structure> GetNetworkCells(Simple.OData.Client.ODataClient client, ICollection<long> StructureIDs, uint numHops)
         {
-            var annotations = new ODataFeedAnnotations();
+            ODataFeedAnnotations annotations = new();
             IDictionary<ulong, Structure> NetworkStructures = new SortedDictionary<ulong, Structure>();
 
             Task<IEnumerable<IDictionary<string, object>>> taskStructuresDicts = client.FindEntriesAsync(string.Format("Network(IDs=@IDs,Hops={1})?@IDs={0}", StructureIDs.ToODataArrayParameterString(), numHops), annotations);
@@ -127,9 +118,9 @@ namespace AnnotationVizLib.SimpleOData
 
         private static ICollection<Structure> GetNetworkChildStructures(Simple.OData.Client.ODataClient client, ICollection<long> StructureIDs, uint numHops)
         {
-            List<Structure> listNetworkChildStructures = new List<SimpleOData.Structure>();
+            List<Structure> listNetworkChildStructures = [];
 
-            ODataFeedAnnotations annotations = new ODataFeedAnnotations();
+            ODataFeedAnnotations annotations = new();
             Task<IEnumerable<IDictionary<string, object>>> taskStructuresDicts = client.FindEntriesAsync(string.Format("NetworkChildStructures(IDs=@IDs,Hops={1})?@IDs={0}", StructureIDs.ToODataArrayParameterString(), numHops), annotations);
             Debug.Assert(taskStructuresDicts != null);
 
@@ -162,13 +153,13 @@ namespace AnnotationVizLib.SimpleOData
 
         private static ICollection<StructureLink> GetNetworkLinks(Simple.OData.Client.ODataClient client, ICollection<long> StructureIDs, uint numHops)
         {
-            ODataFeedAnnotations annotations = new ODataFeedAnnotations();
+            ODataFeedAnnotations annotations = new();
             Task<IEnumerable<IDictionary<string, object>>> taskStructureLinksDict = client.FindEntriesAsync(string.Format("NetworkLinks(IDs=@IDs,Hops={1})?@IDs={0}", StructureIDs.ToODataArrayParameterString(), numHops), annotations);
             Debug.Assert(taskStructureLinksDict != null);
 
             taskStructureLinksDict.Wait();
             IEnumerable<IDictionary<string, object>> StructureLinksDicts = taskStructureLinksDict.Result;
-            List<StructureLink> listStructureLinks = new List<SimpleOData.StructureLink>();
+            List<StructureLink> listStructureLinks = [];
 
             foreach (IDictionary<string, object> dict in StructureLinksDicts)
             {
@@ -196,7 +187,7 @@ namespace AnnotationVizLib.SimpleOData
 
         private static void PopulateStructureTypeDictionary(IEnumerable<StructureType> types)
         {
-            SimpleODataNeuronFactory.IDToStructureType = new SortedDictionary<ulong, StructureType>();
+            SimpleODataNeuronFactory.IDToStructureType = [];
 
             foreach (StructureType t in types)
             {
@@ -226,7 +217,7 @@ namespace AnnotationVizLib.SimpleOData
         {
             foreach (IStructureReadOnly s in structs)
             {
-                NeuronNode node = new NeuronNode((long)s.ID, s);
+                NeuronNode node = new((long)s.ID, s);
                 graph.AddNode(node);
             }
         }
@@ -237,7 +228,7 @@ namespace AnnotationVizLib.SimpleOData
             {
                 //After this point both nodes are already in the graph and we can create an edge
                 if (IDToStructure.TryGetValue(link.SourceID, out var LinkSource) && IDToStructure.TryGetValue(link.TargetID, out var LinkTarget))
-                {  
+                {
                     if (LinkTarget.ParentID.HasValue && LinkSource.ParentID.HasValue)
                     {
                         string SourceTypeName = "";
@@ -246,7 +237,7 @@ namespace AnnotationVizLib.SimpleOData
                             SourceTypeName = structureType.Name;
                         }
 
-                        NeuronEdge E = new NeuronEdge((long)LinkSource.ParentID.Value, (long)LinkTarget.ParentID.Value, link, SourceTypeName);
+                        NeuronEdge E = new((long)LinkSource.ParentID.Value, (long)LinkTarget.ParentID.Value, link, SourceTypeName);
 
                         if (graph.Edges.TryGetValue(E, out var edges))
                         {

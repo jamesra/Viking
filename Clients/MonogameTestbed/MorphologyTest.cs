@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Geometry.Meshing;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -16,7 +16,7 @@ namespace MonogameTestbed
     {
         public string Title => this.GetType().Name;
 
-        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
+        readonly GamePadStateTracker Gamepad = new();
 
         VikingXNAGraphics.MeshView<VertexPositionNormalColor> meshView;
 
@@ -26,7 +26,7 @@ namespace MonogameTestbed
 
         LabelView labelCamera;
 
-        
+
 
 
         bool _initialized = false;
@@ -98,12 +98,12 @@ namespace MonogameTestbed
         */
 
         //Polygons with internal polygon merging with external concavity
-        readonly long[] TroubleIDS = new long[] {
+        readonly long[] TroubleIDS = [
           1333661, //Z = 2
           1333662, //Z = 3
           1333665 //Z =2
 
-        };
+        ];
 
         public Task Init(MonoTestbed window)
         {
@@ -115,7 +115,7 @@ namespace MonogameTestbed
                 MinDrawDistance = 1
             };
             this.meshView = new MeshView<VertexPositionNormalColor>();
-             
+
             labelCamera = new LabelView("", new GridVector2(0, 100));
 
             //meshes = InitSmallSmoothModelFromOData(144287, ENDPOINT.TEST);
@@ -125,7 +125,7 @@ namespace MonogameTestbed
             //meshes = InitSmallSmoothModelFromOData(new long[] { 144302 }, ENDPOINT.TEST);
             //meshes = InitSmallSmoothModelFromOData(476, ENDPOINT.RC1);
             //meshes = InitSmallSmoothModelFromOData(new long[] { 192 }, ENDPOINT.RPC1);
-            meshes = InitSmallSmoothModelFromOData(new long[] { 2713 }, Endpoint.RPC1);
+            meshes = InitSmallSmoothModelFromOData([2713], Endpoint.RPC1);
             //meshes = InitSmallSmoothModelFromOData(5554, ENDPOINT.RC2);
             //meshes = InitSmallSmoothModelFromOData(new long[] { 1650, 858 }, ENDPOINT.INFERIORMONKEY);
 
@@ -154,8 +154,8 @@ namespace MonogameTestbed
             //this.Scene.Camera.Position += new Vector3((float)bbox.Width, (float)bbox.Height, (float)bbox.Depth);
             //this.Scene.Camera.Rotation = new Vector3(4.986171f, 1.67181f, 0);
             //this.Scene.Camera.LookAt = meshes.First().BoundingBox.CenterPoint.ToXNAVector3();            
-             
-            System.Random r = new Random();
+
+            System.Random r = new();
             foreach (Mesh3D<IVertex3D<ulong>> mesh in meshes)
             {
                 meshView.models.Add(mesh.ToVertexPositionNormalColorMeshModel(new Color((float)r.NextDouble(), (float)r.NextDouble(), (float)r.NextDouble())));
@@ -171,28 +171,28 @@ namespace MonogameTestbed
         /// <summary>
         /// Create a tube of circles offset slighty each section
         /// </summary>
-        public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallTopologyModelFromOData(ulong CellID, Endpoint endpoint)
+        public static ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallTopologyModelFromOData(ulong CellID, Endpoint endpoint)
         {
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { (long)CellID }, true, DataSource.EndpointMap[endpoint]); 
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { (long)CellID }, true, DataSource.EndpointMap[endpoint]);
 
             // TODO: TopologyMeshGenerator not available - need to implement or find alternative
             // MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
             // return new Mesh3D<IVertex3D<ulong>>[] { MorphologyMesh.TopologyMeshGenerator.Generate(graph.Subgraphs.Values.First()) };
-            return new Mesh3D<IVertex3D<ulong>>[0];
+            return Array.Empty<Mesh3D<IVertex3D<ulong>>>();
         }
 
         /// <summary>
         /// Create a tube of circles offset slighty each section
         /// </summary>
         public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallSmoothModelFromOData(long[] CellIDs, Endpoint endpoint)
-        { 
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(CellIDs.Select(id => id).ToArray(), true, DataSource.EndpointMap[endpoint]);
+        {
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData([.. CellIDs.Select(id => id)], true, DataSource.EndpointMap[endpoint]);
 
             //SelectZRange(graph, 231, 235);
             //SelectSubsetOfIDs(graph, TroubleIDS);
 
             AnnotationVizLib.MorphologyGraph.SmoothProcesses(graph);
-            
+
             //MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
             return RecursivelyGenerateMeshes(graph);
         }
@@ -202,32 +202,15 @@ namespace MonogameTestbed
         /// </summary>
         public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallSmoothModelFromODataLocations(long[] LocationIDs, Endpoint endpoint)
         {
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(LocationIDs.Select(id => id).ToArray(), true, DataSource.EndpointMap[endpoint]);
-                         
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData([.. LocationIDs.Select(id => id)], true, DataSource.EndpointMap[endpoint]);
+
             //MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
             return RecursivelyGenerateMeshes(graph);
         }
-         
-        private void SelectZRange(AnnotationVizLib.MorphologyGraph graph, int StartZ, int EndZ)
+
+        private static void SelectZRange(AnnotationVizLib.MorphologyGraph graph, int StartZ, int EndZ)
         {
-            AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.Where(n => n.UnscaledZ < StartZ || n.UnscaledZ > EndZ).ToArray();
-            
-            for(int i = 0; i < nodes.Length; i++)
-            {
-                graph.RemoveNode(nodes[i].Key);
-            }
-
-            foreach(AnnotationVizLib.MorphologyGraph subgraph in graph.Subgraphs.Values)
-            {
-                SelectZRange(subgraph, StartZ, EndZ);
-            }
-
-            return;
-        }
-
-        private void SelectSubsetOfIDs(AnnotationVizLib.MorphologyGraph graph, long[] IDs)
-        {
-            AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.Where(n => !IDs.Contains((long)n.Key)).ToArray();
+            AnnotationVizLib.MorphologyNode[] nodes = [.. graph.Nodes.Values.Where(n => n.UnscaledZ < StartZ || n.UnscaledZ > EndZ)];
 
             for (int i = 0; i < nodes.Length; i++)
             {
@@ -236,25 +219,42 @@ namespace MonogameTestbed
 
             foreach (AnnotationVizLib.MorphologyGraph subgraph in graph.Subgraphs.Values)
             {
-                SelectSubsetOfIDs(subgraph, IDs); 
+                SelectZRange(subgraph, StartZ, EndZ);
             }
-            
+
+            return;
+        }
+
+        private static void SelectSubsetOfIDs(AnnotationVizLib.MorphologyGraph graph, long[] IDs)
+        {
+            AnnotationVizLib.MorphologyNode[] nodes = [.. graph.Nodes.Values.Where(n => !IDs.Contains((long)n.Key))];
+
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                graph.RemoveNode(nodes[i].Key);
+            }
+
+            foreach (AnnotationVizLib.MorphologyGraph subgraph in graph.Subgraphs.Values)
+            {
+                SelectSubsetOfIDs(subgraph, IDs);
+            }
+
             return;
         }
 
 
-        private ICollection<Mesh3D<IVertex3D<ulong>>> RecursivelyGenerateMeshes(AnnotationVizLib.MorphologyGraph graph)
+        private static ICollection<Mesh3D<IVertex3D<ulong>>> RecursivelyGenerateMeshes(AnnotationVizLib.MorphologyGraph graph)
         {
-            List<Mesh3D<IVertex3D<ulong>>> listMeshes = new List<Mesh3D<IVertex3D<ulong>>>();
+            List<Mesh3D<IVertex3D<ulong>>> listMeshes = [];
 
             // TODO: SmoothMeshGenerator not available - need to implement or find alternative
             // Mesh3D<IVertex3D<ulong>> structureMesh = MorphologyMesh.SmoothMeshGenerator.Generate(graph);
             // if(structureMesh != null)
             //     listMeshes.Add(structureMesh);
 
-            foreach(var subgraph in graph.Subgraphs.Values)
+            foreach (var subgraph in graph.Subgraphs.Values)
             {
-                listMeshes.AddRange( RecursivelyGenerateMeshes(subgraph) );
+                listMeshes.AddRange(RecursivelyGenerateMeshes(subgraph));
             }
 
             return listMeshes;
@@ -282,14 +282,14 @@ namespace MonogameTestbed
             VolumePosition /= new GridVector3(2.18, 2.18, -90);
 
             labelCamera.Text = string.Format("{0}\n{1}\n{2}", Scene.Camera.Position, VolumePosition, Scene.Camera.Rotation);
-              
+
         }
 
         public void Draw(MonoTestbed window)
         {
             window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
 
-            DepthStencilState dstate = new DepthStencilState
+            DepthStencilState dstate = new()
             {
                 DepthBufferEnable = true,
                 StencilEnable = false,
@@ -299,12 +299,12 @@ namespace MonogameTestbed
 
             window.GraphicsDevice.DepthStencilState = dstate;
             //window.GraphicsDevice.BlendState = BlendState.Opaque;
-            meshView.Draw(window.GraphicsDevice, this.Scene, CullMode.None); 
+            meshView.Draw(window.GraphicsDevice, this.Scene, CullMode.None);
 
-            
+
             window.spriteBatch.Begin();
             labelCamera.Draw(window.spriteBatch, window.fontArial, window.Scene);
-            window.spriteBatch.End(); 
+            window.spriteBatch.End();
         }
     }
 }

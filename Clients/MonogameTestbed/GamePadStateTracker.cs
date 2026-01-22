@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
@@ -8,8 +8,8 @@ namespace MonogameTestbed
     {
         private GamePadState LastState;
         public GamePadState CurrentState;
-         
-        static readonly PlayerIndex[] inputs = new PlayerIndex[] { PlayerIndex.One, PlayerIndex.Two, PlayerIndex.Three, PlayerIndex.Four };
+
+        static readonly PlayerIndex[] inputs = [PlayerIndex.One, PlayerIndex.Two, PlayerIndex.Three, PlayerIndex.Four];
 
         private static bool ControllerErrorPrinted = false;
 
@@ -40,7 +40,7 @@ namespace MonogameTestbed
             }
             catch (Exception e)
             {
-                if(false == ControllerErrorPrinted)
+                if (false == ControllerErrorPrinted)
                     Console.WriteLine($"Unable to initialize controller input.  The program will still run but a gamepad cannot be used for input.\n{e}");
 
                 ControllerErrorPrinted = true;
@@ -54,7 +54,7 @@ namespace MonogameTestbed
         public void Update(GamePadState state)
         {
             LastState = CurrentState;
-            CurrentState = state;  
+            CurrentState = state;
         }
 
         public bool Start_Clicked => CurrentState.Buttons.Start == ButtonState.Pressed && (LastState.Buttons.Start != CurrentState.Buttons.Start);
@@ -70,7 +70,7 @@ namespace MonogameTestbed
         public bool Y_Clicked => CurrentState.Buttons.Y == ButtonState.Pressed && (LastState.Buttons.Y != CurrentState.Buttons.Y);
 
         public bool LeftShoulder_Clicked =>
-            CurrentState.Buttons.LeftShoulder == ButtonState.Pressed && 
+            CurrentState.Buttons.LeftShoulder == ButtonState.Pressed &&
             (LastState.Buttons.LeftShoulder != CurrentState.Buttons.LeftShoulder);
 
         public bool RightShoulder_Clicked =>

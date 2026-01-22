@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -8,10 +8,7 @@ namespace Geometry.Meshing
 {
     public readonly struct EdgeKey : IComparable<EdgeKey>, IEquatable<EdgeKey>, IComparable<IEdgeKey>, IEquatable<IEdgeKey>, IEdgeKey
     {
-        public int[] Verticies //The two verticies defining the edge
-        {
-            get { return new int[] { A, B }; }
-        }
+        public int[] Verticies => [A, B]; //The two verticies defining the edge
 
         public int A
         {
@@ -25,7 +22,7 @@ namespace Geometry.Meshing
 
         public EdgeKey(int a, int b)
         {
-            int[] ordered = a < b ? new int[] { a, b } : new int[] { b, a };
+            int[] ordered = a < b ? [a, b] : [b, a];
             this.A = ordered[0];
             this.B = ordered[1];
         }
@@ -35,25 +32,13 @@ namespace Geometry.Meshing
 
         }
 
-        public static bool operator ==(EdgeKey A, EdgeKey B)
-        {
-            return A.Equals(B);
-        }
+        public static bool operator ==(EdgeKey A, EdgeKey B) => A.Equals(B);
 
-        public static bool operator !=(EdgeKey A, EdgeKey B)
-        {
-            return !A.Equals(B);
-        }
+        public static bool operator !=(EdgeKey A, EdgeKey B) => !A.Equals(B);
 
-        public static bool operator ==(EdgeKey A, IEdgeKey B)
-        {
-            return A.Equals(B);
-        }
+        public static bool operator ==(EdgeKey A, IEdgeKey B) => A.Equals(B);
 
-        public static bool operator !=(EdgeKey A, IEdgeKey B)
-        {
-            return !A.Equals(B);
-        }
+        public static bool operator !=(EdgeKey A, IEdgeKey B) => !A.Equals(B);
 
         public int CompareTo(EdgeKey other)
         {
@@ -77,10 +62,7 @@ namespace Geometry.Meshing
             return comparison;
         }
 
-        public bool Equals(EdgeKey other)
-        {  
-            return this.A == other.A && this.B == other.B;
-        }
+        public bool Equals(EdgeKey other) => this.A == other.A && this.B == other.B;
 
         public bool Equals(IEdgeKey other)
         {
@@ -100,15 +82,9 @@ namespace Geometry.Meshing
             return false;
         }
 
-        public override int GetHashCode()
-        {
-            return (int)(((long)A * (long)B) & int.MaxValue);
-        }
+        public override int GetHashCode() => (int)(((long)A * (long)B) & int.MaxValue);
 
-        public override string ToString()
-        {
-            return $"{A}-{B}";
-        }
+        public override string ToString() => $"{A}-{B}";
 
         public int OppositeEnd(int value)
         {
@@ -134,10 +110,7 @@ namespace Geometry.Meshing
             }
         }
 
-        public bool Contains(long vertex)
-        {
-            return this.A == vertex || this.B == vertex;
-        }
+        public bool Contains(long vertex) => this.A == vertex || this.B == vertex;
 
         /// <summary>
         /// True if the edges share a vertex, but are not identical
@@ -170,19 +143,13 @@ namespace Geometry.Meshing
         {
             get
             {
-                if (_ImmutableFaces is null)
-                {
-                    _ImmutableFaces = _Faces.ToImmutableSortedSet();
-                }
+                _ImmutableFaces ??= [.. _Faces];
 
                 return this._ImmutableFaces;
             }
         }
 
-        public static IEdge Create(int A, int B)
-        {
-            return new Edge(A, B);
-        }
+        public static IEdge Create(int A, int B) => new Edge(A, B);
 
         /// <summary>
         /// Duplicate functions are used to create a copy of the edge, with index numbers adjusted by the offset, without any face data.
@@ -193,13 +160,13 @@ namespace Geometry.Meshing
         /// <returns></returns>
         public static Edge CreateOffsetCopy(Edge oldEdge, int offset)
         {
-            Edge newEdge = new Meshing.Edge(oldEdge.A + offset, oldEdge.B + offset);
+            Edge newEdge = new(oldEdge.A + offset, oldEdge.B + offset);
             return newEdge;
         }
 
         public static IEdge CreateOffsetCopy(IEdge oldEdge, int A, int B)
         {
-            Edge newEdge = new Meshing.Edge(A, B);
+            Edge newEdge = new(A, B);
             return newEdge;
         }
 
@@ -208,28 +175,28 @@ namespace Geometry.Meshing
             if (a == b)
                 throw new ArgumentException("Edges cannot have the same start and end point");
 
-            _Faces = new SortedSet<IFace>();
+            _Faces = [];
             _ImmutableFaces = null;
             Key = new EdgeKey(a, b);
         }
 
         public Edge(EdgeKey key)
         {
-            _Faces = new SortedSet<IFace>();
+            _Faces = [];
             _ImmutableFaces = null;
             Key = key;
         }
 
         public Edge(IEdgeKey key)
         {
-            _Faces = new SortedSet<IFace>();
+            _Faces = [];
             _ImmutableFaces = null;
             Key = key;
         }
 
         public IEdge DeepCopyWithOffset(int VertexIndexOffset)
         {
-            Edge e = new Meshing.Edge(A + VertexIndexOffset, B + VertexIndexOffset);
+            Edge e = new(A + VertexIndexOffset, B + VertexIndexOffset);
 
             return e;
         }
@@ -277,8 +244,8 @@ namespace Geometry.Meshing
         public static bool operator !=(Edge A, Edge B)
         {
             if (A is null)
-                return ! (B is null);
-            
+                return B is not null;
+
             return !A.Equals(B);
         }
 
@@ -293,25 +260,16 @@ namespace Geometry.Meshing
         public static bool operator !=(Edge A, IEdge B)
         {
             if (A is null)
-                return !(B is null);
+                return B is not null;
 
             return !A.Equals(B);
         }
 
-        public int CompareTo(Edge other)
-        {
-            return this.Key.CompareTo(other.Key);
-        }
+        public int CompareTo(Edge other) => this.Key.CompareTo(other.Key);
 
-        public int CompareTo(IEdge other)
-        {
-            return this.Key.CompareTo(other.Key);
-        }
+        public int CompareTo(IEdge other) => this.Key.CompareTo(other.Key);
 
-        public int CompareTo(IEdgeKey other)
-        {
-            return this.Key.CompareTo(other);
-        }
+        public int CompareTo(IEdgeKey other) => this.Key.CompareTo(other);
 
         public bool Equals(Edge other)
         {
@@ -386,9 +344,9 @@ namespace Geometry.Meshing
 
         public virtual IEdge Clone()
         {
-            var e = new Edge(this.Key)
+            Edge e = new(this.Key)
             {
-                _ImmutableFaces = this.Faces.Select(f => f.Clone()).ToImmutableSortedSet()
+                _ImmutableFaces = [.. this.Faces.Select(f => f.Clone())]
             };
             return e;
         }
@@ -405,11 +363,11 @@ namespace Geometry.Meshing
             Debug.Assert(this.Faces.Count == 2, "Expected a triangulation when I wrote this function, future uses may render this assert meaningless");
             if (this.Faces.Count == 0)
             {
-                return Array.Empty<int>();
+                return [];
             }
             else if (this.Faces.Count == 1)
             {
-                return this.Faces[0].iVerts.ToArray();
+                return [.. this.Faces[0].iVerts];
             }
             else if (this.Faces.Count > 2)
             {
@@ -432,7 +390,7 @@ namespace Geometry.Meshing
                 IndexerB = new InfiniteIndexSet(FaceB.iVerts, FaceB.iVerts.IndexOf(this.B));
             }
 
-            List<long> boundary = new List<long>(FaceA.iVerts.Length + FaceB.iVerts.Length);
+            List<long> boundary = new(FaceA.iVerts.Length + FaceB.iVerts.Length);
             boundary.AddRange(IndexerA);
             boundary.AddRange(IndexerB);
 
@@ -440,7 +398,7 @@ namespace Geometry.Meshing
             boundary.RemoveAt(boundary.Count - 1);
             boundary.RemoveAt(IndexerA.Count);
 
-            return boundary.Select(i => (int)i).ToArray();
+            return [.. boundary.Select(i => (int)i)];
         }
     }
 }

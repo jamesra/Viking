@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Geometry.Meshing;
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
@@ -9,23 +9,23 @@ namespace VikingXNAGraphics
 {
     public class TriangulationView
     {
-        PointSet Points_X = new PointSet();
-        readonly PointSetView Points_X_View = new PointSetView(Color.White);
+        PointSet Points_X = [];
+        readonly PointSetView Points_X_View = new(Color.White);
 
         LabelView[] FaceLabels = null;
         LineView[] TriangulatedEdgeLineViews = null;
         LabelView[] TriangulatedEdgeLabels = null;
 
-        private readonly SortedList<IEdgeKey, LineView> EdgeLineViews = new SortedList<IEdgeKey, LineView>();
-        private readonly SortedList<IEdgeKey, LabelView> EdgeLineLabelsViews = new SortedList<IEdgeKey, LabelView>();
-        private readonly SortedList<IFace, LabelView> TriFaceLabels = new SortedList<IFace, LabelView>();
+        private readonly SortedList<IEdgeKey, LineView> EdgeLineViews = [];
+        private readonly SortedList<IEdgeKey, LabelView> EdgeLineLabelsViews = [];
+        private readonly SortedList<IFace, LabelView> TriFaceLabels = [];
 
         //double LineRadius = 1.5;
         Color LineColor = Color.Beige;
 
         readonly bool ShowMeshFaces = false;
 
-        MeshView<VertexPositionNormalColor> meshView = new MeshView<VertexPositionNormalColor>();
+        MeshView<VertexPositionNormalColor> meshView = new();
 
         GridRectangle BoundingBox;
 
@@ -36,7 +36,7 @@ namespace VikingXNAGraphics
         }
 
 
-        readonly System.Threading.ReaderWriterLockSlim RWLock = new System.Threading.ReaderWriterLockSlim();
+        readonly System.Threading.ReaderWriterLockSlim RWLock = new();
 
         public TriangulationView()
         {
@@ -58,7 +58,7 @@ namespace VikingXNAGraphics
 
                 if (mesh.Verticies.Count == 0)
                 {
-                    Points_X = new PointSet(); 
+                    Points_X = [];
                     FaceLabels = new LabelView[mesh.Faces.Count];
                     meshView = new MeshView<VertexPositionNormalColor>();
                     BoundingBox = new GridRectangle();
@@ -67,7 +67,7 @@ namespace VikingXNAGraphics
 
                 if ((Points_X.Count != mesh.Verticies.Count) || (Points_X.Points.First() != mesh.Verticies.First().Position))
                 {
-                    Points_X = new PointSet(mesh.Verticies.Select(v => v.Position + TranslationVector));
+                    Points_X = [.. mesh.Verticies.Select(v => v.Position + TranslationVector)];
                     Points_X_View.PointRadius = 2;
                     Points_X_View.Points = Points_X;
                     Points_X_View.LabelType = PointLabelType.INDEX;
@@ -75,29 +75,29 @@ namespace VikingXNAGraphics
 
                     GridRectangle rect = Points_X.BoundingBox();
                     rect = GridRectangle.Scale(rect, 1.05);
-                    BoundingBox = rect; 
+                    BoundingBox = rect;
                 }
 
-                SortedSet<IEdgeKey> edgesToAdd = new SortedSet<IEdgeKey>(mesh.Edges.Keys);
-                SortedSet<IEdgeKey> edgesToRemove = new SortedSet<IEdgeKey>(this.EdgeLineViews.Keys);
+                SortedSet<IEdgeKey> edgesToAdd = [.. mesh.Edges.Keys];
+                SortedSet<IEdgeKey> edgesToRemove = [.. this.EdgeLineViews.Keys];
 
                 edgesToRemove.ExceptWith(edgesToAdd);
                 edgesToAdd.ExceptWith(this.EdgeLineViews.Keys);
 
-                foreach(IEdgeKey edge in edgesToRemove)
+                foreach (IEdgeKey edge in edgesToRemove)
                 {
                     this.EdgeLineViews.Remove(edge);
-                    this.EdgeLineLabelsViews.Remove(edge); 
+                    this.EdgeLineLabelsViews.Remove(edge);
                 }
 
                 foreach (IEdgeKey edge in edgesToAdd)
                 {
-                    GridLineSegment edgeSeg = mesh.ToGridLineSegment(edge).Translate(TranslationVector); 
+                    GridLineSegment edgeSeg = mesh.ToGridLineSegment(edge).Translate(TranslationVector);
                     EdgeLineViews[edge] = new LineView(edgeSeg, 1.5, mesh[edge] as ConstrainedEdge != null ? Color.Yellow : Color.LightGray, LineStyle.Standard);
                     EdgeLineLabelsViews[edge] = new LabelView(edge.ToString(), edgeSeg, scaleFontWithScene: true, lineWidth: 2.0, color: Color.Black);
                 }
 
-                foreach(IEdgeKey edge in EdgeLineViews.Keys)
+                foreach (IEdgeKey edge in EdgeLineViews.Keys)
                 {
                     EdgeLineViews[edge].Color = mesh[edge] as ConstrainedEdge != null ? Color.Yellow : Color.LightGray;
                 }
@@ -116,21 +116,21 @@ namespace VikingXNAGraphics
                 }
                 */
 
-                SortedSet<IFace> facesToAdd = new SortedSet<IFace>(mesh.Faces);
-                SortedSet<IFace> facesToRemove = new SortedSet<IFace>(this.TriFaceLabels.Keys);
+                SortedSet<IFace> facesToAdd = [.. mesh.Faces];
+                SortedSet<IFace> facesToRemove = [.. this.TriFaceLabels.Keys];
 
                 facesToRemove.ExceptWith(facesToAdd);
                 facesToAdd.ExceptWith(this.TriFaceLabels.Keys);
 
                 foreach (IFace face in facesToRemove)
                 {
-                    this.TriFaceLabels.Remove(face); 
+                    this.TriFaceLabels.Remove(face);
                 }
 
                 foreach (IFace face in facesToAdd)
-                { 
+                {
                     this.TriFaceLabels[face] = new LabelView(face.ToString(),
-                                                                         new GridTriangle(face.iVerts.Select(iVert => mesh[iVert].Position + TranslationVector).ToArray()).BaryToVector(new GridVector2(1 / 3.0, 1 / 3.0)),
+                                                                         new GridTriangle([.. face.iVerts.Select(iVert => mesh[iVert].Position + TranslationVector)]).BaryToVector(new GridVector2(1 / 3.0, 1 / 3.0)),
                                                                          mesh.IsClockwise(face) ? Color.Red.SetAlpha(0.75f) : Color.LightBlue.SetAlpha(0.75f),
                                                                          scaleFontWithScene: true,
                                                                          fontSize: 2.0);
@@ -151,12 +151,12 @@ namespace VikingXNAGraphics
                     label.Color = Color.Blue.SetAlpha(0.5f);
                 }*/
 
-                TriangulatedEdgeLineViews = EdgeLineViews.Values.ToArray();
-                TriangulatedEdgeLabels = EdgeLineLabelsViews.Values.ToArray();
-                FaceLabels = TriFaceLabels.Values.ToArray();
+                TriangulatedEdgeLineViews = [.. EdgeLineViews.Values];
+                TriangulatedEdgeLabels = [.. EdgeLineLabelsViews.Values];
+                FaceLabels = [.. TriFaceLabels.Values];
 
-                
-                meshView = new MeshView<VertexPositionNormalColor>();      
+
+                meshView = new MeshView<VertexPositionNormalColor>();
                 /*
                 MeshModel<VertexPositionNormalColor> model = CreateMeshModel(mesh);
                 model.ModelMatrix = Matrix.CreateTranslation(TranslationVector.ToXNAVector3());
@@ -171,20 +171,20 @@ namespace VikingXNAGraphics
 
         static MeshModel<VertexPositionNormalColor> CreateMeshModel(IReadOnlyMesh2D<IVertex2D> mesh)
         {
-            MeshModel<VertexPositionNormalColor> model = new MeshModel<VertexPositionNormalColor>
+            MeshModel<VertexPositionNormalColor> model = new()
             {
-                Verticies = mesh.Verticies.Select(v => new VertexPositionNormalColor((v.Position).ToXNAVector3(0), Vector3.UnitZ, ColorExtensions.Random().SetAlpha(0.5f))).ToArray(),
-                Edges = mesh.Faces.SelectMany(f => f.iVerts).ToArray()
+                Verticies = [.. mesh.Verticies.Select(v => new VertexPositionNormalColor((v.Position).ToXNAVector3(0), Vector3.UnitZ, ColorExtensions.Random().SetAlpha(0.5f)))],
+                Edges = [.. mesh.Faces.SelectMany(f => f.iVerts)]
             };
             return model;
         }
 
         static MeshModel<VertexPositionNormalColor> CreateMeshModel(IReadOnlyMesh3D<IVertex3D> mesh)
         {
-            MeshModel<VertexPositionNormalColor> model = new MeshModel<VertexPositionNormalColor>
+            MeshModel<VertexPositionNormalColor> model = new()
             {
-                Verticies = mesh.Verticies.Select(v => new VertexPositionNormalColor(v.Position.ToXNAVector3(), Vector3.UnitZ, ColorExtensions.Random().SetAlpha(0.5f))).ToArray(),
-                Edges = mesh.Faces.SelectMany(f => f.iVerts).ToArray()
+                Verticies = [.. mesh.Verticies.Select(v => new VertexPositionNormalColor(v.Position.ToXNAVector3(), Vector3.UnitZ, ColorExtensions.Random().SetAlpha(0.5f)))],
+                Edges = [.. mesh.Faces.SelectMany(f => f.iVerts)]
             };
             return model;
         }
@@ -226,7 +226,7 @@ namespace VikingXNAGraphics
                     LabelView.Draw(window.spriteBatch, window.font, scene, this.FaceLabels);
                 }
 
-                
+
             }
             catch (System.ApplicationException)
             {

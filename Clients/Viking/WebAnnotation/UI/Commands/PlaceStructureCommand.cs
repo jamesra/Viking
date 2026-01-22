@@ -58,8 +58,8 @@ namespace WebAnnotation.UI.Commands
             //Create a new structure on left click
             if (e.Button.Left())
             {
-                //  Debug.Assert(obj == null, "This command should be inactive if Selected Object isn't a StructureTypeObj"); 
-                if (Type == null)
+                //  Debug.Assert(obj is null, "This command should be inactive if Selected Object isn't a StructureTypeObj"); 
+                if (Type is null)
                 {
                     return;
                 }
@@ -77,27 +77,26 @@ namespace WebAnnotation.UI.Commands
                 }
 
 
-                StructureObj newStruct = new StructureObj(Type.modelObj);
+                StructureObj newStruct = new(Type.modelObj);
 
-                LocationObj newLocation = new LocationObj(newStruct,
+                LocationObj newLocation = new(newStruct,
                                                 Parent.Section.Number,
                                                 Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE);
 
                 WebAnnotation.LocationActions.UpdateCircleLocationNoSaveCallback(newLocation, WorldPos, SectionPos, 16);
 
-                Parent.CommandQueue.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent, Type.Color, WorldPos,
-                        new ResizeCircleCommand.OnCommandSuccess((double radius) =>
-                        {
+                Parent.CommandQueue.EnqueueCommand(typeof(ResizeCircleCommand), [ Parent, Type.Color, WorldPos,
+                        new ResizeCircleCommand.OnCommandSuccess(radius => {
                             radius = radius < Global.MinRadius ? Global.MinRadius : radius;
                             WebAnnotation.LocationActions.UpdateCircleLocationNoSaveCallback(newLocation, WorldPos, SectionPos, radius);
-                        }) });
+                        }) ]);
                 if (Type.Parent != null)
                 {
                     //Enqueue extra command to select a parent
-                    Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStruct, newLocation });
+                    Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), [Parent, newStruct, newLocation]);
                 }
 
-                Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStruct, newLocation });
+                Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), [Parent, newStruct, newLocation]);
 
                 Execute();
             }
@@ -112,8 +111,8 @@ namespace WebAnnotation.UI.Commands
         public override void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect)
         {
             StructureType obj = Type;
-            //    Debug.Assert(obj == null, "This command should be inactive if Selected Object isn't a StructureTypeObj"); 
-            if (obj == null)
+            //    Debug.Assert(obj is null, "This command should be inactive if Selected Object isn't a StructureTypeObj"); 
+            if (obj is null)
             {
                 return;
             }

@@ -78,7 +78,7 @@ namespace TriangleNet.Voronoi.Legacy
             this.points = new Point[mesh.triangles.Count + mesh.hullsize];
             this.regions = new Dictionary<int, VoronoiRegion>(mesh.vertices.Count);
 
-            rayPoints = new Dictionary<int, Point>();
+            rayPoints = [];
             rayIndex = 0;
 
             bounds = new Rectangle();
@@ -131,9 +131,9 @@ namespace TriangleNet.Voronoi.Legacy
         /// <param name="region"></param>
         private void ConstructCell(VoronoiRegion region)
         {
-            var vertex = region.Generator as Vertex;
+            Vertex vertex = region.Generator as Vertex;
 
-            var vpoints = new List<Point>();
+            List<Point> vpoints = [];
 
             Otri f = default;
             Otri f_init = default;
@@ -322,14 +322,7 @@ namespace TriangleNet.Voronoi.Legacy
                 x2 = y2 = 0;
             }
 
-            if (t1 < t2)
-            {
-                intersect = new Point(x1, y1);
-            }
-            else
-            {
-                intersect = new Point(x2, y2);
-            }
+            intersect = t1 < t2 ? new Point(x1, y1) : new Point(x2, y2);
 
             return true;
         }
@@ -340,7 +333,7 @@ namespace TriangleNet.Voronoi.Legacy
         {
             // Copy edges
             Point first, last;
-            var edges = new List<IEdge>(this.Regions.Count * 2);
+            List<IEdge> edges = new(this.Regions.Count * 2);
             foreach (var region in this.Regions)
             {
                 first = null;

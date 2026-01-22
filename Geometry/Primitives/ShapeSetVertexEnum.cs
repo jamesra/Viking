@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -7,26 +7,18 @@ namespace Geometry
     /// <summary>
     /// Enumerate all verticies for a collection of _shapes
     /// </summary>
-    public class ShapeSetVertexEnum : IEnumerator<IShapeIndex>, IEnumerator, IEnumerable<IShapeIndex>, IEnumerable
+    public class ShapeSetVertexEnum(in IReadOnlyList<IShape2D> shapes, int iStartingShapeIndex = 0) : IEnumerator<IShapeIndex>, IEnumerator, IEnumerable<IShapeIndex>, IEnumerable
     {
-        IShapeIndex _curIndex;
+        IShapeIndex _curIndex = null;
 
-        readonly IReadOnlyList<IShape2D> _shapes;
+        readonly IReadOnlyList<IShape2D> _shapes = shapes;
 
         /// <summary>
         /// The index we are at in the list. Defaults to zero
         /// </summary>
-        private int _currentShapeIndex = 0;
+        private int _currentShapeIndex = iStartingShapeIndex;
 
         private IEnumerator _enumerator = null;
-
-
-        public ShapeSetVertexEnum(in IReadOnlyList<IShape2D> shapes, int iStartingShapeIndex = 0)
-        {
-            this._shapes = shapes;
-            _curIndex = null;
-            _currentShapeIndex = iStartingShapeIndex;
-        }
 
         public IShapeIndex Current
         {
@@ -46,13 +38,13 @@ namespace Geometry
             get
             {
                 if (_curIndex is null)
-                    throw new IndexOutOfRangeException("Current Index is undefined");                
+                    throw new IndexOutOfRangeException("Current Index is undefined");
 
                 return _curIndex;
             }
         }
 
-        public void Dispose() { GC.SuppressFinalize(this); }
+        public void Dispose() => GC.SuppressFinalize(this);
 
         /// <summary>
         /// Go to the next index, if the shape is closed we do not return the closed index twice. 
@@ -69,7 +61,7 @@ namespace Geometry
             }
 
             //We have an existing _enumerator
-            if(_enumerator.MoveNext())
+            if (_enumerator.MoveNext())
             {
                 _curIndex = (IShapeIndex)_enumerator.Current;
                 return true;
@@ -79,7 +71,7 @@ namespace Geometry
                 _currentShapeIndex += 1;
                 if (_currentShapeIndex >= _shapes.Count)
                     return false;
-                
+
                 _enumerator = GetNextEnumerator(_currentShapeIndex);
                 return MoveNext();
             }
@@ -93,7 +85,7 @@ namespace Geometry
             {
                 if (shape is GridPolygon poly)
                 {
-                    return new PolygonVertexEnum(poly, iShape, false).GetEnumerator(); 
+                    return new PolygonVertexEnum(poly, iShape, false).GetEnumerator();
                 }
 
                 throw new ArgumentException("Expected GridPolygon");
@@ -102,7 +94,7 @@ namespace Geometry
             {
                 if (shape is GridPolyline line)
                 {
-                    return new PolylineVertexEnum(line, iShape, false).GetEnumerator(); 
+                    return new PolylineVertexEnum(line, iShape, false).GetEnumerator();
                 }
 
                 throw new ArgumentException("Expected GridPolyline");
@@ -112,21 +104,12 @@ namespace Geometry
                 throw new NotImplementedException();
             }
         }
-         
 
-        public void Reset()
-        {
-            _curIndex = null;
-        }
 
-        public IEnumerator GetEnumerator()
-        {
-            return (IEnumerator<PolygonIndex>)this;
-        }
+        public void Reset() => _curIndex = null;
 
-        IEnumerator<IShapeIndex> IEnumerable<IShapeIndex>.GetEnumerator()
-        {
-            return (IEnumerator<IShapeIndex>)this;
-        }
+        public IEnumerator GetEnumerator() => (IEnumerator<PolygonIndex>)this;
+
+        IEnumerator<IShapeIndex> IEnumerable<IShapeIndex>.GetEnumerator() => (IEnumerator<IShapeIndex>)this;
     }
 }

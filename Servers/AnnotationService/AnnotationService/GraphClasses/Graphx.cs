@@ -43,17 +43,17 @@ namespace AnnotationService.Types
 
         public Graphx()
         {
-            EdgeList = new List<Edgex>();
+            EdgeList = [];
 
-            InvolvedCells = new List<long>();
+            InvolvedCells = [];
 
-            ReducedEdges = new List<long>();
+            ReducedEdges = [];
 
-            NodeList = new SortedDictionary<long, Structure>();
+            NodeList = [];
 
-            locationInfo = new SortedDictionary<long, LocationInfo>();
+            locationInfo = [];
 
-            zLocationForSynapses = new SortedDictionary<long, long>();
+            zLocationForSynapses = [];
         }
 
     }

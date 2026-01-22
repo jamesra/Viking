@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Reflection;
@@ -37,7 +37,7 @@ namespace EntityFrameworkExtras
             {
                 foreach (Type interfaceType in type.GetInterfaces())
                 {
-                    if (interfaceType.GetGenericTypeDefinition() == typeof (IList<>))
+                    if (interfaceType.GetGenericTypeDefinition() == typeof(IList<>))
                     {
                         return interfaceType.GetGenericArguments()[0];
                     }
@@ -45,7 +45,7 @@ namespace EntityFrameworkExtras
             }
 
             return null;
-             
+
         }
 
         public object GetUserDefinedTableValue(PropertyInfo propertyInfo, object storedProcedure)
@@ -53,7 +53,7 @@ namespace EntityFrameworkExtras
             Type enumerableType = GetCollectionType(propertyInfo.PropertyType);
             object propertyValue = propertyInfo.GetValue(storedProcedure, null);
 
-            var generator = new UserDefinedTableGenerator(enumerableType, propertyValue);
+            UserDefinedTableGenerator generator = new(enumerableType, propertyValue);
 
             DataTable table = generator.GenerateTable();
 

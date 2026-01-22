@@ -1,4 +1,4 @@
-﻿using ConnectomeDataModel;
+using ConnectomeDataModel;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNet.OData.Extensions;
 using Microsoft.Extensions.Logging;
@@ -20,19 +20,13 @@ namespace ConnectomeODataV4.Controllers
     builder.EntitySet<Location>("Locations"); 
     config.Routes.MapODataServiceRoute("odata", "odata", builder.GetEdmModel());
     */
-    public class LocationLinksController : ODataController
+    /// <summary>
+    /// Constructor with dependency injection
+    /// </summary>
+    public class LocationLinksController(ConnectomeEntities db, ILogger<LocationLinksController> logger) : ODataController
     {
-        private readonly ConnectomeEntities _db;
-        private readonly ILogger<LocationLinksController> _logger;
-
-        /// <summary>
-        /// Constructor with dependency injection
-        /// </summary>
-        public LocationLinksController(ConnectomeEntities db, ILogger<LocationLinksController> logger)
-        {
-            _db = db ?? throw new ArgumentNullException(nameof(db));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
+        private readonly ConnectomeEntities _db = db ?? throw new ArgumentNullException(nameof(db));
+        private readonly ILogger<LocationLinksController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // GET: odata/LocationLinks
         [EnableQuery(PageSize = WebApiConfig.PageSize)]
@@ -208,9 +202,6 @@ namespace ConnectomeODataV4.Controllers
 
         // No need for Dispose override - DI container handles disposal
 
-        private bool LocationLinkExists(long key)
-        {
-            return _db.LocationLinks.Count(e => e.A == key) > 0;
-        }
+        private bool LocationLinkExists(long key) => _db.LocationLinks.Count(e => e.A == key) > 0;
     }
 }

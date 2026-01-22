@@ -45,8 +45,8 @@ namespace TriangleNet.Voronoi
             {
                 var twin = edge.twin;
 
-                var v1 = (TVertex)edge.face.generator;
-                var v2 = (TVertex)twin.face.generator;
+                TVertex v1 = (TVertex)edge.face.generator;
+                TVertex v2 = (TVertex)twin.face.generator;
 
                 double dir = predicates.CounterClockwise(v1, v2, edge.origin);
 
@@ -69,7 +69,7 @@ namespace TriangleNet.Voronoi
             //int mark = GetBoundaryMark(v1);
 
             // The infinite vertex.
-            var v = (Point)edge.twin.origin;
+            Point v = (Point)edge.twin.origin;
 
             // The half-edge is the bisector of v1 and v2, so the projection onto the
             // boundary segment is actually its midpoint.
@@ -109,8 +109,8 @@ namespace TriangleNet.Voronoi
         private void HandleCase2(HalfEdge edge, TVertex v1, TVertex v2)
         {
             // The vertices of the infinite edge.
-            var p1 = (Point)edge.origin;
-            var p2 = (Point)edge.twin.origin;
+            Point p1 = (Point)edge.origin;
+            Point p2 = (Point)edge.twin.origin;
 
             // The two edges leaving p1, pointing into the mesh.
             var e1 = edge.twin.next;

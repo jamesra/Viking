@@ -53,7 +53,7 @@ namespace VikingXNAWinForms
         /// </summary>
         public ServiceContainer Services => services;
 
-        readonly ServiceContainer services = new ServiceContainer();
+        readonly ServiceContainer services = new();
 
         private Microsoft.Xna.Framework.Content.ContentManager? _Content;
         public Microsoft.Xna.Framework.Content.ContentManager Content =>
@@ -124,17 +124,10 @@ namespace VikingXNAWinForms
         /// </summary>
         protected override void Dispose(bool disposing)
         {
-            if (graphicsDeviceService != null)
-            {
-                graphicsDeviceService.Release(disposing);
-                graphicsDeviceService = null;
-            }
-
-            if (_Content != null)
-            {
-                _Content.Dispose();
-                _Content = null;
-            }
+            graphicsDeviceService?.Release(disposing);
+            graphicsDeviceService = null;
+            _Content?.Dispose();
+            _Content = null;
 
             base.Dispose(disposing);
         }
@@ -161,20 +154,20 @@ namespace VikingXNAWinForms
                 try
                 {
 #endif
-                PaintCallRefCount++;
-                // Draw the control using the GraphicsDevice.
-                Draw();
-                EndDraw();
+                    PaintCallRefCount++;
+                    // Draw the control using the GraphicsDevice.
+                    Draw();
+                    EndDraw();
 #if !DEBUG
                 }
                 catch (Exception except)
                 {
-                    throw except; 
+                    throw;
                 }
                 finally
                 {
 #endif
-                PaintCallRefCount--;
+                    PaintCallRefCount--;
 #if !DEBUG
                 }
 #endif
@@ -214,10 +207,10 @@ namespace VikingXNAWinForms
             // largest of these controls. But what if we are currently drawing
             // a smaller control? To avoid unwanted stretching, we set the
             // viewport to only use the top left portion of the full backbuffer.
-            if (Device == null)
+            if (Device is null)
                 return "Graphics device is not available";
 
-            Viewport viewport = new Viewport
+            Viewport viewport = new()
             {
                 X = 0,
                 Y = 0,
@@ -249,14 +242,14 @@ namespace VikingXNAWinForms
             try
             {
 #endif
-            if (Device == null)
-                return;
+                if (Device is null)
+                    return;
 
-            Rectangle sourceRectangle = new Rectangle(0, 0, ClientSize.Width,
-                                                            ClientSize.Height);
+                Rectangle sourceRectangle = new(0, 0, ClientSize.Width,
+                                                                ClientSize.Height);
 
-            if (Device.GraphicsDeviceStatus == GraphicsDeviceStatus.Normal)
-                Device.Present(); //(sourceRectangle, null, this.Handle);
+                if (Device.GraphicsDeviceStatus == GraphicsDeviceStatus.Normal)
+                    Device.Present(); //(sourceRectangle, null, this.Handle);
 #if !DEBUG
             }
             catch
@@ -277,7 +270,7 @@ namespace VikingXNAWinForms
         /// </summary>
         string? HandleDeviceReset()
         {
-            if (Device == null)
+            if (Device is null)
                 return "Graphics device is not available";
 
             bool deviceNeedsReset = false;
@@ -305,7 +298,7 @@ namespace VikingXNAWinForms
             // Do we need to reset the device?
             if (deviceNeedsReset)
             {
-                if (graphicsDeviceService == null)
+                if (graphicsDeviceService is null)
                     return "Graphics device service is not available";
 
                 try
@@ -332,16 +325,12 @@ namespace VikingXNAWinForms
         {
             graphics.Clear(Color.CornflowerBlue);
 
-            using (Brush brush = new SolidBrush(Color.Black))
-            {
-                using (StringFormat format = new StringFormat())
-                {
-                    format.Alignment = StringAlignment.Center;
-                    format.LineAlignment = StringAlignment.Center;
+            using Brush brush = new SolidBrush(Color.Black);
+            using StringFormat format = new();
+            format.Alignment = StringAlignment.Center;
+            format.LineAlignment = StringAlignment.Center;
 
-                    graphics.DrawString(text, Font, brush, ClientRectangle, format);
-                }
-            }
+            graphics.DrawString(text, Font, brush, ClientRectangle, format);
         }
 
 
@@ -364,19 +353,13 @@ namespace VikingXNAWinForms
         /// <summary>
         /// Derived classes override this to initialize their drawing code.
         /// </summary>
-        protected virtual void Initialize()
-        {
-            throw new NotImplementedException("GraphicsDeviceControl::Initialize must be implemented");
-        }
+        protected virtual void Initialize() => throw new NotImplementedException("GraphicsDeviceControl::Initialize must be implemented");
 
 
         /// <summary>
         /// Derived classes override this to draw themselves using the GraphicsDevice.
         /// </summary>
-        protected virtual void Draw()
-        {
-            throw new NotImplementedException("GraphicsDeviceControl::Draw must be implemented");
-        }
+        protected virtual void Draw() => throw new NotImplementedException("GraphicsDeviceControl::Draw must be implemented");
 
 
         #endregion

@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -20,7 +20,7 @@ namespace VikingXNAGraphics
             {
                 throw new ArgumentException("Cannot create a curve with fewer than two control points");
             }
-            else if(cps.Count == 2 && TryToClose)
+            else if (cps.Count == 2 && TryToClose)
             {
                 throw new ArgumentException("Cannot close a curve with only two points");
             }
@@ -30,14 +30,14 @@ namespace VikingXNAGraphics
 
             if (NumInterpolations == 0)
             {
-                this.ControlPoints = cps.ToArray();
+                this.ControlPoints = [.. cps];
             }
-            
+
             if (TryCloseCurve && cps.Count > 2)
             {
                 bool Reverse = cps.ToArray().AreClockwise();
                 ReversedOrder = Reverse;
-                this.ControlPoints = Reverse ? cps.Reverse().ToArray() : cps.ToArray();
+                this.ControlPoints = Reverse ? [.. ((IEnumerable<GridVector2>)cps).Reverse()] : [.. cps];
             }
             else
                 this.ControlPoints = ReverseControlPointsIfTextUpsideDown(cps, out ReversedOrder);
@@ -50,10 +50,10 @@ namespace VikingXNAGraphics
             if (cps.First().X > cps.Last().X)
             {
                 Reversed = true;
-                return cps.Reverse().ToArray();
+                return [.. ((IEnumerable<GridVector2>)cps).Reverse()];
             }
-            
-            return cps.ToArray();
+
+            return [.. cps];
         }
 
         /// <summary>
@@ -111,7 +111,7 @@ namespace VikingXNAGraphics
                 iEnd = ControlPoints.Length - 1;
 
             bool EndAtLastVertex = false;
-            while(iEnd.Value >= ControlPoints.Length)
+            while (iEnd.Value >= ControlPoints.Length)
             {
                 EndAtLastVertex = true;
                 iEnd -= ControlPoints.Length;
@@ -126,7 +126,7 @@ namespace VikingXNAGraphics
             int iCurveStart = FindIndex(_CurvePoints, startControlPoint);
             int iCurveEnd = FindIndex(_CurvePoints, endControlPoint);
 
-            if(EndAtLastVertex)
+            if (EndAtLastVertex)
             {
                 iCurveEnd = _CurvePoints.Length;
             }
@@ -151,9 +151,9 @@ namespace VikingXNAGraphics
             //If we reversed the order of the input array we need to reverse the start and end points
             GridVector2[] Points = new GridVector2[_CurvePoints.Length];
 
-            if(ReversedOrder)
+            if (ReversedOrder)
             {
-                Points = _CurvePoints.Reverse().ToArray();
+                Points = [.. ((IEnumerable<GridVector2>)_CurvePoints).Reverse()];
             }
             else
             {
@@ -165,7 +165,7 @@ namespace VikingXNAGraphics
 
             //If our end curve is less than our start point we may be dealing with a closed curve where the start and end verticies are the same.
             //If we are not then FindIndex throws an ArgumentException
-            if(iCurveEnd < iCurveStart)
+            if (iCurveEnd < iCurveStart)
             {
                 iCurveEnd = FindIndex(Points, endControlPoint, iCurveEnd + 1);
             }
@@ -188,9 +188,9 @@ namespace VikingXNAGraphics
         /// <returns></returns>
         private static int FindIndex(GridVector2[] array, GridVector2 value, int SearchStart = 0)
         {
-            for(int i = SearchStart; i < array.Length; i++)
+            for (int i = SearchStart; i < array.Length; i++)
             {
-                if(array[i] == value)
+                if (array[i] == value)
                 {
                     return i;
                 }
@@ -230,10 +230,7 @@ namespace VikingXNAGraphics
             Array.Copy(array, cps, array.Length - 1);
             return cps;
         }
-         
-        public void RecalculateCurvePoints()
-        {
-            this._CurvePoints = this._ControlPoints.CalculateCurvePoints(this._NumInterpolations, this._TryCloseCurve).ToArray();
-        }
+
+        public void RecalculateCurvePoints() => this._CurvePoints = [.. this._ControlPoints.CalculateCurvePoints(this._NumInterpolations, this._TryCloseCurve)];
     }
 }

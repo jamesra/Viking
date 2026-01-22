@@ -1,4 +1,4 @@
-﻿using AnnotationService.Types;
+using AnnotationService.Types;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -22,11 +22,8 @@ namespace WebAnnotationModel
         /// When we create an object we don't know the ID the database will give it.  We use this value on the local machine until the DB
         /// tells us the new ID on insert
         /// </summary>
-        static readonly KEYGEN keyGenerator = new KEYGEN();
-        public KEY GetTempKey()
-        {
-            return keyGenerator.NextKey();
-        }
+        static readonly KEYGEN keyGenerator = new();
+        public KEY GetTempKey() => keyGenerator.NextKey();
 
         /// <summary>
         /// Save all changes to locations, returns true if the method completed without errors, otherwise false
@@ -41,7 +38,7 @@ namespace WebAnnotationModel
                 return true;
 
             ChangeInventory<OBJECT> inventory;
-            List<OBJECT> output = new List<OBJECT>(input.Count);
+            List<OBJECT> output = new(input.Count);
             List<WCFOBJECT> changedDBObj = null;
             try
             {
@@ -52,13 +49,14 @@ namespace WebAnnotationModel
                 {
                     changedDBObj.Add(dbObj.GetData());
                 }
-                 
 
-                KEY[] newIDs = new KEY[0];
-                try { 
+
+                KEY[] newIDs = [];
+                try
+                {
                     var proxy = CreateProxy();
                     {
-                        newIDs = ProxyUpdate((INTERFACE)proxy, changedDBObj.ToArray());
+                        newIDs = ProxyUpdate((INTERFACE)proxy, [.. changedDBObj]);
                     }
                 }
                 catch (Exception e)
@@ -66,7 +64,7 @@ namespace WebAnnotationModel
                     Trace.WriteLine("An error occurred during the update:\n" + e.Message);
                     return false;
                 }
-                
+
                 Debug.Assert(changedDBObj.Count == newIDs.Length);
 
                 inventory = ProcessUpdateResults(newIDs, input, changedDBObj);
@@ -77,13 +75,12 @@ namespace WebAnnotationModel
 
                 if (changedDBObj != null)
                 {
-                    List<OBJECT> listDeleted = new List<OBJECT>(changedDBObj.Count);
+                    List<OBJECT> listDeleted = new(changedDBObj.Count);
                     //Update ID's of new objects
                     for (int iObj = 0; iObj < changedDBObj.Count; iObj++)
                     {
                         WCFOBJECT data = changedDBObj[iObj];
-                        WCFObjBaseWithKey<KEY, WCFOBJECT> keyObj = data as WCFObjBaseWithKey<KEY, WCFOBJECT>;
-                        if (keyObj is null)
+                        if (data is not WCFObjBaseWithKey<KEY, WCFOBJECT> keyObj)
                         {
                             Debug.Fail("Could not convert WCFOBJECT template to proper type, StoreBaseWithIndexKey.cs");
                             continue;
@@ -134,13 +131,13 @@ namespace WebAnnotationModel
 
         protected ChangeInventory<OBJECT> ProcessUpdateResults(KEY[] newIDs, List<OBJECT> input, List<WCFOBJECT> changedDBObj)
         {
-            List<OBJECT> newObjList = new List<OBJECT>(newIDs.Length);
-            List<OBJECT> updateObjList = new List<OBJECT>(changedDBObj.Count);
-            List<KEY> delObjList = new List<KEY>(changedDBObj.Count);
+            List<OBJECT> newObjList = new(newIDs.Length);
+            List<OBJECT> updateObjList = new(changedDBObj.Count);
+            List<KEY> delObjList = new(changedDBObj.Count);
 
 
-            List<KEY> replacedKeysList = new List<KEY>(newIDs.Length);
-            List<OBJECT> replacedObjList = new List<OBJECT>(newIDs.Length);
+            List<KEY> replacedKeysList = new(newIDs.Length);
+            List<OBJECT> replacedObjList = new(newIDs.Length);
 
 
             //Update ID's of new objects
@@ -199,9 +196,9 @@ namespace WebAnnotationModel
             }
 
 
-            ChangeInventory<OBJECT> output = InternalAdd(newObjList.ToArray());
-            output.UpdatedObjects.AddRange(InternalUpdate(updateObjList.ToArray()));
-            output.DeletedObjects = InternalDelete(delObjList.ToArray());
+            ChangeInventory<OBJECT> output = InternalAdd([.. newObjList]);
+            output.UpdatedObjects.AddRange(InternalUpdate([.. updateObjList]));
+            output.DeletedObjects = InternalDelete([.. delObjList]);
 
             /*
             if (replacedKeysList.Count > 0)

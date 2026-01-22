@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -13,16 +13,10 @@ namespace WebAnnotationModel
     /// </summary>
     /// <typeparam name="KEY"></typeparam>
     /// <typeparam name="OBJECT"></typeparam>
-    public class MixedLocalAndRemoteQueryResults<KEY, OBJECT>
+    public class MixedLocalAndRemoteQueryResults<KEY, OBJECT>(IAsyncResult result, ICollection<OBJECT> known_objects)
     {
-        public readonly IAsyncResult ServerRequestResult = null;
-        public readonly ICollection<OBJECT> KnownObjects = null;
-
-        public MixedLocalAndRemoteQueryResults(IAsyncResult result, ICollection<OBJECT> known_objects)
-        {
-            this.ServerRequestResult = result;
-            this.KnownObjects = known_objects;
-        }
+        public readonly IAsyncResult ServerRequestResult = result;
+        public readonly ICollection<OBJECT> KnownObjects = known_objects;
     }
 
     /// <summary>
@@ -64,12 +58,12 @@ namespace WebAnnotationModel
 
         public ChangeInventory()
         {
-            AddedObjects = new List<OBJECT>();
-            UpdatedObjects = new List<OBJECT>();
-            DeletedObjects = new List<OBJECT>();
-            OldObjectsReplaced = new List<OBJECT>();
-            NewObjectReplacements = new List<OBJECT>();
-            UnchangedObjects = new List<OBJECT>();
+            AddedObjects = [];
+            UpdatedObjects = [];
+            DeletedObjects = [];
+            OldObjectsReplaced = [];
+            NewObjectReplacements = [];
+            UnchangedObjects = [];
 
         }
 
@@ -91,7 +85,7 @@ namespace WebAnnotationModel
         {
             get
             {
-                List<OBJECT> listObjects = new List<OBJECT>(AddedObjects.Count + UpdatedObjects.Count + NewObjectReplacements.Count);
+                List<OBJECT> listObjects = new(AddedObjects.Count + UpdatedObjects.Count + NewObjectReplacements.Count);
                 listObjects.AddRange(AddedObjects);
                 listObjects.AddRange(UpdatedObjects);
                 listObjects.AddRange(NewObjectReplacements);
@@ -115,14 +109,9 @@ namespace WebAnnotationModel
         }
     }
 
-    public class ThreadLocalProxyFactory<IService>
+    public class ThreadLocalProxyFactory<IService>(ChannelFactory<IService> factory)
     {
-        private readonly ChannelFactory<IService> _factory;
-
-        public ThreadLocalProxyFactory(ChannelFactory<IService> factory)
-        {
-            this._factory = factory;
-        }
+        private readonly ChannelFactory<IService> _factory = factory;
 
         static ThreadLocalProxyFactory()
         {
@@ -130,21 +119,21 @@ namespace WebAnnotationModel
             AppDomain.CurrentDomain.ProcessExit += (sender, e) => DisposeChannel();
         }
 
-        private static readonly ThreadLocal<IClientChannel> Channel = new ThreadLocal<IClientChannel>();
+        private static readonly ThreadLocal<IClientChannel> Channel = new();
 
         public IClientChannel GetProxy()
         {
-            var channel = Channel.Value as IClientChannel;
+            IClientChannel channel = Channel.Value as IClientChannel;
 
-            if (!(channel is null) && channel.State == CommunicationState.Faulted)
+            if (channel is not null && channel.State == CommunicationState.Faulted)
             {
                 // Abort the faulted channel
                 channel.Abort();
                 channel = null;
             }
 
-            if(channel is null || 
-                (channel.State == CommunicationState.Closed || 
+            if (channel is null ||
+                (channel.State == CommunicationState.Closed ||
                  channel.State == CommunicationState.Closing))
             {
                 // Create a new channel and open it
@@ -159,8 +148,7 @@ namespace WebAnnotationModel
         {
             if (Channel.IsValueCreated)
             {
-                var channel = Channel.Value as IClientChannel;
-                if (channel != null)
+                if (Channel.Value is IClientChannel channel)
                 {
                     try
                     {
@@ -194,14 +182,11 @@ namespace WebAnnotationModel
 
         protected virtual IClientChannel CreateProxy()
         {
-            if(proxyFactory is null)
-            {
-                proxyFactory = new ThreadLocalProxyFactory<INTERFACE>(channelFactory);
-            }
+            proxyFactory ??= new ThreadLocalProxyFactory<INTERFACE>(channelFactory);
 
             //return (IClientChannel)channelFactory.CreateChannel(State.EndpointAddress);
             return proxyFactory.GetProxy();
-        } 
+        }
 
         #region Public Creation/Removal methods
 
@@ -276,7 +261,7 @@ namespace WebAnnotationModel
             //InternalUpdate will send its own notification for the updated objects
             if (listAddedObj.Count > 0)
             {
-                Action a = new Action(() =>
+                Action a = new(() =>
                 {
                     OBJECT[] listCopy = new OBJECT[listAddedObj.Count];
                     listAddedObj.CopyTo(listCopy, 0);
@@ -293,7 +278,7 @@ namespace WebAnnotationModel
             //InternalUpdate will send its own notification for the updated objects
             if (listObj.Count > 0)
             {
-                Action a = new Action(() =>
+                Action a = new(() =>
                 {
                     OBJECT[] listCopy = new OBJECT[listObj.Count];
                     listObj.CopyTo(listCopy, 0);
@@ -311,13 +296,13 @@ namespace WebAnnotationModel
             Debug.Assert(listOldObjects.Count == listNewObjects.Count);
             if (listNewObjects.Count > 0)
             {
-                Action a = new Action(() =>
+                Action a = new(() =>
                 {
                     OBJECT[] listOldObjectsCopy = new OBJECT[listOldObjects.Count];
                     OBJECT[] listNewObjectsCopy = new OBJECT[listNewObjects.Count];
                     listOldObjects.CopyTo(listOldObjectsCopy, 0);
                     listNewObjects.CopyTo(listNewObjectsCopy, 0);
-                    NotifyCollectionChangedEventArgs e = new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace,
+                    NotifyCollectionChangedEventArgs e = new(NotifyCollectionChangedAction.Replace,
                                                                                               listNewObjectsCopy, listOldObjectsCopy);
                     CallOnCollectionChanged(e);
                 });
@@ -327,10 +312,7 @@ namespace WebAnnotationModel
         }
 
 
-        private void CallOnCollectionChanged(NotifyCollectionChangedEventArgs e)
-        {
-            OnCollectionChanged?.Invoke(this, e);
-            /*
+        private void CallOnCollectionChanged(NotifyCollectionChangedEventArgs e) => OnCollectionChanged?.Invoke(this, e);/*
              if (OnCollectionChanged != null)
             {
                 OnCollectionChanged(this, e);
@@ -352,10 +334,7 @@ namespace WebAnnotationModel
                 {
                     a.Invoke(); 
                 }
-                */
-            
-            //}
-        }
+                *///}
 
         /*
         protected void CallOnAllUpdatesCompleted(OnAllUpdatesCompletedEventArgs e)

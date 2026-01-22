@@ -1,4 +1,4 @@
-﻿using ODataClient.ConnectomeDataModel;
+using ODataClient.ConnectomeDataModel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,10 +12,7 @@ namespace AnnotationVizLib.OData
         /// <summary>
         /// Synchronously builds a morphology graph from structure IDs
         /// </summary>
-        public static MorphologyGraph FromOData(ICollection<long> StructureIDs, bool include_children, Uri Endpoint)
-        {
-            return FromODataAsync(StructureIDs, include_children, Endpoint).GetAwaiter().GetResult();
-        }
+        public static MorphologyGraph FromOData(ICollection<long> StructureIDs, bool include_children, Uri Endpoint) => FromODataAsync(StructureIDs, include_children, Endpoint).GetAwaiter().GetResult();
 
         #region Async Helper Methods
 
@@ -32,7 +29,7 @@ namespace AnnotationVizLib.OData
                 var scale = await scaleTask;
                 return scale.ToGeometryScale();
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 throw new InvalidOperationException($"Failed to retrieve scale: {ex.Message}", ex);
             }
@@ -48,7 +45,7 @@ namespace AnnotationVizLib.OData
         {
             try
             {
-                var tasks = structureIDs.Select(id => Task.Run(() => 
+                var tasks = structureIDs.Select(id => Task.Run(() =>
                     container.Structures
                         .Expand(s => s.Locations)
                         .Expand(s => s.Type)
@@ -58,8 +55,8 @@ namespace AnnotationVizLib.OData
                 ).ToArray();
 
                 await Task.WhenAll(tasks);
-                
-                var allStructures = new List<Structure>();
+
+                List<Structure> allStructures = [];
                 foreach (var task in tasks)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -68,7 +65,7 @@ namespace AnnotationVizLib.OData
 
                 return allStructures;
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 throw new InvalidOperationException($"Failed to load structures by IDs: {ex.Message}", ex);
             }
@@ -84,7 +81,7 @@ namespace AnnotationVizLib.OData
         {
             try
             {
-                var tasks = typeIDs.Select(typeId => Task.Run(() => 
+                var tasks = typeIDs.Select(typeId => Task.Run(() =>
                     container.Structures
                         .Expand(s => s.Locations)
                         .Expand(s => s.Type)
@@ -94,8 +91,8 @@ namespace AnnotationVizLib.OData
                 ).ToArray();
 
                 await Task.WhenAll(tasks);
-                
-                var allStructures = new List<Structure>();
+
+                List<Structure> allStructures = [];
                 foreach (var task in tasks)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -104,7 +101,7 @@ namespace AnnotationVizLib.OData
 
                 return allStructures;
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 throw new InvalidOperationException($"Failed to load structures by type IDs: {ex.Message}", ex);
             }
@@ -120,15 +117,15 @@ namespace AnnotationVizLib.OData
         {
             try
             {
-                var tasks = locationIDs.Distinct().Select(id => Task.Run(() => 
+                var tasks = locationIDs.Distinct().Select(id => Task.Run(() =>
                     container.Locations
                         .Where(l => l.ID == id)
                         .ToList(), cancellationToken)
                 ).ToArray();
 
                 await Task.WhenAll(tasks);
-                
-                var allLocations = new List<Location>();
+
+                List<Location> allLocations = [];
                 foreach (var task in tasks)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -137,7 +134,7 @@ namespace AnnotationVizLib.OData
 
                 return allLocations;
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 throw new InvalidOperationException($"Failed to load locations by IDs: {ex.Message}", ex);
             }
@@ -154,11 +151,11 @@ namespace AnnotationVizLib.OData
             try
             {
                 var tasks = structures
-                    .Where(s => s.LocationLinks == null || !s.LocationLinks.Any())
+                    .Where(s => s.LocationLinks is null || !s.LocationLinks.Any())
                     .Select(s => Task.Run(() =>
                     {
-                        var links = container.StructureLocationLinks(s.ID).ToList();
-                        
+                        List<LocationLink> links = [.. container.StructureLocationLinks(s.ID)];
+
                         s.LocationLinks = new Microsoft.OData.Client.DataServiceCollection<LocationLink>(null, Microsoft.OData.Client.TrackingMode.None);
                         foreach (var link in links)
                         {
@@ -169,7 +166,7 @@ namespace AnnotationVizLib.OData
 
                 await Task.WhenAll(tasks);
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 throw new InvalidOperationException($"Failed to load structure location links: {ex.Message}", ex);
             }
@@ -183,20 +180,20 @@ namespace AnnotationVizLib.OData
         /// Asynchronously builds morphology graphs for structures matching the given type IDs
         /// </summary>
         public static async Task<MorphologyGraph> FromODataByTypeIDsAsync(
-            ICollection<long> TypeIDs, 
-            Uri Endpoint, 
+            ICollection<long> TypeIDs,
+            Uri Endpoint,
             bool include_children = false,
             CancellationToken cancellationToken = default)
         {
-            Container container = new Container(Endpoint)
+            Container container = new(Endpoint)
             {
                 MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
             };
 
             var scale = await GetScaleAsync(container, cancellationToken);
-            MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
+            MorphologyGraph rootGraph = new(0, scale);
 
-            if (TypeIDs == null || TypeIDs.Count == 0)
+            if (TypeIDs is null || TypeIDs.Count == 0)
                 return rootGraph;
 
             // Load structures by type IDs in parallel
@@ -215,12 +212,12 @@ namespace AnnotationVizLib.OData
         /// Asynchronously builds morphology graphs for the specified structure IDs
         /// </summary>
         public static async Task<MorphologyGraph> FromODataAsync(
-            ICollection<long> StructureIDs, 
-            bool include_children, 
+            ICollection<long> StructureIDs,
+            bool include_children,
             Uri Endpoint,
             CancellationToken cancellationToken = default)
         {
-            Container container = new Container(Endpoint)
+            Container container = new(Endpoint)
             {
                 MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
             };
@@ -233,20 +230,20 @@ namespace AnnotationVizLib.OData
         /// Asynchronously builds morphology graphs for the specified structure IDs using a pre-fetched scale
         /// </summary>
         public static async Task<MorphologyGraph> FromODataAsync(
-            ICollection<long> StructureIDs, 
-            bool include_children, 
+            ICollection<long> StructureIDs,
+            bool include_children,
             Uri Endpoint,
             UnitsAndScale.Scale scale,
             CancellationToken cancellationToken = default)
         {
-            Container container = new Container(Endpoint)
+            Container container = new(Endpoint)
             {
                 MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
             };
 
-            MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
+            MorphologyGraph rootGraph = new(0, scale);
 
-            if (StructureIDs == null || StructureIDs.Count == 0)
+            if (StructureIDs is null || StructureIDs.Count == 0)
                 return rootGraph;
 
             // Load structures in parallel
@@ -265,20 +262,20 @@ namespace AnnotationVizLib.OData
         /// Asynchronously builds morphology graph for specified location IDs
         /// </summary>
         public static async Task<MorphologyGraph> FromODataLocationIDsAsync(
-            ICollection<long> LocationIDs, 
-            Uri Endpoint, 
+            ICollection<long> LocationIDs,
+            Uri Endpoint,
             int hops = 0,
             CancellationToken cancellationToken = default)
         {
-            Container container = new Container(Endpoint)
+            Container container = new(Endpoint)
             {
                 MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
             };
 
             var scale = await GetScaleAsync(container, cancellationToken);
-            MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
+            MorphologyGraph rootGraph = new(0, scale);
 
-            if (LocationIDs == null || LocationIDs.Count == 0)
+            if (LocationIDs is null || LocationIDs.Count == 0)
                 return rootGraph;
 
             // Load locations in parallel
@@ -291,14 +288,14 @@ namespace AnnotationVizLib.OData
             long structureId = locations[0].ParentID;
 
             // Load parent structure
-            var parents = await LoadStructuresByIDsAsync(container, new[] { structureId }, cancellationToken);
+            var parents = await LoadStructuresByIDsAsync(container, [structureId], cancellationToken);
             var parent = parents.FirstOrDefault();
 
-            if (parent == null)
+            if (parent is null)
                 return rootGraph;
 
             // Load location links
-            await LoadStructureLocationLinksAsync(container, new[] { parent }, cancellationToken);
+            await LoadStructureLocationLinksAsync(container, [parent], cancellationToken);
 
             // TODO: Implement hops logic if needed (currently only loads direct locations)
 
@@ -316,7 +313,7 @@ namespace AnnotationVizLib.OData
                 }
             }
 
-            AddLocationEdges(graph, parent.LocationLinks.ToArray());
+            AddLocationEdges(graph, [.. parent.LocationLinks]);
 
             return graph;
         }
@@ -339,7 +336,7 @@ namespace AnnotationVizLib.OData
                 cancellationToken.ThrowIfCancellationRequested();
 
                 MorphologyGraph graph = MorphologyForStructure(s, scale);
-                if (graph == null)
+                if (graph is null)
                     continue;
 
                 rootGraph.AddSubgraph(graph);
@@ -347,7 +344,7 @@ namespace AnnotationVizLib.OData
                 if (include_children && s.Children != null && s.Children.Any())
                 {
                     // Load child structures
-                    var childIds = s.Children.Select(c => (long)c.ID).ToList();
+                    List<long> childIds = [.. s.Children.Select(c => (long)c.ID)];
                     var childStructures = await LoadStructuresByIDsAsync(container, childIds, cancellationToken);
 
                     // Load location links for children
@@ -361,8 +358,8 @@ namespace AnnotationVizLib.OData
 
         private static MorphologyGraph MorphologyForStructure(Structure s, UnitsAndScale.IScale scale)
         {
-            Location[] locations = s.Locations.ToArray();
-            LocationLink[] location_links = s.LocationLinks.ToArray();
+            Location[] locations = [.. s.Locations];
+            LocationLink[] location_links = [.. s.LocationLinks];
 
 
             if (locations.Length <= 0)
@@ -370,7 +367,7 @@ namespace AnnotationVizLib.OData
                 return null;
             }
 
-            MorphologyGraph graph = new MorphologyGraph((ulong)s.ID, scale, new ODataStructureAdapter(s));
+            MorphologyGraph graph = new((ulong)s.ID, scale, new ODataStructureAdapter(s));
 
             foreach (Location loc in locations)
             {

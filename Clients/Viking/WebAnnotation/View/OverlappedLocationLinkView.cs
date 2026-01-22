@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -19,8 +19,8 @@ namespace WebAnnotation.View
     internal class OverlappedLocationLinkView : ICanvasGeometryView, IColorView, ILabelView,
                                        IMouseActionSupport, IPenActionSupport, IViewLocationLink, IViewLocation, Viking.Common.IHelpStrings
     {
-        private TextureCircleView circleView;
-        private LabelView label;
+        private readonly TextureCircleView circleView;
+        private readonly LabelView label;
         private readonly LocationLinkKey linkKey;
 
         public GridCircle Circle
@@ -56,22 +56,13 @@ namespace WebAnnotation.View
         }
 
         public GridRectangle BoundingBox => Circle.BoundingBox;
-          
 
-        public bool IsVisible(Scene scene)
-        {
-            return circleView.IsVisible(scene);
-        }
 
-        public bool Contains(GridVector2 Position)
-        {
-            return Circle.Contains(Position);
-        }
+        public bool IsVisible(Scene scene) => circleView.IsVisible(scene);
 
-        public bool Intersects(GridLineSegment line)
-        {
-            return Circle.Intersects(line);
-        }
+        public bool Contains(GridVector2 Position) => Circle.Contains(Position);
+
+        public bool Intersects(GridLineSegment line) => Circle.Intersects(line);
 
         public double Distance(GridVector2 Position)
         {
@@ -80,15 +71,9 @@ namespace WebAnnotation.View
             return Distance;
         }
 
-        public double Distance(SqlGeometry Position)
-        {
-            throw new NotImplementedException();
-        }
+        public double Distance(SqlGeometry Position) => throw new NotImplementedException();
 
-        public double DistanceFromCenterNormalized(GridVector2 Position)
-        {
-            return GridVector2.Distance(Position, Circle.Center) / Radius;
-        }
+        public double DistanceFromCenterNormalized(GridVector2 Position) => GridVector2.Distance(Position, Circle.Center) / Radius;
 
         public long LocationID
         {
@@ -123,8 +108,8 @@ namespace WebAnnotation.View
                           OverlayShaderEffect overlayEffect,
                           OverlappedLocationLinkView[] listToDraw)
         {
-            TextureCircleView[] backgroundCircles = listToDraw.Select(l => l.circleView).ToArray();
-            TextureCircleView.Draw(device, scene, OverlayStyle.Luma, backgroundCircles.ToArray());
+            TextureCircleView[] backgroundCircles = [.. listToDraw.Select(l => l.circleView)];
+            TextureCircleView.Draw(device, scene, OverlayStyle.Luma, [.. backgroundCircles]);
         }
 
         public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene)
@@ -137,10 +122,7 @@ namespace WebAnnotation.View
             label.Draw(spriteBatch, font, scene);
         }
 
-        public bool IsLabelVisible(Scene scene)
-        {
-            return label.IsVisible(scene);
-        }
+        public bool IsLabelVisible(Scene scene) => label.IsVisible(scene);
 
         public LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
@@ -159,14 +141,11 @@ namespace WebAnnotation.View
             return LocationAction.CREATELINKEDLOCATION;
         }
 
-        public List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
-        {
-            return new List<IAction>();
-        }
+        public List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => [];
 
-        public string[] HelpStrings => new string[] {
+        public string[] HelpStrings => [
                     "Hold left click + drag: Create additional annotation for this structure linked to the annotation on the adjacent section."
-                };
+                ];
 
         int ICanvasView.VisualHeight => 0;
     }

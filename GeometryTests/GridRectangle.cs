@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace GeometryTests
@@ -53,7 +53,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestGridRectangle()
         {
-            GridRectangle rectA = new GridRectangle(10, 50, 20, 40);
+            GridRectangle rectA = new(10, 50, 20, 40);
 
             bool success = rectA.Contains(new GridVector2(10, 20));
             Assert.IsTrue(success);
@@ -64,21 +64,21 @@ namespace GeometryTests
             success = rectA.Contains(rectA.Center);
             Assert.IsTrue(success);
 
-            GridRectangle rectBOverlaps = new GridRectangle(5, 15, 10, 21);
+            GridRectangle rectBOverlaps = new(5, 15, 10, 21);
             success = rectA.Intersects(rectBOverlaps);
             Assert.IsTrue(success);
 
             success = rectA.Contains(rectBOverlaps);
-            Assert.IsTrue(false == success);
+            Assert.AreEqual(success, false);
 
-            GridRectangle rectCNoOverlap = new GridRectangle(5, 15, 10, 19);
+            GridRectangle rectCNoOverlap = new(5, 15, 10, 19);
             success = rectA.Intersects(rectCNoOverlap);
-            Assert.IsTrue(false == success);
+            Assert.AreEqual(success, false);
 
             success = rectA.Contains(rectBOverlaps);
-            Assert.IsTrue(false == success);
+            Assert.AreEqual(success, false);
 
-            GridRectangle rectDContained = new GridRectangle(15, 45, 25, 35);
+            GridRectangle rectDContained = new(15, 45, 25, 35);
             success = rectA.Intersects(rectDContained);
             Assert.IsTrue(success);
 
@@ -108,8 +108,8 @@ namespace GeometryTests
         [TestMethod]
         public void TestGridRectangleUnion()
         {
-            GridRectangle rectA = new GridRectangle(10, 20, 10, 30);
-            GridRectangle rectB = new GridRectangle(-20, -10, -15, -5);
+            GridRectangle rectA = new(10, 20, 10, 30);
+            GridRectangle rectB = new(-20, -10, -15, -5);
 
             rectA += rectB;
 

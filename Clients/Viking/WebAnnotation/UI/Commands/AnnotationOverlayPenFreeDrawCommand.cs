@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
 using SqlGeometryUtils;
@@ -39,17 +39,14 @@ namespace WebAnnotation.UI.Commands
 
         public override uint NumCurveInterpolations => throw new NotImplementedException();
 
-        protected override bool CanCommandComplete()
-        {
-            return true;
-        }
+        protected override bool CanCommandComplete() => true;
 
         protected override void OnPathLoop(object sender, bool HasLoop)
         {
             //TODO: Prompt the user to create a closed curve type
             if (HasLoop)
             {
-                GridPolygon newVolumePoly = new GridPolygon(PenInput.SimplifiedFirstLoop);
+                GridPolygon newVolumePoly = new(PenInput.SimplifiedFirstLoop);
                 if (newVolumePoly.Area < MinAreaForClosedShape)
                 {
                     Deactivated = true;
@@ -71,13 +68,13 @@ namespace WebAnnotation.UI.Commands
                     LocationObj lastObj = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, false);
                     if (lastObj != null && lastObj.TypeCode.AllowsClosed2DShape())
                     {
-                        LocationObj newLoc = new LocationObj(lastObj.Parent,
+                        LocationObj newLoc = new(lastObj.Parent,
                                                              Parent.Section.Number,
                                                              lastObj.TypeCode);
                         try
                         {
                             newLoc.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, newVolumePoly.ToSqlGeometry());
-                            Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, lastObj, newLoc });
+                            Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [Parent, lastObj, newLoc]);
                         }
                         catch (ArgumentException e)
                         {
@@ -146,39 +143,37 @@ namespace WebAnnotation.UI.Commands
 
         private void CreateNewClosedAnnotation()
         {
-            GridPolygon newVolumePoly = new GridPolygon(PenInput.SimplifiedFirstLoop);
+            GridPolygon newVolumePoly = new(PenInput.SimplifiedFirstLoop);
 
             StructureTypeObj type = Store.StructureTypes.GetObjectByID(1);//new StructureType(typeObj);
             bool StructureNeedsParent = type.ParentID.HasValue;
 
-            StructureObj newStruct = new StructureObj(type);
-            LocationObj newLocation = new LocationObj(newStruct,
+            StructureObj newStruct = new(type);
+            LocationObj newLocation = new(newStruct,
                                             Parent.Section.Number,
                                             Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON);
 
             newLocation.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, newVolumePoly.ToSqlGeometry());
 
-            Parent.CommandQueue.EnqueueCommand(typeof(ShapeConfirmationCommand), new object[] { Parent, newVolumePoly, LineWidth,
+            Parent.CommandQueue.EnqueueCommand(typeof(ShapeConfirmationCommand), [ Parent, newVolumePoly, LineWidth,
                 new ShapeConfirmationCommand.OnCommandSuccess(() =>  {
                             if (StructureNeedsParent)
                             {
                                 //Enqueue extra command to select a parent
-                                Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStruct, newLocation });
+                                Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), [Parent, newStruct, newLocation]);
                             }
 
-                            Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStruct, newLocation });
+                            Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), [Parent, newStruct, newLocation]);
                         })
-                }
+                ]
              );
         }
 
-        protected override void OnPenPathComplete(object sender, GridVector2[] Path)
-        {
+        protected override void OnPenPathComplete(object sender, GridVector2[] Path) =>
             //TODO: Prompt the user to create an open curve type if there is no curve
             //If we draw from one annotation to another we either create a location link (different sections) or a structure link (same sections).
             //If not we create a new open curve annotation.
             Execute();
-        }
 
         protected override void OnPenPathChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
@@ -194,7 +189,7 @@ namespace WebAnnotation.UI.Commands
             GridLineSegment move_line = PenInput.NewestSegent;
             ICanvasView IntersectedObject = AnnotationOverlay.FirstIntersectedObjectOnSection(Parent.Section.Number, move_line);
             //            ICanvasGeometryView MouseOverAnnotation = ObjectAtPosition(WorldPosition, out distance) as ICanvasGeometryView;
-            System.Diagnostics.Trace.WriteLine($"{(IntersectedObject == null ? "NULL" : IntersectedObject.ToString())}");
+            System.Diagnostics.Trace.WriteLine($"{(IntersectedObject is null ? "NULL" : IntersectedObject.ToString())}");
 
             //If the objects changed that means we intersected the boundary of the object.  If we are in pen mode and the intersected object qualifies we should start a retrace and replace command... 
             if (IntersectedObject != null)
@@ -210,7 +205,7 @@ namespace WebAnnotation.UI.Commands
 
                     Loc.VolumeShape.ToPolygon().AddVertex(intersection_point);
 #endif
-                    RetraceAndReplacePathCommand retraceCmd = new RetraceAndReplacePathCommand(Parent, Loc.MosaicShape.ToPolygon(), intersectedPolyView.Color, Loc.Width.HasValue ? Loc.Width.Value : Global.DefaultClosedLineWidth, (senderCmd, MosaicPolygon) =>
+                    RetraceAndReplacePathCommand retraceCmd = new(Parent, Loc.MosaicShape.ToPolygon(), intersectedPolyView.Color, Loc.Width ?? Global.DefaultClosedLineWidth, (senderCmd, MosaicPolygon) =>
                     {
                         //Drawing from outside to inside:
 
@@ -245,10 +240,7 @@ namespace WebAnnotation.UI.Commands
             return;
         }
 
-        protected override bool ShapeIsValid()
-        {
-            return true;
-        }
+        protected override bool ShapeIsValid() => true;
 
         /// <summary>
         /// Find the annotations intersecting the provided line on viewed section only, using annotation locations on the screen, not anatomical positions
@@ -258,7 +250,7 @@ namespace WebAnnotation.UI.Commands
         public static List<LocationCircleView> IntersectedCirclesOnSection(int CurrentSectionNumber, GridPolygon bounds)
         {
             SectionAnnotationsView locView = AnnotationOverlay.GetAnnotationsForSection(CurrentSectionNumber);
-            if (locView == null)
+            if (locView is null)
             {
                 return null;
             }
@@ -267,7 +259,7 @@ namespace WebAnnotation.UI.Commands
 
             IEnumerable<LocationCircleView> listCircles = listObjects.Select(o => o as LocationCircleView).Where(o => o != null);
 
-            return listCircles.Where(o => o.VolumeCircle.Intersects(bounds) || bounds.Contains(o.VolumeCircle)).ToList();
+            return [.. listCircles.Where(o => o.VolumeCircle.Intersects(bounds) || bounds.Contains(o.VolumeCircle))];
         }
 
 

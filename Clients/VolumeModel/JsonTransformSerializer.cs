@@ -1,7 +1,9 @@
 using Geometry;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -12,7 +14,7 @@ namespace VolumeModel
     /// </summary>
     public static class JsonTransformSerializer
     {
-        private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
+        private static readonly JsonSerializerOptions _jsonOptions = new()
         {
             WriteIndented = false,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -20,7 +22,7 @@ namespace VolumeModel
             NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
             ReferenceHandler = ReferenceHandler.IgnoreCycles,
             // Allow polymorphic serialization for ITransform implementations
-            Converters = 
+            Converters =
             {
                 new JsonStringEnumConverter(),
                 new TransformJsonConverter(),
@@ -33,13 +35,13 @@ namespace VolumeModel
         /// </summary>
         public static void Serialize(Stream stream, ITransform transform)
         {
-            if (stream == null)
+            if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
-            
-            if (transform == null)
+
+            if (transform is null)
                 throw new ArgumentNullException(nameof(transform));
-             
-            JsonSerializer.Serialize(stream, transform, _jsonOptions); 
+
+            JsonSerializer.Serialize(stream, transform, _jsonOptions);
         }
 
         /// <summary>
@@ -47,7 +49,7 @@ namespace VolumeModel
         /// </summary>
         public static ITransform Deserialize(Stream stream)
         {
-            if (stream == null)
+            if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
 
             return JsonSerializer.Deserialize<ITransform>(stream, _jsonOptions);
@@ -58,10 +60,10 @@ namespace VolumeModel
         /// </summary>
         public static void SerializeArray(Stream stream, ITransform[] transforms)
         {
-            if (stream == null)
+            if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
-            
-            if (transforms == null)
+
+            if (transforms is null)
                 throw new ArgumentNullException(nameof(transforms));
 
             JsonSerializer.Serialize(stream, transforms, _jsonOptions);
@@ -72,7 +74,7 @@ namespace VolumeModel
         /// </summary>
         public static ITransform[] DeserializeArray(Stream stream)
         {
-            if (stream == null)
+            if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
 
             return JsonSerializer.Deserialize<ITransform[]>(stream, _jsonOptions);
@@ -89,7 +91,7 @@ namespace VolumeModel
             if (reader.TokenType != JsonTokenType.StartObject)
                 throw new JsonException("Expected start of object");
 
-            using var jsonDoc = JsonDocument.ParseValue(ref reader);
+            using JsonDocument jsonDoc = JsonDocument.ParseValue(ref reader);
             var root = jsonDoc.RootElement;
 
             // Try to determine the concrete type based on available properties
@@ -113,12 +115,12 @@ namespace VolumeModel
 
         public override void Write(Utf8JsonWriter writer, ITransform value, JsonSerializerOptions options)
         {
-            if (value == null)
+            if (value is null)
             {
                 writer.WriteNullValue();
                 return;
             }
-             
+
             JsonSerializer.Serialize(writer, value, value.GetType(), options);
         }
     }
@@ -132,7 +134,7 @@ namespace VolumeModel
         public override bool CanConvert(Type typeToConvert)
         {
             // Only apply to types that might have computed properties
-            return typeToConvert.Namespace?.StartsWith("Geometry") == true || 
+            return typeToConvert.Namespace?.StartsWith("Geometry") == true ||
                    typeToConvert.Namespace?.StartsWith("VolumeModel") == true;
         }
 
@@ -144,24 +146,20 @@ namespace VolumeModel
 
         private class ComputedPropertyJsonConverterInner<T> : JsonConverter<T>
         {
-            public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-            {
+            public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
                 // For reading, we'll use the default behavior
-                return JsonSerializer.Deserialize<T>(ref reader, options);
-            }
+                JsonSerializer.Deserialize<T>(ref reader, options);
 
             public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
             {
-                if (value == null)
+                if (value is null)
                 {
                     writer.WriteNullValue();
                     return;
                 }
 
                 var type = typeof(T);
-                var properties = type.GetProperties()
-                    .Where(p => p.CanRead && p.CanWrite) // Only include properties with both getter and setter
-                    .ToList();
+                List<PropertyInfo> properties = [.. type.GetProperties().Where(p => p.CanRead && p.CanWrite)];
 
                 writer.WriteStartObject();
 
@@ -180,4 +178,4 @@ namespace VolumeModel
             }
         }
     }
-} 
+}

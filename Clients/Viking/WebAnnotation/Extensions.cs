@@ -34,15 +34,9 @@ namespace WebAnnotation
                ModifierKeys == System.Windows.Forms.Keys.Shift;
         }
 
-        public static bool ShiftPressed(this System.Windows.Forms.Keys ModifierKeys)
-        {
-            return ModifierKeys == System.Windows.Forms.Keys.Shift;
-        }
+        public static bool ShiftPressed(this System.Windows.Forms.Keys ModifierKeys) => ModifierKeys == System.Windows.Forms.Keys.Shift;
 
-        public static bool CtrlPressed(this System.Windows.Forms.Keys ModifierKeys)
-        {
-            return ModifierKeys == System.Windows.Forms.Keys.Control;
-        }
+        public static bool CtrlPressed(this System.Windows.Forms.Keys ModifierKeys) => ModifierKeys == System.Windows.Forms.Keys.Control;
     }
 
     public static class HitTestResultExtensions
@@ -65,12 +59,12 @@ namespace WebAnnotation
                 return null;
             }
 
-            List<HitTestResult> listLocations = listHitTestObjects.Where(l => l.obj as IViewLocation != null).ToList();
-            List<HitTestResult> listLocationsOnSection = listLocations.Where(l => l.Z == SectionNumber).ToList();
-            List<HitTestResult> listLocationsOnSectionContainsPoint = listLocationsOnSection.Where(l => l.Distance <= 1.0).ToList();
-            List<HitTestResult> listStructureLinks = listHitTestObjects.Where(h => h.obj as IViewStructureLink != null).ToList();
+            List<HitTestResult> listLocations = [.. listHitTestObjects.Where(l => l.obj as IViewLocation != null)];
+            List<HitTestResult> listLocationsOnSection = [.. listLocations.Where(l => l.Z == SectionNumber)];
+            List<HitTestResult> listLocationsOnSectionContainsPoint = [.. listLocationsOnSection.Where(l => l.Distance <= 1.0)];
+            List<HitTestResult> listStructureLinks = [.. listHitTestObjects.Where(h => h.obj as IViewStructureLink != null)];
 
-            List<HitTestResult> listLocationsOnSectionContainingPointAndStructureLinks = new List<HitTestResult>(listLocationsOnSectionContainsPoint);
+            List<HitTestResult> listLocationsOnSectionContainingPointAndStructureLinks = [.. listLocationsOnSectionContainsPoint];
             listLocationsOnSectionContainingPointAndStructureLinks.AddRange(listStructureLinks);
 
             if (listLocationsOnSectionContainingPointAndStructureLinks.Count > 0)
@@ -79,7 +73,7 @@ namespace WebAnnotation
                 return listLocationsOnSectionContainingPointAndStructureLinks.First();
             }
 
-            List<HitTestResult> listObjectsOnAdjacentSection = listLocations.Where(l => l.Z != SectionNumber).ToList();
+            List<HitTestResult> listObjectsOnAdjacentSection = [.. listLocations.Where(l => l.Z != SectionNumber)];
             if (listObjectsOnAdjacentSection.Count > 0)
             {
                 listObjectsOnAdjacentSection.Sort(new HitTest_Distance_Sorter());
@@ -101,7 +95,7 @@ namespace WebAnnotation
             */
 
             //OK, no locations or structure links, return what is left by distance
-            List<HitTestResult> remaining = new List<HitTestResult>(listHitTestObjects);
+            List<HitTestResult> remaining = [.. listHitTestObjects];
             remaining.Sort(new HitTest_Z_Distance_Sorter());
             return remaining.First();
         }
@@ -114,16 +108,15 @@ namespace WebAnnotation
         /// <returns></returns>
         public static List<HitTestResult> ExpandICanvasViewContainers(this IEnumerable<HitTestResult> listHitTestObjects, GridVector2 WorldPos)
         {
-            List<HitTestResult> nestedContainers = listHitTestObjects.Select(lc =>
+            List<HitTestResult> nestedContainers = [.. listHitTestObjects.Select(lc =>
                  {
-                     ICanvasViewContainer container = lc.obj as ICanvasViewContainer;
-                     if (container == null)
+                     if (lc.obj is not ICanvasViewContainer container)
                      {
                          return lc;
                      }
 
                      ICanvasView nestedObj = container.GetAnnotationAtPosition(WorldPos);
-                     if (nestedObj == null)
+                     if (nestedObj is null)
                      {
                          return null;
                      }
@@ -136,9 +129,9 @@ namespace WebAnnotation
                          return lc;
                      }
 
-                 }).ToList();
+                 })];
 
-            return nestedContainers.ToList();
+            return [.. nestedContainers];
         }
     }
 
@@ -146,7 +139,7 @@ namespace WebAnnotation
     {
         public static GridRectangle ToMosaicSpace(this in GridRectangle volumeRect, Viking.VolumeModel.IVolumeToSectionTransform mapper)
         {
-            GridVector2[] MosaicCorners = mapper.VolumeToSection(new GridVector2[] { volumeRect.LowerLeft, volumeRect.LowerRight, volumeRect.UpperLeft, volumeRect.UpperRight });
+            GridVector2[] MosaicCorners = mapper.VolumeToSection([volumeRect.LowerLeft, volumeRect.LowerRight, volumeRect.UpperLeft, volumeRect.UpperRight]);
 
             double MinX = MosaicCorners.Min(p => p.X);
             double MaxX = MosaicCorners.Max(p => p.X);
@@ -161,40 +154,24 @@ namespace WebAnnotation
     {
         private static Viking.AnnotationServiceTypes.Interfaces.LocationType StringToLocationType(string annotationType)
         {
-            switch (annotationType)
+            return annotationType switch
             {
-                case "Circle":
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
-                case "ClosedCurve":
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.CLOSEDCURVE;
-                case "OpenCurve":
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE;
-                case "Polygon":
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON;
-                case "Polyline":
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYLINE;
-                case "Point":
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.POINT;
-                case "Ellipse":
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.ELLIPSE;
-                case "CurvePolygon":
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON;
-                default:
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
-            }
-
+                "Circle" => Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE,
+                "ClosedCurve" => Viking.AnnotationServiceTypes.Interfaces.LocationType.CLOSEDCURVE,
+                "OpenCurve" => Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE,
+                "Polygon" => Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON,
+                "Polyline" => Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYLINE,
+                "Point" => Viking.AnnotationServiceTypes.Interfaces.LocationType.POINT,
+                "Ellipse" => Viking.AnnotationServiceTypes.Interfaces.LocationType.ELLIPSE,
+                "CurvePolygon" => Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON,
+                _ => Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE,
+            };
             throw new ArgumentException("Unknown annotation type " + annotationType);
         }
 
-        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command)
-        {
-            return StringToLocationType(command.AnnotationType);
-        }
+        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command) => StringToLocationType(command.AnnotationType);
 
-        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command)
-        {
-            return StringToLocationType(command.AnnotationType);
-        }
+        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command) => StringToLocationType(command.AnnotationType);
 
         public static void SubscribeToPropertyChangeEvents(this WebAnnotationModel.LocationObj loc, System.Windows.IWeakEventListener listener)
         {
@@ -226,7 +203,7 @@ namespace WebAnnotation
         public static double DistanceToPoint3D(this WebAnnotationModel.LocationObj l, GridVector3 origin)
         {
             Viking.VolumeModel.IVolumeToSectionTransform mapper = Viking.UI.State.volume.GetSectionToVolumeTransform((int)l.Z);
-            if (mapper == null)
+            if (mapper is null)
             {
                 return double.MaxValue;
             }
@@ -236,7 +213,7 @@ namespace WebAnnotation
                 return double.MaxValue;
             }
 
-            GridVector3 p = new GridVector3(vPos.X * Global.Scale.X, vPos.Y * Global.Scale.Y, l.Z * Global.Scale.Z);
+            GridVector3 p = new(vPos.X * Global.Scale.X, vPos.Y * Global.Scale.Y, l.Z * Global.Scale.Z);
             return GridVector3.Distance(p, origin);
         }
 
@@ -279,12 +256,12 @@ namespace WebAnnotation
     {
         public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
         {
-            if (source == null)
+            if (source is null)
             {
                 throw new ArgumentNullException("source");
             }
 
-            if (action == null)
+            if (action is null)
             {
                 throw new ArgumentNullException("action");
             }
@@ -297,12 +274,12 @@ namespace WebAnnotation
 
         public static void ForEach<T>(this IEnumerable<T> source, Action<T, int> action)
         {
-            if (source == null)
+            if (source is null)
             {
                 throw new ArgumentNullException("source");
             }
 
-            if (action == null)
+            if (action is null)
             {
                 throw new ArgumentNullException("action");
             }
@@ -317,12 +294,12 @@ namespace WebAnnotation
 
         public static void ForEach<T>(this T[] source, Action<T, int> action)
         {
-            if (source == null)
+            if (source is null)
             {
                 throw new ArgumentNullException("source");
             }
 
-            if (action == null)
+            if (action is null)
             {
                 throw new ArgumentNullException("action");
             }

@@ -4,27 +4,16 @@
 namespace AnnotationService.Types
 {
     [DataContract]
-    public class LocationInfo
+    public class LocationInfo(double a, double b, double c, double rad)
     {
         [DataMember]
-        public double X;
+        public double X = a;
         [DataMember]
-        public double Y;
+        public double Y = b;
         [DataMember]
-        public double Z;
+        public double Z = c;
         [DataMember]
-        public double Radius;
-
-        public LocationInfo(double a, double b, double c, double rad)
-        {
-            this.X = a;
-
-            this.Y = b;
-
-            this.Z = c;
-
-            this.Radius = rad;
-        }
+        public double Radius = rad;
     }
 
 

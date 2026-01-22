@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
@@ -26,7 +26,7 @@ namespace AnnotationVizLib
         /// <returns></returns>
         private RTree.RTree<ulong> CreateRTreeForSubgraph(ICollection<ulong> subgraph)
         {
-            RTree.RTree<ulong> rtree = new RTree.RTree<ulong>();
+            RTree.RTree<ulong> rtree = new();
 
             foreach (ulong key in subgraph)
             {
@@ -51,7 +51,7 @@ namespace AnnotationVizLib
                 return;
 
             //Sort the subgraphs from smallest to largest
-            List<SortedSet<ulong>> sorted_subgraphs = subgraphs.OrderBy(s => s.Count).ToList();
+            List<SortedSet<ulong>> sorted_subgraphs = [.. subgraphs.OrderBy(s => s.Count)];
 
             //OK find the nearest point between the subgraphs.
             while (sorted_subgraphs.Count > 1)
@@ -69,7 +69,7 @@ namespace AnnotationVizLib
             double[] Distances = new double[SubgraphToMerge.Count];
 
             //Create a single graph of the subgraphs we want to merge into
-            SortedSet<ulong> subgraphUnion = new SortedSet<ulong>(subgraphs[0]);
+            SortedSet<ulong> subgraphUnion = [.. subgraphs[0]];
             for (int i = 1; i < subgraphs.Count; i++)
             {
                 foreach (ulong id in subgraphs[i])
@@ -82,7 +82,7 @@ namespace AnnotationVizLib
 
 
 
-            SortedList<ulong, double> distances = new SortedList<ulong, double>();
+            SortedList<ulong, double> distances = [];
 
             ulong nearest_node_id = 0;
             MorphologyEdge best_edge = null;
@@ -110,10 +110,10 @@ namespace AnnotationVizLib
             this.AddEdge(best_edge);
 
             //Add the subgraph we merged to the subgraph in the list
-            MergeSubgraphs(SubgraphToMerge, nearest_node_id, subgraphs);
+            MorphologyGraph.MergeSubgraphs(SubgraphToMerge, nearest_node_id, subgraphs);
         }
 
-        private void MergeSubgraphs(SortedSet<ulong> SubgraphToMerge, ulong node_to_merge_onto, IList<SortedSet<ulong>> subgraphs)
+        private static void MergeSubgraphs(SortedSet<ulong> SubgraphToMerge, ulong node_to_merge_onto, IList<SortedSet<ulong>> subgraphs)
         {
             foreach (SortedSet<ulong> subgraph in subgraphs)
             {
@@ -142,7 +142,7 @@ namespace AnnotationVizLib
         {
             //Use the RTree to estimate which nodes to check
             SortedSet<ulong> candidates = FindNearestCandidatesFromRTree(this.RTree, shape_to_check);
-            return NearestNode(shape_to_check, new SortedSet<ulong>(this.Nodes.Keys), out min_distance);
+            return NearestNode(shape_to_check, [.. this.Nodes.Keys], out min_distance);
         }
 
         /// <summary>
@@ -152,18 +152,18 @@ namespace AnnotationVizLib
         /// <returns></returns>
         private static SortedSet<ulong> FindNearestCandidatesFromRTree(RTree.RTree<ulong> rtree, IGeometry shape_to_check)
         {
-            List<ulong> found_nodes = new List<ulong>();
+            List<ulong> found_nodes = [];
 
             double scale_factor = 2.0;
             while (found_nodes.Count < 8 && found_nodes.Count != rtree.Count)
             {
                 GridBox bbox = shape_to_check.BoundingBox;
                 bbox = bbox.Scale(scale_factor);
-                found_nodes = rtree.Intersects(bbox.ToRTreeRect()).ToList();
+                found_nodes = [.. rtree.Intersects(bbox.ToRTreeRect())];
                 scale_factor *= 2.0;
             }
 
-            return new SortedSet<ulong>(found_nodes);
+            return [.. found_nodes];
         }
 
         private ulong NearestNode(IGeometry shape_to_check, SortedSet<ulong> nodes_to_compare, out double min_distance)
@@ -236,7 +236,7 @@ namespace AnnotationVizLib
             ulong nearest_node = ulong.MaxValue;
             //Get the bounding box for the graph, 
             foreach (MorphologyNode subgraphnode in other.Nodes.Values)
-            { 
+            {
                 ulong id = NearestNode(subgraphnode, out double node_min_distance);
                 if (node_min_distance < min_distance)
                 {
@@ -261,7 +261,7 @@ namespace AnnotationVizLib
 
             double TotalDistance = 0.0;
 
-            for (int iStart = 0; iStart < path.Count() - 1; iStart++)
+            for (int iStart = 0; iStart < path.Count - 1; iStart++)
             {
                 int iEnd = iStart + 1;
 
@@ -316,14 +316,14 @@ namespace AnnotationVizLib
         /// <returns></returns>
         public static PathData[] DistancesBetweenSubgraphsByType(MorphologyGraph cell_graph, SortedSet<ulong> SourceTypeIDs, SortedSet<ulong> TargetTypeIDs)
         {
-            List<ulong> source_ids = cell_graph.Subgraphs.Where(sg => SourceTypeIDs.Contains(sg.Value.structureType.ID)).Select(sg => sg.Key).ToList();
+            List<ulong> source_ids = [.. cell_graph.Subgraphs.Where(sg => SourceTypeIDs.Contains(sg.Value.structureType.ID)).Select(sg => sg.Key)];
             //Assert.IsTrue(desmosome_ids.Count > 0);
             if (source_ids.Count == 0)
-                return new PathData[0];
+                return [];
 
             var nodes_with_sourceType_subgraphs = source_ids.Select(id => new { Node = cell_graph.NearestNodeToSubgraph[id], StructureID = id }).ToList();
 
-            SortedDictionary<ulong, PathData> paths_between_types = new SortedDictionary<ulong, PathData>();
+            SortedDictionary<ulong, PathData> paths_between_types = [];
 
             //Find the nearest synapse
             foreach (var node_with_sourceType in nodes_with_sourceType_subgraphs)
@@ -362,7 +362,7 @@ namespace AnnotationVizLib
                 p.Distance = DistanceBetweenSubstructures(cell_graph, p.Path, p.SourceStructureID, p.TargetStructureID);
             }
 
-            return paths_between_types.Values.ToArray();
+            return [.. paths_between_types.Values];
         }
 
 
@@ -403,13 +403,13 @@ namespace AnnotationVizLib
 
             foreach (ulong[] process in listProcesses)
             {
-                MorphologyNode[] process_nodes = process.Select(p => graph.Nodes[p]).ToArray();
+                MorphologyNode[] process_nodes = [.. process.Select(p => graph.Nodes[p])];
 
-                GridVector2[] center_of_mass = process_nodes.Select(n => n.Center.XY()).ToArray();
+                GridVector2[] center_of_mass = [.. process_nodes.Select(n => n.Center.XY())];
 
                 GridVector2[] smoothed_points = Geometry.Smoothing.Gaussian(center_of_mass);
 
-                GridVector2[] translation_vectors = center_of_mass.Select((c, i) => smoothed_points[i] - c).ToArray();
+                GridVector2[] translation_vectors = [.. center_of_mass.Select((c, i) => smoothed_points[i] - c)];
 
                 Parallel.For(0, process_nodes.Length, (i) => process_nodes[i].Geometry = process_nodes[i].Geometry.Translate(translation_vectors[i]));
 

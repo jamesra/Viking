@@ -1,4 +1,4 @@
-﻿using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra;
 using RTree;
 using System;
 using System.Collections.Generic;
@@ -12,7 +12,7 @@ namespace Geometry
     {
         public static List<T> Peek(Stack<T> stack, int count)
         {
-            List<T> items = new List<T>(count);
+            List<T> items = new(count);
             using (Stack<T>.Enumerator path_enumerator = stack.GetEnumerator())
             {
                 while (items.Count < count)
@@ -84,10 +84,7 @@ namespace Geometry
 
     public static class ArrayToStringExtensions
     {
-        public static string ToCSV(this double[] array, string delimiter = ", ", string format = "F2")
-        {
-            return string.Join(delimiter, array.Select(v => v.ToString(format)));
-            /*
+        public static string ToCSV(this double[] array, string delimiter = ", ", string format = "F2") => string.Join(delimiter, array.Select(v => v.ToString(format)));/*
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < array.Count(); i++)
             {
@@ -98,11 +95,10 @@ namespace Geometry
 
             return sb.ToString();
             */
-        }
 
         public static string ToMatlab(this double[] array, string format = "F2")
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.Append('[');
             sb.Append(array.ToCSV(" "));
             sb.Append(']');
@@ -113,50 +109,26 @@ namespace Geometry
 
     public static class GeometryRTreeExtensions
     {
-        public static RTree.Point ToRTreePoint(this GridVector2 p, double Z = 0)
-        {
-            return new RTree.Point(p.X, p.Y, Z);
-        }
+        public static RTree.Point ToRTreePoint(this GridVector2 p, double Z = 0) => new RTree.Point(p.X, p.Y, Z);
 
-        public static RTree.Point ToRTreePoint(this GridVector3 p)
-        {
-            return new RTree.Point(p.coords);
-        }
+        public static RTree.Point ToRTreePoint(this GridVector3 p) => new RTree.Point(p.coords);
 
-        public static RTree.Rectangle ToRTreeRect(this in GridRectangle rect, double MinZ, double MaxZ)
-        {
-            return new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, MinZ, MaxZ);
-        }
+        public static RTree.Rectangle ToRTreeRect(this in GridRectangle rect, double MinZ, double MaxZ) => new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, MinZ, MaxZ);
 
-        public static RTree.Rectangle ToRTreeRect(this in GridRectangle rect, double Z = 0)
-        {
-            return new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, Z, Z);
-        }
+        public static RTree.Rectangle ToRTreeRect(this in GridRectangle rect, double Z = 0) => new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, Z, Z);
 
         /// <summary>
         /// Converts to an RTree.Rectangle, but pads an epsilon value to the bounding box
         /// </summary>
         /// <param name="rect"></param>
         /// <returns></returns>
-        public static RTree.Rectangle ToRTreeRectEpsilonPadded(this in GridRectangle rect, double Z = 0)
-        {
-            return new RTree.Rectangle(rect.Left - Global.Epsilon, rect.Bottom - Global.Epsilon, rect.Right + Global.Epsilon, rect.Top + Global.Epsilon, (double)Z, (double)Z);
-        }
+        public static RTree.Rectangle ToRTreeRectEpsilonPadded(this in GridRectangle rect, double Z = 0) => new RTree.Rectangle(rect.Left - Global.Epsilon, rect.Bottom - Global.Epsilon, rect.Right + Global.Epsilon, rect.Top + Global.Epsilon, (double)Z, (double)Z);
 
-        public static RTree.Rectangle ToRTreeRect(this GridVector2 p, double Z)
-        {
-            return new RTree.Rectangle(p.X, p.Y, p.X, p.Y, Z, Z);
-        }
+        public static RTree.Rectangle ToRTreeRect(this GridVector2 p, double Z) => new RTree.Rectangle(p.X, p.Y, p.X, p.Y, Z, Z);
 
-        public static RTree.Rectangle ToRTreeRect(this GridVector2 p, int Z)
-        {
-            return new RTree.Rectangle(p.X, p.Y, p.X, p.Y, (double)Z, (double)Z);
-        }
+        public static RTree.Rectangle ToRTreeRect(this GridVector2 p, int Z) => new RTree.Rectangle(p.X, p.Y, p.X, p.Y, (double)Z, (double)Z);
 
-        public static RTree.Rectangle ToRTreeRect(this IPoint2D p, int Z)
-        {
-            return new RTree.Rectangle(p.X, p.Y, p.X, p.Y, (double)Z, (double)Z);
-        }
+        public static RTree.Rectangle ToRTreeRect(this IPoint2D p, int Z) => new RTree.Rectangle(p.X, p.Y, p.X, p.Y, (double)Z, (double)Z);
 
         public static RTree.Rectangle ToRTreeRect(this GridBox bbox)
         {
@@ -166,7 +138,7 @@ namespace Geometry
 
         public static RTree.RTree<GridLineSegment> ToRTree(this IEnumerable<GridLineSegment> lines)
         {
-            RTree.RTree<GridLineSegment> rTree = new RTree<Geometry.GridLineSegment>();
+            RTree.RTree<GridLineSegment> rTree = new();
             foreach (GridLineSegment l in lines)
             {
                 rTree.Add(l.BoundingBox.ToRTreeRect(0), l);
@@ -179,45 +151,21 @@ namespace Geometry
 
     public static class GeometryMathNetNumerics
     {
-        public static Matrix<double> ToMatrix(this GridVector2 point)
-        {
-            return (new GridVector2[] { point }).ToMatrix();
-        }
+        public static Matrix<double> ToMatrix(this GridVector2 point) => (new GridVector2[] { point }).ToMatrix();
 
-        public static Matrix<double> ToMatrix(this GridVector3 point)
-        {
-            return (new GridVector3[] { point }).ToMatrix();
-        }
+        public static Matrix<double> ToMatrix(this GridVector3 point) => (new GridVector3[] { point }).ToMatrix();
 
-        public static Vector<double> ToVector(this GridVector2 point)
-        {
-            return Vector<double>.Build.Dense(new double[] { point.X, point.Y, 0 });
-        }
+        public static Vector<double> ToVector(this GridVector2 point) => Vector<double>.Build.Dense([point.X, point.Y, 0]);
 
-        public static Vector<double> ToVector(this GridVector3 point)
-        {
-            return Vector<double>.Build.Dense(new double[] { point.X, point.Y, point.Z });
-        }
+        public static Vector<double> ToVector(this GridVector3 point) => Vector<double>.Build.Dense([point.X, point.Y, point.Z]);
 
-        public static Matrix<double> ToMatrix(this ICollection<GridVector2> points)
-        {
-            return Matrix<double>.Build.DenseOfColumns(points.Select(p => new double[] { p.X, p.Y, 0, 1 }));
-        }
+        public static Matrix<double> ToMatrix(this ICollection<GridVector2> points) => Matrix<double>.Build.DenseOfColumns(points.Select(p => new double[] { p.X, p.Y, 0, 1 }));
 
-        public static Matrix<double> ToMatrix(this ICollection<GridVector3> points)
-        {
-            return Matrix<double>.Build.DenseOfColumns(points.Select(p => new double[] { p.X, p.Y, p.Z, 1 }));
-        }
+        public static Matrix<double> ToMatrix(this ICollection<GridVector3> points) => Matrix<double>.Build.DenseOfColumns(points.Select(p => new double[] { p.X, p.Y, p.Z, 1 }));
 
-        public static GridVector2 ToGridVector2(this Vector<double> m)
-        {
-            return new GridVector2(m[0], m[1]);
-        }
+        public static GridVector2 ToGridVector2(this Vector<double> m) => new GridVector2(m[0], m[1]);
 
-        public static GridVector3 ToGridVector3(this Vector<double> m)
-        {
-            return new GridVector3(m[0], m[1], m[2]);
-        }
+        public static GridVector3 ToGridVector3(this Vector<double> m) => new GridVector3(m[0], m[1], m[2]);
 
         public static GridVector2[] ToGridVector2(this Matrix<double> m)
         {
@@ -277,7 +225,7 @@ namespace Geometry
 
         public static Matrix<double> CreateScaleMatrix(double X, double Y, double Z)
         {
-            Vector<double> v = Vector<double>.Build.Dense(new double[] { X, Y, Z });
+            Vector<double> v = Vector<double>.Build.Dense([X, Y, Z]);
             return CreateScaleMatrix(v);
         }
 
@@ -285,7 +233,7 @@ namespace Geometry
         {
             if (scalars.Count == 2)
             {
-                scalars = Vector<double>.Build.Dense(new double[] { scalars[0], scalars[1], 1.0 });
+                scalars = Vector<double>.Build.Dense([scalars[0], scalars[1], 1.0]);
             }
 
             if (scalars.Count != 3)
@@ -323,10 +271,7 @@ namespace Geometry
         /// <param name="scale"></param>
         /// <param name="centerOfScale"></param>
         /// <returns></returns>
-        public static GridVector2[] Scale(this ICollection<GridVector2> points, double scale, GridVector2 origin)
-        {
-            return points.Scale(new GridVector2(scale, scale), origin);
-        }
+        public static GridVector2[] Scale(this ICollection<GridVector2> points, double scale, GridVector2 origin) => points.Scale(new GridVector2(scale, scale), origin);
 
         /// <summary>
         /// Scale distance of points from a centerpoint by a scalar value
@@ -371,15 +316,9 @@ namespace Geometry
 
     public static class IPoint2DExtensions
     {
-        public static GridVector2 Round(this IPoint2D p, int precision)
-        {
-            return new GridVector2(Math.Round(p.X, precision), Math.Round(p.Y, precision));
-        }
+        public static GridVector2 Round(this IPoint2D p, int precision) => new GridVector2(Math.Round(p.X, precision), Math.Round(p.Y, precision));
 
-        public static GridVector2 ToGridVector2(this IPoint2D p)
-        {
-            return new GridVector2(p.X, p.Y);
-        }
+        public static GridVector2 ToGridVector2(this IPoint2D p) => new GridVector2(p.X, p.Y);
     }
 
     public static class IShape2DExtensions
@@ -394,7 +333,7 @@ namespace Geometry
 
 
             bool first = true;
-            GridRectangle bbox = new GridRectangle();
+            GridRectangle bbox = new();
             foreach (var s in shapes)
             {
                 var result = s.BoundingBox;
@@ -424,10 +363,7 @@ namespace Geometry
         {
             if (points.First() != points.Last())
             {
-                List<int> newPoints = new List<int>(points)
-                {
-                    points.First()
-                };
+                List<int> newPoints = [.. points, points.First()];
                 return newPoints;
             }
 
@@ -444,10 +380,7 @@ namespace Geometry
         {
             if (points.First() != points.Last())
             {
-                List<GridVector2> newPoints = new List<Geometry.GridVector2>(points)
-                {
-                    points.First()
-                };
+                List<GridVector2> newPoints = [.. points, points.First()];
                 return newPoints;
             }
 
@@ -482,11 +415,11 @@ namespace Geometry
         public static ICollection<GridVector2> EnsureOpenRing(this ICollection<GridVector2> points)
         {
             if (points.Count < 2)
-                return points.ToList();
+                return [.. points];
 
             if (points.First() == points.Last())
             {
-                List<GridVector2> newPoints = new List<Geometry.GridVector2>(points);
+                List<GridVector2> newPoints = [.. points];
                 newPoints.RemoveAt(newPoints.Count - 1);
                 return newPoints;
             }
@@ -503,7 +436,7 @@ namespace Geometry
         public static GridVector2[] EnsureOpenRing(this GridVector2[] points)
         {
             if (points.Length < 2)
-                return points.ToArray();
+                return [.. points];
 
             if (points.First() == points.Last())
             {
@@ -591,10 +524,7 @@ namespace Geometry
         /// </summary>
         /// <param name="points"></param>
         /// <returns></returns>
-        public static bool AreClockwise(this GridVector2[] points)
-        {
-            return points.Winding() == RotationDirection.CLOCKWISE;
-        }
+        public static bool AreClockwise(this GridVector2[] points) => points.Winding() == RotationDirection.CLOCKWISE;
 
         /// <summary>
         /// Return RotationDirection of the points.  Code Assumes points do not cross over themselves. 
@@ -656,10 +586,10 @@ namespace Geometry
                     segments[iLine] = new GridLineSegment(points.ElementAt(iPoint), points.ElementAt(iPoint + 1));
                     iLine++;
                 }
-                catch(ArgumentException)
-                { 
+                catch (ArgumentException)
+                {
                     //If points are identical, do not add them to the result set
-                    if(points.ElementAt(iPoint) == points.ElementAt(iPoint+1))
+                    if (points.ElementAt(iPoint) == points.ElementAt(iPoint + 1))
                         continue;
                     else
                         throw;
@@ -668,12 +598,12 @@ namespace Geometry
 
             //Resize the array if we omitted any identical point pairs
             if (iLine < segments.Length)
-            {  
-                var shortened_array = new GridLineSegment[iLine];
+            {
+                GridLineSegment[] shortened_array = new GridLineSegment[iLine];
                 Array.Copy(segments, shortened_array, iLine);
                 return shortened_array;
             }
-                
+
 
             return segments;
         }
@@ -691,7 +621,7 @@ namespace Geometry
             if (points.Count <= 1)
                 throw new ArgumentException("Must have two points to create line segments");
 
-            GridPolyline polyline = new GridPolyline(points, AllowSelfIntersection);
+            GridPolyline polyline = new(points, AllowSelfIntersection);
             return polyline;
         }
 
@@ -702,21 +632,21 @@ namespace Geometry
         /// <returns></returns>
         public static List<GridVector2> RemoveAdjacentDuplicates(this IEnumerable<GridVector2> points)
         {
-            List<GridVector2> nonDuplicatePoints = new List<GridVector2>();
+            List<GridVector2> nonDuplicatePoints = [];
             var enumerator = points.GetEnumerator();
-            if(!enumerator.MoveNext())
+            if (!enumerator.MoveNext())
                 throw new ArgumentException("Must have at least one point to remove adjacent duplicates");
 
             GridVector2 p = enumerator.Current;
             GridVector2 next = GridVector2.Zero;
             int count = 0;
-            while(enumerator.MoveNext())
+            while (enumerator.MoveNext())
             {
                 next = enumerator.Current;
                 if (p != next)
-                { 
+                {
                     nonDuplicatePoints.Add(p);
-                    p = next; 
+                    p = next;
                 }
 
                 //Don't advance p every loop if values are equal.  This allows small epsilon changes to add up and eventually add a point
@@ -724,13 +654,13 @@ namespace Geometry
                 count++;
             }
 
-            if(count == 0) //There was only one point and the loop didn't execute
+            if (count == 0) //There was only one point and the loop didn't execute
                 nonDuplicatePoints.Add(p);
 
             //Always preserve the last point
             if (count > 0) //Did the loop execute at least once?  If so we need to account for the last point
                 nonDuplicatePoints.Add(next);
-            
+
             //System.Diagnostics.Trace.WriteLine("Originally " + (ControlPoints.Count * NumInterpolations).ToString() + " now " + nonDuplicatePoints.Count.ToString());
             return nonDuplicatePoints;
         }
@@ -743,24 +673,24 @@ namespace Geometry
         /// <returns></returns>
         public static List<GridVector2> RemoveAdjacentDuplicates(this IEnumerable<GridVector2> points, IEnumerable<GridVector2> preserved_path)
         {
-            List<GridVector2> nonDuplicatePoints = new List<GridVector2>();
+            List<GridVector2> nonDuplicatePoints = [];
             var enumerator = points.GetEnumerator();
             if (!enumerator.MoveNext())
                 throw new ArgumentException("Must have at least one point to remove adjacent duplicates");
 
-            if(preserved_path is null)
+            if (preserved_path is null)
                 throw new ArgumentNullException(nameof(preserved_path));
 
             var preserved_enumerator = preserved_path.GetEnumerator();
             GridVector2 preserved_point = preserved_enumerator.MoveNext() ? preserved_enumerator.Current : GridVector2.NaN;
-             
+
             GridVector2 p = enumerator.Current;
-            GridVector2 next = GridVector2.NaN; 
+            GridVector2 next = GridVector2.NaN;
             int count = 0;
             while (enumerator.MoveNext())
             {
                 next = enumerator.Current;
-                if(p.X == preserved_point.X && p.Y == preserved_point.Y)
+                if (p.X == preserved_point.X && p.Y == preserved_point.Y)
                 {
                     //Skip further duplicates of the preserved point, use the epsilon equality operator to ensure we get far enough away to not add a psuedo-duplicate point
                     while (next == preserved_point)
@@ -769,12 +699,12 @@ namespace Geometry
                     //Add the preserved point
                     nonDuplicatePoints.Add(p);
 
-                    preserved_point = preserved_enumerator.MoveNext() ? preserved_enumerator.Current : GridVector2.NaN; 
+                    preserved_point = preserved_enumerator.MoveNext() ? preserved_enumerator.Current : GridVector2.NaN;
                 }
                 else if (p == preserved_point) //It is close, but not the exact point, so skip it because we know the exact preserved_point will be added soon.
-                { 
-                    if(next != preserved_point) //We are moving away from the preserved point, so add it to ensure it isn't lost
-                    { 
+                {
+                    if (next != preserved_point) //We are moving away from the preserved point, so add it to ensure it isn't lost
+                    {
                         nonDuplicatePoints.Add(preserved_point);
                         preserved_point = preserved_enumerator.MoveNext() ? preserved_enumerator.Current : GridVector2.NaN;
                     }
@@ -808,12 +738,12 @@ namespace Geometry
         /// <returns></returns>
         public static List<GridVector2> RemoveAdjacentDuplicates(this ICollection<GridVector2> points)
         {
-            List<GridVector2> nonDuplicatePoints = new List<GridVector2>(points.Count);
+            List<GridVector2> nonDuplicatePoints = new(points.Count);
             GridVector2 p = points.First();
             int i = 0;
-            foreach(GridVector2 next in points)
-            { 
-                if(p != next)
+            foreach (GridVector2 next in points)
+            {
+                if (p != next)
                     nonDuplicatePoints.Add(p);
 
                 if (i == points.Count - 1)
@@ -825,7 +755,7 @@ namespace Geometry
                 p = next;
                 i++;
             }
-             
+
             //                System.Diagnostics.Trace.WriteLine("Originally " + (ControlPoints.Count * NumInterpolations).ToString() + " now " + nonDuplicatePoints.Count.ToString());
             return nonDuplicatePoints;
         }
@@ -861,7 +791,7 @@ namespace Geometry
         /// <returns></returns>
         public static GridVector2[] RemoveDuplicates(this IReadOnlyList<GridVector2> points)
         {
-            List<GridVector2> nonDuplicatePoints = new List<GridVector2>();
+            List<GridVector2> nonDuplicatePoints = [];
             for (int i = 0; i < points.Count; i++)
             {
                 if (false == nonDuplicatePoints.Contains(points[i]))
@@ -870,7 +800,7 @@ namespace Geometry
 
 
             //                System.Diagnostics.Trace.WriteLine("Originally " + (ControlPoints.Count * NumInterpolations).ToString() + " now " + nonDuplicatePoints.Count.ToString());
-            return nonDuplicatePoints.ToArray();
+            return [.. nonDuplicatePoints];
         }
 
         /*
@@ -980,7 +910,7 @@ namespace Geometry
                 maxY = points[i].Y > maxY ? points[i].Y : maxY;
             }
 
-            return new double[] { minX, maxX, minY, maxY };
+            return [minX, maxX, minY, maxY];
         }
 
         /// <returns>[MinX/Left, MaxX/Right, MinY/Bottom, MaxY/Top]</returns>
@@ -1006,12 +936,12 @@ namespace Geometry
             if (minX == double.MinValue && points.Any() == false)
                 throw new ArgumentException("Empty collection", nameof(points));
 
-            return new double[] { minX, maxX, minY, maxY };
+            return [minX, maxX, minY, maxY];
         }
 
-        public static GridRectangle BoundingBox(this GridVector2[] points) => new GridRectangle(GetBounds(points));
+        public static GridRectangle BoundingBox(this GridVector2[] points) => new(GetBounds(points));
 
-        public static GridRectangle BoundingBox(this IEnumerable<GridVector2> points) => new GridRectangle(GetBounds(points));
+        public static GridRectangle BoundingBox(this IEnumerable<GridVector2> points) => new(GetBounds(points));
 
         /// <summary>
         /// Given a set of points, return the closest distance between any two points
@@ -1061,7 +991,7 @@ namespace Geometry
         /// <returns></returns>
         public static GridVector2? IntersectionPoint(this ICollection<GridVector2> Verticies, GridLineSegment testSeg)
         {
-            GridLineSegment[] segments = GridLineSegment.SegmentsFromPoints(Verticies.ToArray());
+            GridLineSegment[] segments = GridLineSegment.SegmentsFromPoints([.. Verticies]);
             return segments.IntersectionPoint(testSeg, false);
         }
 
@@ -1076,7 +1006,7 @@ namespace Geometry
         public static int NearestPoint(this ICollection<GridVector2> points, GridVector2 testPoint, out double MinDistance)
         {
             //Find the line segment the NewControlPoint intersects
-            double[] distancesToRemovalPoint = points.Select(p => GridVector2.Distance(p, testPoint)).ToArray();
+            double[] distancesToRemovalPoint = [.. points.Select(p => GridVector2.Distance(p, testPoint))];
             double minDistance = distancesToRemovalPoint.Min();
             int iNearestPoint = distancesToRemovalPoint.TakeWhile(d => d != distancesToRemovalPoint.Min()).Count();
             MinDistance = minDistance;
@@ -1097,15 +1027,15 @@ namespace Geometry
 
         public static bool SetEquals(this IReadOnlyList<GridVector2> A, IReadOnlyList<GridVector2> B)
         {
-            var sortedA = A.ToImmutableSortedSet(new GridVectorComparerXY());
-            var sortedB = B.ToImmutableSortedSet(new GridVectorComparerXY());
+            ImmutableSortedSet<GridVector2> sortedA = A.ToImmutableSortedSet(new GridVectorComparerXY());
+            ImmutableSortedSet<GridVector2> sortedB = B.ToImmutableSortedSet(new GridVectorComparerXY());
             return sortedA.SetEquals(sortedB);
         }
 
         public static bool SetEquals(this IReadOnlyList<MappingGridVector2> A, IReadOnlyList<MappingGridVector2> B)
         {
-            var sortedA = A.ToImmutableSortedSet(new MappingGridVector2Comparer());
-            var sortedB = B.ToImmutableSortedSet(new MappingGridVector2Comparer());
+            ImmutableSortedSet<MappingGridVector2> sortedA = A.ToImmutableSortedSet(new MappingGridVector2Comparer());
+            ImmutableSortedSet<MappingGridVector2> sortedB = B.ToImmutableSortedSet(new MappingGridVector2Comparer());
             return sortedA.SetEquals(sortedB);
         }
     }
@@ -1153,8 +1083,8 @@ namespace Geometry
                 maxZ = Math.Max(maxZ, points[i].Z);
             }
 
-            return new GridBox(new double[] { minX, minY, minZ },
-                                new double[] { maxX, maxY, maxZ });
+            return new GridBox([minX, minY, minZ],
+                                [maxX, maxY, maxZ]);
         }
 
         public static GridVector3 Average(this ICollection<GridVector3> points)
@@ -1181,10 +1111,7 @@ namespace Geometry
             return new GridVector3(mX / (double)points.Count, mY / (double)points.Count, mZ / (double)points.Count);
         }
 
-        public static GridVector2 XY(this GridVector3 point)
-        {
-            return new GridVector2(point.X, point.Y);
-        }
+        public static GridVector2 XY(this GridVector3 point) => new GridVector2(point.X, point.Y);
     }
 
     public static class VectorExtensions
@@ -1196,7 +1123,7 @@ namespace Geometry
         {
             var items = source.Select(item => new { Key = keySelector(item), Item = elementSelector(item) }).ToArray();
             var bbox = items.Select(item => item.Key).BoundingBox();
-            var output = new QuadTreeWithUniqueValues<TElement>(bbox * 1.5);
+            QuadTreeWithUniqueValues<TElement> output = new(bbox * 1.5);
             foreach (var item in items)
             {
                 output.Add(item.Key, item.Item);
@@ -1211,7 +1138,7 @@ namespace Geometry
         {
             var items = source.Select(item => new { Key = keySelector(item), Item = item }).ToArray();
             var bbox = items.Select(item => item.Key).BoundingBox();
-            var output = new QuadTreeWithUniqueValues<TSource>(bbox * 1.5);
+            QuadTreeWithUniqueValues<TSource> output = new(bbox * 1.5);
             foreach (var item in items)
             {
                 output.Add(item.Key, item.Item);
@@ -1230,10 +1157,7 @@ namespace Geometry
         /// <param name="position"></param>
         /// <param name="IgnoreEndpoints">Ignore line segments where the endpoints are identical</param>
         /// <returns></returns>
-        public static GridVector2? IntersectionPoint(this ICollection<GridLineSegment> segments, GridLineSegment testSeg, bool IgnoreEndpoints)
-        {
-            return IntersectionPoint(segments, testSeg, IgnoreEndpoints, out GridLineSegment? intersectedSegment);
-        }
+        public static GridVector2? IntersectionPoint(this ICollection<GridLineSegment> segments, GridLineSegment testSeg, bool IgnoreEndpoints) => IntersectionPoint(segments, testSeg, IgnoreEndpoints, out GridLineSegment? intersectedSegment);
 
         /// <summary>
         /// Return the intersection point with a value if the provided line intersects any segment of our polyline.
@@ -1247,7 +1171,7 @@ namespace Geometry
 
             if (IgnoreEndpoints)
             {
-                segments = segments.Where(s => !s.SharedEndPoint(in testSeg)).ToList();
+                segments = [.. segments.Where(s => !s.SharedEndPoint(in testSeg))];
             }
 
             foreach (GridLineSegment existingLine in segments)
@@ -1298,7 +1222,7 @@ namespace Geometry
                 return iNearestSegment;
             }
 
-            double[] distancesToNewPoint = segments.Select(l => l.DistanceToPoint(in p)).ToArray();
+            double[] distancesToNewPoint = [.. segments.Select(l => l.DistanceToPoint(in p))];
             double minDistance = distancesToNewPoint.Min();
 
             iNearestSegment = distancesToNewPoint.TakeWhile(d => d != minDistance).Count();
@@ -1306,10 +1230,7 @@ namespace Geometry
             return iNearestSegment;
         }
 
-        static bool IsRing(this ICollection<GridLineSegment> segments)
-        {
-            return segments.First().A == segments.Last().B;
-        }
+        static bool IsRing(this ICollection<GridLineSegment> segments) => segments.First().A == segments.Last().B;
 
         /// <summary>
         /// Include the new point in the grid line segment array.  Creates two new segments from (index-1, index) and (index, index + 1) and removes the segment between (index-1 and index) by creating a new segment between the new point and closest vertex in the existing segments.  Preserves order.
@@ -1321,7 +1242,7 @@ namespace Geometry
         {
             GridVector2[] newControlPoints = new GridVector2[lineSegs.Count + 2];
 
-            List<GridVector2> verts = lineSegs.Verticies().ToList();
+            List<GridVector2> verts = [.. lineSegs.Verticies()];
             verts.Insert(segmentIndex + 1, newPointPosition);
             return verts.ToLineSegments();
         }
@@ -1435,7 +1356,7 @@ namespace Geometry
                 }
             }
 
-            GridCircle testCircle = new GridCircle(WorldPosition, ControlPointRadius);
+            GridCircle testCircle = new(WorldPosition, ControlPointRadius);
             if (polygon.ExteriorRing.Any(v => testCircle.Contains(v)))
             {
                 intersectingPoly = polygon;
@@ -1554,14 +1475,14 @@ namespace Geometry
         /// <returns>A dictionary of Polygon vertex indicies and a distance from that vertex.  </returns>
         public static SortedDictionary<double, PolygonIndex> IntersectingSegments(this GridPolygon polygon, in GridLineSegment line)
         {
-            SortedDictionary<double, PolygonIndex> output = new SortedDictionary<double, PolygonIndex>();
+            SortedDictionary<double, PolygonIndex> output = [];
 
-            PolygonIndex[] candidates = polygon.SegmentRTree.Intersects(line.BoundingBox).ToArray();
+            PolygonIndex[] candidates = [.. polygon.SegmentRTree.Intersects(line.BoundingBox)];
 
             //Due to epsilon factors a single line may intersect the same vertex twice when a line passes near the vertex.
             //We control this by keeping a list of verticies we've already added and not adding them again
 
-            List<PolygonIndex> AddedVerticies = new List<PolygonIndex>();
+            List<PolygonIndex> AddedVerticies = [];
 
             foreach (PolygonIndex index in candidates)
             {
@@ -1572,7 +1493,7 @@ namespace Geometry
                 if (segment.Intersects(in line, false, out IShape2D intersection))
                 {
                     double distance;
-                    if (!(intersection is IPoint2D p)) //It is not a point, it is a line.  Therefore distance is zero
+                    if (intersection is not IPoint2D p) //It is not a point, it is a line.  Therefore distance is zero
                     {
                         distance = 0;
                         if (output.ContainsKey(distance)) //There is an error if we add an endpoint twice, so don't
@@ -1584,7 +1505,7 @@ namespace Geometry
                     }
                     else //Intersection is a point
                     {
-                        GridVector2 p2 = new GridVector2(p.X, p.Y);
+                        GridVector2 p2 = new(p.X, p.Y);
                         distance = GridVector2.Distance(line.A, p2);
 
                         if (segment.IsEndpoint(p2))
@@ -1668,7 +1589,7 @@ namespace Geometry
         /// <returns></returns>
         public static SortedDictionary<double, PolygonIndex> IntersectingSegments(this GridPolygon polygon, GridLineSegment[] path)
         {
-            SortedDictionary<double, PolygonIndex> output = new SortedDictionary<double, PolygonIndex>();
+            SortedDictionary<double, PolygonIndex> output = [];
 
             for (int iRing = 0; iRing < polygon.InteriorRings.Count; iRing++)
             {
@@ -1694,7 +1615,7 @@ namespace Geometry
                     if (segment.Intersects(line, false, out IShape2D intersection))
                     {
                         IPoint2D p = intersection as IPoint2D;
-                        GridVector2 p2 = new GridVector2(p.X, p.Y);
+                        GridVector2 p2 = new(p.X, p.Y);
                         double distance = GridVector2.Distance(line.A, p2) + total_length;
                         if (segment.IsEndpoint(p2))
                         {

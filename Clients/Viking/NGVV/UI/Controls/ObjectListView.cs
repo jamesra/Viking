@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -29,42 +29,37 @@ namespace Viking.UI.BaseClasses
         }
 
         [Serializable()]
-        public struct ColumnVisibilitySetting
+        public struct ColumnVisibilitySetting(bool isVisibile, int width)
         {
-            public ColumnVisibilitySetting(bool isVisibile, int width)
-            {
-                this.isVisibile = isVisibile;
-                this.width = width;
-            }
-            public bool isVisibile;
-            public int width;
+            public bool isVisibile = isVisibile;
+            public int width = width;
         }
 
         [Browsable(true)]
         public bool ShowPropertiesOnDoubleClick = true;
 
-        public System.EventHandler OnContextMenuNewClick = null;
-        public System.EventHandler OnContextMenuRemoveClick = null;
+        public System.EventHandler? OnContextMenuNewClick = null;
+        public System.EventHandler? OnContextMenuRemoveClick = null;
 
-        private PropertyInfo[] ColumnProperties = new PropertyInfo[0];
+        private PropertyInfo[] ColumnProperties = [];
 
-        private readonly System.EventHandler OnObjectSaveHandler = null;
-        private readonly System.EventHandler OnObjectDeleteHandler = null;
-        private readonly System.ComponentModel.PropertyChangedEventHandler OnObjectValueChangedHandler = null;
-        private readonly EventHandler OnContextColumnMenuHandler = null;
+        private readonly System.EventHandler? OnObjectSaveHandler = null;
+        private readonly System.EventHandler? OnObjectDeleteHandler = null;
+        private readonly System.ComponentModel.PropertyChangedEventHandler? OnObjectValueChangedHandler = null;
+        private readonly EventHandler? OnContextColumnMenuHandler = null;
 
-        private System.Type _DisplayType = null;
+        private System.Type? _DisplayType = null;
 
 
         /// <summary>
         /// saves the args from the last mouse up event
         /// </summary>
-        private MouseEventArgs lastMouseUpEventArgs = null;
+        private MouseEventArgs? lastMouseUpEventArgs = null;
 
         /// <summary>
         /// stores the columnsetting structs for the columns
         /// </summary>
-        private Dictionary<string, ColumnVisibilitySetting> _ColumnSettingsHashtable = null;
+        private Dictionary<string, ColumnVisibilitySetting>? _ColumnSettingsHashtable = null;
 
         private readonly int _ColumnDefaultWidth = 75;
 
@@ -95,9 +90,9 @@ namespace Viking.UI.BaseClasses
         /// <param name="ObjType"></param>
 		public void SetDisplayType(System.Type ObjType)
         {
-            List<string> ColumnList = new List<String>();
+            List<string> ColumnList = [];
             PropertyInfo[] Properties = ObjType.GetProperties();
-            List<PropertyInfo> listPropInfoForColumn = new List<PropertyInfo>();
+            List<PropertyInfo> listPropInfoForColumn = [];
             foreach (PropertyInfo Property in Properties)
             {
                 ColumnAttribute[] Attributes = Property.GetCustomAttributes(typeof(ColumnAttribute), true) as ColumnAttribute[];
@@ -130,7 +125,7 @@ namespace Viking.UI.BaseClasses
 
             this.EndUpdate();
 
-            this.ColumnProperties = listPropInfoForColumn.ToArray();
+            this.ColumnProperties = [.. listPropInfoForColumn];
             /*
 			this.ColumnProperties = new PropertyInfo[ColumnList.Count]; 
 			for(int iColumn = 0; iColumn < ColumnList.Count; iColumn++)
@@ -144,17 +139,14 @@ namespace Viking.UI.BaseClasses
             LoadColumnVisibilitySettings();
         }
 
-        protected System.Type GetTypeForArray(object[] Objects)
-        {
-            return Objects?.GetType().GetElementType();
-        }
+        protected System.Type GetTypeForArray(object[] Objects) => Objects?.GetType().GetElementType();
 
         [Browsable(false)]
         public Viking.Common.IUIObject[] SelectedObjects
         {
             get
             {
-                IUIObject[] Objs = new IUIObject[this.SelectedItems.Count];
+                IUIObject?[] Objs = new IUIObject?[this.SelectedItems.Count];
 
                 for (int i = 0; i < SelectedItems.Count; i++)
                 {
@@ -186,12 +178,7 @@ namespace Viking.UI.BaseClasses
         {
             foreach (ListViewItem Item in this.Items)
             {
-                if (Item.Tag.Equals(Object) == true)
-                {
-                    Item.Selected = true;
-                }
-                else
-                    Item.Selected = false;
+                Item.Selected = Item.Tag.Equals(Object) == true;
             }
         }
 
@@ -272,7 +259,7 @@ namespace Viking.UI.BaseClasses
 
             //Removed until I add images again
             //			ListViewItem Item = new ListViewItem(SubItems, Object.TreeImageIndex);
-            ListViewItem Item = new ListViewItem(SubItems, null)
+            ListViewItem Item = new(SubItems, null)
             {
                 Tag = Object
             };
@@ -361,8 +348,8 @@ namespace Viking.UI.BaseClasses
 
 
         // Modern ContextMenuStrip implementation for .NET 9.0 compatibility
-        private System.Windows.Forms.ContextMenuStrip _ContextMenuStrip = null;
-        private System.Windows.Forms.ToolStripItem[] menuItemsFromHost = new System.Windows.Forms.ToolStripItem[0];
+        private readonly System.Windows.Forms.ContextMenuStrip? _ContextMenuStrip = null;
+        private System.Windows.Forms.ToolStripItem[] menuItemsFromHost = [];
 
         /// <summary>
         /// Property to set context menu items from host controls
@@ -374,7 +361,7 @@ namespace Viking.UI.BaseClasses
             {
                 if (value is null)
                 {
-                    menuItemsFromHost = new System.Windows.Forms.ToolStripItem[0];
+                    menuItemsFromHost = [];
                 }
                 else
                 {
@@ -393,7 +380,7 @@ namespace Viking.UI.BaseClasses
         /// </summary>
         private System.Windows.Forms.ContextMenuStrip BuildContextMenuStrip()
         {
-            var contextMenu = new System.Windows.Forms.ContextMenuStrip();
+            ContextMenuStrip contextMenu = new();
 
             // find the item we clicked on
             ListViewItem listItem = null;
@@ -428,7 +415,7 @@ namespace Viking.UI.BaseClasses
             // if someone is going to handle the click for New add that
             if (OnContextMenuNewClick != null)
             {
-                var newItem = new System.Windows.Forms.ToolStripMenuItem("New");
+                ToolStripMenuItem newItem = new("New");
                 newItem.Click += OnContextMenuNewClick;
                 contextMenu.Items.Add(newItem);
             }
@@ -436,7 +423,7 @@ namespace Viking.UI.BaseClasses
             // if someone is handling remove add the menu item
             if (OnContextMenuRemoveClick != null)
             {
-                var removeItem = new System.Windows.Forms.ToolStripMenuItem("Remove");
+                ToolStripMenuItem removeItem = new("Remove");
                 removeItem.Click += OnContextMenuRemoveClick;
                 contextMenu.Items.Add(removeItem);
             }
@@ -451,7 +438,7 @@ namespace Viking.UI.BaseClasses
             var columnMenuStrip = BuildColumnMenuStrip();
             if (columnMenuStrip != null && columnMenuStrip.Items.Count > 1)
             {
-                var columnMenuItem = new System.Windows.Forms.ToolStripMenuItem("Columns");
+                ToolStripMenuItem columnMenuItem = new("Columns");
                 // Copy column menu items to the submenu
                 foreach (System.Windows.Forms.ToolStripItem item in columnMenuStrip.Items)
                 {
@@ -472,16 +459,16 @@ namespace Viking.UI.BaseClasses
         /// </summary>
         private System.Windows.Forms.ToolStripMenuItem CloneToolStripMenuItem(System.Windows.Forms.ToolStripMenuItem original)
         {
-            var clone = new System.Windows.Forms.ToolStripMenuItem(original.Text);
-            clone.Enabled = original.Enabled;
-            clone.Checked = original.Checked;
-            clone.Image = original.Image;
-            clone.Tag = original.Tag;
-            
-            // Clone event handlers by creating a lambda that calls the original's PerformClick
-            clone.Click += (sender, e) => {
-                original.PerformClick();
+            ToolStripMenuItem clone = new(original.Text)
+            {
+                Enabled = original.Enabled,
+                Checked = original.Checked,
+                Image = original.Image,
+                Tag = original.Tag
             };
+
+            // Clone event handlers by creating a lambda that calls the original's PerformClick
+            clone.Click += (sender, e) => original.PerformClick();
 
             // Clone sub-menu items recursively
             foreach (System.Windows.Forms.ToolStripItem subItem in original.DropDownItems)
@@ -509,7 +496,7 @@ namespace Viking.UI.BaseClasses
                 return null;
 
             // a list to sort our columns
-            List<string> list = new List<string>(this.Columns.Count);
+            List<string> list = new(this.Columns.Count);
 
             // update the visibility settings and add the columns to the list
             foreach (ColumnHeader column in this.Columns)
@@ -530,13 +517,13 @@ namespace Viking.UI.BaseClasses
 
             list.Sort();
 
-            var menuStrip = new System.Windows.Forms.ContextMenuStrip();
+            ContextMenuStrip menuStrip = new();
 
             // create the menu items
             foreach (object obj in list)
             {
                 string str = obj as string;
-                var newMenuItem = new System.Windows.Forms.ToolStripMenuItem(str);
+                ToolStripMenuItem newMenuItem = new(str);
                 newMenuItem.Click += OnContextColumnMenuHandler;
 
                 // get the setting so we know if the column is visibile
@@ -565,15 +552,9 @@ namespace Viking.UI.BaseClasses
             base.OnDoubleClick(e);
         }
 
-        private Viking.Common.IUIObject ObjectForItem(ListViewItem Item)
-        {
-            return Item?.Tag as IUIObject;
-        }
+        private Viking.Common.IUIObject ObjectForItem(ListViewItem Item) => Item?.Tag as IUIObject;
 
-        private Viking.Common.IContextMenu ContextMenuForItem(ListViewItem Item)
-        {
-            return Item?.Tag as IContextMenu;
-        }
+        private Viking.Common.IContextMenu ContextMenuForItem(ListViewItem Item) => Item?.Tag as IContextMenu;
 
         protected override void OnColumnClick(System.Windows.Forms.ColumnClickEventArgs e)
         {
@@ -581,7 +562,7 @@ namespace Viking.UI.BaseClasses
             if (e.Column > 0)
                 ColumnType = this.ColumnProperties[e.Column - 1]?.PropertyType;
 
-            if (!(this.ListViewItemSorter is ListViewColumnSorter Sorter))
+            if (this.ListViewItemSorter is not ListViewColumnSorter Sorter)
             {
 
                 Sorter = new ListViewColumnSorter(e.Column, ColumnType);
@@ -677,10 +658,7 @@ namespace Viking.UI.BaseClasses
                 // is this our column?
                 if (column.Text == item.Text)
                 {
-                    if (visSetting.isVisibile)
-                        column.Width = visSetting.width;
-                    else
-                        column.Width = 0;
+                    column.Width = visSetting.isVisibile ? visSetting.width : 0;
 
                     // end the loop
                     break;
@@ -696,7 +674,7 @@ namespace Viking.UI.BaseClasses
                 //				string key = this.ControlKey;
 
                 // load the settings from the user preferences
-                _ColumnSettingsHashtable = new Dictionary<string, ColumnVisibilitySetting>();
+                _ColumnSettingsHashtable = [];
 
                 /*
 				if(Global.CurrentUser != null)
@@ -712,10 +690,7 @@ namespace Viking.UI.BaseClasses
                     if (_ColumnSettingsHashtable.ContainsKey(header.Text))
                     {
                         ColumnVisibilitySetting setting = (ColumnVisibilitySetting)_ColumnSettingsHashtable[header.Text];
-                        if (setting.isVisibile)
-                            header.Width = setting.width;
-                        else
-                            header.Width = 0;
+                        header.Width = setting.isVisibile ? setting.width : 0;
                     }
                     else
                         _ColumnSettingsHashtable.Add(header.Text, new ColumnVisibilitySetting(true, _ColumnDefaultWidth));
@@ -737,10 +712,7 @@ namespace Viking.UI.BaseClasses
                     (ColumnVisibilitySetting)_ColumnSettingsHashtable[column.Text];
 
                 visSetting.isVisibile = (column.Width != 0);
-                if (column.Width > 0)
-                    visSetting.width = column.Width;
-                else
-                    visSetting.width = _ColumnDefaultWidth;
+                visSetting.width = column.Width > 0 ? column.Width : _ColumnDefaultWidth;
 
                 _ColumnSettingsHashtable[column.Text] = visSetting;
             }
@@ -757,7 +729,7 @@ namespace Viking.UI.BaseClasses
             get
             {
                 // building a key by appending all the control names together
-                System.Text.StringBuilder key = new System.Text.StringBuilder();
+                System.Text.StringBuilder key = new();
 
                 // columns depend on display type
                 if (_DisplayType != null)
@@ -781,17 +753,10 @@ namespace Viking.UI.BaseClasses
         /// </summary>
         /// <param name="Obj"></param>
         /// <returns></returns>
-        public bool ContainsObj(object Obj)
-        {
-            return ItemForObject(Obj) != null;
-        }
+        public bool ContainsObj(object Obj) => ItemForObject(Obj) != null;
 
 
-        public void ExportToExcel()
-        {
-            throw new NotImplementedException("Coming soon");
-            //PlantMap.Utils.OfficeDocExporter.ToExcel(this);
-        }
+        public void ExportToExcel() => throw new NotImplementedException("Coming soon");//PlantMap.Utils.OfficeDocExporter.ToExcel(this);
 
 
         #endregion
@@ -805,8 +770,8 @@ namespace Viking.UI.BaseClasses
         }
 
 
-        private readonly CancelEventHandler OnParentFormClosing = null;
-        private readonly Form _ParentForm = null;
+        private readonly CancelEventHandler? OnParentFormClosing = null;
+        private readonly Form? _ParentForm = null;
 
         protected override void OnParentBindingContextChanged(EventArgs e)
         {

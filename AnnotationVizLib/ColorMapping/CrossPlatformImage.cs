@@ -23,29 +23,21 @@ namespace AnnotationVizLib
         private readonly Bitmap _systemDrawingImage;
 #endif
 
-        public int Width
-        {
-            get
-            {
+        public int Width =>
 #if NET9_0
-                return _width;
+                _width;
 #else
-                return _systemDrawingImage.Width;
+                _systemDrawingImage.Width;
 #endif
-            }
-        }
 
-        public int Height
-        {
-            get
-            {
+
+        public int Height =>
 #if NET9_0
-                return _height;
+                _height;
 #else
-                return _systemDrawingImage.Height;
+                _systemDrawingImage.Height;
 #endif
-            }
-        }
+
 
         public CrossPlatformImage(Stream imageStream)
         {
@@ -68,13 +60,12 @@ namespace AnnotationVizLib
 #endif
         }
 
-        public void Dispose()
-        {
+        public void Dispose() =>
 #if NET9_0
             _imageSharpImage?.Dispose();
 #else
             _systemDrawingImage?.Dispose();
 #endif
-        }
+
     }
-} 
+}

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Geometry;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -27,33 +27,30 @@ namespace Viking.VolumeModel
             this.NumSectionsToKeepInMemory = 6; //Total number of sections we will keep loaded by default
         }
 
-        protected override SectionTransformsDictionary Fetch(SectionMappingsCacheEntry entry)
-        {
-            return entry.TransformsForSection;
-        }
+        protected override SectionTransformsDictionary Fetch(SectionMappingsCacheEntry entry) => entry.TransformsForSection;
 
         protected override SectionMappingsCacheEntry CreateEntry(int key, SectionTransformsDictionary entry)
         {
-            SectionMappingsCacheEntry cacheEntry = new SectionMappingsCacheEntry(key, entry);
+            SectionMappingsCacheEntry cacheEntry = new(key, entry);
             return cacheEntry;
         }
 
         protected override SectionMappingsCacheEntry CreateEntry(int key, Func<int, SectionTransformsDictionary> entryFactory)
         {
-            SectionMappingsCacheEntry cacheEntry = new SectionMappingsCacheEntry(key, entryFactory(key));
+            SectionMappingsCacheEntry cacheEntry = new(key, entryFactory(key));
             return cacheEntry;
         }
 
         protected override Task<SectionMappingsCacheEntry> CreateEntryAsync(int key, SectionTransformsDictionary entry)
         {
-            SectionMappingsCacheEntry cacheEntry = new SectionMappingsCacheEntry(key, entry);
+            SectionMappingsCacheEntry cacheEntry = new(key, entry);
             return Task.FromResult(cacheEntry);
         }
     }
 
     public class SectionMappingsCacheEntry : CacheEntry<int>
     {
-        public SectionTransformsDictionary TransformsForSection = new SectionTransformsDictionary();
+        public SectionTransformsDictionary TransformsForSection = new();
 
         public SectionMappingsCacheEntry(int SectionNumber, SectionTransformsDictionary entry) :
             base(SectionNumber)
@@ -82,21 +79,13 @@ namespace Viking.VolumeModel
     /// This class holds references to all of the Mapping objects that are created during runtime and 
     /// creates mappings on the fly as needed
     /// </summary>
-    public class MappingManager
+    public class MappingManager(Volume Volume)
     {
-        private readonly VolumeModel.Volume volume;
+        private readonly VolumeModel.Volume volume = Volume;
 
-        public SectionTransformsCache SectionMappingCache = new SectionTransformsCache();
+        public SectionTransformsCache SectionMappingCache = new();
 
-        public MappingManager(Volume Volume)
-        {
-            this.volume = Volume;
-        }
-
-        public void ReduceCacheFootprint()
-        {
-            SectionMappingCache.ReduceCacheFootprint(null);
-        }
+        public void ReduceCacheFootprint() => SectionMappingCache.ReduceCacheFootprint(null);
 
         //static private ConcurrentDictionary<string, MappingBase> mapTable = new ConcurrentDictionary<string, MappingBase>();
 
@@ -130,12 +119,8 @@ namespace Viking.VolumeModel
         {
             Section section = volume.Sections[SectionNumber];
 
-            if (SectionTransformName is null)
-                SectionTransformName = section.DefaultPyramidTransform;
-            if (ChannelName is null)
-            {
-                ChannelName = "";
-            }
+            SectionTransformName ??= section.DefaultPyramidTransform;
+            ChannelName ??= "";
 
             //If the transform is rolled into the tiles then use the channel name to generate the key
             string key;
@@ -191,9 +176,9 @@ namespace Viking.VolumeModel
             {
                 return null;
             }
-             
+
             if (VolumeTransformName is null)
-            { 
+            {
                 MappingBase output = transformsForSection.GetOrAdd(key, sectionWarpedToMapValue);
 
                 if (output is FixedTileCountMapping fixedMapping)
@@ -209,7 +194,7 @@ namespace Viking.VolumeModel
                 //We have to create a volume transform for the requested map 
                 if (false == volume.Transforms.TryGetValue(VolumeTransformName, out SortedList<int, ITransform> stosTransforms))
                     return null;
-                 
+
                 if (false == stosTransforms.TryGetValue(section.Number, out var transform))
                 {
                     //Maybe we are the reference section, check if there is a mapping for no transform.  This at least prevents displaying

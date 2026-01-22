@@ -1,8 +1,8 @@
-﻿using Geometry;
+using Geometry;
 using Geometry.JSON;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
-using System.Threading.Tasks; 
+using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -17,14 +17,14 @@ namespace MonogameTestbed
 
 
         Scene scene;
-        readonly PointSetViewCollection Points_A = new PointSetViewCollection(Color.Blue, Color.BlueViolet, Color.PowderBlue);
-        readonly PointSetViewCollection Points_B = new PointSetViewCollection(Color.Red, Color.Pink, Color.Plum);
-        readonly PointSetViewCollection Points_C = new PointSetViewCollection(Color.Red, Color.Pink, Color.GreenYellow);
-        readonly PolygonContourView PolyAView = new PolygonContourView();
-        readonly PolygonContourView PolyBView = new PolygonContourView();
-        readonly PolygonContourView PolyCView = new PolygonContourView();
-        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
-        readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
+        readonly PointSetViewCollection Points_A = new(Color.Blue, Color.BlueViolet, Color.PowderBlue);
+        readonly PointSetViewCollection Points_B = new(Color.Red, Color.Pink, Color.Plum);
+        readonly PointSetViewCollection Points_C = new(Color.Red, Color.Pink, Color.GreenYellow);
+        readonly PolygonContourView PolyAView = new();
+        readonly PolygonContourView PolyBView = new();
+        readonly PolygonContourView PolyCView = new();
+        readonly GamePadStateTracker Gamepad = new();
+        readonly Cursor2DCameraManipulator CameraManipulator = new();
 
         GridVector2 Cursor = GridVector2.Zero;
         CircleView cursorView;
@@ -121,7 +121,7 @@ namespace MonogameTestbed
         {
             if (cursorView != null)
                 CircleView.Draw(window.GraphicsDevice, this.scene, OverlayStyle.Alpha, new CircleView[] { cursorView });
-             
+
             Points_A.Draw(window, scene);
             Points_B.Draw(window, scene);
             Points_C.Draw(window, scene);

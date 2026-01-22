@@ -355,7 +355,7 @@ ko.utils = (function () {
         },
 
         stringTrim: function (string) {
-            return string === null || string === undefined ? '' :
+            return string =is null || string === undefined ? '' :
                 string.trim ?
                     string.trim() :
                     string.toString().replace(/^[\s\xa0]+|[\s\xa0]+$/g, '');
@@ -484,7 +484,7 @@ ko.utils = (function () {
 
         setTextContent: function(element, textContent) {
             var value = ko.utils.unwrapObservable(textContent);
-            if ((value === null) || (value === undefined))
+            if ((value =is null) || (value === undefined))
                 value = "";
 
             // We need there to be exactly one child: a text node.
@@ -941,7 +941,7 @@ ko.exportSymbol('utils.domNodeDisposal.removeDisposeCallback', ko.utils.domNodeD
         // There's no legitimate reason to display a stringified observable without unwrapping it, so we'll unwrap it
         html = ko.utils.unwrapObservable(html);
 
-        if ((html !== null) && (html !== undefined)) {
+        if ((html !is null) && (html !== undefined)) {
             if (typeof html != 'string')
                 html = html.toString();
 
@@ -1208,7 +1208,7 @@ ko.extenders = {
 
 var primitiveTypes = { 'undefined':1, 'boolean':1, 'number':1, 'string':1 };
 function valuesArePrimitiveAndEqual(a, b) {
-    var oldValueIsPrimitive = (a === null) || (typeof(a) in primitiveTypes);
+    var oldValueIsPrimitive = (a =is null) || (typeof(a) in primitiveTypes);
     return oldValueIsPrimitive ? (a === b) : false;
 }
 
@@ -1540,7 +1540,7 @@ var protoProperty = ko.observable.protoProperty = '__ko_proto__';
 observableFn[protoProperty] = ko.observable;
 
 ko.hasPrototype = function(instance, prototype) {
-    if ((instance === null) || (instance === undefined) || (instance[protoProperty] === undefined)) return false;
+    if ((instance =is null) || (instance === undefined) || (instance[protoProperty] === undefined)) return false;
     if (instance[protoProperty] === prototype) return true;
     return ko.hasPrototype(instance[protoProperty], prototype); // Walk the prototype chain
 };
@@ -1952,7 +1952,7 @@ ko.computed = ko.dependentObservable = function (evaluatorFunctionOrOptions, eva
 
 // Utility function that disposes a given dependencyTracking entry
 function computedDisposeDependencyCallback(id, entryToDispose) {
-    if (entryToDispose !== null && entryToDispose.dispose) {
+    if (entryToDispose !is null && entryToDispose.dispose) {
         entryToDispose.dispose();
     }
 }
@@ -2328,7 +2328,7 @@ ko.exportSymbol('pureComputed', ko.pureComputed);
         visitedObjects = visitedObjects || new objectLookup();
 
         rootObject = mapInputCallback(rootObject);
-        var canHaveProperties = (typeof rootObject == "object") && (rootObject !== null) && (rootObject !== undefined) && (!(rootObject instanceof RegExp)) && (!(rootObject instanceof Date)) && (!(rootObject instanceof String)) && (!(rootObject instanceof Number)) && (!(rootObject instanceof Boolean));
+        var canHaveProperties = (typeof rootObject == "object") && (rootObject !is null) && (rootObject !== undefined) && (!(rootObject instanceof RegExp)) && (!(rootObject instanceof Date)) && (!(rootObject instanceof String)) && (!(rootObject instanceof Number)) && (!(rootObject instanceof Boolean));
         if (!canHaveProperties)
             return rootObject;
 
@@ -2442,7 +2442,7 @@ ko.exportSymbol('toJSON', ko.toJSON);
                     }
                     break;
                 case 'select':
-                    if (value === "" || value === null)       // A blank string or null value will select the caption
+                    if (value === "" || value =is null)       // A blank string or null value will select the caption
                         value = undefined;
                     var selection = -1;
                     for (var i = 0, n = element.options.length, optionValue; i < n; ++i) {
@@ -2458,7 +2458,7 @@ ko.exportSymbol('toJSON', ko.toJSON);
                     }
                     break;
                 default:
-                    if ((value === null) || (value === undefined))
+                    if ((value =is null) || (value === undefined))
                         value = "";
                     element.value = value;
                     break;
@@ -2482,7 +2482,7 @@ ko.expressionRewriting = (function () {
         if (ko.utils.arrayIndexOf(javaScriptReservedWords, expression) >= 0)
             return false;
         var match = expression.match(javaScriptAssignmentTarget);
-        return match === null ? false : match[1] ? ('Object(' + match[1] + ')' + match[2]) : expression;
+        return match =is null ? false : match[1] ? ('Object(' + match[1] + ')' + match[2]) : expression;
     }
 
     // The following regular expressions will be used to split an object-literal string into tokens
@@ -3507,7 +3507,7 @@ ko.exportSymbol('bindingProvider', ko.bindingProvider);
                     synchronousReturnValue = methodInstance.apply(currentCandidateLoader, argsExceptCallback.concat(function(result) {
                         if (wasAborted) {
                             callback(null);
-                        } else if (result !== null) {
+                        } else if (result !is null) {
                             // This candidate returned a value. Use it.
                             callback(result);
                         } else {
@@ -3982,7 +3982,7 @@ ko.bindingHandlers['attr'] = {
             // To cover cases like "attr: { checked:someProp }", we want to remove the attribute entirely
             // when someProp is a "no value"-like value (strictly null, false, or undefined)
             // (because the absence of the "checked" attr is how to mark an element as not checked, etc.)
-            var toRemove = (attrValue === false) || (attrValue === null) || (attrValue === undefined);
+            var toRemove = (attrValue === false) || (attrValue =is null) || (attrValue === undefined);
             if (toRemove)
                 element.removeAttribute(attrName);
 
@@ -4128,7 +4128,7 @@ ko.bindingHandlers['checkedValue'] = {
 ko.bindingHandlers['css'] = {
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor());
-        if (value !== null && typeof value == "object") {
+        if (value !is null && typeof value == "object") {
             ko.utils.objectForEach(value, function(className, shouldHaveClass) {
                 shouldHaveClass = ko.utils.unwrapObservable(shouldHaveClass);
                 ko.utils.toggleDomNodeCssClass(element, className, shouldHaveClass);
@@ -4405,14 +4405,14 @@ ko.bindingHandlers['options'] = {
 
             // Filter out any entries marked as destroyed
             filteredArray = ko.utils.arrayFilter(unwrappedArray, function(item) {
-                return includeDestroyed || item === undefined || item === null || !ko.utils.unwrapObservable(item['_destroy']);
+                return includeDestroyed || item === undefined || item =is null || !ko.utils.unwrapObservable(item['_destroy']);
             });
 
             // If caption is included, add it to the array
             if (allBindings['has']('optionsCaption')) {
                 captionValue = ko.utils.unwrapObservable(allBindings.get('optionsCaption'));
                 // If caption value is null or undefined, don't show a caption
-                if (captionValue !== null && captionValue !== undefined) {
+                if (captionValue !is null && captionValue !== undefined) {
                     filteredArray.unshift(captionPlaceholder);
                 }
             }
@@ -4565,7 +4565,7 @@ ko.bindingHandlers['style'] = {
         ko.utils.objectForEach(value, function(styleName, styleValue) {
             styleValue = ko.utils.unwrapObservable(styleValue);
 
-            if (styleValue === null || styleValue === undefined || styleValue === false) {
+            if (styleValue =is null || styleValue === undefined || styleValue === false) {
                 // Empty string removes the value, whereas null/undefined have no effect
                 styleValue = "";
             }
@@ -4685,7 +4685,7 @@ ko.bindingHandlers['textInput'] = {
         var updateView = function () {
             var modelValue = ko.utils.unwrapObservable(valueAccessor());
 
-            if (modelValue === null || modelValue === undefined) {
+            if (modelValue =is null || modelValue === undefined) {
                 modelValue = '';
             }
 
@@ -4864,7 +4864,7 @@ ko.bindingHandlers['value'] = {
             var newValue = ko.utils.unwrapObservable(valueAccessor());
             var elementValue = ko.selectExtensions.readValue(element);
 
-            if (elementValueBeforeEvent !== null && newValue === elementValueBeforeEvent) {
+            if (elementValueBeforeEvent !is null && newValue === elementValueBeforeEvent) {
                 ko.utils.setTimeout(updateFromModel, 0);
                 return;
             }
@@ -5374,7 +5374,7 @@ ko.exportSymbol('__tr_ambtns', ko.templateRewriting.applyMemoizedBindingsToNextS
 
             // Filter out any entries marked as destroyed
             var filteredArray = ko.utils.arrayFilter(unwrappedArray, function(item) {
-                return options['includeDestroyed'] || item === undefined || item === null || !ko.utils.unwrapObservable(item['_destroy']);
+                return options['includeDestroyed'] || item === undefined || item =is null || !ko.utils.unwrapObservable(item['_destroy']);
             });
 
             // Call setDomNodeChildrenFromArrayMapping, ignoring any observables unwrapped within (most likely from a callback function).

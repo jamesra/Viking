@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using MorphologyMesh;
 using SqlGeometryUtils;
 using System;
@@ -22,28 +22,28 @@ namespace MonogameTestbed
 
         public static GridVector2[] CreateTestPolygonExteriorVerticies(GridVector2? offset = new GridVector2?())
         {
-            GridVector2[] output = new GridVector2[] {new GridVector2(10,10),
-                                      new GridVector2(5, 20),
-                                      new GridVector2(15, 30),
-                                      new GridVector2(30, 30),
-                                      new GridVector2(25, 15),
-                                      new GridVector2(45, 15),
-                                      new GridVector2(45, 10),
-                                      new GridVector2(55, 0),
-                                      new GridVector2(25, 5),
-                                      new GridVector2(10, 10)};
+            GridVector2[] output = [new(10,10),
+                                      new(5, 20),
+                                      new(15, 30),
+                                      new(30, 30),
+                                      new(25, 15),
+                                      new(45, 15),
+                                      new(45, 10),
+                                      new(55, 0),
+                                      new(25, 5),
+                                      new(10, 10)];
 
             return output;
         }
 
         public static GridVector2[] CreateTestPolygonInteriorRingVerticies(GridVector2? offset = new GridVector2?())
         {
-            GridVector2[] output = new GridVector2[] {new GridVector2(12.5,12.5),
-                                      new GridVector2(22.5, 12.5),
-                                      new GridVector2(24.5, 17.5),
-                                      new GridVector2(17.5, 25.5),
-                                      new GridVector2(12.5, 17.5),
-                                     new GridVector2(12.5, 12.5)};
+            GridVector2[] output = [new(12.5,12.5),
+                                      new(22.5, 12.5),
+                                      new(24.5, 17.5),
+                                      new(17.5, 25.5),
+                                      new(12.5, 17.5),
+                                     new(12.5, 12.5)];
 
             return output;
         }
@@ -51,7 +51,7 @@ namespace MonogameTestbed
         public static GridPolygon CreateTestPolygon(bool IncludeHole, GridVector2? offset = new GridVector2?())
         {
             GridVector2[] holy_cps = CreateTestPolygonExteriorVerticies();
-            List<GridVector2[]> listInnerRings = new List<GridVector2[]>();
+            List<GridVector2[]> listInnerRings = [];
 
             if (IncludeHole)
             {
@@ -60,7 +60,7 @@ namespace MonogameTestbed
             }
 
             //When I made this I did not center polygon on 0,0, so just recenter after creation for now
-            GridPolygon uncentered_poly = new GridPolygon(holy_cps, listInnerRings);
+            GridPolygon uncentered_poly = new(holy_cps, listInnerRings);
             GridPolygon centered_poly = uncentered_poly.Translate(-uncentered_poly.Centroid);
 
             if (offset.HasValue)
@@ -74,7 +74,7 @@ namespace MonogameTestbed
     public enum StandardModel
     {
         PolyOverNotchedBox,
-        PolyOverNotchedBoxOffset, 
+        PolyOverNotchedBoxOffset,
         PolyFourLevelStraightProcess,
         Custom
     }

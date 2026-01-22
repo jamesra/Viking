@@ -17,13 +17,10 @@ namespace Viking.DependencyInjection
         string Endpoint();
     }
 
-    public class GrpcServiceConfiguration : IGrpcServiceConfiguration
+    public class GrpcServiceConfiguration(string endpoint) : IGrpcServiceConfiguration
     {
-        private readonly string _endpoint;
-        public GrpcServiceConfiguration(string endpoint)
-        {
-            _endpoint = endpoint;
-        }
+        private readonly string _endpoint = endpoint;
+
         /// <inheritdoc />
         public string Endpoint() => _endpoint;
     }

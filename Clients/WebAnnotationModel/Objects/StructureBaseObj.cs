@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -270,35 +270,17 @@ namespace WebAnnotation.Objects
         private event EventHandler OnAfterSave;
         private event NotifyCollectionChangedEventHandler OnChildChanged;
 
-        protected void ValueChangedEvent(string Column)
-        {
-            OnValueChanged?.Invoke(this, new PropertyChangedEventArgs(Column));
-        }
+        protected void ValueChangedEvent(string Column) => OnValueChanged?.Invoke(this, new PropertyChangedEventArgs(Column));
 
-        protected void CallBeforeSave()
-        {
-            OnBeforeSave?.Invoke(this, EventArgs.Empty);
-        }
+        protected void CallBeforeSave() => OnBeforeSave?.Invoke(this, EventArgs.Empty);
 
-        protected void CallAfterSave()
-        {
-            OnAfterSave?.Invoke(this, EventArgs.Empty);
-        }
+        protected void CallAfterSave() => OnAfterSave?.Invoke(this, EventArgs.Empty);
 
-        protected void CallBeforeDelete()
-        {
-            OnBeforeDelete?.Invoke(this, EventArgs.Empty);
-        }
+        protected void CallBeforeDelete() => OnBeforeDelete?.Invoke(this, EventArgs.Empty);
 
-        protected void CallAfterDelete()
-        {
-            OnAfterDelete?.Invoke(this, EventArgs.Empty);
-        }
+        protected void CallAfterDelete() => OnAfterDelete?.Invoke(this, EventArgs.Empty);
 
-        protected void CallOnChildChanged(NotifyCollectionChangedEventArgs args)
-        {
-            OnChildChanged?.Invoke(this, args);
-        }
+        protected void CallOnChildChanged(NotifyCollectionChangedEventArgs args) => OnChildChanged?.Invoke(this, args);
 
         #endregion
 
@@ -352,17 +334,14 @@ namespace WebAnnotation.Objects
             // Default implementation - can be overridden by derived classes
         }
 
-        public virtual Type[] AssignableParentTypes => new Type[0];
+        public virtual Type[] AssignableParentTypes => [];
 
         public virtual void SetParent(IUIObject parent)
         {
             // Default implementation - can be overridden by derived classes
         }
 
-        public virtual GenericTreeNode CreateNode()
-        {
-            return new GenericTreeNode(this);
-        }
+        public virtual GenericTreeNode CreateNode() => new GenericTreeNode(this);
 
         public virtual int TreeImageIndex => 0;
 
@@ -398,10 +377,7 @@ namespace WebAnnotation.Objects
             }
         }
 
-        public override string ToString()
-        {
-            return string.IsNullOrEmpty(_Name) ? GetType().Name : _Name;
-        }
+        public override string ToString() => string.IsNullOrEmpty(_Name) ? GetType().Name : _Name;
 
         #endregion
     }

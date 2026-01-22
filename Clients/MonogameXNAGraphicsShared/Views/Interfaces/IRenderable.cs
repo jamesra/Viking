@@ -42,28 +42,22 @@ namespace VikingXNAGraphics
     {
         public static RoundLineCode.RoundLineManager GetLineManager(this OverlayStyle overlay, GraphicsDevice device)
         {
-            switch (overlay)
+            return overlay switch
             {
-                case OverlayStyle.Alpha:
-                    return VikingXNAGraphics.DeviceEffectsStore<RoundLineManager>.TryGet(device);
-                case OverlayStyle.Luma:
-                    return VikingXNAGraphics.DeviceEffectsStore<LumaOverlayRoundLineManager>.TryGet(device);
-                default:
-                    throw new NotImplementedException(string.Format("GetLineManager: Unknown Overlay Style {0}", overlay));
-            }
+                OverlayStyle.Alpha => VikingXNAGraphics.DeviceEffectsStore<RoundLineManager>.TryGet(device),
+                OverlayStyle.Luma => VikingXNAGraphics.DeviceEffectsStore<LumaOverlayRoundLineManager>.TryGet(device),
+                _ => throw new NotImplementedException(string.Format("GetLineManager: Unknown Overlay Style {0}", overlay)),
+            };
         }
 
         public static RoundCurve.CurveManager GetCurveManager(this OverlayStyle overlay, GraphicsDevice device)
         {
-            switch (overlay)
+            return overlay switch
             {
-                case OverlayStyle.Alpha:
-                    return VikingXNAGraphics.DeviceEffectsStore<RoundCurve.CurveManager>.TryGet(device);
-                case OverlayStyle.Luma:
-                    return VikingXNAGraphics.DeviceEffectsStore<RoundCurve.CurveManagerHSV>.TryGet(device);
-                default:
-                    throw new NotImplementedException(string.Format("GetCurveManager: Unknown Overlay Style {0}", overlay));
-            }
+                OverlayStyle.Alpha => VikingXNAGraphics.DeviceEffectsStore<RoundCurve.CurveManager>.TryGet(device),
+                OverlayStyle.Luma => VikingXNAGraphics.DeviceEffectsStore<RoundCurve.CurveManagerHSV>.TryGet(device),
+                _ => throw new NotImplementedException(string.Format("GetCurveManager: Unknown Overlay Style {0}", overlay)),
+            };
         }
     }
 }

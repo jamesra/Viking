@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework.Graphics;
 using SqlGeometryUtils;
@@ -58,35 +58,17 @@ namespace WebAnnotation.View
             circleView = Up ? TextureCircleView.CreateUpArrow(gridCircle, color) : TextureCircleView.CreateDownArrow(gridCircle, color);
         }
 
-        private static string LocationLabel(LocationObj obj)
-        {
-            return obj.Z.ToString();
-        }
+        private static string LocationLabel(LocationObj obj) => obj.Z.ToString();
 
-        public override bool IsVisible(VikingXNA.Scene scene)
-        {
-            return circleView.IsVisible(scene);
-        }
+        public override bool IsVisible(VikingXNA.Scene scene) => circleView.IsVisible(scene);
 
-        public bool IsLabelVisible(VikingXNA.Scene scene)
-        {
-            return label.IsVisible(scene);
-        }
+        public bool IsLabelVisible(VikingXNA.Scene scene) => label.IsVisible(scene);
 
-        public override bool Contains(GridVector2 Position)
-        {
-            return Circle.Contains(Position);
-        }
+        public override bool Contains(GridVector2 Position) => Circle.Contains(Position);
 
-        public override bool Intersects(GridLineSegment line)
-        {
-            return Circle.Intersects(line);
-        }
+        public override bool Intersects(GridLineSegment line) => Circle.Intersects(line);
 
-        public override bool Intersects(SqlGeometry shape)
-        {
-            throw new NotImplementedException();
-        }
+        public override bool Intersects(SqlGeometry shape) => throw new NotImplementedException();
 
         public override double Distance(GridVector2 Position)
         {
@@ -95,10 +77,7 @@ namespace WebAnnotation.View
             return Distance;
         }
 
-        public override double DistanceFromCenterNormalized(GridVector2 Position)
-        {
-            return GridVector2.Distance(Position, Circle.Center) / Radius;
-        }
+        public override double DistanceFromCenterNormalized(GridVector2 Position) => GridVector2.Distance(Position, Circle.Center) / Radius;
 
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
@@ -106,8 +85,8 @@ namespace WebAnnotation.View
                           OverlayShaderEffect overlayEffect,
                           OverlappedLocationView[] listToDraw)
         {
-            TextureCircleView[] backgroundCircles = listToDraw.Select(l => l.circleView).ToArray();
-            TextureCircleView.Draw(device, scene, OverlayStyle.Luma, backgroundCircles.ToArray());
+            TextureCircleView[] backgroundCircles = [.. listToDraw.Select(l => l.circleView)];
+            TextureCircleView.Draw(device, scene, OverlayStyle.Luma, [.. backgroundCircles]);
         }
 
         public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene)
@@ -139,15 +118,11 @@ namespace WebAnnotation.View
             return LocationAction.NONE;
         }
 
-        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
-        {
-            throw new NotImplementedException();
-            //return LocationAction.CREATELINKEDLOCATION;
-        }
+        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new NotImplementedException();//return LocationAction.CREATELINKEDLOCATION;
 
-        public override string[] HelpStrings => new string[] {
+        public override string[] HelpStrings => [
                     "Hold left click + drag on inscribed arrow: Create additional annotation for this structure linked to the annotation on the adjacent section."
-                };
+                ];
 
         public new ContextMenuStrip ContextMenu => new Location_CanvasContextMenuView(ID).ContextMenu;
 

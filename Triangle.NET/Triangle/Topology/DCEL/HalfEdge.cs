@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="HalfEdge.cs">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -93,9 +93,6 @@ namespace TriangleNet.Topology.DCEL
             }
         }
 
-        public override string ToString()
-        {
-            return string.Format("HE-ID {0} (Origin = VID-{1})", id, origin.id);
-        }
+        public override string ToString() => string.Format("HE-ID {0} (Origin = VID-{1})", id, origin.id);
     }
 }

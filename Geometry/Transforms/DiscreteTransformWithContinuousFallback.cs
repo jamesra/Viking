@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -14,10 +14,7 @@ namespace Geometry.Transforms
         readonly IDiscreteTransform DiscreteTransform;
         readonly IContinuousTransform ContinuousTransform;
 
-        public override string ToString()
-        {
-            return this.Info.ToString();
-        }
+        public override string ToString() => this.Info.ToString();
 
         public TransformBasicInfo Info
         {
@@ -39,7 +36,7 @@ namespace Geometry.Transforms
                     return dt.TriangleIndicies;
                 }
 
-                return Array.Empty<int>();
+                return [];
             }
         }
 
@@ -52,7 +49,7 @@ namespace Geometry.Transforms
                     return dt.Edges;
                 }
 
-                return Array.Empty<List<int>>();
+                return [];
             }
         }
 
@@ -83,15 +80,9 @@ namespace Geometry.Transforms
             info.AddValue("ContinuousTransform", ContinuousTransform);
         }
 
-        public bool CanTransform(in GridVector2 p)
-        {
-            return true;
-        }
+        public bool CanTransform(in GridVector2 p) => true;
 
-        public bool CanInverseTransform(in GridVector2 p)
-        {
-            return true;
-        }
+        public bool CanInverseTransform(in GridVector2 p) => true;
 
         public GridVector2 Transform(in GridVector2 Point)
         {
@@ -103,10 +94,7 @@ namespace Geometry.Transforms
             return output;
         }
 
-        public GridVector2[] Transform(in GridVector2[] Points)
-        {
-            return Points.Select(p => this.Transform(p)).ToArray();
-        }
+        public GridVector2[] Transform(in GridVector2[] Points) => [.. Points.Select(p => this.Transform(p))];
 
         public bool TryTransform(in GridVector2 Point, out GridVector2 v)
         {
@@ -117,7 +105,7 @@ namespace Geometry.Transforms
         public bool[] TryTransform(in GridVector2[] Points, out GridVector2[] v)
         {
             v = Transform(Points);
-            return v.Select(p => true).ToArray();
+            return [.. v.Select(p => true)];
         }
 
         public GridVector2 InverseTransform(in GridVector2 Point)
@@ -130,10 +118,7 @@ namespace Geometry.Transforms
             return output;
         }
 
-        public GridVector2[] InverseTransform(in GridVector2[] Points)
-        {
-            return Points.Select(p => this.InverseTransform(p)).ToArray();
-        }
+        public GridVector2[] InverseTransform(in GridVector2[] Points) => [.. Points.Select(p => this.InverseTransform(p))];
 
         public bool TryInverseTransform(in GridVector2 Point, out GridVector2 v)
         {
@@ -144,13 +129,10 @@ namespace Geometry.Transforms
         public bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] v)
         {
             v = InverseTransform(Points);
-            return v.Select(p => true).ToArray();
+            return [.. v.Select(p => true)];
         }
 
-        public void Translate(in GridVector2 vector)
-        {
-            throw new NotImplementedException();
-        }
+        public void Translate(in GridVector2 vector) => throw new NotImplementedException();
 
         public void MinimizeMemory()
         {
@@ -158,14 +140,8 @@ namespace Geometry.Transforms
             (ContinuousTransform as IMemoryMinimization)?.MinimizeMemory();
         }
 
-        public List<MappingGridVector2> IntersectingControlRectangle(in GridRectangle gridRect)
-        {
-            return ((ITransformControlPoints)DiscreteTransform).IntersectingControlRectangle(gridRect);
-        }
+        public List<MappingGridVector2> IntersectingControlRectangle(in GridRectangle gridRect) => ((ITransformControlPoints)DiscreteTransform).IntersectingControlRectangle(gridRect);
 
-        public List<MappingGridVector2> IntersectingMappedRectangle(in GridRectangle gridRect)
-        {
-            return ((ITransformControlPoints)DiscreteTransform).IntersectingMappedRectangle(gridRect);
-        }
+        public List<MappingGridVector2> IntersectingMappedRectangle(in GridRectangle gridRect) => ((ITransformControlPoints)DiscreteTransform).IntersectingMappedRectangle(gridRect);
     }
 }

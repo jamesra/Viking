@@ -76,7 +76,7 @@
             distance = double.MaxValue; 
             RTree.RTree<LocationLinkView> searchGrid = GetSearchGrid(SectionNumber);
 
-            if (searchGrid == null)
+            if (searchGrid is null)
                 return null; 
 
 //            IEnumerable<LocationLink> intersectingObjs = searchGrid.Intersects(WorldPosition.ToRTreeRect(SectionNumber)).Where(l => l.LineSegment.DistanceToPoint(WorldPosition) <= l.Radius).ToList();
@@ -137,10 +137,10 @@
             LocationObj AObj = Store.Locations.GetObjectByID(key.A, false);
             LocationObj BObj = Store.Locations.GetObjectByID(key.B, false);
 
-            if (AObj == null)
+            if (AObj is null)
                 return false;
 
-            if (BObj == null)
+            if (BObj is null)
                 return false;            
             
             if (!(AObj.VolumePositionHasBeenCalculated && BObj.VolumePositionHasBeenCalculated))
@@ -257,7 +257,7 @@
         {
             RTree.RTree<LocationLinkView> searchGrid = GetSearchGrid(SectionNumber);
 
-            if (searchGrid == null)
+            if (searchGrid is null)
                 return false;
 
             LocationLinkView line;
@@ -314,7 +314,7 @@
         private void OnLinkedLocationPropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             LocationObj loc = sender as LocationObj;
-            if (loc == null)
+            if (loc is null)
                 return;
 
             //Update if a position or everything has changed
@@ -388,7 +388,7 @@
         public void OnLocationLinksChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             LocationObj source = sender as LocationObj;
-            if (source == null)
+            if (source is null)
                 return; 
 
             switch (e.Action)
@@ -410,7 +410,7 @@
 
         public bool ReceiveWeakEvent(Type managerType, object sender, EventArgs e)
         {
-            if (sender == null)
+            if (sender is null)
                 throw new ArgumentNullException("sender"); 
 
             System.Collections.Specialized.NotifyCollectionChangedEventArgs CollectionChangeArgs = e as System.Collections.Specialized.NotifyCollectionChangedEventArgs;

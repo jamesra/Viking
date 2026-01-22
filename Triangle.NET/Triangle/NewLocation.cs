@@ -18,14 +18,14 @@ namespace TriangleNet
     /// <remarks>
     /// http://www.cise.ufl.edu/~ungor/aCute/index.html
     /// </remarks>
-    class NewLocation
+    class NewLocation(Mesh mesh, IPredicates predicates)
     {
         const double EPS = 1e-50;
 
-        readonly IPredicates predicates;
+        readonly IPredicates predicates = predicates;
 
-        readonly Mesh mesh;
-        readonly Behavior behavior;
+        readonly Mesh mesh = mesh;
+        readonly Behavior behavior = mesh.behavior;
 
         // Work arrays for wegde intersection
         double[] petalx = new double[20];
@@ -43,14 +43,6 @@ namespace TriangleNet
         readonly double[] poly1 = new double[100];
         readonly double[] poly2 = new double[100];
         readonly double[][] polys = new double[3][];
-
-        public NewLocation(Mesh mesh, IPredicates predicates)
-        {
-            this.mesh = mesh;
-            this.predicates = predicates;
-
-            this.behavior = mesh.behavior;
-        }
 
         /// <summary>
         /// Find a new location for a Steiner point.
@@ -746,7 +738,7 @@ namespace TriangleNet
                 }// end of relocation				 
             }// end of almostGood	
 
-            Point circumcenter = new Point();
+            Point circumcenter = new();
 
             if (relocated <= 0)
             {
@@ -1937,7 +1929,7 @@ namespace TriangleNet
                 }// end of relocation				 
             }// end of almostGood	
 
-            Point circumcenter = new Point();
+            Point circumcenter = new();
 
             if (relocated <= 0)
             {
@@ -2073,14 +2065,9 @@ namespace TriangleNet
             {
                 //newLocFound = getPetalIntersection(m, b, numpoints_p, points_p, newloc);
                 //newLocFound = getPetalIntersectionBruteForce(m, b,numpoints_p, points_p, newloc,torg[0],torg[1]);
-                if (behavior.MaxAngle == 0.0)
-                {
-                    newLocFound = GetWedgeIntersectionWithoutMaxAngle(numpoints_p, points_p, ref newloc);
-                }
-                else
-                {
-                    newLocFound = GetWedgeIntersection(numpoints_p, points_p, ref newloc);
-                }
+                newLocFound = behavior.MaxAngle == 0.0
+                    ? GetWedgeIntersectionWithoutMaxAngle(numpoints_p, points_p, ref newloc)
+                    : GetWedgeIntersection(numpoints_p, points_p, ref newloc);
                 //printf("call petal intersection for p\n");
                 // make sure the relocated point is a free vertex	
                 if (newLocFound)
@@ -2118,14 +2105,9 @@ namespace TriangleNet
             {
                 //newLocFound = getPetalIntersection(m, b,numpoints_q, points_q, newloc);
                 //newLocFound = getPetalIntersectionBruteForce(m, b,numpoints_q, points_q, newloc,tapex[0],tapex[1]);
-                if (behavior.MaxAngle == 0.0)
-                {
-                    newLocFound = GetWedgeIntersectionWithoutMaxAngle(numpoints_q, points_q, ref newloc);
-                }
-                else
-                {
-                    newLocFound = GetWedgeIntersection(numpoints_q, points_q, ref newloc);
-                }
+                newLocFound = behavior.MaxAngle == 0.0
+                    ? GetWedgeIntersectionWithoutMaxAngle(numpoints_q, points_q, ref newloc)
+                    : GetWedgeIntersection(numpoints_q, points_q, ref newloc);
                 //printf("call petal intersection for q\n");	
 
                 // make sure the relocated point is a free vertex	
@@ -2164,14 +2146,9 @@ namespace TriangleNet
             {
                 //newLocFound = getPetalIntersection(m, b,numpoints_r, points_r, newloc);
                 //newLocFound = getPetalIntersectionBruteForce(m, b,numpoints_r, points_r, newloc,tdest[0],tdest[1]);
-                if (behavior.MaxAngle == 0.0)
-                {
-                    newLocFound = GetWedgeIntersectionWithoutMaxAngle(numpoints_r, points_r, ref newloc);
-                }
-                else
-                {
-                    newLocFound = GetWedgeIntersection(numpoints_r, points_r, ref newloc);
-                }
+                newLocFound = behavior.MaxAngle == 0.0
+                    ? GetWedgeIntersectionWithoutMaxAngle(numpoints_r, points_r, ref newloc)
+                    : GetWedgeIntersection(numpoints_r, points_r, ref newloc);
 
                 //printf("call petal intersection for r\n");
 
@@ -4024,7 +4001,7 @@ namespace TriangleNet
             double d1, d2, d3, ahead;
             //triangle ptr;                         // Temporary variable used by sym().
 
-            Point newvertex = new Point(newlocX, newlocY);
+            Point newvertex = new(newlocX, newlocY);
 
             // 	printf("newvertex %f,%f\n", newvertex[0], newvertex[1]);
             // Find the location of the vertex to be inserted.  Check if a good

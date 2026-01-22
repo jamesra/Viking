@@ -25,7 +25,7 @@ namespace Viking.UI.WPF.Controls
             if (DataContext is VolumeSelectionViewModel viewModel && lstRecentVolumes.SelectedItem is VolumeInfo volumeInfo)
             {
                 // Create a tree node from the recent volume for selection
-                var node = new VolumeTreeNode
+                VolumeTreeNode node = new()
                 {
                     Volume = volumeInfo,
                     Name = volumeInfo.Name,

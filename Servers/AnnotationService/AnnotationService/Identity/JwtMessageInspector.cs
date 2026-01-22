@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
@@ -19,6 +19,8 @@ using MicrosoftSecurityTokenInvalidAudienceException = Microsoft.IdentityModel.T
 using MicrosoftSecurityTokenInvalidIssuerException = Microsoft.IdentityModel.Tokens.SecurityTokenInvalidIssuerException;
 using MicrosoftSecurityTokenSignatureKeyNotFoundException = Microsoft.IdentityModel.Tokens.SecurityTokenSignatureKeyNotFoundException;
 using log4net;
+using System.Collections.Generic;
+using System.Security.Principal;
 
 namespace Annotation.Identity
 {
@@ -37,10 +39,10 @@ namespace Annotation.Identity
         {
             _authority = ConfigurationManager.AppSettings["IdentityServer:authority"] ?? "https://identity.codepharm.net:5001/";
             _audience = ConfigurationManager.AppSettings["IdentityServer:audience"] ?? "Viking.Annotation.API";
-            
+
             // Cache volume name at initialization (read once, use many times)
             _volumeName = ConfigurationManager.AppSettings["VolumeName"] ?? ConfigurationManager.AppSettings["DatabaseName"] ?? "Unknown";
-            
+
             // Set up automatic retrieval of signing keys from Identity Server's discovery endpoint
             _configurationManager = new ConfigurationManager<OpenIdConnectConfiguration>(
                 $"{_authority.TrimEnd('/')}/.well-known/openid-configuration",
@@ -48,8 +50,8 @@ namespace Annotation.Identity
                 new HttpDocumentRetriever());
         }
 
-        public JwtMessageInspector(string Authority, 
-                                   string Audience, 
+        public JwtMessageInspector(string Authority,
+                                   string Audience,
                                    bool ValidateIssuer = true,
                                    bool ValidateIssuerSigningKey = true,
                                    bool ValidateAudience = true,
@@ -79,17 +81,17 @@ namespace Annotation.Identity
             {
                 // Extract JWT token from the request
                 var token = ExtractTokenFromMessage(request);
-                
+
                 if (!string.IsNullOrEmpty(token))
                 {
                     // Validate the JWT token
                     var principal = ValidateToken(token);
-                    
+
                     if (principal != null)
                     {
                         // Convert ClaimsPrincipal to GenericPrincipal with roles for WCF compatibility
                         var wcfPrincipal = ConvertToGenericPrincipal(principal);
-                        
+
                         // Set the principal in the operation context
                         if (OperationContext.Current != null)
                         {
@@ -101,13 +103,10 @@ namespace Annotation.Identity
                         {
                             System.Diagnostics.Debug.WriteLine($"JwtMessageInspector: WARNING - OperationContext.Current is NULL!");
                         }
-                        
+
                         // Also set it in the HttpContext if available
-                        if (HttpContext.Current != null)
-                        {
-                            HttpContext.Current.User = wcfPrincipal;
-                        }
-                        
+                        HttpContext.Current?.User = wcfPrincipal;
+
                         // Set Thread.CurrentPrincipal directly (backup in case RoleAuthorizationManager doesn't run)
                         Thread.CurrentPrincipal = wcfPrincipal;
                         System.Diagnostics.Debug.WriteLine($"JwtMessageInspector: Thread.CurrentPrincipal set to user '{wcfPrincipal.Identity?.Name}'");
@@ -140,8 +139,7 @@ namespace Annotation.Identity
                 // Method 1: Try to extract from HTTP headers
                 if (message.Properties.ContainsKey("httpRequest"))
                 {
-                    var httpRequest = message.Properties["httpRequest"] as HttpRequestMessageProperty;
-                    if (httpRequest != null)
+                    if (message.Properties["httpRequest"] is HttpRequestMessageProperty httpRequest)
                     {
                         var authHeader = httpRequest.Headers["Authorization"];
                         if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
@@ -154,8 +152,7 @@ namespace Annotation.Identity
                 // Method 2: Try to extract from custom headers
                 if (message.Properties.ContainsKey("httpRequest"))
                 {
-                    var httpRequest = message.Properties["httpRequest"] as HttpRequestMessageProperty;
-                    if (httpRequest != null)
+                    if (message.Properties["httpRequest"] is HttpRequestMessageProperty httpRequest)
                     {
                         var token = httpRequest.Headers["X-JWT-Token"];
                         if (!string.IsNullOrEmpty(token))
@@ -207,32 +204,32 @@ namespace Annotation.Identity
                 System.Diagnostics.Debug.WriteLine($"  Type: '{claim.Type}' = Value: '{claim.Value}'");
             }
             System.Diagnostics.Debug.WriteLine($"===========================");
-            
+
             // Extract role claims from the JWT token
             // Common role claim types used by Identity Server / OpenID Connect:
             // - "role" (standard claim)
             // - "http://schemas.microsoft.com/ws/2008/06/identity/claims/role" (Windows claim)
-            var roleClaims = claimsPrincipal.FindAll(c => 
-                c.Type == "role" || 
+            var roleClaims = claimsPrincipal.FindAll(c =>
+                c.Type == "role" ||
                 c.Type == ClaimTypes.Role ||
                 c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role");
 
-            var scopeClaims = claimsPrincipal.FindAll(c => c.Type == "scope").Where(c => c.Value.StartsWith(this._volumeName)).ToList();
-            
+            List<Claim> scopeClaims = [.. claimsPrincipal.FindAll(c => c.Type == "scope").Where(c => c.Value.StartsWith(this._volumeName))];
+
             // Debug: Log all scope claims
             System.Diagnostics.Debug.WriteLine($"Found {scopeClaims.Count} scope claims for volume '{_volumeName}':");
             foreach (var claim in scopeClaims)
             {
                 System.Diagnostics.Debug.WriteLine($"  - {claim.Value}");
             }
-            
+
             //Remove the name of the volume from the scope and save the name of the role
             int volumeNameLength = _volumeName.Length;
-            var volumeRoleClaims = scopeClaims.Select(c => c.Value.Substring(volumeNameLength+1));
-             
-            var roles = roleClaims.Select(c => c.Value).ToList();
+            var volumeRoleClaims = scopeClaims.Select(c => c.Value.Substring(volumeNameLength + 1));
+
+            List<string> roles = [.. roleClaims.Select(c => c.Value)];
             roles.AddRange(volumeRoleClaims);
-            
+
             // Map JWT role names to service role names
             // "admin" (volume-specific role) → "Review" (service role name)
             for (int i = 0; i < roles.Count; i++)
@@ -244,27 +241,27 @@ namespace Annotation.Identity
                     System.Diagnostics.Debug.WriteLine($"Mapped role '{originalRole}' -> 'Review'");
                 }
             }
-             
+
             // Debug: Log all extracted roles
             System.Diagnostics.Debug.WriteLine($"Total roles extracted: {roles.Count}");
             foreach (var role in roles)
             {
                 System.Diagnostics.Debug.WriteLine($"  - Role: '{role}'");
             }
-            
+
             // Preserve the original ClaimsIdentity from the JWT token
             // Create a new ClaimsIdentity with proper NameClaimType so Identity.Name works correctly
-            var originalIdentity = claimsPrincipal.Identity as ClaimsIdentity;
-            
+            ClaimsIdentity originalIdentity = claimsPrincipal.Identity as ClaimsIdentity;
+
             // Create new ClaimsIdentity with the name claim type specified
             // This ensures Identity.Name property gets populated from the "name" claim
-            var identity = new ClaimsIdentity(
+            ClaimsIdentity identity = new(
                 originalIdentity.Claims,
                 originalIdentity.AuthenticationType,
                 nameType: "name",  // Tell it to use "name" claim for Identity.Name
                 roleType: ClaimTypes.Role
             );
-            
+
             // Add role claims for volume-specific roles (these aren't in the original claims)
             foreach (var role in roles)
             {
@@ -274,20 +271,20 @@ namespace Annotation.Identity
                     identity.AddClaim(new Claim(ClaimTypes.Role, role));
                 }
             }
-            
+
             var userName = identity.Name ?? "Unknown";
             System.Diagnostics.Debug.WriteLine($"Extracted username from identity: '{userName}'");
-            
+
             // Create a ClaimsPrincipal (preserves all claims from the token)
-            var claimsPrincipalWithRoles = new ClaimsPrincipal(identity);
-            
+            ClaimsPrincipal claimsPrincipalWithRoles = new(identity);
+
             // For WCF compatibility, we also create a GenericPrincipal wrapper
-            var genericPrincipal = new System.Security.Principal.GenericPrincipal(identity, roles.ToArray());
-            
+            GenericPrincipal genericPrincipal = new(identity, [.. roles]);
+
             System.Diagnostics.Debug.WriteLine($"JWT Principal created for user '{userName}' with roles: {string.Join(", ", roles)} [Volume: {_volumeName}]");
-            
+
             return genericPrincipal;
-        } 
+        }
 
         private ClaimsPrincipal ValidateToken(string token)
         {
@@ -295,9 +292,9 @@ namespace Annotation.Identity
             {
                 // Retrieve the OpenID Connect configuration (includes signing keys)
                 var discoveryDocument = _configurationManager.GetConfigurationAsync(CancellationToken.None).Result;
-                
+
                 // Create token validation parameters with the signing keys from Identity Server
-                var tokenValidationParameters = new TokenValidationParameters
+                TokenValidationParameters tokenValidationParameters = new()
                 {
                     ValidateIssuerSigningKey = this._validateIssuerSigningKey,
                     IssuerSigningKeys = discoveryDocument.SigningKeys,
@@ -308,30 +305,29 @@ namespace Annotation.Identity
                     ValidateLifetime = this._validateLifetime,
                     ClockSkew = TimeSpan.FromMinutes(5)
                 };
-                
-                var tokenHandler = new JwtSecurityTokenHandler();
-                
+
+                JwtSecurityTokenHandler tokenHandler = new();
+
                 // Validate the token
                 var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out MicrosoftSecurityToken validatedToken);
-                
+
                 if (validatedToken != null)
                 {
                     // Additional validation if needed
-                    var jwtToken = validatedToken as JwtSecurityToken;
-                    if (jwtToken != null)
+                    if (validatedToken is JwtSecurityToken jwtToken)
                     {
                         // You can add additional validation here
                         // For example, check specific claims, roles, etc.
-                        
+
                         // Example: Check if token has required role
                         var roleClaim = principal.FindFirst("role") ?? principal.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role");
-                        if (roleClaim == null)
+                        if (roleClaim is null)
                         {
                             // Log warning or handle as needed
                             System.Diagnostics.Debug.WriteLine("Token does not contain role claim");
                         }
                     }
-                    
+
                     return principal;
                 }
             }

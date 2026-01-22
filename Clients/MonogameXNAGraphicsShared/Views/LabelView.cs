@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -37,18 +37,20 @@ namespace VikingXNAGraphics
             _Scene = scene;
         }
 
-        public override GridRectangle BoundingRect{
-        
-            get{ 
+        public override GridRectangle BoundingRect
+        {
+
+            get
+            {
                 double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
                 var scaledFont = ScaleForMagnification(FontScaleForVolume, _Scene);
                 var unanchoredBoundingRect = UnanchoredUnscaledBoundingRect;
 
-                GridVector2 label_size = new GridVector2(unanchoredBoundingRect.Width * scaledFont, unanchoredBoundingRect.Height * scaledFont);
+                GridVector2 label_size = new(unanchoredBoundingRect.Width * scaledFont, unanchoredBoundingRect.Height * scaledFont);
                 GridVector2 half_label_size = label_size / 2.0;
 
                 GridVector2 origin = Position;
-                GridVector2 offset = new GridVector2(
+                GridVector2 offset = new(
                     Anchor.Horizontal == HorizontalAlignment.LEFT ? 0 : Anchor.Horizontal == HorizontalAlignment.RIGHT ? -label_size.X : -half_label_size.X,
                     Anchor.Vertical == VerticalAlignment.BOTTOM ? 0 : Anchor.Vertical == VerticalAlignment.TOP ? -label_size.Y : -half_label_size.Y
                 );
@@ -77,7 +79,7 @@ namespace VikingXNAGraphics
 
         static readonly byte DefaultAlpha = 192;
 
-        public Microsoft.Xna.Framework.Color _Color = new Microsoft.Xna.Framework.Color((byte)(0),
+        public Microsoft.Xna.Framework.Color _Color = new((byte)(0),
                                                                                     (byte)(0),
                                                                                     (byte)(0),
                                                                                     DefaultAlpha);
@@ -235,17 +237,19 @@ namespace VikingXNAGraphics
         }
 
 
-        public virtual GridRectangle BoundingRect{
-        
-            get{ 
+        public virtual GridRectangle BoundingRect
+        {
+
+            get
+            {
                 double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
                 var unanchoredBoundingRect = UnanchoredUnscaledBoundingRect;
 
-                GridVector2 label_size = new GridVector2(unanchoredBoundingRect.Width * FontScaleForVolume, unanchoredBoundingRect.Height * FontScaleForVolume);
+                GridVector2 label_size = new(unanchoredBoundingRect.Width * FontScaleForVolume, unanchoredBoundingRect.Height * FontScaleForVolume);
                 GridVector2 half_label_size = label_size / 2.0;
 
                 GridVector2 origin = Position;
-                GridVector2 offset = new GridVector2(
+                GridVector2 offset = new(
                     Anchor.Horizontal == HorizontalAlignment.LEFT ? 0 : Anchor.Horizontal == HorizontalAlignment.RIGHT ? -label_size.X : -half_label_size.X,
                     Anchor.Vertical == VerticalAlignment.BOTTOM ? 0 : Anchor.Vertical == VerticalAlignment.TOP ? -label_size.Y : -half_label_size.Y
                     );
@@ -270,19 +274,19 @@ namespace VikingXNAGraphics
             double Width = _RowMeasurements.Max(m => m.X);
             double Height = _RowMeasurements.Sum(m => m.Y);
 
-            GridVector2 label_size = new GridVector2(Width * FontScaleForVolume, Height * FontScaleForVolume);
+            GridVector2 label_size = new(Width * FontScaleForVolume, Height * FontScaleForVolume);
             GridVector2 half_label_size = label_size / 2.0;
 
             GridVector2 origin = Position;
-            GridVector2 offset = new GridVector2(
+            GridVector2 offset = new(
                 Anchor.Horizontal == HorizontalAlignment.LEFT ? 0 : Anchor.Horizontal == HorizontalAlignment.RIGHT ? -label_size.X : -half_label_size.X,
                 Anchor.Vertical == VerticalAlignment.BOTTOM ? 0 : Anchor.Vertical == VerticalAlignment.TOP ? -label_size.Y : -half_label_size.Y
             );
 
-            return new GridRectangle(this.Position + offset, Width * FontScaleForVolume, Height * FontScaleForVolume); 
+            return new GridRectangle(this.Position + offset, Width * FontScaleForVolume, Height * FontScaleForVolume);
         }
 
-        
+
         /// <summary>
         /// Fonts are always the same size, they aren't rendered on a texture or anything.  So we have to scale the font according to the magnification requested by the viewer.
         /// </summary>
@@ -290,12 +294,12 @@ namespace VikingXNAGraphics
         /// <returns>Fraction (0 to 1) of the screen's Y-axis the font will display upon. </returns>
         protected double ScaleForMagnification(double FontSize, VikingXNA.IScene scene)
         {
-            Vector3 center  = scene.Viewport.Project(Position.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
+            Vector3 center = scene.Viewport.Project(Position.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
             Vector3 topedge = scene.Viewport.Project(Position.ToXNAVector3(0) - new Vector3(0, (float)FontSize / 2, 0), scene.Projection, scene.View, scene.World);
             //return FontSize / scene.Camera.Downsample;
             return (topedge.Y - center.Y) * 2;
         }
-         
+
 
         /// <summary>
         /// What does the font size need to be to fit the provided bounds?
@@ -303,14 +307,11 @@ namespace VikingXNAGraphics
         /// <param name="bbox"></param>
         /// <param name="Padding_factor">Scalar to indicate how much padding to add around text. 1.05 = 5% additional space around text</param>
         /// <returns></returns>
-        public double GetFontSizeToFitBounds(GridRectangle bbox, GridVector2? Padding_factor=null)
+        public double GetFontSizeToFitBounds(GridRectangle bbox, GridVector2? Padding_factor = null)
         {
-            if(Padding_factor is null)
-            {
-                Padding_factor = new GridVector2 { X = 1, Y = 1 };
-            }
+            Padding_factor ??= new GridVector2 { X = 1, Y = 1 };
             //Determine how to fix the text within the width of the rectangle
-            
+
             double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
             string[] Rows = this.Text.Split('\n');
             //int MinRows = Rows.Length;
@@ -351,31 +352,25 @@ namespace VikingXNAGraphics
                 }
                 
             }
-            */ 
+            */
         }
 
-        private static bool IsLabelTooSmallToSee(double fontSizeInScreenFraction)
-        {
-            return fontSizeInScreenFraction < (1.0 / 200.0); //Don't show if label is < 5% of screen's height
-        }
+        private static bool IsLabelTooSmallToSee(double fontSizeInScreenFraction) => fontSizeInScreenFraction < (1.0 / 200.0); //Don't show if label is < 5% of screen's height
 
         public bool IsVisible(VikingXNA.Scene scene)
         {
             if (font is null) //The first time draw is called font is initialized.  So allow us to draw if we haven't initialized font yet.
                 return true;
-             
+
             double fontSizeInScreenPixels = ScaleForMagnification(this.FontSize, scene);
 
             //Don't draw labels if no human could read them
             return !IsLabelTooSmallToSee(fontSizeInScreenPixels / scene.Viewport.Height);
         }
 
-        
 
-        private static int NumberOfNewlines(string label)
-        {
-            return label.Count(c => '\n' == c);
-        }
+
+        private static int NumberOfNewlines(string label) => label.Count(c => '\n' == c);
 
         /// <summary>
         /// Remove newlines from string, and push portion after the newline back on the stack
@@ -390,7 +385,7 @@ namespace VikingXNAGraphics
                 return word;
 
             NewlineFound = true;
-            string[] parts = word.Split(new char[] { '\n' }, 2);
+            string[] parts = word.Split(['\n'], 2);
             strStack.Push(parts[1]);
             return parts[0];
         }
@@ -409,13 +404,13 @@ namespace VikingXNAGraphics
             Vector2 FullLabelMeasurement = font.MeasureString(label);
             int MaxRows = (int)Math.Ceiling((double)(FullLabelMeasurement.X * fontScale) / LineWidth) + NumberOfNewlines(label);
             //string[] labelParts = label.Split();
-            Stack<string> labelStack = new Stack<string>(label.Split(new char[] { ' ', '\r' }, StringSplitOptions.RemoveEmptyEntries).Reverse());
+            Stack<string> labelStack = new(((IEnumerable<string>)label.Split([' ', '\r'], StringSplitOptions.RemoveEmptyEntries)).Reverse());
 
             //Shortcut the case where the label fits on one line
             if (FullLabelMeasurement.X * fontScale <= LineWidth && !label.Contains('\n'))
             {
-                OutputRowMeasurements = new Vector2[] { FullLabelMeasurement };
-                return new string[] { label };
+                OutputRowMeasurements = [FullLabelMeasurement];
+                return [label];
             }
 
             string[] rows = new string[MaxRows];
@@ -424,8 +419,7 @@ namespace VikingXNAGraphics
             int iRow = 0;
             while (labelStack.Count > 0)
             {
-                bool RequireNewRow = false;
-                string word = SplitNewlines(labelStack, labelStack.Pop(), out RequireNewRow);
+                string word = SplitNewlines(labelStack, labelStack.Pop(), out bool RequireNewRow);
                 if (string.IsNullOrEmpty(rows[iRow])) //The row is still empty
                 {
                     rows[iRow] = word;
@@ -464,14 +458,14 @@ namespace VikingXNAGraphics
                     if (iRow >= MaxRows && labelStack.Count > 0)
                     {
                         //Replace the last three characters with "..." to indicate there was more text.
-                        rows[iRow - 1] = rows[iRow - 1].Insert(rows[iRow - 1].Length - 3 < 0 ? 0 : rows[iRow - 1].Length - 3, "..."); 
+                        rows[iRow - 1] = rows[iRow - 1].Insert(rows[iRow - 1].Length - 3 < 0 ? 0 : rows[iRow - 1].Length - 3, "...");
                         break;
                     }
                 }
             }
 
 
-            rows = rows.Where(r => !string.IsNullOrEmpty(r)).ToArray();
+            rows = [.. rows.Where(r => !string.IsNullOrEmpty(r))];
             int NumRows = rows.Length;
 
             OutputRowMeasurements = new Vector2[NumRows];
@@ -490,8 +484,7 @@ namespace VikingXNAGraphics
             if (Labels.Count == 0)
                 return;
 
-            if (font is null)
-                font = Global.DefaultFont;
+            font ??= Global.DefaultFont;
 
 
             BlendState originalBlendState = spriteBatch.GraphicsDevice.BlendState;
@@ -501,7 +494,7 @@ namespace VikingXNAGraphics
             SamplerState originalVSamplerState = spriteBatch.GraphicsDevice.VertexSamplerStates[0];
 
             try
-            {  
+            {
                 spriteBatch.Begin();
 
                 foreach (LabelView label in Labels.Where(l => l != null))
@@ -528,8 +521,8 @@ namespace VikingXNAGraphics
                 if (originalVSamplerState != null)
                     spriteBatch.GraphicsDevice.VertexSamplerStates[0] = originalVSamplerState;
             }
-            
-            
+
+
         }
 
         /*
@@ -565,52 +558,36 @@ namespace VikingXNAGraphics
 
         }
         */
-         
+
 
         private static Vector2 AlignmentAdjustmentForRow(Vector2 row_measurement, GridRectangle bounds, Vector2 max_row_size, Alignment alignment)
         {
-            Vector2 origin = new Vector2();
+            Vector2 origin = new();
 
-            switch (alignment.Horizontal)
+            origin.X = alignment.Horizontal switch
             {
-                case HorizontalAlignment.CENTER:
-                    origin.X = (row_measurement.X - max_row_size.X) / 2.0f;
-                    break;
-                case HorizontalAlignment.LEFT:
-                    origin.X = 0;
-                    break;
-                case HorizontalAlignment.RIGHT:
-                    origin.X = row_measurement.X - max_row_size.X;
-                    break;
-                default:
-                    throw new InvalidOperationException(string.Format("Unexpected horizontal alignment {0}", alignment.Horizontal));
-            }
-
-            switch (alignment.Vertical)
+                HorizontalAlignment.CENTER => (row_measurement.X - max_row_size.X) / 2.0f,
+                HorizontalAlignment.LEFT => 0,
+                HorizontalAlignment.RIGHT => row_measurement.X - max_row_size.X,
+                _ => throw new InvalidOperationException(string.Format("Unexpected horizontal alignment {0}", alignment.Horizontal)),
+            };
+            origin.Y = alignment.Vertical switch
             {
-                case VerticalAlignment.CENTER:
-                    origin.Y = (row_measurement.Y - max_row_size.Y) / 2.0f;
-                    break;
-                case VerticalAlignment.TOP:
-                    origin.Y = 0;
-                    break;
-                case VerticalAlignment.BOTTOM:
-                    origin.Y = row_measurement.Y - max_row_size.Y;
-                    break;
-                default:
-                    throw new InvalidOperationException(string.Format("Unexpected vertical alignment {0}", alignment.Vertical));
-            }
-
-            return origin; 
+                VerticalAlignment.CENTER => (row_measurement.Y - max_row_size.Y) / 2.0f,
+                VerticalAlignment.TOP => 0,
+                VerticalAlignment.BOTTOM => row_measurement.Y - max_row_size.Y,
+                _ => throw new InvalidOperationException(string.Format("Unexpected vertical alignment {0}", alignment.Vertical)),
+            };
+            return origin;
         }
 
         private void MeasureLabel()
-        { 
+        {
             double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
             this._Rows = WrapText(this.Text, this.font, FontScaleForVolume, this.MaxLineWidth, out this._RowMeasurements);
             _IsMeasured = true;
         }
-        
+
         /// <summary>
         /// Draw a single label. 
         /// The caller is expected to call Begin and End on the sprite batch.  They should also preserve all state on the graphics device. 
@@ -629,13 +606,13 @@ namespace VikingXNAGraphics
 
             if (spriteBatch is null)
                 throw new ArgumentNullException(nameof(spriteBatch));
-            
+
             //Update our font, will clear the measurements if the font has changed.
-            this.font = font ?? throw new ArgumentNullException("font");
+            this.font = font ?? throw new ArgumentNullException(nameof(font));
             //Scale is used to adjust for the magnification factor of the viewer.  Otherwise text would remain at constant size regardless of mag factor.
             //offsets must be multiplied by scale before use
             double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
-             
+
             if (!_IsMeasured)////!_IsMeasured)
             {
                 MeasureLabel();
@@ -647,9 +624,9 @@ namespace VikingXNAGraphics
             //Vector3 LocationCenterScreenPosition_v3 = scene.Viewport.Project(Position.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
             GridRectangle bounds = BoundingRect;
             Vector3 LocationCenterScreenPosition_v3 = scene.Viewport.Project(bounds.UpperLeft.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
-            Vector2 LocationCenterScreenPosition = new Vector2(LocationCenterScreenPosition_v3.X, LocationCenterScreenPosition_v3.Y);
+            Vector2 LocationCenterScreenPosition = new(LocationCenterScreenPosition_v3.X, LocationCenterScreenPosition_v3.Y);
 
-    //scene.WorldToScreen(this.Position).ToXNAVector2();
+            //scene.WorldToScreen(this.Position).ToXNAVector2();
 
             float fontScale = this.ScaleFontWithScene ? (float)ScaleForMagnification(FontScaleForVolume, scene) : (float)FontScaleForVolume;
 
@@ -657,7 +634,7 @@ namespace VikingXNAGraphics
             float yOffset = -((float)font.LineSpacing) * fontScale;  //What is the offset to draw the line at the correct position?  We have to draw below label if it exists
                                                                      //However we only need to drop half a line since the label straddles the center
 
-            Vector2 max_row_size = new Vector2(_RowMeasurements.Max(r => r.X), _RowMeasurements.Max(r => r.Y));
+            Vector2 max_row_size = new(_RowMeasurements.Max(r => r.X), _RowMeasurements.Max(r => r.Y));
 
             for (int iRow = 0; iRow < _Rows.Length; iRow++)
             {
@@ -667,7 +644,7 @@ namespace VikingXNAGraphics
                 //DrawPosition = AdjustPositionForVertAlignment(DrawPosition, _RowMeasurements[iRow]);
                 DrawPosition.Y += LineStep * iRow;
                 Vector2 origin = AlignmentAdjustmentForRow(_RowMeasurements[iRow], bounds, max_row_size, Alignment);
-                  
+
                 spriteBatch.DrawString(font,
                                        _Rows[iRow],
                                        DrawPosition,
@@ -679,18 +656,18 @@ namespace VikingXNAGraphics
                                        0);
             }
         }
-         
+
 
         public void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
         {
             var fontData = DeviceFontStore.TryGet(device);
-            LabelView.Draw(fontData.SpriteBatch, fontData.Font, scene, items.Select(i => i as LabelView).Where(i => i != null).ToArray());
+            LabelView.Draw(fontData.SpriteBatch, fontData.Font, scene, [.. items.Select(i => i as LabelView).Where(i => i != null)]);
         }
 
         public void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay)
         {
             var fontData = DeviceFontStore.TryGet(device);
-            LabelView.Draw(fontData.SpriteBatch, fontData.Font, scene, new LabelView[] { this });
+            LabelView.Draw(fontData.SpriteBatch, fontData.Font, scene, [this]);
         }
     }
 }

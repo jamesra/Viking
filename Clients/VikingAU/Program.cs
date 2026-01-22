@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using CommandLine;
 using CommandLine.Text;
 using Geometry;
@@ -18,7 +18,7 @@ using Viking.Common;
 
 namespace Viking.AU
 {
-    class CommandLineOptions
+    partial class CommandLineOptions
     {
         [Option('v', "VolumeURL", Required = true, HelpText = "URL of VolumeXML file")]
         public string VolumeURL { get; set; }
@@ -26,7 +26,7 @@ namespace Viking.AU
         [Option('u', "username", Required = false, HelpText = "URL of VolumeXML file")]
         public string Username { get; set; } = "Anonymous";
 
-        [Option('p', "password",Required = false, HelpText = "URL of VolumeXML file")]
+        [Option('p', "password", Required = false, HelpText = "URL of VolumeXML file")]
         public string Password { get; set; } = "connectome";
 
         [Option('c', "closed_interpolation_points", Required = false, HelpText = "Number of closed curve interpolation points")]
@@ -35,12 +35,12 @@ namespace Viking.AU
         [Option('o', "open_interpolation_points", Required = false, HelpText = "Number of open curve interpolation points")]
         public int NumOpenInterpolationPoints { get; set; } = 3;
 
-        [Option('s', "sections", Required = false,  HelpText = "Section Numbers to update")]
+        [Option('s', "sections", Required = false, HelpText = "Section Numbers to update")]
         public string SectionNumbersString { get; set; } = null;
 
         [Option('t', "threads", Required = false, HelpText = "Number of threads to process and submit updates on.  If VikingAU is reporting timeout errors lower this number.  If VikingAU isn't using 100% of the CPU you can try raising it.  Default value is the number of cores on the machine + 1")]
         public int? NumThreads { get; set; } = null;
-          
+
         [Option('m', "translate", Required = false, HelpText = "Translation file, json each array entry is <section #> <X> <Y> <datetime>")]
         public string TranslateFile { get; set; } = null;
 
@@ -49,7 +49,7 @@ namespace Viking.AU
             get
             {
                 if (this.SectionNumbersString is null)
-                    return new List<long>();
+                    return [];
                 else
                     return NumberRangeToList(this.SectionNumbersString);
             }
@@ -58,7 +58,11 @@ namespace Viking.AU
 
         private static bool IsNumberRange(string input)
         {
-            Regex regex = new Regex(@"(\d+)\-(\d+)");
+#if NETFRAMEWORK
+            Regex regex = MyRegex;
+#else
+            Regex regex = MyRegex();
+#endif
             var match = regex.Match(input);
             return match.Success;
         }
@@ -76,15 +80,19 @@ namespace Viking.AU
             try
             {
                 long SectionNumber = System.Convert.ToInt64(input);
-                listNumbers = new List<long>
-                {
+                listNumbers =
+                [
                     SectionNumber
-                };
+                ];
                 return listNumbers;
             }
             catch (FormatException e)
-            {
-                Regex regex = new Regex(@"(\d+)\-(\d+)");
+            { 
+#if NETFRAMEWORK
+                Regex regex = MyRegex;
+#else
+                Regex regex = MyRegex();
+#endif
                 Match m = regex.Match(input);
 
                 long start = System.Convert.ToInt64(m.Groups[1].Value);
@@ -103,7 +111,7 @@ namespace Viking.AU
 
         private static List<long> NumberStringToList(string input)
         {
-            List<long> listNumbers = new List<long>();
+            List<long> listNumbers = [];
 
             foreach (string chunk in input.Split(','))
             {
@@ -127,6 +135,12 @@ namespace Viking.AU
             return listNumbers;
         }
 
+#if NETFRAMEWORK
+        private static readonly Regex MyRegex = new(@"(\d+)\-(\d+)", RegexOptions.Compiled);
+#else
+        [GeneratedRegex(@"(\d+)\-(\d+)")]
+        private static partial Regex MyRegex();
+#endif
     }
 
     class ConsoleProgressReporter
@@ -146,7 +160,7 @@ namespace Viking.AU
             string message = info.Message;
             string ProgressPercentage = info.Progress.ToString("0.00");
 
-            StringBuilder output = new StringBuilder();
+            StringBuilder output = new();
             string Details = $"{ProgressPercentage}% {message}";
             int LineLength = Details.Length;
             output.Append('\b', LastLineLength);
@@ -160,67 +174,64 @@ namespace Viking.AU
             Console.Write(final_output);
         }
 
-        private void TaskComplete()
-        {
-            Console.WriteLine("Task Complete");
-        }
+        private static void TaskComplete() => Console.WriteLine("Task Complete");
     }
 
     class Program
-    { 
-        private static readonly SemaphoreSlim ConsoleLock = new SemaphoreSlim(1);
+    {
+        private static readonly SemaphoreSlim ConsoleLock = new(1);
 
-        static SectionTranslations SectionTranslations = new SectionTranslations();
-         
+        static SectionTranslations SectionTranslations = [];
+
 
         static async Task Main(string[] args)
-        {  
+        {
             var parse_result = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
             parse_result.WithNotParsed(e => ShowErrorsAsync(parse_result, e));
             await parse_result.WithParsedAsync(RunAsync);
-                        
+
         }
-        
+
         static void ShowErrorsAsync(ParserResult<CommandLineOptions> result, IEnumerable<Error> errors)
-        { 
+        {
             // Create a new help text with error information
-            var errorHelpText = HelpText.AutoBuild(result);
+            HelpText errorHelpText = HelpText.AutoBuild(result);
             errorHelpText.AddPreOptionsLine("ERROR: Unable to parse command line arguments.");
             errorHelpText.AddPreOptionsLine("The following errors occurred:");
-            
+
             foreach (var error in errors)
             {
                 errorHelpText.AddPreOptionsLine($"  {error}");
             }
-            
+
             errorHelpText.AddPreOptionsLine("");
             Console.WriteLine(errorHelpText);
-            
+
             // Exit with error code
             Environment.Exit(1);
         }
-        
-        
+
+
         static async Task RunAsync(CommandLineOptions options)
-        { 
-            
+        {
+
             if (options.TranslateFile != null)
             {
                 SectionTranslations = SectionTranslations.CreateFromConfigFile(options.TranslateFile);
-            }   
+            }
 
             int numThreads = options.NumThreads ?? System.Environment.ProcessorCount + 1;
 
             System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=16.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
             SqlServerTypesLoader.Loader.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
 
-            ConsoleProgressReporter progressReporter = new AU.ConsoleProgressReporter();
-            var progress = new System.Progress<ProgressInfo>();
+            ConsoleProgressReporter progressReporter = new();
+            Progress<ProgressInfo> progress = new();
             progress.ProgressChanged += progressReporter.OnReport;
 
-            var cancellationTokenSource = new CancellationTokenSource();
+            CancellationTokenSource cancellationTokenSource = new();
             State.Volume = await Volume.CreateAsync(options.VolumeURL, State.CachePath, progress, CancellationToken.None);
-             
+
             State.MappingsManager = new MappingManager(State.Volume);
 
             Console.Write($"Endpoint: {State.Volume.Endpoint.EndpointURL}");
@@ -233,15 +244,9 @@ namespace Viking.AU
             Store.Structures.GetAllStructures();
             Console.WriteLine("Finished loading all structures");
 
-            IList<long> SectionsToProcess;
-
-            if (options.Sections.Count == 0)
-                SectionsToProcess = State.Volume.Sections.Values.Select(s => (long)s.Number).ToList();
-            else
-            {
-                SectionsToProcess = options.Sections.Where(sectionNumber => State.Volume.Sections.ContainsKey((int)sectionNumber)).ToList();
-
-            }
+            IList<long> SectionsToProcess = options.Sections.Count == 0
+                ? [.. State.Volume.Sections.Values.Select(s => (long)s.Number)]
+                : [.. options.Sections.Where(sectionNumber => State.Volume.Sections.ContainsKey((int)sectionNumber))];
 
             //OK.  Figure out which command we are executing.
             await UpdateVolumePositionsAsync(SectionsToProcess, numThreads, CancellationToken.None);
@@ -277,53 +282,51 @@ namespace Viking.AU
             {
                 Console.WriteLine(task.Result);
             }
-        }   
+        }
 
         static async Task UpdateVolumePositionsAsync(IList<long> SectionNumbers, int NumThreads, CancellationToken token)
         {
             //SortedDictionary<long, Task<string>> tasks = new SortedDictionary<long, Task<string>>();
-            
 
-            using (System.Threading.SemaphoreSlim concurrencySemaphore = new System.Threading.SemaphoreSlim(NumThreads)) //))
+
+            using System.Threading.SemaphoreSlim concurrencySemaphore = new(NumThreads); //))
+            List<Task<string>> tasks = new(SectionNumbers.Count);
+
+            foreach (long sectionNumber in SectionNumbers)
             {
-                List<Task<string>> tasks = new List<Task<string>>(SectionNumbers.Count); 
-                 
-                foreach (long sectionNumber in SectionNumbers)
+                //    UpdateVolumePositions(sectionNumber);
+
+                var task = Task.Run(() => UpdateVolumePositionsOnSectionAsync(sectionNumber, concurrencySemaphore, token), token);
+                _ = task.ContinueWith((t) => Console.WriteLine(t.Result), TaskContinuationOptions.OnlyOnFaulted);
+                tasks.Add(task);
+                //var task = System.Threading.Tasks.Task.Run();
+                //tasks.Add(sectionNumber, task);
+
+                /*while (tasks.Keys.Count > 2)
                 {
-                    //    UpdateVolumePositions(sectionNumber);
-
-                    var task = Task.Run(() => UpdateVolumePositionsOnSectionAsync(sectionNumber, concurrencySemaphore, token),token);
-                    task.ContinueWith((t) => Console.WriteLine(t.Result), TaskContinuationOptions.OnlyOnFaulted);
-                    tasks.Add(task);
-                    //var task = System.Threading.Tasks.Task.Run();
-                    //tasks.Add(sectionNumber, task);
-
-                    /*while (tasks.Keys.Count > 2)
-                    {
-                        RemoveCompletedTasks(tasks);
-                    }*/
-                }
-
-                Task[] taskArray = tasks.Cast<Task>().ToArray();
-                Task.WaitAll(taskArray);
-
-                /*
-                while (tasks.Count > 0)
-                {
-                    Task<string>[] taskArray = tasks.ToArray();
-                    int iTask = Task.WaitAny(taskArray);
-                    var finishedTask = tasks[iTask];
-                    var sectionNumber = taskSectionNumbers[iTask];
-
-                    tasks.RemoveAt(iTask);
-                    taskSectionNumbers.RemoveAt(iTask);
-                    string result = finishedTask.Result;
-
-                    Console.WriteLine(result);
-                    State.MappingsManager.SectionMappingCache.Remove((int)sectionNumber);
-                }
-                */
+                    RemoveCompletedTasks(tasks);
+                }*/
             }
+
+            Task[] taskArray = [.. tasks.Cast<Task>()];
+            Task.WaitAll(taskArray, token);
+
+            /*
+            while (tasks.Count > 0)
+            {
+                Task<string>[] taskArray = tasks.ToArray();
+                int iTask = Task.WaitAny(taskArray);
+                var finishedTask = tasks[iTask];
+                var sectionNumber = taskSectionNumbers[iTask];
+
+                tasks.RemoveAt(iTask);
+                taskSectionNumbers.RemoveAt(iTask);
+                string result = finishedTask.Result;
+
+                Console.WriteLine(result);
+                State.MappingsManager.SectionMappingCache.Remove((int)sectionNumber);
+            }
+            */
 
             /*
             foreach (long sectionNumber in tasks.Keys.ToArray())
@@ -371,23 +374,23 @@ namespace Viking.AU
         static string BuildSectionFeedbackString(long sectionNumber, long numUpdated, long numTotal, SectionTranslation? translation)
         {
             string output = $"Section {sectionNumber} : {numUpdated} of {numTotal} locations needed updates.";
-            if(translation.HasValue)
+            if (translation.HasValue)
             {
                 output += $" Translated {translation.Value.Offset.X},{translation.Value.Offset.Y} before {translation.Value.TranslateBefore}";
             }
 
             return output;
         }
-         
+
         static async Task<string> UpdateSectionPositions(long SectionNumber, CancellationToken token)
         {
-            LocationStore threadLocationStore = new LocationStore();
+            LocationStore threadLocationStore = [];
             int NumUpdated = 0;
 
             var LocDict = threadLocationStore.GetObjectsForSection(SectionNumber);
 
             string feedback = null;
-            if(LocDict.Count >= 0)
+            if (LocDict.Count >= 0)
             {
                 Viking.VolumeModel.Section section = State.Volume.Sections[(int)SectionNumber];
 
@@ -395,7 +398,7 @@ namespace Viking.AU
                 await mapper.Initialize(token);
 
                 SectionTranslation? translationData = null;
-                if(SectionTranslations.TryGetValue(SectionNumber, out var sectionTranslationData))
+                if (SectionTranslations.TryGetValue(SectionNumber, out var sectionTranslationData))
                     translationData = sectionTranslationData;
 
                 foreach (LocationObj loc in LocDict.Values)
@@ -407,23 +410,23 @@ namespace Viking.AU
                             NumUpdated++;
                     }
                     catch (ArgumentException e)
-                    { 
-                        Console.WriteLine($"Location {loc.ID} could not be updated.  {e}"); 
-                    } 
+                    {
+                        Console.WriteLine($"Location {loc.ID} could not be updated.  {e}");
+                    }
                 }
-                
+
                 feedback = BuildSectionFeedbackString(SectionNumber, NumUpdated, LocDict.Count, translationData);
             }
             else
             {
                 feedback = $"Section {SectionNumber} : No locations found";
-            } 
+            }
 
             if (NumUpdated > 0)
             {
                 try
                 {
-                    if(threadLocationStore.Save() == false)
+                    if (threadLocationStore.Save() == false)
                         feedback += $"\nSection {SectionNumber} : Failed to apply updates";
                 }
                 catch (System.ServiceModel.FaultException e)
@@ -440,7 +443,7 @@ namespace Viking.AU
                     //feedback += $"\nSection {SectionNumber} : Failed to apply updates with error{e}";
                     //Console.Write("...Locations updated");
                 }
-            } 
+            }
 
             threadLocationStore.RemoveSection((int)SectionNumber);
 
@@ -476,10 +479,10 @@ namespace Viking.AU
             }
 
             //Translate if needed
-            if(!(translation is null))
+            if (translation is not null)
             {
-                if(loc.LastModified < translation.Value.TranslateBefore)
-                { 
+                if (loc.LastModified < translation.Value.TranslateBefore)
+                {
                     updatedVolumeShape = updatedVolumeShape.Translate(translation.Value.Offset);
                     loc.MosaicShape = mapper.TryMapShapeVolumeToSection(updatedVolumeShape);
                     Translated = true;
@@ -507,25 +510,12 @@ namespace Viking.AU
 
         static GridVector2[] MosaicPointsForLocation(LocationObj loc)
         {
-            GridVector2[] mosaicPoints;
-            switch (loc.TypeCode)
+            GridVector2[] mosaicPoints = loc.TypeCode switch
             {
-                case LocationType.POINT:
-                case LocationType.CIRCLE:
-                    mosaicPoints = new GridVector2[] { loc.Position };
-                    break;
-                case LocationType.POLYGON:
-                case LocationType.POLYLINE:
-                case LocationType.OPENCURVE:
-                case LocationType.CLOSEDCURVE:
-                case LocationType.CURVEPOLYGON:
-                    mosaicPoints = loc.MosaicShape.ToPoints();
-                    break;
-                default:
-                    mosaicPoints = loc.MosaicShape.ToPoints();
-                    break;
-            }
-
+                LocationType.POINT or LocationType.CIRCLE => [loc.Position],
+                LocationType.POLYGON or LocationType.POLYLINE or LocationType.OPENCURVE or LocationType.CLOSEDCURVE or LocationType.CURVEPOLYGON => loc.MosaicShape.ToPoints(),
+                _ => loc.MosaicShape.ToPoints(),
+            };
             return mosaicPoints;
         }
 
@@ -655,7 +645,7 @@ namespace Viking.AU
                 if (GridVector2.DistanceSquared(Original[i], New[i]) > epsilonSquared)
                     return true;
             }
-             
+
             return false;
         }
     }

@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using System;
 using System.Collections.ObjectModel;
 using System.Windows;
@@ -15,21 +15,21 @@ namespace WebAnnotation.UI.Controls
     {
         public System.Collections.ObjectModel.ObservableCollection<IStructureTypeReadOnly> RootStructureTypes
         {
-            get => (System.Collections.ObjectModel.ObservableCollection<IStructureTypeReadOnly>)GetValue( RootStructureTypesProperty);
-            set => SetValue( RootStructureTypesProperty, value);
+            get => (System.Collections.ObjectModel.ObservableCollection<IStructureTypeReadOnly>)GetValue(RootStructureTypesProperty);
+            set => SetValue(RootStructureTypesProperty, value);
         }
 
         // Using a DependencyProperty as the backing store for  RootStructureTypes.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty  RootStructureTypesProperty =
-            DependencyProperty.Register("RootStructureTypes", typeof(ObservableCollection<IStructureTypeReadOnly>), 
+        public static readonly DependencyProperty RootStructureTypesProperty =
+            DependencyProperty.Register("RootStructureTypes", typeof(ObservableCollection<IStructureTypeReadOnly>),
                 typeof(StructureTypeTree), new PropertyMetadata());
-         
+
 
         public StructureTypeTree()
         {
             InitializeComponent();
             //if (System.ComponentModel.DesignerProperties.GetIsInDesignMode(this))
-            if(true)
+            if (true)
             {
                 // Load design-time books.
                 WebAnnotationModel.State.Endpoint = new Uri("https://websvc1.connectomes.utah.edu/RABBIT/Annotation/Service.svc");

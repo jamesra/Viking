@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
@@ -22,7 +22,7 @@ namespace Viking.VolumeModel
             if (loc.VolumeTransformID == mapper.ID)
                 return true;
 
-            GridVector2 VolumePosition = new GridVector2(-1, -1);
+            GridVector2 VolumePosition = new(-1, -1);
 
             bool mappedPosition = mapper.TrySectionToVolume(loc.Position, out VolumePosition);
             if (!mappedPosition) //Remove locations we can't map
@@ -42,7 +42,7 @@ namespace Viking.VolumeModel
 
         public static Microsoft.SqlServer.Types.SqlGeometry TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
-            ICollection<GridVector2[]> VolumeInnerRings = null;
+            List<GridVector2[]> VolumeInnerRings = null;
 
             //Circles are represented by curve polygons.  When we map the points through a transform the results are not a circle.
             //So we special case the mapping of circles
@@ -62,7 +62,7 @@ namespace Viking.VolumeModel
 
             if (shape.HasInteriorRings())
             {
-                ICollection<GridVector2[]> innerRings = shape.InteriorRingPoints();
+                List<GridVector2[]> innerRings = shape.InteriorRingPoints();
                 VolumeInnerRings = new List<GridVector2[]>(innerRings.Count);
 
                 foreach (GridVector2[] innerRing in innerRings)
@@ -79,7 +79,7 @@ namespace Viking.VolumeModel
             }
 
             return SqlGeometryUtils.Extensions.ToGeometry(shape.GeometryType(), VolumePositions, VolumeInnerRings);
-        } 
+        }
         public static Microsoft.SqlServer.Types.SqlGeometry TryMapShapeVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
             //Circles are represented by curve polygons.  When we map the points through a transform the results are not a circle.
@@ -89,7 +89,7 @@ namespace Viking.VolumeModel
                 return TryMapCurvePolygonVolumeToSection(mapper, shape);
             }
 
-            ICollection<GridVector2[]> SectionInnerRings = null;
+            List<GridVector2[]> SectionInnerRings = null;
             GridVector2[] points = shape.ToPoints();
 
             bool[] mappedPosition = mapper.TryVolumeToSection(points, out GridVector2[] SectionPositions);
@@ -101,7 +101,7 @@ namespace Viking.VolumeModel
 
             if (shape.HasInteriorRings())
             {
-                ICollection<GridVector2[]> innerRings = shape.InteriorRingPoints();
+                List<GridVector2[]> innerRings = shape.InteriorRingPoints();
                 SectionInnerRings = new List<GridVector2[]>(innerRings.Count);
 
                 foreach (GridVector2[] innerRing in innerRings)
@@ -119,7 +119,7 @@ namespace Viking.VolumeModel
 
             return SqlGeometryUtils.Extensions.ToGeometry(shape.GeometryType(), SectionPositions, SectionInnerRings);
         }
-         
+
         /// <summary>
         /// In Viking CURVEPOLYGONS are always circles.  When we map the points through a transform the results are not a circle. 
         /// This function maps the center and preserves the radius, at the cost of not adapting the radius.  
@@ -127,10 +127,7 @@ namespace Viking.VolumeModel
         /// <param name="mapper"></param>
         /// <param name="shape"></param>
         /// <returns></returns>
-        private static Microsoft.SqlServer.Types.SqlGeometry TryMapCurvePolygonSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
-        {
-            return TryMapCurvePolygonCircle(mapper, shape, useSectionToVolumeDirection: true);
-        }
+        private static Microsoft.SqlServer.Types.SqlGeometry TryMapCurvePolygonSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape) => TryMapCurvePolygonCircle(mapper, shape, useSectionToVolumeDirection: true);
 
         /// <summary>
         /// In Viking CURVEPOLYGONS are always circles.  When we map the points through a transform the results are not a circle. 
@@ -139,10 +136,7 @@ namespace Viking.VolumeModel
         /// <param name="mapper"></param>
         /// <param name="shape"></param>
         /// <returns></returns>
-        private static Microsoft.SqlServer.Types.SqlGeometry TryMapCurvePolygonVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
-        {
-            return TryMapCurvePolygonCircle(mapper, shape, useSectionToVolumeDirection: false);
-        }
+        private static Microsoft.SqlServer.Types.SqlGeometry TryMapCurvePolygonVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape) => TryMapCurvePolygonCircle(mapper, shape, useSectionToVolumeDirection: false);
 
         private static Microsoft.SqlServer.Types.SqlGeometry TryMapCurvePolygonCircle(
             this Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape,
@@ -153,18 +147,18 @@ namespace Viking.VolumeModel
                 throw new ArgumentException("CURVEPOLYGON shape argument required");
             }
 
-            GridVector2 center = shape.Centroid(); 
+            GridVector2 center = shape.Centroid();
             GridRectangle bbox = shape.BoundingBox();
 
             //In some cases the transform can have significant distortions corrected.  To handle this we map points on the circle at the cardinal directions and then recalculate the radius
-            var points = new GridVector2[]
-            {
+            GridVector2[] points =
+            [
                 center,
-                new GridVector2(bbox.Left, center.Y),
-                new GridVector2(center.X, bbox.Bottom),
-                new GridVector2(bbox.Right, center.Y),
-                new GridVector2(center.X, bbox.Top)
-            };
+                new(bbox.Left, center.Y),
+                new(center.X, bbox.Bottom),
+                new(bbox.Right, center.Y),
+                new(center.X, bbox.Top)
+            ];
 
             bool[] mappedCorrectly = useSectionToVolumeDirection ?
                 mapper.TrySectionToVolume(points, out GridVector2[] mappedPoints) :
@@ -180,7 +174,7 @@ namespace Viking.VolumeModel
 
             double radiiSquared = mappedPoints.Where((p, i) => i > 0 && mappedCorrectly[i]).Select(p => GridVector2.DistanceSquared(mappedCenter, p)).Median();
             double radius = Math.Sqrt(radiiSquared);
-              
+
             return SqlGeometryUtils.Extensions.ToCircle(mappedCenter.X, mappedCenter.Y, 0, radius);
         }
     }

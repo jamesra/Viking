@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="TriangleSampler.cs">
 // Original Triangle code by Jonathan Richard Shewchuk, http://www.cs.cmu.edu/~quake/triangle.html
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
@@ -14,15 +14,15 @@ namespace TriangleNet
     /// <summary>
     /// Used for triangle sampling in the <see cref="TriangleLocator"/> class.
     /// </summary>
-    class TriangleSampler : IEnumerable<Triangle>
+    class TriangleSampler(Mesh mesh, Random random) : IEnumerable<Triangle>
     {
         private const int RANDOM_SEED = 110503;
 
         // Empirically chosen factor.
         private const int samplefactor = 11;
 
-        private readonly Random random;
-        private readonly Mesh mesh;
+        private readonly Random random = random;
+        private readonly Mesh mesh = mesh;
 
         // Number of random samples for point location (at least 1).
         private int samples = 1;
@@ -33,12 +33,6 @@ namespace TriangleNet
         public TriangleSampler(Mesh mesh)
             : this(mesh, new Random(RANDOM_SEED))
         {
-        }
-
-        public TriangleSampler(Mesh mesh, Random random)
-        {
-            this.mesh = mesh;
-            this.random = random;
         }
 
         /// <summary>
@@ -72,14 +66,8 @@ namespace TriangleNet
             }
         }
 
-        public IEnumerator<Triangle> GetEnumerator()
-        {
-            return mesh.triangles.Sample(samples, random).GetEnumerator();
-        }
+        public IEnumerator<Triangle> GetEnumerator() => mesh.triangles.Sample(samples, random).GetEnumerator();
 
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

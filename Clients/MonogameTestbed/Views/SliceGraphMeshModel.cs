@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Geometry.Meshing;
 using Microsoft.Xna.Framework;
 using MorphologyMesh;
@@ -21,29 +21,33 @@ namespace MonogameTestbed
         /// <summary>
         /// The composite mesh.  Not thread safe or protected by modeLock
         /// </summary>
-        public Mesh3D<MorphMeshVertex> composite = new Mesh3D<MorphMeshVertex>();
+        public Mesh3D<MorphMeshVertex> composite = new();
 
         /// <summary>
         /// A model of the final mesh.  Can be protected via modeLock for rendering the model as it is constructed
         /// </summary>
-        public MeshModel<VertexPositionNormalColor> model = new MeshModel<VertexPositionNormalColor>();
+        public MeshModel<VertexPositionNormalColor> model = new();
 
-        private readonly Dictionary<IShapeIndex, int> ShapeIndexToVertex = new Dictionary<IShapeIndex, int>();
+        private readonly Dictionary<IShapeIndex, int> ShapeIndexToVertex = [];
 
-        public ReaderWriterLockSlim ModelLock = new ReaderWriterLockSlim();
+        public ReaderWriterLockSlim ModelLock = new();
 
         private Color _color = Color.CornflowerBlue;
-        public Color Color { get => _color;
+        public Color Color
+        {
+            get => _color;
             set
             {
-                if(value != _color)
+                if (value != _color)
                 {
                     model.SetColor(value);
-                    _color = value; 
+                    _color = value;
                 }
             }
-        } 
-        public float Alpha { get => Color.GetAlpha();
+        }
+        public float Alpha
+        {
+            get => Color.GetAlpha();
             set => Color = Color.SetAlpha(value);
         }
 
@@ -54,7 +58,7 @@ namespace MonogameTestbed
         public SliceGraphMeshModel(GridVector3 position)
         {
             model.Position = position;
-        } 
+        }
 
         /// <summary>
         /// </summary>
@@ -64,17 +68,17 @@ namespace MonogameTestbed
             //Maps mesh vertex index to the global vertex index
             int[] mesh_to_global = new int[mesh.Verticies.Count];
 
-            List<VertexPositionNormalColor> modelVerts = new List<VertexPositionNormalColor>(mesh.Verticies.Count);
+            List<VertexPositionNormalColor> modelVerts = new(mesh.Verticies.Count);
 
             ///Add all new verticies to the mesh and populate a map for vertex indicies
             for (int iVert = 0; iVert < mesh.Verticies.Count; iVert++)
             {
                 MorphMeshVertex vertex = mesh[iVert];
-                
-                if(vertex.ShapeIndex is null)
+
+                if (vertex.ShapeIndex is null)
                 {
                     //It is not part of a polygon, so we know the vertex will not collide with another vertex and need remapping
-                    var composite_vertex = MorphMeshVertex.Duplicate(vertex);
+                    MorphMeshVertex composite_vertex = MorphMeshVertex.Duplicate(vertex);
                     int iNewVert = composite.AddVertex(composite_vertex);
 
                     modelVerts.Add(new VertexPositionNormalColor(composite_vertex.Position.ToXNAVector3(), Vector3.Zero, Color));
@@ -85,10 +89,10 @@ namespace MonogameTestbed
                 {
                     //Check if the PointIndex for this vertex already exists in the model
                     ulong iShape = mesh.Topology.ShapeIndexToMorphNodeIndex[vertex.ShapeIndex.iShape];
-                    var composite_vertex = MorphMeshVertex.Reindex(vertex, (int)iShape);
+                    MorphMeshVertex composite_vertex = MorphMeshVertex.Reindex(vertex, (int)iShape);
 
-                    if(false == ShapeIndexToVertex.TryGetValue(composite_vertex.ShapeIndex, out int iGlobalVert))
-                    {   
+                    if (false == ShapeIndexToVertex.TryGetValue(composite_vertex.ShapeIndex, out int iGlobalVert))
+                    {
                         //If the vertex is not in the mesh already, then add it.
                         iGlobalVert = composite.AddVertex(composite_vertex);
                         ShapeIndexToVertex.Add(composite_vertex.ShapeIndex, iGlobalVert);
@@ -109,7 +113,7 @@ namespace MonogameTestbed
             composite.RecalculateNormals(mesh_to_global);
 
             UpdateModel(modelVerts, NewModelEdges, mesh_to_global);
-        }   
+        }
 
         /// <summary>
         /// Adds edges to the composite mesh, mapping indicies using mesh_to_global
@@ -117,11 +121,11 @@ namespace MonogameTestbed
         /// <param name="edges"></param>
         /// <param name="mesh_to_global"></param>
         /// <returns></returns>
-        private IEnumerable<Edge> AddEdgesToComposite(IEnumerable<IEdgeKey> edges, int[] mesh_to_global)
+        private Geometry.Meshing.Edge[] AddEdgesToComposite(IEnumerable<IEdgeKey> edges, int[] mesh_to_global)
         {
-            Edge[] newEdges = edges.Select(k => new Edge(mesh_to_global[k.A], mesh_to_global[k.B])).ToArray();
+            Edge[] newEdges = [.. edges.Select(k => new Edge(mesh_to_global[k.A], mesh_to_global[k.B]))];
             foreach (Edge composite_edge in newEdges)
-            { 
+            {
                 composite.AddEdge(composite_edge);
             }
 
@@ -142,14 +146,14 @@ namespace MonogameTestbed
             int iCompositeFace = 0;
 
             int iModelFace = 0;
-            foreach (Face f in faces)
+            foreach (Face f in faces.Cast<Face>())
             {
 
                 int[] iMapped = new int[f.iVerts.Length];
                 for (int i = 0; i < f.iVerts.Length; i++)
                     iMapped[i] = mesh_to_global[f.iVerts[i]];
 
-                Face composite_face = new Face(iMapped);
+                Face composite_face = new(iMapped);
                 //composite.AddFace(composite_face);
                 composite_faces[iCompositeFace] = composite_face;
 
@@ -159,7 +163,7 @@ namespace MonogameTestbed
                 iModelFace += iMapped.Length;
                 iCompositeFace += 1;
             }
-            
+
             //Add the composite faces in one bulk move
             composite.AddFaces(composite_faces);
 
@@ -172,7 +176,7 @@ namespace MonogameTestbed
         /// <param name="verts">Verticies to append to our model</param>
         /// <param name="edges">Triangles to add to the model, expects sets of three indicating triangles.</param>
         /// <param name="mesh_to_global">The indicies of vertices whose normal needs to be updated using the composite mesh normal</param>
-        private void UpdateModel(ICollection<VertexPositionNormalColor> modelVerts, int[] NewModelEdges, int[] mesh_to_global=null)
+        private void UpdateModel(ICollection<VertexPositionNormalColor> modelVerts, int[] NewModelEdges, int[] mesh_to_global = null)
         {
             try
             {
@@ -211,18 +215,18 @@ namespace MonogameTestbed
             //Maps mesh vertex index to the global vertex index
             int[] mesh_to_global = new int[mesh.Verticies.Count];
 
-            List<VertexPositionNormalColor> modelVerts = new List<VertexPositionNormalColor>(mesh.Verticies.Count);
-            
+            List<VertexPositionNormalColor> modelVerts = new(mesh.Verticies.Count);
+
             ///Add all new verticies to the mesh and populate a map for vertex indicies
             for (int iVert = 0; iVert < mesh.Verticies.Count; iVert++)
             {
                 MorphMeshVertex vertex = mesh[iVert];
-                var composite_vertex = MorphMeshVertex.Duplicate(vertex);
+                MorphMeshVertex composite_vertex = MorphMeshVertex.Duplicate(vertex);
 
                 if (vertex.ShapeIndex is null)
                 {
                     //It is not part of a polygon, so we know the vertex will not collide with another vertex and need remapping
-                    
+
                     int iNewVert = composite.AddVertex(composite_vertex);
 
                     modelVerts.Add(new VertexPositionNormalColor(composite_vertex.Position.ToXNAVector3(), Vector3.Zero, Color));

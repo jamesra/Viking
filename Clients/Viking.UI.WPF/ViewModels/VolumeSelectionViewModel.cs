@@ -9,14 +9,15 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Duende.IdentityModel.Client;
+using Viking.Tokens;
 using Viking.UI.WPF.Models;
 
 namespace Viking.UI.WPF.ViewModels
 {
     public class VolumeSelectionViewModel : INotifyPropertyChanged
     {
-        private TokenResponse _bearerToken;
-        private string _identityServerUrl;
+        private readonly TokenResponse _bearerToken;
+        private readonly string _identityServerUrl;
         private bool _isLoading;
         private string _statusMessage;
         private VolumeTreeNode _selectedVolume;
@@ -27,15 +28,15 @@ namespace Viking.UI.WPF.ViewModels
         {
             _bearerToken = bearerToken;
             _identityServerUrl = identityServerUrl;
-            
-            OrganizationNodes = new ObservableCollection<VolumeTreeNode>();
-            RecentVolumes = new ObservableCollection<VolumeInfo>();
-            
+
+            OrganizationNodes = [];
+            RecentVolumes = [];
+
             SelectCommand = new RelayCommand(SelectVolume, () => CanSelect);
             CancelCommand = new RelayCommand(Cancel);
             LoadVolumesCommand = new RelayCommand(async () => await LoadVolumesAsync());
             CopyUrlCommand = new RelayCommand(CopyUrlToClipboard, () => !string.IsNullOrWhiteSpace(SelectedVolumeUrl));
-              
+
             // Auto-load volumes on creation if we have a bearer token
             if (_bearerToken != null)
             {
@@ -157,13 +158,13 @@ namespace Viking.UI.WPF.ViewModels
         public ICommand LoadVolumesCommand { get; }
         public ICommand CopyUrlCommand { get; }
 
-        private bool CanSelect => !IsLoading && 
+        private bool CanSelect => !IsLoading &&
             (SelectedVolume?.Volume != null || !string.IsNullOrWhiteSpace(ManualVolumeUrl));
 
         public event EventHandler<VolumeSelectedEventArgs> VolumeSelected;
         public event EventHandler SelectionCancelled;
         public event PropertyChangedEventHandler PropertyChanged;
-         
+
 
         public void AddRecentVolume(string url, string name)
         {
@@ -171,21 +172,21 @@ namespace Viking.UI.WPF.ViewModels
                 return;
 
             // Remove any existing entry with the same URL to avoid duplicates
-            var existingEntry = RecentVolumes.FirstOrDefault(v => 
+            var existingEntry = RecentVolumes.FirstOrDefault(v =>
                 string.Equals(v.VolumeXmlUrl, url, StringComparison.OrdinalIgnoreCase));
-            
+
             if (existingEntry != null)
             {
                 RecentVolumes.Remove(existingEntry);
             }
 
-            var volumeInfo = new VolumeInfo
+            VolumeInfo volumeInfo = new()
             {
                 VolumeXmlUrl = url,
                 Name = name ?? ExtractVolumeName(url),
                 Organization = "Recent"
             };
-            
+
             // Insert at the top of the list (most recent)
             RecentVolumes.Insert(0, volumeInfo);
         }
@@ -195,7 +196,7 @@ namespace Viking.UI.WPF.ViewModels
             if (RecentVolumes.Count > 0)
             {
                 var mostRecentVolume = RecentVolumes[0];
-                var node = new VolumeTreeNode
+                VolumeTreeNode node = new()
                 {
                     Volume = mostRecentVolume,
                     Name = mostRecentVolume.Name,
@@ -209,7 +210,7 @@ namespace Viking.UI.WPF.ViewModels
         {
             try
             {
-                var uri = new Uri(url);
+                Uri uri = new(url);
                 var segments = uri.Segments;
                 if (segments.Length > 1)
                 {
@@ -228,7 +229,7 @@ namespace Viking.UI.WPF.ViewModels
 
         private async Task LoadVolumesAsync()
         {
-            if (_bearerToken == null)
+            if (_bearerToken is null)
             {
                 StatusMessage = "No authentication token available";
                 return;
@@ -256,21 +257,21 @@ namespace Viking.UI.WPF.ViewModels
                 Trace.WriteLine($"[VolumeSelection] Identity API URL (port 6001): {identityApiUri}");
                 Trace.WriteLine($"[VolumeSelection] Full endpoint will be: {new Uri(identityApiUri, "Permissions/UserAccessibleVolumeTree")}");
 
-                var helper = new Viking.Tokens.IdentityApiHelper
+                IdentityApiHelper helper = new()
                 {
                     IdentityApiURL = identityApiUri
                 };
 
                 var apiTreeNodes = await helper.RetrieveUserAccessibleVolumeTree(_bearerToken);
-                
-                if (apiTreeNodes == null || apiTreeNodes.Count == 0)
+
+                if (apiTreeNodes is null || apiTreeNodes.Count == 0)
                 {
                     StatusMessage = "No volumes available from server. Use manual entry or recent volumes.";
                     return;
                 }
 
                 OrganizationNodes.Clear();
-                
+
                 int totalVolumes = 0;
                 foreach (var apiNode in apiTreeNodes)
                 {
@@ -313,14 +314,14 @@ namespace Viking.UI.WPF.ViewModels
 
         private VolumeTreeNode BuildUITreeNodeFromApiNode(Viking.Tokens.ApiVolumeTreeNode apiNode)
         {
-            if (apiNode == null)
+            if (apiNode is null)
                 return null;
 
-            var uiNode = new VolumeTreeNode
+            VolumeTreeNode uiNode = new()
             {
                 Name = apiNode.Name ?? "Unnamed",
                 IsOrganization = true,
-                Children = new ObservableCollection<VolumeTreeNode>()
+                Children = []
             };
 
             // Process Volumes (the leaves)
@@ -331,7 +332,7 @@ namespace Viking.UI.WPF.ViewModels
                     try
                     {
                         var volumeInfo = ConvertUserResourcePermissionsToVolumeInfo(volumePermission);
-                        var volumeNode = new VolumeTreeNode
+                        VolumeTreeNode volumeNode = new()
                         {
                             Name = volumeInfo.Name,
                             Volume = volumeInfo,
@@ -371,7 +372,7 @@ namespace Viking.UI.WPF.ViewModels
 
         private VolumeInfo ConvertUserResourcePermissionsToVolumeInfo(Viking.Tokens.UserResourcePermissions resourcePermissions)
         {
-            var volumeInfo = new VolumeInfo
+            VolumeInfo volumeInfo = new()
             {
                 Id = resourcePermissions.Id,
                 Name = resourcePermissions.Name ?? $"Volume {resourcePermissions.Id}"
@@ -408,13 +409,13 @@ namespace Viking.UI.WPF.ViewModels
             }
 
             System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Converted VolumeInfo: Id={volumeInfo.Id}, Name={volumeInfo.Name}, VolumeXmlUrl={volumeInfo.VolumeXmlUrl ?? "(null)"}, Description={volumeInfo.Description ?? "(null)"}");
-            
+
             return volumeInfo;
         }
 
         private int CountVolumesInNode(VolumeTreeNode node)
         {
-            if (node == null)
+            if (node is null)
                 return 0;
 
             int count = 0;
@@ -461,7 +462,7 @@ namespace Viking.UI.WPF.ViewModels
             {
                 // Ensure URL has proper format (add volume.vikingxml if needed)
                 selectedUrl = AppendDefaultVolumeFilenameIfMissing(selectedUrl);
-                
+
                 System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Final volume URL: {selectedUrl}, Name: {selectedName ?? "(null - will load from XML)"}");
                 VolumeSelected?.Invoke(this, new VolumeSelectedEventArgs { Url = selectedUrl, Name = selectedName });
             }
@@ -472,10 +473,7 @@ namespace Viking.UI.WPF.ViewModels
             }
         }
 
-        private void Cancel()
-        {
-            SelectionCancelled?.Invoke(this, EventArgs.Empty);
-        }
+        private void Cancel() => SelectionCancelled?.Invoke(this, EventArgs.Empty);
 
         private void CopyUrlToClipboard()
         {
@@ -501,7 +499,7 @@ namespace Viking.UI.WPF.ViewModels
 
             try
             {
-                Uri websiteUri = new Uri(url);
+                Uri websiteUri = new(url);
                 string path = websiteUri.GetComponents(UriComponents.Path, UriFormat.SafeUnescaped);
                 if (!path.Contains('.'))
                 {
@@ -520,10 +518,7 @@ namespace Viking.UI.WPF.ViewModels
             return url;
         }
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
     public class VolumeTreeNode : INotifyPropertyChanged
@@ -589,17 +584,14 @@ namespace Viking.UI.WPF.ViewModels
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
     public class VolumeSelectedEventArgs : EventArgs
     {
         public string Url { get; set; }
 
-        public string Name { get;set;}
+        public string Name { get; set; }
     }
 }
 

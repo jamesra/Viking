@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using SqlGeometryUtils;
 using System;
@@ -41,17 +41,14 @@ namespace WebAnnotation.UI.Commands
 
         public override uint NumCurveInterpolations => throw new NotImplementedException();
 
-        protected override bool CanCommandComplete()
-        {
-            return true;
-        }
+        protected override bool CanCommandComplete() => true;
 
         protected override void OnPathLoop(object sender, bool HasLoop)
         {
             //TODO: Prompt the user to create a closed curve type
             if (HasLoop)
             {
-                GridPolygon newVolumePoly = new GridPolygon(PenInput.SimplifiedFirstLoop);
+                GridPolygon newVolumePoly = new(PenInput.SimplifiedFirstLoop);
                 if (newVolumePoly.Area < MinAreaForClosedShape)
                 {
                     Deactivated = true;
@@ -146,11 +143,7 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        protected override void OnPenPathChanged(object sender, NotifyCollectionChangedEventArgs e)
-        {
-            base.OnPenPathChanged(sender, e);
-
-            /*
+        protected override void OnPenPathChanged(object sender, NotifyCollectionChangedEventArgs e) => base.OnPenPathChanged(sender, e);/*
             //This path is used to detect when the user starts inside an annotation, but leaves and re-enters the annotation to fire a retrace and replace command.
             //In the future we should probably fire OnLeavingAnnotation events to simplify detecting this case
             if (this.PenInput.Points.Count <= 1)
@@ -159,7 +152,7 @@ namespace WebAnnotation.UI.Commands
             GridLineSegment move_line = this.PenInput.NewestSegent;
             ICanvasGeometryView IntersectedObject = AnnotationOverlay.FirstIntersectedObjectOnSection(Parent.Section.Number, move_line, out double distance);
             //            ICanvasGeometryView MouseOverAnnotation = ObjectAtPosition(WorldPosition, out distance) as ICanvasGeometryView;
-            System.Diagnostics.Trace.WriteLine(string.Format("{0}", IntersectedObject == null ? "NULL" : IntersectedObject.ToString()));
+            System.Diagnostics.Trace.WriteLine(string.Format("{0}", IntersectedObject is null ? "NULL" : IntersectedObject.ToString()));
 
             //If the objects changed that means we intersected the boundary of the object.  If we are in pen mode and the intersected object qualifies we should start a retrace and replace command... 
             if (IntersectedObject != null)
@@ -203,7 +196,6 @@ namespace WebAnnotation.UI.Commands
                     Parent.CurrentCommand = retraceCmd;
                 }
             }*/
-        }
 
         protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
         {
@@ -212,10 +204,7 @@ namespace WebAnnotation.UI.Commands
             return;
         }
 
-        protected override bool ShapeIsValid()
-        {
-            return true;
-        }
+        protected override bool ShapeIsValid() => true;
 
 
         /// <summary>
@@ -226,7 +215,7 @@ namespace WebAnnotation.UI.Commands
         public static List<LocationPolygonView> IntersectedPolygonsOnSection(int CurrentSectionNumber, GridPolygon bounds)
         {
             SectionAnnotationsView locView = AnnotationOverlay.GetAnnotationsForSection(CurrentSectionNumber);
-            if (locView == null)
+            if (locView is null)
             {
                 return null;
             }
@@ -235,11 +224,11 @@ namespace WebAnnotation.UI.Commands
 
             IEnumerable<LocationPolygonView> listPolygons = listObjects.Select(o => o as LocationPolygonView).Where(o => o != null);
 
-            return listPolygons.Where(o =>
+            return [.. listPolygons.Where(o =>
             {
                 GridPolygon poly = o.VolumeShapeAsRendered.ToPolygon();
                 return poly.Intersects(bounds) || poly.Contains(bounds);
-            }).ToList();
+            })];
         }
     }
 }

@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Duende.IdentityModel.Client;
+using Viking.Tokens;
 using Viking.UI.WPF.Models;
 
 namespace Viking.UI.WPF.ViewModels
@@ -25,7 +26,7 @@ namespace Viking.UI.WPF.ViewModels
         private SegmentationServiceTreeNode _selectedService;
         private string _manualServiceEndpoint;
         private bool _showManualEntry;
-        private bool _isSelectionMade = false;
+        private readonly bool _isSelectionMade = false;
 
         public SegmentationServiceSelectionViewModel(TokenResponse bearerToken, string identityServerUrl, string preselectedEndpoint = null)
         {
@@ -33,8 +34,8 @@ namespace Viking.UI.WPF.ViewModels
             _identityServerUrl = identityServerUrl;
             _preselectedEndpoint = preselectedEndpoint;
 
-            ServiceNodes = new ObservableCollection<SegmentationServiceTreeNode>();
-            RecentServices = new ObservableCollection<SegmentationServiceInfo>();
+            ServiceNodes = [];
+            RecentServices = [];
 
             SelectCommand = new RelayCommand(SelectService, () => CanSelect);
             NoneCommand = new RelayCommand(SelectNone);
@@ -181,7 +182,7 @@ namespace Viking.UI.WPF.ViewModels
                 return;
             }
 
-            var serviceInfo = new SegmentationServiceInfo
+            SegmentationServiceInfo serviceInfo = new()
             {
                 Endpoint = endpoint,
                 Name = string.IsNullOrWhiteSpace(name) ? endpoint : name,
@@ -239,7 +240,7 @@ namespace Viking.UI.WPF.ViewModels
 
         private async Task LoadServicesAsync()
         {
-            if (_bearerToken == null)
+            if (_bearerToken is null)
             {
                 StatusMessage = "No authentication token available";
                 return;
@@ -265,14 +266,14 @@ namespace Viking.UI.WPF.ViewModels
                 Trace.WriteLine($"[SegmentationSelection] Identity API URL (port 6001): {identityApiUri}");
                 Trace.WriteLine($"[SegmentationSelection] Endpoint: {new Uri(identityApiUri, "Permissions/AccessibleSegmentationServices")}");
 
-                var helper = new Viking.Tokens.IdentityApiHelper
+                IdentityApiHelper helper = new()
                 {
                     IdentityApiURL = identityApiUri
                 };
 
                 var servicesDict = await helper.RetrieveUserAccessibleSegmentationServices(_bearerToken);
 
-                if (servicesDict == null || servicesDict.Count == 0)
+                if (servicesDict is null || servicesDict.Count == 0)
                 {
                     StatusMessage = "No segmentation services available. Use manual entry or recent services.";
                     return;
@@ -285,14 +286,14 @@ namespace Viking.UI.WPF.ViewModels
                     try
                     {
                         var serviceInfo = ParseServiceData(kvp.Key, kvp.Value);
-                        
+
                         // Log warning if endpoint is missing
                         if (string.IsNullOrWhiteSpace(serviceInfo.Endpoint))
                         {
                             Trace.WriteLine($"[SegmentationSelection] WARNING: Service {kvp.Key} ({serviceInfo.Name}) has no endpoint!");
                         }
-                        
-                        var node = new SegmentationServiceTreeNode
+
+                        SegmentationServiceTreeNode node = new()
                         {
                             Name = serviceInfo.Name,
                             Service = serviceInfo,
@@ -334,12 +335,12 @@ namespace Viking.UI.WPF.ViewModels
 
         private SegmentationServiceInfo ParseServiceData(long id, object data)
         {
-            var serviceInfo = new SegmentationServiceInfo { Id = id };
+            SegmentationServiceInfo serviceInfo = new() { Id = id };
 
             try
             {
                 JsonElement rootElement;
-                
+
                 if (data is JsonElement jsonElement)
                 {
                     Trace.WriteLine($"[SegmentationSelection] Parsing service {id}, JSON: {jsonElement.GetRawText()}");
@@ -348,7 +349,7 @@ namespace Viking.UI.WPF.ViewModels
                 else
                 {
                     var json = JsonSerializer.Serialize(data);
-                    using var doc = JsonDocument.Parse(json);
+                    using JsonDocument doc = JsonDocument.Parse(json);
                     rootElement = doc.RootElement;
                 }
 
@@ -366,14 +367,14 @@ namespace Viking.UI.WPF.ViewModels
 
                 // Extract endpoint - check both root level and metadata dict (case-insensitive)
                 string endpoint = null;
-                
+
                 // First try root level (check both lowercase and capitalized)
-                if (rootElement.TryGetProperty("endpoint", out var endpointElement) || 
+                if (rootElement.TryGetProperty("endpoint", out var endpointElement) ||
                     rootElement.TryGetProperty("Endpoint", out endpointElement))
                 {
                     endpoint = endpointElement.GetString();
                 }
-                
+
                 // If not found, check metadata dict (check both lowercase and capitalized)
                 if (string.IsNullOrWhiteSpace(endpoint) && rootElement.TryGetProperty("metadata", out var metadataElement))
                 {
@@ -386,9 +387,9 @@ namespace Viking.UI.WPF.ViewModels
                         }
                     }
                 }
-                
+
                 serviceInfo.Endpoint = endpoint;
-                
+
                 Trace.WriteLine($"[SegmentationSelection] Service {id} - Name: {serviceInfo.Name}, Endpoint: {serviceInfo.Endpoint}");
             }
             catch (Exception ex)
@@ -428,7 +429,7 @@ namespace Viking.UI.WPF.ViewModels
                 Endpoint = endpoint,
                 IsNone = false
             });
-            
+
             Trace.WriteLine($"[SegmentationSelection] Event fired successfully");
         }
 
@@ -436,7 +437,7 @@ namespace Viking.UI.WPF.ViewModels
         {
             Trace.WriteLine("[SegmentationSelection] User opted to skip segmentation service.");
 
-            SegmentationSelectionSkipped?.Invoke(this, EventArgs.Empty);            
+            SegmentationSelectionSkipped?.Invoke(this, EventArgs.Empty);
             /*SegmentationServiceSelected?.Invoke(this, new SegmentationServiceSelectedEventArgs
             {
                 Endpoint = null,
@@ -444,10 +445,7 @@ namespace Viking.UI.WPF.ViewModels
             });*/
         }
 
-        private void Cancel()
-        {
-            SelectionCancelled?.Invoke(this, EventArgs.Empty);
-        }
+        private void Cancel() => SelectionCancelled?.Invoke(this, EventArgs.Empty);
 
         private void CopyEndpointToClipboard()
         {
@@ -466,10 +464,7 @@ namespace Viking.UI.WPF.ViewModels
             }
         }
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
         private class SegmentationServiceComparer : IComparer<object>
         {
@@ -490,7 +485,7 @@ namespace Viking.UI.WPF.ViewModels
                     }
 
                     var json = JsonSerializer.Serialize(data);
-                    using var doc = JsonDocument.Parse(json);
+                    using JsonDocument doc = JsonDocument.Parse(json);
 
                     if (doc.RootElement.TryGetProperty("name", out var name))
                     {
@@ -570,10 +565,7 @@ namespace Viking.UI.WPF.ViewModels
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
     public class SegmentationServiceSelectedEventArgs : EventArgs
@@ -581,4 +573,4 @@ namespace Viking.UI.WPF.ViewModels
         public string Endpoint { get; set; }
         public bool IsNone { get; set; }
     }
-} 
+}

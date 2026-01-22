@@ -1,4 +1,4 @@
-﻿using ConnectomeDataModel;
+using ConnectomeDataModel;
 using Microsoft.AspNet.OData;
 using Microsoft.Extensions.Logging;
 using System;
@@ -19,19 +19,13 @@ namespace ConnectomeODataV4.Controllers
     builder.EntitySet<Structure>("Structures"); 
     config.Routes.MapODataServiceRoute("odata", "odata", builder.GetEdmModel());
     */
-    public class StructureTypesController : ODataController
+    /// <summary>
+    /// Constructor with dependency injection
+    /// </summary>
+    public class StructureTypesController(ConnectomeEntities db, ILogger<StructureTypesController> logger) : ODataController
     {
-        private readonly ConnectomeEntities _db;
-        private readonly ILogger<StructureTypesController> _logger;
-
-        /// <summary>
-        /// Constructor with dependency injection
-        /// </summary>
-        public StructureTypesController(ConnectomeEntities db, ILogger<StructureTypesController> logger)
-        {
-            _db = db ?? throw new ArgumentNullException(nameof(db));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
+        private readonly ConnectomeEntities _db = db ?? throw new ArgumentNullException(nameof(db));
+        private readonly ILogger<StructureTypesController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // GET: odata/StructureTypes
         [EnableQuery(PageSize = WebApiConfig.PageSize)]
@@ -203,9 +197,6 @@ namespace ConnectomeODataV4.Controllers
 
         // No need for Dispose override - DI container handles disposal
 
-        private bool StructureTypeExists(long key)
-        {
-            return _db.StructureTypes.Count(e => e.ID == key) > 0;
-        }
+        private bool StructureTypeExists(long key) => _db.StructureTypes.Count(e => e.ID == key) > 0;
     }
 }

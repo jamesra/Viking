@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -22,7 +22,7 @@ namespace AnnotationVizLib
             if (!NodeAttribs.ContainsKey("viewLabel"))
                 NodeAttribs.Add("viewLabel", node.Key);
 
-            NodeAttribs.Add("StructureIDs", SourceStructures(node));
+            NodeAttribs.Add("StructureIDs", MotifTLPView.SourceStructures(node));
             NodeAttribs.Add("NumberOfCells", node.Structures.Count.ToString());
             NodeAttribs.Add("InputTypeCount", node.InputEdgesCount.ToString());
             NodeAttribs.Add("OutputTypeCount", node.OutputEdgesCount.ToString());
@@ -52,12 +52,12 @@ namespace AnnotationVizLib
             TLPViewEdge tlpedge = this.addEdge(edge.SourceNodeKey, edge.TargetNodeKey);
             IDictionary<string, string> EdgeAttribs = AttributeMapper.AttribsForLabel(edge.SynapseType, TLPAttributes.StandardEdgeSourceLabelToTLPAppearance);
 
-            EdgeAttribs.Add("SourceParentStructures", EdgeStructuresString(edge.SourceStructIDs.Keys));
-            EdgeAttribs.Add("ConnectionSourceStructures", EdgeStructuresString(edge.SourceStructIDs.SelectMany(s => s.Value)));
-            EdgeAttribs.Add("TargetParentStructures", EdgeStructuresString(edge.TargetStructIDs.Keys));
-            EdgeAttribs.Add("ConnectionTargetStructures", EdgeStructuresString(edge.TargetStructIDs.SelectMany(s => s.Value)));
+            EdgeAttribs.Add("SourceParentStructures", MotifTLPView.EdgeStructuresString(edge.SourceStructIDs.Keys));
+            EdgeAttribs.Add("ConnectionSourceStructures", MotifTLPView.EdgeStructuresString(edge.SourceStructIDs.SelectMany(s => s.Value)));
+            EdgeAttribs.Add("TargetParentStructures", MotifTLPView.EdgeStructuresString(edge.TargetStructIDs.Keys));
+            EdgeAttribs.Add("ConnectionTargetStructures", MotifTLPView.EdgeStructuresString(edge.TargetStructIDs.SelectMany(s => s.Value)));
 
-            EdgeAttribs.Add("viewLabel", EdgeLabel(edge));
+            EdgeAttribs.Add("viewLabel", MotifTLPView.EdgeLabel(edge));
             EdgeAttribs.Add("edgeType", edge.SynapseType);
 
             EdgeAttribs.Add("SourceLabel", edge.SourceNodeKey);
@@ -82,7 +82,7 @@ namespace AnnotationVizLib
         /// Append statistics about the edge to edge attributes
         /// </summary>
         /// <param name="edge"></param>
-        private void AppendEdgeStatistics(MotifGraph graph, MotifEdge edge, ref IDictionary<string, string> EdgeAttribs)
+        private static void AppendEdgeStatistics(MotifGraph graph, MotifEdge edge, ref IDictionary<string, string> EdgeAttribs)
         {
             MotifNode sourceNode = graph.Nodes[edge.SourceNodeKey];
             MotifNode targetNode = graph.Nodes[edge.TargetNodeKey];
@@ -146,15 +146,15 @@ namespace AnnotationVizLib
         {
             if (VolumeURL != null)
             {
-                return string.Format("{0}/Export/Morphology/Tlp?id={1}", VolumeURL, SourceStructures(node));
+                return string.Format("{0}/Export/Morphology/Tlp?id={1}", VolumeURL, MotifTLPView.SourceStructures(node));
             }
 
             return null;
         }
 
-        private string SourceStructures(MotifNode node)
+        private static string SourceStructures(MotifNode node)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
 
             bool first = false;
             foreach (IStructureReadOnly s in node.Structures)
@@ -170,9 +170,9 @@ namespace AnnotationVizLib
             return sb.ToString();
         }
 
-        private string EdgeStructuresString(IEnumerable<long> structIDs)
+        private static string EdgeStructuresString(IEnumerable<long> structIDs)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             bool first = false;
 
             foreach (long sourceID in structIDs)
@@ -188,19 +188,16 @@ namespace AnnotationVizLib
             return sb.ToString();
         }
 
-        private string EdgeLabel(MotifEdge edge)
-        {
-            return edge.SynapseType;
-        }
+        private static string EdgeLabel(MotifEdge edge) => edge.SynapseType;
 
-        public void PopulateTLPNode(MotifNode node, TLPViewNode tlpnode)
+        public static void PopulateTLPNode(MotifNode node, TLPViewNode tlpnode)
         {
 
         }
 
         public static MotifTLPView ToTLP(MotifGraph graph, string ExportURLBase, bool IncludeUnlabeled = false)
         {
-            MotifTLPView view = new MotifTLPView(graph, ExportURLBase);
+            MotifTLPView view = new(graph, ExportURLBase);
 
             foreach (MotifNode node in graph.Nodes.Values)
             {

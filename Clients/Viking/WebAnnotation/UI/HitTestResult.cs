@@ -2,25 +2,17 @@
 
 namespace WebAnnotation
 {
-    public class HitTestResult
+    public class HitTestResult(VikingXNAGraphics.IHitTesting o, int z, int visual_height, double dist)
     {
         /// <summary>
         /// Contains for LocationPolygonView is semi-broken because we need to select holes in the polygon for UI purposes.  However for pen
         /// purposes we want contains to return false.  The workaround is that if the point is inside the interior hole it has a distance > 1
         /// where any other annotation that returns contains == true would have a distance == 0
         /// </summary>
-        public readonly double Distance;
-        public readonly int Z;
-        public readonly int VisualHeight;
-        public readonly VikingXNAGraphics.IHitTesting obj;
-
-        public HitTestResult(VikingXNAGraphics.IHitTesting o, int z, int visual_height, double dist)
-        {
-            obj = o;
-            Z = z;
-            VisualHeight = visual_height;
-            Distance = dist;
-        }
+        public readonly double Distance = dist;
+        public readonly int Z = z;
+        public readonly int VisualHeight = visual_height;
+        public readonly VikingXNAGraphics.IHitTesting obj = o;
     }
 
     public class HitTest_Z_Distance_Sorter : IComparer<HitTestResult>

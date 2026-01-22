@@ -25,10 +25,10 @@ namespace Viking.Properties
 
         private object GetOrCreateSetting(string key, Func<object> defaultFactory, Type valueType, SettingsSerializeAs serializeAs)
         {
-            if (Properties[key] == null)
+            if (Properties[key] is null)
             {
                 var provider = Providers["LocalFileSettingsProvider"];
-                var property = new SettingsProperty(key)
+                SettingsProperty property = new(key)
                 {
                     PropertyType = valueType,
                     IsReadOnly = false,
@@ -36,19 +36,19 @@ namespace Viking.Properties
                     SerializeAs = serializeAs,
                     DefaultValue = null
                 };
-                
+
                 // Check if UserScopedSettingAttribute already exists before adding
                 if (!property.Attributes.Contains(typeof(UserScopedSettingAttribute)))
                 {
                     property.Attributes.Add(typeof(UserScopedSettingAttribute), new UserScopedSettingAttribute());
                 }
-                
+
                 Properties.Add(property);
                 Reload();
             }
 
             var value = this[key];
-            if (value == null)
+            if (value is null)
             {
                 value = defaultFactory();
                 this[key] = value;

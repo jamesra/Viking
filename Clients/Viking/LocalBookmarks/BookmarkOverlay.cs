@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Windows.Forms;
 using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
@@ -26,15 +26,15 @@ namespace LocalBookmarks
         public static Texture2D ArrowTexture;
         public static Texture2D DefaultTexture;
 
-        public static readonly VertexPositionColorTexture[] SquareVerts = {
-            new VertexPositionColorTexture(new Vector3(-1,1,0), Color.White, Vector2.Zero),
-            new VertexPositionColorTexture(new Vector3(1,1,0), Color.White, Vector2.UnitX),
-            new VertexPositionColorTexture(new Vector3(-1,-1,0), Color.White, Vector2.UnitY),
-            new VertexPositionColorTexture(new Vector3(1,-1,0), Color.White, Vector2.One) };
+        public static readonly VertexPositionColorTexture[] SquareVerts = [
+            new(new Vector3(-1,1,0), Color.White, Vector2.Zero),
+            new(new Vector3(1,1,0), Color.White, Vector2.UnitX),
+            new(new Vector3(-1,-1,0), Color.White, Vector2.UnitY),
+            new(new Vector3(1,-1,0), Color.White, Vector2.One) ];
 
-        public static readonly int[] SquareIndicies = { 2, 1, 0, 3, 1, 2 };
+        public static readonly int[] SquareIndicies = [2, 1, 0, 3, 1, 2];
 
-        public static VertexDeclaration VertexPositionColorTextureDecl = null;
+        public static VertexDeclaration? VertexPositionColorTextureDecl = null;
 
         #endregion
 
@@ -107,8 +107,7 @@ namespace LocalBookmarks
         void ISectionOverlayExtension.Draw(GraphicsDevice graphicsDevice, Scene scene, Texture BackgroundLuma, Texture BackgroundColors, ref int nextStencilValue)
         {
 
-            if (basicEffect == null)
-                basicEffect = new BasicEffect(graphicsDevice);
+            basicEffect ??= new BasicEffect(graphicsDevice);
 
             if (basicEffect.IsDisposed)
                 basicEffect = new BasicEffect(graphicsDevice);
@@ -128,12 +127,12 @@ namespace LocalBookmarks
                                     BasicEffect basicEffect,
                                     Scene scene)
         {
-            BookmarkUIObj[] bookmarks = ParentFolder.Bookmarks.Where(b => b.Z == State.ViewerControl.Section.Number && scene.VisibleWorldBounds.Intersects(b.BoundingRect)).ToArray();
+            BookmarkUIObj[] bookmarks = [.. ParentFolder.Bookmarks.Where(b => b.Z == State.ViewerControl.Section.Number && scene.VisibleWorldBounds.Intersects(b.BoundingRect))];
 
             _parent.AnnotationOverlayEffect.Technique = OverlayShaderEffect.Techniques.SingleColorTextureLumaOverlayEffect;
-            TextureOverlayView.Draw(graphicsDevice, scene, _parent.AnnotationOverlayEffect, bookmarks.Select(b => b.ShapeView).ToArray());
+            TextureOverlayView.Draw(graphicsDevice, scene, _parent.AnnotationOverlayEffect, [.. bookmarks.Select(b => b.ShapeView)]);
 
-            LabelView.Draw(_parent.spriteBatch, VikingXNAGraphics.Global.DefaultFont, scene, bookmarks.Select(b => b.LabelView).ToArray());
+            LabelView.Draw(_parent.spriteBatch, VikingXNAGraphics.Global.DefaultFont, scene, [.. bookmarks.Select(b => b.LabelView)]);
 
             foreach (FolderUIObj folder in ParentFolder.Folders)
             {
@@ -143,15 +142,13 @@ namespace LocalBookmarks
 
         #endregion
 
-        public ContextMenuStrip BuildMenuFor(IContextMenu Obj, ContextMenuStrip Menu) 
-        { 
-            if (Menu == null) Menu = new ContextMenuStrip();
+        public ContextMenuStrip BuildMenuFor(IContextMenu Obj, ContextMenuStrip Menu)
+        {
+            Menu ??= new ContextMenuStrip();
 
             // Add a default menu item
-            var addBookmarkItem = new ToolStripMenuItem("Add Bookmark");
-            addBookmarkItem.Click += (sender, e) => {
-                State.ViewerControl.CommandQueue.EnqueueCommand(typeof(CreateBookmarkCommand), State.ViewerControl, Global.FolderUIObjRoot);
-            };
+            ToolStripMenuItem addBookmarkItem = new("Add Bookmark");
+            addBookmarkItem.Click += (sender, e) => State.ViewerControl.CommandQueue.EnqueueCommand(typeof(CreateBookmarkCommand), State.ViewerControl, Global.FolderUIObjRoot);
             Menu.Items.Add(addBookmarkItem);
 
             // If the object provides its own context menu, merge it
@@ -176,15 +173,15 @@ namespace LocalBookmarks
 
         private ToolStripMenuItem CloneToolStripMenuItem(ToolStripMenuItem original)
         {
-            var clone = new ToolStripMenuItem(original.Text);
-            clone.Enabled = original.Enabled;
-            clone.Checked = original.Checked;
-            clone.Tag = original.Tag;
-            
-            // Clone event handlers by invoking the original handler when the new one is clicked
-            clone.Click += (sender, e) => {
-                original.PerformClick();
+            ToolStripMenuItem clone = new(original.Text)
+            {
+                Enabled = original.Enabled,
+                Checked = original.Checked,
+                Tag = original.Tag
             };
+
+            // Clone event handlers by invoking the original handler when the new one is clicked
+            clone.Click += (sender, e) => original.PerformClick();
 
             // Clone sub-menu items recursively
             foreach (ToolStripItem subItem in original.DropDownItems)
@@ -207,11 +204,11 @@ namespace LocalBookmarks
             if (Obj is null)
                 return Menu;
 
-            Menu ??= new ContextMenuStrip(); 
+            Menu ??= new ContextMenuStrip();
 
             if (Obj.GetType() == typeof(FolderUIObj))
-            { 
-                var deleteFolderItem = new ToolStripMenuItem("Delete Folder");
+            {
+                ToolStripMenuItem deleteFolderItem = new("Delete Folder");
                 deleteFolderItem.Click += (sender, e) =>
                 {
                     // Logic to delete folder
@@ -220,14 +217,14 @@ namespace LocalBookmarks
             }
             else if (Obj.GetType() == typeof(BookmarkUIObj))
             {
-                var propertiesItem = new ToolStripMenuItem("Properties");
+                ToolStripMenuItem propertiesItem = new("Properties");
                 propertiesItem.Click += (sender, e) =>
                 {
                     // Logic to open bookmark
                 };
                 Menu.Items.Add(propertiesItem);
 
-                var deleteBookmarkItem = new ToolStripMenuItem("Delete Bookmark");
+                ToolStripMenuItem deleteBookmarkItem = new("Delete Bookmark");
                 deleteBookmarkItem.Click += (sender, e) =>
                 {
                     // Logic to delete bookmark
@@ -236,7 +233,7 @@ namespace LocalBookmarks
             }
 
             return Menu;
-        } 
+        }
 
         public ContextMenuStrip BuildMenuFor(Type ObjType, ContextMenuStrip Menu)
         {
@@ -244,24 +241,26 @@ namespace LocalBookmarks
 
             if (ObjType == typeof(FolderTreeControl))
             {
-                var createFolderItem = new ToolStripMenuItem("Create Folder");
+                ToolStripMenuItem createFolderItem = new("Create Folder");
                 createFolderItem.Click += (sender, e) =>
                 {
-                    Folder newFolder = new Folder();
-                    newFolder.Name = "New Folder";
-                    var newFolderUIObj = new FolderUIObj(Global.FolderUIObjRoot, newFolder);
+                    Folder newFolder = new()
+                    {
+                        Name = "New Folder"
+                    };
+                    FolderUIObj newFolderUIObj = new(Global.FolderUIObjRoot, newFolder);
                 };
                 Menu.Items.Add(createFolderItem);
             }
             else if (ObjType == typeof(BookmarkUIObj))
             {
-                var openBookmarkItem = new ToolStripMenuItem("Open Bookmark");
+                ToolStripMenuItem openBookmarkItem = new("Open Bookmark");
                 openBookmarkItem.Click += (sender, e) =>
                 {
                     // Logic to open bookmark
                 };
                 Menu.Items.Add(openBookmarkItem);
-                var deleteBookmarkItem = new ToolStripMenuItem("Delete Bookmark");
+                ToolStripMenuItem deleteBookmarkItem = new("Delete Bookmark");
                 deleteBookmarkItem.Click += (sender, e) =>
                 {
                     // Logic to delete bookmark

@@ -1,4 +1,4 @@
-﻿using ODataClient.ConnectomeDataModel;
+using ODataClient.ConnectomeDataModel;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,10 +6,7 @@ namespace AnnotationVizLib.OData
 {
     static class ODataLocationExtensions
     {
-        public static List<ObjAttribute> Attributes(this Location loc)
-        {
-            return ObjAttribute.Parse(loc.Tags);
-        }
+        public static List<ObjAttribute> Attributes(this Location loc) => ObjAttribute.Parse(loc.Tags);
 
         public static bool IsVericosityCap(this Location loc)
         {

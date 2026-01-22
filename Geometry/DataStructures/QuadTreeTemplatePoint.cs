@@ -15,7 +15,7 @@ namespace Geometry
         /// <summary>
         /// Maps the values to the node containing the values. Populated by the QuadTreeNode class.
         /// </summary>
-        internal Dictionary<TValue, QuadTreeNodeTemplatePoint<TPoint, TValue>> ValueToNodeTable = new Dictionary<TValue, QuadTreeNodeTemplatePoint<TPoint, TValue>>();
+        internal Dictionary<TValue, QuadTreeNodeTemplatePoint<TPoint, TValue>> ValueToNodeTable = [];
 
         public QuadTreeTemplatePoint(GridRectangle border)
         {

@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 
 namespace MorphologyMesh
@@ -14,25 +14,17 @@ namespace MorphologyMesh
     /// <summary>
     /// Describes a slice chord via verticies on the mesh.  Can include medial axis verticies unlike the original SliceChord class
     /// </summary>
-    public class MeshChord : IEquatable<MeshChord>, ISliceChord
-    { 
-        public readonly GridLineSegment Line;
+    public class MeshChord(MorphRenderMesh mesh, int iO, int iT) : IEquatable<MeshChord>, ISliceChord
+    {
+        public readonly GridLineSegment Line = new(mesh[iO].Position.XY(), mesh[iT].Position.XY());
 
-        public readonly int iOrigin; //The index of the vertex in the mesh at the origin of the chord
-        public readonly int iTarget; //The index of the vertex in the mesh at the target of the chord
+        public readonly int iOrigin = iO; //The index of the vertex in the mesh at the origin of the chord
+        public readonly int iTarget = iT; //The index of the vertex in the mesh at the target of the chord
 
-        private readonly MorphRenderMesh mesh;
+        private readonly MorphRenderMesh mesh = mesh;
 
         GridLineSegment ISliceChord.Line => this.Line;
 
-        public MeshChord(MorphRenderMesh mesh, int iO, int iT)
-        {
-            this.mesh = mesh;
-            this.iOrigin = iO;
-            this.iTarget = iT;
-            this.Line = new GridLineSegment(mesh[iO].Position.XY(), mesh[iT].Position.XY());
-        }
-         
         public bool Equals(MeshChord other)
         {
             if (other is null)
@@ -104,12 +96,9 @@ namespace MorphologyMesh
             return this.Equals(other);
         }
 
-        public override int GetHashCode()
-        {
-            return Origin.GetHashCode() + Target.GetHashCode();
-        }
+        public override int GetHashCode() => Origin.GetHashCode() + Target.GetHashCode();
 
-        
+
         public override string ToString() => $"{Origin} - {Target}";
 
         public bool Equals(ISliceChord other)

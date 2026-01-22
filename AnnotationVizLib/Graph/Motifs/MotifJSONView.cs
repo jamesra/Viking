@@ -17,10 +17,10 @@ namespace AnnotationVizLib
         public static MotifJSONView ToJSON(MotifGraph graph)
         {
             int edgeCount = 0;
-            MotifJSONView JSONView = new MotifJSONView
+            MotifJSONView JSONView = new()
             {
-                nodesJSON = new JArray(),
-                edgesJSON = new JArray()
+                nodesJSON = [],
+                edgesJSON = []
             };
 
             foreach (MotifNode node in graph.Nodes.Values)
@@ -78,15 +78,13 @@ namespace AnnotationVizLib
 
         public void SaveJSON(string JSONFileFullPath)
         {
-            using (FileStream fl = new FileStream(JSONFileFullPath, FileMode.Create, FileAccess.Write))
+            using FileStream fl = new(JSONFileFullPath, FileMode.Create, FileAccess.Write);
+            using (StreamWriter write = new(fl))
             {
-                using (StreamWriter write = new StreamWriter(fl))
-                {
-                    write.Write(this.ToString());
-                    write.Close();
-                }
-                fl.Close();
+                write.Write(this.ToString());
+                write.Close();
             }
+            fl.Close();
         }
     }
 }

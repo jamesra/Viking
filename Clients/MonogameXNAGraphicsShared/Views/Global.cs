@@ -1,8 +1,8 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
-using System.Collections.Generic; 
+using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 
@@ -22,10 +22,7 @@ namespace VikingXNAGraphics
         {
             get
             {
-                if (_DefaultFont is null)
-                {
-                    _DefaultFont = Content.Load<SpriteFont>(@"Arial");
-                }
+                _DefaultFont ??= Content.Load<SpriteFont>(@"Arial");
 
                 return _DefaultFont;
             }
@@ -79,53 +76,40 @@ namespace VikingXNAGraphics
 
         public static Texture2D GetTexture(this BuiltinTexture tex)
         {
-            switch(tex)
+            return tex switch
             {
-                case BuiltinTexture.None:
-                    return null;
-                case BuiltinTexture.Circle:
-                    return CircleTexture;
-                case BuiltinTexture.Plus:
-                    return PlusTexture;
-                case BuiltinTexture.Minus:
-                    return MinusTexture;
-                case BuiltinTexture.UpArrow:
-                    return UpArrowTexture;
-                case BuiltinTexture.DownArrow:
-                    return DownArrowTexture;
-                case BuiltinTexture.Chain:
-                    return ChainTexture;
-                case BuiltinTexture.Connect:
-                    return ConnectTexture;
-                case BuiltinTexture.X:
-                    return CircleXTexture;
-                default:
-                    throw new NotImplementedException(string.Format("Missing texture for CircleIcon enumeration value {0}", tex));
-            }
+                BuiltinTexture.None => null,
+                BuiltinTexture.Circle => CircleTexture,
+                BuiltinTexture.Plus => PlusTexture,
+                BuiltinTexture.Minus => MinusTexture,
+                BuiltinTexture.UpArrow => UpArrowTexture,
+                BuiltinTexture.DownArrow => DownArrowTexture,
+                BuiltinTexture.Chain => ChainTexture,
+                BuiltinTexture.Connect => ConnectTexture,
+                BuiltinTexture.X => CircleXTexture,
+                _ => throw new NotImplementedException(string.Format("Missing texture for CircleIcon enumeration value {0}", tex)),
+            };
         }
 
-        public static readonly VertexPositionColorTexture[] SquareVerts = new VertexPositionColorTexture[] {
-            new VertexPositionColorTexture(new Vector3(-1,1,0), Color.White, Vector2.Zero), 
-            new VertexPositionColorTexture(new Vector3(1,1,0), Color.White, Vector2.UnitX), 
-            new VertexPositionColorTexture(new Vector3(-1,-1,0), Color.White, Vector2.UnitY), 
-            new VertexPositionColorTexture(new Vector3(1,-1,0), Color.White, Vector2.One) };
+        public static readonly VertexPositionColorTexture[] SquareVerts = [
+            new(new Vector3(-1,1,0), Color.White, Vector2.Zero),
+            new(new Vector3(1,1,0), Color.White, Vector2.UnitX),
+            new(new Vector3(-1,-1,0), Color.White, Vector2.UnitY),
+            new(new Vector3(1,-1,0), Color.White, Vector2.One) ];
 
-        public static readonly int[] SquareIndicies = new int[] { 2, 1, 0, 3, 1, 2 };
+        public static readonly int[] SquareIndicies = [2, 1, 0, 3, 1, 2];
 
         /// <summary>
         /// Stores a unit circle/square index buffer for each device we know about.
         /// </summary>
-        private static readonly Dictionary<GraphicsDevice, IndexBuffer> unit_circle_index_buffers = new Dictionary<GraphicsDevice, IndexBuffer>();
+        private static readonly Dictionary<GraphicsDevice, IndexBuffer> unit_circle_index_buffers = [];
 
         /// <summary>
         /// Gets the index buffer for unit square built with two triangles
         /// </summary>
         /// <param name="device"></param>
         /// <returns></returns>
-        public static IndexBuffer GetUnitSquareIndexBuffer(GraphicsDevice device)
-        {
-            return GetUnitCircleIndexBuffer(device);
-        }
+        public static IndexBuffer GetUnitSquareIndexBuffer(GraphicsDevice device) => GetUnitCircleIndexBuffer(device);
 
         /// <summary>
         /// Gets the index buffer for unit circle built with two triangles
@@ -133,30 +117,30 @@ namespace VikingXNAGraphics
         /// <param name="device"></param>
         /// <returns></returns>
         public static IndexBuffer GetUnitCircleIndexBuffer(GraphicsDevice device)
-        {  
+        {
             if (unit_circle_index_buffers.TryGetValue(device, out IndexBuffer ib))
             {
                 if (!ib.IsDisposed) return ib;
             }
 
-            ib = CreateUnitCircleIndexBuffer(device); 
+            ib = CreateUnitCircleIndexBuffer(device);
             unit_circle_index_buffers.Add(device, ib);
             return ib;
         }
-         
+
 
         public static IndexBuffer CreateUnitCircleIndexBuffer(GraphicsDevice device)
         {
-            IndexBuffer ib = new IndexBuffer(device, IndexElementSize.ThirtyTwoBits, SquareIndicies.Length, BufferUsage.WriteOnly);
+            IndexBuffer ib = new(device, IndexElementSize.ThirtyTwoBits, SquareIndicies.Length, BufferUsage.WriteOnly);
             ib.SetData<int>(SquareIndicies);
-            return ib; 
+            return ib;
         }
 
 
         /// <summary>
         /// Stores a unit circle vertex buffer for each device we know about
         /// </summary>
-        private static readonly Dictionary<GraphicsDevice, VertexBuffer> unit_circle_vertex_buffers = new Dictionary<GraphicsDevice, VertexBuffer>();
+        private static readonly Dictionary<GraphicsDevice, VertexBuffer> unit_circle_vertex_buffers = [];
 
 
         // <summary>
@@ -164,10 +148,7 @@ namespace VikingXNAGraphics
         /// </summary>
         /// <param name="device"></param>
         /// <returns></returns>
-        public static VertexBuffer GetUnitSquareVertexBuffer(GraphicsDevice device)
-        {
-            return GetUnitCircleVertexBuffer(device);
-        }
+        public static VertexBuffer GetUnitSquareVertexBuffer(GraphicsDevice device) => GetUnitCircleVertexBuffer(device);
 
         // <summary>
         /// Gets vertxe buffer of four vertcies with corners at -1,1.  Pixel shader should clip pixels outside the unit circle.
@@ -175,7 +156,7 @@ namespace VikingXNAGraphics
         /// <param name="device"></param>
         /// <returns></returns>
         public static VertexBuffer GetUnitCircleVertexBuffer(GraphicsDevice device)
-        {  
+        {
             if (unit_circle_vertex_buffers.TryGetValue(device, out VertexBuffer vb))
             {
                 if (!vb.IsDisposed) return vb;
@@ -187,15 +168,12 @@ namespace VikingXNAGraphics
             unit_circle_vertex_buffers.Add(device, vb);
             return vb;
         }
-          
-        private static VertexBuffer CreateUnitCircleVertexBuffer(GraphicsDevice device)
-        {
-            return CreateUnitSquareVertexBuffer(device);
-        }
-         
+
+        private static VertexBuffer CreateUnitCircleVertexBuffer(GraphicsDevice device) => CreateUnitSquareVertexBuffer(device);
+
         private static VertexBuffer CreateUnitSquareVertexBuffer(GraphicsDevice device)
         {
-            var vb = new VertexBuffer(device, typeof(VertexPositionColorTexture), SquareVerts.Length, BufferUsage.WriteOnly);
+            VertexBuffer vb = new(device, typeof(VertexPositionColorTexture), SquareVerts.Length, BufferUsage.WriteOnly);
             vb.SetData<VertexPositionColorTexture>(SquareVerts);
             return vb;
         }
@@ -297,7 +275,7 @@ namespace VikingXNAGraphics
         private static VertexPositionColorTexture[] CircleVerticies(GridVector2 Pos, float Radius, Microsoft.Xna.Framework.Color color)
         {
             VertexPositionColorTexture[] verts = new VertexPositionColorTexture[GlobalPrimitives.SquareVerts.Length];
-            GlobalPrimitives.SquareVerts.CopyTo(verts, 0); 
+            GlobalPrimitives.SquareVerts.CopyTo(verts, 0);
 
             //Scale and color the verticies
             for (int i = 0; i < verts.Length; i++)
@@ -315,7 +293,7 @@ namespace VikingXNAGraphics
 
 
         public static void DrawCircle(GraphicsDevice graphicsDevice,
-                BasicEffect basicEffect, 
+                BasicEffect basicEffect,
                 GridVector2 Pos,
                 double Radius,
                 Microsoft.Xna.Framework.Color color)
@@ -340,25 +318,25 @@ namespace VikingXNAGraphics
             basicEffect.VertexColorEnabled = true;
             basicEffect.LightingEnabled = false;
 
-             foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
-             {
-                 pass.Apply();
+            foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+            {
+                pass.Apply();
 
-                 graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColorTexture>(PrimitiveType.TriangleList,
-                                                                               verts,
-                                                                               0,
-                                                                               verts.Length,
-                                                                               indicies,
-                                                                               0,
-                                                                               2);
-             }
+                graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColorTexture>(PrimitiveType.TriangleList,
+                                                                              verts,
+                                                                              0,
+                                                                              verts.Length,
+                                                                              indicies,
+                                                                              0,
+                                                                              2);
+            }
 
-             basicEffect.TextureEnabled = false;
-             basicEffect.VertexColorEnabled = false;
+            basicEffect.TextureEnabled = false;
+            basicEffect.VertexColorEnabled = false;
 
-            graphicsDevice.BlendState = originalState; 
+            graphicsDevice.BlendState = originalState;
         }
-         
+
 
         public static void DrawPolyline(RoundLineCode.RoundLineManager LineManager,
                                    BasicEffect basicEffect,
@@ -367,13 +345,13 @@ namespace VikingXNAGraphics
                                    Microsoft.Xna.Framework.Color color)
         {
             RoundLineCode.RoundLine[] drawn_lines = new RoundLineCode.RoundLine[LineVerticies.Count - 1];
-            GridVector2[] verts = LineVerticies.ToArray();
+            GridVector2[] verts = [.. LineVerticies];
             for (int i = 0; i < LineVerticies.Count - 1; i++)
             {
                 drawn_lines[i] = new RoundLineCode.RoundLine(new Microsoft.Xna.Framework.Vector2((float)verts[i].X, (float)verts[i].Y),
                                                              new Microsoft.Xna.Framework.Vector2((float)verts[i + 1].X, (float)verts[i + 1].Y));
             }
-            LineManager.Draw(drawn_lines, (float)LineWidth /2.0f, color, basicEffect.View * basicEffect.Projection, 0, "Standard");
+            LineManager.Draw(drawn_lines, (float)LineWidth / 2.0f, color, basicEffect.View * basicEffect.Projection, 0, "Standard");
         }
 
 
@@ -385,14 +363,14 @@ namespace VikingXNAGraphics
         {
             RoundLineCode.Disc[] points = new RoundLineCode.Disc[Verticies.Count - 1];
 
-            GridVector2[] verts = Verticies.ToArray();
+            GridVector2[] verts = [.. Verticies];
             for (int i = 0; i < Verticies.Count - 1; i++)
             {
                 points[i] = new RoundLineCode.Disc((float)verts[i].X, (float)verts[i].Y);
             }
             LineManager.Draw(points, (float)Radius, color, basicEffect.View * basicEffect.Projection, 0, "Standard");
         }
-         
+
         public static void AppendVertLists(IEnumerable<VertexPositionColorTexture> sourceList, List<VertexPositionColorTexture> targetList, IEnumerable<int> indicies, ref List<int> listIndicies)
         {
             int iStartVert = targetList.Count;

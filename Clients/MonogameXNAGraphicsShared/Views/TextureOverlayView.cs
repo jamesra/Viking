@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Linq;
@@ -10,15 +10,15 @@ namespace VikingXNAGraphics
     {
         #region static
 
-        static double BeginFadeCutoff = 0.1;
-        static double InvisibleCutoff = 1f;
+        static readonly double BeginFadeCutoff = 0.1;
+        static readonly double InvisibleCutoff = 1f;
 
         #endregion
 
         public Texture2D Texture;
         //bool FlipTexture = false;
-         
-        private GridRectangle _BoundingRect; 
+
+        private GridRectangle _BoundingRect;
 
         public override GridRectangle BoundingRect
         {
@@ -50,9 +50,9 @@ namespace VikingXNAGraphics
         public TextureOverlayView(Texture2D texture, GridVector2 Center, Color color) : base(color)
         {
             this.Texture = texture;
-            if (Texture == null)
+            if (Texture is null)
             {
-                GridVector2 offset = new GridVector2(Texture.Width / 2.0, Texture.Height / 2.0);
+                GridVector2 offset = new(Texture.Width / 2.0, Texture.Height / 2.0);
                 this.BoundingRect = new GridRectangle(Center - offset, Center + offset);
             }
         }
@@ -66,27 +66,27 @@ namespace VikingXNAGraphics
         public override void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
         {
             OverlayShaderEffect overlayEffect = VikingXNAGraphics.DeviceEffectsStore<OverlayShaderEffect>.TryGet(device);
-            if (overlayEffect == null)
+            if (overlayEffect is null)
                 return;
 
             overlayEffect.Technique = Overlay == OverlayStyle.Alpha ?
                     OverlayShaderEffect.Techniques.TextureAlphaOverlayEffect :
                     OverlayShaderEffect.Techniques.TextureLumaOverlayEffect;
 
-            TextureOverlayView.Draw(device, scene, overlayEffect, items.Select(i => i as TextureOverlayView).Where(i => i != null).ToArray());
+            TextureOverlayView.Draw(device, scene, overlayEffect, [.. items.Select(i => i as TextureOverlayView).Where(i => i != null)]);
         }
 
         public override void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay)
         {
             OverlayShaderEffect overlayEffect = VikingXNAGraphics.DeviceEffectsStore<OverlayShaderEffect>.TryGet(device);
-            if (overlayEffect == null)
+            if (overlayEffect is null)
                 return;
 
             overlayEffect.Technique = Overlay == OverlayStyle.Alpha ?
                     OverlayShaderEffect.Techniques.TextureAlphaOverlayEffect :
                     OverlayShaderEffect.Techniques.TextureLumaOverlayEffect;
 
-            TextureOverlayView.Draw(device, scene, overlayEffect, new TextureOverlayView[] { this });
+            TextureOverlayView.Draw(device, scene, overlayEffect, [this]);
         }
 
         public static void Draw(GraphicsDevice device,
@@ -105,7 +105,7 @@ namespace VikingXNAGraphics
             var textureGroups = listToDraw.GroupBy(l => l.Texture);
             foreach (var textureGroup in textureGroups)
             {
-                TextureOverlayView[] views = textureGroup.ToArray();
+                TextureOverlayView[] views = [.. textureGroup];
 
                 //overlayEffect.AnnotateWithTexture(textureGroup.Key);
                 overlayEffect.AnnotationTexture = textureGroup.Key;

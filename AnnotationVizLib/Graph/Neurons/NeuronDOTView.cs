@@ -7,7 +7,7 @@ namespace AnnotationVizLib
     {
         public static NeuronDOTView ToDOT(NeuronGraph graph, bool ShowFreeEdges)
         {
-            NeuronDOTView DotGraph = new NeuronDOTView();
+            NeuronDOTView DotGraph = new();
 
             DotGraph.AddStandardizedAttributes(DOTAttributes.StandardGraphDOTAttributes);
 
@@ -68,7 +68,7 @@ namespace AnnotationVizLib
 
         public static GraphViewEdge<long> GraphVizEdgeFromNeuronEdge(GraphViewEngine<long> DotEngine, NeuronEdge edge)
         {
-            GraphVizEdge<long> DotEdge = new GraphVizEdge<long>();
+            GraphVizEdge<long> DotEdge = new();
             float additionFactor = 1f;
             float mulFactor = 0.5f;
             //Set the arrow properties 

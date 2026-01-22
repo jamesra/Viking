@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using RoundLineCode;
@@ -16,15 +16,16 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Commands
 {
-    internal class LinkAnnotationsCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal class LinkAnnotationsCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                           LocationObj existingLoc) : AnnotationCommandBase(parent), Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
-        private readonly LocationObj OriginObj;
+        private readonly LocationObj OriginObj = existingLoc;
 
         /// <summary>
         /// Where the origin of the line used for rendering UI feedback is
         /// </summary>
-        private readonly GridVector2 OriginPosition;
-        private LocationObj NearestTarget = null;
+        private readonly GridVector2 OriginPosition = GetOriginForLocation(existingLoc);
+        private LocationObj? NearestTarget = null;
 
         /// <summary>
         /// For UI feedback this records the bounding box of the nearest target as it appears on the screen.
@@ -33,36 +34,22 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         private GridRectangle NearestTargetBoundingBox = default;
 
-        public string[] HelpStrings => new string[] { "Left Mouse Button Release over annotation from the same structure: Link locations to indicate morphological connection",
+        public string[] HelpStrings => [ "Left Mouse Button Release over annotation from the same structure: Link locations to indicate morphological connection",
                                       "Left Mouse Button Release over annotation from different structure: Link structures to indicate relationship connection, for example Pre- & Post- Synaptic densities",
-                                      "Escape: Cancel command"};
+                                      "Escape: Cancel command"];
 
-        public ObservableCollection<string> ObservableHelpStrings => new ObservableCollection<string>(HelpStrings);
-
-        public LinkAnnotationsCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                               LocationObj existingLoc)
-            : base(parent)
-        {
-            OriginObj = existingLoc;
-            OriginPosition = GetOriginForLocation(existingLoc);
-        }
+        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
 
         private static GridVector2 GetOriginForLocation(LocationObj obj)
         {
-            switch (obj.TypeCode)
+            return obj.TypeCode switch
             {
-                case LocationType.CIRCLE:
-                    return obj.VolumePosition;
-                case LocationType.POLYGON:
-                case LocationType.CURVEPOLYGON:
-                    return obj.VolumePosition;
-                case LocationType.OPENCURVE:
-                    return Midpoint(obj.VolumeShape.ToPoints());
-                case LocationType.POLYLINE:
-                    return Midpoint(obj.VolumeShape.ToPoints());
-                default:
-                    return obj.VolumePosition;
-            }
+                LocationType.CIRCLE => obj.VolumePosition,
+                LocationType.POLYGON or LocationType.CURVEPOLYGON => obj.VolumePosition,
+                LocationType.OPENCURVE => Midpoint(obj.VolumeShape.ToPoints()),
+                LocationType.POLYLINE => Midpoint(obj.VolumeShape.ToPoints()),
+                _ => obj.VolumePosition,
+            };
         }
 
         private static GridVector2 Midpoint(GridVector2[] array)
@@ -84,20 +71,19 @@ namespace WebAnnotation.UI.Commands
             }
 
             rectBestMatchBBox = default;
-            List<HitTestResult> listInitialHitTestResults = sectionView.GetAnnotations(WorldPos).Where(ht => ht.obj != null).ToList();
+            List<HitTestResult> listInitialHitTestResults = [.. sectionView.GetAnnotations(WorldPos).Where(ht => ht.obj != null)];
             List<HitTestResult> listHitTestResults = listInitialHitTestResults.ExpandICanvasViewContainers(WorldPos);
 
             //Find locations that are not equal to our origin location
-            listHitTestResults = listHitTestResults.Where(hr =>
+            listHitTestResults = [.. listHitTestResults.Where(hr =>
             {
-                IViewLocation loc = hr.obj as IViewLocation;
-                if (loc == null)
+                if (hr.obj is not IViewLocation loc)
                 {
                     return false;
                 }
 
                 return loc.ID != OriginObj.ID && !OriginObj.Links.Contains(loc.ID);
-            }).ToList();
+            })];
 
             IViewLocation nearestVisible = null;
             HitTestResult BestMatch = listHitTestResults.NearestObjectOnCurrentSectionThenAdjacent((int)OriginObj.Z);
@@ -120,7 +106,7 @@ namespace WebAnnotation.UI.Commands
         {
             candidateBoundingBox = default;
             SectionAnnotationsView sectionView = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
-            return sectionView == null ? null : FindBestLinkCandidate(sectionView, WorldPos, OriginObj, out candidateBoundingBox);
+            return sectionView is null ? null : FindBestLinkCandidate(sectionView, WorldPos, OriginObj, out candidateBoundingBox);
         }
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
@@ -160,7 +146,7 @@ namespace WebAnnotation.UI.Commands
         /// <returns></returns>
         private LocationObj TrySetTarget(LocationObj nearest_target)
         {
-            if (nearest_target == null)
+            if (nearest_target is null)
             {
                 return null;
             }
@@ -189,7 +175,7 @@ namespace WebAnnotation.UI.Commands
                 IViewLocation nearest = FindBestLinkCandidate(WorldPos, out GridRectangle boundingBox);
                 NearestTarget = TrySetTarget(nearest, boundingBox);
 
-                if (NearestTarget == null)
+                if (NearestTarget is null)
                 {
                     Deactivated = true;
                     return;
@@ -215,7 +201,7 @@ namespace WebAnnotation.UI.Commands
                     try
                     {
                         bool Bidirectional = NearestTarget.Parent.Type.ID == OriginObj.Parent.Type.ID;
-                        StructureLinkObj linkStruct = new StructureLinkObj(OriginObj.ParentID.Value, NearestTarget.ParentID.Value, Bidirectional);
+                        StructureLinkObj linkStruct = new(OriginObj.ParentID.Value, NearestTarget.ParentID.Value, Bidirectional);
                         linkStruct = Store.StructureLinks.Create(linkStruct);
                     }
                     catch (Exception except)
@@ -265,7 +251,7 @@ namespace WebAnnotation.UI.Commands
                 try
                 {
                     bool Bidirectional = NearestTarget.Parent.Type.ID == OriginObj.Parent.Type.ID;
-                    StructureLinkObj linkStruct = new StructureLinkObj(OriginObj.ParentID.Value, NearestTarget.ParentID.Value, Bidirectional);
+                    StructureLinkObj linkStruct = new(OriginObj.ParentID.Value, NearestTarget.ParentID.Value, Bidirectional);
                     linkStruct = Store.StructureLinks.Create(linkStruct);
                     return true;
                 }
@@ -295,26 +281,26 @@ namespace WebAnnotation.UI.Commands
             base.Execute();
         }
 
-        private static readonly Color invalidTarget = new Color(255,
+        private static readonly Color invalidTarget = new(255,
                                             0,
                                             64,
                                             0.5f);
-        private static readonly Color validTarget = new Microsoft.Xna.Framework.Color(0,
+        private static readonly Color validTarget = new(0,
                                 255,
                                 0,
                                 128);
-        private static readonly Color noTarget = new Color(Color.White.R,
+        private static readonly Color noTarget = new(Color.White.R,
                                     Color.White.G,
                                     Color.White.B,
                                     0.5f);
-        private static readonly string InvalidTargetStyle = null;
-        private static readonly string LocationLinkStyle = null;
+        private static readonly string? InvalidTargetStyle = null;
+        private static readonly string? LocationLinkStyle = null;
         private static readonly string StructureLinkStyle = "AnimatedLinear";
 
-        private double LineRadiusForLocationLink() { return OriginObj.Radius / 6.0; }
+        private double LineRadiusForLocationLink() => OriginObj.Radius / 6.0;
         private double LineRadiusForStructureLink()
         {
-            if (NearestTarget == null)
+            if (NearestTarget is null)
             {
                 return OriginObj.Radius;
             }
@@ -324,7 +310,7 @@ namespace WebAnnotation.UI.Commands
 
         public override void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect)
         {
-            if (oldMouse == null)
+            if (oldMouse is null)
             {
                 return;
             }
@@ -373,7 +359,7 @@ namespace WebAnnotation.UI.Commands
                 }
             }
 
-            RoundLine lineToParent = new RoundLine((float)OriginPosition.X,
+            RoundLine lineToParent = new((float)OriginPosition.X,
                                                    (float)OriginPosition.Y,
                                                    target.X,
                                                    target.Y);

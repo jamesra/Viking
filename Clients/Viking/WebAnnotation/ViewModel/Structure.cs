@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -9,24 +9,17 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.ViewModel
 {
-    public class Structure : Viking.Objects.UIObjBase, IEquatable<Structure>, IEqualityComparer<Structure>, IContextMenu
+    public class Structure(StructureObj data) : Viking.Objects.UIObjBase, IEquatable<Structure>, IEqualityComparer<Structure>, IContextMenu
     {
-        public StructureObj modelObj;
+        public StructureObj modelObj = data;
 
-        public override string ToString()
-        {
-            return modelObj.ToString();
-        }
+        public override string ToString() => modelObj.ToString();
 
-        public override int GetHashCode()
-        {
-            return modelObj.GetHashCode();
-        }
+        public override int GetHashCode() => modelObj.GetHashCode();
 
         public override bool Equals(object obj)
         {
-            Structure Obj = obj as Structure;
-            if (Obj != null)
+            if (obj is Structure Obj)
             {
                 return modelObj.Equals(Obj.modelObj);
             }
@@ -40,16 +33,11 @@ namespace WebAnnotation.ViewModel
             return false;
         }
 
-        public Structure(StructureObj data)
-        {
-            modelObj = data;
-        }
-
         public Structure Parent
         {
             get
             {
-                if (modelObj.Parent == null)
+                if (modelObj.Parent is null)
                 {
                     return null;
                 }
@@ -96,7 +84,7 @@ namespace WebAnnotation.ViewModel
         public IEnumerable<ObjAttribute> Attributes
         {
             get => modelObj.Attributes;
-            set => modelObj.Attributes = new List<ObjAttribute>(value);
+            set => modelObj.Attributes = [.. value];
         }
 
         [Column("Notes")]
@@ -107,14 +95,14 @@ namespace WebAnnotation.ViewModel
         }
 
         [Column("Type")]
-        public StructureType Type => new StructureType(modelObj.Type);
+        public StructureType Type => new(modelObj.Type);
 
 
 
         public static void ToggleAttribute(StructureObj structObj, string tag)
         {
-            ObjAttribute attrib = new ObjAttribute(tag, null);
-            List<ObjAttribute> listAttributes = structObj.Attributes.ToList();
+            ObjAttribute attrib = new(tag, null);
+            List<ObjAttribute> listAttributes = [.. structObj.Attributes];
             if (listAttributes.Contains(attrib))
             {
                 listAttributes.Remove(attrib);
@@ -131,7 +119,7 @@ namespace WebAnnotation.ViewModel
         {
             get
             {
-                LocationObj[] locations = Store.Locations.GetLocationsForStructure(ID).ToArray<LocationObj>();
+                LocationObj[] locations = [.. Store.Locations.GetLocationsForStructure(ID)];
 
                 if (locations != null && locations.Length > 0)
                 {
@@ -156,14 +144,14 @@ namespace WebAnnotation.ViewModel
                     double meanY = (sumY) * Global.Scale.Y;
                     double meanZ = (sumZ) * Global.Scale.Z;
 
-                    Geometry.GridVector3 MeanPosition = new Geometry.GridVector3(meanX, meanY, meanZ);
+                    Geometry.GridVector3 MeanPosition = new(meanX, meanY, meanZ);
 
                     //Find the location closest to the mean position
                     double minDistance = double.MaxValue;
                     int iClosest = 0;
                     for (int iLoc = 0; iLoc < locations.Length; iLoc++)
                     {
-                        Geometry.GridVector3 locPosition = new Geometry.GridVector3(locations[iLoc].VolumePosition.X * Global.Scale.X,
+                        Geometry.GridVector3 locPosition = new(locations[iLoc].VolumePosition.X * Global.Scale.X,
                                                                                     locations[iLoc].VolumePosition.Y * Global.Scale.Y,
                                                                                     locations[iLoc].Z * Global.Scale.Z);
 
@@ -194,19 +182,19 @@ namespace WebAnnotation.ViewModel
         {
             get
             {
-                ContextMenuStrip menu = new ContextMenuStrip();
+                ContextMenuStrip menu = new();
                 if (Global.Export != null)
                 {
-                    var exportItem = new ToolStripMenuItem("Export Morphology To Tulip");
+                    ToolStripMenuItem exportItem = new("Export Morphology To Tulip");
                     exportItem.Click += ContextMenu_OnMorphology;
                     menu.Items.Add(exportItem);
                 }
 
-                var propertiesItem = new ToolStripMenuItem("Properties");
+                ToolStripMenuItem propertiesItem = new("Properties");
                 propertiesItem.Click += ContextMenu_OnProperties;
                 menu.Items.Add(propertiesItem);
                 menu.Items.Add(new ToolStripSeparator());
-                var deleteItem = new ToolStripMenuItem("Delete");
+                ToolStripMenuItem deleteItem = new("Delete");
                 deleteItem.Click += ContextMenu_OnDelete;
                 menu.Items.Add(deleteItem);
 
@@ -227,39 +215,24 @@ namespace WebAnnotation.ViewModel
 
         }
 
-        public override Viking.UI.Controls.GenericTreeNode CreateNode()
-        {
-            return new Viking.UI.Controls.GenericTreeNode(this);
-        }
+        public override Viking.UI.Controls.GenericTreeNode CreateNode() => new Viking.UI.Controls.GenericTreeNode(this);
 
-        public override Type[] AssignableParentTypes => new System.Type[] { typeof(StructureObj) };
+        public override Type[] AssignableParentTypes => [typeof(StructureObj)];
 
-        public long[] UnfinishedBranches()
-        {
-            return Store.Structures.GetUnfinishedBranches(ID);
-        }
+        public long[] UnfinishedBranches() => Store.Structures.GetUnfinishedBranches(ID);
 
         #endregion
 
-        protected void ContextMenu_OnMorphology(object sender, EventArgs e)
-        {
-            Global.Export.OpenMorphology(ID);
-        }
+        protected void ContextMenu_OnMorphology(object sender, EventArgs e) => Global.Export.OpenMorphology(ID);
 
 
-        protected void ContextMenu_OnProperties(object sender, EventArgs e)
-        {
-            Viking.UI.Forms.PropertySheetForm.Show(this);
-        }
+        protected void ContextMenu_OnProperties(object sender, EventArgs e) => Viking.UI.Forms.PropertySheetForm.Show(this);
 
-        protected void ContextMenu_OnDelete(object sender, EventArgs e)
-        {
-            Delete();
-        }
+        protected void ContextMenu_OnDelete(object sender, EventArgs e) => Delete();
 
         public ContextMenuStrip ContextMenu_AddUnverifiedBranchTerminals(ContextMenuStrip menu)
         {
-            ToolStripMenuItem menuUnverifiedBranchTerminals = new ToolStripMenuItem("Unmarked process terminals");
+            ToolStripMenuItem menuUnverifiedBranchTerminals = new("Unmarked process terminals");
             menuUnverifiedBranchTerminals.DropDownOpening += OnDropDownOpeningUnverifiedBranchTerminals;
             menu.Items.Add(menuUnverifiedBranchTerminals);
 
@@ -290,7 +263,7 @@ namespace WebAnnotation.ViewModel
 
             Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>> dictSectionToLocations = MapLocationsToSections(LocationArray);
 
-            List<double> levels = new List<double>(dictSectionToLocations.Keys);
+            List<double> levels = [.. dictSectionToLocations.Keys];
             levels.Sort();
             foreach (double level in levels)
             {
@@ -301,10 +274,7 @@ namespace WebAnnotation.ViewModel
             return levels.Count > 0;
         }
 
-        private string _LocationToString(AnnotationService.Types.LocationPositionOnly loc)
-        {
-            return "Radius: " + loc.Radius.ToString("F1") + " X: " + loc.Position.X.ToString("F0") + " Y: " + loc.Position.Y.ToString("F0");
-        }
+        private string _LocationToString(AnnotationService.Types.LocationPositionOnly loc) => "Radius: " + loc.Radius.ToString("F1") + " X: " + loc.Position.X.ToString("F0") + " Y: " + loc.Position.Y.ToString("F0");
 
         private ToolStripMenuItem BuildContextMenusForLevel(long level, List<AnnotationService.Types.LocationPositionOnly> listObjs)
         {
@@ -314,8 +284,10 @@ namespace WebAnnotation.ViewModel
                 AnnotationService.Types.LocationPositionOnly locObj = listObjs[0];
                 //For a single item do not create a submenu
                 string locString = _LocationToString(locObj);
-                rootMenuItem = new ToolStripMenuItem(level.ToString("D4") + " - " + locString);
-                rootMenuItem.Tag = locObj.ID;
+                rootMenuItem = new ToolStripMenuItem(level.ToString("D4") + " - " + locString)
+                {
+                    Tag = locObj.ID
+                };
                 rootMenuItem.Click += ContextMenu_SelectUnbranchedLocation;
             }
             else
@@ -324,8 +296,10 @@ namespace WebAnnotation.ViewModel
                 foreach (AnnotationService.Types.LocationPositionOnly locObj in listObjs)
                 {
                     string locString = _LocationToString(locObj);
-                    ToolStripMenuItem subItem = new ToolStripMenuItem(locString);
-                    subItem.Tag = locObj.ID;
+                    ToolStripMenuItem subItem = new(locString)
+                    {
+                        Tag = locObj.ID
+                    };
                     subItem.Click += ContextMenu_SelectUnbranchedLocation;
                     rootMenuItem.DropDownItems.Add(subItem);
                 }
@@ -336,12 +310,12 @@ namespace WebAnnotation.ViewModel
 
         private Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>> MapLocationsToSections(IEnumerable<AnnotationService.Types.LocationPositionOnly> locations)
         {
-            Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>> dictSectionToLocations = new Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>>();
+            Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>> dictSectionToLocations = [];
             foreach (AnnotationService.Types.LocationPositionOnly loc in locations)
             {
                 if (!dictSectionToLocations.ContainsKey(loc.Position.Z))
                 {
-                    dictSectionToLocations[loc.Position.Z] = new List<AnnotationService.Types.LocationPositionOnly>();
+                    dictSectionToLocations[loc.Position.Z] = [];
                 }
 
                 dictSectionToLocations[loc.Position.Z].Add(loc);
@@ -360,11 +334,7 @@ namespace WebAnnotation.ViewModel
             AnnotationOverlay.GoToLocation(loc);
         }
 
-        public override void Delete()
-        {
-            Store.Structures.Remove(modelObj);
-
-            /*
+        public override void Delete() => Store.Structures.Remove(modelObj);/*
             Structure OriginalParent = this.Parent;
             this.Parent = null;
 
@@ -380,21 +350,11 @@ namespace WebAnnotation.ViewModel
                 this.Parent = OriginalParent;
             }
             */
-        }
 
-        bool IEquatable<Structure>.Equals(Structure other)
-        {
-            return modelObj.ID == other.modelObj.ID;
-        }
+        bool IEquatable<Structure>.Equals(Structure other) => modelObj.ID == other.modelObj.ID;
 
-        public bool Equals(Structure x, Structure y)
-        {
-            return x.modelObj.ID == y.modelObj.ID;
-        }
+        public bool Equals(Structure x, Structure y) => x.modelObj.ID == y.modelObj.ID;
 
-        public int GetHashCode(Structure obj)
-        {
-            return obj.modelObj.GetHashCode();
-        }
+        public int GetHashCode(Structure obj) => obj.modelObj.GetHashCode();
     }
 }

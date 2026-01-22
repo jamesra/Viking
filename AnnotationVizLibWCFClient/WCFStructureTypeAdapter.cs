@@ -3,13 +3,9 @@ using AnnotationService.Types;
 
 namespace AnnotationVizLib.WCFClient
 {
-    class WCFStructureTypeAdapter : IStructureTypeReadOnly
+    class WCFStructureTypeAdapter(StructureType t) : IStructureTypeReadOnly
     {
-        private readonly StructureType type;
-        public WCFStructureTypeAdapter(StructureType t)
-        {
-            type = t;
-        }
+        private readonly StructureType type = t;
 
         public ulong ID => (ulong)type.ID;
 

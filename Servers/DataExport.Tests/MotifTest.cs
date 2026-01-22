@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationVizLib;
 
 namespace DataExport.Tests;
@@ -13,18 +13,18 @@ public class MotifTest
 
     private static MotifGraph CreateMotifGraph()
     {
-        var graph = new MotifGraph();
+        MotifGraph graph = new();
 
-        var bcNode = new MotifNode("BC", Array.Empty<IStructureReadOnly>());
-        var aciiNode = new MotifNode("ACII", Array.Empty<IStructureReadOnly>());
-        var aciNode = new MotifNode("ACI", Array.Empty<IStructureReadOnly>());
-        var gcNode = new MotifNode("GC", Array.Empty<IStructureReadOnly>());
+        MotifNode bcNode = new("BC", Array.Empty<IStructureReadOnly>());
+        MotifNode aciiNode = new("ACII", Array.Empty<IStructureReadOnly>());
+        MotifNode aciNode = new("ACI", Array.Empty<IStructureReadOnly>());
+        MotifNode gcNode = new("GC", Array.Empty<IStructureReadOnly>());
 
-        var bcGcEdge = new MotifEdge("BC", "GC", "RIBBON SYNAPSE");
-        var bcAcEdge = new MotifEdge("BC", "ACII", "RIBBON SYNAPSE");
-        var aciiAciEdge = new MotifEdge("ACII", "ACI", "CONVENTIONAL");
-        var aciiBcEdge = new MotifEdge("ACII", "BC", "GAP JUNCTION");
-        var acGcEdge = new MotifEdge("ACI", "GC", "CONVENTIONAL");
+        MotifEdge bcGcEdge = new("BC", "GC", "RIBBON SYNAPSE");
+        MotifEdge bcAcEdge = new("BC", "ACII", "RIBBON SYNAPSE");
+        MotifEdge aciiAciEdge = new("ACII", "ACI", "CONVENTIONAL");
+        MotifEdge aciiBcEdge = new("ACII", "BC", "GAP JUNCTION");
+        MotifEdge acGcEdge = new("ACI", "GC", "CONVENTIONAL");
 
         graph.AddNode(bcNode);
         graph.AddNode(aciNode);
@@ -45,7 +45,7 @@ public class MotifTest
     {
         MotifGraph motifGraph = CreateMotifGraph();
         MotifTLPView tlpGraph = MotifTLPView.ToTLP(motifGraph, "https://vpn.codepharm.net/RC1Test/OData");
-        
+
         string outputPath = TestOutputHelper.GetOutputPath("Motif", "motif-graph.tlp");
         tlpGraph.SaveTLP(outputPath);
         Console.WriteLine($"Test output saved to: {outputPath}");

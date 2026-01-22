@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Windows;
@@ -11,7 +11,7 @@ namespace Viking.UI.WPF
     /// </summary>
     public partial class StringArrayAutoScroller : UserControl
     {
-         
+
         public static readonly DependencyProperty TextArrayProperty;
         public static readonly DependencyProperty TextArrayIndexProperty;
 
@@ -62,12 +62,12 @@ namespace Viking.UI.WPF
 
             if (TotalCount > 0)
             {
-                Random R = new Random();
+                Random R = new();
                 this.TextArrayIndex = R.Next() % TotalCount;
                 this.comboHelpText.SelectedIndex = this.TextArrayIndex;
-            } 
+            }
         }
-          
+
         private static void OnTextArrayChanged(DependencyObject o, DependencyPropertyChangedEventArgs e)
         {
             if (o is StringArrayAutoScroller obj)

@@ -79,13 +79,11 @@ namespace GeometryTests
                                                                                                MappedTriangulation,
                                                                                                new StosTransformInfo(37, 34,
                                                                                                DateTime.UtcNow));
-            using (System.IO.StreamWriter fs = System.IO.File.CreateText(outputStosFile))
-            {
-                string itk = ((Geometry.IITKSerialization)SliceToVolumeTriangulation).GetITKTransform();
-                fs.Write(itk);
+            using System.IO.StreamWriter fs = System.IO.File.CreateText(outputStosFile);
+            string itk = ((Geometry.IITKSerialization)SliceToVolumeTriangulation).GetITKTransform();
+            fs.Write(itk);
 
-                fs.Flush();
-            }
+            fs.Flush();
         }
     }
 }

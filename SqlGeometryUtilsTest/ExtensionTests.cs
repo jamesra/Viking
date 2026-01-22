@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.SqlServer.Types;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SqlGeometryUtils;
@@ -13,10 +13,7 @@ namespace SqlGeometryUtilsTest
             //SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
         }
 
-        private void AssertPosition(GridVector2 A, GridVector2 B)
-        {
-            Assert.IsTrue(GridVector2.Distance(A, B) <= .001);
-        }
+        private static void AssertPosition(GridVector2 A, GridVector2 B) => Assert.IsTrue(GridVector2.Distance(A, B) <= .001);
 
         [TestMethod]
         public void TestTranslateCircleGeometry()
@@ -28,9 +25,9 @@ namespace SqlGeometryUtilsTest
         [TestMethod]
         public void TestTranslateLineGeometry()
         {
-            GridVector2[] points = new GridVector2[] { new GridVector2(-10,0),
-                                                       new GridVector2(0,0),
-                                                       new GridVector2(10,0)};
+            GridVector2[] points = [ new(-10,0),
+                                                       new(0,0),
+                                                       new(10,0)];
             SqlGeometry line = Extensions.ToSqlGeometry(points);
             TestTranslateMoveGeometry(line);
         }
@@ -38,9 +35,9 @@ namespace SqlGeometryUtilsTest
         [TestMethod]
         public void TestTranslatePolyGeometry()
         {
-            GridVector2[] points = new GridVector2[] { new GridVector2(-10,-10),
-                                                       new GridVector2(-10,10),
-                                                       new GridVector2(10,0)};
+            GridVector2[] points = [ new(-10,-10),
+                                                       new(-10,10),
+                                                       new(10,0)];
             SqlGeometry line = Extensions.ToPolygon(points);
             TestTranslateMoveGeometry(line);
         }
@@ -48,24 +45,24 @@ namespace SqlGeometryUtilsTest
         [TestMethod]
         public void TestTranslatePolywithInnerRingsGeometry()
         {
-            GridVector2[] points = new GridVector2[] { new GridVector2(-10,-10),
-                                                       new GridVector2(-10,10),
-                                                       new GridVector2(10,10),
-                                                       new GridVector2(10,-10)};
+            GridVector2[] points = [ new(-10,-10),
+                                                       new(-10,10),
+                                                       new(10,10),
+                                                       new(10,-10)];
 
-            GridVector2[] innerring = new GridVector2[] { new GridVector2(-5,-5),
-                                                       new GridVector2(-5,5),
-                                                       new GridVector2(5,5),
-                                                       new GridVector2(5,-5)};
+            GridVector2[] innerring = [ new(-5,-5),
+                                                       new(-5,5),
+                                                       new(5,5),
+                                                       new(5,-5)];
 
-            SqlGeometry line = Extensions.ToPolygon(points, new GridVector2[][] { innerring });
+            SqlGeometry line = Extensions.ToPolygon(points, [innerring]);
             TestTranslateMoveGeometry(line);
         }
 
         [TestMethod]
         public void TestTranslatePointGeometry()
         {
-            GridVector2 point = new GridVector2(0,0);
+            GridVector2 point = new(0, 0);
             SqlGeometry p = point.ToSqlGeometry();
             TestTranslateMoveGeometry(p);
         }
@@ -75,16 +72,16 @@ namespace SqlGeometryUtilsTest
             GridVector2 origin = geometry.Centroid();
             //AssertPosition(geometry.Centroid(), origin);
 
-            GridVector2 move_target = new GridVector2(100, 100);
+            GridVector2 move_target = new(100, 100);
             SqlGeometry movedgeometry = Extensions.MoveTo(geometry, move_target);
             AssertPosition(movedgeometry.Centroid(), move_target);
 
-            GridVector2 move_offset = movedgeometry.Centroid() - origin; 
+            GridVector2 move_offset = movedgeometry.Centroid() - origin;
 
             //Ensure we didn't lose the interior rings
             Assert.AreEqual(geometry.NumInteriorRings(), movedgeometry.NumInteriorRings());
 
-            GridVector2 translate_offset = new GridVector2(50, 50);
+            GridVector2 translate_offset = new(50, 50);
             SqlGeometry translatedGeometry = Extensions.Translate(geometry, translate_offset);
             AssertPosition(translatedGeometry.Centroid() - origin, translate_offset);
 

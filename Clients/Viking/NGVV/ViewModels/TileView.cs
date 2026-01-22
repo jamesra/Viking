@@ -24,9 +24,9 @@ namespace Viking.ViewModels
         /// <summary>
         /// Stores the verticies used for drawing
         /// </summary>
-        private VertexBuffer VertBuffer = null;
+        private VertexBuffer? VertBuffer = null;
 
-        private IndexBuffer IndBuffer = null;
+        private IndexBuffer? IndBuffer = null;
 
         /// <summary>
         /// Indicies passed to render call specifying triangle verticies
@@ -51,7 +51,7 @@ namespace Viking.ViewModels
         /// <summary>
         /// This is not null if we have a thread loading our texture.  It can be cancelled to abort the loading.
         /// </summary>
-        private CancellationTokenSource TextureLoadCancellationTokenSource = null;
+        private CancellationTokenSource? TextureLoadCancellationTokenSource = null;
 
         /// <summary>
         /// This should only be written via the texture member 
@@ -61,25 +61,25 @@ namespace Viking.ViewModels
         Microsoft.Xna.Framework.Graphics.Texture2D? texture
         {
             get
-            { 
+            {
                 if (ServerTextureNotFound)
                     return null;
 
                 var texture = _texture;
                 if (texture != null)
-                { 
+                {
                     //Ensure the texture is valid
                     if (texture.IsDisposed || texture.GraphicsDevice.IsDisposed)
                     {
-                        
+
                         Interlocked.CompareExchange(ref _texture, null, texture);
                     }
                 }
 
-                return _texture; 
+                return _texture;
             }
             set
-            { 
+            {
                 var originalTexture = Interlocked.CompareExchange(ref _texture, value, null);
 
                 originalTexture?.Dispose();
@@ -96,7 +96,7 @@ namespace Viking.ViewModels
         internal bool TextureNeedsLoading => this.ServerTextureNotFound == false && this.texture is null && this.TextureLoadCancellationTokenSource is null;
 
         internal bool TextureIsLoading => TextureLoadCancellationTokenSource != null;
-          
+
         public int TileID;
 
         public readonly string TextureFileName;
@@ -108,12 +108,9 @@ namespace Viking.ViewModels
 
         //private Object thisLock = new Object();
 
-        private readonly ReaderWriterLockSlim rwTextureLock = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim rwTextureLock = new();
 
-        private static ushort IntToShort(int value)
-        {
-            return (ushort)value;
-        }
+        private static ushort IntToShort(int value) => (ushort)value;
 
         public TileView(TileViewModel tileViewModel,
                              string textureFileName,
@@ -128,7 +125,7 @@ namespace Viking.ViewModels
             this.TextureCachedFileName = cachedTextureFileName;
             this.MipMapLevels = mipMapLevels;
 
-            Random r = new Random(TileID);
+            Random r = new(TileID);
 
             this.TileColor = new Color((float)(r.NextDouble() * 0.5) + 0.5f, (float)(r.NextDouble() * 0.5) + 0.5f, (float)(r.NextDouble() * 0.5) + 0.5f, 0.5f);
 
@@ -180,21 +177,15 @@ namespace Viking.ViewModels
             }
             catch (Exception)
             {
-                if (vb != null)
-                {
-                    vb.Dispose();
-                    vb = null;
-                }
+                vb?.Dispose();
+                vb = null;
                 throw;
             }
 
             return vb;
         }
 
-        public override string ToString()
-        {
-            return TextureFileName;
-        }
+        public override string ToString() => TextureFileName;
 
         public void FreeTexture()
         {
@@ -205,7 +196,7 @@ namespace Viking.ViewModels
                 //This disposes of the texture
                 this.texture = null;
 
-                rwTextureLock.EnterWriteLock();  
+                rwTextureLock.EnterWriteLock();
 
                 if (VertBuffer != null)
                 {
@@ -220,9 +211,9 @@ namespace Viking.ViewModels
                 }
             }
             finally
-            { 
+            {
                 rwTextureLock.ExitWriteLock();
-            } 
+            }
 
         }
 
@@ -264,35 +255,29 @@ namespace Viking.ViewModels
             var currentTexture = texture;
             if (currentTexture != null)
                 return currentTexture;
-        
 
 
-        //In this path we either have no texture, or a low-res texture.  Ask for a new one if we haven't already
-        if (ServerTextureNotFound == false && Interlocked.CompareExchange(ref this.TextureLoadCancellationTokenSource,
-                new CancellationTokenSource(), null) is null)
+
+            //In this path we either have no texture, or a low-res texture.  Ask for a new one if we haven't already
+            if (ServerTextureNotFound == false && Interlocked.CompareExchange(ref this.TextureLoadCancellationTokenSource,
+                    new CancellationTokenSource(), null) is null)
             {
-                TextureReaderV2 texReader = null;
-
-                //If the section is read over a network provide a cache path too
-                if (State.volume.IsLocal == false)
-                {
-                    texReader = new TextureReaderV2(graphicsDevice,
+                TextureReaderV2 texReader = State.volume.IsLocal == false
+                    ? new TextureReaderV2(graphicsDevice,
                                                         new Uri(this.TextureFileName),
                                                         this.TextureCachedFileName,
                                                         this.MipMapLevels,
                                                         null,
-                                                        TextureLoadCancellationTokenSource);
-                }
-                else
-                {
-                    texReader = new TextureReaderV2(graphicsDevice,
+                                                        TextureLoadCancellationTokenSource)
+                    : new TextureReaderV2(graphicsDevice,
                                                         new Uri(this.TextureFileName),
                                                         this.MipMapLevels,
                                                         null,
                                                         TextureLoadCancellationTokenSource);
-                }
 
-                return await texReader.LoadTexture().ContinueWith(task => CompleteTextureReadTask(texReader, task), TextureLoadCancellationTokenSource.Token).ConfigureAwait(false); 
+                //If the section is read over a network provide a cache path too
+
+                return await texReader.LoadTexture().ContinueWith(task => CompleteTextureReadTask(texReader, task), TextureLoadCancellationTokenSource.Token).ConfigureAwait(false);
             }
 
             return null;
@@ -307,7 +292,7 @@ namespace Viking.ViewModels
             this.ServerTextureNotFound = texReader.TextureNotFound;
 
             if (texTask.IsFaulted == false && texTask.IsCanceled == false && texReader.HasTexture)
-            { 
+            {
                 this.texture = texTask.Result;
                 return this.texture;
             }
@@ -358,7 +343,7 @@ namespace Viking.ViewModels
                 //Do not draw if we don't have a texture
                 if (currentTexture is null)
                     return;
-                  
+
                 if (currentTexture.IsDisposed)
                     return;
 
@@ -380,7 +365,7 @@ namespace Viking.ViewModels
             }
             finally
             {
-               // rwTextureLock.ExitReadLock();
+                // rwTextureLock.ExitReadLock();
             }
 
             graphicsDevice.SetVertexBuffer(this.VertBuffer);
@@ -415,16 +400,16 @@ namespace Viking.ViewModels
                 //pass.End();
             }
 
-                //PORT XNA 4
-                //effect.effect.End(); 
+            //PORT XNA 4
+            //effect.effect.End(); 
         }
 
         //PORT XNA 4
         //static VertexDeclaration VertexPositionColorDeclaration = null;
-        VertexBuffer vbMesh = null;
-        IndexBuffer ibMesh = null;
+        VertexBuffer? vbMesh = null;
+        IndexBuffer? ibMesh = null;
         //PORT XNA 4
-        readonly VertexPositionColor[] MeshVerticies = null;
+        readonly VertexPositionColor[]? MeshVerticies = null;
 
         //int[] MeshEdges = null;
 
@@ -447,19 +432,19 @@ namespace Viking.ViewModels
 
         private void CreateMesh(GraphicsDevice graphicsDevice)
         {
-            Random ColorGen = new Random(this.GetHashCode());
+            Random ColorGen = new(this.GetHashCode());
             byte[] randColorBytes = new byte[3];
             ColorGen.NextBytes(randColorBytes);
             randColorBytes[0] = randColorBytes[0] < 128 ? (byte)(randColorBytes[0] + 128) : randColorBytes[0];
             randColorBytes[1] = randColorBytes[1] < 128 ? (byte)(randColorBytes[1] + 128) : randColorBytes[1];
             randColorBytes[2] = randColorBytes[2] < 128 ? (byte)(randColorBytes[2] + 128) : randColorBytes[2];
-            Color color = new Color(randColorBytes[0], randColorBytes[1], randColorBytes[2]);
+            Color color = new(randColorBytes[0], randColorBytes[1], randColorBytes[2]);
             VertexPositionColor[] meshVerticies = TileView.CreateMeshVerticies(this._tileViewModel, color);
 
             vbMesh = new VertexBuffer(graphicsDevice, typeof(VertexPositionColor), meshVerticies.Length, BufferUsage.None);
             vbMesh.SetData<VertexPositionColor>(meshVerticies);
 
-            List<int> TrianglesAsLines = new List<int>();
+            List<int> TrianglesAsLines = [];
 
             for (int i = 0; i < TriangleIndicies.Length; i += 3)
             {
@@ -472,7 +457,7 @@ namespace Viking.ViewModels
             }
 
             ibMesh = new IndexBuffer(graphicsDevice, typeof(int), TrianglesAsLines.Count, BufferUsage.None);
-            ibMesh.SetData<int>(TrianglesAsLines.ToArray());
+            ibMesh.SetData<int>([.. TrianglesAsLines]);
         }
 
         public void DrawMesh(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
@@ -500,7 +485,7 @@ namespace Viking.ViewModels
 
             DepthStencilState originalDepthState = graphicsDevice.DepthStencilState;
 
-            DepthStencilState newDepthState = new DepthStencilState
+            DepthStencilState newDepthState = new()
             {
                 DepthBufferEnable = false,
                 StencilEnable = false
@@ -530,15 +515,12 @@ namespace Viking.ViewModels
 
         }
 
-        private VikingXNAGraphics.LabelView _TileLabel = null;
+        private VikingXNAGraphics.LabelView? _TileLabel = null;
         internal VikingXNAGraphics.LabelView TileLabel
         {
             get
             {
-                if (_TileLabel is null)
-                {
-                    _TileLabel = new VikingXNAGraphics.LabelView(this._tileViewModel.TextureFullPath, this._tileViewModel.Bounds.Center, Color.Yellow, scaleFontWithScene: true, fontSize: Math.Max(_tileViewModel.Bounds.Width, _tileViewModel.Bounds.Height) / 25.0);
-                }
+                _TileLabel ??= new VikingXNAGraphics.LabelView(this._tileViewModel.TextureFullPath, this._tileViewModel.Bounds.Center, Color.Yellow, scaleFontWithScene: true, fontSize: Math.Max(_tileViewModel.Bounds.Width, _tileViewModel.Bounds.Height) / 25.0);
 
                 return _TileLabel;
             }
@@ -626,18 +608,11 @@ namespace Viking.ViewModels
                             this._texture = null;
                         }
                     }
-                
-                    if (vbMesh != null)
-                    {
-                        vbMesh.Dispose();
-                        vbMesh = null;
-                    }
 
-                    if (ibMesh != null)
-                    {
-                        ibMesh.Dispose();
-                        ibMesh = null;
-                    }
+                    vbMesh?.Dispose();
+                    vbMesh = null;
+                    ibMesh?.Dispose();
+                    ibMesh = null;
 
                     if (VertBuffer != null)
                     {

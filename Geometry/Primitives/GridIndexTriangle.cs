@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Geometry
 {
@@ -38,10 +38,7 @@ namespace Geometry
             this.points = pointArray;
         }
 
-        public int[] Indicies()
-        {
-            return new int[] { i1, i2, i3 };
-        }
+        public int[] Indicies() => [i1, i2, i3];
 
         public static implicit operator GridTriangle(GridIndexTriangle t)
         {

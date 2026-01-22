@@ -13,10 +13,10 @@ namespace Geometry
             }
             else
             {
-                set = new SortedSet<int>
-                {
+                set =
+                [
                     val
-                };
+                ];
                 dict.Add(key, set);
             }
         }

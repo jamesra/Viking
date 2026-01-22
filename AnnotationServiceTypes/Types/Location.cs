@@ -1,4 +1,4 @@
-﻿using Annotation;
+using Annotation;
 using ProtoBuf;
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using System.Data.Entity;
 namespace AnnotationService.Types
 {
     [ProtoContract]
-    [DataContract] 
+    [DataContract]
     public class LocationPositionOnly : DataObjectWithKeyOfLong
     {
         AnnotationPoint _Position;
@@ -190,9 +190,9 @@ namespace AnnotationService.Types
                 if (_Links.Count == 0)
                     return null;
                 else
-                    return _Links.ToArray();
+                    return [.. _Links];
             }
-            set => _Links = value is null ? null : new SortedSet<Int64>(value);
+            set => _Links = value is null ? null : [.. value];
         }
 
         [ProtoMember(19)]
@@ -261,7 +261,7 @@ namespace AnnotationService.Types
         public void AddLink(Int64 linkedID)
         {
             if (this._Links is null)
-                _Links = new SortedSet<Int64>();
+                _Links = [];
             if (linkedID == this.ID)
             {
                 throw new ArgumentException("Cannot link location to itself: ID = " + this.ID.ToString());
@@ -273,7 +273,7 @@ namespace AnnotationService.Types
         public void AddLinks(SortedSet<Int64> linkIDs)
         {
             if (this._Links is null)
-                _Links = new SortedSet<Int64>();
+                _Links = [];
 
             if (linkIDs.Contains(this.ID))
             {
@@ -292,53 +292,47 @@ namespace AnnotationService.Types
 
         public static Int64 MeasureEncodedObjectSize(Location loc)
         {
-            DataContractSerializer ds = new DataContractSerializer(loc.GetType());
+            DataContractSerializer ds = new(loc.GetType());
 
-            using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
-            {
-                ds.WriteObject(ms, loc);
-                // Spit out
+            using System.IO.MemoryStream ms = new();
+            ds.WriteObject(ms, loc);
+            // Spit out
 
-                string payload = System.Text.Encoding.UTF8.GetString(ms.ToArray());
-                System.Diagnostics.Trace.WriteLine("Output: " + payload);
-                System.Diagnostics.Trace.WriteLine("Loc #" + loc.ID.ToString() + " Message length: " + ms.Length.ToString());
+            string payload = System.Text.Encoding.UTF8.GetString(ms.ToArray());
+            System.Diagnostics.Trace.WriteLine("Output: " + payload);
+            System.Diagnostics.Trace.WriteLine("Loc #" + loc.ID.ToString() + " Message length: " + ms.Length.ToString());
 
-                return ms.Length;
-            }
+            return ms.Length;
         }
 
         public static Int64 MeasureProtobufEncodedObjectSize(Location loc)
         {
-            using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
-            {
-                Serializer.Serialize(ms, loc);
-                //ds.WriteObject(ms, loc);
-                // Spit out
+            using System.IO.MemoryStream ms = new();
+            Serializer.Serialize(ms, loc);
+            //ds.WriteObject(ms, loc);
+            // Spit out
 
-                string payload = System.Text.Encoding.UTF8.GetString(ms.ToArray());
-                System.Diagnostics.Trace.WriteLine("PB Output: " + payload);
-                System.Diagnostics.Trace.WriteLine("PB Loc #" + loc.ID.ToString() + " Message length: " + ms.Length.ToString());
+            string payload = System.Text.Encoding.UTF8.GetString(ms.ToArray());
+            System.Diagnostics.Trace.WriteLine("PB Output: " + payload);
+            System.Diagnostics.Trace.WriteLine("PB Loc #" + loc.ID.ToString() + " Message length: " + ms.Length.ToString());
 
-                return ms.Length;
-            }
+            return ms.Length;
         }
 
         public static Location VerifyProtobufEncodedObject(Location loc)
         {
-            using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
-            {
-                Serializer.Serialize(ms, loc);
-                //ds.WriteObject(ms, loc);
-                // Spit out
+            using System.IO.MemoryStream ms = new();
+            Serializer.Serialize(ms, loc);
+            //ds.WriteObject(ms, loc);
+            // Spit out
 
-                string payload = System.Text.Encoding.UTF8.GetString(ms.ToArray());
-                System.Diagnostics.Trace.WriteLine("PB Output: " + payload);
-                System.Diagnostics.Trace.WriteLine("PB Loc #" + loc.ID.ToString() + " Message length: " + ms.Length.ToString());
+            string payload = System.Text.Encoding.UTF8.GetString(ms.ToArray());
+            System.Diagnostics.Trace.WriteLine("PB Output: " + payload);
+            System.Diagnostics.Trace.WriteLine("PB Loc #" + loc.ID.ToString() + " Message length: " + ms.Length.ToString());
 
-                Location output = Serializer.Deserialize<Location>(ms);
+            Location output = Serializer.Deserialize<Location>(ms);
 
-                return output;
-            }
+            return output;
 
 
         }

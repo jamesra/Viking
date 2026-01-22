@@ -20,7 +20,7 @@ namespace Viking
         {
             InitializeComponent();
 
-            TabsModules.TabCategory = TABCATEGORY.ACTION; 
+            TabsModules.TabCategory = TABCATEGORY.ACTION;
         }
 
 
@@ -39,7 +39,7 @@ namespace Viking
             Global.PrintAllocatedTextures();
             Global.PrintAllocatedTextureReaders();
         }
-           
+
         private void CacheCleaningTimer_Tick(object sender, EventArgs e)
         {
             //Fire off a thread to clean the disk
@@ -52,11 +52,7 @@ namespace Viking
             //ThreadPool.QueueUserWorkItem(, Global.TileViewModelCache.ReduceCacheFootprint, null);
             //ThreadPool.QueueUserWorkItem(Viking.VolumeModel.Global.TileCache.ReduceCacheFootprint, null);
 
-            if (Viking.UI.State.volume != null)
-            {
-                Viking.UI.State.volume.ReduceCacheFootprint(null!); // null is valid parameter for this method
-                //ThreadPool.QueueUserWorkItem(Viking.UI.State.volume.ReduceCacheFootprint, null);
-            }
+            Viking.UI.State.volume?.ReduceCacheFootprint(null!); // null is valid parameter for this method
 
 
             /*
@@ -123,8 +119,8 @@ namespace Viking
             }
 
             bool GestureConfigured = GestureSupport.ConfigureDefaultGestures(this.Handle);
-            Trace.WriteLine($"Gesture support configuration: { (GestureConfigured ? "Successful" : "Failed") } ");
-             
+            Trace.WriteLine($"Gesture support configuration: {(GestureConfigured ? "Successful" : "Failed")} ");
+
             //bool RegisteredTouch = Touch.RegisterTouchWindow(this.Handle, TouchRegisterOptions.None);
 
             //
@@ -134,9 +130,9 @@ namespace Viking
             //However, for some reason setting MouseInPointer allowed the pen buttons to properly set the SecondButtonUp/Down flags in the pointer state.
             //
             bool MouseInPointerEnabled = WinMsgInput.EnableMouseInPointer(true);
-             
+
             this.Text = UI.State.volume.Name;
-             
+
             /* PORT
             if (UI.State.volume.Sections is null)
                 return;
@@ -159,7 +155,7 @@ namespace Viking
                     string strX = UI.State.StartupArguments["X"];
                     string strY = UI.State.StartupArguments["Y"];
                     string strZ = UI.State.StartupArguments["Z"];
-                    
+
                     if (strX is null || strY is null || strZ is null)
                         UseDefaultPosition = true;
                     else
@@ -207,7 +203,7 @@ namespace Viking
                         //default to centering the viewer on startup 
                         MappingBase map = Viking.UI.State.volume.GetTileMapping(
                             Viking.UI.State.volume.DefaultVolumeTransform, DefaultSection.Number, null, null);
-                        
+
                         if (map != null)
                         {
                             if (map.Initialized == false)
@@ -230,19 +226,15 @@ namespace Viking
 
         private void vikingHomepageToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            using (System.Diagnostics.Process WebBrowser = new System.Diagnostics.Process())
-            {
-                WebBrowser.StartInfo.FileName = "http://connectomes.utah.edu/";
-                WebBrowser.Start();
-            }
+            using System.Diagnostics.Process WebBrowser = new();
+            WebBrowser.StartInfo.FileName = "http://connectomes.utah.edu/";
+            WebBrowser.Start();
         }
 
         private void versionInfoToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            using (AboutBox aboutBox = new AboutBox())
-            {
-                aboutBox.ShowDialog();
-            }
+            using AboutBox aboutBox = new();
+            aboutBox.ShowDialog();
 
             return;
         }

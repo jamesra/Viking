@@ -8,17 +8,12 @@ namespace Viking.Services.Grpc
     /// <summary>
     /// Manages a shared gRPC channel for the segmentation service to avoid expensive channel creation.
     /// </summary>
-    public class GrpcChannelManager : IGrpcChannelManager
+    public class GrpcChannelManager(IGrpcServiceConfiguration configuration) : IGrpcChannelManager
     {
-        private readonly object _lock = new object();
-        private readonly IGrpcServiceConfiguration _configuration;
+        private readonly object _lock = new();
+        private readonly IGrpcServiceConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         private Channel? _channel;
         private string? _currentServiceUrl;
-
-        public GrpcChannelManager(IGrpcServiceConfiguration configuration)
-        {
-            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        }
 
         /// <inheritdoc />
         public Channel? GetOrCreateChannel()
@@ -34,7 +29,7 @@ namespace Viking.Services.Grpc
 
             lock (_lock)
             {
-                if (_channel == null ||
+                if (_channel is null ||
                     _currentServiceUrl != serviceUrl ||
                     _channel.State == ChannelState.Shutdown ||
                     _channel.State == ChannelState.TransientFailure)
@@ -100,7 +95,7 @@ namespace Viking.Services.Grpc
             bool containsScheme = trimmedEndpoint.IndexOf("://", StringComparison.Ordinal) >= 0;
             string endpointToParse = containsScheme ? trimmedEndpoint : $"http://{trimmedEndpoint}";
 
-            if (!Uri.TryCreate(endpointToParse, UriKind.Absolute, out Uri? parsedUri) || parsedUri == null)
+            if (!Uri.TryCreate(endpointToParse, UriKind.Absolute, out Uri? parsedUri) || parsedUri is null)
             {
                 return null;
             }
@@ -120,7 +115,7 @@ namespace Viking.Services.Grpc
 
         private void ShutdownChannelInternal()
         {
-            if (_channel == null || _channel.State == ChannelState.Shutdown)
+            if (_channel is null || _channel.State == ChannelState.Shutdown)
             {
                 return;
             }

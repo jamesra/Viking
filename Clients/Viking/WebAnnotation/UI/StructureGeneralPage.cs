@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -15,17 +15,14 @@ namespace WebAnnotation.UI
     public partial class StructureGeneralPage : Viking.UI.BaseClasses.PropertyPageBase
     {
         private Structure Obj;
-        private BindingList<WebAnnotationModel.ObjAttribute> ListTags = null;
+        private BindingList<WebAnnotationModel.ObjAttribute>? ListTags = null;
 
         public StructureGeneralPage()
         {
             InitializeComponent();
         }
 
-        protected override void OnInitPage()
-        {
-            base.OnInitPage();
-        }
+        protected override void OnInitPage() => base.OnInitPage();
 
         protected override void OnShowObject(object Object)
         {
@@ -36,7 +33,7 @@ namespace WebAnnotation.UI
             textLabel.Text = Obj.InfoLabel;
             linkType.Text = Obj.Type.Name;
 
-            ListTags = new BindingList<WebAnnotationModel.ObjAttribute>(new List<ObjAttribute>(Obj.Attributes));
+            ListTags = new BindingList<WebAnnotationModel.ObjAttribute>([.. Obj.Attributes]);
 
             dataGridTags.DataSource = ListTags;
         }
@@ -57,7 +54,7 @@ namespace WebAnnotation.UI
             for (int i = list.Count - 1; i >= 0; i--)
             {
                 WebAnnotationModel.ObjAttribute item = list[i];
-                if (item.Name == null)
+                if (item.Name is null)
                 {
                     list.RemoveAt(i);
                     continue;
@@ -88,7 +85,7 @@ namespace WebAnnotation.UI
         {
             if (e.KeyCode == Keys.Delete)
             {
-                List<int> iDeleteRowList = new List<int>(dataGridTags.SelectedCells.Count);
+                List<int> iDeleteRowList = new(dataGridTags.SelectedCells.Count);
                 foreach (DataGridViewCell cell in dataGridTags.SelectedCells)
                 {
                     if (iDeleteRowList.Contains(cell.RowIndex))
@@ -149,8 +146,7 @@ namespace WebAnnotation.UI
                     continue;
                 }
 
-                string compareValue = dataGridTags.Rows[i].Cells[0].Value as string;
-                if (compareValue == null)
+                if (dataGridTags.Rows[i].Cells[0].Value is not string compareValue)
                 {
                     continue;
                 }
@@ -169,14 +165,8 @@ namespace WebAnnotation.UI
             e.Cancel = false;
         }
 
-        private void dataGridTags_CellErrorTextChanged(object sender, DataGridViewCellEventArgs e)
-        {
-            labelDataGridError.Text = dataGridTags.Rows[e.RowIndex].Cells[e.ColumnIndex].ErrorText;
-        }
+        private void DataGridTags_CellErrorTextChanged(object sender, DataGridViewCellEventArgs e) => labelDataGridError.Text = dataGridTags.Rows[e.RowIndex].Cells[e.ColumnIndex].ErrorText;
 
-        private void dataGridTags_RowErrorTextChanged(object sender, DataGridViewRowEventArgs e)
-        {
-            labelDataGridError.Text = e.Row.ErrorText;
-        }
+        private void DataGridTags_RowErrorTextChanged(object sender, DataGridViewRowEventArgs e) => labelDataGridError.Text = e.Row.ErrorText;
     }
 }

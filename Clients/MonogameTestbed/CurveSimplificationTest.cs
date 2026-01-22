@@ -1,9 +1,9 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks; 
+using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -17,26 +17,26 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized => _initialized;
 
-        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
-        readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
+        readonly GamePadStateTracker Gamepad = new();
+        readonly Cursor2DCameraManipulator CameraManipulator = new();
 
         GridVector2 Cursor;
         CircleView cursorView;
         LabelView cursorLabel;
-        readonly PolyLineView RawPolyLine = new PolyLineView(Color.Black.SetAlpha(0.25f));
-        readonly PolyLineView RawInflectionPolyLine = new PolyLineView(Color.Gray.SetAlpha(0.25f));
-        readonly PolyLineView CurvedRawInflectionPolyLine = new PolyLineView(Color.Gold);
-        readonly PolyLineView CurvedPolyLine = new PolyLineView(Color.Green.SetAlpha(0.25f));
-        readonly PolyLineView CurvedSimplifiedPolyLine = new PolyLineView(Color.Blue);
-        readonly PolyLineView CurvedInflectionsPolyLine = new PolyLineView(Color.Orange);
-        readonly PolyLineView CurvedSimplifiedWithInflectionsPolyLine = new PolyLineView(Color.Red);
-        readonly PolyLineView CurvedRecreationFromInflectionsPolyLine = new PolyLineView(Color.BlueViolet);
-        readonly PolyLineView MinimalCatmullFitPolyLine = new PolyLineView(Color.Yellow.SetAlpha(0.5f));
-        readonly PolyLineView MinimalCatmullFitCurvedPolyLine = new PolyLineView(Color.Red.SetAlpha(0.5f));
+        readonly PolyLineView RawPolyLine = new(Color.Black.SetAlpha(0.25f));
+        readonly PolyLineView RawInflectionPolyLine = new(Color.Gray.SetAlpha(0.25f));
+        readonly PolyLineView CurvedRawInflectionPolyLine = new(Color.Gold);
+        readonly PolyLineView CurvedPolyLine = new(Color.Green.SetAlpha(0.25f));
+        readonly PolyLineView CurvedSimplifiedPolyLine = new(Color.Blue);
+        readonly PolyLineView CurvedInflectionsPolyLine = new(Color.Orange);
+        readonly PolyLineView CurvedSimplifiedWithInflectionsPolyLine = new(Color.Red);
+        readonly PolyLineView CurvedRecreationFromInflectionsPolyLine = new(Color.BlueViolet);
+        readonly PolyLineView MinimalCatmullFitPolyLine = new(Color.Yellow.SetAlpha(0.5f));
+        readonly PolyLineView MinimalCatmullFitCurvedPolyLine = new(Color.Red.SetAlpha(0.5f));
 
         public double PointRadius = 2.0;
 
-        public List<GridVector2> path = new List<GridVector2>();
+        public List<GridVector2> path = [];
 
         bool IsClosed = false;
 
@@ -46,7 +46,7 @@ namespace MonogameTestbed
         {
             PolyLineView.Draw(window.GraphicsDevice,
                 scene, OverlayStyle.Alpha,
-                new PolyLineView[] {
+                [
                     RawPolyLine,
                     //RawInflectionPolyLine,
                     //CurvedRawInflectionPolyLine, 
@@ -57,7 +57,7 @@ namespace MonogameTestbed
                     //CurvedRecreationFromInflectionsPolyLine,
                     MinimalCatmullFitPolyLine,
                     MinimalCatmullFitCurvedPolyLine
-                });
+                ]);
 
             CircleView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, new CircleView[] { cursorView });
             LabelView.Draw(window.spriteBatch, window.fontArial, scene, new LabelView[] { cursorLabel });
@@ -68,8 +68,8 @@ namespace MonogameTestbed
             _initialized = true;
 
             this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
-            
-            Gamepad.Update(GamePad.GetState(PlayerIndex.One)); 
+
+            Gamepad.Update(GamePad.GetState(PlayerIndex.One));
             return Task.CompletedTask;
         }
 
@@ -89,7 +89,7 @@ namespace MonogameTestbed
 
                 int[] raw_inflectionPoints = path.InflectionPointIndicies();
 
-                GridVector2[] inflectionPath = raw_inflectionPoints.Select(i => path[i]).ToArray();
+                GridVector2[] inflectionPath = [.. raw_inflectionPoints.Select(i => path[i])];
 
                 GridVector2[] curveFit = Geometry.CatmullRom.FitCurve(this.path, 5, IsClosed);
 
@@ -101,16 +101,16 @@ namespace MonogameTestbed
                 CurvedSimplifiedPolyLine.ControlPoints = curveFit.DouglasPeuckerReduction(15);
 
                 int[] inflectionIndicies = curveFit.InflectionPointIndicies();//curveFit.MeasureCurvature2().ApplyKernel(new double[] { 0.15, 0.70, 0.15 }).InflectionPointIndicies(); //curveFit.InflectionPointIndicies();
-                GridVector2[] inflectionPoints = inflectionIndicies.Select(i => curveFit[i]).ToArray();
+                GridVector2[] inflectionPoints = [.. inflectionIndicies.Select(i => curveFit[i])];
                 CurvedInflectionsPolyLine.ControlPoints = inflectionPoints;
 
                 //CurvedSimplifiedWithInflectionsPolyLine.ControlPoints = inflectionPoints.DouglasPeuckerReduction(2);
                 //CurvedRecreationFromInflectionsPolyLine.ControlPoints = Geometry.CatmullRom.FitCurve(CurvedSimplifiedWithInflectionsPolyLine.ControlPoints, 5, false);
 
                 MinimalCatmullFitPolyLine.ControlPoints = CatmullRomControlPointSimplification.IdentifyControlPoints(this.path, 1.0, IsClosed);
-                MinimalCatmullFitCurvedPolyLine.ControlPoints = Geometry.CatmullRom.FitCurve(MinimalCatmullFitPolyLine.ControlPoints.ToArray(), 5, IsClosed);
+                MinimalCatmullFitCurvedPolyLine.ControlPoints = Geometry.CatmullRom.FitCurve([.. MinimalCatmullFitPolyLine.ControlPoints], 5, IsClosed);
 
-               
+
             }
         }
 
@@ -133,9 +133,9 @@ namespace MonogameTestbed
                     FontSize = cursorView.Radius / 2.0,
                     Color = Color.Yellow
                 };
-            } 
+            }
 
-            if(state.Buttons.LeftShoulder == ButtonState.Pressed)
+            if (state.Buttons.LeftShoulder == ButtonState.Pressed)
             {
                 if (TryAddPathPoint(Cursor))
                 {
@@ -146,7 +146,7 @@ namespace MonogameTestbed
             if (Gamepad.RightShoulder_Clicked)
             {
                 if (path.Count > 0)
-                { 
+                {
                     path.RemoveAt(path.Count - 1);
                     UpdateViews();
                 }
@@ -193,14 +193,14 @@ namespace MonogameTestbed
 
         public bool TryAddPathPoint(GridVector2 p)
         {
-            if(path.Count == 0)
+            if (path.Count == 0)
             {
                 path.Add(p);
                 return true;
             }
 
-            double distance = GridVector2.Distance(path[path.Count - 1], p);
-            if(distance >= this.PointIntervalOnDrag)
+            double distance = GridVector2.Distance(path[^1], p);
+            if (distance >= this.PointIntervalOnDrag)
             {
                 path.Add(p);
                 return true;
@@ -217,11 +217,11 @@ namespace MonogameTestbed
         public bool TryRemovePathPoint(GridVector2 p)
         {
             if (path.Count == 0)
-            {  
+            {
                 return false;
             }
 
-            double distance = GridVector2.Distance(path[path.Count - 1], p);
+            double distance = GridVector2.Distance(path[^1], p);
             if (distance <= this.PointIntervalOnDrag)
             {
                 path.RemoveAt(path.Count - 1);

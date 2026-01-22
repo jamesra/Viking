@@ -1,26 +1,13 @@
-﻿using Geometry;
+using Geometry;
 using MIConvexHull;
 
 namespace MIConvexHullExtensions
 {
-    public readonly struct MIVector2 :  MIConvexHull.IVertex
+    public readonly struct MIVector2(GridVector2 p, Geometry.PolygonIndex index) : MIConvexHull.IVertex
     {
-        public readonly Geometry.GridVector2 P;
-        public readonly Geometry.PolygonIndex PolyIndex;
+        public readonly Geometry.GridVector2 P = p;
+        public readonly Geometry.PolygonIndex PolyIndex = index;
 
-
-        public MIVector2(GridVector2 p, Geometry.PolygonIndex index)
-        {
-            this.P = p;
-            this.PolyIndex = index;
-        }
-
-        double[] IVertex.Position
-        {
-            get
-            {
-                return new double[] { P.X, P.Y };
-            }
-        }
+        double[] IVertex.Position => [P.X, P.Y];
     }
 }

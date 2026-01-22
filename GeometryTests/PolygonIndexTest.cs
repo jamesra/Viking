@@ -12,35 +12,35 @@ namespace GeometryTests
         public void PolygonIndexBasics()
         {
             //Check that equality works for identical indicies
-            var A1 = new PolygonIndex(0, 0, 5);
-            CheckPolygonIndexEquality(A1);
-            var A2 = new PolygonIndex(3, 3, 5);
-            CheckPolygonIndexEquality(A2);
-            var indexWithInner = new PolygonIndex(3, 2, 3, 5);
-            CheckPolygonIndexEquality(indexWithInner);
+            PolygonIndex A1 = new(0, 0, 5);
+            PolygonIndexTest.CheckPolygonIndexEquality(A1);
+            PolygonIndex A2 = new(3, 3, 5);
+            PolygonIndexTest.CheckPolygonIndexEquality(A2);
+            PolygonIndex indexWithInner = new(3, 2, 3, 5);
+            PolygonIndexTest.CheckPolygonIndexEquality(indexWithInner);
         }
 
-        private void CheckPolygonIndexEquality(PolygonIndex input)
+        private static void CheckPolygonIndexEquality(PolygonIndex input)
         {
-            var clone = (PolygonIndex)input.Clone();
+            PolygonIndex clone = (PolygonIndex)input.Clone();
             Assert.AreEqual(input, clone);
             Assert.IsTrue(input == clone);
             Assert.IsFalse(input != clone);
 
-            var differentRing =
-                new PolygonIndex(input.iPoly, input.iInnerPoly, input.iVertex, input.NumUniqueInRing + 1);
+            PolygonIndex differentRing =
+                new(input.iPoly, input.iInnerPoly, input.iVertex, input.NumUniqueInRing + 1);
             Assert.AreNotEqual(input, differentRing);
 
-            var differentPolygon =
-                new PolygonIndex(input.iPoly + 1, input.iInnerPoly, input.iVertex, input.NumUniqueInRing);
+            PolygonIndex differentPolygon =
+                new(input.iPoly + 1, input.iInnerPoly, input.iVertex, input.NumUniqueInRing);
             Assert.AreNotEqual(input, differentPolygon);
 
-            var differentInner =
-                new PolygonIndex(input.iPoly, input.iInnerPoly.HasValue ? input.iInnerPoly.Value + 1 : 0, input.iVertex, input.NumUniqueInRing);
+            PolygonIndex differentInner =
+                new(input.iPoly, input.iInnerPoly.HasValue ? input.iInnerPoly.Value + 1 : 0, input.iVertex, input.NumUniqueInRing);
             Assert.AreNotEqual(input, differentInner);
 
-            var differentInner2 =
-                new PolygonIndex(input.iPoly, input.iInnerPoly.HasValue ? new int?() : 0, input.iVertex, input.NumUniqueInRing);
+            PolygonIndex differentInner2 =
+                new(input.iPoly, input.iInnerPoly.HasValue ? new int?() : 0, input.iVertex, input.NumUniqueInRing);
             Assert.AreNotEqual(input, differentInner2);
 
             var stepForward = input.Next;
@@ -82,7 +82,7 @@ namespace GeometryTests
             //Only the outer poly
             GridPolygon box = Primitives.BoxPolygon(10);
 
-            CheckVertexEnumerator(box);
+            PolygonIndexTest.CheckVertexEnumerator(box);
 
             /////////////////////////////////
             //Outer poly with one inner poly
@@ -92,20 +92,20 @@ namespace GeometryTests
             //Add the U polygon as an interior polygon
             OuterBox.AddInteriorRing(U);
 
-            CheckVertexEnumerator(OuterBox);
+            PolygonIndexTest.CheckVertexEnumerator(OuterBox);
 
             /////////////////////////////////
             //Outer poly with two inner poly
             GridPolygon mini_box = Primitives.UPolygon(1);
 
             OuterBox.AddInteriorRing(mini_box);
-            CheckVertexEnumerator(OuterBox);
+            PolygonIndexTest.CheckVertexEnumerator(OuterBox);
         }
 
-        private void CheckVertexEnumerator(GridPolygon polygon)
+        private static void CheckVertexEnumerator(GridPolygon polygon)
         {
             PolygonIndex[] forward = new PolygonVertexEnum(polygon).ToArray();
-            PolygonIndex[] backward = new PolygonVertexEnum(polygon, reverse: true).Reverse().ToArray();
+            PolygonIndex[] backward = [.. new PolygonVertexEnum(polygon, reverse: true).Reverse()];
 
             //Check we got the expected number of indicies, one per vertex
             Assert.AreEqual(forward.Length, polygon.TotalUniqueVerticies);
@@ -154,16 +154,16 @@ namespace GeometryTests
         [TestMethod]
         public void PolySetVertexEnumTests()
         {
-            var polys = new GridPolygon[]
-            {
+            GridPolygon[] polys =
+            [
                 Primitives.BoxPolygon(1),
                 Primitives.BoxPolygon(2),
                 Primitives.BoxPolygon(3)
-            };
+            ];
 
             polys[1].AddInteriorRing(Primitives.ConcaveCheckPolygon(0.5));
 
-            var enumeratorForward = new PolySetVertexEnum(polys);
+            PolySetVertexEnum enumeratorForward = new(polys);
             var forward = enumeratorForward.ToArray();
 
             var totalVerts = polys.Sum(p => p.TotalUniqueVerticies);

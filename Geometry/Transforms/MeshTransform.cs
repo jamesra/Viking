@@ -15,7 +15,7 @@ namespace Geometry.Transforms
     {
         #region Edges
 
-        protected ReaderWriterLockSlim rwLockEdges = new ReaderWriterLockSlim();
+        protected ReaderWriterLockSlim rwLockEdges = new();
         private PairedLineSearchGrid _LineSegmentGrid;
 
         private List<int>[] _edges;
@@ -98,16 +98,13 @@ namespace Geometry.Transforms
 
         #region ICloneable
 
-        public MeshTransform Copy()
-        {
-            return ((ICloneable)this).Clone() as MeshTransform;
-        }
+        public MeshTransform Copy() => ((ICloneable)this).Clone() as MeshTransform;
 
         object ICloneable.Clone()
         {
             MeshTransform newObj = this.MemberwiseClone() as MeshTransform;
 
-            List<MappingGridVector2> TempList = new List<MappingGridVector2>();
+            List<MappingGridVector2> TempList = [];
 
             foreach (MappingGridVector2 pt in MapPoints)
             {
@@ -115,7 +112,7 @@ namespace Geometry.Transforms
             }
 
             //Setting the mapPoints will sort and recalculate triangles
-            newObj.MapPoints = TempList.ToArray();
+            newObj.MapPoints = [.. TempList];
 
             return newObj;
         }
@@ -146,7 +143,7 @@ namespace Geometry.Transforms
 
             if (triangles is null)
                 return null;
-             
+
             foreach (MappingGridTriangle t in triangles)
             {
                 if (!t.MappedBoundingBox.Contains(Point))
@@ -292,7 +289,7 @@ namespace Geometry.Transforms
 
             //For debugging only
             double nearestFailedIntersect = double.MaxValue;
-            GridVector2 nearestFailedPoint = new GridVector2();
+            GridVector2 nearestFailedPoint = new();
 
             foundCtrlLine = new GridLineSegment();
             foundMapLine = new GridLineSegment();
@@ -346,11 +343,8 @@ namespace Geometry.Transforms
         {
             if (disposing)
             {
-                if (rwLockEdges != null)
-                {
-                    rwLockEdges.Dispose();
-                    rwLockEdges = null;
-                }
+                rwLockEdges?.Dispose();
+                rwLockEdges = null;
 
 
             }

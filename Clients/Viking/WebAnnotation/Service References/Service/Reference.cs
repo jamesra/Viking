@@ -1403,13 +1403,13 @@ namespace WebAnnotation.Service {
         }
         
         public void GetStructureTypesAsync(object userState) {
-            if ((this.onBeginGetStructureTypesDelegate == null)) {
+            if ((this.onBeginGetStructureTypesDelegate is null)) {
                 this.onBeginGetStructureTypesDelegate = new BeginOperationDelegate(this.OnBeginGetStructureTypes);
             }
-            if ((this.onEndGetStructureTypesDelegate == null)) {
+            if ((this.onEndGetStructureTypesDelegate is null)) {
                 this.onEndGetStructureTypesDelegate = new EndOperationDelegate(this.OnEndGetStructureTypes);
             }
-            if ((this.onGetStructureTypesCompletedDelegate == null)) {
+            if ((this.onGetStructureTypesCompletedDelegate is null)) {
                 this.onGetStructureTypesCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetStructureTypesCompleted);
             }
             base.InvokeAsync(this.onBeginGetStructureTypesDelegate, null, this.onEndGetStructureTypesDelegate, this.onGetStructureTypesCompletedDelegate, userState);
@@ -1452,13 +1452,13 @@ namespace WebAnnotation.Service {
         }
         
         public void GetStructureTypeByIDAsync(long ID, object userState) {
-            if ((this.onBeginGetStructureTypeByIDDelegate == null)) {
+            if ((this.onBeginGetStructureTypeByIDDelegate is null)) {
                 this.onBeginGetStructureTypeByIDDelegate = new BeginOperationDelegate(this.OnBeginGetStructureTypeByID);
             }
-            if ((this.onEndGetStructureTypeByIDDelegate == null)) {
+            if ((this.onEndGetStructureTypeByIDDelegate is null)) {
                 this.onEndGetStructureTypeByIDDelegate = new EndOperationDelegate(this.OnEndGetStructureTypeByID);
             }
-            if ((this.onGetStructureTypeByIDCompletedDelegate == null)) {
+            if ((this.onGetStructureTypeByIDCompletedDelegate is null)) {
                 this.onGetStructureTypeByIDCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetStructureTypeByIDCompleted);
             }
             base.InvokeAsync(this.onBeginGetStructureTypeByIDDelegate, new object[] {
@@ -1502,13 +1502,13 @@ namespace WebAnnotation.Service {
         }
         
         public void UpdateStructureTypesAsync(WebAnnotation.Service.StructureType[] structType, object userState) {
-            if ((this.onBeginUpdateStructureTypesDelegate == null)) {
+            if ((this.onBeginUpdateStructureTypesDelegate is null)) {
                 this.onBeginUpdateStructureTypesDelegate = new BeginOperationDelegate(this.OnBeginUpdateStructureTypes);
             }
-            if ((this.onEndUpdateStructureTypesDelegate == null)) {
+            if ((this.onEndUpdateStructureTypesDelegate is null)) {
                 this.onEndUpdateStructureTypesDelegate = new EndOperationDelegate(this.OnEndUpdateStructureTypes);
             }
-            if ((this.onUpdateStructureTypesCompletedDelegate == null)) {
+            if ((this.onUpdateStructureTypesCompletedDelegate is null)) {
                 this.onUpdateStructureTypesCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnUpdateStructureTypesCompleted);
             }
             base.InvokeAsync(this.onBeginUpdateStructureTypesDelegate, new object[] {
@@ -1551,13 +1551,13 @@ namespace WebAnnotation.Service {
         }
         
         public void TestMethodAsync(object userState) {
-            if ((this.onBeginTestMethodDelegate == null)) {
+            if ((this.onBeginTestMethodDelegate is null)) {
                 this.onBeginTestMethodDelegate = new BeginOperationDelegate(this.OnBeginTestMethod);
             }
-            if ((this.onEndTestMethodDelegate == null)) {
+            if ((this.onEndTestMethodDelegate is null)) {
                 this.onEndTestMethodDelegate = new EndOperationDelegate(this.OnEndTestMethod);
             }
-            if ((this.onTestMethodCompletedDelegate == null)) {
+            if ((this.onTestMethodCompletedDelegate is null)) {
                 this.onTestMethodCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnTestMethodCompleted);
             }
             base.InvokeAsync(this.onBeginTestMethodDelegate, null, this.onEndTestMethodDelegate, this.onTestMethodCompletedDelegate, userState);
@@ -2014,13 +2014,13 @@ namespace WebAnnotation.Service {
         }
         
         public void GetStructuresAsync(object userState) {
-            if ((this.onBeginGetStructuresDelegate == null)) {
+            if ((this.onBeginGetStructuresDelegate is null)) {
                 this.onBeginGetStructuresDelegate = new BeginOperationDelegate(this.OnBeginGetStructures);
             }
-            if ((this.onEndGetStructuresDelegate == null)) {
+            if ((this.onEndGetStructuresDelegate is null)) {
                 this.onEndGetStructuresDelegate = new EndOperationDelegate(this.OnEndGetStructures);
             }
-            if ((this.onGetStructuresCompletedDelegate == null)) {
+            if ((this.onGetStructuresCompletedDelegate is null)) {
                 this.onGetStructuresCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetStructuresCompleted);
             }
             base.InvokeAsync(this.onBeginGetStructuresDelegate, null, this.onEndGetStructuresDelegate, this.onGetStructuresCompletedDelegate, userState);
@@ -2064,13 +2064,13 @@ namespace WebAnnotation.Service {
         }
         
         public void GetStructureByIDAsync(long ID, bool IncludeChildren, object userState) {
-            if ((this.onBeginGetStructureByIDDelegate == null)) {
+            if ((this.onBeginGetStructureByIDDelegate is null)) {
                 this.onBeginGetStructureByIDDelegate = new BeginOperationDelegate(this.OnBeginGetStructureByID);
             }
-            if ((this.onEndGetStructureByIDDelegate == null)) {
+            if ((this.onEndGetStructureByIDDelegate is null)) {
                 this.onEndGetStructureByIDDelegate = new EndOperationDelegate(this.OnEndGetStructureByID);
             }
-            if ((this.onGetStructureByIDCompletedDelegate == null)) {
+            if ((this.onGetStructureByIDCompletedDelegate is null)) {
                 this.onGetStructureByIDCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetStructureByIDCompleted);
             }
             base.InvokeAsync(this.onBeginGetStructureByIDDelegate, new object[] {
@@ -2116,13 +2116,13 @@ namespace WebAnnotation.Service {
         }
         
         public void GetStructuresByIDsAsync(long[] ID, bool IncludeChildren, object userState) {
-            if ((this.onBeginGetStructuresByIDsDelegate == null)) {
+            if ((this.onBeginGetStructuresByIDsDelegate is null)) {
                 this.onBeginGetStructuresByIDsDelegate = new BeginOperationDelegate(this.OnBeginGetStructuresByIDs);
             }
-            if ((this.onEndGetStructuresByIDsDelegate == null)) {
+            if ((this.onEndGetStructuresByIDsDelegate is null)) {
                 this.onEndGetStructuresByIDsDelegate = new EndOperationDelegate(this.OnEndGetStructuresByIDs);
             }
-            if ((this.onGetStructuresByIDsCompletedDelegate == null)) {
+            if ((this.onGetStructuresByIDsCompletedDelegate is null)) {
                 this.onGetStructuresByIDsCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetStructuresByIDsCompleted);
             }
             base.InvokeAsync(this.onBeginGetStructuresByIDsDelegate, new object[] {
@@ -2166,13 +2166,13 @@ namespace WebAnnotation.Service {
         }
         
         public void CreateStructureLinkAsync(WebAnnotation.Service.StructureLink link, object userState) {
-            if ((this.onBeginCreateStructureLinkDelegate == null)) {
+            if ((this.onBeginCreateStructureLinkDelegate is null)) {
                 this.onBeginCreateStructureLinkDelegate = new BeginOperationDelegate(this.OnBeginCreateStructureLink);
             }
-            if ((this.onEndCreateStructureLinkDelegate == null)) {
+            if ((this.onEndCreateStructureLinkDelegate is null)) {
                 this.onEndCreateStructureLinkDelegate = new EndOperationDelegate(this.OnEndCreateStructureLink);
             }
-            if ((this.onCreateStructureLinkCompletedDelegate == null)) {
+            if ((this.onCreateStructureLinkCompletedDelegate is null)) {
                 this.onCreateStructureLinkCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnCreateStructureLinkCompleted);
             }
             base.InvokeAsync(this.onBeginCreateStructureLinkDelegate, new object[] {
@@ -2216,13 +2216,13 @@ namespace WebAnnotation.Service {
         }
         
         public void GetLinkedStructuresByIDAsync(long ID, object userState) {
-            if ((this.onBeginGetLinkedStructuresByIDDelegate == null)) {
+            if ((this.onBeginGetLinkedStructuresByIDDelegate is null)) {
                 this.onBeginGetLinkedStructuresByIDDelegate = new BeginOperationDelegate(this.OnBeginGetLinkedStructuresByID);
             }
-            if ((this.onEndGetLinkedStructuresByIDDelegate == null)) {
+            if ((this.onEndGetLinkedStructuresByIDDelegate is null)) {
                 this.onEndGetLinkedStructuresByIDDelegate = new EndOperationDelegate(this.OnEndGetLinkedStructuresByID);
             }
-            if ((this.onGetLinkedStructuresByIDCompletedDelegate == null)) {
+            if ((this.onGetLinkedStructuresByIDCompletedDelegate is null)) {
                 this.onGetLinkedStructuresByIDCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLinkedStructuresByIDCompleted);
             }
             base.InvokeAsync(this.onBeginGetLinkedStructuresByIDDelegate, new object[] {
@@ -2266,13 +2266,13 @@ namespace WebAnnotation.Service {
         }
         
         public void GetLocationsForStructureAsync(long structureID, object userState) {
-            if ((this.onBeginGetLocationsForStructureDelegate == null)) {
+            if ((this.onBeginGetLocationsForStructureDelegate is null)) {
                 this.onBeginGetLocationsForStructureDelegate = new BeginOperationDelegate(this.OnBeginGetLocationsForStructure);
             }
-            if ((this.onEndGetLocationsForStructureDelegate == null)) {
+            if ((this.onEndGetLocationsForStructureDelegate is null)) {
                 this.onEndGetLocationsForStructureDelegate = new EndOperationDelegate(this.OnEndGetLocationsForStructure);
             }
-            if ((this.onGetLocationsForStructureCompletedDelegate == null)) {
+            if ((this.onGetLocationsForStructureCompletedDelegate is null)) {
                 this.onGetLocationsForStructureCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLocationsForStructureCompleted);
             }
             base.InvokeAsync(this.onBeginGetLocationsForStructureDelegate, new object[] {
@@ -2316,13 +2316,13 @@ namespace WebAnnotation.Service {
         }
         
         public void NumberOfLocationsForStructureAsync(long structureID, object userState) {
-            if ((this.onBeginNumberOfLocationsForStructureDelegate == null)) {
+            if ((this.onBeginNumberOfLocationsForStructureDelegate is null)) {
                 this.onBeginNumberOfLocationsForStructureDelegate = new BeginOperationDelegate(this.OnBeginNumberOfLocationsForStructure);
             }
-            if ((this.onEndNumberOfLocationsForStructureDelegate == null)) {
+            if ((this.onEndNumberOfLocationsForStructureDelegate is null)) {
                 this.onEndNumberOfLocationsForStructureDelegate = new EndOperationDelegate(this.OnEndNumberOfLocationsForStructure);
             }
-            if ((this.onNumberOfLocationsForStructureCompletedDelegate == null)) {
+            if ((this.onNumberOfLocationsForStructureCompletedDelegate is null)) {
                 this.onNumberOfLocationsForStructureCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnNumberOfLocationsForStructureCompleted);
             }
             base.InvokeAsync(this.onBeginNumberOfLocationsForStructureDelegate, new object[] {
@@ -2367,13 +2367,13 @@ namespace WebAnnotation.Service {
         }
         
         public void CreateStructureAsync(WebAnnotation.Service.Structure structure, WebAnnotation.Service.Location location, object userState) {
-            if ((this.onBeginCreateStructureDelegate == null)) {
+            if ((this.onBeginCreateStructureDelegate is null)) {
                 this.onBeginCreateStructureDelegate = new BeginOperationDelegate(this.OnBeginCreateStructure);
             }
-            if ((this.onEndCreateStructureDelegate == null)) {
+            if ((this.onEndCreateStructureDelegate is null)) {
                 this.onEndCreateStructureDelegate = new EndOperationDelegate(this.OnEndCreateStructure);
             }
-            if ((this.onCreateStructureCompletedDelegate == null)) {
+            if ((this.onCreateStructureCompletedDelegate is null)) {
                 this.onCreateStructureCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnCreateStructureCompleted);
             }
             base.InvokeAsync(this.onBeginCreateStructureDelegate, new object[] {
@@ -2418,13 +2418,13 @@ namespace WebAnnotation.Service {
         }
         
         public void UpdateStructuresAsync(WebAnnotation.Service.Structure[] structure, object userState) {
-            if ((this.onBeginUpdateStructuresDelegate == null)) {
+            if ((this.onBeginUpdateStructuresDelegate is null)) {
                 this.onBeginUpdateStructuresDelegate = new BeginOperationDelegate(this.OnBeginUpdateStructures);
             }
-            if ((this.onEndUpdateStructuresDelegate == null)) {
+            if ((this.onEndUpdateStructuresDelegate is null)) {
                 this.onEndUpdateStructuresDelegate = new EndOperationDelegate(this.OnEndUpdateStructures);
             }
-            if ((this.onUpdateStructuresCompletedDelegate == null)) {
+            if ((this.onUpdateStructuresCompletedDelegate is null)) {
                 this.onUpdateStructuresCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnUpdateStructuresCompleted);
             }
             base.InvokeAsync(this.onBeginUpdateStructuresDelegate, new object[] {
@@ -2467,13 +2467,13 @@ namespace WebAnnotation.Service {
         }
         
         public void UpdateStructureLinksAsync(WebAnnotation.Service.StructureLink[] structureLinks, object userState) {
-            if ((this.onBeginUpdateStructureLinksDelegate == null)) {
+            if ((this.onBeginUpdateStructureLinksDelegate is null)) {
                 this.onBeginUpdateStructureLinksDelegate = new BeginOperationDelegate(this.OnBeginUpdateStructureLinks);
             }
-            if ((this.onEndUpdateStructureLinksDelegate == null)) {
+            if ((this.onEndUpdateStructureLinksDelegate is null)) {
                 this.onEndUpdateStructureLinksDelegate = new EndOperationDelegate(this.OnEndUpdateStructureLinks);
             }
-            if ((this.onUpdateStructureLinksCompletedDelegate == null)) {
+            if ((this.onUpdateStructureLinksCompletedDelegate is null)) {
                 this.onUpdateStructureLinksCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnUpdateStructureLinksCompleted);
             }
             base.InvokeAsync(this.onBeginUpdateStructureLinksDelegate, new object[] {
@@ -2518,13 +2518,13 @@ namespace WebAnnotation.Service {
         }
         
         public void MergeAsync(long StructureA, long StructureB, object userState) {
-            if ((this.onBeginMergeDelegate == null)) {
+            if ((this.onBeginMergeDelegate is null)) {
                 this.onBeginMergeDelegate = new BeginOperationDelegate(this.OnBeginMerge);
             }
-            if ((this.onEndMergeDelegate == null)) {
+            if ((this.onEndMergeDelegate is null)) {
                 this.onEndMergeDelegate = new EndOperationDelegate(this.OnEndMerge);
             }
-            if ((this.onMergeCompletedDelegate == null)) {
+            if ((this.onMergeCompletedDelegate is null)) {
                 this.onMergeCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnMergeCompleted);
             }
             base.InvokeAsync(this.onBeginMergeDelegate, new object[] {
@@ -2570,13 +2570,13 @@ namespace WebAnnotation.Service {
         }
         
         public void SplitAsync(long StructureA, WebAnnotation.Service.LocationLink locLink, object userState) {
-            if ((this.onBeginSplitDelegate == null)) {
+            if ((this.onBeginSplitDelegate is null)) {
                 this.onBeginSplitDelegate = new BeginOperationDelegate(this.OnBeginSplit);
             }
-            if ((this.onEndSplitDelegate == null)) {
+            if ((this.onEndSplitDelegate is null)) {
                 this.onEndSplitDelegate = new EndOperationDelegate(this.OnEndSplit);
             }
-            if ((this.onSplitCompletedDelegate == null)) {
+            if ((this.onSplitCompletedDelegate is null)) {
                 this.onSplitCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnSplitCompleted);
             }
             base.InvokeAsync(this.onBeginSplitDelegate, new object[] {
@@ -2882,13 +2882,13 @@ namespace WebAnnotation.Service {
         }
         
         public void GetLocationByIDAsync(long ID, object userState) {
-            if ((this.onBeginGetLocationByIDDelegate == null)) {
+            if ((this.onBeginGetLocationByIDDelegate is null)) {
                 this.onBeginGetLocationByIDDelegate = new BeginOperationDelegate(this.OnBeginGetLocationByID);
             }
-            if ((this.onEndGetLocationByIDDelegate == null)) {
+            if ((this.onEndGetLocationByIDDelegate is null)) {
                 this.onEndGetLocationByIDDelegate = new EndOperationDelegate(this.OnEndGetLocationByID);
             }
-            if ((this.onGetLocationByIDCompletedDelegate == null)) {
+            if ((this.onGetLocationByIDCompletedDelegate is null)) {
                 this.onGetLocationByIDCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLocationByIDCompleted);
             }
             base.InvokeAsync(this.onBeginGetLocationByIDDelegate, new object[] {
@@ -2932,13 +2932,13 @@ namespace WebAnnotation.Service {
         }
         
         public void GetLocationsByIDAsync(long[] IDs, object userState) {
-            if ((this.onBeginGetLocationsByIDDelegate == null)) {
+            if ((this.onBeginGetLocationsByIDDelegate is null)) {
                 this.onBeginGetLocationsByIDDelegate = new BeginOperationDelegate(this.OnBeginGetLocationsByID);
             }
-            if ((this.onEndGetLocationsByIDDelegate == null)) {
+            if ((this.onEndGetLocationsByIDDelegate is null)) {
                 this.onEndGetLocationsByIDDelegate = new EndOperationDelegate(this.OnEndGetLocationsByID);
             }
-            if ((this.onGetLocationsByIDCompletedDelegate == null)) {
+            if ((this.onGetLocationsByIDCompletedDelegate is null)) {
                 this.onGetLocationsByIDCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLocationsByIDCompleted);
             }
             base.InvokeAsync(this.onBeginGetLocationsByIDDelegate, new object[] {
@@ -2984,13 +2984,13 @@ namespace WebAnnotation.Service {
         }
         
         public void GetLocationsForSectionAsync(long section, object userState) {
-            if ((this.onBeginGetLocationsForSectionDelegate == null)) {
+            if ((this.onBeginGetLocationsForSectionDelegate is null)) {
                 this.onBeginGetLocationsForSectionDelegate = new BeginOperationDelegate(this.OnBeginGetLocationsForSection);
             }
-            if ((this.onEndGetLocationsForSectionDelegate == null)) {
+            if ((this.onEndGetLocationsForSectionDelegate is null)) {
                 this.onEndGetLocationsForSectionDelegate = new EndOperationDelegate(this.OnEndGetLocationsForSection);
             }
-            if ((this.onGetLocationsForSectionCompletedDelegate == null)) {
+            if ((this.onGetLocationsForSectionCompletedDelegate is null)) {
                 this.onGetLocationsForSectionCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLocationsForSectionCompleted);
             }
             base.InvokeAsync(this.onBeginGetLocationsForSectionDelegate, new object[] {
@@ -3039,13 +3039,13 @@ namespace WebAnnotation.Service {
         }
         
         public void GetLocationChangesAsync(long section, long ModifiedAfterThisTime, object userState) {
-            if ((this.onBeginGetLocationChangesDelegate == null)) {
+            if ((this.onBeginGetLocationChangesDelegate is null)) {
                 this.onBeginGetLocationChangesDelegate = new BeginOperationDelegate(this.OnBeginGetLocationChanges);
             }
-            if ((this.onEndGetLocationChangesDelegate == null)) {
+            if ((this.onEndGetLocationChangesDelegate is null)) {
                 this.onEndGetLocationChangesDelegate = new EndOperationDelegate(this.OnEndGetLocationChanges);
             }
-            if ((this.onGetLocationChangesCompletedDelegate == null)) {
+            if ((this.onGetLocationChangesCompletedDelegate is null)) {
                 this.onGetLocationChangesCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetLocationChangesCompleted);
             }
             base.InvokeAsync(this.onBeginGetLocationChangesDelegate, new object[] {
@@ -3090,13 +3090,13 @@ namespace WebAnnotation.Service {
         }
         
         public void UpdateAsync(WebAnnotation.Service.Location[] locations, object userState) {
-            if ((this.onBeginUpdateDelegate == null)) {
+            if ((this.onBeginUpdateDelegate is null)) {
                 this.onBeginUpdateDelegate = new BeginOperationDelegate(this.OnBeginUpdate);
             }
-            if ((this.onEndUpdateDelegate == null)) {
+            if ((this.onEndUpdateDelegate is null)) {
                 this.onEndUpdateDelegate = new EndOperationDelegate(this.OnEndUpdate);
             }
-            if ((this.onUpdateCompletedDelegate == null)) {
+            if ((this.onUpdateCompletedDelegate is null)) {
                 this.onUpdateCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnUpdateCompleted);
             }
             base.InvokeAsync(this.onBeginUpdateDelegate, new object[] {
@@ -3140,13 +3140,13 @@ namespace WebAnnotation.Service {
         }
         
         public void CreateLocationLinkAsync(long SourceID, long TargetID, object userState) {
-            if ((this.onBeginCreateLocationLinkDelegate == null)) {
+            if ((this.onBeginCreateLocationLinkDelegate is null)) {
                 this.onBeginCreateLocationLinkDelegate = new BeginOperationDelegate(this.OnBeginCreateLocationLink);
             }
-            if ((this.onEndCreateLocationLinkDelegate == null)) {
+            if ((this.onEndCreateLocationLinkDelegate is null)) {
                 this.onEndCreateLocationLinkDelegate = new EndOperationDelegate(this.OnEndCreateLocationLink);
             }
-            if ((this.onCreateLocationLinkCompletedDelegate == null)) {
+            if ((this.onCreateLocationLinkCompletedDelegate is null)) {
                 this.onCreateLocationLinkCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnCreateLocationLinkCompleted);
             }
             base.InvokeAsync(this.onBeginCreateLocationLinkDelegate, new object[] {
@@ -3191,13 +3191,13 @@ namespace WebAnnotation.Service {
         }
         
         public void DeleteLocationLinkAsync(long SourceID, long TargetID, object userState) {
-            if ((this.onBeginDeleteLocationLinkDelegate == null)) {
+            if ((this.onBeginDeleteLocationLinkDelegate is null)) {
                 this.onBeginDeleteLocationLinkDelegate = new BeginOperationDelegate(this.OnBeginDeleteLocationLink);
             }
-            if ((this.onEndDeleteLocationLinkDelegate == null)) {
+            if ((this.onEndDeleteLocationLinkDelegate is null)) {
                 this.onEndDeleteLocationLinkDelegate = new EndOperationDelegate(this.OnEndDeleteLocationLink);
             }
-            if ((this.onDeleteLocationLinkCompletedDelegate == null)) {
+            if ((this.onDeleteLocationLinkCompletedDelegate is null)) {
                 this.onDeleteLocationLinkCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnDeleteLocationLinkCompleted);
             }
             base.InvokeAsync(this.onBeginDeleteLocationLinkDelegate, new object[] {
@@ -3486,13 +3486,13 @@ namespace WebAnnotation.Service {
         }
         
         public void getGraphAsync(int cellID, int numHops, object userState) {
-            if ((this.onBegingetGraphDelegate == null)) {
+            if ((this.onBegingetGraphDelegate is null)) {
                 this.onBegingetGraphDelegate = new BeginOperationDelegate(this.OnBegingetGraph);
             }
-            if ((this.onEndgetGraphDelegate == null)) {
+            if ((this.onEndgetGraphDelegate is null)) {
                 this.onEndgetGraphDelegate = new EndOperationDelegate(this.OnEndgetGraph);
             }
-            if ((this.ongetGraphCompletedDelegate == null)) {
+            if ((this.ongetGraphCompletedDelegate is null)) {
                 this.ongetGraphCompletedDelegate = new System.Threading.SendOrPostCallback(this.OngetGraphCompleted);
             }
             base.InvokeAsync(this.onBegingetGraphDelegate, new object[] {
@@ -3537,13 +3537,13 @@ namespace WebAnnotation.Service {
         }
         
         public void getStructuresByTypeIDAsync(int typeID, object userState) {
-            if ((this.onBegingetStructuresByTypeIDDelegate == null)) {
+            if ((this.onBegingetStructuresByTypeIDDelegate is null)) {
                 this.onBegingetStructuresByTypeIDDelegate = new BeginOperationDelegate(this.OnBegingetStructuresByTypeID);
             }
-            if ((this.onEndgetStructuresByTypeIDDelegate == null)) {
+            if ((this.onEndgetStructuresByTypeIDDelegate is null)) {
                 this.onEndgetStructuresByTypeIDDelegate = new EndOperationDelegate(this.OnEndgetStructuresByTypeID);
             }
-            if ((this.ongetStructuresByTypeIDCompletedDelegate == null)) {
+            if ((this.ongetStructuresByTypeIDCompletedDelegate is null)) {
                 this.ongetStructuresByTypeIDCompletedDelegate = new System.Threading.SendOrPostCallback(this.OngetStructuresByTypeIDCompleted);
             }
             base.InvokeAsync(this.onBegingetStructuresByTypeIDDelegate, new object[] {
@@ -3587,13 +3587,13 @@ namespace WebAnnotation.Service {
         }
         
         public void getSynapsesAsync(int cellID, object userState) {
-            if ((this.onBegingetSynapsesDelegate == null)) {
+            if ((this.onBegingetSynapsesDelegate is null)) {
                 this.onBegingetSynapsesDelegate = new BeginOperationDelegate(this.OnBegingetSynapses);
             }
-            if ((this.onEndgetSynapsesDelegate == null)) {
+            if ((this.onEndgetSynapsesDelegate is null)) {
                 this.onEndgetSynapsesDelegate = new EndOperationDelegate(this.OnEndgetSynapses);
             }
-            if ((this.ongetSynapsesCompletedDelegate == null)) {
+            if ((this.ongetSynapsesCompletedDelegate is null)) {
                 this.ongetSynapsesCompletedDelegate = new System.Threading.SendOrPostCallback(this.OngetSynapsesCompleted);
             }
             base.InvokeAsync(this.onBegingetSynapsesDelegate, new object[] {
@@ -3636,13 +3636,13 @@ namespace WebAnnotation.Service {
         }
         
         public void getSynapseStatsAsync(object userState) {
-            if ((this.onBegingetSynapseStatsDelegate == null)) {
+            if ((this.onBegingetSynapseStatsDelegate is null)) {
                 this.onBegingetSynapseStatsDelegate = new BeginOperationDelegate(this.OnBegingetSynapseStats);
             }
-            if ((this.onEndgetSynapseStatsDelegate == null)) {
+            if ((this.onEndgetSynapseStatsDelegate is null)) {
                 this.onEndgetSynapseStatsDelegate = new EndOperationDelegate(this.OnEndgetSynapseStats);
             }
-            if ((this.ongetSynapseStatsCompletedDelegate == null)) {
+            if ((this.ongetSynapseStatsCompletedDelegate is null)) {
                 this.ongetSynapseStatsCompletedDelegate = new System.Threading.SendOrPostCallback(this.OngetSynapseStatsCompleted);
             }
             base.InvokeAsync(this.onBegingetSynapseStatsDelegate, null, this.onEndgetSynapseStatsDelegate, this.ongetSynapseStatsCompletedDelegate, userState);
@@ -3685,13 +3685,13 @@ namespace WebAnnotation.Service {
         }
         
         public void getTopConnectedStructuresAsync(int num, object userState) {
-            if ((this.onBegingetTopConnectedStructuresDelegate == null)) {
+            if ((this.onBegingetTopConnectedStructuresDelegate is null)) {
                 this.onBegingetTopConnectedStructuresDelegate = new BeginOperationDelegate(this.OnBegingetTopConnectedStructures);
             }
-            if ((this.onEndgetTopConnectedStructuresDelegate == null)) {
+            if ((this.onEndgetTopConnectedStructuresDelegate is null)) {
                 this.onEndgetTopConnectedStructuresDelegate = new EndOperationDelegate(this.OnEndgetTopConnectedStructures);
             }
-            if ((this.ongetTopConnectedStructuresCompletedDelegate == null)) {
+            if ((this.ongetTopConnectedStructuresCompletedDelegate is null)) {
                 this.ongetTopConnectedStructuresCompletedDelegate = new System.Threading.SendOrPostCallback(this.OngetTopConnectedStructuresCompleted);
             }
             base.InvokeAsync(this.onBegingetTopConnectedStructuresDelegate, new object[] {
@@ -3734,13 +3734,13 @@ namespace WebAnnotation.Service {
         }
         
         public void getTopConnectedCellsAsync(object userState) {
-            if ((this.onBegingetTopConnectedCellsDelegate == null)) {
+            if ((this.onBegingetTopConnectedCellsDelegate is null)) {
                 this.onBegingetTopConnectedCellsDelegate = new BeginOperationDelegate(this.OnBegingetTopConnectedCells);
             }
-            if ((this.onEndgetTopConnectedCellsDelegate == null)) {
+            if ((this.onEndgetTopConnectedCellsDelegate is null)) {
                 this.onEndgetTopConnectedCellsDelegate = new EndOperationDelegate(this.OnEndgetTopConnectedCells);
             }
-            if ((this.ongetTopConnectedCellsCompletedDelegate == null)) {
+            if ((this.ongetTopConnectedCellsCompletedDelegate is null)) {
                 this.ongetTopConnectedCellsCompletedDelegate = new System.Threading.SendOrPostCallback(this.OngetTopConnectedCellsCompleted);
             }
             base.InvokeAsync(this.onBegingetTopConnectedCellsDelegate, null, this.onEndgetTopConnectedCellsDelegate, this.ongetTopConnectedCellsCompletedDelegate, userState);

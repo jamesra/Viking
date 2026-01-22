@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using GraphLib;
 using System;
 using System.Collections.Generic;
@@ -40,7 +40,7 @@ namespace AnnotationVizLib
         /// <summary>
         /// List of child structures involved in the link
         /// </summary>
-        public SortedSet<IStructureLink> Links = new SortedSet<IStructureLink>(new StructureLinkComparer());
+        public SortedSet<IStructureLink> Links = new(new StructureLinkComparer());
 
         public double TotalSourceArea
         {
@@ -98,23 +98,11 @@ namespace AnnotationVizLib
             set => Attributes["MaxZ"] = value;
         }
 
-        public override double Weight => (double)Links.Count();
+        public override double Weight => (double)Links.Count;
 
-        public ulong[] SourceIDs
-        {
-            get
-            {
-                return Links.Select(l => l.SourceID).ToArray();
-            }
-        }
+        public ulong[] SourceIDs => [.. Links.Select(l => l.SourceID)];
 
-        public ulong[] TargetIDs
-        {
-            get
-            {
-                return Links.Select(l => l.TargetID).ToArray();
-            }
-        }
+        public ulong[] TargetIDs => [.. Links.Select(l => l.TargetID)];
 
         public NeuronEdge(long SourceKey, long TargetKey, IStructureLink Link, string SynapseType)
             : base(SourceKey, TargetKey, Link.Directional)
@@ -150,10 +138,7 @@ namespace AnnotationVizLib
             return output;
         }
 
-        public override string ToString()
-        {
-            return this.SourceNodeKey.ToString() + "-" + this.TargetNodeKey.ToString() + " via " + this.SynapseType + " " + PrintChildLinks();
-        }
+        public override string ToString() => this.SourceNodeKey.ToString() + "-" + this.TargetNodeKey.ToString() + " via " + this.SynapseType + " " + PrintChildLinks();
 
         public int Compare(NeuronEdge x, NeuronEdge y)
         {
@@ -161,7 +146,7 @@ namespace AnnotationVizLib
             if (comparison != 0)
                 return comparison;
 
-            if (x is object && y is object)
+            if (x is not null && y is not null)
             {
                 return string.Compare(x.SynapseType, y.SynapseType);
             }
@@ -175,7 +160,7 @@ namespace AnnotationVizLib
             if (comparison != 0)
                 return comparison;
 
-            if (other is object)
+            if (other is not null)
             {
                 return this.SynapseType.CompareTo(other.SynapseType);
             }
@@ -186,7 +171,7 @@ namespace AnnotationVizLib
         public bool Equals(NeuronEdge other)
         {
             bool baseEquals = base.Equals(other);
-            if (baseEquals && (other is object))
+            if (baseEquals && (other is not null))
             {
                 return this.SynapseType.Equals(other.SynapseType);
             }
@@ -195,25 +180,15 @@ namespace AnnotationVizLib
         }
     }
 
-    public class NeuronNode : Node<long, NeuronEdge>
+    public class NeuronNode(long key, IStructureReadOnly value) : Node<long, NeuronEdge>(key)
     {
         //Structure this node represents
-        public IStructureReadOnly Structure;
+        public IStructureReadOnly Structure = value;
 
-        public IEnumerable<ulong> EdgeSourceChildStructureIDs { get { return this.Edges.Values.SelectMany(e => e.SelectMany(s => s.SourceIDs)); } }
-        public IEnumerable<ulong> EdgeTargetChildStructureIDs { get { return this.Edges.Values.SelectMany(e => e.SelectMany(s => s.TargetIDs)); } }
+        public IEnumerable<ulong> EdgeSourceChildStructureIDs => this.Edges.Values.SelectMany(e => e.SelectMany(s => s.SourceIDs));
+        public IEnumerable<ulong> EdgeTargetChildStructureIDs => this.Edges.Values.SelectMany(e => e.SelectMany(s => s.TargetIDs));
 
-        public NeuronNode(long key, IStructureReadOnly value)
-            : base(key)
-        {
-            this.Structure = value;
-
-        }
-
-        public override string ToString()
-        {
-            return this.Key.ToString() + " : " + Structure.Label;
-        }
+        public override string ToString() => this.Key.ToString() + " : " + Structure.Label;
     }
 
     public class NeuronGraph : Graph<long, NeuronNode, NeuronEdge>

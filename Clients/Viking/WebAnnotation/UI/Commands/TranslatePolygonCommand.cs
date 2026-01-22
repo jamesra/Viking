@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -19,14 +19,14 @@ namespace WebAnnotation.UI.Commands
         {
             get
             {
-                List<string> s = new List<string>(base.HelpStrings);
+                List<string> s = [.. base.HelpStrings];
                 s.AddRange(TranslateOpenCurveCommand.DefaultMouseHelpStrings);
                 s.Sort();
-                return s.ToArray();
+                return [.. s];
             }
         }
 
-        protected GridVector2 DeltaSum = new GridVector2(0, 0);
+        protected GridVector2 DeltaSum = new(0, 0);
 
         private readonly GridPolygon OriginalMosaicPolygon;
         public GridPolygon TransformedMosaicPolygon;
@@ -40,7 +40,7 @@ namespace WebAnnotation.UI.Commands
         /// The extra mosaic points transformed by the current command parameters
         /// </summary>
         public GridVector2[] TransformedExtraMosaicPoints { get; private set; }
-        private PointSetView _extraPointsView;
+        private readonly PointSetView _extraPointsView;
 
         public Microsoft.Xna.Framework.Color Color;
 
@@ -60,7 +60,7 @@ namespace WebAnnotation.UI.Commands
             OriginalMosaicPolygon = MosaicPolygon;
             Color = color;
             TransformedMosaicPolygon = CalculateTransformedPolygon();
-            _originalExtraMosaicPoints = null; 
+            _originalExtraMosaicPoints = null;
             CreateUpdateView();
             this.success_callback = success_callback;
         }
@@ -75,12 +75,12 @@ namespace WebAnnotation.UI.Commands
             OriginalMosaicPolygon = MosaicPolygon;
             Color = color;
             _originalExtraMosaicPoints = extra_mosaic_points;
-            
+
             if (_originalExtraMosaicPoints != null && _originalExtraMosaicPoints.Length > 0)
             {
                 _extraPointsView = new PointSetView(GetComplementaryColor(color), 14);
             }
-            
+
             TransformedMosaicPolygon = CalculateTransformedPolygon();
             TransformedExtraMosaicPoints = CalculateTransformedPoints();
             CreateUpdateView();
@@ -100,10 +100,7 @@ namespace WebAnnotation.UI.Commands
             Parent.PolygonOverlayEffect.InputLumaAlphaValue = oldValue;
 
             // Draw extra points if they exist
-            if (_extraPointsView != null)
-            {
-                _extraPointsView.Draw(graphicsDevice, scene, OverlayStyle.Luma);
-            }
+            _extraPointsView?.Draw(graphicsDevice, scene, OverlayStyle.Luma);
         }
 
         protected override void OnAngleChanged()
@@ -150,18 +147,18 @@ namespace WebAnnotation.UI.Commands
 
         protected GridVector2[] CalculateTransformedPoints()
         {
-            if(this._originalExtraMosaicPoints == null || this._originalExtraMosaicPoints.Length == 0)
+            if (this._originalExtraMosaicPoints is null || this._originalExtraMosaicPoints.Length == 0)
             {
                 return null;
             }
 
-            var mosaic_points = new List<GridVector2>();
-            var mosaic_centroid = TransformedMosaicPolygon.Centroid; 
+            List<GridVector2> mosaic_points = [];
+            var mosaic_centroid = TransformedMosaicPolygon.Centroid;
             if (_originalExtraMosaicPoints != null && _originalExtraMosaicPoints.Length > 0)
             {
                 mosaic_points.AddRange(_originalExtraMosaicPoints);
             }
-            GridVector2[] transformedPoints = mosaic_points.ToArray();
+            GridVector2[] transformedPoints = [.. mosaic_points];
             // Apply rotation around polygon centroid
             if (Angle != 0)
             {
@@ -177,7 +174,7 @@ namespace WebAnnotation.UI.Commands
             {
                 transformedPoints = transformedPoints.Translate(MosaicPositionDeltaSum);
             }
-            return transformedPoints.ToArray();
+            return [.. transformedPoints];
         }
 
         protected void CreateUpdateView()
@@ -188,12 +185,12 @@ namespace WebAnnotation.UI.Commands
 
             OriginalVolumePositionView = new CircleView(new GridCircle(OriginalVolumePosition, 16), Microsoft.Xna.Framework.Color.Red);
             TranslatedVolumePositionView = new CircleView(new GridCircle(TranslatedVolumePosition, 16), Microsoft.Xna.Framework.Color.Green);
-             
-            if(TransformedExtraMosaicPoints != null)
-            { 
-                var mapped = mapping.TrySectionToVolume(this.TransformedExtraMosaicPoints.ToArray(), out GridVector2[] transformedVolumePoints);
-                 
-                _extraPointsView.Points = transformedVolumePoints.ToArray();
+
+            if (TransformedExtraMosaicPoints != null)
+            {
+                var mapped = mapping.TrySectionToVolume([.. this.TransformedExtraMosaicPoints], out GridVector2[] transformedVolumePoints);
+
+                _extraPointsView.Points = [.. transformedVolumePoints];
                 _extraPointsView.UpdateViews();
             }
         }

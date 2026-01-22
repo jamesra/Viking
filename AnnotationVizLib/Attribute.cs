@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -13,10 +13,7 @@ namespace AnnotationVizLib
         public readonly string Name;
         public string Value { get; set; }
 
-        public override int GetHashCode()
-        {
-            return Name.GetHashCode();
-        }
+        public override int GetHashCode() => Name.GetHashCode();
 
         public ObjAttribute(string Name)
         {
@@ -52,7 +49,7 @@ namespace AnnotationVizLib
                 return null;
             }
 
-            StringBuilder sbuilder = new StringBuilder();
+            StringBuilder sbuilder = new();
             using (System.Xml.XmlWriter xwriter = XmlWriter.Create(sbuilder))
             {
                 xwriter.WriteStartElement("Structure");
@@ -87,7 +84,7 @@ namespace AnnotationVizLib
         public static List<ObjAttribute> Parse(string serverXml)
         {
             if (serverXml is null)
-                return new List<ObjAttribute>();
+                return [];
 
             if (serverXml.StartsWith("<"))
             {
@@ -106,7 +103,7 @@ namespace AnnotationVizLib
 
             XElement structureElem = doc.Element("Structure");
             if (structureElem is null)
-                return new List<ObjAttribute>();
+                return [];
 
             return ObjAttribute.ElementToAttribs(structureElem);
         }
@@ -118,9 +115,9 @@ namespace AnnotationVizLib
         /// <returns></returns>
         public static string AttributesToString(string xml)
         {
-            List<ObjAttribute> listAttribs = ObjAttribute.Parse(xml).Where(a => !string.IsNullOrEmpty(a.Name)).ToList();
+            List<ObjAttribute> listAttribs = [.. ObjAttribute.Parse(xml).Where(a => !string.IsNullOrEmpty(a.Name))];
 
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             bool FirstRow = true;
             foreach (ObjAttribute a in listAttribs)
             {
@@ -141,10 +138,10 @@ namespace AnnotationVizLib
 
         private static List<ObjAttribute> ElementToAttribs(XElement structureElem)
         {
-            List<ObjAttribute> listAttrib = new List<ObjAttribute>();
+            List<ObjAttribute> listAttrib = [];
             foreach (XElement attribElem in structureElem.Elements("Attrib"))
             {
-                ObjAttribute a = new ObjAttribute(attribElem.Attribute("Name").Value);
+                ObjAttribute a = new(attribElem.Attribute("Name").Value);
                 if (attribElem.Attribute("Value") != null)
                 {
                     a.Value = attribElem.Attribute("Value").Value;
@@ -161,9 +158,9 @@ namespace AnnotationVizLib
         public static List<ObjAttribute> TagStringsToList(IEnumerable<string> tags)
         {
             if (tags is null)
-                return new List<ObjAttribute>();
+                return [];
 
-            List<ObjAttribute> listTags = new List<ObjAttribute>();
+            List<ObjAttribute> listTags = [];
 
             foreach (string tagString in tags)
             {
@@ -232,7 +229,7 @@ namespace AnnotationVizLib
 
         public override bool Equals(object obj)
         {
-            if (!(obj is ObjAttribute Other))
+            if (obj is not ObjAttribute Other)
                 return false;
 
             return Other.Name == this.Name;

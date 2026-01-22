@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -8,15 +8,16 @@ using Viking.Common;
 using Viking.Common.UI;
 using Viking.UI.WPF.PropertyPages;
 using Viking.VolumeModel;
+using System.Windows.Forms;
 
 namespace Viking.ViewModels
 {
     /// <summary>
     /// Encapsulates a section within the UI
     /// </summary>
-    public class SectionViewModel : IUIObject, INotifyPropertyChanged, IContextMenu
+    public class SectionViewModel(VolumeViewModel Volume, Section section) : IUIObject, INotifyPropertyChanged, IContextMenu
     {
-        public readonly Section section;
+        public readonly Section section = section;
 
         /// <summary>
         /// Fires when the transform used to render the section changes
@@ -39,10 +40,7 @@ namespace Viking.ViewModels
 
         public string SubPath => section.SectionSubPath;
 
-        public override string ToString()
-        {
-            return section.ToString();
-        }
+        public override string ToString() => section.ToString();
 
         public string DefaultChannel => section.DefaultChannel;
         public IList<string> Channels => section.Channels;
@@ -62,13 +60,13 @@ namespace Viking.ViewModels
             {
                 if (section.ChannelInfoArray is null || section.ChannelInfoArray.Length == 0)
                 {
-                    ChannelInfo channel = new ChannelInfo
+                    ChannelInfo channel = new()
                     {
                         ChannelName = this.ActiveChannel,
                         SectionSource = ChannelInfo.SectionInfo.FIXED,
                         FixedSectionNumber = this.section.Number
                     };
-                    return new ChannelInfo[] { channel };
+                    return [channel];
                 }
                 return section.ChannelInfoArray;
             }
@@ -92,7 +90,7 @@ namespace Viking.ViewModels
         /// <summary>
         /// Fires when one of the reference sections has been changed
         /// </summary>
-        public event ReferenceSectionChangedEventHandler OnReferenceSectionChanged;
+        public event ReferenceSectionChangedEventHandler? OnReferenceSectionChanged;
 
         /// <summary>
         /// Pointer to a section above this one, user configurable to point to a properly registered section suitable as a reference
@@ -147,7 +145,7 @@ namespace Viking.ViewModels
         /// <summary>
         /// Pointer to a section below this one, user configurable to point to a properly registered section suitable as a reference
         /// </summary>
-        private Section _ReferenceSectionBelow = null;
+        private Section? _ReferenceSectionBelow = null;
 
         public Section ReferenceSectionBelow
         {
@@ -196,14 +194,8 @@ namespace Viking.ViewModels
 
         #endregion
 
-        private readonly VolumeViewModel _VolumeViewModel;
+        private readonly VolumeViewModel _VolumeViewModel = Volume;
         public VolumeViewModel VolumeViewModel => _VolumeViewModel;
-
-        public SectionViewModel(VolumeViewModel Volume, Section section)
-        {
-            this._VolumeViewModel = Volume;
-            this.section = section;
-        }
 
         #region IUIObject Members
 
@@ -213,10 +205,10 @@ namespace Viking.ViewModels
         {
             get
             {
-                System.Windows.Forms.ContextMenuStrip menu = new System.Windows.Forms.ContextMenuStrip(); 
-                var propertiesItem = new System.Windows.Forms.ToolStripMenuItem("Properties");
+                System.Windows.Forms.ContextMenuStrip menu = new();
+                ToolStripMenuItem propertiesItem = new("Properties");
                 propertiesItem.Click += ContextMenu_OnProperties;
-                menu.Items.Add(propertiesItem); 
+                menu.Items.Add(propertiesItem);
                 return menu;
             }
         }
@@ -230,12 +222,12 @@ namespace Viking.ViewModels
         }
 
 
-        private event System.ComponentModel.PropertyChangedEventHandler OnValueChanged;
-        internal event EventHandler OnBeforeDelete;
-        internal event EventHandler OnAfterDelete;
-        internal event EventHandler OnBeforeSave;
-        internal event EventHandler OnAfterSave;
-        private event System.Collections.Specialized.NotifyCollectionChangedEventHandler OnChildChanged;
+        private event System.ComponentModel.PropertyChangedEventHandler? OnValueChanged;
+        internal event EventHandler? OnBeforeDelete;
+        internal event EventHandler? OnAfterDelete;
+        internal event EventHandler? OnBeforeSave;
+        internal event EventHandler? OnAfterSave;
+        private event System.Collections.Specialized.NotifyCollectionChangedEventHandler? OnChildChanged;
 
         event System.ComponentModel.PropertyChangedEventHandler IUIObject.ValueChanged
         {
@@ -282,17 +274,11 @@ namespace Viking.ViewModels
 
         System.Drawing.Image IUIObject.SmallThumbnail => throw new NotImplementedException();
 
-        Type[] IUIObject.AssignableParentTypes => new Type[0];
+        Type[] IUIObject.AssignableParentTypes => [];
 
-        void IUIObject.SetParent(IUIObject? parent)
-        {
-            throw new NotImplementedException();
-        }
+        void IUIObject.SetParent(IUIObject? parent) => throw new NotImplementedException();
 
-        Viking.UI.Controls.GenericTreeNode IUIObject.CreateNode()
-        {
-            throw new NotImplementedException();
-        }
+        Viking.UI.Controls.GenericTreeNode IUIObject.CreateNode() => throw new NotImplementedException();
 
         int IUIObject.TreeImageIndex => throw new NotImplementedException();
 
@@ -301,19 +287,10 @@ namespace Viking.ViewModels
         #endregion
 
 
-        protected void ContextMenu_OnProperties(object sender, EventArgs e)
-        {
-            ShowPropertiesWindow();
-        }
-        private void ShowPropertiesWindow()
-        {
-            PropertySheetService.ShowDialog(this);
-        }
+        protected void ContextMenu_OnProperties(object sender, EventArgs e) => ShowPropertiesWindow();
+        private void ShowPropertiesWindow() => PropertySheetService.ShowDialog(this);
 
-        public async Task PrepareTransform(string transform)
-        {
-            await this.section.PrepareTransform(transform);
-        }
+        public async Task PrepareTransform(string transform) => await this.section.PrepareTransform(transform);
 
         public IVolumeToSectionTransform ActiveSectionToVolumeTransform => this._VolumeViewModel.GetSectionToVolumeTransform(this.section.Number);
 
@@ -358,10 +335,7 @@ namespace Viking.ViewModels
             }
         }
 
-        private void RaisePropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        private void RaisePropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
         public Section GetSectionToDrawForChannel(ChannelInfo channel)
         {
@@ -379,11 +353,11 @@ namespace Viking.ViewModels
                     sectionToDraw = this.ReferenceSectionBelow;
                     break;
                 case ChannelInfo.SectionInfo.FIXED:
+                    if (!channel.FixedSectionNumber.HasValue) break;
                     int SectionNumber = channel.FixedSectionNumber.Value;
-                    if (false == UI.State.volume.SectionViewModels.ContainsKey(SectionNumber))
-                        sectionToDraw = null;
-                    else
-                        sectionToDraw = UI.State.volume.SectionViewModels[SectionNumber].section;
+                    sectionToDraw = false == UI.State.volume.SectionViewModels.ContainsKey(SectionNumber)
+                        ? null
+                        : UI.State.volume.SectionViewModels[SectionNumber].section;
 
                     break;
             }

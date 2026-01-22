@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Forms;
@@ -23,13 +23,13 @@ namespace Viking.UI.Commands
 
         private readonly ObservableCollection<string> _ObservableHelpStrings;
 
-        public virtual ObservableCollection<string> ObservableHelpStrings => _ObservableHelpStrings; 
+        public virtual ObservableCollection<string> ObservableHelpStrings => _ObservableHelpStrings;
 
         private object? LastNearestObject = null;
 
         private string[] BuildHelpStrings()
         {
-            List<string> s = new List<string>();
+            List<string> s = [];
 
             if (LastNearestObject is null)
             {
@@ -57,13 +57,13 @@ namespace Viking.UI.Commands
 
             s.Sort();
 
-            return s.ToArray();
+            return [.. s];
         }
 
         private string[] GetHelpStringsFromObject(object obj)
         {
-            if (!(obj is IHelpStrings helpStrings))
-                return new string[] { };
+            if (obj is not IHelpStrings helpStrings)
+                return [];
 
             return helpStrings.HelpStrings;
         }
@@ -106,7 +106,7 @@ namespace Viking.UI.Commands
 
             base.OnMouseMove(sender, e);
         }
-  
+
         protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
         {
             //Middle mouse button is for Wacom Pen Support
@@ -136,11 +136,10 @@ namespace Viking.UI.Commands
                 //Right mouse button calls up context menu
                 ContextMenuStrip menu = null;
                 if (context_obj != null)
-                    if(context_obj is IContextMenu menu_obj)
-                    { 
+                    if (context_obj is IContextMenu menu_obj)
+                    {
                         menu = menu_obj.ContextMenu;
-                        if(menu is null)
-                            menu = new ContextMenuStrip();
+                        menu ??= new ContextMenuStrip();
                     }
                     else
                         menu = new ContextMenuStrip();

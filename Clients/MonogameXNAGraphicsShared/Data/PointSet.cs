@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -12,7 +12,7 @@ namespace VikingXNAGraphics
     public class PointSet : INotifyCollectionChanged, ICollection<GridVector2>
     {
         public double PointRadius = 2.0;
-        public List<GridCircle> Circles = new List<GridCircle>();
+        public List<GridCircle> Circles = [];
 
         public event NotifyCollectionChangedEventHandler CollectionChanged;
 
@@ -25,13 +25,7 @@ namespace VikingXNAGraphics
             Circles.AddRange(input.Select(p => new GridCircle(p, PointRadius)));
         }
 
-        public ICollection<GridVector2> Points
-        {
-            get
-            {
-                return Circles.Select(c => c.Center).ToList();
-            }
-        }
+        public ICollection<GridVector2> Points => [.. Circles.Select(c => c.Center)];
 
         public int Count => Points.Count;
 
@@ -43,10 +37,10 @@ namespace VikingXNAGraphics
         /// <param name="p"></param>
         public void Toggle(GridVector2 p)
         {
-            GridCircle newCircle = new GridCircle(p, PointRadius);
+            GridCircle newCircle = new(p, PointRadius);
             if (Circles.Any(c => c.Intersects(newCircle)))
             {
-                GridCircle[] removedCircles = Circles.Where(c => c.Intersects(newCircle)).ToArray();
+                GridCircle[] removedCircles = [.. Circles.Where(c => c.Intersects(newCircle))];
                 Circles.RemoveAll(c => c.Intersects(newCircle));
                 CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, removedCircles));
             }
@@ -59,7 +53,7 @@ namespace VikingXNAGraphics
 
         public void Add(GridVector2 item)
         {
-            GridCircle newCircle = new GridCircle(item, PointRadius);
+            GridCircle newCircle = new(item, PointRadius);
             Circles.Add(newCircle);
             CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, newCircle));
         }
@@ -77,19 +71,13 @@ namespace VikingXNAGraphics
             CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
-        public bool Contains(GridVector2 item)
-        {
-            return Points.Contains(item);
-        }
+        public bool Contains(GridVector2 item) => Points.Contains(item);
 
-        public void CopyTo(GridVector2[] array, int arrayIndex)
-        {
-            Points.CopyTo(array, arrayIndex);
-        }
+        public void CopyTo(GridVector2[] array, int arrayIndex) => Points.CopyTo(array, arrayIndex);
 
         public bool Remove(GridVector2 item)
         {
-            GridCircle[] remove = Circles.Where(c => c.Contains(item)).ToArray();
+            GridCircle[] remove = [.. Circles.Where(c => c.Contains(item))];
             bool nRemoved = Circles.RemoveAll(c => c.Contains(item)) > 0;
             if (CollectionChanged != null && remove.Length > 0)
             {
@@ -99,14 +87,8 @@ namespace VikingXNAGraphics
             return nRemoved;
         }
 
-        public IEnumerator<GridVector2> GetEnumerator()
-        {
-            return Points.GetEnumerator();
-        }
+        public IEnumerator<GridVector2> GetEnumerator() => Points.GetEnumerator();
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return Points.GetEnumerator();
-        }
+        IEnumerator IEnumerable.GetEnumerator() => Points.GetEnumerator();
     }
 }

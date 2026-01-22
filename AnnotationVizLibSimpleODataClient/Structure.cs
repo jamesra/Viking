@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,17 +9,14 @@ namespace AnnotationVizLib.SimpleOData
     {
         public static Structure FromDictionary(IDictionary<string, object> dict)
         {
-            Structure s = new Structure { ID = System.Convert.ToUInt64(dict["ID"]) };
+            Structure s = new() { ID = System.Convert.ToUInt64(dict["ID"]) };
 
             if (dict.ContainsKey("ParentID"))
             {
-                if (dict["ParentID"] is null)
-                    s.ParentID = new ulong?();
-                else
-                    s.ParentID = System.Convert.ToUInt64(dict["ParentID"]);
+                s.ParentID = dict["ParentID"] is null ? new ulong?() : System.Convert.ToUInt64(dict["ParentID"]);
             }
 
-            
+
             if (dict.TryGetValue("Label", out var label))
                 s.Label = (string)label;
 
@@ -67,14 +64,14 @@ namespace AnnotationVizLib.SimpleOData
         {
             get
             {
-                List<StructureLink> links = new List<StructureLink>();
+                List<StructureLink> links = [];
                 if (this.SourceOfLinks != null)
                     links.AddRange(SourceOfLinks);
 
                 if (TargetOfLinks != null)
                     links.AddRange(TargetOfLinks);
 
-                return links.Select(ll => ll as IStructureLink).ToList();
+                return [.. links.Select(ll => ll as IStructureLink)];
             }
         }
 
@@ -114,10 +111,7 @@ namespace AnnotationVizLib.SimpleOData
             get; internal set;
         }
 
-        public override string ToString()
-        {
-            return ID.ToString();
-        }
+        public override string ToString() => ID.ToString();
 
         public bool Equals(IStructureReadOnly other)
         {
@@ -130,9 +124,6 @@ namespace AnnotationVizLib.SimpleOData
             return false;
         }
 
-        public bool Equals(Structure other)
-        {
-            return this.Equals((IStructureReadOnly)other);
-        }
+        public bool Equals(Structure other) => this.Equals((IStructureReadOnly)other);
     }
 }

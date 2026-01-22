@@ -1,4 +1,4 @@
-﻿namespace Geometry
+namespace Geometry
 {
     public delegate double Poly(double x);
     public delegate double dPoly(double x);
@@ -7,11 +7,9 @@
     {
 
         // Legendre polynomials:
-        static double P0(double x)
-        { return 1.0; }
+        static double P0(double x) => 1.0;
 
-        static double P1(double x)
-        { return x; }
+        static double P1(double x) => x;
 
         static double P2(double x)
         {
@@ -46,17 +44,14 @@
         //----------------------------------------------------------------
         // A partial table of the Legendre polynomials
         // 
-        public static Poly[] P = { new Poly(P0), new Poly(P1), new Poly(P2), new Poly(P3), new Poly(P4), new Poly(P5), new Poly(P6) };
+        public static Poly[] P = [new(P0), new(P1), new(P2), new(P3), new(P4), new(P5), new(P6)];
 
         // first derivatives of the Legendre polynomials:
-        static double dP0(double x)
-        { return 0.0; }
+        static double dP0(double x) => 0.0;
 
-        static double dP1(double x)
-        { return 1.0; }
+        static double dP1(double x) => 1.0;
 
-        static double dP2(double x)
-        { return 3.0 * x; }
+        static double dP2(double x) => 3.0 * x;
 
         static double dP3(double x)
         {
@@ -85,6 +80,6 @@
         //----------------------------------------------------------------
         // A partial table of the derivatives of Legendre polynomials
         // 
-        public static dPoly[] dP = { new dPoly(dP0), new dPoly(dP1), new dPoly(dP2), new dPoly(dP3), new dPoly(dP4), new dPoly(dP5), new dPoly(dP6) };
+        public static dPoly[] dP = [new(dP0), new(dP1), new(dP2), new(dP3), new(dP4), new(dP5), new(dP6)];
     }
 }

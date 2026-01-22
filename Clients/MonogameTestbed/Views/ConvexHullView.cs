@@ -9,7 +9,7 @@ namespace MonogameTestbed
 {
     public class ConvexHullView
     {
-        public List<LineView> LineViews = new List<LineView>();
+        public List<LineView> LineViews = [];
         public double LineRadius = 1;
         public Color color;
 
@@ -17,7 +17,7 @@ namespace MonogameTestbed
         {
             GridVector2[] cv_points = ConvexHullExtension.ConvexHull(Points, out int[] original_indicies);
 
-            List<LineView> listLines = new List<LineView>();
+            List<LineView> listLines = [];
 
             for (int i = 0; i < cv_points.Length - 1; i++)
             {
@@ -34,9 +34,9 @@ namespace MonogameTestbed
 
         private List<LineView> ToLines(TriangleNet.Topology.DCEL.DcelMesh mesh, Color color)
         {
-            List<LineView> listLines = new List<LineView>();
+            List<LineView> listLines = [];
             //Create a map of Vertex ID's to DRMesh ID's
-            int[] IndexMap = mesh.Vertices.Select(v => v.ID).ToArray();
+            int[] IndexMap = [.. mesh.Vertices.Select(v => v.ID)];
 
             foreach (var e in mesh.Edges)
             {

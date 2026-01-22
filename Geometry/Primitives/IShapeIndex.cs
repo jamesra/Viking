@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Geometry
@@ -28,7 +28,7 @@ namespace Geometry
         /// <summary>
         /// The number of verticies in the shape the index refers to. Unique is in the name because for closed shapes the first and last index are identical and the duplicate is not counted.
         /// </summary>
-        int NumUnique { get;}
+        int NumUnique { get; }
 
         /// <summary>
         /// True if the vertex refers to an inner shape

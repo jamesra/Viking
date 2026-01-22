@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using ODataClient.ConnectomeDataModel;
 using System;
 using System.Collections.Generic;
@@ -9,14 +9,9 @@ namespace AnnotationVizLib.OData
     /// <summary>
     /// Represents a read-only adapter around an OData Structure object
     /// </summary>
-    class ODataStructureAdapter : IStructureReadOnly
+    class ODataStructureAdapter(Structure s) : IStructureReadOnly
     {
-        private readonly Structure structure;
-
-        public ODataStructureAdapter(Structure s)
-        {
-            this.structure = s ?? throw new ArgumentNullException();
-        }
+        private readonly Structure structure = s ?? throw new ArgumentNullException();
 
         public ulong ID => (ulong)structure.ID;
 
@@ -26,10 +21,10 @@ namespace AnnotationVizLib.OData
         {
             get
             {
-                List<StructureLink> links = structure.SourceOfLinks.ToList();
+                List<StructureLink> links = [.. structure.SourceOfLinks];
                 links.AddRange(structure.TargetOfLinks);
 
-                return links.Select(l => new ODataStructureLinkAdapter(l)).ToArray();
+                return [.. links.Select(l => new ODataStructureLinkAdapter(l))];
             }
         }
 
@@ -61,9 +56,6 @@ namespace AnnotationVizLib.OData
             return false;
         }
 
-        public bool Equals(Structure other)
-        {
-            return this.Equals((IStructureReadOnly)other);
-        }
+        public bool Equals(Structure other) => this.Equals((IStructureReadOnly)other);
     }
 }

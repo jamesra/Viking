@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Web.Configuration;
@@ -8,10 +8,7 @@ namespace VikingWebAppSettings
 {
     public static class UriExtensions
     {
-        public static Uri Append(this Uri uri, params string[] paths)
-        {
-            return new Uri(paths.Aggregate(uri.AbsoluteUri, (current, path) => string.Format("{0}/{1}", current.TrimEnd('/'), path.TrimStart('/'))));
-        }
+        public static Uri Append(this Uri uri, params string[] paths) => new Uri(paths.Aggregate(uri.AbsoluteUri, (current, path) => string.Format("{0}/{1}", current.TrimEnd('/'), path.TrimStart('/'))));
     }
 
     public static class AppSettings
@@ -36,47 +33,29 @@ namespace VikingWebAppSettings
             return setting ?? throw new ArgumentNullException(name + " not configured in AppSettings or environment variables");
         }
 
-        public static string GetDatabaseServer()
-        {
-            return GetApplicationSetting("DatabaseServer");
-        }
+        public static string GetDatabaseServer() => GetApplicationSetting("DatabaseServer");
 
-        public static string GetDatabaseCatalogName()
-        {
-            return GetApplicationSetting("DatabaseCatalog");
-        } 
+        public static string GetDatabaseCatalogName() => GetApplicationSetting("DatabaseCatalog");
 
-        public static string GetDefaultDatabaseConnectionStringName()
-        { 
-            return GetApplicationSetting("DatabaseConnectionName");
-        }
+        public static string GetDefaultDatabaseConnectionStringName() => GetApplicationSetting("DatabaseConnectionName");
 
-        public static string GetIdentityServerURLString()
-        {
-            return GetApplicationSetting("IdentityServer");
-        }
+        public static string GetIdentityServerURLString() => GetApplicationSetting("IdentityServer");
 
-        public static string GetDefaultConnectionString()
-        {
-            return GetConnectionString(GetDefaultDatabaseConnectionStringName());
-        }
+        public static string GetDefaultConnectionString() => GetConnectionString(GetDefaultDatabaseConnectionStringName());
 
-        public static string[] GetAllowedOrganizations()
-        {
-            return GetStringList("AllowedOrganizations");
-        }
+        public static string[] GetAllowedOrganizations() => GetStringList("AllowedOrganizations");
 
         public static string[] GetStringList(string name)
         {
             string setting = GetApplicationSetting(name);
             if (setting is null)
-                return new string[0];
+                return [];
 
-            return setting.Split(';').Select(s => s.Trim()).Where(s => s.Length > 0).ToArray();
+            return [.. setting.Split(';').Select(s => s.Trim()).Where(s => s.Length > 0)];
         }
 
-        public static string GetConnectionString(string name) 
-        { 
+        public static string GetConnectionString(string name)
+        {
             if (WebConfigurationManager.ConnectionStrings is null)
             {
                 throw new ArgumentException("WebConfigurationManager.ConnectionStrings is null");
@@ -91,7 +70,7 @@ namespace VikingWebAppSettings
             }
 
             string connectionString = WebConfigurationManager.ConnectionStrings[name].ConnectionString ?? throw new ArgumentException("Connection string " + name + " returned null ConnectionString");
-            
+
             // Substitute environment variables in connection string
             // Pattern: %VARIABLE_NAME% will be replaced with environment variable value
             connectionString = Regex.Replace(connectionString, @"%([A-Z_][A-Z0-9_]*)%", match =>
@@ -100,10 +79,10 @@ namespace VikingWebAppSettings
                 string envValue = Environment.GetEnvironmentVariable(envVarName);
                 return envValue ?? match.Value; // Return original if env var not found
             });
-            
+
             return connectionString;
         }
-          
+
         public static string WebServiceURL => GetApplicationSetting("EndpointURL");
 
         public static string VolumeURL => GetApplicationSetting("VolumeURL");
@@ -116,7 +95,7 @@ namespace VikingWebAppSettings
         {
             get
             {
-                System.Net.NetworkCredential userCredentials = new System.Net.NetworkCredential(GetApplicationSetting("EndpointUsername"), GetApplicationSetting("EndpointPassword"));
+                System.Net.NetworkCredential userCredentials = new(GetApplicationSetting("EndpointUsername"), GetApplicationSetting("EndpointPassword"));
                 return userCredentials;
             }
         }
@@ -129,14 +108,14 @@ namespace VikingWebAppSettings
             try
             {
 #endif
-                X = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("XScaleValue")),
-                                            GetApplicationSetting("XScaleUnits"));
+            X = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("XScaleValue")),
+                                        GetApplicationSetting("XScaleUnits"));
 
-                Y = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("YScaleValue")),
-                                            GetApplicationSetting("YScaleUnits"));
+            Y = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("YScaleValue")),
+                                        GetApplicationSetting("YScaleUnits"));
 
-                Z = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("ZScaleValue")),
-                                            GetApplicationSetting("ZScaleUnits"));
+            Z = new AxisUnits(System.Convert.ToDouble(GetApplicationSetting("ZScaleValue")),
+                                        GetApplicationSetting("ZScaleUnits"));
 #if DEBUG
             }
             catch(ArgumentException)
@@ -148,7 +127,7 @@ namespace VikingWebAppSettings
                 Z = new AxisUnits(90, "nm");
             }
 #endif
-            return new Scale(X, Y, Z); 
-        } 
+            return new Scale(X, Y, Z);
+        }
     }
 }

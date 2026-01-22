@@ -1,4 +1,5 @@
-﻿using Geometry;
+﻿using System;
+using Geometry;
 using Microsoft.Xna.Framework;
 using VikingXNAGraphics;
 using WebAnnotation.UI.Actions;
@@ -20,6 +21,7 @@ namespace WebAnnotation.UI.ActionViews
 
         public CreateNewLinkedLocationActionView(CreateNewLinkedLocationAction action)
         {
+            if (action == null) throw new ArgumentNullException(nameof(action));
             model = action;
             CreateDefaultVisuals();
         }
@@ -33,14 +35,7 @@ namespace WebAnnotation.UI.ActionViews
             {
                 StructureTypeObj structure_type = Store.StructureTypes.GetObjectByID(existing_loc.Parent.TypeID, false);
 
-                if (model != null)
-                {
-                    Color = structure_type.Color.ToXNAColor();
-                }
-                else
-                {
-                    Color = Color.White;
-                }
+                Color = model != null ? structure_type.Color.ToXNAColor() : Color.White;
             }
 
 
@@ -48,14 +43,14 @@ namespace WebAnnotation.UI.ActionViews
             {
                 GridPolygon smoothedPoly = (GridPolygon)model.NewVolumeShape; //NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
                 Shape = smoothedPoly;
-                SolidPolygonView view = new SolidPolygonView(smoothedPoly, Color);
+                SolidPolygonView view = new(smoothedPoly, Color);
                 Active = view;
             }
             else if (model.NewVolumeShape.ShapeType.IsOpen())
             {
                 GridPolyline smoothedPoly = (GridPolyline)model.NewVolumeShape; //NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
                 Shape = smoothedPoly;
-                PolyLineView view = new PolyLineView(smoothedPoly, Color);
+                PolyLineView view = new(smoothedPoly, Color);
                 Active = view;
             }
 

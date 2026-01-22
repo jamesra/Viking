@@ -1,4 +1,6 @@
-﻿namespace DataExport.Controllers;
+using System.Text;
+
+namespace DataExport.Controllers;
 
 /// <summary>
 /// Helper class to generate names for generated files.
@@ -28,9 +30,9 @@ public static class OutputNameGenerator
             return "ALL";
         }
 
-        var sb = new System.Text.StringBuilder(maxLength);
+        StringBuilder sb = new(maxLength);
         bool first = true;
-        
+
         foreach (long id in requestIDs)
         {
             if (!first)
@@ -67,10 +69,10 @@ public static class RequestVariables
         // A hack, but should only occur in unit testing
         if (queryData is null)
         {
-            return new long[] { 180, 476, 514 };
+            return [180, 476, 514];
         }
 
-        var ids = new SortedSet<long>();
+        SortedSet<long> ids = [];
 
         ids.UnionWith(ParseIDString(queryData["id"].ToString(), odataUrl));
         ids.UnionWith(ParseIDString(queryData["ids"].ToString(), odataUrl));
@@ -105,9 +107,9 @@ public static class RequestVariables
             return Array.Empty<long>();
         }
 
-        string[] parts = idListStr.Split(new[] { ';', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        var ids = new List<long>(parts.Length);
-        
+        string[] parts = idListStr.Split([';', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        List<long> ids = new(parts.Length);
+
         foreach (string idStr in parts)
         {
             try
@@ -124,7 +126,7 @@ public static class RequestVariables
 
         return ids;
     }
-    
+
     /// <summary>
     /// Retrieves IDs from an OData query string.
     /// </summary>

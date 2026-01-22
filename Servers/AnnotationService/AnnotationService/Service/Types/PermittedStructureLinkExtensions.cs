@@ -4,7 +4,7 @@
     {
         public static PermittedStructureLink Create(this ConnectomeDataModel.PermittedStructureLink obj)
         {
-            PermittedStructureLink psl = new PermittedStructureLink();
+            PermittedStructureLink psl = new();
             ConnectomeDataModel.PermittedStructureLink db = obj;
 
             psl.SourceTypeID = db.SourceTypeID;

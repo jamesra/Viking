@@ -1,12 +1,12 @@
-﻿namespace WebAnnotation.WPF.MockData
+namespace WebAnnotation.WPF.MockData
 {
     public class MockFavoriteStructureTypes
-    {  
-        public MockStructureTypes RootStructureTypes; 
+    {
+        public MockStructureTypes RootStructureTypes;
         public MockStructureTypes FavoriteStructureTypeIDs;
 
         public MockFavoriteStructureTypes()
-        { 
-        } 
+        {
+        }
     }
 }

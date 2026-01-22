@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Geometry.Transforms;
@@ -22,7 +22,7 @@ namespace Geometry
 
         bool CanInverseTransform(in GridVector2 Point);
         bool TryInverseTransform(in GridVector2 Point, out GridVector2 v);
-        bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] v); 
+        bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] v);
     }
 
     /// <summary>
@@ -72,7 +72,7 @@ namespace Geometry
         GridRectangle ControlBounds { get; }
         GridRectangle MappedBounds { get; }
     }
-     
+
 
     public interface IControlPointTriangulation : ITransformControlPoints
     {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Runtime.Serialization;
 
@@ -7,15 +7,9 @@ namespace Geometry.Transforms
     [Serializable]
     public class IdentityTransform : Geometry.IContinuousTransform
     {
-        public bool CanInverseTransform(in GridVector2 Point)
-        {
-            return true;
-        }
+        public bool CanInverseTransform(in GridVector2 Point) => true;
 
-        public bool CanTransform(in GridVector2 Point)
-        {
-            return true;
-        }
+        public bool CanTransform(in GridVector2 Point) => true;
 
         public GridVector2[] InverseTransform(in GridVector2[] Points)
         {
@@ -24,10 +18,7 @@ namespace Geometry.Transforms
             return transformedP;
         }
 
-        public GridVector2 InverseTransform(in GridVector2 Point)
-        {
-            return Point;
-        }
+        public GridVector2 InverseTransform(in GridVector2 Point) => Point;
 
         public GridVector2[] Transform(in GridVector2[] Points)
         {
@@ -36,21 +27,15 @@ namespace Geometry.Transforms
             return transformedP;
         }
 
-        public GridVector2 Transform(in GridVector2 Point)
-        {
-            return Point;
-        }
+        public GridVector2 Transform(in GridVector2 Point) => Point;
 
-        public void Translate(in GridVector2 vector)
-        {
-            throw new NotImplementedException();
-        }
+        public void Translate(in GridVector2 vector) => throw new NotImplementedException();
 
         public bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] transformedP)
         {
             transformedP = new GridVector2[Points.Length];
             Points.CopyTo(transformedP, 0);
-            return transformedP.Select(p => true).ToArray();
+            return [.. transformedP.Select(p => true)];
         }
 
         public bool TryInverseTransform(in GridVector2 Point, out GridVector2 v)
@@ -63,7 +48,7 @@ namespace Geometry.Transforms
         {
             transformedP = new GridVector2[Points.Length];
             Points.CopyTo(transformedP, 0);
-            return transformedP.Select(p => true).ToArray();
+            return [.. transformedP.Select(p => true)];
         }
 
         public bool TryTransform(in GridVector2 Point, out GridVector2 v)
@@ -146,10 +131,7 @@ namespace Geometry.Transforms
         /// <param name="BtoC"></param>
         /// <param name="AtoB"></param>
         /// <returns></returns>
-        public static MappingGridVector2[] TransformControlPoints(this IContinuousTransform BtoC, MappingGridVector2[] AtoB)
-        {
-            return AtoB.Select(mp => new MappingGridVector2(BtoC.Transform(mp.ControlPoint), mp.MappedPoint)).ToArray();
-        }
+        public static MappingGridVector2[] TransformControlPoints(this IContinuousTransform BtoC, MappingGridVector2[] AtoB) => [.. AtoB.Select(mp => new MappingGridVector2(BtoC.Transform(mp.ControlPoint), mp.MappedPoint))];
         public static IContinuousTransform TransformTransform(this IContinuousTransform BtoC, ITransformControlPoints AtoB)
         {
             StosTransformInfo BtoCInfo = ((ITransformInfo)BtoC)?.Info as StosTransformInfo;

@@ -1,46 +1,28 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Geometry
 {
-    public readonly struct Coord : IComparer<Coord>, IComparable<Coord>
+    public readonly struct Coord(int ix, int iy) : IComparer<Coord>, IComparable<Coord>
     {
-        public readonly int iX;
-        public readonly int iY;
+        public readonly int iX = ix;
+        public readonly int iY = iy;
 
-        public Coord(int ix, int iy)
-        {
-            this.iX = ix;
-            this.iY = iy;
-        }
-
-        public override string ToString()
-        {
-            return iX.ToString() + "," + iY.ToString();
-        }
+        public override string ToString() => iX.ToString() + "," + iY.ToString();
 
         public override bool Equals(object obj)
         {
-            if(obj is Coord coord)
+            if (obj is Coord coord)
                 return this == coord;
 
             return false;
         }
 
-        public override int GetHashCode()
-        {
-            return iX * iY;
-        }
+        public override int GetHashCode() => iX * iY;
 
-        public static bool operator ==(Coord A, Coord B)
-        {
-            return ((A.iX == B.iX) && (A.iY == B.iY));
-        }
+        public static bool operator ==(Coord A, Coord B) => ((A.iX == B.iX) && (A.iY == B.iY));
 
-        public static bool operator !=(Coord A, Coord B)
-        {
-            return !((A.iX == B.iX) && (A.iY == B.iY));
-        }
+        public static bool operator !=(Coord A, Coord B) => !((A.iX == B.iX) && (A.iY == B.iY));
 
         public int Compare(Coord x, Coord y)
         {
@@ -53,9 +35,6 @@ namespace Geometry
             return diff;
         }
 
-        public int CompareTo(Coord other)
-        {
-            return Compare(this, other);
-        }
+        public int CompareTo(Coord other) => Compare(this, other);
     }
 }

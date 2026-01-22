@@ -1,4 +1,4 @@
-﻿using Geometry.Meshing;
+using Geometry.Meshing;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -8,36 +8,18 @@ namespace MorphologyMesh
 {
 
 
-    public class MorphMeshEdge : Edge, IEquatable<MorphMeshEdge>
+    public class MorphMeshEdge(EdgeType type, int A, int B) : Edge(A, B), IEquatable<MorphMeshEdge>
     {
-        public EdgeType Type;
+        public EdgeType Type = type;
 
         public bool MatchingOrientation = false; //True if this edge is outside of one shape and inside another
 
-        public MorphMeshEdge(EdgeType type, int A, int B) : base(A, B)
-        {
-            Type = type;
-        }
+        public override void AddFace(IFace f) => base.AddFace(f);//Debug.Assert(this.Faces.Count < 3, string.Format("{0} was extra face on {1}", f, this));
 
-        public override void AddFace(IFace f)
-        {
-            base.AddFace(f);
-            //Debug.Assert(this.Faces.Count < 3, string.Format("{0} was extra face on {1}", f, this));
-        }
+        public new static IEdge Create(int A, int B) => new MorphMeshEdge(EdgeType.UNKNOWN, A, B);
 
-        public new static IEdge Create(int A, int B)
-        {
-            return new MorphMeshEdge(EdgeType.UNKNOWN, A, B);
-        }
+        public new ImmutableSortedSet<MorphMeshFace> Faces => new SortedSet<MorphMeshFace>(this._Faces.Select(f => (MorphMeshFace)f)).ToImmutableSortedSet();
 
-        public new ImmutableSortedSet<MorphMeshFace> Faces
-        {
-            get
-            {
-                return new SortedSet<MorphMeshFace>(this._Faces.Select(f => (MorphMeshFace)f)).ToImmutableSortedSet();
-            }
-        }
-       
         /// <summary>
         /// Returns false if the edge requires additional faces to complete the meshing of the morphology.
         /// Currently used for Bajaj meshing, where CONTOUR edges require one face, and all others require two.
@@ -64,15 +46,9 @@ namespace MorphologyMesh
             return new MorphMeshEdge(EdgeType.UNKNOWN, A, B);
         }
 
-        public bool Equals(MorphMeshEdge other)
-        {
-            return base.Equals(other);
-        }
+        public bool Equals(MorphMeshEdge other) => base.Equals(other);
 
-        public override string ToString()
-        {
-            return base.ToString() + " " + this.Type.ToString();
-        }
+        public override string ToString() => base.ToString() + " " + this.Type.ToString();
     }
 
 }

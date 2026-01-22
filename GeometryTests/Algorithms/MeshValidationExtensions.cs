@@ -33,7 +33,7 @@ namespace GeometryTests.Algorithms
         /// <returns></returns>
         public static bool AreTriangulatedFacesCCW(this IReadOnlyMesh2D<IVertex2D> mesh)
         {
-            foreach (Face f in mesh.Faces)
+            foreach (Face f in mesh.Faces.Cast<Face>())
             {
                 bool IsClockwise = mesh.IsClockwise(f);
                 //Assert.IsTrue(IsDelaunay, string.Format("{0} is not a delaunay triangle", f));
@@ -53,7 +53,7 @@ namespace GeometryTests.Algorithms
         /// <returns></returns>
         public static bool AreTriangulatedFacesColinear(this IReadOnlyMesh2D<IVertex2D> mesh)
         {
-            foreach (Face f in mesh.Faces)
+            foreach (Face f in mesh.Faces.Cast<Face>())
             {
                 RotationDirection winding = mesh.Winding(f);
                 //Assert.IsTrue(IsDelaunay, string.Format("{0} is not a delaunay triangle", f));
@@ -62,9 +62,9 @@ namespace GeometryTests.Algorithms
                 if (winding == RotationDirection.COLINEAR)
                     return true;
 
-                if (f.iVerts.Count() == 3)
+                if (f.iVerts.Length == 3)
                 {
-                    GridTriangle tri = new GridTriangle(mesh[f.iVerts].Select(v => v.Position).ToArray());
+                    GridTriangle tri = new([.. mesh[f.iVerts].Select(v => v.Position)]);
                     if (tri.Area == 0)
                         return true;
                 }
@@ -101,7 +101,7 @@ namespace GeometryTests.Algorithms
         public static Property AreTriangulatedFacesDelaunay(this TriangulationMesh<IVertex2D> mesh, out bool result)
         {
             result = true;
-            foreach (Face f in mesh.Faces)
+            foreach (Face f in mesh.Faces.Cast<Face>())
             {
                 bool IsDelaunay = mesh.IsTriangleDelaunay(f);
                 //Assert.IsTrue(IsDelaunay, string.Format("{0} is not a delaunay triangle", f));

@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework.Input;
+using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
 
@@ -9,7 +9,7 @@ namespace MonogameTestbed
         private KeyboardState LastState;
         public KeyboardState CurrentState;
 
-        private readonly Dictionary<Keys, DateTime> KeyPressStart = new Dictionary<Keys, DateTime>();
+        private readonly Dictionary<Keys, DateTime> KeyPressStart = [];
 
         public void Update(KeyboardState state)
         {
@@ -20,11 +20,11 @@ namespace MonogameTestbed
 
         private void UpdatePressedKeys()
         {
-            SortedSet<Keys> removedKeys = new SortedSet<Keys>(LastState.GetPressedKeys());
+            SortedSet<Keys> removedKeys = [.. LastState.GetPressedKeys()];
             removedKeys.ExceptWith(CurrentState.GetPressedKeys());
 
             //Remove the missing keys from the KeyPresStart times
-            foreach(var key in removedKeys)
+            foreach (var key in removedKeys)
             {
                 try
                 {
@@ -33,9 +33,9 @@ namespace MonogameTestbed
                 catch (KeyNotFoundException) { }
             }
 
-            foreach(var key in CurrentState.GetPressedKeys())
+            foreach (var key in CurrentState.GetPressedKeys())
             {
-                if(KeyPressStart.ContainsKey(key) == false)
+                if (KeyPressStart.ContainsKey(key) == false)
                 {
                     KeyPressStart[key] = DateTime.UtcNow;
                 }
@@ -44,7 +44,7 @@ namespace MonogameTestbed
 
         public TimeSpan PressDuration(Keys key)
         {
-            if(KeyPressStart.TryGetValue(key, out var timestamp) == false)
+            if (KeyPressStart.TryGetValue(key, out var timestamp) == false)
             {
                 return TimeSpan.Zero;
             }
@@ -58,13 +58,13 @@ namespace MonogameTestbed
         /// <param name="key"></param>
         /// <returns></returns>
         public bool Pressed(Keys key)
-        {  
-            if(LastState.IsKeyDown(key) == false && CurrentState.IsKeyDown(key) == true )
+        {
+            if (LastState.IsKeyDown(key) == false && CurrentState.IsKeyDown(key) == true)
             {
                 return true;
             }
 
-            return false; 
+            return false;
         }
 
         /// <summary>
@@ -72,9 +72,6 @@ namespace MonogameTestbed
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        public bool Down(Keys key)
-        {
-            return CurrentState.IsKeyDown(key);
-        }
+        public bool Down(Keys key) => CurrentState.IsKeyDown(key);
     }
 }

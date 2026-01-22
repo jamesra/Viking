@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationService.Types;
 using System;
 using System.Diagnostics;
@@ -7,15 +7,12 @@ using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
-      
+
     public class LocationLinkObj : WCFObjBaseWithKey<LocationLinkKey, LocationLink>, ILocationLink
     {
-        public override LocationLinkKey ID => new LocationLinkKey(this);
+        public override LocationLinkKey ID => new(this);
 
-        public override string ToString()
-        {
-            return ID.ToString();
-        }
+        public override string ToString() => ID.ToString();
 
         public override bool Equals(object obj)
         {
@@ -29,33 +26,19 @@ namespace WebAnnotationModel
             return (A == other.A) && (B == other.B);
         }
 
-        protected override int GenerateHashCode()
-        {
-            return ID.GetHashCode();
-        }
+        protected override int GenerateHashCode() => ID.GetHashCode();
 
-        public override int GetHashCode()
-        {
-            return ID.GetHashCode();
-        }
+        public override int GetHashCode() => ID.GetHashCode();
 
-        public static bool operator ==(LocationLinkObj A, LocationLinkObj B)
-        {
-            return object.Equals(A, B);
-
-            /*if (object.Equals(A, B))
+        public static bool operator ==(LocationLinkObj A, LocationLinkObj B) => object.Equals(A, B);/*if (object.Equals(A, B))
                 return true;
             if (object.Equals(A, null) || object.Equals(B, null))
                 return false;  
 
             return (A.ID == B.ID);
             */
-        }
 
-        public static bool operator !=(LocationLinkObj A, LocationLinkObj B)
-        {
-            return !object.Equals(A, B);
-            /*
+        public static bool operator !=(LocationLinkObj A, LocationLinkObj B) => !object.Equals(A, B);/*
             if (object.Equals(A, B))
                 return false;
             if(object.Equals(A,null) || object.Equals(B,null))                
@@ -63,7 +46,6 @@ namespace WebAnnotationModel
 
             return !((A.ID == B.ID));
             */
-        }
 
         public int CompareTo(LocationLinkKey other)
         {
@@ -73,10 +55,7 @@ namespace WebAnnotationModel
                 return (int)(other.B - B);
         }
 
-        bool IEquatable<ILocationLink>.Equals(ILocationLink other)
-        {
-            throw new NotImplementedException();
-        }
+        bool IEquatable<ILocationLink>.Equals(ILocationLink other) => throw new NotImplementedException();
 
         public long A => Data.SourceID < Data.TargetID ? Data.SourceID : Data.TargetID;
 
@@ -88,7 +67,7 @@ namespace WebAnnotationModel
 
         public LocationLinkObj()
         {
-            LocationLink link = new LocationLink();
+            LocationLink link = new();
             this.Data = link;
         }
 
@@ -96,7 +75,7 @@ namespace WebAnnotationModel
                                long IDB)
         {
             Debug.Assert(IDA != IDB);
-            LocationLink link = new LocationLink
+            LocationLink link = new()
             {
                 SourceID = IDA < IDB ? IDA : IDB,
                 TargetID = IDA < IDB ? IDB : IDA

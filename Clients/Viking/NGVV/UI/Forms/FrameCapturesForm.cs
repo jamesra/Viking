@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
@@ -16,11 +16,11 @@ namespace Viking.UI.Forms
 
     public partial class FrameCapturesForm : Form
     {
-        public FrameCapture[] Frames = new FrameCapture[0];
+        public FrameCapture[] Frames = [];
 
         public string Prefix = Properties.Settings.Default.FrameExportPrefix;
         public string Path = Properties.Settings.Default.FrameExportPath;
-          
+
         private const int iX = 0;
         private const int iY = 1;
         private const int iZ = 2;
@@ -44,12 +44,12 @@ namespace Viking.UI.Forms
             {
                 this.textPath.Text = System.Environment.CurrentDirectory;
             }
-            else if(System.IO.Directory.Exists(this.Path) == false)
-            {
-                this.textPath.Text = System.Environment.CurrentDirectory;
-            }
             else
-                this.textPath.Text = Environment.ExpandEnvironmentVariables(Path);
+            {
+                this.textPath.Text = System.IO.Directory.Exists(this.Path) == false
+                    ? Environment.CurrentDirectory
+                    : Environment.ExpandEnvironmentVariables(Path);
+            }
         }
 
         private void FrameCapturesForm_KeyDown(object sender, KeyEventArgs e)
@@ -58,7 +58,7 @@ namespace Viking.UI.Forms
                 (e.Shift && e.KeyCode == Keys.Insert))
             {
                 string Data = Clipboard.GetText();
-                string[] lines = Data.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                string[] lines = Data.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
 
                 DataGridViewSelectedRowCollection rows = this.dataGridView.SelectedRows;
                 int iStartRow = int.MaxValue;
@@ -75,7 +75,7 @@ namespace Viking.UI.Forms
                 int iRow = 0;
                 for (iRow = iStartRow; iRow < iStartRow + lines.Length; iRow++)
                 {
-                    string[] parts = lines[iRow - iStartRow].Split(new char[] { '\t' });
+                    string[] parts = lines[iRow - iStartRow].Split(['\t']);
                     int iWriteRow = iRow;
                     if (this.dataGridView.Rows.Count <= iRow)
                     {
@@ -95,13 +95,13 @@ namespace Viking.UI.Forms
         {
             //These need to be initialized before we create frame structures
             this.Prefix = this.textPrefix.Text;
-            
+
             Properties.Settings.Default.FrameExportPrefix = this.Prefix;
-            
-             
+
+
             this.Path = this.textPath.Text;
 
-            if(System.IO.Directory.Exists(this.Path))
+            if (System.IO.Directory.Exists(this.Path))
                 Properties.Settings.Default.FrameExportPath = this.Path;
 
             Properties.Settings.Default.Save();
@@ -109,12 +109,12 @@ namespace Viking.UI.Forms
             int FirstFrameNum = System.Convert.ToInt32(this.numStartFrame.Value);
 
             //Walk each cell and create a screenshot object
-            List<FrameCapture> listFrames = new List<FrameCapture>();
+            List<FrameCapture> listFrames = [];
             foreach (DataGridViewRow row in dataGridView.Rows)
             {
                 try
                 {
-                    FrameCapture frame = new FrameCapture();
+                    FrameCapture frame = new();
 
                     double X = System.Convert.ToDouble(row.Cells[iX].Value);
                     double Y = System.Convert.ToDouble(row.Cells[iY].Value);
@@ -159,23 +159,21 @@ namespace Viking.UI.Forms
                         return;
                 }
             }
-              
-            this.Frames = listFrames.ToArray();
+
+            this.Frames = [.. listFrames];
             this.DialogResult = DialogResult.OK;
             this.Close();
         }
 
         private void btnBrowse_Click(object sender, EventArgs e)
         {
-            using (FolderBrowserDialog browserDlg = new FolderBrowserDialog())
+            using FolderBrowserDialog browserDlg = new();
+            //browserDlg.SelectedPath = System.Environment.CurrentDirectory;
+            browserDlg.Description = "Choose screenshot file name";
+            DialogResult result = browserDlg.ShowDialog(this);
+            if (result == DialogResult.OK)
             {
-                //browserDlg.SelectedPath = System.Environment.CurrentDirectory;
-                browserDlg.Description = "Choose screenshot file name";
-                DialogResult result = browserDlg.ShowDialog(this);
-                if (result == DialogResult.OK)
-                {
-                    this.textPath.Text = Environment.ExpandEnvironmentVariables(browserDlg.SelectedPath);
-                }
+                this.textPath.Text = Environment.ExpandEnvironmentVariables(browserDlg.SelectedPath);
             }
 
 

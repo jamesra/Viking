@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Viking.Common;
 
@@ -32,10 +32,7 @@ namespace Viking.VolumeModel
             this.MaxCacheSize = 1 << 21;
         }
 
-        protected static string TileKey(string textureFileName, string TransformName)
-        {
-            return textureFileName + " " + TransformName;
-        }
+        protected static string TileKey(string textureFileName, string TransformName) => textureFileName + " " + TransformName;
 
         protected override TileViewModel Fetch(TileCacheEntry key)
         {
@@ -84,19 +81,13 @@ namespace Viking.VolumeModel
 
         protected override TileCacheEntry CreateEntry(string key, TileViewModel value)
         {
-            TileCacheEntry entry = new TileCacheEntry(key, value);
+            TileCacheEntry entry = new(key, value);
             return entry;
         }
 
-        protected override TileCacheEntry CreateEntry(string key, Func<string, TileViewModel> valueFactory)
-        {
-            return new TileCacheEntry(key, valueFactory(key));
-        }
+        protected override TileCacheEntry CreateEntry(string key, Func<string, TileViewModel> valueFactory) => new TileCacheEntry(key, valueFactory(key));
 
-        protected override Task<TileCacheEntry> CreateEntryAsync(string key, TileViewModel value)
-        {
-            return Task.FromResult(CreateEntry(key, value));
-        }
+        protected override Task<TileCacheEntry> CreateEntryAsync(string key, TileViewModel value) => Task.FromResult(CreateEntry(key, value));
 
         /*
         /// <summary>
@@ -114,13 +105,9 @@ namespace Viking.VolumeModel
         /// Only one of these methods should be running at a time or much of the cache could be deleted
         /// </summary>
         /// <param name="SafeTiles"></param>
-        protected override void OnCheckpointFailed(TileCacheEntry entry)
-        {
+        protected override void OnCheckpointFailed(TileCacheEntry entry) =>
             // Trace.WriteLine("OnCheckpointFailed for transform: " + entry.Key);
-            base.OnCheckpointFailed(entry);
-            //
-            //RemoveEntry(entry);
-        }
+            base.OnCheckpointFailed(entry);////RemoveEntry(entry);
 
     }
 }

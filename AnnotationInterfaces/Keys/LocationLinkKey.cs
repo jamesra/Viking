@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace Viking.AnnotationServiceTypes
 {
-    public readonly struct LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>, IEquatable<ILocationLink>, ILocationLinkReadOnly,  IEquatable<ILocationLinkReadOnly>, IComparable<ILocationLinkReadOnly>, ILocationLink
+    public readonly struct LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>, IEquatable<ILocationLink>, ILocationLinkReadOnly, IEquatable<ILocationLinkReadOnly>, IComparable<ILocationLinkReadOnly>, ILocationLink
     {
         public readonly long A;
         public readonly long B;
@@ -44,27 +44,14 @@ namespace Viking.AnnotationServiceTypes
                 return (int)(other.B - B);
         }
 
-        public override string ToString()
-        {
-            return A.ToString() + " - " + B.ToString();
-        }
+        public override string ToString() => A.ToString() + " - " + B.ToString();
 
-        public override int GetHashCode()
-        {
-            return (int)(A % int.MaxValue);
-        }
+        public override int GetHashCode() => (int)(A % int.MaxValue);
 
-        public static bool operator ==(LocationLinkKey A, LocationLinkKey B)
-        {
-            return A.A == B.A && A.B == B.B || A.A == B.B && A.B == B.A;
-        }
+        public static bool operator ==(LocationLinkKey A, LocationLinkKey B) => A.A == B.A && A.B == B.B || A.A == B.B && A.B == B.A;
 
-        public static bool operator !=(LocationLinkKey A, LocationLinkKey B)
-        {
-            
-            return !(A == B);
-        }
-         
+        public static bool operator !=(LocationLinkKey A, LocationLinkKey B) => !(A == B);
+
         public override bool Equals(object obj)
         {
             if (System.Object.Equals(this, obj))
@@ -81,10 +68,7 @@ namespace Viking.AnnotationServiceTypes
             return false;
         }
 
-        public bool Equals(LocationLinkKey other)
-        {
-            return (this.A == other.A && this.B == other.B);
-        }
+        public bool Equals(LocationLinkKey other) => (this.A == other.A && this.B == other.B);
 
         bool IEquatable<ILocationLink>.Equals(ILocationLink other)
         {

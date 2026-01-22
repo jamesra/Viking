@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -23,44 +23,44 @@ namespace WebAnnotation.UI.Commands
         //private IShape2D VolumeShape = null;
 
         //Shapes the user can click to confirm
-        private readonly PositionColorMeshModel DrawnShape2D = null;  //Shape to draw for filled 2D shapes, Polygons, circles, etc...
-        private readonly PolyLineView DrawnShape1D = null;            //Shape to draw for 1D shapes or open 2D shapes, lines, closed curves, etc...
-        private readonly CircleView circleView = null;
+        private readonly PositionColorMeshModel? DrawnShape2D = null;  //Shape to draw for filled 2D shapes, Polygons, circles, etc...
+        private readonly PolyLineView? DrawnShape1D = null;            //Shape to draw for 1D shapes or open 2D shapes, lines, closed curves, etc...
+        private readonly CircleView? circleView = null;
         private readonly double Width;  //Line width for line types
 
         /// <summary>
         /// Button user can click to cancel
         /// </summary>
-        private CircularButton CancelButton = null;
+        private CircularButton? CancelButton = null;
         private Color ShapeColor = Color.Green;
-        private readonly IAction[] AvailableActions = null;
-        private List<CircularButton> Buttons = new List<CircularButton>();
+        private readonly IAction[]? AvailableActions = null;
+        private List<CircularButton> Buttons = [];
 
         public delegate void OnCommandSuccess();
 
-        private readonly OnCommandSuccess SuccessCallback = null;
+        private readonly OnCommandSuccess? SuccessCallback = null;
 
         private readonly GridRectangle BoundingBox;
 
-        private readonly IActionView[] action_views = null;
+        private readonly IActionView[]? action_views = null;
 
         /// <summary>
         /// If the mouse or pen hover over a button we only display the active animation for the button if it exists
         /// </summary>
-        private IRenderable active_action_view = null;
+        private IRenderable? active_action_view = null;
 
         /// <summary>
         /// Fraction of the total shape area a button should occupy by default
         /// </summary>
         private readonly double CircleAreaScalar = 10;
 
-        public ActionConfirmationCommand(SectionViewerControl parent, IAction[] actions, GridRectangle bounding_box, OnCommandSuccess success_callback = null) : base(parent)
+        public ActionConfirmationCommand(SectionViewerControl parent, IAction[] actions, GridRectangle bounding_box, OnCommandSuccess? success_callback = null) : base(parent)
         {
             BoundingBox = bounding_box;
             AvailableActions = actions;
             SuccessCallback = success_callback;
 
-            action_views = actions.Select(a => a as IActionView).Where(a => a != null).ToArray();
+            action_views = [.. actions.Select(a => a as IActionView).Where(a => a != null)];
 
             //UpdateViews();
             CreateButtonsForActions();
@@ -85,19 +85,12 @@ namespace WebAnnotation.UI.Commands
             {
                 CircleView btnView = null;
 
-                IColorView colorView = action as IColorView;
-                Color color = colorView == null ? Color.Green : colorView.Color;
+                Color color = action is not IColorView colorView ? Color.Green : colorView.Color;
 
-                GridCircle circle = new GridCircle(GridVector2.Zero, 1); //Button is positioned later.  This is just to call constructor.
-                IIconTexture view = action as IIconTexture;
-                if (view != null && view.Icon != BuiltinTexture.None)
-                {
-                    btnView = new TextureCircleView(view.Icon.GetTexture(), circle, color);
-                }
-                else
-                {
-                    btnView = new CircleView(circle, color);
-                }
+                GridCircle circle = new(GridVector2.Zero, 1); //Button is positioned later.  This is just to call constructor.
+                btnView = action is IIconTexture view && view.Icon != BuiltinTexture.None
+                    ? new TextureCircleView(view.Icon.GetTexture(), circle, color)
+                    : new CircleView(circle, color);
 
                 //TODO: Sort and Map visuals on the circlular buttons according to action types
                 CircularButton circularButton = CircularButton.CreateSimple(btnView, action.Execute);
@@ -154,10 +147,10 @@ namespace WebAnnotation.UI.Commands
             GridVector2 ButtonCenter = BoundingBox.UpperRight;
             double CancelCircleRadius = GetButtonRadius(BoundingBox, CircleAreaScalar);
             ButtonCenter = ButtonCenter + new GridVector2(CancelCircleRadius, CancelCircleRadius);
-            GridCircle ButtonCircle = new GridCircle(ButtonCenter, CancelCircleRadius);
+            GridCircle ButtonCircle = new(ButtonCenter, CancelCircleRadius);
 
             //CancelView = new CircularButton(ButtonCircle, Color.Magenta);
-            TextureCircleView cancelBtnView = new TextureCircleView(BuiltinTexture.X.GetTexture(), ButtonCircle, Color.Magenta);
+            TextureCircleView cancelBtnView = new(BuiltinTexture.X.GetTexture(), ButtonCircle, Color.Magenta);
             CancelButton = new CircularButton(cancelBtnView);
 
             Buttons.Add(CancelButton);
@@ -194,10 +187,7 @@ namespace WebAnnotation.UI.Commands
             }
         }*/
 
-        public override void OnActivate()
-        {
-            base.OnActivate();
-        }
+        public override void OnActivate() => base.OnActivate();
 
         public override void OnDraw(GraphicsDevice graphicsDevice, Scene scene, BasicEffect basicEffect)
         {
@@ -212,7 +202,7 @@ namespace WebAnnotation.UI.Commands
             }
             */
 
-            CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, Buttons.Select(b => b.circleView).ToArray());
+            CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, [.. Buttons.Select(b => b.circleView)]);
 
             if (DrawnShape2D != null)
             {
@@ -224,7 +214,7 @@ namespace WebAnnotation.UI.Commands
             }
 
             //Show the passive views for all buttons if there is no active view
-            if (active_action_view == null)
+            if (active_action_view is null)
             {
                 foreach (IActionView action in action_views.Where(av => av.Passive != null))
                 {
@@ -238,26 +228,17 @@ namespace WebAnnotation.UI.Commands
 
             if (DrawnShape1D != null)
             {
-                PolyLineView.Draw(graphicsDevice, scene, OverlayStyle.Luma, new PolyLineView[] { DrawnShape1D });
+                PolyLineView.Draw(graphicsDevice, scene, OverlayStyle.Luma, [DrawnShape1D]);
             }
 
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }
 
-        public override void Redo()
-        {
-            base.Redo();
-        }
+        public override void Redo() => base.Redo();
 
-        public override string ToString()
-        {
-            return base.ToString();
-        }
+        public override string ToString() => base.ToString();
 
-        public override void Undo()
-        {
-            base.Undo();
-        }
+        public override void Undo() => base.Undo();
 
         protected override void Execute()
         {
@@ -270,40 +251,19 @@ namespace WebAnnotation.UI.Commands
         }
 
 
-        protected override void OnCameraChanged(object sender, PropertyChangedEventArgs e)
-        {
-            base.OnCameraChanged(sender, e);
-        }
+        protected override void OnCameraChanged(object sender, PropertyChangedEventArgs e) => base.OnCameraChanged(sender, e);
 
-        protected override void OnDeactivate()
-        {
-            base.OnDeactivate();
-        }
+        protected override void OnDeactivate() => base.OnDeactivate();
 
-        protected override void OnKeyDown(object sender, KeyEventArgs e)
-        {
-            base.OnKeyDown(sender, e);
-        }
+        protected override void OnKeyDown(object sender, KeyEventArgs e) => base.OnKeyDown(sender, e);
 
-        protected override void OnKeyPress(object sender, KeyPressEventArgs e)
-        {
-            base.OnKeyPress(sender, e);
-        }
+        protected override void OnKeyPress(object sender, KeyPressEventArgs e) => base.OnKeyPress(sender, e);
 
-        protected override void OnKeyUp(object sender, KeyEventArgs e)
-        {
-            base.OnKeyUp(sender, e);
-        }
+        protected override void OnKeyUp(object sender, KeyEventArgs e) => base.OnKeyUp(sender, e);
 
-        protected override void OnMouseClick(object sender, MouseEventArgs e)
-        {
-            base.OnMouseClick(sender, e);
-        }
+        protected override void OnMouseClick(object sender, MouseEventArgs e) => base.OnMouseClick(sender, e);
 
-        protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            base.OnMouseDoubleClick(sender, e);
-        }
+        protected override void OnMouseDoubleClick(object sender, MouseEventArgs e) => base.OnMouseDoubleClick(sender, e);
 
         protected override void OnMouseDown(object sender, MouseEventArgs e)
         {
@@ -327,20 +287,11 @@ namespace WebAnnotation.UI.Commands
             */
         }
 
-        protected override void OnMouseEnter(object sender, EventArgs e)
-        {
-            base.OnMouseEnter(sender, e);
-        }
+        protected override void OnMouseEnter(object sender, EventArgs e) => base.OnMouseEnter(sender, e);
 
-        protected override void OnMouseHover(object sender, EventArgs e)
-        {
-            base.OnMouseHover(sender, e);
-        }
+        protected override void OnMouseHover(object sender, EventArgs e) => base.OnMouseHover(sender, e);
 
-        protected override void OnMouseLeave(object sender, EventArgs e)
-        {
-            base.OnMouseLeave(sender, e);
-        }
+        protected override void OnMouseLeave(object sender, EventArgs e) => base.OnMouseLeave(sender, e);
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
@@ -348,15 +299,9 @@ namespace WebAnnotation.UI.Commands
             UpdateActiveView(WorldPosition);
         }
 
-        protected override void OnMouseUp(object sender, MouseEventArgs e)
-        {
-            base.OnMouseUp(sender, e);
-        }
+        protected override void OnMouseUp(object sender, MouseEventArgs e) => base.OnMouseUp(sender, e);
 
-        protected override void OnMouseWheel(object sender, MouseEventArgs e)
-        {
-            base.OnMouseWheel(sender, e);
-        }
+        protected override void OnMouseWheel(object sender, MouseEventArgs e) => base.OnMouseWheel(sender, e);
 
         protected override void OnPenContact(object sender, PenEventArgs e)
         {
@@ -381,20 +326,11 @@ namespace WebAnnotation.UI.Commands
             base.OnPenContact(sender, e);
         }
 
-        protected override void OnPenEnterRange(object sender, PenEventArgs e)
-        {
-            base.OnPenEnterRange(sender, e);
-        }
+        protected override void OnPenEnterRange(object sender, PenEventArgs e) => base.OnPenEnterRange(sender, e);
 
-        protected override void OnPenLeaveContact(object sender, PenEventArgs e)
-        {
-            base.OnPenLeaveContact(sender, e);
-        }
+        protected override void OnPenLeaveContact(object sender, PenEventArgs e) => base.OnPenLeaveContact(sender, e);
 
-        protected override void OnPenLeaveRange(object sender, PenEventArgs e)
-        {
-            base.OnPenLeaveRange(sender, e);
-        }
+        protected override void OnPenLeaveRange(object sender, PenEventArgs e) => base.OnPenLeaveRange(sender, e);
 
         protected override void OnPenMove(object sender, PenEventArgs e)
         {
@@ -407,15 +343,9 @@ namespace WebAnnotation.UI.Commands
             base.OnPenMove(sender, e);
         }
 
-        protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
-        {
-            base.OnPropertyChanged(e);
-        }
+        protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e) => base.OnPropertyChanged(e);
 
-        protected override bool ShouldSerializeProperty(DependencyProperty dp)
-        {
-            return base.ShouldSerializeProperty(dp);
-        }
+        protected override bool ShouldSerializeProperty(DependencyProperty dp) => base.ShouldSerializeProperty(dp);
 
         protected void UpdateActiveView(GridVector2 WorldPosition)
         {

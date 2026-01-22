@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System;
 using VikingXNA;
@@ -8,7 +8,7 @@ namespace MonogameTestbed
 {
     static class StandardCameraManipulator
     {
-        static DateTime? TriggerDownStartTime = new DateTime?(); 
+        static DateTime? TriggerDownStartTime = new DateTime?();
 
         /// <summary>
         /// Basic camera manipulation for only gamepad
@@ -16,8 +16,8 @@ namespace MonogameTestbed
         /// 
         /// <param name="Camera"></param>
         /// <param name="unitStepSize">How far to move the camera for a single d-pad click or input event</param>
-        public static void Update(Camera3D Camera, float unitStepSize=10.0f)
-        { 
+        public static void Update(Camera3D Camera, float unitStepSize = 10.0f)
+        {
             PlayerIndex? InputSource = GamePadStateTracker.GetFirstConnectedController() ?? PlayerIndex.One;
             GamePadState state = GamePad.GetState(InputSource.Value);
 
@@ -93,9 +93,9 @@ namespace MonogameTestbed
 
     internal class Camera3DManipulator
     {
-        readonly KeyboardStateTracker keyboard = new KeyboardStateTracker();
-        readonly GamePadStateTracker gamepad = new GamePadStateTracker();
-        readonly MouseStateTracker mouse = new MouseStateTracker();
+        readonly KeyboardStateTracker keyboard = new();
+        readonly GamePadStateTracker gamepad = new();
+        readonly MouseStateTracker mouse = new();
 
         public float UnitStepSize = 10.0f;
         const double OneDegree = (Math.PI * 2.0 / 360);
@@ -114,19 +114,13 @@ namespace MonogameTestbed
             UpdateCameraFromMouse(Camera);
         }
 
-        public void UpdateCameraFromGamepad(Camera3D camera)
-        {
-            StandardCameraManipulator.Update(camera, UnitStepSize);
-        }
+        public void UpdateCameraFromGamepad(Camera3D camera) => StandardCameraManipulator.Update(camera, UnitStepSize);
 
-        private bool PressedOrDown(Keys key)
-        {
-            return keyboard.Pressed(key) || keyboard.Down(key);
-        }
+        private bool PressedOrDown(Keys key) => keyboard.Pressed(key) || keyboard.Down(key);
 
         public void UpdateCameraFromKeyboard(Camera3D Camera)
         {
-            Vector3 translation = new Vector3();
+            Vector3 translation = new();
             bool CapsLockDown = PressedOrDown(Keys.CapsLock);
             bool ShiftDown = PressedOrDown(Keys.LeftShift) || PressedOrDown(Keys.RightShift);
             bool CtrlDown = PressedOrDown(Keys.LeftControl) || PressedOrDown(Keys.RightControl);
@@ -136,11 +130,11 @@ namespace MonogameTestbed
 
             if (PressedOrDown(Keys.W))
             {
-                if(CtrlDown)
+                if (CtrlDown)
                 {
                     Camera.Pitch -= OneDegree * rotateScalar;
                 }
-                else 
+                else
                     translation += new Vector3(0, 0, -UnitStepSize * stepScalar) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.W) : 1);
             }
             if (PressedOrDown(Keys.S))
@@ -171,21 +165,21 @@ namespace MonogameTestbed
                     translation += new Vector3(UnitStepSize * stepScalar, 0, 0) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.D) : 1);
             }
             if (PressedOrDown(Keys.E))
-            { 
+            {
                 translation += new Vector3(0, UnitStepSize * stepScalar, 0) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.E) : 1);
             }
             if (PressedOrDown(Keys.C))
             {
                 translation += new Vector3(0, -UnitStepSize * stepScalar, 0) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.C) : 1);
             }
-             
+
 
             Vector3 translated = Camera.View.TranslateRelativeToViewMatrix(translation.X, translation.Y, translation.Z);
             Camera.Position += translated;
         }
 
-        public void UpdateCameraFromMouse(Camera3D camera)
-        { 
+        public static void UpdateCameraFromMouse(Camera3D camera)
+        {
         }
 
         public float ScalarForElapsedDownTime(Keys key)
@@ -194,16 +188,13 @@ namespace MonogameTestbed
             return ScalarForElapsedTime(elapsed.TotalSeconds);
         }
 
-        public float ScalarForElapsedTime(TimeSpan elapsed)
-        {
-            return ScalarForElapsedTime(elapsed.TotalSeconds);
-        }
+        public float ScalarForElapsedTime(TimeSpan elapsed) => ScalarForElapsedTime(elapsed.TotalSeconds);
 
-        public float ScalarForElapsedTime(double elapsed)
+        public static float ScalarForElapsedTime(double elapsed)
         {
             if (elapsed < 1)
             {
-                return 1; 
+                return 1;
             }
 
             float scalar = (float)Math.Pow(2, elapsed);

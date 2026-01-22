@@ -15,7 +15,7 @@ namespace WebAnnotation.UI.Commands
     internal class LocationObjCommand : AnnotationCommandBase
     {
         private readonly LocationObj selected;
-        private StructureTypeObj _LocType = null;
+        private StructureTypeObj? _LocType = null;
 
         private StructureTypeObj LocType
         {
@@ -39,14 +39,7 @@ namespace WebAnnotation.UI.Commands
             Debug.Assert(selected != null);
 
             //Figure out if we've selected a location on the same section or different
-            if (selected.Section != Parent.Section.Number)
-            {
-                parent.Cursor = Cursors.Cross;
-            }
-            else
-            {
-                parent.Cursor = Cursors.Hand;
-            }
+            parent.Cursor = selected.Section != Parent.Section.Number ? Cursors.Cross : Cursors.Hand;
         }
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
@@ -87,17 +80,17 @@ namespace WebAnnotation.UI.Commands
                                     VikingXNA.Scene scene,
                                     Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            if (oldMouse == null)
+            if (oldMouse is null)
             {
                 return;
             }
 
-            if (basicEffect == null)
+            if (basicEffect is null)
             {
                 throw new ArgumentNullException("basicEffect");
             }
 
-            if (scene == null)
+            if (scene is null)
             {
                 throw new ArgumentNullException("scene");
             }
@@ -125,11 +118,11 @@ namespace WebAnnotation.UI.Commands
                 else
                 {
 
-                    VertexPositionColor[] verts = new VertexPositionColor[] {
-                                                        new VertexPositionColor(new Vector3((float)selectedPos.X, (float)selectedPos.Y, 0f), Color.Gold),
-                                                        new VertexPositionColor(new Vector3((float)oldWorldPosition.X, (float)oldWorldPosition.Y, 0f), Color.Gold)};
+                    VertexPositionColor[] verts = [
+                                                        new(new Vector3((float)selectedPos.X, (float)selectedPos.Y, 0f), Color.Gold),
+                                                        new(new Vector3((float)oldWorldPosition.X, (float)oldWorldPosition.Y, 0f), Color.Gold)];
 
-                    int[] indicies = new int[] { 0, 1 };
+                    int[] indicies = [0, 1];
 
                     foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
                     {

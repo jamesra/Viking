@@ -5,27 +5,18 @@ using System.Windows.Forms;
 
 namespace WebAnnotation.UI.Commands
 {
-    internal class AddLineControlPointCommand : AnnotationCommandBase
+    internal class AddLineControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                    GridVector2[] OriginalMosaicControlPoints,
+AddLineControlPointCommand.OnCommandSuccess success_callback) : AnnotationCommandBase(parent)
     {
-        private readonly GridVector2[] OriginalControlPoints;
+        private readonly GridVector2[] OriginalControlPoints = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(OriginalMosaicControlPoints);
         private GridVector2[] NewControlPoints;
         private int iNewControlPoint = -1;
 
         public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
 
-        private readonly OnCommandSuccess success_callback;
-        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
-
-        public AddLineControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridVector2[] OriginalMosaicControlPoints,
-                                        OnCommandSuccess success_callback) : base(parent)
-        {
-            OriginalControlPoints = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(OriginalMosaicControlPoints);
-
-            this.success_callback = success_callback;
-
-            mapping = parent.Section.ActiveSectionToVolumeTransform;
-        }
+        private readonly OnCommandSuccess success_callback = success_callback;
+        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping = parent.Section.ActiveSectionToVolumeTransform;
 
         public static GridVector2[] AddControlPoint(GridVector2[] OriginalControlPoints, GridVector2 NewControlPointPosition, out int iNewControlPoint)
         {
@@ -66,29 +57,19 @@ namespace WebAnnotation.UI.Commands
         }
     }
 
-    internal class RemoveLineControlPointCommand : AnnotationCommandBase
+    internal class RemoveLineControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                    GridVector2[] OriginalMosaicControlPoints,
+                                    bool IsClosed,
+RemoveLineControlPointCommand.OnCommandSuccess success_callback) : AnnotationCommandBase(parent)
     {
-        private readonly GridVector2[] OriginalControlPoints;
+        private readonly GridVector2[] OriginalControlPoints = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(OriginalMosaicControlPoints);
         private GridVector2[] NewControlPoints;
-        private readonly bool IsClosedShape;
+        private readonly bool IsClosedShape = IsClosed;
 
         public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
 
-        private readonly OnCommandSuccess success_callback;
-        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
-
-        public RemoveLineControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridVector2[] OriginalMosaicControlPoints,
-                                        bool IsClosed,
-                                        OnCommandSuccess success_callback) : base(parent)
-        {
-            IsClosedShape = IsClosed;
-            OriginalControlPoints = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(OriginalMosaicControlPoints);
-
-            this.success_callback = success_callback;
-
-            mapping = parent.Section.ActiveSectionToVolumeTransform;
-        }
+        private readonly OnCommandSuccess success_callback = success_callback;
+        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping = parent.Section.ActiveSectionToVolumeTransform;
 
         public static GridVector2[] RemoveControlPoint(GridVector2[] OriginalControlPoints, GridVector2 RemovedControlPointPosition, bool IsClosedShape)
         {

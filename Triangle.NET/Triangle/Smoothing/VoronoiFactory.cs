@@ -1,4 +1,4 @@
-﻿
+
 namespace TriangleNet.Smoothing
 {
     using System;
@@ -175,10 +175,7 @@ namespace TriangleNet.Smoothing
                 this.index++;
             }
 
-            public void Release()
-            {
-                this.index = 0;
-            }
+            public void Release() => this.index = 0;
 
             private void Resize(int size)
             {

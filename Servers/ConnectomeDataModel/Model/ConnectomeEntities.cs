@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using System.Collections.Generic;
 using System.Data.Entity;
@@ -10,30 +10,17 @@ using System.Threading.Tasks;
 
 namespace ConnectomeDataModel
 {
-    public readonly struct NetworkDetails
+    public readonly struct NetworkDetails(Structure[] nodes, Structure[] childNodes, StructureLink[] edges)
     {
-        public readonly Structure[] Nodes;
-        public readonly Structure[] ChildNodes;
-        public readonly StructureLink[] Edges;
-
-        public NetworkDetails(Structure[] nodes, Structure[] childNodes, StructureLink[] edges)
-        {
-            this.Nodes = nodes;
-            this.ChildNodes = childNodes;
-            this.Edges = edges;
-        } 
+        public readonly Structure[] Nodes = nodes;
+        public readonly Structure[] ChildNodes = childNodes;
+        public readonly StructureLink[] Edges = edges;
     }
 
-    public readonly struct AnnotationCollection
+    public readonly struct AnnotationCollection(IDictionary<long, Structure> structs, IDictionary<long, Location> locs)
     {
-        public readonly IDictionary<long, Structure> Structures;
-        public readonly IDictionary<long, Location> Locations;
-
-        public AnnotationCollection(IDictionary<long, Structure> structs, IDictionary<long, Location>  locs)
-        {
-            this.Structures = structs;
-            this.Locations = locs;
-        }
+        public readonly IDictionary<long, Structure> Structures = structs;
+        public readonly IDictionary<long, Location> Locations = locs;
     }
 
     /// <summary>
@@ -41,24 +28,22 @@ namespace ConnectomeDataModel
     /// </summary>
     public class UnconvertedStructureSpatialCache
     {
-        public StructureSpatialCache row = new StructureSpatialCache();
+        public StructureSpatialCache row = new();
         public System.Threading.Tasks.Task<System.Data.Entity.Spatial.DbGeometry> ConvexHullTask = null;
         public System.Threading.Tasks.Task<System.Data.Entity.Spatial.DbGeometry> BBoxTask = null;
 
-        private static System.Data.Entity.Spatial.DbGeometry UnpackSqlGeometry(Microsoft.SqlServer.Types.SqlGeometry input)
-        {
+        private static System.Data.Entity.Spatial.DbGeometry UnpackSqlGeometry(Microsoft.SqlServer.Types.SqlGeometry input) =>
             //return System.Data.Entity.Spatial.DbGeometry.FromBinary(input.STAsBinary().Buffer);
-            return System.Data.Entity.Spatial.DbGeometry.FromText(input.ToString());
-        }
-          
+            System.Data.Entity.Spatial.DbGeometry.FromText(input.ToString());
+
         public static UnconvertedStructureSpatialCache PopulateAsync(System.Data.Common.DbDataReader reader)
         {
-            UnconvertedStructureSpatialCache obj = new UnconvertedStructureSpatialCache();
+            UnconvertedStructureSpatialCache obj = new();
             obj.row.ID = reader.GetInt64(0);
             //row.BoundingRect = System.Data.Entity.Spatial.DbGeometry.FromBinary(reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(1).STAsBinary().Buffer);
             //obj.row.BoundingRect = System.Data.Entity.Spatial.DbGeometry.FromBinary(reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(1).STAsBinary().Buffer);
             Microsoft.SqlServer.Types.SqlGeometry bbox_input = reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(1);
-            obj.BBoxTask = Task<System.Data.Entity.Spatial.DbGeometry>.Run(() => { return UnpackSqlGeometry(bbox_input); });
+            obj.BBoxTask = Task<System.Data.Entity.Spatial.DbGeometry>.Run(() => UnpackSqlGeometry(bbox_input));
             obj.row.Area = reader.GetDouble(2);
             obj.row.Volume = reader.GetDouble(3);
             obj.row.MaxDimension = reader.GetInt32(4);
@@ -67,15 +52,15 @@ namespace ConnectomeDataModel
             //row.ConvexHull = System.Data.Entity.Spatial.DbGeometry.FromBinary(reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(7).STAsBinary().Buffer);
             //row.ConvexHull = System.Data.Entity.Spatial.DbGeometry.FromText(reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(7).ToString());
             Microsoft.SqlServer.Types.SqlGeometry convex_hull_input = reader.GetFieldValue<Microsoft.SqlServer.Types.SqlGeometry>(7);
-            obj.ConvexHullTask = Task<System.Data.Entity.Spatial.DbGeometry>.Run(() => { return UnpackSqlGeometry(convex_hull_input); });
+            obj.ConvexHullTask = Task<System.Data.Entity.Spatial.DbGeometry>.Run(() => UnpackSqlGeometry(convex_hull_input));
             obj.row.LastModified = reader.GetDateTime(8);
 
             return obj;
         }
-            /// <summary>
-            /// Waits for the tasks to return, returns the final object
-            /// </summary>
-            /// <returns></returns>
+        /// <summary>
+        /// Waits for the tasks to return, returns the final object
+        /// </summary>
+        /// <returns></returns>
         public StructureSpatialCache WaitReturn()
         {
             row.BoundingRect = BBoxTask.Result;
@@ -123,7 +108,7 @@ namespace ConnectomeDataModel
 
         private static SqlParameter CreateSectionNumberParameter(long section)
         {
-            SqlParameter param = new SqlParameter("Z", System.Data.SqlDbType.Float)
+            SqlParameter param = new("Z", System.Data.SqlDbType.Float)
             {
                 Direction = System.Data.ParameterDirection.Input,
                 SqlValue = new System.Data.SqlTypes.SqlDouble((double)section)
@@ -136,7 +121,7 @@ namespace ConnectomeDataModel
 
         private static SqlParameter CreateMinRadiusParameter(double MinRadius)
         {
-            SqlParameter param = new SqlParameter("MinRadius", System.Data.SqlDbType.Float)
+            SqlParameter param = new("MinRadius", System.Data.SqlDbType.Float)
             {
                 Direction = System.Data.ParameterDirection.Input,
                 SqlValue = new System.Data.SqlTypes.SqlDouble((double)MinRadius)
@@ -147,9 +132,9 @@ namespace ConnectomeDataModel
 
         private static SqlParameter CreateBoundingBoxParameter(System.Data.Entity.Spatial.DbGeometry bbox)
         {
-            
+
             System.Data.SqlDbType dbGeoType = System.Data.SqlDbType.Udt;
-            SqlParameter param = new SqlParameter("BBox", dbGeoType)
+            SqlParameter param = new("BBox", dbGeoType)
             {
                 UdtTypeName = "geometry",
                 Direction = System.Data.ParameterDirection.Input,
@@ -161,15 +146,12 @@ namespace ConnectomeDataModel
 
         private static SqlParameter CreateDateTimeParameter(DateTime? time)
         {
-            SqlParameter param = new SqlParameter("QueryDate", System.Data.SqlDbType.DateTime)
+            SqlParameter param = new("QueryDate", System.Data.SqlDbType.DateTime)
             {
                 Direction = System.Data.ParameterDirection.Input
             };
 
-            if (!time.HasValue)
-                param.SqlValue = DBNull.Value;
-            else
-                param.SqlValue = new System.Data.SqlTypes.SqlDateTime(time.Value);
+            param.SqlValue = !time.HasValue ? DBNull.Value : new System.Data.SqlTypes.SqlDateTime(time.Value);
             return param;
         }
 
@@ -206,63 +188,63 @@ namespace ConnectomeDataModel
         {
             if (LastModified.HasValue)
             {
-                return this.SectionLocations((double)section).Where(l=> l.LastModified >= LastModified.Value);
+                return this.SectionLocations((double)section).Where(l => l.LastModified >= LastModified.Value);
             }
             else
             {
                 return this.SectionLocations((double)section);
             }
-        } 
+        }
 
         public IList<Location> ReadSectionLocationsAndLinks(long section, DateTime? LastModified)
         {
             var results = this.SelectSectionLocationsAndLinks((double)section, LastModified, MergeOption.NoTracking);
 
-            var dictLocations = results.ToDictionary(l => l.ID);
+            Dictionary<long, Location> dictLocations = results.ToDictionary(l => l.ID);
 
-            var LocationLinks = results.GetNextResult<LocationLink>().ToList();
-            
+            List<LocationLink> LocationLinks = [.. results.GetNextResult<LocationLink>()];
+
             AppendLinksToLocations(dictLocations, LocationLinks);
 
-            return dictLocations.Values.ToList();
+            return [.. dictLocations.Values];
         }
 
         public IList<Location> ReadSectionLocationsAndLinksInMosaicRegion(long section, System.Data.Entity.Spatial.DbGeometry bbox, double MinRadius, DateTime? LastModified)
         {
             var results = this.SelectSectionLocationsAndLinksInMosaicBounds((double)section, bbox, MinRadius, LastModified, MergeOption.NoTracking);
 
-            var dictLocations = results.ToDictionary(l => l.ID);
+            Dictionary<long, Location> dictLocations = results.ToDictionary(l => l.ID);
 
-            var LocationLinks = results.GetNextResult<LocationLink>().ToList();
+            List<LocationLink> LocationLinks = [.. results.GetNextResult<LocationLink>()];
 
             AppendLinksToLocations(dictLocations, LocationLinks);
 
-            return dictLocations.Values.ToList();
+            return [.. dictLocations.Values];
         }
 
         public IList<Location> ReadSectionLocationsAndLinksInVolumeRegion(long section, System.Data.Entity.Spatial.DbGeometry bbox, double MinRadius, DateTime? LastModified)
         {
             var results = this.SelectSectionLocationsAndLinksInVolumeBounds((double)section, bbox, MinRadius, LastModified, MergeOption.NoTracking);
 
-            var dictLocations = results.ToDictionary(l => l.ID);
+            Dictionary<long, Location> dictLocations = results.ToDictionary(l => l.ID);
 
-            var LocationLinks = results.GetNextResult<LocationLink>().ToList();
+            List<LocationLink> LocationLinks = [.. results.GetNextResult<LocationLink>()];
 
             AppendLinksToLocations(dictLocations, LocationLinks);
 
-            return dictLocations.Values.ToList();
+            return [.. dictLocations.Values];
         }
 
         public IList<Location> ReadStructureLocationsAndLinks(long StructureID)
         {
             var results = this.SelectStructureLocationsAndLinks(StructureID);
 
-            var dictLocations = results.ToDictionary(l => l.ID);
-            var LocationLinks = results.GetNextResult<LocationLink>().ToList();
-            
+            Dictionary<long, Location> dictLocations = results.ToDictionary(l => l.ID);
+            List<LocationLink> LocationLinks = [.. results.GetNextResult<LocationLink>()];
+
             AppendLinksToLocations(dictLocations, LocationLinks);
 
-            return dictLocations.Values.ToList();
+            return [.. dictLocations.Values];
         }
 
         public IList<Structure> ReadSectionStructuresAndLinks(long section, DateTime? LastModified)
@@ -271,11 +253,11 @@ namespace ConnectomeDataModel
 
             Dictionary<long, Structure> dictStructures = results.ToDictionary(s => s.ID);
 
-            var StructureLinks = results.GetNextResult<StructureLink>().ToList();
-             
+            List<StructureLink> StructureLinks = [.. results.GetNextResult<StructureLink>()];
+
             AppendLinksToStructures(dictStructures, StructureLinks);
 
-            return dictStructures.Values.ToList();
+            return [.. dictStructures.Values];
         }
 
         public IList<Structure> ReadSectionStructuresAndLinksInMosaicRegion(long section, System.Data.Entity.Spatial.DbGeometry bbox, double MinRadius, DateTime? LastModified)
@@ -284,11 +266,11 @@ namespace ConnectomeDataModel
 
             Dictionary<long, Structure> dictStructures = results.ToDictionary(s => s.ID);
 
-            var StructureLinks = results.GetNextResult<StructureLink>().ToList();
+            List<StructureLink> StructureLinks = [.. results.GetNextResult<StructureLink>()];
 
             AppendLinksToStructures(dictStructures, StructureLinks);
 
-            return dictStructures.Values.ToList();
+            return [.. dictStructures.Values];
         }
 
         public IList<Structure> ReadSectionStructuresAndLinksInVolumeRegion(long section, System.Data.Entity.Spatial.DbGeometry bbox, double MinRadius, DateTime? LastModified)
@@ -297,11 +279,11 @@ namespace ConnectomeDataModel
 
             Dictionary<long, Structure> dictStructures = results.ToDictionary(s => s.ID);
 
-            var StructureLinks = results.GetNextResult<StructureLink>().ToList();
+            List<StructureLink> StructureLinks = [.. results.GetNextResult<StructureLink>()];
 
             AppendLinksToStructures(dictStructures, StructureLinks);
 
-            return dictStructures.Values.ToList();
+            return [.. dictStructures.Values];
         }
 
 
@@ -313,7 +295,7 @@ namespace ConnectomeDataModel
 
             var StructureLinks = results.GetNextResult<StructureLink>();
 
-            AppendLinksToStructures(dictStructures, StructureLinks.ToList());
+            AppendLinksToStructures(dictStructures, [.. StructureLinks]);
 
             var Locations = StructureLinks.GetNextResult<Location>();
 
@@ -321,7 +303,7 @@ namespace ConnectomeDataModel
 
             var LocationLinks = Locations.GetNextResult<LocationLink>();
 
-            AppendLinksToLocations(dictLocations, LocationLinks.ToList());
+            AppendLinksToLocations(dictLocations, [.. LocationLinks]);
 
             return new AnnotationCollection(dictStructures, dictLocations);
         }
@@ -334,7 +316,7 @@ namespace ConnectomeDataModel
 
             var StructureLinks = results.GetNextResult<StructureLink>();
 
-            AppendLinksToStructures(dictStructures, StructureLinks.ToList());
+            AppendLinksToStructures(dictStructures, [.. StructureLinks]);
 
             var Locations = StructureLinks.GetNextResult<Location>();
 
@@ -342,37 +324,31 @@ namespace ConnectomeDataModel
 
             var LocationLinks = Locations.GetNextResult<LocationLink>();
 
-            AppendLinksToLocations(dictLocations, LocationLinks.ToList());
+            AppendLinksToLocations(dictLocations, [.. LocationLinks]);
 
             return new AnnotationCollection(dictStructures, dictLocations);
         }
 
         public virtual int SplitStructure(long keepStructureID, long firstLocationIDOfSplitStructure, out long NewStructureID)
         {
-            var keepStructureIDParameter = new ObjectParameter("KeepStructureID", keepStructureID);
-            var firstLocationIDOfSplitStructureParameter = new ObjectParameter("FirstLocationIDOfSplitStructure", firstLocationIDOfSplitStructure);
-            var NewStructureIDParam = new ObjectParameter("SplitStructureID", typeof(long));
+            ObjectParameter keepStructureIDParameter = new("KeepStructureID", keepStructureID);
+            ObjectParameter firstLocationIDOfSplitStructureParameter = new("FirstLocationIDOfSplitStructure", firstLocationIDOfSplitStructure);
+            ObjectParameter NewStructureIDParam = new("SplitStructureID", typeof(long));
 
             int retval = ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SplitStructure", keepStructureIDParameter, firstLocationIDOfSplitStructureParameter, NewStructureIDParam);
-            if (retval != 0)
-                NewStructureID = -1;
-            else
-                NewStructureID = (long)NewStructureIDParam.Value;
+            NewStructureID = retval != 0 ? -1 : (long)NewStructureIDParam.Value;
 
             return retval;
         }
 
         public virtual int SplitStructureAtLocationLink(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure, out long NewStructureID)
         {
-            var LocationIDOfKeepStructureParameter = new ObjectParameter("LocationIDOfKeepStructure", LocationIDOfKeepStructure);
-            var LocationIDOfSplitStructureParameter = new ObjectParameter("LocationIDOfSplitStructure", LocationIDOfSplitStructure);
-            var NewStructureIDParam = new ObjectParameter("SplitStructureID", typeof(long));
+            ObjectParameter LocationIDOfKeepStructureParameter = new("LocationIDOfKeepStructure", LocationIDOfKeepStructure);
+            ObjectParameter LocationIDOfSplitStructureParameter = new("LocationIDOfSplitStructure", LocationIDOfSplitStructure);
+            ObjectParameter NewStructureIDParam = new("SplitStructureID", typeof(long));
 
             int retval = ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction("SplitStructureAtLocationLink", LocationIDOfKeepStructureParameter, LocationIDOfSplitStructureParameter, NewStructureIDParam);
-            if (retval != 0)
-                NewStructureID = -1;
-            else
-                NewStructureID = (long)NewStructureIDParam.Value;
+            NewStructureID = retval != 0 ? -1 : (long)NewStructureIDParam.Value;
 
             return retval;
         }
@@ -380,19 +356,19 @@ namespace ConnectomeDataModel
 
         public SortedSet<long> SelectNetworkStructureIDs(IEnumerable<long> IDs, int numHops)
         {
-            var proc = new SelectNetworkStructureIDsStoredProcedure()
+            SelectNetworkStructureIDsStoredProcedure proc = new()
             {
                 Hops = numHops,
                 IDs = udt_integer_list.Create(IDs)
             };
 
-            SortedSet<long> StructureIDs = new SortedSet<long>(EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteStoredProcedure<long>(this.Database, proc));
+            SortedSet<long> StructureIDs = [.. EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteStoredProcedure<long>(this.Database, proc)];
             return StructureIDs;
         }
 
         public NetworkDetails SelectNetworkDetails(IEnumerable<long> IDs, int numHops)
-        { 
-            var proc = new SelectNetworkDetailsStoredProcedure()
+        {
+            SelectNetworkDetailsStoredProcedure proc = new()
             {
                 Hops = numHops,
                 IDs = udt_integer_list.Create(IDs)
@@ -400,16 +376,16 @@ namespace ConnectomeDataModel
 
             NetworkDetails retval;
 
-            if(this.Database.Connection.State != System.Data.ConnectionState.Open)
+            if (this.Database.Connection.State != System.Data.ConnectionState.Open)
                 this.Database.Connection.Open();
 
             using (System.Data.Common.DbDataReader reader = EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteReader(this.Database, proc))
             {
-                Structure[] NodeObjects = ((IObjectContextAdapter)this).ObjectContext.Translate<Structure>(reader, "Structures", MergeOption.NoTracking).ToArray();
+                Structure[] NodeObjects = [.. ((IObjectContextAdapter)this).ObjectContext.Translate<Structure>(reader, "Structures", MergeOption.NoTracking)];
                 reader.NextResult();
-                Structure[] ChildObjects = ((IObjectContextAdapter)this).ObjectContext.Translate<Structure>(reader, "Structures", MergeOption.NoTracking).ToArray();
+                Structure[] ChildObjects = [.. ((IObjectContextAdapter)this).ObjectContext.Translate<Structure>(reader, "Structures", MergeOption.NoTracking)];
                 reader.NextResult();
-                StructureLink[] Edges = ((IObjectContextAdapter)this).ObjectContext.Translate<StructureLink>(reader, "StructureLinks", MergeOption.NoTracking).ToArray();
+                StructureLink[] Edges = [.. ((IObjectContextAdapter)this).ObjectContext.Translate<StructureLink>(reader, "StructureLinks", MergeOption.NoTracking)];
 
                 retval = new NetworkDetails(NodeObjects, ChildObjects, Edges);
             }
@@ -421,19 +397,19 @@ namespace ConnectomeDataModel
 
         public IQueryable<Structure> SelectNetworkStructures(IEnumerable<long> IDs, int numHops)
         {
-            var proc = new SelectNetworkStructuresProcedure()
+            SelectNetworkStructuresProcedure proc = new()
             {
                 Hops = numHops,
                 IDs = udt_integer_list.Create(IDs)
             };
-              
+
             if (this.Database.Connection.State != System.Data.ConnectionState.Open)
                 this.Database.Connection.Open();
 
-            Structure[] NodeObjects; 
+            Structure[] NodeObjects;
             using (System.Data.Common.DbDataReader reader = EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteReader(this.Database, proc))
             {
-                NodeObjects = ((IObjectContextAdapter)this).ObjectContext.Translate<Structure>(reader, "Structures", MergeOption.NoTracking).ToArray();
+                NodeObjects = [.. ((IObjectContextAdapter)this).ObjectContext.Translate<Structure>(reader, "Structures", MergeOption.NoTracking)];
             }
 
             this.Database.Connection.Close();
@@ -443,14 +419,14 @@ namespace ConnectomeDataModel
 
         public IQueryable<Structure> SelectNetworkChildStructuresIDs(IEnumerable<long> IDs, int numHops)
         {
-            var proc = new SelectNetworkChildStructureIDsProcedure()
+            SelectNetworkChildStructureIDsProcedure proc = new()
             {
                 Hops = numHops,
                 IDs = udt_integer_list.Create(IDs)
             };
-            
-            SortedSet<long> ChildStructureIDs = new SortedSet<long>(EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteStoredProcedure<long>(this.Database, proc));
-            
+
+            SortedSet<long> ChildStructureIDs = [.. EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteStoredProcedure<long>(this.Database, proc)];
+
             return from s in this.Structures
                    where ChildStructureIDs.Contains(s.ID)
                    select s;
@@ -458,7 +434,7 @@ namespace ConnectomeDataModel
 
         public IQueryable<StructureSpatialCache> SelectNetworkStructureSpatialData(IEnumerable<long> IDs, int numHops)
         {
-            var proc = new SelectNetworkStructureSpatialData()
+            SelectNetworkStructureSpatialData proc = new()
             {
                 Hops = numHops,
                 IDs = udt_integer_list.Create(IDs)
@@ -487,7 +463,7 @@ namespace ConnectomeDataModel
 
         public IQueryable<StructureSpatialCache> SelectNetworkChildStructureSpatialData(IEnumerable<long> IDs, int numHops)
         {
-            var proc = new SelectNetworkChildStructureSpatialData()
+            SelectNetworkChildStructureSpatialData proc = new()
             {
                 Hops = numHops,
                 IDs = udt_integer_list.Create(IDs)
@@ -496,11 +472,11 @@ namespace ConnectomeDataModel
             if (this.Database.Connection.State != System.Data.ConnectionState.Open)
                 this.Database.Connection.Open();
 
-            List<StructureSpatialCache> NodeObjects = new List<StructureSpatialCache>();
+            List<StructureSpatialCache> NodeObjects = [];
             using (System.Data.Common.DbDataReader reader = EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteReader(this.Database, proc))
             {
                 NodeObjects = ConvertReaderToList(reader);
-               // NodeObjects = ((IObjectContextAdapter)this).ObjectContext.Translate<StructureSpatialCache>(reader, "StructureSpatialCaches", MergeOption.NoTracking).ToArray();
+                // NodeObjects = ((IObjectContextAdapter)this).ObjectContext.Translate<StructureSpatialCache>(reader, "StructureSpatialCaches", MergeOption.NoTracking).ToArray();
             }
 
             this.Database.Connection.Close();
@@ -517,7 +493,7 @@ namespace ConnectomeDataModel
 
         public List<StructureSpatialCache> ConvertReaderToList(System.Data.Common.DbDataReader reader)
         {
-            List<UnconvertedStructureSpatialCache> NodeObjects = new List<UnconvertedStructureSpatialCache>();
+            List<UnconvertedStructureSpatialCache> NodeObjects = [];
 
             while (reader.Read())
             {
@@ -540,12 +516,12 @@ namespace ConnectomeDataModel
                 NodeObjects.Add(row);
             }
 
-            return NodeObjects.Select(o => o.WaitReturn()).ToList();
+            return [.. NodeObjects.Select(o => o.WaitReturn())];
         }
 
         public IQueryable<Structure> SelectNetworkChildStructures(IEnumerable<long> IDs, int numHops)
         {
-            var proc = new SelectNetworkChildStructuresProcedure()
+            SelectNetworkChildStructuresProcedure proc = new()
             {
                 Hops = numHops,
                 IDs = udt_integer_list.Create(IDs)
@@ -557,7 +533,7 @@ namespace ConnectomeDataModel
             Structure[] ChildStructures;
             using (System.Data.Common.DbDataReader reader = EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteReader(this.Database, proc))
             {
-                ChildStructures = ((IObjectContextAdapter)this).ObjectContext.Translate<Structure>(reader, "Structures", MergeOption.NoTracking).ToArray();
+                ChildStructures = [.. ((IObjectContextAdapter)this).ObjectContext.Translate<Structure>(reader, "Structures", MergeOption.NoTracking)];
             }
 
             this.Database.Connection.Close();
@@ -567,7 +543,7 @@ namespace ConnectomeDataModel
 
         public IQueryable<StructureLink> SelectNetworkStructureLinks(IEnumerable<long> IDs, int numHops)
         {
-            var proc = new SelectNetworkStructureLinksProcedure()
+            SelectNetworkStructureLinksProcedure proc = new()
             {
                 Hops = numHops,
                 IDs = udt_integer_list.Create(IDs)
@@ -579,7 +555,7 @@ namespace ConnectomeDataModel
             StructureLink[] Links;
             using (System.Data.Common.DbDataReader reader = EntityFrameworkExtras.EF6.DatabaseExtensions.ExecuteReader(this.Database, proc))
             {
-                Links = ((IObjectContextAdapter)this).ObjectContext.Translate<StructureLink>(reader, "StructureLinks", MergeOption.NoTracking).ToArray();
+                Links = [.. ((IObjectContextAdapter)this).ObjectContext.Translate<StructureLink>(reader, "StructureLinks", MergeOption.NoTracking)];
             }
 
             this.Database.Connection.Close();
@@ -610,7 +586,7 @@ namespace ConnectomeDataModel
                 }
             }
         }
-        
+
 
         /// <summary>
         /// Add the links to the locations in the dictionary
@@ -632,18 +608,18 @@ namespace ConnectomeDataModel
                 }
             }
         }
-         
+
         [DbFunction("ConnectomeModel.Store", "ufnStructureArea")]
         public string GetStructureArea(long ID)
         {
             var objectContext = ((IObjectContextAdapter)this).ObjectContext;
 
-            var parameters = new List<ObjectParameter>
-            {
-                new ObjectParameter("Id", ID)
-            };
+            List<ObjectParameter> parameters =
+            [
+                new("Id", ID)
+            ];
 
-            return objectContext.CreateQuery<string>("ConnectomeModel.Store.ufnStructureArea(@Id)", parameters.ToArray())
+            return objectContext.CreateQuery<string>("ConnectomeModel.Store.ufnStructureArea(@Id)", [.. parameters])
                  .Execute(MergeOption.NoTracking)
                  .FirstOrDefault();
         }
@@ -653,12 +629,12 @@ namespace ConnectomeDataModel
         {
             var objectContext = ((IObjectContextAdapter)this).ObjectContext;
 
-            var parameters = new List<ObjectParameter>
-            {
-                new ObjectParameter("Id", ID)
-            };
+            List<ObjectParameter> parameters =
+            [
+                new("Id", ID)
+            ];
 
-            return objectContext.CreateQuery<string>("ConnectomeModel.Store.ufnStructureVolume(@Id)", parameters.ToArray())
+            return objectContext.CreateQuery<string>("ConnectomeModel.Store.ufnStructureVolume(@Id)", [.. parameters])
                  .Execute(MergeOption.NoTracking)
                  .FirstOrDefault();
         }
@@ -668,9 +644,9 @@ namespace ConnectomeDataModel
         {
             var objectContext = ((IObjectContextAdapter)this).ObjectContext;
 
-            var parameters = new List<ObjectParameter>(); 
-            
-            return objectContext.CreateQuery<double>("ConnectomeModel.Store.XYScale()", parameters.ToArray())
+            List<ObjectParameter> parameters = [];
+
+            return objectContext.CreateQuery<double>("ConnectomeModel.Store.XYScale()", [.. parameters])
                  .Execute(MergeOption.NoTracking)
                  .FirstOrDefault();
         }
@@ -680,9 +656,9 @@ namespace ConnectomeDataModel
         {
             var objectContext = ((IObjectContextAdapter)this).ObjectContext;
 
-            var parameters = new List<ObjectParameter>();
+            List<ObjectParameter> parameters = [];
 
-            return objectContext.CreateQuery<double>("ConnectomeModel.Store.ZScale()", parameters.ToArray())
+            return objectContext.CreateQuery<double>("ConnectomeModel.Store.ZScale()", [.. parameters])
                  .Execute(MergeOption.NoTracking)
                  .FirstOrDefault();
         }
@@ -692,9 +668,9 @@ namespace ConnectomeDataModel
         {
             var objectContext = ((IObjectContextAdapter)this).ObjectContext;
 
-            var parameters = new List<ObjectParameter>();
+            List<ObjectParameter> parameters = [];
 
-            return objectContext.CreateQuery<string>("ConnectomeModel.Store.XYScaleUnits()", parameters.ToArray())
+            return objectContext.CreateQuery<string>("ConnectomeModel.Store.XYScaleUnits()", [.. parameters])
                  .Execute(MergeOption.NoTracking)
                  .FirstOrDefault();
         }
@@ -704,9 +680,9 @@ namespace ConnectomeDataModel
         {
             var objectContext = ((IObjectContextAdapter)this).ObjectContext;
 
-            var parameters = new List<ObjectParameter>();
+            List<ObjectParameter> parameters = [];
 
-            return objectContext.CreateQuery<string>("ConnectomeModel.Store.ZScaleUnits()", parameters.ToArray())
+            return objectContext.CreateQuery<string>("ConnectomeModel.Store.ZScaleUnits()", [.. parameters])
                  .Execute(MergeOption.NoTracking)
                  .FirstOrDefault();
         }

@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Geometry.Transforms;
 using System;
 using System.Collections.Generic;
@@ -15,7 +15,7 @@ namespace Viking.VolumeModel
     /// This is the base class for transforms that use the original tiles where the number of tiles is 
     /// fixed at each resolution and the size varies
     /// </summary>
-    public abstract class FixedTileCountMapping : MappingBase
+    public abstract class FixedTileCountMapping(Section section, string name, string Prefix, string Postfix) : MappingBase(section, name, Prefix, Postfix)
     {
         public override UnitsAndScale.IAxisUnits XYScale => CurrentPyramid.XYScale;
 
@@ -39,7 +39,7 @@ namespace Viking.VolumeModel
                 if (CurrentPyramid is null)
                     throw new InvalidOperationException("No image pyramid set in FixedTileCountMapping, not using mapping manager?");
 
-                return CurrentPyramid.GetLevels().ToArray();
+                return [.. CurrentPyramid.GetLevels()];
             }
         }
 
@@ -72,21 +72,13 @@ namespace Viking.VolumeModel
             if (transforms is null)
                 return null;
 
-            if (!(((ITransformInfo)transforms[number]).Info is TileTransformInfo info))
+            if (((ITransformInfo)transforms[number]).Info is not TileTransformInfo info)
                 return null;
 
             return info.TileFileName;
         }
 
-        internal string TileFileName(string filename, int DownsampleLevel)
-        {
-            return $"{CurrentPyramid.Path}{System.IO.Path.DirectorySeparatorChar}{DownsampleLevel:D3}{System.IO.Path.DirectorySeparatorChar}{filename}";
-        }
-
-        protected FixedTileCountMapping(Section section, string name, string Prefix, string Postfix) :
-            base(section, name, Prefix, Postfix)
-        {
-        }
+        internal string TileFileName(string filename, int DownsampleLevel) => $"{CurrentPyramid.Path}{System.IO.Path.DirectorySeparatorChar}{DownsampleLevel:D3}{System.IO.Path.DirectorySeparatorChar}{filename}";
 
         /*
         private int _Initialized = 0;
@@ -130,7 +122,7 @@ namespace Viking.VolumeModel
             if (transforms is null)
                 return Task.CompletedTask;
 
-            using (FileStream fstream = new FileStream(CachedTransformsFileName, FileMode.Create, FileAccess.Write))
+            using (FileStream fstream = new(CachedTransformsFileName, FileMode.Create, FileAccess.Write))
             {
                 JsonTransformSerializer.SerializeArray(fstream, transforms);
             }
@@ -146,7 +138,7 @@ namespace Viking.VolumeModel
 
             try
             {
-                using FileStream fstream = new FileStream(CachedTransformsFileName, FileMode.Open, FileAccess.Read);
+                using FileStream fstream = new(CachedTransformsFileName, FileMode.Open, FileAccess.Read);
                 transforms = JsonTransformSerializer.DeserializeArray(fstream);
             }
             catch (Exception e)
@@ -165,7 +157,7 @@ namespace Viking.VolumeModel
                                                 GridQuad? SectionVisibleBounds,
                                                 double DownSample)
         {
-            TilePyramid VisibleTiles = new TilePyramid(VisibleBounds);
+            TilePyramid VisibleTiles = new(VisibleBounds);
 
             double scaledDownsampleLevel = AdjustDownsampleForScale(DownSample);
 
@@ -198,10 +190,10 @@ namespace Viking.VolumeModel
 
             int ExpectedTileCount = Tranforms.Length;
 #if DEBUG
-            List<TileViewModel> TilesToDraw = new List<TileViewModel>(ExpectedTileCount);
+            List<TileViewModel> TilesToDraw = new(ExpectedTileCount);
 #endif
             //            List<Tile> TilesToLoad = new List<Tile>(ExpectedTileCount);
-            List<Task<TileViewModel>> tileTasks = new List<Task<TileViewModel>>();
+            List<Task<TileViewModel>> tileTasks = [];
 
             foreach (ITransform T in Tranforms)
             {
@@ -211,13 +203,13 @@ namespace Viking.VolumeModel
                     {
                         if (T_Info.Info is TileTransformInfo info)
                         {
-                            GridVector2[] corners = new GridVector2[]
-                            {
+                            GridVector2[] corners =
+                            [
                                 GridVector2.Zero,
-                                new GridVector2(info.ImageWidth, 0),
-                                new GridVector2(0, info.ImageHeight),
-                                new GridVector2(info.ImageWidth, info.ImageHeight)
-                            };
+                                new(info.ImageWidth, 0),
+                                new(0, info.ImageHeight),
+                                new(info.ImageWidth, info.ImageHeight)
+                            ];
 
                             var target_corners = T.Transform(corners);
                             var target_bbox = target_corners.BoundingBox();
@@ -230,7 +222,7 @@ namespace Viking.VolumeModel
                         }
                     }
                 }
-                 
+
                 if (T is IControlPointTriangulation T_Triangulation)
                 {
                     //If this tile has been transformed out of existence then skip it
@@ -254,15 +246,15 @@ namespace Viking.VolumeModel
                 }
             }
 
-            Task[] tileTaskArray = tileTasks.Cast<Task>().ToArray();
+            Task[] tileTaskArray = [.. tileTasks.Cast<Task>()];
             Task.WaitAll(tileTaskArray);
 
-            var tiles = tileTasks.Select(t => t.Result).ToList();
+            List<TileViewModel> tiles = [.. tileTasks.Select(t => t.Result)];
 #if DEBUG
             TilesToDraw.AddRange(tiles);
 #endif 
             foreach (var tile in tiles)
-            { 
+            {
                 VisibleTiles.AddTile(tile.Downsample, tile);
             }
 
@@ -275,18 +267,18 @@ namespace Viking.VolumeModel
             int lowestResLevel = AvailableLevels[iLowestResLevel];
             int level = lowestResLevel;
             int iLevel = iLowestResLevel;
-            List<Task<TileViewModel>> tileTasks = new List<Task<TileViewModel>>();
+            List<Task<TileViewModel>> tileTasks = [];
             while (level >= roundedDownsample)
             {
                 string uniqueID = TileViewModel.CreateUniqueKey(Section.Number, Name, CurrentPyramid.Name,
                     level, info.TileFileName);
-                
+
                 if (Global.TileCache.TryGetValue(uniqueID, out TileViewModel tileViewModel))
                     //Add the existing tile to the task list
                     tileTasks.Add(Task.FromResult(tileViewModel));
                 else
                 {
-                    if(T is IControlPointTriangulation T_Triangulation)
+                    if (T is IControlPointTriangulation T_Triangulation)
                         tileTasks.Add(Task.Run(() => CreateTile(uniqueID, level,
                             T_Triangulation, info)));
                     else if (T is IContinuousTransform T_Cont)
@@ -294,7 +286,7 @@ namespace Viking.VolumeModel
                             T_Cont, info)));
                     else
                         throw new NotImplementedException("Unknown transform type for Tiles");
-                } 
+                }
                 /*
                 if (tile != null)
                 {
@@ -314,10 +306,10 @@ namespace Viking.VolumeModel
             return tileTasks;
         }
 
-        private TileViewModel CreateTile(string uniqueID, int roundedScaledDownsample, in IContinuousTransform cTransform,  in TileTransformInfo info)
-        {  
+        private TileViewModel CreateTile(string uniqueID, int roundedScaledDownsample, in IContinuousTransform cTransform, in TileTransformInfo info)
+        {
             PositionNormalTextureVertex[] verticies = TileViewModel.CalculateVerticies(cTransform, info, out int[] triangulation);
-            return CreateTile(uniqueID, roundedScaledDownsample, verticies, triangulation, info); 
+            return CreateTile(uniqueID, roundedScaledDownsample, verticies, triangulation, info);
         }
 
         private TileViewModel CreateTile(string uniqueID, int roundedScaledDownsample, in IControlPointTriangulation ctrlTriangulation, in TileTransformInfo info)
@@ -325,7 +317,7 @@ namespace Viking.VolumeModel
             //First create a new tile
             //PORT: string TextureCacheFileName = TileCacheName(iX, iY, roundedDownsample);
             PositionNormalTextureVertex[] verticies = TileViewModel.CalculateVerticies(ctrlTriangulation, info);
-            return CreateTile(uniqueID, roundedScaledDownsample, verticies, ctrlTriangulation.TriangleIndicies, info); 
+            return CreateTile(uniqueID, roundedScaledDownsample, verticies, ctrlTriangulation.TriangleIndicies, info);
         }
 
         private TileViewModel CreateTile(string uniqueID,

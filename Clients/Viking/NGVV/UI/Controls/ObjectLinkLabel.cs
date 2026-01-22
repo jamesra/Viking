@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Drawing; 
+using System.Drawing;
 using System.Windows.Forms;
 using Viking.Common;
 using UserControl = System.Windows.Forms.UserControl;
@@ -85,10 +85,7 @@ namespace Viking.UI.Controls
         }
 
 
-        private void ContextMenuOnClear(object sender, EventArgs e)
-        {
-            SourceObject = null;
-        }
+        private void ContextMenuOnClear(object sender, EventArgs e) => SourceObject = null;
 
         protected void EnableControls()
         {
@@ -107,13 +104,13 @@ namespace Viking.UI.Controls
 
         protected override void OnDragDrop(System.Windows.Forms.DragEventArgs e)
         {
-            if (UI.State.DragDropObject == null)
+            if (UI.State.DragDropObject is null)
                 return;
 
             Debug.Assert(_Type is not null);
-            if(_Type is null)
+            if (_Type is null)
                 throw new NullReferenceException("Unexpected null type");
-             
+
             if (_Type.IsAssignableFrom(UI.State.DragDropObject.GetType()))
                 SourceObject = UI.State.DragDropObject as IUIObject;
             base.OnDragDrop(e);
@@ -123,10 +120,7 @@ namespace Viking.UI.Controls
         {
             if (_Type is null)
                 e.Effect = DragDropEffects.None;
-            else if (_ReadOnly == false && _Type.IsAssignableFrom(UI.State.DragDropObject.GetType()))
-                e.Effect = DragDropEffects.All;
-            else
-                e.Effect = DragDropEffects.None;
+            else e.Effect = _ReadOnly == false && _Type.IsAssignableFrom(UI.State.DragDropObject.GetType()) ? DragDropEffects.All : DragDropEffects.None;
 
             base.OnDragOver(e);
         }
@@ -137,16 +131,13 @@ namespace Viking.UI.Controls
             {
                 if (e.Button == MouseButtons.Right)
                 {
-                    System.Windows.Forms.ContextMenuStrip contextMenu = null;
+                    System.Windows.Forms.ContextMenuStrip? contextMenu = null;
                     if (_SourceObject is IContextMenu contextMenuObj)
                     {
                         contextMenu = contextMenuObj.ContextMenu;
                     }
 
-                    if (contextMenu == null)
-                    {
-                        contextMenu = new System.Windows.Forms.ContextMenuStrip();
-                    }
+                    contextMenu ??= new System.Windows.Forms.ContextMenuStrip();
 
                     // Add separator if there are existing items
                     if (contextMenu.Items.Count > 0)
@@ -155,7 +146,7 @@ namespace Viking.UI.Controls
                     }
 
                     // Add "Clear Link" option
-                    var clearLinkItem = new System.Windows.Forms.ToolStripMenuItem("Clear Link");
+                    ToolStripMenuItem clearLinkItem = new("Clear Link");
                     clearLinkItem.Click += ContextMenuOnClear;
                     contextMenu.Items.Add(clearLinkItem);
 

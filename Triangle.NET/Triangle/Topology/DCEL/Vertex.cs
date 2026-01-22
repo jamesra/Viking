@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="Vertex.cs">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -60,9 +60,6 @@ namespace TriangleNet.Topology.DCEL
             } while (edge.ID != first);
         }
 
-        public override string ToString()
-        {
-            return string.Format("V-ID {0}", base.id);
-        }
+        public override string ToString() => string.Format("V-ID {0}", base.id);
     }
 }

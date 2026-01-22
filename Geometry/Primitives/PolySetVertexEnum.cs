@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,24 +8,16 @@ namespace Geometry
     /// <summary>
     /// Enumerate all verticies for a collection of polygons
     /// </summary>
-    public class PolySetVertexEnum : IEnumerator<PolygonIndex>, IEnumerator, IEnumerable<PolygonIndex>, IEnumerable
+    public class PolySetVertexEnum(IReadOnlyList<GridPolygon> polys, int iStartingPolyIndex = 0) : IEnumerator<PolygonIndex>, IEnumerator, IEnumerable<PolygonIndex>, IEnumerable
     {
-        PolygonIndex? curIndex;
+        PolygonIndex? curIndex = new Geometry.PolygonIndex?();
 
-        readonly IReadOnlyList<GridPolygon> polygons;
+        readonly IReadOnlyList<GridPolygon> polygons = polys;
 
         /// <summary>
         /// The index to use for the first polygon in the list, defaults to zero
         /// </summary>
-        private readonly int StartingPolyIndex;
-
-
-        public PolySetVertexEnum(IReadOnlyList<GridPolygon> polys, int iStartingPolyIndex = 0)
-        {
-            this.polygons = polys;
-            curIndex = new Geometry.PolygonIndex?();
-            StartingPolyIndex = iStartingPolyIndex;
-        }
+        private readonly int StartingPolyIndex = iStartingPolyIndex;
 
         public PolygonIndex Current
         {
@@ -53,7 +45,7 @@ namespace Geometry
             }
         }
 
-        public void Dispose() { GC.SuppressFinalize(this); }
+        public void Dispose() => GC.SuppressFinalize(this);
 
         /// <summary>
         /// Go to the next index, if the shape is closed we do not return the closed index twice. 
@@ -127,9 +119,9 @@ namespace Geometry
                 //OK, we need to move on and could not move to an inner ring.  Go to the next polygon
 
                 int iNextPoly = iPoly + 1;
-                while(iNextPoly < inputPolygons.Count) 
+                while (iNextPoly < inputPolygons.Count)
                 {
-                    if (inputPolygons[iNextPoly] is GridPolygon) //Skip over non-polygons
+                    if (inputPolygons[iNextPoly] is not null) //Skip over non-polygons
                         return new Geometry.PolygonIndex(iNextPoly, 0, inputPolygons[iNextPoly].ExteriorRing.Length - 1);
 
                     iNextPoly++;
@@ -139,19 +131,10 @@ namespace Geometry
             }
         }
 
-        public void Reset()
-        {
-            curIndex = new PolygonIndex?();
-        }
+        public void Reset() => curIndex = new PolygonIndex?();
 
-        public IEnumerator GetEnumerator()
-        {
-            return (IEnumerator<PolygonIndex>)this;
-        }
+        public IEnumerator GetEnumerator() => (IEnumerator<PolygonIndex>)this;
 
-        IEnumerator<PolygonIndex> IEnumerable<PolygonIndex>.GetEnumerator()
-        {
-            return (IEnumerator<PolygonIndex>)this;
-        }
+        IEnumerator<PolygonIndex> IEnumerable<PolygonIndex>.GetEnumerator() => (IEnumerator<PolygonIndex>)this;
     }
 }

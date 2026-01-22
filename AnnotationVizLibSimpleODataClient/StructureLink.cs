@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using System;
 using System.Collections.Generic;
 
@@ -8,7 +8,7 @@ namespace AnnotationVizLib.SimpleOData
     {
         public static StructureLink FromDictionary(IDictionary<string, object> dict)
         {
-            StructureLink s = new StructureLink
+            StructureLink s = new()
             {
                 SourceID = System.Convert.ToUInt64(dict["SourceID"]),
                 TargetID = System.Convert.ToUInt64(dict["TargetID"]),
@@ -61,9 +61,6 @@ namespace AnnotationVizLib.SimpleOData
             return false;
         }
 
-        public bool Equals(StructureLink other)
-        {
-            return this.Equals((IStructureLink)other);
-        }
+        public bool Equals(StructureLink other) => this.Equals((IStructureLink)other);
     }
 }

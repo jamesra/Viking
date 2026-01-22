@@ -7,16 +7,11 @@ namespace WebAnnotation.View
     /// <summary>
     /// Renders the name of a structure type object over a box with the background color = Structure type color
     /// </summary>
-    internal class StructureTypeButtonView : IViewPosition2D
+    internal class StructureTypeButtonView(StructureTypeObj obj) : IViewPosition2D
     {
-        private readonly StructureTypeObj model;
-        private VikingXNAGraphics.RectangleView BackgroundBox = null;
-        private VikingXNAGraphics.LabelView Label = null;
-
-        public StructureTypeButtonView(StructureTypeObj obj)
-        {
-            model = obj;
-        }
+        private readonly StructureTypeObj model = obj;
+        private VikingXNAGraphics.RectangleView? BackgroundBox = null;
+        private VikingXNAGraphics.LabelView? Label = null;
 
         public GridVector2 Position
         {

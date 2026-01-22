@@ -8,7 +8,7 @@ namespace LocalBookmarks
     class CreateBookmarkCommand : Viking.UI.Commands.Command
     {
         GridVector2 bookmarkPosition;
-        FolderUIObj ParentFolder;
+        readonly FolderUIObj ParentFolder;
 
         VikingXNAGraphics.TextureCircleView? circleView;
 
@@ -48,14 +48,13 @@ namespace LocalBookmarks
 
         protected override void Execute()
         {
-            BookmarkUIObj bookmark = new BookmarkUIObj(ParentFolder);
+            BookmarkUIObj bookmark = new(ParentFolder);
             System.Drawing.Point ControlPostion = Viking.UI.State.ViewerForm.PointToClient(Cursor.Position);
             GridVector2 WorldPosition = Viking.UI.State.ViewerControl.ScreenToWorld(ControlPostion.X, ControlPostion.Y);
 
             Viking.VolumeModel.IVolumeToSectionTransform mapping = Parent.Section.ActiveSectionToVolumeTransform;
 
-            GridVector2 SectionPosition;
-            bool mappedToSection = mapping.TryVolumeToSection(WorldPosition, out SectionPosition);
+            bool mappedToSection = mapping.TryVolumeToSection(WorldPosition, out GridVector2 SectionPosition);
 
             bookmark.X = WorldPosition.X;
             bookmark.Y = WorldPosition.Y;
@@ -99,8 +98,10 @@ namespace LocalBookmarks
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            circleView = new VikingXNAGraphics.TextureCircleView(BookmarkOverlay.StarTexture, new GridCircle(this.oldWorldPosition, Global.DefaultBookmarkRadius), Microsoft.Xna.Framework.Color.Gold);
-            circleView.Alpha = (float)(DateTime.UtcNow.Second % 6) / 6f;
+            circleView = new VikingXNAGraphics.TextureCircleView(BookmarkOverlay.StarTexture, new GridCircle(this.oldWorldPosition, Global.DefaultBookmarkRadius), Microsoft.Xna.Framework.Color.Gold)
+            {
+                Alpha = (float)(DateTime.UtcNow.Second % 6) / 6f
+            };
 
             if (circleView != null)
             {

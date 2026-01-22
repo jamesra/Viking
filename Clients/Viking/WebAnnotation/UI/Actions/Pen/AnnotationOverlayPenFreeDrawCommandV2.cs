@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -22,7 +22,7 @@ namespace WebAnnotation.UI.Commands
         /// <summary>
         /// Renders any loops the user has created so they have feedback if that was the goal
         /// </summary>
-        private readonly List<SolidPolygonView> LoopViews = new List<SolidPolygonView>();
+        private readonly List<SolidPolygonView> LoopViews = [];
 
         /*
         /// <summary>
@@ -30,19 +30,19 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         Dictionary<GridVector2, IAction> ActionAtPoint = new Dictionary<GridVector2, IAction>();*/
 
-        public Dictionary<ICanvasView, List<IAction>> ActionsForCanvasItem = new Dictionary<ICanvasView, List<IAction>>();
+        public Dictionary<ICanvasView, List<IAction>> ActionsForCanvasItem = [];
 
         public IAction[] PossibleActions
         {
             get
             {
-                List<IAction> listActions = new List<IAction>();
+                List<IAction> listActions = [];
                 foreach (List<IAction> list in ActionsForCanvasItem.Values)
                 {
                     listActions.AddRange(list);
                 }
 
-                return listActions.ToArray();
+                return [.. listActions];
             }
         }
 
@@ -73,10 +73,7 @@ namespace WebAnnotation.UI.Commands
 
         public override uint NumCurveInterpolations => throw new NotImplementedException();
 
-        protected override bool CanCommandComplete()
-        {
-            return true;
-        }
+        protected override bool CanCommandComplete() => true;
 
         protected override void OnPenPathComplete(object sender, GridVector2[] Path)
         {
@@ -91,7 +88,7 @@ namespace WebAnnotation.UI.Commands
             /*
             foreach (InteractionLogEvent e in this.InteractionsLog.Entries)
             {
-                Trace.WriteLine(string.Format("{0} {1}", e.Interaction, e.Annotation == null ? "Empty region" : e.Annotation.ToString()));
+                Trace.WriteLine(string.Format("{0} {1}", e.Interaction, e.Annotation is null ? "Empty region" : e.Annotation.ToString()));
             }
 
             // PossibleActions.Clear();
@@ -100,7 +97,7 @@ namespace WebAnnotation.UI.Commands
             foreach (var annotation in Annotations)
             {
                 IPenActionSupport pen_view = annotation as IPenActionSupport;
-                if (pen_view == null)
+                if (pen_view is null)
                     continue;
 
                 var actions = pen_view.GetPenActionsForShapeAnnotation(this.PenInput.path, this.InteractionsLogger.Log.Entries, Parent.Section.Number);
@@ -138,7 +135,7 @@ namespace WebAnnotation.UI.Commands
         {
             foreach (InteractionLogEvent e in views)
             {
-                Trace.WriteLine($"{e.Interaction} {(e.Annotation == null ? "Empty region" : e.Annotation.ToString())}");
+                Trace.WriteLine($"{e.Interaction} {(e.Annotation is null ? "Empty region" : e.Annotation.ToString())}");
             }
 
             // PossibleActions.Clear();
@@ -146,8 +143,7 @@ namespace WebAnnotation.UI.Commands
             IEnumerable<ICanvasView> Annotations = InteractionsLogger.Log.Entries.Select(e => e.Annotation).Distinct();
             foreach (ICanvasView annotation in Annotations)
             {
-                IPenActionSupport pen_view = annotation as IPenActionSupport;
-                if (pen_view == null)
+                if (annotation is not IPenActionSupport pen_view)
                 {
                     continue;
                 }
@@ -167,7 +163,7 @@ namespace WebAnnotation.UI.Commands
             foreach (InteractionLogEvent e in views)
             {
                 Trace.WriteLine(
-                    $"Remove {e.Interaction} {(e.Annotation == null ? "Empty region" : e.Annotation.ToString())}");
+                    $"Remove {e.Interaction} {(e.Annotation is null ? "Empty region" : e.Annotation.ToString())}");
             }
 
             ActionsForCanvasItem.Clear();
@@ -175,8 +171,7 @@ namespace WebAnnotation.UI.Commands
             IEnumerable<ICanvasView> Annotations = InteractionsLogger.Log.Entries.Select(e => e.Annotation).Distinct();
             foreach (ICanvasView annotation in Annotations)
             {
-                IPenActionSupport pen_view = annotation as IPenActionSupport;
-                if (pen_view == null)
+                if (annotation is not IPenActionSupport pen_view)
                 {
                     continue;
                 }
@@ -209,9 +204,6 @@ namespace WebAnnotation.UI.Commands
             return;
         }
 
-        protected override bool ShapeIsValid()
-        {
-            return true;
-        }
+        protected override bool ShapeIsValid() => true;
     }
 }

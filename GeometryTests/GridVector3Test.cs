@@ -57,8 +57,8 @@ namespace UtilitiesTests
         [TestMethod]
         public void TestAngle()
         {
-            GridVector3 A = new GridVector3(5, 0, 0);
-            GridVector3 B = new GridVector3(2.5, 2.5, 0);
+            GridVector3 A = new(5, 0, 0);
+            GridVector3 B = new(2.5, 2.5, 0);
 
             double PI4 = Math.PI / 4;
 
@@ -126,9 +126,9 @@ namespace UtilitiesTests
         [TestMethod]
         public void TestArcAngle()
         {
-            GridVector3 O = new GridVector3(0, 0, 0);
-            GridVector3 A = new GridVector3(5, 0, 0);
-            GridVector3 B = new GridVector3(2.5, 2.5, 0);
+            GridVector3 O = new(0, 0, 0);
+            GridVector3 A = new(5, 0, 0);
+            GridVector3 B = new(2.5, 2.5, 0);
 
             double PI4 = Math.PI / 4;
 
@@ -151,11 +151,11 @@ namespace UtilitiesTests
         [TestMethod]
         public void TestTranslate()
         {
-            GridVector3 A = new GridVector3(0, 0, 0);
+            GridVector3 A = new(0, 0, 0);
 
-            Vector<double> v = Vector<double>.Build.Dense(new double[] { A.X, A.Y, 0, 1 });
+            Vector<double> v = Vector<double>.Build.Dense([A.X, A.Y, 0, 1]);
 
-            GridVector3 Offset = new GridVector3(1, 2, 0);
+            GridVector3 Offset = new(1, 2, 0);
 
             Matrix<double> translationMatrix = GeometryMathNetNumerics.CreateTranslationMatrix(Offset);
             Vector<double> translated = translationMatrix * v;
@@ -173,22 +173,22 @@ namespace UtilitiesTests
         [TestMethod]
         public void ToFromMatrix()
         {
-            GridVector3 A = new GridVector3(1, 2, 0);
-            GridVector3 B = new GridVector3(1, 0, 0);
-            GridVector3 C = new GridVector3(2, 1, 0);
-            GridVector3 D = new GridVector3(0, 1, 0);
+            GridVector3 A = new(1, 2, 0);
+            GridVector3 B = new(1, 0, 0);
+            GridVector3 C = new(2, 1, 0);
+            GridVector3 D = new(0, 1, 0);
 
-            GridVector3[] points = new GridVector3[] { A, B, C, D };
+            GridVector3[] points = [A, B, C, D];
 
             Matrix<double> m = points.ToMatrix();
-            GridVector3[] convertedPoints = m.ToGridVector3().ToArray();
+            GridVector3[] convertedPoints = [.. m.ToGridVector3()];
 
             Assert.AreEqual(points.Length, convertedPoints.Length);
 
             for (int i = 0; i < points.Length; i++)
             {
                 Assert.AreEqual(points[i], convertedPoints[i], "Output of matrix conversion does not match input");
-                Assert.AreEqual(points[i].coords.Length, 3, "Expect a GridVector3 to have coords array of length 3");
+                Assert.AreEqual(3, points[i].coords.Length, "Expect a GridVector3 to have coords array of length 3");
             }
         }
     }

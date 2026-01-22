@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Geometry.Graphics
 {
@@ -70,17 +70,14 @@ namespace Geometry.Graphics
             A = (byte)(a / (double)byte.MaxValue);
         }
 
-        public static readonly Color Blue = new Color(0x00, 0x00, 0xff);
-        public static readonly Color Green = new Color(0x00, 0xff, 0x00);
-        public static readonly Color Red = new Color(0xff, 0x00, 0x00);
-        public static readonly Color Gold = new Color(0xff, 0xd7, 0x00);
+        public static readonly Color Blue = new(0x00, 0x00, 0xff);
+        public static readonly Color Green = new(0x00, 0xff, 0x00);
+        public static readonly Color Red = new(0xff, 0x00, 0x00);
+        public static readonly Color Gold = new(0xff, 0xd7, 0x00);
 
-        public override string ToString()
-        {
-            return "R: " + R.ToString() + " G: " + G.ToString() + " B: " + B.ToString();
-        }
+        public override string ToString() => "R: " + R.ToString() + " G: " + G.ToString() + " B: " + B.ToString();
 
-        public override bool Equals(object obj)
+        public override readonly bool Equals(object obj)
         {
             Color ColorB = (Color)obj;
             return this == ColorB;
@@ -105,9 +102,6 @@ namespace Geometry.Graphics
                    (A.A == B.A));
         }
 
-        public static bool operator !=(Color A, Color B)
-        {
-            return !(A == B);
-        }
+        public static bool operator !=(Color A, Color B) => !(A == B);
     }
 }

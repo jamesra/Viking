@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -43,17 +43,12 @@ namespace AnnotationVizLib
     /// Tulip IDs every edge with an index. The TLPViewEdge records the TO/FROM index of the linked nodes, and the unique index of the edge itself.
     /// </summary>
     /// <typeparam name="KEY"></typeparam>
-    public class TLPViewEdge : GraphViewEdge<ulong>
+    public class TLPViewEdge(ulong id) : GraphViewEdge<ulong>
     {
         /// <summary>
         /// TLP file ID
         /// </summary>
-        public ulong tulip_id;
-
-        public TLPViewEdge(ulong id)
-        {
-            this.tulip_id = id;
-        }
+        public ulong tulip_id = id;
 
         public System.Drawing.Color Color
         {
@@ -64,10 +59,7 @@ namespace AnnotationVizLib
                     value.A);
         }
 
-        public string DefinitionString()
-        {
-            return string.Format("(edge {0} {1} {2})", tulip_id, from, to);
-        }
+        public string DefinitionString() => string.Format("(edge {0} {1} {2})", tulip_id, from, to);
 
         public string AttributeToString(string attrib_name)
         {
@@ -87,15 +79,9 @@ namespace AnnotationVizLib
 
         public static string GenericFooter => ")";
 
-        public static string ClusterHeader(ulong id, string name)
-        {
-            return string.Format("(cluster {0} \"{1}\"", id, name);
-        }
+        public static string ClusterHeader(ulong id, string name) => string.Format("(cluster {0} \"{1}\"", id, name);
 
-        public static string ClusterFooter()
-        {
-            return GenericFooter;
-        }
+        public static string ClusterFooter() => GenericFooter;
 
         public static string PropertyHeader(string attribName)
         {
@@ -109,22 +95,16 @@ namespace AnnotationVizLib
         public static string PropertyFooter => GenericFooter;
     }
 
-    public class TLPViewSubgraph
+    public class TLPViewSubgraph(ulong subgraph_ID, string label)
     {
-        public readonly ulong ID;
-        public string Label;
+        public readonly ulong ID = subgraph_ID;
+        public string Label = label;
 
-        public SortedDictionary<string, string> SubgraphAttributes = new SortedDictionary<string, string>();
-        public SortedDictionary<ulong, TLPViewSubgraph> SubGraphs = new SortedDictionary<ulong, TLPViewSubgraph>();
+        public SortedDictionary<string, string> SubgraphAttributes = [];
+        public SortedDictionary<ulong, TLPViewSubgraph> SubGraphs = [];
 
-        readonly SortedSet<ulong> NodeIDs = new SortedSet<ulong>();
-        readonly SortedSet<ulong> EdgeIDs = new SortedSet<ulong>();
-
-        public TLPViewSubgraph(ulong subgraph_ID, string label)
-        {
-            this.ID = subgraph_ID;
-            this.Label = label;
-        }
+        readonly SortedSet<ulong> NodeIDs = [];
+        readonly SortedSet<ulong> EdgeIDs = [];
 
         public void AddNode(ulong ID)
         {
@@ -153,40 +133,36 @@ namespace AnnotationVizLib
                     value.A);
         }
 
-        private string NodesString(IEnumerable<ulong> node_ids)
+        private static string NodesString(IEnumerable<ulong> node_ids)
         {
             if (node_ids.Count() == 0)
                 return "";
 
-            using (StringWriter sw = new StringWriter())
+            using StringWriter sw = new();
+            sw.Write("(nodes ");
+            foreach (ulong id in node_ids)
             {
-                sw.Write("(nodes ");
-                foreach (ulong id in node_ids)
-                {
-                    sw.Write(string.Format("{0} ", id));
-                }
-                sw.WriteLine(TLPFile.GenericFooter);
-
-                return sw.ToString();
+                sw.Write(string.Format("{0} ", id));
             }
+            sw.WriteLine(TLPFile.GenericFooter);
+
+            return sw.ToString();
         }
 
-        private string EdgesString(IEnumerable<ulong> edge_ids)
+        private static string EdgesString(IEnumerable<ulong> edge_ids)
         {
             if (edge_ids.Count() == 0)
                 return "";
 
-            using (StringWriter sw = new StringWriter())
+            using StringWriter sw = new();
+            sw.Write("(edges ");
+            foreach (ulong id in edge_ids)
             {
-                sw.Write("(edges ");
-                foreach (ulong id in edge_ids)
-                {
-                    sw.Write(string.Format("{0} ", id));
-                }
-                sw.WriteLine(TLPFile.GenericFooter);
-
-                return sw.ToString();
+                sw.Write(string.Format("{0} ", id));
             }
+            sw.WriteLine(TLPFile.GenericFooter);
+
+            return sw.ToString();
         }
 
         /// <summary>
@@ -195,37 +171,30 @@ namespace AnnotationVizLib
         /// <returns></returns>
         private string ClusterGraphBody()
         {
-            using (StringWriter sw = new StringWriter())
+            using StringWriter sw = new();
+            sw.Write(TLPViewSubgraph.NodesString(this.NodeIDs));
+            sw.Write(TLPViewSubgraph.EdgesString(this.EdgeIDs));
+
+            foreach (ulong subgraph_id in this.SubGraphs.Keys)
             {
-                sw.Write(NodesString(this.NodeIDs));
-                sw.Write(EdgesString(this.EdgeIDs));
-
-                foreach (ulong subgraph_id in this.SubGraphs.Keys)
-                {
-                    sw.Write(this.SubGraphs[subgraph_id].ToClusterString());
-                }
-
-                return sw.ToString();
+                sw.Write(this.SubGraphs[subgraph_id].ToClusterString());
             }
+
+            return sw.ToString();
         }
 
         public string ToClusterString()
         {
-            using (StringWriter sw = new StringWriter())
-            {
-                sw.WriteLine(TLPFile.ClusterHeader(this.ID, this.Label));
+            using StringWriter sw = new();
+            sw.WriteLine(TLPFile.ClusterHeader(this.ID, this.Label));
 
-                sw.WriteLine(ClusterGraphBody());
+            sw.WriteLine(ClusterGraphBody());
 
-                sw.WriteLine(TLPFile.GenericFooter);
-                return sw.ToString();
-            }
+            sw.WriteLine(TLPFile.GenericFooter);
+            return sw.ToString();
         }
 
-        public override string ToString()
-        {
-            return string.Format("{0} {1}", this.ID, this.Label);
-        }
+        public override string ToString() => string.Format("{0} {1}", this.ID, this.Label);
     }
 
 
@@ -252,14 +221,14 @@ namespace AnnotationVizLib
         /// <summary>
         /// Map the motif label to the arbitrary id used by TLP
         /// </summary>
-        readonly SortedDictionary<VIEWED_KEY, ulong> KeyToIndex = new SortedDictionary<VIEWED_KEY, ulong>();
+        readonly SortedDictionary<VIEWED_KEY, ulong> KeyToIndex = [];
 
         /// <summary>
         /// Map the motif label to the arbitrary id used by TLP
         /// </summary>
-        readonly SortedList<ulong, TLPViewSubgraph> Subgraphs = new SortedList<ulong, TLPViewSubgraph>();
+        readonly SortedList<ulong, TLPViewSubgraph> Subgraphs = [];
 
-        readonly SortedDictionary<ulong, TLPViewEdge> TulipIDToEdge = new SortedDictionary<ulong, TLPViewEdge>();
+        readonly SortedDictionary<ulong, TLPViewEdge> TulipIDToEdge = [];
 
         private ulong nextNodeIndex = 0;
 
@@ -284,7 +253,7 @@ namespace AnnotationVizLib
 
         protected TLPViewNode createNode(VIEWED_KEY key)
         {
-            TLPViewNode tempNode = new TLPViewNode(nextNodeIndex);
+            TLPViewNode tempNode = new(nextNodeIndex);
             addNode(key, tempNode);
             nextNodeIndex += 1;
             return tempNode;
@@ -299,7 +268,7 @@ namespace AnnotationVizLib
         private ulong nextEdgeIndex = 0;
         protected TLPViewEdge addEdge(VIEWED_KEY source, VIEWED_KEY target)
         {
-            TLPViewEdge edge = new TLPViewEdge(nextEdgeIndex)
+            TLPViewEdge edge = new(nextEdgeIndex)
             {
                 to = KeyToIndex[target],
                 from = KeyToIndex[source]
@@ -311,33 +280,27 @@ namespace AnnotationVizLib
             return edge;
         }
 
-        protected bool HaveNodesForEdge(VIEWED_KEY source, VIEWED_KEY target)
-        {
-            return KeyToIndex.ContainsKey(source) && KeyToIndex.ContainsKey(target);
-        }
+        protected bool HaveNodesForEdge(VIEWED_KEY source, VIEWED_KEY target) => KeyToIndex.ContainsKey(source) && KeyToIndex.ContainsKey(target);
 
-        protected void AddSubGraph(ulong id, TLPViewSubgraph subgraph)
-        {
-            Subgraphs.Add(id, subgraph);
-        }
+        protected void AddSubGraph(ulong id, TLPViewSubgraph subgraph) => Subgraphs.Add(id, subgraph);
 
         private static string NodesDefinitionString(ICollection<ulong> ids)
         {
-            StringBuilder s = new StringBuilder();
+            StringBuilder s = new();
             s.Append("(nodes ");
             foreach (ulong id in ids)
             {
                 s.Append(id.ToString() + " ");
             }
-            s.Append(")");
+            s.Append(')');
 
             return s.ToString();
         }
 
         private string EdgesDefinitionString()
         {
-            StringBuilder s = new StringBuilder();
-            foreach (TLPViewEdge edge in edges)
+            StringBuilder s = new();
+            foreach (TLPViewEdge edge in edges.Cast<TLPViewEdge>())
             {
                 s.AppendLine(edge.DefinitionString());
             }
@@ -348,9 +311,9 @@ namespace AnnotationVizLib
 
         private IList<string> EntityAttributeList()
         {
-            SortedSet<string> attribNames = new SortedSet<string>(this.DefaultAttributes.Keys.Distinct());
+            SortedSet<string> attribNames = [.. this.DefaultAttributes.Keys.Distinct()];
 
-            foreach (TLPViewEdge edge in edges)
+            foreach (TLPViewEdge edge in edges.Cast<TLPViewEdge>())
             {
                 foreach (string attribName in edge.Attributes.Keys)
                 {
@@ -361,7 +324,7 @@ namespace AnnotationVizLib
                 }
             }
 
-            foreach (TLPViewNode node in nodes.Values)
+            foreach (TLPViewNode node in nodes.Values.Cast<TLPViewNode>())
             {
                 foreach (string attribName in node.Attributes.Keys)
                 {
@@ -373,13 +336,13 @@ namespace AnnotationVizLib
             }
 
 
-            return attribNames.ToList();
+            return [.. attribNames];
         }
 
 
         private string AttributeValueString()
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             IList<string> knownAttributes = EntityAttributeList();
             foreach (string attribName in knownAttributes)
             {
@@ -392,7 +355,7 @@ namespace AnnotationVizLib
 
         private string WriteAttribute(string attribname)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
 
             sb.AppendLine(TLPFile.PropertyHeader(attribname));
 
@@ -401,14 +364,14 @@ namespace AnnotationVizLib
                 sb.AppendLine(string.Format("(default {0} )", DefaultAttributes[attribname]));
             }
 
-            foreach (TLPViewNode node in nodes.Values)
+            foreach (TLPViewNode node in nodes.Values.Cast<TLPViewNode>())
             {
                 string attrib = node.AttributeToString(attribname);
                 if (attrib != null)
                     sb.AppendLine(attrib);
             }
 
-            foreach (TLPViewEdge edge in edges)
+            foreach (TLPViewEdge edge in edges.Cast<TLPViewEdge>())
             {
                 string attrib = edge.AttributeToString(attribname);
                 if (attrib != null)
@@ -423,40 +386,36 @@ namespace AnnotationVizLib
 
         public override string ToString()
         {
-            using (StringWriter sw = new StringWriter())
-            {
-                sw.WriteLine(TLPFile.FileHeader);
+            using StringWriter sw = new();
+            sw.WriteLine(TLPFile.FileHeader);
 
-                sw.WriteLine(this.GraphBody());
+            sw.WriteLine(this.GraphBody());
 
-                sw.WriteLine(AttributeValueString());
+            sw.WriteLine(AttributeValueString());
 
-                sw.WriteLine(TLPFile.FileFooter);
-                return sw.ToString();
-            }
+            sw.WriteLine(TLPFile.FileFooter);
+            return sw.ToString();
         }
 
         private string GraphBody()
         {
-            using (StringWriter sw = new StringWriter())
+            using StringWriter sw = new();
+            sw.WriteLine(NodesDefinitionString(nodes.Keys));
+
+            sw.WriteLine(EdgesDefinitionString());
+
+            foreach (ulong subgraph_id in this.Subgraphs.Keys)
             {
-                sw.WriteLine(NodesDefinitionString(nodes.Keys));
-
-                sw.WriteLine(EdgesDefinitionString());
-
-                foreach (ulong subgraph_id in this.Subgraphs.Keys)
-                {
-                    sw.WriteLine(this.Subgraphs[subgraph_id].ToClusterString());
-                }
-
-                return sw.ToString();
+                sw.WriteLine(this.Subgraphs[subgraph_id].ToClusterString());
             }
+
+            return sw.ToString();
         }
 
 
         public void SaveTLP(string FullPath)
         {
-            using (StreamWriter write = new StreamWriter(FullPath, false))
+            using (StreamWriter write = new(FullPath, false))
             {
                 write.Write(this.ToString());
                 write.Close();

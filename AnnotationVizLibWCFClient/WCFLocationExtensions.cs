@@ -1,4 +1,4 @@
-﻿using AnnotationService.Types;
+using AnnotationService.Types;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,10 +6,7 @@ namespace AnnotationVizLib.WCFClient
 {
     static class WCFLocationExtensions
     {
-        public static List<ObjAttribute> Attributes(this Location loc)
-        {
-            return ObjAttribute.Parse(loc.AttributesXml);
-        }
+        public static List<ObjAttribute> Attributes(this Location loc) => ObjAttribute.Parse(loc.AttributesXml);
 
         public static bool IsVericosityCap(this Location loc)
         {

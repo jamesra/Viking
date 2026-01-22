@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -90,9 +90,9 @@ namespace Viking.AnnotationServiceTypes
             }
         }
 
-        readonly ObservableCollection<THISTYPE> _Children = new ObservableCollection<THISTYPE>();
+        readonly ObservableCollection<THISTYPE> _Children = [];
 
-        public THISTYPE[] Children => _Children.ToArray();
+        public THISTYPE[] Children => [.. _Children];
 
         protected void AddChild(THISTYPE child)
         {
@@ -137,11 +137,11 @@ namespace Viking.AnnotationServiceTypes
         {
             if (this.Data != null)
             {
-                if(false == newdata.ParentID.Equals(Data.ParentID))
+                if (false == newdata.ParentID.Equals(Data.ParentID))
                 {
                     this._Parent = null;
                 }
-                 
+
             }
 
             base.Synch(newdata);

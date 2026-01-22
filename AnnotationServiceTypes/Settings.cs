@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using ProtoBuf;
 
 namespace AnnotationService.Types
@@ -10,7 +10,7 @@ namespace AnnotationService.Types
         /// </summary>
         public static void PrepareSerializers()
         {
-            Serializer.PrepareSerializer<DBACTION>(); 
+            Serializer.PrepareSerializer<DBACTION>();
             Serializer.PrepareSerializer<DataObject>();
 
             //Geometry.cs

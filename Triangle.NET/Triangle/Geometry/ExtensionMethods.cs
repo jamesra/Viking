@@ -1,4 +1,4 @@
-﻿
+
 namespace TriangleNet.Geometry
 {
     using TriangleNet.Meshing;
@@ -10,38 +10,26 @@ namespace TriangleNet.Geometry
         /// <summary>
         /// Triangulates a polygon.
         /// </summary>
-        public static IMesh Triangulate(this IPolygon polygon)
-        {
-            return (new GenericMesher()).Triangulate(polygon, null, null);
-        }
+        public static IMesh Triangulate(this IPolygon polygon) => (new GenericMesher()).Triangulate(polygon, null, null);
 
         /// <summary>
         /// Triangulates a polygon, applying constraint options.
         /// </summary>
         /// <param name="options">Constraint options.</param>
-        public static IMesh Triangulate(this IPolygon polygon, ConstraintOptions options)
-        {
-            return (new GenericMesher()).Triangulate(polygon, options, null);
-        }
+        public static IMesh Triangulate(this IPolygon polygon, ConstraintOptions options) => (new GenericMesher()).Triangulate(polygon, options, null);
 
         /// <summary>
         /// Triangulates a polygon, applying quality options.
         /// </summary>
         /// <param name="quality">Quality options.</param>
-        public static IMesh Triangulate(this IPolygon polygon, QualityOptions quality)
-        {
-            return (new GenericMesher()).Triangulate(polygon, null, quality);
-        }
+        public static IMesh Triangulate(this IPolygon polygon, QualityOptions quality) => (new GenericMesher()).Triangulate(polygon, null, quality);
 
         /// <summary>
         /// Triangulates a polygon, applying quality and constraint options.
         /// </summary>
         /// <param name="options">Constraint options.</param>
         /// <param name="quality">Quality options.</param>
-        public static IMesh Triangulate(this IPolygon polygon, ConstraintOptions options, QualityOptions quality)
-        {
-            return (new GenericMesher()).Triangulate(polygon, options, quality);
-        }
+        public static IMesh Triangulate(this IPolygon polygon, ConstraintOptions options, QualityOptions quality) => (new GenericMesher()).Triangulate(polygon, options, quality);
 
         /// <summary>
         /// Triangulates a polygon, applying quality and constraint options.
@@ -50,10 +38,7 @@ namespace TriangleNet.Geometry
         /// <param name="quality">Quality options.</param>
         /// <param name="triangulator">The triangulation algorithm.</param>
         public static IMesh Triangulate(this IPolygon polygon, ConstraintOptions options, QualityOptions quality,
-            ITriangulator triangulator)
-        {
-            return (new GenericMesher(triangulator)).Triangulate(polygon, options, quality);
-        }
+            ITriangulator triangulator) => (new GenericMesher(triangulator)).Triangulate(polygon, options, quality);
 
         #endregion
 
@@ -68,10 +53,7 @@ namespace TriangleNet.Geometry
         /// </summary>
         /// <param name="p">Point to locate.</param>
         /// <returns>True, if point is inside or on the edge of this triangle.</returns>
-        public static bool Contains(this ITriangle triangle, Point p)
-        {
-            return Contains(triangle, p.X, p.Y);
-        }
+        public static bool Contains(this ITriangle triangle, Point p) => Contains(triangle, p.X, p.Y);
 
         /// <summary>
         /// Test whether a given point lies inside a triangle or not.
@@ -86,15 +68,15 @@ namespace TriangleNet.Geometry
             var t2 = triangle.GetVertex(2);
 
             // TODO: no need to create new Point instances here
-            Point d0 = new Point(t1.X - t0.X, t1.Y - t0.Y);
-            Point d1 = new Point(t2.X - t0.X, t2.Y - t0.Y);
-            Point d2 = new Point(x - t0.X, y - t0.Y);
+            Point d0 = new(t1.X - t0.X, t1.Y - t0.Y);
+            Point d1 = new(t2.X - t0.X, t2.Y - t0.Y);
+            Point d2 = new(x - t0.X, y - t0.Y);
 
             // crossproduct of (0, 0, 1) and d0
-            Point c0 = new Point(-d0.Y, d0.X);
+            Point c0 = new(-d0.Y, d0.X);
 
             // crossproduct of (0, 0, 1) and d1
-            Point c1 = new Point(-d1.Y, d1.X);
+            Point c1 = new(-d1.Y, d1.X);
 
             // Linear combination d2 = s * d0 + v * d1.
             //
@@ -118,7 +100,7 @@ namespace TriangleNet.Geometry
 
         public static Rectangle Bounds(this ITriangle triangle)
         {
-            var bounds = new Rectangle();
+            Rectangle bounds = new();
 
             for (int i = 0; i < 3; i++)
             {
@@ -132,10 +114,7 @@ namespace TriangleNet.Geometry
 
         #region Helper methods
 
-        internal static double DotProduct(Point p, Point q)
-        {
-            return p.X * q.X + p.Y * q.Y;
-        }
+        internal static double DotProduct(Point p, Point q) => p.X * q.X + p.Y * q.Y;
 
         #endregion
     }

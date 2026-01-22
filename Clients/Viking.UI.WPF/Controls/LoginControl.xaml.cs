@@ -13,15 +13,9 @@ namespace Viking.UI.WPF.Controls
             Loaded += LoginControl_Loaded;
         }
 
-        private void LoginControl_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
-        {
-            UpdatePasswordBox();
-        }
+        private void LoginControl_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e) => UpdatePasswordBox();
 
-        private void LoginControl_Loaded(object sender, RoutedEventArgs e)
-        {
-            UpdatePasswordBox();
-        }
+        private void LoginControl_Loaded(object sender, RoutedEventArgs e) => UpdatePasswordBox();
 
         private void UpdatePasswordBox()
         {

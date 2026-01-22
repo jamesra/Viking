@@ -98,41 +98,65 @@ namespace Viking.UI.Forms
         {
             get
             {
-                DateTime buildDate = new DateTime(2000, 1, 1);
-
-                string version = AssemblyVersion;
-                string[] temp = version.Split('.');
-
                 try
                 {
-                    if (temp.Length == 4)
+                    // Get the build date from the executable file's last write time
+                    // This reflects when the assembly was actually built
+                    var assembly = Assembly.GetEntryAssembly();
+                    if (assembly != null && !string.IsNullOrEmpty(assembly.Location))
                     {
-                        int build = Convert.ToInt32(temp[2]);
+                        var fileInfo = new System.IO.FileInfo(assembly.Location);
+                        if (fileInfo.Exists)
+                        {
+                            return fileInfo.LastWriteTime;
+                        }
+                    }
+                    
+                    // Fallback: Try to use linker timestamp if available
+                    // The linker timestamp is embedded in the PE header
+                    var assemblyLocation = assembly?.Location;
+                    if (!string.IsNullOrEmpty(assemblyLocation) && System.IO.File.Exists(assemblyLocation))
+                    {
+                        // Read PE header timestamp
+                        using (var fs = new System.IO.FileStream(assemblyLocation, System.IO.FileMode.Open, System.IO.FileAccess.Read))
+                        {
+                            var reader = new System.IO.BinaryReader(fs);
+                            fs.Seek(0x3C, System.IO.SeekOrigin.Begin); // Offset to PE signature
+                            int peOffset = reader.ReadInt32();
+                            fs.Seek(peOffset + 8, System.IO.SeekOrigin.Begin); // Skip PE signature, read timestamp
+                            uint timestamp = reader.ReadUInt32();
+                            
+                            // Convert Unix timestamp to DateTime
+                            var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                            return epoch.AddSeconds(timestamp).ToLocalTime();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error getting build date: {ex.Message}");
+                }
 
-                        int rev = Convert.ToInt32(temp[3]);
-
-                        buildDate = buildDate.AddDays(build);
-
-                        buildDate = buildDate.AddSeconds(rev * 2);
-
-                        Debug.WriteLine("Build #: " + build);
-
-                        Debug.WriteLine("Revision #: " + rev);
-
-                        Debug.WriteLine("This was built on: " + buildDate.ToLongDateString() + " at " + buildDate.ToLongTimeString());
-
-
+                // Fallback to file timestamp if PE timestamp fails
+                try
+                {
+                    var assembly = Assembly.GetEntryAssembly();
+                    if (assembly != null && !string.IsNullOrEmpty(assembly.Location))
+                    {
+                        var fileInfo = new System.IO.FileInfo(assembly.Location);
+                        if (fileInfo.Exists)
+                        {
+                            return fileInfo.LastWriteTime;
+                        }
                     }
                 }
                 catch
                 {
-
+                    // If all else fails, return current date as fallback
                 }
 
-                return buildDate;
-
+                return DateTime.Now;
             }
-
         }
         #endregion
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,17 +12,11 @@ namespace Geometry.Transforms
     /// A simple translation only transform
     /// </summary>
     [Serializable]
-    class RigidNoRotationTransform : IITKSerialization, ITransformBasicInfo, ISerializable, IContinuousTransform, Geometry.ITransformInfo
+    class RigidNoRotationTransform(GridVector2 sourceToTargetOffset, TransformBasicInfo info) : IITKSerialization, ITransformBasicInfo, ISerializable, IContinuousTransform, Geometry.ITransformInfo
     {
-        public TransformBasicInfo Info { get; set; }
+        public TransformBasicInfo Info { get; set; } = info;
 
-        public GridVector2 SourceToTargetOffset { get; set; }
-
-        public RigidNoRotationTransform(GridVector2 sourceToTargetOffset, TransformBasicInfo info)
-        {
-            SourceToTargetOffset = sourceToTargetOffset;
-            Info = info;
-        }
+        public GridVector2 SourceToTargetOffset { get; set; } = sourceToTargetOffset;
 
         public string GetITKTransform()
         {
@@ -31,22 +25,13 @@ namespace Geometry.Transforms
             var output = $"Rigid2DTransform_double_2_2 vp 3 {Angle} {SourceToTargetOffset.X} {SourceToTargetOffset.Y} fp 2 {CenterOfRotation.X} {CenterOfRotation.Y}";
             return output;
         }
-         
-        public override string ToString()
-        {
-            return $"Rigid, Src to Tgt Offset: {SourceToTargetOffset}";
-        }
+
+        public override string ToString() => $"Rigid, Src to Tgt Offset: {SourceToTargetOffset}";
 
         public DateTime LastModified { get; }
-        public void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            throw new NotImplementedException();
-        }
+        public void GetObjectData(SerializationInfo info, StreamingContext context) => throw new NotImplementedException();
 
-        public GridVector2 Transform(in GridVector2 Point)
-        {
-            return Point + SourceToTargetOffset;
-        }
+        public GridVector2 Transform(in GridVector2 Point) => Point + SourceToTargetOffset;
 
         public GridVector2[] Transform(in GridVector2[] Points)
         {
@@ -56,10 +41,7 @@ namespace Geometry.Transforms
             return output;
         }
 
-        public GridVector2 InverseTransform(in GridVector2 Point)
-        {
-            return Point - SourceToTargetOffset;
-        }
+        public GridVector2 InverseTransform(in GridVector2 Point) => Point - SourceToTargetOffset;
 
         public GridVector2[] InverseTransform(in GridVector2[] Points)
         {
@@ -69,10 +51,7 @@ namespace Geometry.Transforms
             return output;
         }
 
-        public bool CanTransform(in GridVector2 Point)
-        {
-            return true;
-        }
+        public bool CanTransform(in GridVector2 Point) => true;
 
         public bool TryTransform(in GridVector2 Point, out GridVector2 v)
         {
@@ -90,10 +69,7 @@ namespace Geometry.Transforms
             return output;
         }
 
-        public bool CanInverseTransform(in GridVector2 Point)
-        {
-            return true;
-        }
+        public bool CanInverseTransform(in GridVector2 Point) => true;
 
         public bool TryInverseTransform(in GridVector2 Point, out GridVector2 v)
         {
@@ -111,36 +87,22 @@ namespace Geometry.Transforms
             return output;
         }
 
-        public void Translate(in GridVector2 vector)
-        {
-            SourceToTargetOffset += vector;
-        }
+        public void Translate(in GridVector2 vector) => SourceToTargetOffset += vector;
     }
 
     /// <summary>
     /// A simple translation only transform
     /// </summary>
     [Serializable]
-    class RigidTransform : IITKSerialization, ITransformBasicInfo, ISerializable, IContinuousTransform, Geometry.ITransformInfo
+    class RigidTransform(GridVector2 sourceToTargetOffset, GridVector2 sourceRotationCenter, double angle, TransformBasicInfo info) : IITKSerialization, ITransformBasicInfo, ISerializable, IContinuousTransform, Geometry.ITransformInfo
     {
-        public TransformBasicInfo Info { get; set; }
+        public TransformBasicInfo Info { get; set; } = info;
 
-        public GridVector2 SourceToTargetOffset { get; set; }
+        public GridVector2 SourceToTargetOffset { get; set; } = sourceToTargetOffset;
 
-        public readonly double Angle;
-        
-        public readonly GridVector2 SourceSpaceRotationCenter;
-         
-        public RigidTransform(GridVector2 sourceToTargetOffset, GridVector2 sourceRotationCenter, double angle, TransformBasicInfo info)
-        {
-            SourceToTargetOffset = sourceToTargetOffset;
-            Angle = angle;
-            SourceSpaceRotationCenter = sourceRotationCenter;
-             
+        public readonly double Angle = angle;
 
-            Info = info;
-        }
-         
+        public readonly GridVector2 SourceSpaceRotationCenter = sourceRotationCenter;
 
         public string GetITKTransform()
         {
@@ -149,46 +111,31 @@ namespace Geometry.Transforms
             var output = $"Rigid2DTransform_double_2_2 vp 3 {Angle} {SourceToTargetOffset.X} {SourceToTargetOffset.Y} fp 2 {SourceSpaceRotationCenter.X} {SourceSpaceRotationCenter.Y}";
             return output;
         }
-          
-        public override string ToString()
-        {
-            return $"Rigid, Src to Tgt Offset: {SourceToTargetOffset}";
-        }
+
+        public override string ToString() => $"Rigid, Src to Tgt Offset: {SourceToTargetOffset}";
 
         public DateTime LastModified { get; }
-        public void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            throw new NotImplementedException();
-        }
+        public void GetObjectData(SerializationInfo info, StreamingContext context) => throw new NotImplementedException();
 
-        public GridVector2 Transform(in GridVector2 Point)
-        {
-            return Transform(new GridVector2[] {Point})[0];
-        }
+        public GridVector2 Transform(in GridVector2 Point) => Transform([Point])[0];
 
         public GridVector2[] Transform(in GridVector2[] Points)
-        {            
+        {
             var rotated_points = Points.Rotate(this.Angle, this.SourceSpaceRotationCenter);
             rotated_points.Translate(this.SourceToTargetOffset);
             return rotated_points;
         }
 
-        public GridVector2 InverseTransform(in GridVector2 Point)
-        {
-            return InverseTransform(new GridVector2[] { Point })[0];
-        }
+        public GridVector2 InverseTransform(in GridVector2 Point) => InverseTransform([Point])[0];
 
         public GridVector2[] InverseTransform(in GridVector2[] Points)
         {
             var translated_points = Points.Translate(-this.SourceToTargetOffset);
-            var rotated_points = Points.Rotate(-this.Angle, this.SourceSpaceRotationCenter); 
+            var rotated_points = Points.Rotate(-this.Angle, this.SourceSpaceRotationCenter);
             return rotated_points;
         }
 
-        public bool CanTransform(in GridVector2 Point)
-        {
-            return true;
-        }
+        public bool CanTransform(in GridVector2 Point) => true;
 
         public bool TryTransform(in GridVector2 Point, out GridVector2 v)
         {
@@ -206,10 +153,7 @@ namespace Geometry.Transforms
             return output;
         }
 
-        public bool CanInverseTransform(in GridVector2 Point)
-        {
-            return true;
-        }
+        public bool CanInverseTransform(in GridVector2 Point) => true;
 
         public bool TryInverseTransform(in GridVector2 Point, out GridVector2 v)
         {
@@ -227,9 +171,6 @@ namespace Geometry.Transforms
             return output;
         }
 
-        public void Translate(in GridVector2 vector)
-        {
-            SourceToTargetOffset += vector;
-        }
+        public void Translate(in GridVector2 vector) => SourceToTargetOffset += vector;
     }
 }

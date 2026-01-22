@@ -11,13 +11,7 @@ namespace Viking.UI.WPF.Controls
 {
     public partial class ChannelPickerControl : UserControl
     {
-        private static readonly IReadOnlyList<string> SectionOptions = new[]
-        {
-            "Selected",
-            "Above",
-            "Below",
-            "Fixed..."
-        };
+        private static readonly IReadOnlyList<string> SectionOptions = ["Selected", "Above", "Below", "Fixed..."];
 
         private static readonly IReadOnlyDictionary<string, Color> PresetColors = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase)
         {
@@ -35,7 +29,7 @@ namespace Viking.UI.WPF.Controls
         {
             InitializeComponent();
             SectionCombo.ItemsSource = SectionOptions;
-            ColorCombo.ItemsSource = PresetColors.Keys.Concat(new[] { "Custom..." }).ToArray();
+            ColorCombo.ItemsSource = PresetColors.Keys.Concat(["Custom..."]).ToArray();
             LabelsVisibility = Visibility.Visible;
         }
 
@@ -92,16 +86,11 @@ namespace Viking.UI.WPF.Controls
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            if (string.IsNullOrEmpty(selected))
-            {
-                ChannelCombo.SelectedItem = DefaultChannelName;
-            }
-            else
-            {
-                ChannelCombo.SelectedItem = ChannelCombo.Items.Cast<string>()
+            ChannelCombo.SelectedItem = string.IsNullOrEmpty(selected)
+                ? DefaultChannelName
+                : ChannelCombo.Items.Cast<string>()
                     .FirstOrDefault(c => c.Equals(selected, StringComparison.OrdinalIgnoreCase))
                     ?? DefaultChannelName;
-            }
         }
 
         private void RefreshSection()
@@ -140,15 +129,9 @@ namespace Viking.UI.WPF.Controls
             ColorCombo.SelectedItem = preset ?? "Custom...";
         }
 
-        private static Color ConvertColor(System.Drawing.Color color)
-        {
-            return Color.FromArgb(color.A, color.R, color.G, color.B);
-        }
+        private static Color ConvertColor(System.Drawing.Color color) => Color.FromArgb(color.A, color.R, color.G, color.B);
 
-        private static System.Drawing.Color ConvertColor(Color color)
-        {
-            return System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B);
-        }
+        private static System.Drawing.Color ConvertColor(Color color) => System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B);
 
         private void SectionCombo_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -197,7 +180,7 @@ namespace Viking.UI.WPF.Controls
             }
             else if (string.Equals(selected, "Custom...", StringComparison.OrdinalIgnoreCase))
             {
-                var dlg = new System.Windows.Forms.ColorDialog
+                System.Windows.Forms.ColorDialog dlg = new()
                 {
                     Color = Info.FormColor
                 };
@@ -221,10 +204,7 @@ namespace Viking.UI.WPF.Controls
             Info.FormColor = ConvertColor(color);
         }
 
-        private void DeleteButton_OnClick(object sender, RoutedEventArgs e)
-        {
-            DeleteClicked?.Invoke(this, EventArgs.Empty);
-        }
+        private void DeleteButton_OnClick(object sender, RoutedEventArgs e) => DeleteClicked?.Invoke(this, EventArgs.Empty);
 
         public void CommitChanges()
         {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Windows.Forms;
 using WebAnnotationModel;
@@ -22,14 +22,7 @@ namespace WebAnnotation.UI
             }
             set
             {
-                if (value > 0)
-                {
-                    textKeepID.Text = value.ToString();
-                }
-                else
-                {
-                    textKeepID.Text = "";
-                }
+                textKeepID.Text = value > 0 ? value.ToString() : "";
             }
         }
 
@@ -79,7 +72,7 @@ namespace WebAnnotation.UI
                 int ID = int.Parse(Input);
 
                 LocationObj obj = Store.Locations.GetObjectByID(ID);
-                if (obj == null)
+                if (obj is null)
                 {
                     Reason = "No Location found";
                 }
@@ -143,19 +136,19 @@ namespace WebAnnotation.UI
             LocationObj keepLoc = Store.Locations.GetObjectByID(KeepID);
             LocationObj splitLoc = Store.Locations.GetObjectByID(SplitID);
 
-            if (keepLoc == null && splitLoc == null)
+            if (keepLoc is null && splitLoc is null)
             {
                 Reason = "Input IDs must be a valid location";
                 return false;
             }
 
-            if (keepLoc == null)
+            if (keepLoc is null)
             {
                 Reason = "Keep Location ID must be a valid location";
                 return false;
             }
 
-            if (splitLoc == null)
+            if (splitLoc is null)
             {
                 Reason = "Split Location ID must be a valid location";
                 return false;
@@ -247,10 +240,7 @@ namespace WebAnnotation.UI
             Close();
         }
 
-        private void btnCancel_Click(object sender, EventArgs e)
-        {
-            Close();
-        }
+        private void btnCancel_Click(object sender, EventArgs e) => Close();
 
         private void textKeepID_Validating(object sender, CancelEventArgs e)
         {
@@ -298,12 +288,6 @@ namespace WebAnnotation.UI
             }
         }
 
-        private void btnFlip_Click(object sender, EventArgs e)
-        {
-
-            long temp = KeepID;
-            KeepID = SplitID;
-            SplitID = temp;
-        }
+        private void btnFlip_Click(object sender, EventArgs e) => (SplitID, KeepID) = (KeepID, SplitID);
     }
 }

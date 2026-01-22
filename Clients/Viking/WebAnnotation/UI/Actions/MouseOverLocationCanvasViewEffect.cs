@@ -7,7 +7,7 @@ namespace WebAnnotation.Actions
     /// </summary>
     internal class MouseOverLocationCanvasViewEffect
     {
-        private object _viewObj = null;
+        private object? _viewObj = null;
 
         public object viewObj
         {
@@ -35,8 +35,7 @@ namespace WebAnnotation.Actions
 
         protected void ApplyEffect(object view_obj)
         {
-            IColorView cView = view_obj as IColorView;
-            if (cView != null)
+            if (view_obj is IColorView cView)
             {
                 OriginalAlpha = cView.Alpha;
                 cView.Alpha /= 2.0f;
@@ -45,8 +44,7 @@ namespace WebAnnotation.Actions
 
         protected void RemoveEffect(object view_obj)
         {
-            IColorView cView = view_obj as IColorView;
-            if (cView != null)
+            if (view_obj is IColorView cView)
             {
                 cView.Alpha = OriginalAlpha;
             }

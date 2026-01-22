@@ -5,16 +5,12 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
-    internal abstract class LocationCurveView : LocationLineViewBase, VikingXNAGraphics.IColorView
+    internal abstract class LocationCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : LocationLineViewBase(obj, mapper), VikingXNAGraphics.IColorView
     {
         public abstract GridVector2[] MosaicCurveControlPoints { get; }
         public abstract GridVector2[] VolumeCurveControlPoints { get; }
         public abstract Color Color { get; set; }
         public abstract float Alpha { get; set; }
-
-        public LocationCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
-        {
-        }
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
         {

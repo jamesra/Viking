@@ -13,15 +13,15 @@ public static class TestOutputHelper
     private static string GetBaseTestOutputPath(IConfiguration? config = null)
     {
         string? customPath = config?["TestSettings:TestOutputPath"];
-        
+
         if (!string.IsNullOrEmpty(customPath))
         {
             return Path.Combine(customPath, "DataExport.Tests");
         }
-        
+
         return Path.Combine(Path.GetTempPath(), "DataExport.Tests");
     }
-    
+
     /// <summary>
     /// Gets the full output path for a test file in a controller-specific folder.
     /// </summary>
@@ -36,7 +36,7 @@ public static class TestOutputHelper
         Directory.CreateDirectory(controllerPath);
         return Path.Combine(controllerPath, fileName);
     }
-    
+
     /// <summary>
     /// Gets the full output path for a test file with a timestamp in the filename.
     /// </summary>
@@ -51,7 +51,7 @@ public static class TestOutputHelper
         string fileName = $"{testName}-{timestamp}.{extension}";
         return GetOutputPath(controllerName, fileName, config);
     }
-    
+
     /// <summary>
     /// Saves a FileResult to disk, handling different FileResult types.
     /// </summary>

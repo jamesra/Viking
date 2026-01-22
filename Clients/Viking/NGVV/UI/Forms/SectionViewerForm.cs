@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
@@ -46,7 +46,7 @@ namespace Viking.UI.Forms
 
         public async Task OnSectionChanged(object sender, SectionChangedEventArgs e, CancellationToken token)
         {
-            if(token.IsCancellationRequested)
+            if (token.IsCancellationRequested)
                 return;
 
             if (e.NewSection != null)
@@ -58,15 +58,9 @@ namespace Viking.UI.Forms
         }
 
 
-        public void GoToLocation(Vector2 location, int Z, bool InputInSectionSpace)
-        {
-            this.SectionControl.GoToLocation(location, Z, InputInSectionSpace);
-        }
+        public void GoToLocation(Vector2 location, int Z, bool InputInSectionSpace) => this.SectionControl.GoToLocation(location, Z, InputInSectionSpace);
 
-        public void GoToLocation(Vector2 location, int Z, bool InputInSectionSpace, double Downsample)
-        {
-            this.SectionControl.GoToLocation(location, Z, InputInSectionSpace, Downsample);
-        }
+        public void GoToLocation(Vector2 location, int Z, bool InputInSectionSpace, double Downsample) => this.SectionControl.GoToLocation(location, Z, InputInSectionSpace, Downsample);
 
         public double CameraDownsample
         {

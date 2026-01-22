@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows.Forms;
 
 namespace LocalBookmarks
@@ -14,13 +14,13 @@ namespace LocalBookmarks
         System.Windows.Forms.ToolStripItem Viking.Common.IMenuFactory.CreateMenuItem()
         {
             //Create a menu containing each of our bookmarks
-            ToolStripMenuItem Parent = new ToolStripMenuItem("Bookmarks");
+            ToolStripMenuItem Parent = new("Bookmarks");
 
             //Create the option to hide bookmarks on the display
-            ToolStripMenuItem HideBookmarksMenu = new ToolStripMenuItem(Global.BookmarksVisible ? HideBookmarksString : ShowBookmarksString);
+            ToolStripMenuItem HideBookmarksMenu = new(Global.BookmarksVisible ? HideBookmarksString : ShowBookmarksString);
             HideBookmarksMenu.Click += OnHideBookmarksClick;
 
-            ToolStripMenuItem UndoBookmarkMenu = new ToolStripMenuItem("Undo Bookmark Change");
+            ToolStripMenuItem UndoBookmarkMenu = new("Undo Bookmark Change");
             UndoBookmarkMenu.Click += OnUndoBookmarkChange;
 
             Parent.DropDownItems.Add(HideBookmarksMenu);
@@ -31,8 +31,7 @@ namespace LocalBookmarks
 
         static void OnHideBookmarksClick(object sender, EventArgs e)
         {
-            ToolStripMenuItem? menuItem = sender as ToolStripMenuItem;
-            if (menuItem != null)
+            if (sender is ToolStripMenuItem menuItem)
             {
                 Global.BookmarksVisible = !Global.BookmarksVisible;
 
@@ -41,10 +40,7 @@ namespace LocalBookmarks
             }
         }
 
-        static void OnUndoBookmarkChange(object sender, EventArgs e)
-        {
-            Global.Undo();
-        }
+        static void OnUndoBookmarkChange(object sender, EventArgs e) => Global.Undo();
 
         #endregion
 

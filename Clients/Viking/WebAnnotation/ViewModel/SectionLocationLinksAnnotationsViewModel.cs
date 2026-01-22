@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,55 +13,38 @@ namespace WebAnnotation.ViewModel
     /// <summary>
     /// Track location links for a section
     /// </summary>
-    internal class SectionLocationLinkAnnotationsViewModel
+    internal class SectionLocationLinkAnnotationsViewModel(SectionViewModel section)
     {
-        protected readonly KeyTracker<LocationLinkKey> KnownLinks = new KeyTracker<LocationLinkKey>();
+        protected readonly KeyTracker<LocationLinkKey> KnownLinks = new();
 
         /// <summary>
         /// The ID's of locations on the adjacent section which we know are linked and overlapped.
         /// </summary>
-        public readonly RefCountingKeyTracker<long> OverlappedAdjacentLocationIDs = new RefCountingKeyTracker<long>();
+        public readonly RefCountingKeyTracker<long> OverlappedAdjacentLocationIDs = new();
 
-        protected readonly ConcurrentDictionary<LocationLinkKey, LocationLinkView> LocationLinks = new ConcurrentDictionary<LocationLinkKey, LocationLinkView>();
+        protected readonly ConcurrentDictionary<LocationLinkKey, LocationLinkView> LocationLinks = new();
 
-        public readonly KeyTracker<LocationLinkKey> OverlappedLinkKeys = new KeyTracker<LocationLinkKey>();
-        public readonly RTree.RTree<LocationLinkKey> NonOverlappedLinksSearch = new RTree.RTree<LocationLinkKey>();
+        public readonly KeyTracker<LocationLinkKey> OverlappedLinkKeys = new();
+        public readonly RTree.RTree<LocationLinkKey> NonOverlappedLinksSearch = new();
 
         /// <summary>
         /// The section that we represent links on the canvas for
         /// </summary>
-        public readonly SectionViewModel Section;
+        public readonly SectionViewModel Section = section;
 
-        public SectionLocationLinkAnnotationsViewModel(SectionViewModel section)
-        {
-            Section = section;
-        }
+        public void AddLocationLinks(IEnumerable<LocationObj> locations) => locations.ForEach(loc => AddLocationLinks(loc, true));
 
-        public void AddLocationLinks(IEnumerable<LocationObj> locations)
-        {
-            locations.ForEach(loc => AddLocationLinks(loc, true));
-        }
+        public void RemoveLocationLinks(IEnumerable<LocationObj> locations) => locations.ForEach(loc => RemoveLocationLinks(loc, true));
 
-        public void RemoveLocationLinks(IEnumerable<LocationObj> locations)
-        {
-            locations.ForEach(loc => RemoveLocationLinks(loc, true));
-        }
+        public void AddLocationLinks(IEnumerable<LocationLinkKey> links) => links.ForEach(link => AddLocationLink(link, true));
 
-        public void AddLocationLinks(IEnumerable<LocationLinkKey> links)
-        {
-            links.ForEach(link => AddLocationLink(link, true));
-        }
-
-        public void RemoveLocationLinks(IEnumerable<LocationLinkKey> links)
-        {
-            links.ForEach(link => RemoveLocationLink(link, true));
-        }
+        public void RemoveLocationLinks(IEnumerable<LocationLinkKey> links) => links.ForEach(link => RemoveLocationLink(link, true));
 
         protected void AddLocationLinks(LocationObj loc, bool subscribe)
         {
             foreach (long linkedID in loc.LinksCopy)
             {
-                LocationLinkKey linkKey = new LocationLinkKey(loc.ID, linkedID);
+                LocationLinkKey linkKey = new(loc.ID, linkedID);
                 AddLocationLink(linkKey, subscribe);
             }
         }
@@ -70,7 +53,7 @@ namespace WebAnnotation.ViewModel
         {
             foreach (long linkedID in loc.LinksCopy)
             {
-                LocationLinkKey linkKey = new LocationLinkKey(loc.ID, linkedID);
+                LocationLinkKey linkKey = new(loc.ID, linkedID);
                 RemoveLocationLink(linkKey, unsubscribe);
             }
         }
@@ -96,7 +79,7 @@ namespace WebAnnotation.ViewModel
             {
                 KnownLinks.TryAdd(key, () =>
                 {
-                    LocationLinkView lv = new LocationLinkView(key, Section.Number, Section.VolumeViewModel);
+                    LocationLinkView lv = new(key, Section.Number, Section.VolumeViewModel);
                     bool added = LocationLinks.TryAdd(key, lv);
                     Debug.Assert(added);
 
@@ -117,7 +100,7 @@ namespace WebAnnotation.ViewModel
             catch (System.ArgumentOutOfRangeException e)
             {
                 //This can occur when the point cannot be mapped
-                System.Diagnostics.Trace.WriteLine($"Exception adding location link {key.ToString()}\n{e.ToString()}");
+                System.Diagnostics.Trace.WriteLine($"Exception adding location link {key}\n{e}");
             }
 
         }
@@ -151,12 +134,12 @@ namespace WebAnnotation.ViewModel
             IEnumerable<LocationLinkKey> intersecting_IDs = NonOverlappedLinksSearch.Intersects(WorldPosition.ToRTreeRect(Section.Number));
             IEnumerable<LocationLinkView> intersecting_objs = intersecting_IDs.Select(id => LocationLinks[id]).Where(l => l.Contains(WorldPosition));
 
-            return new List<HitTestResult>(intersecting_objs.Select(l => new HitTestResult(l, Section.Number, ((ICanvasView)l).VisualHeight, l.DistanceFromCenterNormalized(WorldPosition)))).ToList();
+            return [.. intersecting_objs.Select(l => new HitTestResult(l, Section.Number, ((ICanvasView)l).VisualHeight, l.DistanceFromCenterNormalized(WorldPosition)))];
         }
 
         private List<LocationLinkView> KeysToViews(ICollection<LocationLinkKey> listKeys)
         {
-            List<LocationLinkView> listLocLinkView = new List<LocationLinkView>(listKeys.Count);
+            List<LocationLinkView> listLocLinkView = new(listKeys.Count);
             foreach (LocationLinkKey linkKey in listKeys)
             {
                 if (LocationLinks.TryGetValue(linkKey, out LocationLinkView locLinkView))
@@ -179,7 +162,7 @@ namespace WebAnnotation.ViewModel
         public ICollection<LocationLinkView> GetLocationLinks(GridVector2 point)
         {
             List<LocationLinkKey> intersectingIDs = NonOverlappedLinksSearch.Intersects(point.ToRTreeRect((float)Section.Number));
-            return intersectingIDs.Select(id =>
+            return [.. intersectingIDs.Select(id =>
             {
                 if (LocationLinks.ContainsKey(id))
                 {
@@ -188,13 +171,13 @@ namespace WebAnnotation.ViewModel
 
                 return null;
             }
-            ).Where(l => l != null && l.Contains(point)).ToList();
+            ).Where(l => l != null && l.Contains(point))];
         }
 
         public ICollection<LocationLinkView> GetLocationLinks(GridLineSegment line)
         {
             List<LocationLinkKey> intersectingIDs = NonOverlappedLinksSearch.Intersects(line.BoundingBox.ToRTreeRect((float)Section.Number));
-            return intersectingIDs.Select(id =>
+            return [.. intersectingIDs.Select(id =>
             {
                 if (LocationLinks.ContainsKey(id))
                 {
@@ -203,13 +186,13 @@ namespace WebAnnotation.ViewModel
 
                 return null;
             }
-            ).Where(l => l != null && l.Intersects(line)).ToList();
+            ).Where(l => l != null && l.Intersects(line))];
         }
 
         public ICollection<LocationLinkView> GetLocationLinks(GridRectangle rect)
         {
             List<LocationLinkKey> intersectingIDs = NonOverlappedLinksSearch.Intersects(rect.ToRTreeRect((float)Section.Number));
-            return intersectingIDs.Select(id =>
+            return [.. intersectingIDs.Select(id =>
             {
                 if (LocationLinks.ContainsKey(id))
                 {
@@ -218,7 +201,7 @@ namespace WebAnnotation.ViewModel
 
                 return null;
             }
-            ).Where(l => l != null).ToList();
+            ).Where(l => l != null)];
         }
     }
 }

@@ -21,17 +21,11 @@ namespace GeometryTests.Algorithms
             //
         }
 
-        private TestContext testContextInstance;
-
         /// <summary>
         ///Gets or sets the test context which provides
         ///information about and functionality for the current test run.
         ///</summary>
-        public TestContext TestContext
-        {
-            get => testContextInstance;
-            set => testContextInstance = value;
-        }
+        public TestContext TestContext { get; set; }
 
         #region Additional test attributes
         //
@@ -72,17 +66,17 @@ namespace GeometryTests.Algorithms
                 return;
             }
 
-            TriangulationMesh<Vertex2D> mesh = new TriangulationMesh<Vertex2D>();
+            TriangulationMesh<Vertex2D> mesh = new();
 
-            Vertex2D[] InputVerts = points.Select(p => new Vertex2D(p)).ToArray();
+            Vertex2D[] InputVerts = [.. points.Select(p => new Vertex2D(p))];
             mesh.AddVerticies(InputVerts);
 
-            MeshCut vertSet = new MeshCut(mesh.XSorted, mesh.YSorted, Geometry.CutDirection.HORIZONTAL, mesh.BoundingBox);
+            MeshCut vertSet = new(mesh.XSorted, mesh.YSorted, Geometry.CutDirection.HORIZONTAL, mesh.BoundingBox);
 
-            RecursivelyCutMesh(mesh, vertSet);
+            MeshCutTest.RecursivelyCutMesh(mesh, vertSet);
         }
 
-        void RecursivelyCutMesh(TriangulationMesh<Vertex2D> mesh, MeshCut vertSet)
+        static void RecursivelyCutMesh(TriangulationMesh<Vertex2D> mesh, MeshCut vertSet)
         {
             if (vertSet.Verticies.Count < 2)
             {
@@ -137,8 +131,8 @@ namespace GeometryTests.Algorithms
                 Assert.IsTrue(mesh[(int)LowerSubset.Verticies[0]].Position.X <= mesh[(int)UpperSubset.Verticies[0]].Position.X);
             }
 
-            RecursivelyCutMesh(mesh, LowerSubset);
-            RecursivelyCutMesh(mesh, UpperSubset);
+            MeshCutTest.RecursivelyCutMesh(mesh, LowerSubset);
+            MeshCutTest.RecursivelyCutMesh(mesh, UpperSubset);
         }
 
         static Property PropertyEachPointInOrder(TriangulationMesh<Vertex2D> mesh)

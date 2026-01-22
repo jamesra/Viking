@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using UnitsAndScale;
 
@@ -6,20 +6,12 @@ using UnitsAndScale;
 namespace AnnotationVizLib
 {
     [Serializable]
-    public readonly struct ColorScalars
+    public readonly struct ColorScalars(double a, double r, double g, double b)
     {
-        public readonly double alpha;
-        public readonly double red;
-        public readonly double green;
-        public readonly double blue;
-
-        public ColorScalars(double a, double r, double g, double b)
-        {
-            this.alpha = a;
-            this.red = r;
-            this.green = g;
-            this.blue = b;
-        }
+        public readonly double alpha = a;
+        public readonly double red = r;
+        public readonly double green = g;
+        public readonly double blue = b;
     }
 
 
@@ -27,32 +19,19 @@ namespace AnnotationVizLib
     /// Used to store offsets into color map images
     /// </summary>
     [Serializable]
-    public readonly struct ColorImageOffset
+    public readonly struct ColorImageOffset(double x, double y)
     {
-        public readonly double X;
-        public readonly double Y;
-
-        public ColorImageOffset(double x, double y)
-        {
-            this.X = x;
-            this.Y = y;
-        }
+        public readonly double X = x;
+        public readonly double Y = y;
     }
 
-    public class ColorMapImageData : IDisposable
+    public class ColorMapImageData(System.IO.Stream ImageStream, int section_number, IScale scale_data) : IDisposable
     {
-        public readonly int SectionNumber;
-        readonly CrossPlatformImage image;
-        readonly IScale scale;
-        readonly ColorScalars color_scalar = new ColorScalars(1, 1, 1, 1);
-        readonly ColorImageOffset offset = new ColorImageOffset(0, 0);
-
-        public ColorMapImageData(System.IO.Stream ImageStream, int section_number, IScale scale_data)
-        {
-            this.SectionNumber = section_number;
-            this.image = new CrossPlatformImage(ImageStream);
-            this.scale = scale_data;
-        }
+        public readonly int SectionNumber = section_number;
+        readonly CrossPlatformImage image = new(ImageStream);
+        readonly IScale scale = scale_data;
+        readonly ColorScalars color_scalar = new(1, 1, 1, 1);
+        readonly ColorImageOffset offset = new(0, 0);
 
         public ColorMapImageData(System.IO.Stream ImageStream, int section_number, IScale scale_data, ColorScalars color_scalars, ColorImageOffset offset)
             : this(ImageStream, section_number, scale_data)
@@ -86,13 +65,13 @@ namespace AnnotationVizLib
             }
 
             //Convert to a scalar, multiply, and convert back to color...
-            return Color.FromArgb(ScaleColor(color.A, color_scalar.alpha),
-                                  ScaleColor(color.R, color_scalar.red),
-                                  ScaleColor(color.G, color_scalar.green),
-                                  ScaleColor(color.B, color_scalar.blue));
+            return Color.FromArgb(ColorMapImageData.ScaleColor(color.A, color_scalar.alpha),
+                                  ColorMapImageData.ScaleColor(color.R, color_scalar.red),
+                                  ColorMapImageData.ScaleColor(color.G, color_scalar.green),
+                                  ColorMapImageData.ScaleColor(color.B, color_scalar.blue));
         }
 
-        private int ScaleColor(int color, double scalar)
+        private static int ScaleColor(int color, double scalar)
         {
             int scaled_color = (int)Math.Floor((double)color * scalar);
             scaled_color = scaled_color > 255 ? 255 : scaled_color;
@@ -100,9 +79,6 @@ namespace AnnotationVizLib
             return scaled_color;
         }
 
-        public void Dispose()
-        {
-            image?.Dispose();
-        }
+        void IDisposable.Dispose() => image?.Dispose();
     }
 }

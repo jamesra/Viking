@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq;
 
@@ -12,13 +12,13 @@ namespace GeometryTests
         {
             int startIndex = 5;
             int count = 10;
-            ContinuousIndexSet set = new ContinuousIndexSet(startIndex, count);
+            ContinuousIndexSet set = new(startIndex, count);
 
-            Assert.AreEqual(set[0], 5);
-            Assert.AreEqual(set[set.Count - 1], 14);
+            Assert.AreEqual(5, set[0]);
+            Assert.AreEqual(14, set[set.Count - 1]);
 
-            Assert.IsTrue(set.Max() == 14);
-            Assert.IsTrue(set.Min() == 5);
+            Assert.AreEqual(14, set.Max());
+            Assert.AreEqual(5, set.Min());
         }
 
         [TestMethod]
@@ -32,10 +32,10 @@ namespace GeometryTests
                 indicies[i] = startIndex + i;
             }
 
-            IndexSet set = new IndexSet(indicies);
+            IndexSet set = new(indicies);
 
-            Assert.AreEqual(set[0], 5);
-            Assert.AreEqual(set[set.Count - 1], 14);
+            Assert.AreEqual(5, set[0]);
+            Assert.AreEqual(14, set[set.Count - 1]);
 
         }
 
@@ -46,10 +46,10 @@ namespace GeometryTests
             int minIndex = 1;
             int maxIndex = 10;
 
-            FiniteWrappedIndexSet set = new FiniteWrappedIndexSet(minIndex, maxIndex, startIndex);
+            FiniteWrappedIndexSet set = new(minIndex, maxIndex, startIndex);
 
-            Assert.AreEqual(set[0], 5);
-            Assert.AreEqual(set[set.Count - 1], 4);
+            Assert.AreEqual(5, set[0]);
+            Assert.AreEqual(4, set[set.Count - 1]);
 
             Assert.AreEqual(maxIndex - 1, set.Max());
             Assert.AreEqual(minIndex, set.Min());

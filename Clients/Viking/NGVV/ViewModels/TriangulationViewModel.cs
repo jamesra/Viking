@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -11,12 +11,12 @@ namespace Viking.ViewModels
 {
     class TriangulationViewModel : IDisposable
     {
-        VertexBuffer vbMappedMesh = null;
-        VertexBuffer vbControlMesh = null;
-        IndexBuffer ibMesh = null;
+        VertexBuffer? vbMappedMesh = null;
+        VertexBuffer? vbControlMesh = null;
+        IndexBuffer? ibMesh = null;
 
-        public Color MappedColor = new Color(255, 242, 0);
-        public Color ControlColor = new Color(0, 255, 0);
+        public Color MappedColor = new(255, 242, 0);
+        public Color ControlColor = new(0, 255, 0);
 
         private readonly MappingGridVector2[] MapPoints;
         private readonly int[] TriangleIndicies;
@@ -49,7 +49,7 @@ namespace Viking.ViewModels
                                                               ControlColor);
             }
 
-            List<int> TrianglesAsLines = new List<int>();
+            List<int> TrianglesAsLines = [];
 
             for (int i = 0; i < TriangleIndicies.Length; i += 3)
             {
@@ -67,7 +67,7 @@ namespace Viking.ViewModels
             vbControlMesh = new VertexBuffer(graphicsDevice, typeof(VertexPositionColor), ControlMeshVerticies.Length, BufferUsage.None);
             vbControlMesh.SetData<VertexPositionColor>(ControlMeshVerticies);
             ibMesh = new IndexBuffer(graphicsDevice, typeof(int), TrianglesAsLines.Count, BufferUsage.None);
-            ibMesh.SetData<int>(TrianglesAsLines.ToArray());
+            ibMesh.SetData<int>([.. TrianglesAsLines]);
         }
 
         public void DrawMesh(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
@@ -91,7 +91,7 @@ namespace Viking.ViewModels
 
             DepthStencilState originalDepthState = graphicsDevice.DepthStencilState;
 
-            DepthStencilState newDepthState = new DepthStencilState
+            DepthStencilState newDepthState = new()
             {
                 DepthBufferEnable = false,
                 StencilEnable = false
@@ -129,7 +129,7 @@ namespace Viking.ViewModels
 
             graphicsDevice.DepthStencilState = originalDepthState;
 
-        } 
+        }
 
         LabelView[]? _Labels = null;
 
@@ -137,10 +137,7 @@ namespace Viking.ViewModels
         {
             get
             {
-                if (_Labels is null)
-                {
-                    _Labels = CreateLabels(this.MapPoints);
-                }
+                _Labels ??= CreateLabels(this.MapPoints);
 
                 return _Labels;
             }
@@ -152,8 +149,8 @@ namespace Viking.ViewModels
 
             for (int i = 0; i < map_points.Length; i++)
             {
-                LabelView control_label = new LabelView(i.ToString(), map_points[i].ControlPoint, anchor: Anchor.TopCenter, scaleFontWithScene: true);
-                LabelView mapped_label = new LabelView(i.ToString(), map_points[i].MappedPoint, anchor: Anchor.BottomCenter, scaleFontWithScene: true);
+                LabelView control_label = new(i.ToString(), map_points[i].ControlPoint, anchor: Anchor.TopCenter, scaleFontWithScene: true);
+                LabelView mapped_label = new(i.ToString(), map_points[i].MappedPoint, anchor: Anchor.BottomCenter, scaleFontWithScene: true);
 
                 labels[i * 2] = control_label;
                 labels[(i * 2) + 1] = mapped_label;
@@ -163,18 +160,14 @@ namespace Viking.ViewModels
                 return labels;
 
             var lineHeight = labels[0].font.LineSpacing;
-             
+
             labels[map_points.Length] = new LabelView("Control Points", new GridVector2(15, 15), anchor: Anchor.CenterLeft, scaleFontWithScene: false); ;
             labels[map_points.Length + 1] = new LabelView("Mapped Points", new GridVector2(15, 15 + (lineHeight * 2.15)), anchor: Anchor.CenterLeft, scaleFontWithScene: false); ;
 
             return labels;
         }
 
-        public void DrawLabels(Viking.UI.Controls.SectionViewerControl _Parent, Scene scene)
-        {
-
-            LabelView.Draw(_Parent.spriteBatch, VikingXNAGraphics.Global.DefaultFont, scene, this.Labels);
-        }
+        public void DrawLabels(Viking.UI.Controls.SectionViewerControl _Parent, Scene scene) => LabelView.Draw(_Parent.spriteBatch, VikingXNAGraphics.Global.DefaultFont, scene, this.Labels);
 
 
 
@@ -184,24 +177,12 @@ namespace Viking.ViewModels
         {
             lock (this)
             {
-
-                if (vbMappedMesh != null)
-                {
-                    vbMappedMesh.Dispose();
-                    vbMappedMesh = null;
-                }
-
-                if (vbControlMesh != null)
-                {
-                    vbControlMesh.Dispose();
-                    vbControlMesh = null;
-                }
-
-                if (ibMesh != null)
-                {
-                    ibMesh.Dispose();
-                    ibMesh = null;
-                }
+                vbMappedMesh?.Dispose();
+                vbMappedMesh = null;
+                vbControlMesh?.Dispose();
+                vbControlMesh = null;
+                ibMesh?.Dispose();
+                ibMesh = null;
 
             }
         }

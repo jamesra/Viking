@@ -45,7 +45,7 @@ namespace WebAnnotation
         private readonly EventHandler AnnotationChangedEventHandler;
 
         //private static SectionLocationViewModelCache cacheSectionAnnotations = new SectionLocationViewModelCache(); 
-        private static readonly SectionAnnotationsViewModelCache cacheSectionAnnotations = new SectionAnnotationsViewModelCache();
+        private static readonly SectionAnnotationsViewModelCache cacheSectionAnnotations = new();
         //private static LocationLinksViewModel linksView;
 
         private static AnnotationOverlay _CurrentOverlay = null;
@@ -67,7 +67,7 @@ namespace WebAnnotation
         /// </summary>
         internal static ICanvasGeometryView LastIntersectedObject = null;
 
-        private readonly MouseOverLocationCanvasViewEffect mouseOverEffect = new MouseOverLocationCanvasViewEffect();
+        private readonly MouseOverLocationCanvasViewEffect mouseOverEffect = new();
 
         /// <summary>
         /// Used to cancel loading section annotations when the desired annotations have changed
@@ -106,10 +106,7 @@ namespace WebAnnotation
         /// Updates the maximum cache size for section annotations
         /// </summary>
         /// <param name="maxSize">The new maximum cache size</param>
-        public static void UpdateCacheSize(int maxSize)
-        {
-            cacheSectionAnnotations.MaxCacheSize = maxSize;
-        }
+        public static void UpdateCacheSize(int maxSize) => cacheSectionAnnotations.MaxCacheSize = maxSize;
 
         public static bool SaveLocationsWithMessageBoxOnError()
         {
@@ -135,15 +132,9 @@ namespace WebAnnotation
             }
         }
 
-        string Viking.Common.ISectionOverlayExtension.Name()
-        {
-            return Global.EndpointName;
-        }
+        string Viking.Common.ISectionOverlayExtension.Name() => Global.EndpointName;
 
-        int Viking.Common.ISectionOverlayExtension.DrawOrder()
-        {
-            return 10;
-        }
+        int Viking.Common.ISectionOverlayExtension.DrawOrder() => 10;
 
         public static void GoToStructure(long locID)
         {
@@ -172,13 +163,13 @@ namespace WebAnnotation
             {
                 //ICanvasView lastObj = 
                 GridVector2 lastObjCenter = WebAnnotation.AnnotationOverlay.CurrentOverlay.LastMouseDownCoords;
-                GridVector3 origin = new GridVector3(lastObjCenter.X * Global.Scale.X, lastObjCenter.Y * Global.Scale.Y, WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.Number * Global.Scale.Z);
+                GridVector3 origin = new(lastObjCenter.X * Global.Scale.X, lastObjCenter.Y * Global.Scale.Y, WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.Number * Global.Scale.Z);
 
                 //Sort locations by distance
-                List<LocationObj> nearest = locations.OrderBy(l => l.DistanceToPoint3D(origin)).ToList();
+                List<LocationObj> nearest = [.. locations.OrderBy(l => l.DistanceToPoint3D(origin))];
 
-                List<double> Distance = nearest.Select(l => l.DistanceToPoint3D(origin)).ToList();
-                List<double> Depth = nearest.Select(l => l.Z).ToList();
+                List<double> Distance = [.. nearest.Select(l => l.DistanceToPoint3D(origin))];
+                List<double> Depth = [.. nearest.Select(l => l.Z)];
 
                 GoToLocation(nearest.First());
             }
@@ -220,12 +211,9 @@ namespace WebAnnotation
         /// Returns annotations for section if they exist or null if they do not
         /// </summary>
         /// <param name="SectionNumber"></param>
-        public static SectionAnnotationsView GetAnnotationsForSection(int SectionNumber)
-        {
-            return cacheSectionAnnotations.Fetch(SectionNumber);
-        }
+        public static SectionAnnotationsView GetAnnotationsForSection(int SectionNumber) => cacheSectionAnnotations.Fetch(SectionNumber);
 
-        private static readonly SemaphoreSlim GetOrCreateAnnotationsForSectionSemaphore = new SemaphoreSlim(1);
+        private static readonly SemaphoreSlim GetOrCreateAnnotationsForSectionSemaphore = new(1);
         /// <summary>
         /// Returns annotations for section if they exist or creates new SectionLocationsViewModel if they do not
         /// </summary>
@@ -272,7 +260,7 @@ namespace WebAnnotation
         {
             get
             {
-                List<string> helpstrings = new List<string>();
+                List<string> helpstrings = new();
                 if (IsCommandDefault())
                 {
                     helpstrings.AddRange(BuildHotkeyHelpStrings());
@@ -280,7 +268,7 @@ namespace WebAnnotation
 
                 helpstrings.AddRange(DefaultKeyHelpStrings());
 
-                return helpstrings.ToArray();
+                return [.. helpstrings];
             }
         }
 
@@ -290,7 +278,7 @@ namespace WebAnnotation
         {
             Debug.Print("Open Last Modified Location");
 
-            Task task = new System.Threading.Tasks.Task(() =>
+            Task task = new(() =>
             {
                 WebAnnotationModel.LocationObj lastLocation = WebAnnotationModel.Store.Locations.GetLastModifiedLocation();
                 if (lastLocation != null)
@@ -315,7 +303,7 @@ namespace WebAnnotation
             }
 
             //Get the overlapping locations, filter out non-location annotations
-            return locView.GetAnnotations(position).Where(hr => hr.obj is LocationCanvasView).ToList();
+            return [.. locView.GetAnnotations(position).Where(hr => hr.obj is LocationCanvasView)];
         }
 
         /// <summary>
@@ -332,7 +320,7 @@ namespace WebAnnotation
             }
 
             //Get the overlapping locations, filter out non-location annotations
-            return locView.GetAnnotations(position).Where(hr => hr.obj is LocationCanvasView).ToList();
+            return [.. locView.GetAnnotations(position).Where(hr => hr.obj is LocationCanvasView)];
         }
 
         /// <summary>
@@ -362,8 +350,7 @@ namespace WebAnnotation
                 bestObj = bestHit.obj as ICanvasGeometryView;
 
                 /*Hit testing for containers should probably be cleaned up and incorporated into the GetAnnotationsAtPositions calls*/
-                ICanvasViewContainer container = bestObj as ICanvasViewContainer;
-                if (container != null)
+                if (bestObj is ICanvasViewContainer container)
                 {
                     bestObj = container.GetAnnotationAtPosition(position) as ICanvasGeometryView;
                     if (bestObj != null)
@@ -424,14 +411,11 @@ namespace WebAnnotation
                 return null;
             }
 
-            List<HitTestResult> listObjects = locView.GetLocations(line).Select(o => new HitTestResult(o, (int)o.Z, o.VisualHeight, o.DistanceFromCenterNormalized(line.A))).ToList();
+            List<HitTestResult> listObjects = [.. locView.GetLocations(line).Select(o => new HitTestResult(o, (int)o.Z, o.VisualHeight, o.DistanceFromCenterNormalized(line.A)))];
             return listObjects;
         }
 
-        public List<HitTestResult> GetAnnotations(GridLineSegment line)
-        {
-            return GetAnnotations(line, CurrentSectionNumber);
-        }
+        public List<HitTestResult> GetAnnotations(GridLineSegment line) => GetAnnotations(line, CurrentSectionNumber);
 
         #region ISectionOverlayExtension Members
 
@@ -462,7 +446,7 @@ namespace WebAnnotation
             _Parent.Camera.PropertyChanged += new System.ComponentModel.PropertyChangedEventHandler(OnCameraPropertyChanged);
             //linksView = new LocationLinksViewModel(parent); 
 
-            LoadSectionAnnotations(CancellationToken.None);
+            _ = LoadSectionAnnotations(CancellationToken.None);
         }
 
         private void OnCameraPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -474,8 +458,8 @@ namespace WebAnnotation
 
         protected void UpdateMouseCursor()
         {
-            IMouseActionSupport loc = LastMouseOverObject as IMouseActionSupport; // GetNearestLocation(WorldPosition, out distance);
-            if (loc != null)
+            // GetNearestLocation(WorldPosition, out distance);
+            if (LastMouseOverObject is IMouseActionSupport loc)
             {
                 GridVector2 WorldPosition = LastMouseMoveVolumeCoords;
                 LocationAction action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, CurrentSectionNumber, Control.ModifierKeys, out long locID);
@@ -490,8 +474,8 @@ namespace WebAnnotation
 
         protected void UpdatePenCursor()
         {
-            IPenActionSupport loc = LastMouseOverObject as IPenActionSupport; // GetNearestLocation(WorldPosition, out distance);
-            if (loc != null)
+            // GetNearestLocation(WorldPosition, out distance);
+            if (LastMouseOverObject is IPenActionSupport loc)
             {
                 GridVector2 WorldPosition = LastMouseMoveVolumeCoords;
                 LocationAction action = loc.GetPenContactActionForPositionOnAnnotation(WorldPosition, CurrentSectionNumber, Control.ModifierKeys, out long locID);
@@ -611,9 +595,8 @@ namespace WebAnnotation
                     Viking.UI.State.SelectedObject = obj as IUIObjectBasic;
 
                     /*If we select a link, find the location off the section and assume we have selected that*/
-                    IMouseActionSupport actionSupportedObj = obj as IMouseActionSupport;
 
-                    if (actionSupportedObj != null)
+                    if (obj is IMouseActionSupport actionSupportedObj)
                     {
                         LocationAction action =
                             actionSupportedObj.GetMouseClickActionForPositionOnAnnotation(WorldPosition,
@@ -678,9 +661,8 @@ namespace WebAnnotation
 
                 /*If we select a link, find the location off the section and assume we have selected that*/
 
-                IPenActionSupport actionSupportedObj = obj as IPenActionSupport;
 
-                if (actionSupportedObj != null)
+                if (obj is IPenActionSupport actionSupportedObj)
                 {
                     LocationAction action = actionSupportedObj.GetPenContactActionForPositionOnAnnotation(WorldPosition,
                         CurrentSectionNumber, Control.ModifierKeys, out long LocationID);
@@ -772,7 +754,7 @@ namespace WebAnnotation
         /// </summary>
         protected void StartPenPath(GridVector2 origin)
         {
-            AnnotationOverlayPenFreeDrawCommandV2 cmd = new AnnotationOverlayPenFreeDrawCommandV2(Parent,
+            AnnotationOverlayPenFreeDrawCommandV2 cmd = new(Parent,
                 Color.Yellow,
                 Global.DefaultClosedLineWidth,
                 (object sender, GridVector2[] points) =>
@@ -811,7 +793,7 @@ namespace WebAnnotation
         /// <param name="path"></param>
         protected void OnPenPathCompleted(AnnotationOverlayPenFreeDrawCommandV2 sender_cmd, GridVector2[] path)
         {
-            List<IAction> actions = sender_cmd.PossibleActions == null ? new List<IAction>() : sender_cmd.PossibleActions.ToList();
+            List<IAction> actions = sender_cmd.PossibleActions == null ? new List<IAction>() : [.. sender_cmd.PossibleActions];
             if (path.Length < 2)
             {
                 //If we have a point and not a line just return
@@ -835,7 +817,7 @@ namespace WebAnnotation
             }
 
             //ActionConfirmationCommand confirm_command = new ActionConfirmationCommand(this.Parent, actions, path.BoundingBox(), () => { return; });
-            ActionSelectionCanvasControl confirm_command = ActionSelectionCanvasControl.CreateViews(Parent, actions.ToArray());
+            ActionSelectionCanvasControl confirm_command = ActionSelectionCanvasControl.CreateViews(Parent, [.. actions]);
             _Parent.CurrentCommand = confirm_command;
 
 
@@ -885,31 +867,29 @@ namespace WebAnnotation
 
         }
 
-        protected void OnPenPathCompleted(object sender, GridVector2[] Path)
-        {
+        protected void OnPenPathCompleted(object sender, GridVector2[] Path) =>
             /*
-             * TODO: If the path is a valid shape for the last editted annotation we should continue the last trace. 
-            if(CanContinueLastTrace)
-            {
-                LocationObj lastLoc = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, false);
-                switch(lastLoc.TypeCode)
-                {
-                    case LocationType.CURVEPOLYGON:
-                    case LocationType.POLYGON:
-                    case LocationType.CLOSEDCURVE:
-                        //If we have a closed path type and the user drew a loop then create a new annotation linked to our last editted location.
-                        if(PenPath.HasSelfIntersection)
-                        {
-                            OnContinueLastTrace
-                        }
-                        break;
+* TODO: If the path is a valid shape for the last editted annotation we should continue the last trace. 
+if(CanContinueLastTrace)
+{
+LocationObj lastLoc = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, false);
+switch(lastLoc.TypeCode)
+{
+case LocationType.CURVEPOLYGON:
+case LocationType.POLYGON:
+case LocationType.CLOSEDCURVE:
+//If we have a closed path type and the user drew a loop then create a new annotation linked to our last editted location.
+if(PenPath.HasSelfIntersection)
+{
+OnContinueLastTrace
+}
+break;
 
-                }
-            }
-            */
+}
+}
+*/
 
             StopPenPath();
-        }
 
         private static string[] DefaultKeyHelpStrings()
         {
@@ -925,17 +905,17 @@ namespace WebAnnotation
 
         private string[] BuildHotkeyHelpStrings()
         {
-            if(Global.UserSettings is null)
+            if (Global.UserSettings is null)
                 return Array.Empty<string>();
 
-            List<string> hotkeyStrings = new List<string>(Global.UserSettings.Shortcuts.Hotkey.Count);
+            List<string> hotkeyStrings = new(Global.UserSettings.Shortcuts.Hotkey.Count);
             foreach (Hotkey hkey in Global.UserSettings.Shortcuts.Hotkey)
             {
                 string keystr = hkey.BuildModifierString() + hkey.KeyName + ": " + hkey.Action;
                 hotkeyStrings.Add(keystr);
             }
 
-            return hotkeyStrings.ToArray();
+            return [.. hotkeyStrings];
         }
 
 
@@ -990,12 +970,7 @@ namespace WebAnnotation
                     {
                         var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
                         _Parent.CurrentCommand = new SegmentationCommand(this.Parent,
-                            new SegmentationCommand.OnCommandSuccess((outputPolygon) =>
-                            {
-                                SegmentationCommand.CreateAnnotationFromPolygon(this.Parent, null, outputPolygon);
-                                // Determine structure type
-                            }
-                        ), channelManager);
+                            new SegmentationCommand.OnCommandSuccess((outputPolygon) => SegmentationCommand.CreateAnnotationFromPolygon(this.Parent, null, outputPolygon)), channelManager);
                     }
                     return;
                 case Keys.F5:
@@ -1005,14 +980,14 @@ namespace WebAnnotation
                     OnContinueLastTrace();
                     return;
                 case Keys.F6:
-                    UI.Forms.SelectStructureTypeForm StructureIDChoiceForm = new WebAnnotation.UI.Forms.SelectStructureTypeForm();
-                    Annotation.ViewModels.FavoriteStructureIDsViewModel favorite_view_model = new Annotation.ViewModels.FavoriteStructureIDsViewModel(Global.UserFavoriteStructureTypes);
+                    UI.Forms.SelectStructureTypeForm StructureIDChoiceForm = new();
+                    Annotation.ViewModels.FavoriteStructureIDsViewModel favorite_view_model = new(Global.UserFavoriteStructureTypes);
                     StructureIDChoiceForm.DataContext = favorite_view_model;
                     System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(StructureIDChoiceForm);
                     StructureIDChoiceForm.Show();
                     return;
                 case Keys.F7:
-                    WPF.Forms.StructureTypeManagementForm StructureTypeManagementForm = new WebAnnotation.WPF.Forms.StructureTypeManagementForm
+                    WPF.Forms.StructureTypeManagementForm StructureTypeManagementForm = new()
                     {
                         DataContext = Store.StructureTypes
                     };
@@ -1156,15 +1131,9 @@ namespace WebAnnotation
 
         }
 
-        private void GoToStructureForm_Closed(object sender, EventArgs e)
-        {
-            WebAnnotation.AnnotationOverlay.GoToStructureForm = null;
-        }
+        private void GoToStructureForm_Closed(object sender, EventArgs e) => WebAnnotation.AnnotationOverlay.GoToStructureForm = null;
 
-        private void GoToLocationForm_Closed(object sender, EventArgs e)
-        {
-            WebAnnotation.AnnotationOverlay.GoToLocationForm = null;
-        }
+        private void GoToLocationForm_Closed(object sender, EventArgs e) => WebAnnotation.AnnotationOverlay.GoToLocationForm = null;
 
         protected void OnKeyUp(object sender, KeyEventArgs e)
         {
@@ -1173,7 +1142,7 @@ namespace WebAnnotation
                 case Keys.Space:
 
                     //Only load the annotations for any section once so we can't fire multiple requests by pounding the spacebar
-                    LoadSectionAnnotations(CancellationToken.None);
+                    _ = LoadSectionAnnotations(CancellationToken.None);
                     InvalidateParent();
 
                     break;
@@ -1193,7 +1162,7 @@ namespace WebAnnotation
             StructureTypeObj typeObj = Store.StructureTypes.GetObjectByID(TypeID);
             if (typeObj != null)
             {
-                StructureType type = new StructureType(typeObj);
+                StructureType type = new(typeObj);
                 bool StructureNeedsParent = type.ParentID.HasValue;
                 System.Drawing.Point ClientPoint = _Parent.PointToClient(System.Windows.Forms.Control.MousePosition);
                 GridVector2 WorldPos = _Parent.ScreenToWorld(ClientPoint.X, ClientPoint.Y);
@@ -1204,8 +1173,8 @@ namespace WebAnnotation
                     return;
                 }
 
-                StructureObj newStruct = new StructureObj(type.modelObj);
-                LocationObj newLocation = new LocationObj(newStruct,
+                StructureObj newStruct = new(type.modelObj);
+                LocationObj newLocation = new(newStruct,
                                                 Parent.Section.Number,
                                                 AnnotationType);
 
@@ -1349,7 +1318,7 @@ namespace WebAnnotation
                 return;
             }
 
-            LocationCanvasView loc = LastMouseOverObject as LocationCanvasView;
+            LocationCanvasView? loc = LastMouseOverObject as LocationCanvasView;
             if (loc == null)
             {
                 Trace.WriteLine("No mouse over location to toggle tag");
@@ -1370,7 +1339,7 @@ namespace WebAnnotation
                 return;
             }
 
-            LocationCanvasView loc = LastMouseOverObject as LocationCanvasView;
+            LocationCanvasView? loc = LastMouseOverObject as LocationCanvasView;
             if (loc == null)
             {
                 Trace.WriteLine("No mouse over location to toggle tag");
@@ -1415,7 +1384,7 @@ namespace WebAnnotation
                 return;
             }
 
-            LocationCanvasView loc = LastMouseOverObject as LocationCanvasView; // GetNearestLocation(WorldPosition, out distance);
+            LocationCanvasView? loc = LastMouseOverObject as LocationCanvasView; // GetNearestLocation(WorldPosition, out distance);
             if (loc == null)
             {
                 Trace.WriteLine("No mouse over location to toggle terminal");
@@ -1437,7 +1406,7 @@ namespace WebAnnotation
                 return;
             }
 
-            LocationCanvasView loc = LastMouseOverObject as LocationCanvasView; // GetNearestLocation(WorldPosition, out distance);
+            LocationCanvasView? loc = LastMouseOverObject as LocationCanvasView; // GetNearestLocation(WorldPosition, out distance);
             if (loc == null)
             {
                 Trace.WriteLine("No mouse over object to change location annotation type");
@@ -1548,15 +1517,13 @@ namespace WebAnnotation
             }
         }
 
-        protected void OnAnnotationChanged(object sender, EventArgs e)
-        {
+        protected void OnAnnotationChanged(object sender, EventArgs e) =>
             //Trigger redraw of screen
             InvalidateParent();
-        }
 
         private static SortedSet<int> ChangedSectionsInLocationCollection(NotifyCollectionChangedEventArgs e)
         {
-            SortedSet<int> changedSections = new SortedSet<int>();
+            SortedSet<int> changedSections = new();
 
             if (e.NewItems != null)
             {
@@ -1584,7 +1551,7 @@ namespace WebAnnotation
         /// <returns></returns>
         private static SortedSet<int> GetDistinctLocationSections(System.Collections.IList listLocations)
         {
-            SortedSet<int> changedSections = new SortedSet<int>();
+            SortedSet<int> changedSections = new();
 
             if (listLocations != null)
             {
@@ -1603,7 +1570,7 @@ namespace WebAnnotation
 
         private static SortedSet<int> ChangedSectionsInLocationLinkCollection(NotifyCollectionChangedEventArgs e)
         {
-            SortedSet<int> changedSections = new SortedSet<int>();
+            SortedSet<int> changedSections = new();
 
             if (e.NewItems != null)
             {
@@ -1631,7 +1598,7 @@ namespace WebAnnotation
         /// <returns></returns>
         private static SortedSet<int> GetDistinctLocationLinkSections(System.Collections.IList listObjs)
         {
-            SortedSet<int> changedSections = new SortedSet<int>();
+            SortedSet<int> changedSections = new();
 
             if (listObjs != null)
             {
@@ -1666,7 +1633,7 @@ namespace WebAnnotation
         {
             SortedSet<int> changedSections = ChangedSectionsInLocationCollection(e);
 
-            SortedSet<int> AdjacentSections = new SortedSet<int>();
+            SortedSet<int> AdjacentSections = new();
             foreach (SectionViewModel svm in Viking.UI.State.volume.SectionViewModels.Values)
             {
                 if (svm.ReferenceSectionAbove != null)
@@ -1735,7 +1702,7 @@ namespace WebAnnotation
             {
                 loadSectionAnnotationsCancellationTokenSource?.Cancel();
                 loadSectionAnnotationsCancellationTokenSource = new CancellationTokenSource();
-                LoadSectionAnnotations(loadSectionAnnotationsCancellationTokenSource.Token);
+                _ = LoadSectionAnnotations(loadSectionAnnotationsCancellationTokenSource.Token);
             }
         }
 
@@ -1748,7 +1715,7 @@ namespace WebAnnotation
         {
             loadSectionAnnotationsCancellationTokenSource?.Cancel();
             loadSectionAnnotationsCancellationTokenSource = new CancellationTokenSource();
-            ResetAnnotationsAsync(loadSectionAnnotationsCancellationTokenSource.Token);
+            _ = ResetAnnotationsAsync(loadSectionAnnotationsCancellationTokenSource.Token);
         }
 
         /// <summary>
@@ -1777,11 +1744,7 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="scene"></param>
         /// <returns></returns>
-        private bool ShouldLoadAnnotationsForSceneMovement(VikingXNA.Scene scene)
-        {
-            return (LastVisibleWorldBounds != scene.VisibleWorldBounds);// &&
-                                                                        //(LastCameraDownsample == scene.Camera.Downsample);
-        }
+        private bool ShouldLoadAnnotationsForSceneMovement(VikingXNA.Scene scene) => (LastVisibleWorldBounds != scene.VisibleWorldBounds);// &&//(LastCameraDownsample == scene.Camera.Downsample);
 
         /// <summary>
         /// Record the last scene we rendered so we know if we've moved the camera and need to load new annotations
@@ -1792,7 +1755,7 @@ namespace WebAnnotation
             LastVisibleWorldBounds = scene.VisibleWorldBounds;
         }
 
-        private readonly SemaphoreSlim LoadSectionAnnotationsSemaphore = new SemaphoreSlim(1);
+        private readonly SemaphoreSlim LoadSectionAnnotationsSemaphore = new(1);
         protected async Task LoadSectionAnnotations(CancellationToken token)
         {
             if (Parent.Scene is null)
@@ -1993,8 +1956,8 @@ namespace WebAnnotation
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
             List<StructureLinkViewModelBase> VisibleStructureLinks = currentSectionAnnotations.VisibleStructureLinks(scene);
-            StructureLinkCirclesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, VisibleStructureLinks.Where(l => l as StructureLinkCirclesView != null).Cast<StructureLinkCirclesView>().ToArray());
-            StructureLinkCurvesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, VisibleStructureLinks.Where(l => l as StructureLinkCurvesView != null).Cast<StructureLinkCurvesView>().ToArray());
+            StructureLinkCirclesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [.. VisibleStructureLinks.Where(l => l as StructureLinkCirclesView != null).Cast<StructureLinkCirclesView>()]);
+            StructureLinkCurvesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [.. VisibleStructureLinks.Where(l => l as StructureLinkCurvesView != null).Cast<StructureLinkCurvesView>()]);
 
             graphicsDevice.BlendState = defaultBlendState;
 
@@ -2020,8 +1983,7 @@ namespace WebAnnotation
         {
             IEnumerable<ILabelView> listLocationsWithVisibleLabels = locations.Where(l =>
             {
-                ILabelView iView = l as ILabelView;
-                if (iView != null)
+                if (l is ILabelView iView)
                 {
                     return iView.IsLabelVisible(scene);
                 }
@@ -2041,8 +2003,7 @@ namespace WebAnnotation
 
             IEnumerable<IRenderedLabelView> listLocationsWithVisibleRenderedLabels = locations.Where(l =>
             {
-                IRenderedLabelView iView = l as IRenderedLabelView;
-                if (iView != null)
+                if (l is IRenderedLabelView iView)
                 {
                     return iView.IsLabelVisible(scene);
                 }
@@ -2060,15 +2021,9 @@ namespace WebAnnotation
             DeviceStateManager.RestoreDeviceState(_Parent.Device);
         }
 
-        private static List<LocationCanvasView> FindVisibleLocations(IEnumerable<LocationCanvasView> locations, VikingXNA.Scene scene)
-        {
-            return locations.Where(l => l != null && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene)).ToList();
-        }
+        private static List<LocationCanvasView> FindVisibleLocations(IEnumerable<LocationCanvasView> locations, VikingXNA.Scene scene) => [.. locations.Where(l => l != null && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene))];
 
-        private static List<LocationCanvasView> FindVisibleAdjacentLocations(IEnumerable<LocationCanvasView> locations, VikingXNA.Scene scene)
-        {
-            return locations.Where(l => l != null && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene)).ToList();
-        }
+        private static List<LocationCanvasView> FindVisibleAdjacentLocations(IEnumerable<LocationCanvasView> locations, VikingXNA.Scene scene) => [.. locations.Where(l => l != null && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene))];
         /*
         /// <summary>
         /// Return all locations which overlap the passed locations
@@ -2159,90 +2114,9 @@ namespace WebAnnotation
                 (byte)(alpha));
         }
 
-        public LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, Keys ModifierKeys, out long LocationID)
-        {
-            throw new NotImplementedException();
-        }
+        public LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, Keys ModifierKeys, out long LocationID) => throw new NotImplementedException();
 
-        public List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
-        {
-            throw new NotImplementedException();
-            //If we didn't overlap an existing annotation then create a new structure
-            /*if(interaction_log.All(e => e.Annotation == null))
-            {
-            }
-            */
-        }
-
-        /*
-        private void DrawLocationLink(LocationLinkView link, Matrix ViewProjMatrix)
-        {
-            LocationObj locA = link.A;
-            LocationObj locB = link.B;
-
-            if (!link.IsVisible(Parent.Scene))
-                return;
-
-            if (!locA.VolumePositionHasBeenCalculated)
-                return;
-            if (!locB.VolumePositionHasBeenCalculated)
-                return;
-
-            //Don't draw links for line style locations.
-            if (!(locA.TypeCode == LocationType.CIRCLE && locB.TypeCode == LocationType.CIRCLE))
-                return; 
-
-            //Don't draw if the link falls within the radius of the location we are drawing
-            if (link.LinksOverlap(Parent.Section.Number))
-                return;
-
-            if (locA.Parent == null)
-                return;
-
-            StructureType type = new StructureType(locA.Parent.Type);
-            if (type == null)
-                return;
-
-            int distanceFactor = link.maxSection - link.minSection;
-            if (distanceFactor == 0)
-                distanceFactor = 1;
-
-            //Give the colors a nudge towards red or blue depending on the direction to the link
-            double directionFactor = 1;
-            directionFactor = link.maxSection == _Parent.Section.Number ? 1 : -1;
-
-            Microsoft.Xna.Framework.Color color = GetLocationLinkColor(type.Color, distanceFactor, directionFactor, LastMouseOverObject == link);
-              
-            _Parent.LumaOverlayLineManager.Draw(link.lineGraphic, (float)link.LineWidth, color.ConvertToHCL(),
-                                         ViewProjMatrix, 0, null);
-        }*/
-
-        /*
-        private void DrawStructureLink(StructureLinkViewModelBase link, Matrix ViewProjMatrix, float time_offset)
-        {
-            int alpha = 128;
-            if (LastMouseOverObject == link)
-            {
-                alpha = 192;
-            }
-
-            //If you don't cast to byte the wrong constructor is used and the alpha value is wrong
-            Microsoft.Xna.Framework.Color color = new Microsoft.Xna.Framework.Color((byte)(255),
-                (byte)(255),
-                (byte)(255),
-                (byte)(alpha));
-
-            if (link.Bidirectional)
-            {
-                _Parent.LineManager.Draw(link.lineGraphic, (float)link.Radius, color,
-                                         ViewProjMatrix, time_offset, "AnimatedBidirectional");
-            }
-            else
-            {
-                _Parent.LineManager.Draw(link.lineGraphic, (float)link.Radius, color,
-                                         ViewProjMatrix, time_offset, "AnimatedLinear");
-            }
-        }*/
+        public List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new NotImplementedException();//If we didn't overlap an existing annotation then create a new structure/*if(interaction_log.All(e => e.Annotation == null))
 
         #endregion
 

@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using MathNet.Numerics.LinearAlgebra;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -57,8 +57,8 @@ namespace UtilitiesTests
         [TestMethod]
         public void TestAngle()
         {
-            GridVector2 A = new GridVector2(5, 0);
-            GridVector2 B = new GridVector2(2.5, 2.5);
+            GridVector2 A = new(5, 0);
+            GridVector2 B = new(2.5, 2.5);
 
             double PI4 = Math.PI / 4;
 
@@ -84,17 +84,17 @@ namespace UtilitiesTests
             const double Pi4 = Math.PI / 4.0;
             const double Pi2 = Math.PI / 2.0;
 
-            GridVector2 Origin = new GridVector2(0, 0);
-            GridVector2 A = new GridVector2(1, 0);
-            GridVector2 B = new GridVector2(0, 1);
-            GridVector2 C = new GridVector2(-1, 0);
-            GridVector2 D = new GridVector2(0, -1);
+            GridVector2 Origin = new(0, 0);
+            GridVector2 A = new(1, 0);
+            GridVector2 B = new(0, 1);
+            GridVector2 C = new(-1, 0);
+            GridVector2 D = new(0, -1);
 
             //Check angles not on the axis
-            GridVector2 E = new GridVector2(0.5, 0.5);
-            GridVector2 F = new GridVector2(-0.5, 0.5);
-            GridVector2 G = new GridVector2(-0.5, -0.5);
-            GridVector2 H = new GridVector2(0.5, -0.5);
+            GridVector2 E = new(0.5, 0.5);
+            GridVector2 F = new(-0.5, 0.5);
+            GridVector2 G = new(-0.5, -0.5);
+            GridVector2 H = new(0.5, -0.5);
 
             //     X = -1          X = 1
             //
@@ -109,98 +109,98 @@ namespace UtilitiesTests
 
             //Start by testing angles on the axis
             double Degree90 = GridVector2.ArcAngle(Origin, A, B);
-            Assert.AreEqual(Degree90, -Pi2);
+            Assert.AreEqual(-Pi2, Degree90);
 
             Degree90 = GridVector2.ArcAngle(Origin, B, A);
-            Assert.AreEqual(Degree90, Pi2);
+            Assert.AreEqual(Pi2, Degree90);
 
             double Degree180 = GridVector2.ArcAngle(Origin, A, C);
-            Assert.AreEqual(Degree180, Math.PI);
+            Assert.AreEqual(Math.PI, Degree180);
 
             double BD_Degree180 = GridVector2.ArcAngle(Origin, D, B);
-            Assert.AreEqual(BD_Degree180, Math.PI);
+            Assert.AreEqual(Math.PI, BD_Degree180);
 
             double Degree0 = GridVector2.Angle(Origin, A);
-            Assert.AreEqual(Degree0, 0);
+            Assert.AreEqual(0, Degree0);
 
             Degree90 = GridVector2.Angle(Origin, B);
-            Assert.AreEqual(Degree90, Pi2);
+            Assert.AreEqual(Pi2, Degree90);
 
             //Check angles not on the axis
 
             Degree90 = GridVector2.ArcAngle(Origin, E, F);
-            Assert.AreEqual(Degree90, -Pi2);
+            Assert.AreEqual(-Pi2, Degree90);
 
             Degree90 = GridVector2.ArcAngle(Origin, F, E);
-            Assert.AreEqual(Degree90, Pi2);
+            Assert.AreEqual(Pi2, Degree90);
 
             Degree90 = GridVector2.ArcAngle(Origin, F, G);
-            Assert.AreEqual(Degree90, -Pi2);
+            Assert.AreEqual(-Pi2, Degree90);
 
             Degree90 = GridVector2.ArcAngle(Origin, G, H);
-            Assert.AreEqual(Degree90, -Pi2);
+            Assert.AreEqual(-Pi2, Degree90);
 
             //Check 45 degree angles
             double Degree45 = GridVector2.ArcAngle(Origin, E, B);
-            Assert.AreEqual(Degree45, -Pi4);
+            Assert.AreEqual(-Pi4, Degree45);
 
             Degree45 = GridVector2.ArcAngle(Origin, E, A);
-            Assert.AreEqual(Degree45, Pi4);
+            Assert.AreEqual(Pi4, Degree45);
 
             Degree45 = GridVector2.ArcAngle(Origin, H, A);
-            Assert.AreEqual(Degree45, -Pi4);
+            Assert.AreEqual(-Pi4, Degree45);
 
             //Check 135 degree angles
             double Degree135 = GridVector2.ArcAngle(Origin, E, C);
-            Assert.AreEqual(Degree135, -(Pi4 + Pi2));
+            Assert.AreEqual(-(Pi4 + Pi2), Degree135);
 
             Degree135 = GridVector2.ArcAngle(Origin, C, E);
-            Assert.AreEqual(Degree135, (Pi4 + Pi2));
+            Assert.AreEqual((Pi4 + Pi2), Degree135);
 
             Degree135 = GridVector2.ArcAngle(Origin, G, A);
-            Assert.AreEqual(Degree135, -(Pi4 + Pi2));
+            Assert.AreEqual(-(Pi4 + Pi2), Degree135);
 
             Degree135 = GridVector2.ArcAngle(Origin, B, G);
-            Assert.AreEqual(Degree135, -(Pi4 + Pi2));
+            Assert.AreEqual(-(Pi4 + Pi2), Degree135);
 
             Degree135 = GridVector2.ArcAngle(Origin, G, B);
-            Assert.AreEqual(Degree135, (Pi4 + Pi2));
+            Assert.AreEqual((Pi4 + Pi2), Degree135);
 
             //Check 180 degree angles off-axis
 
             Degree180 = GridVector2.ArcAngle(Origin, F, H);
-            Assert.AreEqual(Math.Abs(Degree180), Math.PI);
+            Assert.AreEqual(Math.PI, Math.Abs(Degree180));
 
             Degree180 = GridVector2.ArcAngle(Origin, H, F);
-            Assert.AreEqual(Math.Abs(Degree180), Math.PI);
+            Assert.AreEqual(Math.PI, Math.Abs(Degree180));
 
             Degree180 = GridVector2.ArcAngle(Origin, E, G);
-            Assert.AreEqual(Math.Abs(Degree180), Math.PI);
+            Assert.AreEqual(Math.PI, Math.Abs(Degree180));
 
             Degree180 = GridVector2.ArcAngle(Origin, G, E);
-            Assert.AreEqual(Math.Abs(Degree180), Math.PI);
+            Assert.AreEqual(Math.PI, Math.Abs(Degree180));
 
             //Translate the vectors slightly and ensure angles are unchanged
-            GridVector2 offset = new GridVector2(5, 2.5);
+            GridVector2 offset = new(5, 2.5);
             Origin += offset;
             A += offset;
             B += offset;
             C += offset;
 
             Degree90 = GridVector2.ArcAngle(Origin, A, B);
-            Assert.AreEqual(Degree90, -Pi2);
+            Assert.AreEqual(-Pi2, Degree90);
 
             Degree90 = GridVector2.ArcAngle(Origin, B, A);
-            Assert.AreEqual(Degree90, Pi2);
+            Assert.AreEqual(Pi2, Degree90);
 
             Degree180 = GridVector2.ArcAngle(Origin, A, C);
-            Assert.AreEqual(Degree180, Math.PI);
+            Assert.AreEqual(Math.PI, Degree180);
 
             Degree0 = GridVector2.Angle(Origin, A);
-            Assert.AreEqual(Degree0, 0);
+            Assert.AreEqual(0, Degree0);
 
             Degree90 = GridVector2.Angle(Origin, B);
-            Assert.AreEqual(Degree90, Pi2);
+            Assert.AreEqual(Pi2, Degree90);
         }
 
         [TestMethod]
@@ -209,11 +209,11 @@ namespace UtilitiesTests
             double Pi4 = Math.PI / 4.0;
             //double Pi2 = Math.PI / 2.0;
 
-            GridVector2 Origin = new GridVector2(0, 0);
-            GridVector2 A = new GridVector2(1, 0);
-            GridVector2 B = new GridVector2(0, 1);
-            GridVector2 C = new GridVector2(-1, 0);
-            GridVector2 D = new GridVector2(Math.Cos(Pi4), Math.Sin(Pi4));
+            GridVector2 Origin = new(0, 0);
+            GridVector2 A = new(1, 0);
+            GridVector2 B = new(0, 1);
+            GridVector2 C = new(-1, 0);
+            GridVector2 D = new(Math.Cos(Pi4), Math.Sin(Pi4));
 
             //Measure from D to A, which is on X-Axis
             double degree45 = GridVector2.ArcAngle(Origin, D, A);
@@ -230,10 +230,10 @@ namespace UtilitiesTests
         [TestMethod]
         public void TestAbsAngle()
         {
-            GridVector2 A = new GridVector2(0, 0);
-            GridVector2 B = new GridVector2(2.5, 2.5);
+            GridVector2 A = new(0, 0);
+            GridVector2 B = new(2.5, 2.5);
 
-            GridLine line = new GridLine(A, GridVector2.UnitX);
+            GridLine line = new(A, GridVector2.UnitX);
 
             double angle = GridVector2.AbsArcAngle(line, B, false);
 
@@ -245,7 +245,7 @@ namespace UtilitiesTests
             Assert.IsTrue(angle2 - Global.Epsilon < (7.0 * PI4) &&
                          angle2 + Global.Epsilon > (7.0 * PI4));
 
-            GridLine lineY = new GridLine(A, GridVector2.UnitY);
+            GridLine lineY = new(A, GridVector2.UnitY);
 
             double angle3 = GridVector2.AbsArcAngle(lineY, B, true);
 
@@ -260,11 +260,11 @@ namespace UtilitiesTests
         [TestMethod]
         public void TestTranslate()
         {
-            GridVector2 A = new GridVector2(0, 0);
+            GridVector2 A = new(0, 0);
 
-            Vector<double> v = Vector<double>.Build.Dense(new double[] { A.X, A.Y, 0, 1 });
+            Vector<double> v = Vector<double>.Build.Dense([A.X, A.Y, 0, 1]);
 
-            GridVector2 Offset = new GridVector2(1, 2);
+            GridVector2 Offset = new(1, 2);
 
             Matrix<double> translationMatrix = GeometryMathNetNumerics.CreateTranslationMatrix(Offset);
             Vector<double> translated = translationMatrix * v;
@@ -282,21 +282,21 @@ namespace UtilitiesTests
         [TestMethod]
         public void TestRotate()
         {
-            GridVector2 N = new GridVector2(1, 2);
-            GridVector2 S = new GridVector2(1, 0);
-            GridVector2 E = new GridVector2(2, 1);
-            GridVector2 W = new GridVector2(0, 1);
+            GridVector2 N = new(1, 2);
+            GridVector2 S = new(1, 0);
+            GridVector2 E = new(2, 1);
+            GridVector2 W = new(0, 1);
 
-            GridVector2 Centroid = new GridVector2(1, 1);
+            GridVector2 Centroid = new(1, 1);
 
-            GridVector2[] points = new GridVector2[] { N, S, E, W };
+            GridVector2[] points = [N, S, E, W];
 
             GridVector2 calculatedCentroid = points.Average();
 
             Assert.AreEqual(Centroid, calculatedCentroid);
 
-            GridVector2[] pointsToRotate = new GridVector2[] { N, W, S, E };
-            GridVector2[] rotatedPoints = pointsToRotate.Rotate(Math.PI / 2, Centroid).ToArray();
+            GridVector2[] pointsToRotate = [N, W, S, E];
+            GridVector2[] rotatedPoints = [.. pointsToRotate.Rotate(Math.PI / 2, Centroid)];
 
             Assert.AreEqual(rotatedPoints[0], W);
             Assert.AreEqual(rotatedPoints[1], S);
@@ -307,15 +307,15 @@ namespace UtilitiesTests
         [TestMethod]
         public void ToFromMatrix()
         {
-            GridVector2 A = new GridVector2(1, 2);
-            GridVector2 B = new GridVector2(1, 0);
-            GridVector2 C = new GridVector2(2, 1);
-            GridVector2 D = new GridVector2(0, 1);
+            GridVector2 A = new(1, 2);
+            GridVector2 B = new(1, 0);
+            GridVector2 C = new(2, 1);
+            GridVector2 D = new(0, 1);
 
-            GridVector2[] points = new GridVector2[] { A, B, C, D };
+            GridVector2[] points = [A, B, C, D];
 
             Matrix<double> m = points.ToMatrix();
-            GridVector2[] convertedPoints = m.ToGridVector2().ToArray();
+            GridVector2[] convertedPoints = [.. m.ToGridVector2()];
 
             Assert.AreEqual(points.Length, convertedPoints.Length);
 
@@ -328,36 +328,36 @@ namespace UtilitiesTests
         [TestMethod]
         public void AreClockwiseTest()
         {
-            GridVector2 W = new GridVector2(-1, 0);
-            GridVector2 N = new GridVector2(0, 1);
-            GridVector2 E = new GridVector2(1, 0);
-            GridVector2 S = new GridVector2(0, -1);
+            GridVector2 W = new(-1, 0);
+            GridVector2 N = new(0, 1);
+            GridVector2 E = new(1, 0);
+            GridVector2 S = new(0, -1);
             GridVector2 O = GridVector2.Zero;
 
-            GridVector2[] WNE_Points = new GridVector2[] { W, N, E };
-            GridVector2[] ENW_Points = new GridVector2[] { E, N, W };
+            GridVector2[] WNE_Points = [W, N, E];
+            GridVector2[] ENW_Points = [E, N, W];
 
             Assert.IsTrue(WNE_Points.AreClockwise());
-            Assert.IsTrue(WNE_Points.Winding() == RotationDirection.CLOCKWISE);
-            Assert.IsTrue(W.Winding(N,E) == RotationDirection.CLOCKWISE);
+            Assert.AreEqual(RotationDirection.CLOCKWISE, WNE_Points.Winding());
+            Assert.AreEqual(RotationDirection.CLOCKWISE, W.Winding(N, E));
 
             Assert.IsFalse(ENW_Points.AreClockwise());
-            Assert.IsTrue(ENW_Points.Winding() == RotationDirection.COUNTERCLOCKWISE);
-            Assert.IsTrue(E.Winding(N, W) == RotationDirection.COUNTERCLOCKWISE);
-            
+            Assert.AreEqual(RotationDirection.COUNTERCLOCKWISE, ENW_Points.Winding());
+            Assert.AreEqual(RotationDirection.COUNTERCLOCKWISE, E.Winding(N, W));
+
             Assert.AreNotEqual(WNE_Points.AreClockwise(), ENW_Points.AreClockwise());
 
 
-            GridVector2[] NES_Points = new GridVector2[] { N, E, S };
-            GridVector2[] SEN_Points = new GridVector2[] { S, E, N };
+            GridVector2[] NES_Points = [N, E, S];
+            GridVector2[] SEN_Points = [S, E, N];
 
             Assert.IsTrue(NES_Points.AreClockwise());
-            Assert.IsTrue(NES_Points.Winding() == RotationDirection.CLOCKWISE);
-            Assert.IsTrue(N.Winding(E, S) == RotationDirection.CLOCKWISE);
+            Assert.AreEqual(RotationDirection.CLOCKWISE, NES_Points.Winding());
+            Assert.AreEqual(RotationDirection.CLOCKWISE, N.Winding(E, S));
 
             Assert.IsFalse(SEN_Points.AreClockwise());
-            Assert.IsTrue(SEN_Points.Winding() == RotationDirection.COUNTERCLOCKWISE);
-            Assert.IsTrue(S.Winding(E, N) == RotationDirection.COUNTERCLOCKWISE);
+            Assert.AreEqual(RotationDirection.COUNTERCLOCKWISE, SEN_Points.Winding());
+            Assert.AreEqual(RotationDirection.COUNTERCLOCKWISE, S.Winding(E, N));
 
             Assert.AreNotEqual(NES_Points.AreClockwise(), SEN_Points.AreClockwise());
 
@@ -366,38 +366,38 @@ namespace UtilitiesTests
             GridVector2[] SEN_Points_Translated = SEN_Points.Translate(new GridVector2(10, 10));
 
             Assert.IsTrue(NES_Points_Translated.AreClockwise());
-            Assert.IsTrue(NES_Points_Translated.Winding() == RotationDirection.CLOCKWISE);
-            Assert.IsTrue(NES_Points_Translated[0].Winding(NES_Points_Translated[1], NES_Points_Translated[2]) == RotationDirection.CLOCKWISE);
+            Assert.AreEqual(RotationDirection.CLOCKWISE, NES_Points_Translated.Winding());
+            Assert.AreEqual(RotationDirection.CLOCKWISE, NES_Points_Translated[0].Winding(NES_Points_Translated[1], NES_Points_Translated[2]));
 
             Assert.IsFalse(SEN_Points_Translated.AreClockwise());
-            Assert.IsTrue(SEN_Points_Translated.Winding() == RotationDirection.COUNTERCLOCKWISE);
-            Assert.IsTrue(SEN_Points_Translated[0].Winding(SEN_Points_Translated[1], SEN_Points_Translated[2]) == RotationDirection.COUNTERCLOCKWISE);
+            Assert.AreEqual(RotationDirection.COUNTERCLOCKWISE, SEN_Points_Translated.Winding());
+            Assert.AreEqual(RotationDirection.COUNTERCLOCKWISE, SEN_Points_Translated[0].Winding(SEN_Points_Translated[1], SEN_Points_Translated[2]));
 
             Assert.AreNotEqual(NES_Points_Translated.AreClockwise(), SEN_Points_Translated.AreClockwise());
 
             //Colinear
-            GridVector2[] WOE_Points = new GridVector2[] { W, GridVector2.Zero, E };
-            GridVector2[] SON_Points = new GridVector2[] { S, GridVector2.Zero, N };
+            GridVector2[] WOE_Points = [W, GridVector2.Zero, E];
+            GridVector2[] SON_Points = [S, GridVector2.Zero, N];
 
-            Assert.IsTrue(WOE_Points.Winding() == RotationDirection.COLINEAR);
-            Assert.IsTrue(W.Winding(O, E) == RotationDirection.COLINEAR);
+            Assert.AreEqual(RotationDirection.COLINEAR, WOE_Points.Winding());
+            Assert.AreEqual(RotationDirection.COLINEAR, W.Winding(O, E));
 
-            Assert.IsTrue(SON_Points.Winding() == RotationDirection.COLINEAR);
-            Assert.IsTrue(S.Winding(O, N) == RotationDirection.COLINEAR);
+            Assert.AreEqual(RotationDirection.COLINEAR, SON_Points.Winding());
+            Assert.AreEqual(RotationDirection.COLINEAR, S.Winding(O, N));
         }
 
         [TestMethod]
         public void ConvexHullTest()
         {
-            GridVector2[] points = new GridVector2[] { new GridVector2(-10,-10),
-                                                       new GridVector2(-10, 10),
-                                                       new GridVector2(10,10),
-                                                       new GridVector2(10,-10)};
+            GridVector2[] points = [ new(-10,-10),
+                                                       new(-10, 10),
+                                                       new(10,10),
+                                                       new(10,-10)];
 
             GridVector2[] ConvexHullPoints = points.ConvexHull(out int[] original_idx);
-            Assert.IsTrue(ConvexHullPoints.Length == points.Length + 1);
+            Assert.AreEqual(points.Length + 1, ConvexHullPoints.Length);
 
-            GridPolygon poly = new GridPolygon(ConvexHullPoints);
+            GridPolygon poly = new(ConvexHullPoints);
             Assert.IsTrue(poly.BoundingBox == points.BoundingBox());
 
             GridVector2 Centroid = ConvexHullPoints.Average();
@@ -406,27 +406,27 @@ namespace UtilitiesTests
             points = points.Translate(new GridVector2(-20, 20));
             ConvexHullPoints = points.ConvexHull(out original_idx);
 
-            Assert.IsTrue(ConvexHullPoints.Length == points.Length + 1);
+            Assert.AreEqual(points.Length + 1, ConvexHullPoints.Length);
         }
 
         [TestMethod]
         public void ConvexHullTest2()
         {
             //Colinear points on the convex hull
-            GridVector2[] points = new GridVector2[] { new GridVector2(-10,-10),
-                new GridVector2(-10, 10),
-                new GridVector2(10,10),
-                new GridVector2(10,-10),
-                new GridVector2(-10, 0),
-                new GridVector2(0, 10),
-                new GridVector2(0, -10),
-                new GridVector2(10, 0)
-            };
+            GridVector2[] points = [ new(-10,-10),
+                new(-10, 10),
+                new(10,10),
+                new(10,-10),
+                new(-10, 0),
+                new(0, 10),
+                new(0, -10),
+                new(10, 0)
+            ];
 
             GridVector2[] ConvexHullPoints = points.ConvexHull(out int[] original_idx);
-            Assert.IsTrue(ConvexHullPoints.Length == points.Length + 1);
+            Assert.AreEqual(points.Length + 1, ConvexHullPoints.Length);
 
-            GridPolygon poly = new GridPolygon(ConvexHullPoints);
+            GridPolygon poly = new(ConvexHullPoints);
             Assert.IsTrue(poly.BoundingBox == points.BoundingBox());
 
             GridVector2 Centroid = ConvexHullPoints.Average();
@@ -435,7 +435,7 @@ namespace UtilitiesTests
             points = points.Translate(new GridVector2(-20, 20));
             ConvexHullPoints = points.ConvexHull(out original_idx);
 
-            Assert.IsTrue(ConvexHullPoints.Length == points.Length+1);
+            Assert.AreEqual(points.Length + 1, ConvexHullPoints.Length);
         }
 
 
@@ -450,26 +450,26 @@ namespace UtilitiesTests
             //      \ /
             //       q
 
-            GridVector2 p = new GridVector2(0, 10);
-            GridVector2 q = new GridVector2(5, 0);
-            GridVector2 r = new GridVector2(10, 10);
+            GridVector2 p = new(0, 10);
+            GridVector2 q = new(5, 0);
+            GridVector2 r = new(10, 10);
 
-            GridVector2 left = new GridVector2(5, 5);
-            GridVector2 right = new GridVector2(5, -5);
+            GridVector2 left = new(5, 5);
+            GridVector2 right = new(5, -5);
 
-            GridVector2[] pqr = new GridVector2[] { p, q, r };
+            GridVector2[] pqr = [p, q, r];
 
-            Assert.AreEqual(GridVector2.IsLeftSide(left, pqr), 1);
-            Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
+            Assert.AreEqual(1, GridVector2.IsLeftSide(left, pqr));
+            Assert.AreEqual(-1, GridVector2.IsLeftSide(right, pqr));
 
             right = new GridVector2(-5, 0);
-            Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
+            Assert.AreEqual(-1, GridVector2.IsLeftSide(right, pqr));
 
             right = new GridVector2(-5, 1);
-            Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
+            Assert.AreEqual(-1, GridVector2.IsLeftSide(right, pqr));
 
             right = new GridVector2(15, 1);
-            Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
+            Assert.AreEqual(-1, GridVector2.IsLeftSide(right, pqr));
         }
 
 
@@ -483,41 +483,41 @@ namespace UtilitiesTests
             //       /
             // p----q
             //
-            GridVector2 p = new GridVector2(0, 0);
-            GridVector2 q = new GridVector2(5, 0);
-            GridVector2 r = new GridVector2(10, 10);
+            GridVector2 p = new(0, 0);
+            GridVector2 q = new(5, 0);
+            GridVector2 r = new(10, 10);
 
-            GridVector2 left = new GridVector2(1, 1);
-            GridVector2 right = new GridVector2(1, -1);
+            GridVector2 left = new(1, 1);
+            GridVector2 right = new(1, -1);
             GridVector2 on = q;
 
-            GridVector2[] pqr = new GridVector2[] { p, q, r };
+            GridVector2[] pqr = [p, q, r];
 
-            Assert.AreEqual(GridVector2.IsLeftSide(left, pqr), 1);
-            Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
-            Assert.AreEqual(GridVector2.IsLeftSide(on, pqr), 0);
+            Assert.AreEqual(1, GridVector2.IsLeftSide(left, pqr));
+            Assert.AreEqual(-1, GridVector2.IsLeftSide(right, pqr));
+            Assert.AreEqual(0, GridVector2.IsLeftSide(on, pqr));
 
             left = new GridVector2(6, 7);
             right = new GridVector2(-5, -1);
             on = new GridVector2(-5, 0);
 
-            Assert.AreEqual(GridVector2.IsLeftSide(left, pqr), 1);
-            Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
-            Assert.AreEqual(GridVector2.IsLeftSide(on, pqr), 0);
+            Assert.AreEqual(1, GridVector2.IsLeftSide(left, pqr));
+            Assert.AreEqual(-1, GridVector2.IsLeftSide(right, pqr));
+            Assert.AreEqual(0, GridVector2.IsLeftSide(on, pqr));
 
             left = new GridVector2(-5, 1);
             right = new GridVector2(7.5, 1);
             on = new GridVector2(7.5, 5);
-            Assert.AreEqual(GridVector2.IsLeftSide(left, pqr), 1);
-            Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
-            Assert.AreEqual(GridVector2.IsLeftSide(on, pqr), 0);
+            Assert.AreEqual(1, GridVector2.IsLeftSide(left, pqr));
+            Assert.AreEqual(-1, GridVector2.IsLeftSide(right, pqr));
+            Assert.AreEqual(0, GridVector2.IsLeftSide(on, pqr));
 
             left = new GridVector2(5, 2);
             right = new GridVector2(25, 1);
             on = r;
-            Assert.AreEqual(GridVector2.IsLeftSide(left, pqr), 1);
-            Assert.AreEqual(GridVector2.IsLeftSide(right, pqr), -1);
-            Assert.AreEqual(GridVector2.IsLeftSide(on, pqr), 0);
+            Assert.AreEqual(1, GridVector2.IsLeftSide(left, pqr));
+            Assert.AreEqual(-1, GridVector2.IsLeftSide(right, pqr));
+            Assert.AreEqual(0, GridVector2.IsLeftSide(on, pqr));
         }
         /*
         static bool IsLeftTest(GridVector2 t, GridVector2[] pqr)

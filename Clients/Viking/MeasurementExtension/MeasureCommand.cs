@@ -1,8 +1,8 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using SIMeasurement;
-using System.Collections.Generic; 
+using System.Collections.Generic;
 using System.Windows.Forms;
 using VikingXNA;
 using VikingXNAGraphics;
@@ -16,22 +16,18 @@ namespace MeasurementExtension
         private readonly LengthMeasurement PixelSize;
         private readonly LabelView? distanceLabel;
 
-        private static readonly string[] DefaultHelpStrings = new string[]
-        {
+        private static readonly string[] DefaultHelpStrings =
+        [
             "Hold SHIFT: Force horizontal measurement line"
-        };
+        ];
 
         public virtual string[] HelpStrings
         {
             get
             {
-                List<string> s = new List<string>(MeasureCommand.DefaultHelpStrings)
-                {
-                    "CTRL - Horizontal measurement",
-                    "SHIFT - Vertical measurement"
-                };
+                List<string> s = [.. MeasureCommand.DefaultHelpStrings, "CTRL - Horizontal measurement", "SHIFT - Vertical measurement"];
                 s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
-                return s.ToArray();
+                return [.. s];
             }
         }
 
@@ -74,10 +70,7 @@ namespace MeasurementExtension
         /// </summary>
         /// <param name="distance"></param>
         /// <returns>A string describing the distance in human readable units</returns>
-        private static string DistanceToString(LengthMeasurement distance)
-        {
-            return LengthMeasurement.ConvertToReadableUnits(distance).ToString(3, PreserveNonSignificant: true);
-        }
+        private static string DistanceToString(LengthMeasurement distance) => LengthMeasurement.ConvertToReadableUnits(distance).ToString(3, PreserveNonSignificant: true);
 
         /// <summary>
         /// 
@@ -95,7 +88,7 @@ namespace MeasurementExtension
         }
 
         private LengthMeasurement GetVolumeDistance(GridVector2 target)
-        { 
+        {
             return new LengthMeasurement(PixelSize.Units,
                 GridVector2.Distance(Origin, target) * PixelSize.Length);
         }
@@ -126,20 +119,20 @@ namespace MeasurementExtension
             Color lineColor = Color.Yellow.SetAlpha(0.9f);//new Color(Color.YellowGreen.R, Color.YellowGreen.G, Color.YellowGreen.B, 0.75f));
 
             //Retrieve the mouse position from the last update, the base class records this for us
-            Vector3 target = new Vector3((float)this.oldWorldPosition.X, (float)oldWorldPosition.Y, 0f);
+            Vector3 target = new((float)this.oldWorldPosition.X, (float)oldWorldPosition.Y, 0f);
             if ((Control.ModifierKeys == Keys.Shift))
             {
                 target.Y = (float)Origin.Y;
             }
-            else if((Control.ModifierKeys == Keys.Control))
+            else if ((Control.ModifierKeys == Keys.Control))
             {
                 target.X = (float)Origin.X;
-            } 
+            }
 
             LengthMeasurement volumeDistance = GetVolumeDistance(target.ToGridVector2XY());
             var mosaicDistance = GetMosaicDistance(target.ToGridVector2XY());
-              
-            RoundLineCode.RoundLine lineToParent = new RoundLineCode.RoundLine((float)Origin.X,
+
+            RoundLineCode.RoundLine lineToParent = new((float)Origin.X,
                                                    (float)Origin.Y,
                                                    (float)target.X,
                                                    (float)target.Y);
@@ -154,16 +147,16 @@ namespace MeasurementExtension
             //Draw the distance near the cursor
             string distanceLabelString = DistanceLabel(volumeDistance, mosaicDistance);
             GridVector2 DrawPosition = Parent.WorldToScreen(target.X, target.Y);
-            var alignment = FindTextAlignment(Origin, target.ToGridVector2XY());
+            var _alignment = FindTextAlignment(Origin, target.ToGridVector2XY());
             var anchor = FindTextAnchor(Origin, target.ToGridVector2XY());
             var fontSize = 40.0f;
             float fontScaleForVolume = (float)(fontSize / (double)VikingXNAGraphics.Global.DefaultFont.LineSpacing);
             //distanceLabel = new LabelView(distanceLabelString, target.ToGridVector2XY(),  lineColor, alignment,
-                //anchor, scaleFontWithScene: false,  fontSize: 32);
+            //anchor, scaleFontWithScene: false,  fontSize: 32);
 
             var label_size = VikingXNAGraphics.Global.DefaultFont.MeasureString(distanceLabelString) * fontScaleForVolume;
             var half_label_size = label_size / 2;
-            GridVector2 offset = new GridVector2(
+            GridVector2 offset = new(
                 anchor.Horizontal == VikingXNAGraphics.HorizontalAlignment.LEFT ? 0 : anchor.Horizontal == VikingXNAGraphics.HorizontalAlignment.RIGHT ? -label_size.X : -half_label_size.X,
                 anchor.Vertical == VikingXNAGraphics.VerticalAlignment.BOTTOM ? -label_size.Y : anchor.Vertical == VikingXNAGraphics.VerticalAlignment.TOP ? 0 : -half_label_size.Y
             );
@@ -174,7 +167,7 @@ namespace MeasurementExtension
             if (Parent.spriteBatch != null)
             {
                 Parent.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
-               
+
                 Parent.spriteBatch.DrawString(VikingXNAGraphics.Global.DefaultFont,
                     distanceLabelString,
                     new Vector2((float)DrawPosition.X, (float)DrawPosition.Y),
@@ -187,23 +180,23 @@ namespace MeasurementExtension
 
                 Parent.spriteBatch.End();
             }
-             
+
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }
-        
+
         /// <summary>
         /// Choose a text alignment that puts the label away from the target, and not over the line we are going to draw
         /// </summary>
         /// <param name="origin"></param>
         /// <param name="target"></param>
         /// <returns></returns>
-        private Alignment FindTextAlignment(GridVector2 origin, GridVector2 target)
+        private Alignment FindTextAlignment(GridVector2 _origin, GridVector2 _target)
         {
             return Alignment.TopLeft;
-            VikingXNAGraphics.HorizontalAlignment hAlign = origin.X < target.X ? VikingXNAGraphics.HorizontalAlignment.RIGHT : VikingXNAGraphics.HorizontalAlignment.LEFT;
-            VikingXNAGraphics.VerticalAlignment vAlign = origin.Y < target.Y ? VikingXNAGraphics.VerticalAlignment.BOTTOM : VikingXNAGraphics.VerticalAlignment.TOP;
+            VikingXNAGraphics.HorizontalAlignment hAlign = _origin.X < _target.X ? VikingXNAGraphics.HorizontalAlignment.RIGHT : VikingXNAGraphics.HorizontalAlignment.LEFT;
+            VikingXNAGraphics.VerticalAlignment vAlign = _origin.Y < _target.Y ? VikingXNAGraphics.VerticalAlignment.BOTTOM : VikingXNAGraphics.VerticalAlignment.TOP;
             return new Alignment { Horizontal = hAlign, Vertical = vAlign };
-                
+
         }
 
         /// <summary>
@@ -213,11 +206,11 @@ namespace MeasurementExtension
         /// <param name="target"></param>
         /// <returns></returns>
         private Anchor FindTextAnchor(GridVector2 origin, GridVector2 target)
-        { 
+        {
             VikingXNAGraphics.HorizontalAlignment hAlign = origin.X <= target.X ? VikingXNAGraphics.HorizontalAlignment.RIGHT : VikingXNAGraphics.HorizontalAlignment.LEFT;
             VikingXNAGraphics.VerticalAlignment vAlign = origin.Y < target.Y ? VikingXNAGraphics.VerticalAlignment.BOTTOM : VikingXNAGraphics.VerticalAlignment.TOP;
             return new Anchor { Horizontal = hAlign, Vertical = vAlign };
-                
+
         }
 
         private string DistanceLabel(LengthMeasurement volumeDistance, LengthMeasurement? mosaicDistance)

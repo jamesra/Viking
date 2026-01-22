@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -31,8 +31,8 @@ namespace GraphLib
 
         public Graph()
         {
-            _Edges = new SortedList<EDGETYPE, EDGETYPE>();
-            _Nodes = new Dictionary<KEY, NODETYPE>();
+            _Edges = [];
+            _Nodes = [];
         }
 
         public Graph(IEnumerable<NODETYPE> _Nodes, IEnumerable<EDGETYPE> _Edges) : this()
@@ -84,7 +84,7 @@ namespace GraphLib
                     }
                 }
 
-                return new SortedSet<EDGETYPE>();
+                return [];
             }
         }
 
@@ -94,10 +94,7 @@ namespace GraphLib
             info.AddValue("_Nodes", _Nodes, typeof(Dictionary<KEY, NODETYPE>));
         }
 
-        public virtual void AddNode(NODETYPE node)
-        {
-            this._Nodes.Add(node.Key, node);
-        }
+        public virtual void AddNode(NODETYPE node) => this._Nodes.Add(node.Key, node);
 
         /// <summary>
         /// Remove the node, remove all _Edges to the node
@@ -106,7 +103,7 @@ namespace GraphLib
         public virtual void RemoveNode(KEY key)
         {
             NODETYPE node_to_remove = _Nodes[key];
-            SortedSet<KEY> other_nodes = new SortedSet<KEY>(node_to_remove.Edges.Keys);
+            SortedSet<KEY> other_nodes = [.. node_to_remove.Edges.Keys];
 
             //Remove edge from other _Nodes to our node
             foreach (KEY other_id in other_nodes)
@@ -126,7 +123,7 @@ namespace GraphLib
         {
             NODETYPE other_node = _Nodes[other_id];
 
-            ICollection<EDGETYPE> edges_to_remove = other_node.Edges[key].ToList();
+            ICollection<EDGETYPE> edges_to_remove = [.. other_node.Edges[key]];
 
             foreach (EDGETYPE edge_to_removed in edges_to_remove)
             {
@@ -161,19 +158,10 @@ namespace GraphLib
             this._Edges.Remove(edge);
         }
 
-        public bool TryGetValue(KEY key, out NODETYPE value)
-        {
-            return _Nodes.TryGetValue(key, out value);
-        }
+        public bool TryGetValue(KEY key, out NODETYPE value) => _Nodes.TryGetValue(key, out value);
 
-        IEnumerator<KeyValuePair<KEY, NODETYPE>> IEnumerable<KeyValuePair<KEY, NODETYPE>>.GetEnumerator()
-        {
-            return _Nodes.GetEnumerator();
-        }
+        IEnumerator<KeyValuePair<KEY, NODETYPE>> IEnumerable<KeyValuePair<KEY, NODETYPE>>.GetEnumerator() => _Nodes.GetEnumerator();
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return _Nodes.GetEnumerator();
-        }
+        IEnumerator IEnumerable.GetEnumerator() => _Nodes.GetEnumerator();
     }
 }

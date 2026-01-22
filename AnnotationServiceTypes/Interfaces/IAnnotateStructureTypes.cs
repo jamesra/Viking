@@ -1,4 +1,4 @@
-﻿using AnnotationService.Types;
+using AnnotationService.Types;
 using System;
 using System.ServiceModel;
 
@@ -55,7 +55,7 @@ namespace AnnotationService.Interfaces
         /// <returns></returns>
         [OperationContract]
         Int64[] UpdateStructureTypes(StructureType[] structType);
-          
+
         /// <summary>
         /// Return all structure types in the database
         /// </summary>

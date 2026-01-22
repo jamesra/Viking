@@ -1,4 +1,4 @@
-﻿using Geometry.JSON;
+using Geometry.JSON;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
@@ -56,23 +56,12 @@ namespace Geometry.Meshing
         protected override void UpdateBoundingBox(IEnumerable<VERTEX> verts)
         {
             var points = verts.Select(v => v.Position);
-            if (_BoundingBox is null)
-                _BoundingBox = points.BoundingBox();
-            else
-            {
-                _BoundingBox = _BoundingBox.Value + points.BoundingBox();
-            }
+            _BoundingBox = _BoundingBox is null ? points.BoundingBox() : _BoundingBox.Value + points.BoundingBox();
         }
 
-        public GridLineSegment ToGridLineSegment(IEdgeKey key)
-        {
-            return new GridLineSegment(this[key.A].Position, this[key.B].Position);
-        }
+        public GridLineSegment ToGridLineSegment(IEdgeKey key) => new GridLineSegment(this[key.A].Position, this[key.B].Position);
 
-        public GridLineSegment ToGridLineSegment(long A, long B)
-        {
-            return new GridLineSegment(this[A].Position, this[B].Position);
-        }
+        public GridLineSegment ToGridLineSegment(long A, long B) => new GridLineSegment(this[A].Position, this[B].Position);
 
         /// <summary>
         /// Return a normalized vector with origin at A towards B
@@ -105,7 +94,7 @@ namespace Geometry.Meshing
         public GridPolygon ToPolygon(IFace f)
         {
             var positions = f.iVerts.Select(v => this[v].Position);
-            GridPolygon poly = new GridPolygon(positions);
+            GridPolygon poly = new(positions);
             return poly;
         }
 
@@ -118,29 +107,17 @@ namespace Geometry.Meshing
         public GridTriangle ToTriangle(IFace f)
         {
             var positions = f.iVerts.Select(v => this[v].Position).ToArray();
-            GridTriangle tri = new GridTriangle(positions);
+            GridTriangle tri = new(positions);
             return tri;
         }
 
-        public GridVector2 Centroid(IFace f)
-        {
-            return this.ToTriangle(f).Centroid;
-        }
+        public GridVector2 Centroid(IFace f) => this.ToTriangle(f).Centroid;
 
-        public RotationDirection Winding(IFace f)
-        {
-            return this[f].Select(v => v.Position).ToArray().Winding();
-        }
+        public RotationDirection Winding(IFace f) => this[f].Select(v => v.Position).ToArray().Winding();
 
-        public bool IsClockwise(IFace f)
-        {
-            return IsClockwise(f.iVerts);
-        }
+        public bool IsClockwise(IFace f) => IsClockwise(f.iVerts);
 
-        public bool IsClockwise(IEnumerable<int> verts)
-        {
-            return verts.Select(v => this[v].Position).ToArray().AreClockwise();
-        }
+        public bool IsClockwise(IEnumerable<int> verts) => verts.Select(v => this[v].Position).ToArray().AreClockwise();
 
         /// <summary>
         /// Given a face that is not a triangle, return an array of triangles describing the face.
@@ -157,18 +134,18 @@ namespace Geometry.Meshing
             {
                 RemoveFace(face);
 
-                GridVector2[] positions = this[face.iVerts].Select(v => v.Position).ToArray();
+                GridVector2[] positions = [.. this[face.iVerts].Select(v => v.Position)];
                 if (GridVector2.Distance(positions[0], positions[2]) < GridVector2.Distance(positions[1], positions[3]))
                 {
-                    IFace ABC = CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[2] });
-                    IFace ACD = CreateFace(new int[] { face.iVerts[0], face.iVerts[2], face.iVerts[3] });
+                    IFace ABC = CreateFace([face.iVerts[0], face.iVerts[1], face.iVerts[2]]);
+                    IFace ACD = CreateFace([face.iVerts[0], face.iVerts[2], face.iVerts[3]]);
                     AddFace(ABC);
                     AddFace(ACD);
                 }
                 else
                 {
-                    IFace ABD = CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[3] });
-                    IFace BCD = CreateFace(new int[] { face.iVerts[1], face.iVerts[2], face.iVerts[3] });
+                    IFace ABD = CreateFace([face.iVerts[0], face.iVerts[1], face.iVerts[3]]);
+                    IFace BCD = CreateFace([face.iVerts[1], face.iVerts[2], face.iVerts[3]]);
                     AddFace(ABD);
                     AddFace(BCD);
                 }
@@ -203,14 +180,8 @@ namespace Geometry.Meshing
             return jObj;
         }
 
-        public virtual string ToJSON()
-        {
-            return this.ToJObject().ToString();
-        }
+        public virtual string ToJSON() => this.ToJObject().ToString();
 
-        public override string ToString()
-        {
-            return string.Format("{0} Verts {1} Edges {2} Faces", this.Verticies.Count, this.Edges.Count, this.Faces.Count);
-        }
+        public override string ToString() => string.Format("{0} Verts {1} Edges {2} Faces", this.Verticies.Count, this.Edges.Count, this.Faces.Count);
     }
 }

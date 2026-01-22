@@ -1,18 +1,18 @@
-﻿using System.Runtime.Serialization;
+using System.Runtime.Serialization;
 
 namespace AnnotationService.Types
 {
     [DataContract]
-    public class Edgex
+    public class Edgex(long SourceParentID, long TargetParentID, StructureLink link, string SourceTypeName)
     {
         [DataMember]
-        public long SourceParentID;
+        public long SourceParentID = SourceParentID;
         [DataMember]
-        public long TargetParentID;
+        public long TargetParentID = TargetParentID;
         [DataMember]
-        public StructureLink Link;
+        public StructureLink Link = link;
         [DataMember]
-        public string SourceTypeName;
+        public string SourceTypeName = SourceTypeName;
 
         [DataMember]
         public long SourceID
@@ -26,16 +26,6 @@ namespace AnnotationService.Types
         {
             get => Link.TargetID;
             set { }
-        }
-
-
-        public Edgex(long SourceParentID, long TargetParentID, StructureLink link, string SourceTypeName)
-        {
-            this.SourceParentID = SourceParentID;
-            this.TargetParentID = TargetParentID;
-            this.Link = link;
-            this.SourceTypeName = SourceTypeName;
-
         }
 
         /// <summary>
@@ -60,14 +50,11 @@ namespace AnnotationService.Types
 
         }
 
-        public override int GetHashCode()
-        {
-            return System.Convert.ToInt32(SourceID);
-        }
+        public override int GetHashCode() => System.Convert.ToInt32(SourceID);
 
         public override bool Equals(object obj)
         {
-            if (!(obj is Edgex E))
+            if (obj is not Edgex E)
                 return false;
 
             return SourceID == E.SourceID &&

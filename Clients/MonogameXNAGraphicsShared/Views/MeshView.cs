@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -11,11 +11,11 @@ using VikingXNA;
 namespace VikingXNAGraphics
 {
     //Displays a mesh
-    public class MeshView<VERTEXTYPE>  
+    public class MeshView<VERTEXTYPE>
         where VERTEXTYPE : struct, IVertexType
     {
         public bool WireFrame { get; set; }
-        public readonly ObservableCollection<MeshModel<VERTEXTYPE>> models = new ObservableCollection<MeshModel<VERTEXTYPE>>();
+        public readonly ObservableCollection<MeshModel<VERTEXTYPE>> models = [];
 
         BasicEffect effect;
 
@@ -24,15 +24,15 @@ namespace VikingXNAGraphics
         public MeshView()
         {
         }
-        
+
         public void Draw(GraphicsDevice device,
-            IScene scene, 
+            IScene scene,
             CullMode cullmode = CullMode.CullCounterClockwiseFace)
         {
             if (models is null)
                 return;
 
-            if(effect is null || effect.IsDisposed)
+            if (effect is null || effect.IsDisposed)
             {
                 effect = new BasicEffect(device);
             }
@@ -40,7 +40,7 @@ namespace VikingXNAGraphics
             RasterizerState originalRasterizerState = device.RasterizerState;
             if (WireFrame)
             {
-                RasterizerState rstate = new RasterizerState
+                RasterizerState rstate = new()
                 {
                     CullMode = cullmode,
                     FillMode = FillMode.WireFrame
@@ -50,13 +50,13 @@ namespace VikingXNAGraphics
             }
             else
             {
-                RasterizerState rstate = new RasterizerState
+                RasterizerState rstate = new()
                 {
                     CullMode = cullmode,
                     FillMode = FillMode.Solid
                 };
                 //rstate.DepthClipEnable = true;
-                device.RasterizerState = rstate; 
+                device.RasterizerState = rstate;
             }
 
             effect.SetScene(scene);
@@ -112,23 +112,23 @@ namespace VikingXNAGraphics
             BasicEffect effect = null,
             CullMode cullmode = CullMode.CullCounterClockwiseFace,
             FillMode fillMode = FillMode.Solid,
-            IEnumerable < MeshView<VERTEXTYPE>> meshViews = null)
+            IEnumerable<MeshView<VERTEXTYPE>> meshViews = null)
         {
             if (meshViews is null)
                 return;
 
             IEnumerable<MeshModel<VERTEXTYPE>> all_models = meshViews.SelectMany(mv => mv.models);
 
-            Draw(device, scene, effect, cullmode, fillMode,  all_models);
+            Draw(device, scene, effect, cullmode, fillMode, all_models);
         }
 
         public void Draw(GraphicsDevice device,
             IScene scene,
             PolygonOverlayEffect effect = null,
             CullMode cullmode = CullMode.CullClockwiseFace)
-        {  
+        {
             FillMode fillMode = this.WireFrame ? FillMode.WireFrame : FillMode.Solid;
-             
+
             Draw(device, scene, effect, cullmode, fillMode, models);
         }
 
@@ -151,7 +151,7 @@ namespace VikingXNAGraphics
 
             RasterizerState originalRasterizerState = device.RasterizerState;
 
-            RasterizerState rstate = new RasterizerState
+            RasterizerState rstate = new()
             {
                 CullMode = cullmode,
                 FillMode = fillMode
@@ -165,9 +165,9 @@ namespace VikingXNAGraphics
             {
                 //This can occur if LazyInitialization has not occurred.
                 if (model is null)
-                    continue; 
+                    continue;
 
-                effect.WorldViewProjMatrix = (model.ModelMatrix * scene.World) * scene.ViewProj ;
+                effect.WorldViewProjMatrix = (model.ModelMatrix * scene.World) * scene.ViewProj;
 
                 if (model.Verticies.Length == 0 || model.Edges.Length == 0)
                 {
@@ -190,7 +190,7 @@ namespace VikingXNAGraphics
 
         public static void Draw(GraphicsDevice device,
             IScene scene,
-            BasicEffect effect=null,
+            BasicEffect effect = null,
             CullMode cullmode = CullMode.CullCounterClockwiseFace,
             FillMode fillMode = FillMode.Solid,
             IEnumerable<MeshModel<VERTEXTYPE>> meshmodels = null)
@@ -202,10 +202,10 @@ namespace VikingXNAGraphics
             {
                 effect = new BasicEffect(device);
             }
-             
+
             RasterizerState originalRasterizerState = device.RasterizerState;
 
-            RasterizerState rstate = new RasterizerState
+            RasterizerState rstate = new()
             {
                 CullMode = cullmode,
                 FillMode = fillMode
@@ -248,7 +248,7 @@ namespace VikingXNAGraphics
                 foreach (MeshModel<VERTEXTYPE> model in group)
                 {
                     if (!group.Any())
-                        continue;  
+                        continue;
 
                     effect.World = model.ModelMatrix * scene.World;
 
@@ -263,6 +263,6 @@ namespace VikingXNAGraphics
 
             if (originalRasterizerState != null)
                 device.RasterizerState = originalRasterizerState;
-        } 
+        }
     }
 }

@@ -40,8 +40,8 @@ namespace TriangleNet.Voronoi
             foreach (var edge in rays)
             {
                 // The vertices of the infinite edge.
-                var v1 = (Point)edge.origin;
-                var v2 = (Point)edge.twin.origin;
+                Point v1 = (Point)edge.origin;
+                Point v2 = (Point)edge.twin.origin;
 
                 if (box.Contains(v1) || box.Contains(v2))
                 {

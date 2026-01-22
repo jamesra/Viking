@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -60,7 +60,7 @@ namespace VikingXNAGraphics
             set
             {
                 BackgroundBox.Position = value;
-                Label.Position = value; 
+                Label.Position = value;
             }
         }
 
@@ -91,35 +91,32 @@ namespace VikingXNAGraphics
             BackgroundBox.Color = background;
         }
 
-        public bool Contains(GridVector2 Position)
-        {
-            return ((IHitTesting)BackgroundBox).Contains(Position);
-        }
+        public bool Contains(GridVector2 Position) => ((IHitTesting)BackgroundBox).Contains(Position);
 
         public void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay)
         {
-            RectangleView.Draw(device, scene, Overlay, new RectangleView[] { BackgroundBox });
+            RectangleView.Draw(device, scene, Overlay, [BackgroundBox]);
             var fontData = DeviceFontStore.TryGet(device);
-            LabelView.Draw(fontData.SpriteBatch, Label.font, scene, new LabelView[] { Label });
+            LabelView.Draw(fontData.SpriteBatch, Label.font, scene, [Label]);
         }
 
         public void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
         {
             var label_rectangle_views = items.Where(i => i is LabeledRectangleView).Select(i => (LabeledRectangleView)i).ToArray();
 
-            RectangleView.Draw(device, scene, Overlay, label_rectangle_views.Select(i => i.BackgroundBox).ToArray() );
+            RectangleView.Draw(device, scene, Overlay, [.. label_rectangle_views.Select(i => i.BackgroundBox)]);
             var fontData = DeviceFontStore.TryGet(device);
-            LabelView.Draw(fontData.SpriteBatch, Label.font, scene, label_rectangle_views.Select(i => i.Label).ToArray()); 
+            LabelView.Draw(fontData.SpriteBatch, Label.font, scene, [.. label_rectangle_views.Select(i => i.Label)]);
         }
 
         public static void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay, LabeledRectangleView[] label_rectangle_views)
-        { 
-            RectangleView.Draw(device, scene, Overlay, label_rectangle_views.Select(i => i.BackgroundBox).ToArray());
+        {
+            RectangleView.Draw(device, scene, Overlay, [.. label_rectangle_views.Select(i => i.BackgroundBox)]);
             var fontData = DeviceFontStore.TryGet(device);
 
-            foreach(var fontGroup in label_rectangle_views.GroupBy(lr => lr.Label.font) )
+            foreach (var fontGroup in label_rectangle_views.GroupBy(lr => lr.Label.font))
             {
-                LabelView.Draw(fontData.SpriteBatch, fontGroup.Key, scene, fontGroup.Select(i => i.Label).ToArray());
+                LabelView.Draw(fontData.SpriteBatch, fontGroup.Key, scene, [.. fontGroup.Select(i => i.Label)]);
             }
         }
     }

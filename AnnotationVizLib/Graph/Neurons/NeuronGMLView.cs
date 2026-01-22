@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -6,18 +6,14 @@ using System.Text;
 
 namespace AnnotationVizLib
 {
-    public class NeuronGMLView : GMLView<long>
+    public class NeuronGMLView(string VolumeURL) : GMLView<long>(VolumeURL)
     {
-        public NeuronGMLView(string VolumeURL) : base(VolumeURL)
-        {
-        }
-
         public GMLViewNode CreateGMLNode(NeuronNode node)
         {
             GMLViewNode GMLnode = createNode(node.Key);
             IDictionary<string, string> NodeAttribs = new Dictionary<string, string>
             {
-                { "Label", LabelForNode(node) },
+                { "Label", NeuronGMLView.LabelForNode(node) },
 
                 { "StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Structures({1}L)", this.VolumeURL, node.Key) }
             };
@@ -27,7 +23,7 @@ namespace AnnotationVizLib
             return GMLnode;
         }
 
-        public string LabelForNode(NeuronNode node)
+        public static string LabelForNode(NeuronNode node)
         {
             if (node.Structure.Label != null && node.Structure.Label.Length > 0)
                 return node.Structure.Label + "\n" + node.Key.ToString();
@@ -37,7 +33,7 @@ namespace AnnotationVizLib
 
         public static string LinkedStructures(NeuronEdge edge)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             //sb.Append(edge.SynapseType);
             foreach (IStructureLink link in edge.Links)
             {
@@ -47,10 +43,7 @@ namespace AnnotationVizLib
             return sb.ToString();
         }
 
-        public static string LinkString(IStructureLink link)
-        {
-            return link.SourceID + " -> " + link.TargetID;
-        }
+        public static string LinkString(IStructureLink link) => link.SourceID + " -> " + link.TargetID;
 
         /// <summary>
         /// Create an edge between two nodes.  Returns null if the nodes do not exist
@@ -85,7 +78,7 @@ namespace AnnotationVizLib
 
         protected static IDictionary<string, string> AttributesForEdge(NeuronEdge edge)
         {
-            Dictionary<string, string> EdgeAttribs = new Dictionary<string, string>
+            Dictionary<string, string> EdgeAttribs = new()
             {
                 { "edgeType", edge.SynapseType },
                 { "Directional", (edge.Directional).ToString() }
@@ -95,7 +88,7 @@ namespace AnnotationVizLib
 
         public static NeuronGMLView ToGML(NeuronGraph graph, string VolumeURL, bool IncludeUnlabeled = false)
         {
-            NeuronGMLView view = new NeuronGMLView(VolumeURL);
+            NeuronGMLView view = new(VolumeURL);
 
             foreach (NeuronNode node in graph.Nodes.Values)
             {

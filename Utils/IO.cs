@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -18,7 +18,7 @@ namespace Utils
             try
             {
                 attrib = element.Attributes().SingleOrDefault(a => string.Compare(a.Name.ToString().ToLower(), attribName.ToLower()) == 0);
-                
+
             }
             catch (Exception e)
             {
@@ -37,10 +37,7 @@ namespace Utils
             return attrib;
         }
 
-        public static bool HasAttributeCaseInsensitive(this XElement element, string AttribName)
-        {
-            return element.Attributes().Any(a => string.Compare(a.Name.ToString().ToLower(), AttribName.ToLower()) == 0);
-        } 
+        public static bool HasAttributeCaseInsensitive(this XElement element, string AttribName) => element.Attributes().Any(a => string.Compare(a.Name.ToString().ToLower(), AttribName.ToLower()) == 0);
 
         /// <summary>
         /// Loads a URI into an XDocument, determines whether path refers to XML file or a local directory
@@ -48,36 +45,26 @@ namespace Utils
         /// <param name="path"></param>
         public static XDocument Load(Uri path)
         {
-            XDocument XDoc;
-            if (path.Scheme == "http" || path.Scheme == "https")
-                XDoc = LoadHTTP(path);
-            else
-                XDoc = XDocument.Load(path.LocalPath);
-
+            XDocument XDoc = path.Scheme == "http" || path.Scheme == "https" ? LoadHTTP(path) : XDocument.Load(path.LocalPath);
             return XDoc;
         }
 
-        private static XDocument LoadHTTP(Uri path)
-        {
-            return LoadHTTPAsync(path).GetAwaiter().GetResult();
-        }
+        private static XDocument LoadHTTP(Uri path) => LoadHTTPAsync(path).GetAwaiter().GetResult();
 
         private static async Task<XDocument> LoadHTTPAsync(Uri path)
         {
-            using (var httpClient = new HttpClient())
+            using HttpClient httpClient = new();
+            try
             {
-                try
-                {
-                    var response = await httpClient.GetAsync(path);
-                    response.EnsureSuccessStatusCode();
-                    
-                    var content = await response.Content.ReadAsStringAsync();
-                    return XDocument.Parse(content);
-                }
-                catch (HttpRequestException e)
-                {
-                    throw new WebException("Error connecting to volume server: \n" + path + "\n" + e.Message, e);
-                }
+                var response = await httpClient.GetAsync(path);
+                response.EnsureSuccessStatusCode();
+
+                var content = await response.Content.ReadAsStringAsync();
+                return XDocument.Parse(content);
+            }
+            catch (HttpRequestException e)
+            {
+                throw new WebException("Error connecting to volume server: \n" + path + "\n" + e.Message, e);
             }
         }
 
@@ -88,9 +75,9 @@ namespace Utils
         /// <returns></returns>
         public static List<XElement> GetRootToElementList(this XElement input)
         {
-            List<XElement> output = new List<XElement>();
+            List<XElement> output = [];
             var parent = input.Parent;
-            while(!(parent is null))
+            while (parent is not null)
             {
                 output.Insert(0, parent);
                 parent = parent.Parent;
@@ -103,13 +90,13 @@ namespace Utils
         public static string PrintVikingXMLElementList(this List<XElement> list)
         {
             int tablevel = 0;
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             foreach (XElement elem in list)
             {
                 sb.Append('\t' * tablevel);
                 sb.Append('<');
                 sb.Append(elem.Name);
-                if(elem.HasAttributeCaseInsensitive("name"))
+                if (elem.HasAttributeCaseInsensitive("name"))
                 {
                     var attrib = elem.GetAttributeCaseInsensitive("name");
                     sb.Append(" name=");

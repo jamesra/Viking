@@ -11,13 +11,13 @@ namespace AnnotationVizLib.WCFClient
         public static MotifGraph BuildGraph(string Endpoint, System.Net.NetworkCredential userCredentials)
         {
             SortedDictionary<long, StructureType> TypeIDToType;
-            SortedDictionary<long, Structure> ChildIDToParent = new SortedDictionary<long, Structure>();
-            SortedDictionary<long, Structure> IDToStructure = new SortedDictionary<long, Structure>();
+            SortedDictionary<long, Structure> ChildIDToParent = [];
+            SortedDictionary<long, Structure> IDToStructure = [];
             SortedList<string, List<Structure>> LabelToStructures = null;
 
             ConnectionFactory.SetConnection(Endpoint, userCredentials);
 
-            MotifGraph graph = new MotifGraph();
+            MotifGraph graph = new();
 
             using (AnnotateStructureTypesClient proxy = ConnectionFactory.CreateStructureTypesClient())
             {
@@ -33,8 +33,8 @@ namespace AnnotationVizLib.WCFClient
                 SortedDictionary<long, List<StructureLink>> StructIDToLinks = Queries.GetLinkedStructures(AllStructureLinks);
 
                 //Find the parents of the linked structures, if they exist
-                Structure[] linkedStructures = Queries.GetStructuresByIDs(proxy, StructIDToLinks.Keys.ToArray());
-                List<long> ParentIDs = new List<long>(linkedStructures.Count());
+                Structure[] linkedStructures = Queries.GetStructuresByIDs(proxy, [.. StructIDToLinks.Keys]);
+                List<long> ParentIDs = new(linkedStructures.Count());
                 foreach (Structure s in linkedStructures)
                 {
                     if (s.ParentID.HasValue)
@@ -47,7 +47,7 @@ namespace AnnotationVizLib.WCFClient
 
                 ParentIDs.Sort();
 
-                Structure[] ParentStructures = Queries.GetStructuresByIDs(proxy, ParentIDs.ToArray()); //Don't query child structures because we know the linked ones
+                Structure[] ParentStructures = Queries.GetStructuresByIDs(proxy, [.. ParentIDs]); //Don't query child structures because we know the linked ones
                 foreach (Structure s in ParentStructures)
                 {
 
@@ -70,21 +70,21 @@ namespace AnnotationVizLib.WCFClient
                         Debug.Assert(IDToStructure.ContainsKey(ParentID));
                         Structure Parent = IDToStructure[ParentID];
                         ChildIDToParent[s.ID] = Parent;
-                        List<long> children = Parent.ChildIDs is null ? new List<long>() : new List<long>(Parent.ChildIDs);
+                        List<long> children = Parent.ChildIDs is null ? [] : [.. Parent.ChildIDs];
                         children.Add(s.ID);
-                        Parent.ChildIDs = children.ToArray();
+                        Parent.ChildIDs = [.. children];
                     }
                 }
 
                 foreach (string Label in LabelToStructures.Keys)
                 {
                     List<Structure> StructuresForLabel = LabelToStructures[Label];
-                    MotifNode node = new MotifNode(Label, StructuresForLabel.ConvertAll(s => new WCFStructureAdapter(s)));
+                    MotifNode node = new(Label, StructuresForLabel.ConvertAll(s => new WCFStructureAdapter(s)));
                     graph.AddNode(node);
                 }
 
                 //OK, build some edges
-                SortedDictionary<MotifEdge, MotifEdge> dictEdges = new SortedDictionary<MotifEdge, MotifEdge>();
+                SortedDictionary<MotifEdge, MotifEdge> dictEdges = [];
                 foreach (StructureLink link in AllStructureLinks)
                 {
                     try
@@ -105,7 +105,7 @@ namespace AnnotationVizLib.WCFClient
                         string SourceLabel = Queries.BaseLabel(ParentOfSource.Label);
                         string TargetLabel = Queries.BaseLabel(ParentOfTarget.Label);
 
-                        MotifEdge edge = new MotifEdge(SourceLabel, TargetLabel, ConnectionLabel);
+                        MotifEdge edge = new(SourceLabel, TargetLabel, ConnectionLabel);
 
                         if (dictEdges.TryGetValue(edge, out var result))
                             edge = result;

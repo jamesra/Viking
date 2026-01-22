@@ -1,4 +1,4 @@
-﻿using FsCheck;
+using FsCheck;
 using Geometry;
 using Geometry.JSON;
 using GeometryTests;
@@ -9,6 +9,7 @@ using System.Collections.Immutable;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
+using Geometry.Meshing;
 
 namespace MorphologyMeshTest
 {
@@ -31,10 +32,10 @@ namespace MorphologyMeshTest
 
             Prop.ForAll<GridPolygon, GridPolygon>((A, B) =>
             {
-                List<GridVector2> listMissingIntersections = new List<GridVector2>();
+                List<GridVector2> listMissingIntersections = [];
 
                 bool PolysIntersect = A.Intersects(B);
-                  
+
                 //Throw out tests where the polygons do not intersect
                 /*
                 if (!PolysIntersect)
@@ -62,27 +63,27 @@ namespace MorphologyMeshTest
                            .Classify(!PolysIntersect, "Polygons did not intersect");
                 }
 
-                GridPolygon[] polys = new GridPolygon[] { A, B };
-                double[] ZLevels = new double[] { 0, 100 };
-                bool[] IsUpper = new bool[] { false, true };
+                GridPolygon[] polys = [A, B];
+                double[] ZLevels = [0, 100];
+                bool[] IsUpper = [false, true];
 
 
                 //Triangulate the verticies of the polygons
-                BajajGeneratorMesh mesh = new BajajGeneratorMesh(polys, ZLevels, IsUpper);
+                BajajGeneratorMesh mesh = new(polys, ZLevels, IsUpper);
                 BajajMeshGenerator.AddDelaunayEdges(mesh);
-                  
+
                 var RegionPairingGraph = BajajMeshGenerator.GenerateRegionGraph(mesh);
 
-                var listPreContourEdges = mesh.Edges.Values.Where(e => ((MorphMeshEdge)e).Type == EdgeType.CONTOUR).ToList();
+                List<IEdge> listPreContourEdges = [.. mesh.Edges.Values.Where(e => ((MorphMeshEdge)e).Type == EdgeType.CONTOUR)];
                 mesh.RemoveInvalidEdges();
-                var listPostContourEdges = mesh.Edges.Values.Where(e => ((MorphMeshEdge)e).Type == EdgeType.CONTOUR).ToList();
+                List<IEdge> listPostContourEdges = [.. mesh.Edges.Values.Where(e => ((MorphMeshEdge)e).Type == EdgeType.CONTOUR)];
 
                 bool ContourEdgesCountAsValid = listPreContourEdges.Count == listPostContourEdges.Count;
 
                 BajajMeshGenerator.CompleteCorrespondingVertexFaces(mesh);
 
                 bool edgesHaveMoreThanTwoFaces = EdgesHaveMoreThanTwoFaces(mesh);
-                if(edgesHaveMoreThanTwoFaces)
+                if (edgesHaveMoreThanTwoFaces)
                 {
                     return (edgesHaveMoreThanTwoFaces == false).Label("Edges have more than two faces").Label("CompleteCorrespondingVertexFaces");
                 }
@@ -119,9 +120,6 @@ namespace MorphologyMeshTest
             }).Check(configuration);
         }
 
-        private static bool EdgesHaveMoreThanTwoFaces(BajajGeneratorMesh mesh)
-        {
-            return mesh.Edges.Values.Any(e => e.Faces.Count > 2);
-        }
+        private static bool EdgesHaveMoreThanTwoFaces(BajajGeneratorMesh mesh) => mesh.Edges.Values.Any(e => e.Faces.Count > 2);
     }
 }

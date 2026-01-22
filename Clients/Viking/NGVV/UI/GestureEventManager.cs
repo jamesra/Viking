@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows.Forms;
 
 namespace Viking.UI
@@ -18,7 +18,7 @@ namespace Viking.UI
 
 
     public class GestureEventArgs : EventArgs
-    { 
+    {
         public Gesture Type => Gesture.Gesture;
 
         /// <summary>
@@ -32,7 +32,7 @@ namespace Viking.UI
         /// <summary>
         /// Position when BEGIN message was recieved
         /// </summary>
-        public System.Drawing.Point BeginPt { get; internal set; } 
+        public System.Drawing.Point BeginPt { get; internal set; }
     }
 
 
@@ -48,10 +48,11 @@ namespace Viking.UI
         /// </summary>
         public System.Drawing.Point EndPt { get; internal set; }
 
-        public System.Drawing.Point Delta { 
+        public System.Drawing.Point Delta
+        {
             get
             {
-                System.Drawing.Point p = new System.Drawing.Point
+                System.Drawing.Point p = new()
                 {
                     X = EndPt.X - BeginPt.X,
                     Y = EndPt.Y - BeginPt.Y
@@ -78,14 +79,11 @@ namespace Viking.UI
         /// </summary>
         public System.Drawing.Point Delta { get; internal set; }
 
-        public override string ToString()
-        {
-            return $"B:{BeginPt} E:{EndPt} D:{Delta}";
-        }
+        public override string ToString() => $"B:{BeginPt} E:{EndPt} D:{Delta}";
     }
 
 
-    class GestureEventManager : IGestureEvents
+    class GestureEventManager(System.Windows.Forms.Control parent) : IGestureEvents
     {
         public event PanGestureEventHandler OnGesturePan;
         public event ZoomGestureEventHandler OnGestureZoom;
@@ -94,16 +92,11 @@ namespace Viking.UI
 
         GestureInfo? PreviousGestureInfo;
 
-        readonly System.Windows.Forms.Control Parent;
+        readonly System.Windows.Forms.Control Parent = parent;
 
         System.Drawing.Point BeginPosition;
 
         System.Drawing.Point LastGesturePositon;
-
-        public GestureEventManager(System.Windows.Forms.Control parent)
-        {
-            Parent = parent;
-        }
 
         /// <summary>
         /// This function must be called by the host controls WndProc function to process Pen related input events
@@ -121,7 +114,7 @@ namespace Viking.UI
                 default:
 
                     return false;
-            } 
+            }
             return false;
         }
 
@@ -153,7 +146,7 @@ namespace Viking.UI
                     {
                         PreviousGestureInfo = null;
 
-                        GestureEventArgs e = new GestureEventArgs() { Gesture = newInfo};
+                        GestureEventArgs e = new() { Gesture = newInfo };
                         FireOnGestureEnd(e);
                         break;
                     }
@@ -162,7 +155,7 @@ namespace Viking.UI
                         var point = Parent.PointToClient(new System.Drawing.Point(newInfo.Location.x, newInfo.Location.y));
                         BeginPosition = point;
                         LastGesturePositon = point;
-                        var e = new BeginGestureEventArgs() { Gesture = newInfo, BeginPt = point };
+                        BeginGestureEventArgs e = new() { Gesture = newInfo, BeginPt = point };
                         PreviousGestureInfo = newInfo;
                         FireOnGestureBegin(e);
                         break;
@@ -170,7 +163,7 @@ namespace Viking.UI
                 case Gesture.Pan:
                     {
                         var point = Parent.PointToClient(new System.Drawing.Point(newInfo.Location.x, newInfo.Location.y));
-                        var e = new PanGestureEventArgs()
+                        PanGestureEventArgs e = new()
                         {
                             Gesture = newInfo,
                             BeginPt = BeginPosition,
@@ -185,7 +178,7 @@ namespace Viking.UI
                     {
                         var point = Parent.PointToClient(new System.Drawing.Point(newInfo.Location.x, newInfo.Location.y));
                         //var e = new ZoomGestureEventArgs() { Gesture = newInfo, BeginPt = BeginPosition, EndPt = point };
-                        var e = new PanGestureEventArgs()
+                        PanGestureEventArgs e = new()
                         {
                             Gesture = newInfo,
                             BeginPt = BeginPosition,
@@ -203,7 +196,7 @@ namespace Viking.UI
             /*
             previousPenState = penState;
             previousPointerState = pointerState;
-            */ 
+            */
 
             return true;
         }

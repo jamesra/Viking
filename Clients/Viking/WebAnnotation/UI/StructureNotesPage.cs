@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 
@@ -15,10 +15,7 @@ namespace WebAnnotation.UI
             InitializeComponent();
         }
 
-        protected override void OnInitPage()
-        {
-            base.OnInitPage();
-        }
+        protected override void OnInitPage() => base.OnInitPage();
 
         protected override void OnShowObject(object Object)
         {
@@ -31,9 +28,6 @@ namespace WebAnnotation.UI
             }
         }
 
-        protected override void OnSaveChanges()
-        {
-            Obj.Notes = textNotes.Text;
-        }
+        protected override void OnSaveChanges() => Obj.Notes = textNotes.Text;
     }
 }

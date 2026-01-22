@@ -27,13 +27,13 @@ namespace WebAnnotation.View
         private SolidPolygonView polygonMesh;
         private readonly GridPolygon VolumePolygon;
         private GridPolygon SmoothedVolumePolygon;
-        private PointSetView ControlPointView;
+        private readonly PointSetView ControlPointView;
 
         public override string[] HelpStrings
         {
             get
             {
-                List<string> listStrings = new List<string>();
+                List<string> listStrings = [];
                 if (Global.PenMode)
                 {
                     listStrings.Add("Hold Left Click + SHIFT drag the interior: Move shape");
@@ -49,7 +49,7 @@ namespace WebAnnotation.View
                     listStrings.Add("CTRL + Left click on control point: Remove control point");
                 }
 
-                return listStrings.ToArray();
+                return [.. listStrings];
             }
         }
 
@@ -75,7 +75,7 @@ namespace WebAnnotation.View
 
         public Microsoft.Xna.Framework.Color HSLColor => _Color.ConvertToHCL();
 
-                /// <summary>
+        /// <summary>
         /// Calculates a control point color that maintains the same hue as the polygon
         /// but inverts the luma (brightness) for better visibility and contrast.
         /// Uses perceptual luma (0.3R + 0.59G + 0.11B) to match human vision.
@@ -121,13 +121,13 @@ namespace WebAnnotation.View
                 // This makes colors more vibrant while preserving hue
                 float saturationBoost = 0.25f; // 25% saturation boost
                 float boostAmount = minComponent * saturationBoost;
-                
+
                 // Reduce the minimum component to increase saturation
-                if (Math.Abs(newR - minComponent) < 0.001f) 
+                if (Math.Abs(newR - minComponent) < 0.001f)
                     newR = Math.Max(0.0f, newR - boostAmount);
-                else if (Math.Abs(newG - minComponent) < 0.001f) 
+                else if (Math.Abs(newG - minComponent) < 0.001f)
                     newG = Math.Max(0.0f, newG - boostAmount);
-                else if (Math.Abs(newB - minComponent) < 0.001f) 
+                else if (Math.Abs(newB - minComponent) < 0.001f)
                     newB = Math.Max(0.0f, newB - boostAmount);
             }
 
@@ -182,17 +182,15 @@ namespace WebAnnotation.View
             VolumePolygon = mapper.TryMapShapeSectionToVolume(obj.MosaicShape)?.ToPolygon();
             //_ControlPointRadius = GetRadiusFromPolygonArea(VolumePolygon, 0.01);
             SmoothedVolumePolygon = VolumePolygon;//VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
-            if (obj.Parent == null)
+            if (obj.Parent is null)
             {
                 Color = Color.Gray.SetAlpha(Global.AnnotationSettings.PolygonOpacityParentless);
             }
-            else if (obj.Parent.TypeID == 1) //Cells get a random color for polygons to help Becca see Glia
-            {
-                Color = obj.Parent.Color.ToXNAColor(Global.AnnotationSettings.PolygonOpacityWithParent);
-            }
             else
             {
-                Color = obj.Parent.Type.Color.ToXNAColor(Global.AnnotationSettings.PolygonOpacityWithParent);
+                Color = obj.Parent.TypeID == 1
+                    ? obj.Parent.Color.ToXNAColor(Global.AnnotationSettings.PolygonOpacityWithParent)
+                    : obj.Parent.Type.Color.ToXNAColor(Global.AnnotationSettings.PolygonOpacityWithParent);
             }
 
             ControlPointView = new PointSetView(GetControlPointColor(), Global.AnnotationSettings.PolygonPointRadius)
@@ -286,10 +284,7 @@ namespace WebAnnotation.View
             }
         }
 
-        public void CreateLabelObjects()
-        {
-            curveLabels = new StructureCircleLabels(modelObj, InscribedCircle);
-        }
+        public void CreateLabelObjects() => curveLabels = new StructureCircleLabels(modelObj, InscribedCircle);
 
         /// <summary>
         /// Return a collection of GridVector2s containing the location of every vertex
@@ -298,8 +293,8 @@ namespace WebAnnotation.View
         /// <returns></returns>
         private ICollection<GridVector2> GetAllPolygonVertices(GridPolygon polygon)
         {
-            List<GridVector2> vertices = new List<GridVector2>();
-            
+            List<GridVector2> vertices = [];
+
             // Add exterior ring vertices (excluding last duplicate point)
             if (polygon.ExteriorRing.Length > 0)
             {
@@ -326,7 +321,7 @@ namespace WebAnnotation.View
         }
 
         private SqlGeometry _RenderedVolumeShape;
-        public override SqlGeometry VolumeShapeAsRendered => _RenderedVolumeShape ?? (_RenderedVolumeShape = VolumePolygon.ToSqlGeometry());
+        public override SqlGeometry VolumeShapeAsRendered => _RenderedVolumeShape ??= VolumePolygon.ToSqlGeometry();
 
         /// <summary>
         /// We have this because with the current renderings the control points are circles that fall outside the polygon we use to render the closed curves
@@ -341,13 +336,13 @@ namespace WebAnnotation.View
                           LocationPolygonView[] listToDraw)
         {
 
-            listToDraw = listToDraw.Where(l => l.Initialized).ToArray();
-            OverlappedLinkCircleView[] overlappedLocations = listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene)).ToArray();
+            listToDraw = [.. listToDraw.Where(l => l.Initialized)];
+            OverlappedLinkCircleView[] overlappedLocations = [.. listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene))];
             OverlappedLinkCircleView.Draw(device, scene, basicEffect, overlayEffect, overlappedLocations);
 
             double radius_scalar = Math.Sqrt((double)scene.Camera.Downsample);
             double expected_radius = Global.AnnotationSettings.PolygonPointRadius * radius_scalar;
-             
+
             //Todo: Check if control points will be visible.
 #if DEBUG
             foreach (var lpv in listToDraw.Where(lpv => lpv.ControlPointView != null))
@@ -358,11 +353,11 @@ namespace WebAnnotation.View
                 lpv.ControlPointView.Draw(device, scene, OverlayStyle.Alpha);
             }
 #else
-            if(!Global.PenMode)
+            if (!Global.PenMode)
             {
                 foreach (var lpv in listToDraw.Where(lpv => lpv.ControlPointView != null))
                 {
-                    if(lpv.ControlPointRadius != Global.AnnotationSettings.PolygonPointRadius)
+                    if (lpv.ControlPointRadius != Global.AnnotationSettings.PolygonPointRadius)
                         lpv.ControlPointRadius = Global.AnnotationSettings.PolygonPointRadius;
 
                     lpv.ControlPointView.Draw(device, scene, OverlayStyle.Luma);
@@ -443,10 +438,7 @@ namespace WebAnnotation.View
 
         public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, Scene scene)
         {
-            if (OverlappedLinkView != null)
-            {
-                OverlappedLinkView.DrawLabel(spriteBatch, font, scene);
-            }
+            OverlappedLinkView?.DrawLabel(spriteBatch, font, scene);
             curveLabels.DrawLabel(spriteBatch, font, scene);
         }
 
@@ -489,7 +481,7 @@ namespace WebAnnotation.View
         {
             protected get
             {
-                if (OverlappedLinkView == null)
+                if (OverlappedLinkView is null)
                 {
                     return new long[0];
                 }
@@ -499,7 +491,7 @@ namespace WebAnnotation.View
 
             set
             {
-                if (value == null || value.Count == 0)
+                if (value is null || value.Count == 0)
                 {
                     OverlappedLinkView = null;
                 }
@@ -524,7 +516,7 @@ namespace WebAnnotation.View
                 {
                     if (SmoothedVolumePolygon.Contains(WorldPosition))
                     {
-                        GridCircle TranslateTargetCircle = new GridCircle(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
+                        GridCircle TranslateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
                         if (TranslateTargetCircle.Contains(WorldPosition))
                         {
                             LocationID = ID;
@@ -613,7 +605,7 @@ namespace WebAnnotation.View
                     }
                     else if (SmoothedVolumePolygon.Contains(WorldPosition))
                     {
-                        GridCircle TranslateTargetCircle = new GridCircle(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
+                        GridCircle TranslateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
                         if (TranslateTargetCircle.Contains(WorldPosition))
                         {
                             LocationID = ID;
@@ -649,10 +641,7 @@ namespace WebAnnotation.View
             }
         }
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
-        {
-            return GetMouseClickActionForPositionOnAnnotationWithPen(WorldPosition, VisibleSectionNumber, ModifierKeys, out LocationID);
-        }
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID) => GetMouseClickActionForPositionOnAnnotationWithPen(WorldPosition, VisibleSectionNumber, ModifierKeys, out LocationID);
 
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
@@ -711,10 +700,10 @@ namespace WebAnnotation.View
         {
             if (Initialized == false)
             {
-                return new List<IAction>();
+                return [];
             }
 
-            List<IAction> listActions = new List<IAction>();
+            List<IAction> listActions = [];
             if (path.HasSelfIntersection)
             {
                 //This could be a reshape or linking to an adjacent annotation
@@ -729,8 +718,8 @@ namespace WebAnnotation.View
                 if (Z == VisibleSectionNumber)
                 {
                     //Ask if they want to convert to a polyline
-                    GridPolyline line = new GridPolyline(path.SimplifiedPath);
-                    ChangeToPolylineAction action = new ChangeToPolylineAction(modelObj, line);
+                    GridPolyline line = new(path.SimplifiedPath);
+                    ChangeToPolylineAction action = new(modelObj, line);
                     listActions.Add(action);
 
                     //Check if they cross the shape at two points and want to adjust the shape

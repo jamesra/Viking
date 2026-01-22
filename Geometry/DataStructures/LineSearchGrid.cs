@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -33,7 +33,7 @@ namespace Geometry
 
         public int Count => tableLineToValue.Count;
 
-        System.Threading.ReaderWriterLockSlim rwLock = new System.Threading.ReaderWriterLockSlim();
+        System.Threading.ReaderWriterLockSlim rwLock = new();
 
         public LineSearchGrid(GridRectangle bounds, int EstimatedLineCount)
         {
@@ -103,7 +103,7 @@ namespace Geometry
             private readonly bool UseLock;
 
             //Only return unique values
-            readonly SortedSet<GridLineSegment> UniqueLines = new SortedSet<GridLineSegment>();
+            readonly SortedSet<GridLineSegment> UniqueLines = [];
 
             public LineSearchGridCoordListEnumerator(LineSearchGrid<T> SearchGrid, IEnumerable<Coord> Coords, bool uselock = false)
             {
@@ -246,7 +246,7 @@ namespace Geometry
             private readonly bool UseLock;
 
             //Only return unique values
-            readonly SortedSet<GridLineSegment> UniqueLines = new SortedSet<GridLineSegment>();
+            readonly SortedSet<GridLineSegment> UniqueLines = [];
 
             public LineSearchGridRectangleEnumerator(LineSearchGrid<T> SearchGrid, Coord Start, Coord End, bool uselock = false)
             {
@@ -421,9 +421,9 @@ namespace Geometry
             }
         }
 
-        public GridLineSegment[] Lines => tableLineToValue.Keys.ToArray();
+        public GridLineSegment[] Lines => [.. tableLineToValue.Keys];
 
-        public T[] Values => tableValueToLine.Keys.ToArray();
+        public T[] Values => [.. tableValueToLine.Keys];
 
 
         public void Add(GridLineSegment line, T value)
@@ -432,7 +432,7 @@ namespace Geometry
             {
                 rwLock.EnterWriteLock();
 
-                Debug.Assert(tableLineToValue.ContainsKey(line) == false); 
+                Debug.Assert(tableLineToValue.ContainsKey(line) == false);
                 /*
                 
                 if (tableLineToValue.ContainsKey(line))
@@ -626,10 +626,7 @@ namespace Geometry
             }
         }
 
-        private Coord GetCoord(GridVector2 position)
-        {
-            return GetCoord(position.X, position.Y);
-        }
+        private Coord GetCoord(GridVector2 position) => GetCoord(position.X, position.Y);
 
         private Coord GetCoord(double x, double y)
         {
@@ -668,7 +665,7 @@ namespace Geometry
             int iEndX = Math.Max(start.iX, end.iX);
             int iEndY = Math.Max(start.iY, end.iY);
 
-            List<Coord> listCoords = new List<Coord>(Math.Abs(end.iX - start.iX) * Math.Abs(end.iY - start.iY));
+            List<Coord> listCoords = new(Math.Abs(end.iX - start.iX) * Math.Abs(end.iY - start.iY));
             if (start.iX == end.iX)
             {
 
@@ -810,10 +807,10 @@ namespace Geometry
             //            int numCells = (end_iX - start_iX) * (end_iY - start_iY);
             //TODO
             //SortedSet<GridLineSegment> 
-            List<GridLineSegment> LineList = new List<GridLineSegment>(_LastIntersectingLineCount);
+            List<GridLineSegment> LineList = new(_LastIntersectingLineCount);
 
-            Coord start = new Coord(start_iX, start_iY);
-            Coord end = new Coord(end_iX, end_iY);
+            Coord start = new(start_iX, start_iY);
+            Coord end = new(end_iX, end_iY);
 
             if (BorderOnly)
             {
@@ -856,7 +853,7 @@ namespace Geometry
         protected List<U> UniqueItems<U>(List<U> LineList)
         {
             //Only return unique values
-            List<U> unique_list = new List<U>(LineList.Count);
+            List<U> unique_list = new(LineList.Count);
             LineList.Sort();
             U lastItem = default;
             foreach (U item in LineList)
@@ -878,10 +875,7 @@ namespace Geometry
         /// </summary>
         /// <param name="L"></param>
         /// <returns></returns>
-        public IEnumerable<GridLineSegment> GetPotentialIntersections(GridLineSegment line)
-        {
-            return GetPotentialIntersections(line, true);
-        }
+        public IEnumerable<GridLineSegment> GetPotentialIntersections(GridLineSegment line) => GetPotentialIntersections(line, true);
 
         /// <summary>
         /// Returns a list of GridLineSegments that could possible intersect the passed line
@@ -930,7 +924,7 @@ namespace Geometry
                 rwLock.EnterReadLock();
 
                 IEnumerable<GridLineSegment> LineList = GetPotentialIntersections(line, false);
-                List<T> values = new List<T>();
+                List<T> values = [];
                 foreach (GridLineSegment gridLine in LineList)
                 {
                     values.Add(tableLineToValue[gridLine]);
@@ -940,7 +934,7 @@ namespace Geometry
                     ListDispose.Dispose();
 
                 // Trace.WriteLine("Enumerator: " + values.Count.ToString()); 
-                return values.ToArray();
+                return [.. values];
             }
             finally
             {
@@ -962,8 +956,8 @@ namespace Geometry
 
                 rwLock.EnterReadLock();
 
-                List<T> values = new List<T>();
-                using (LineSearchGridRectangleEnumerator LineList = new LineSearchGridRectangleEnumerator(this, start, end, false))
+                List<T> values = [];
+                using (LineSearchGridRectangleEnumerator LineList = new(this, start, end, false))
                 {
                     foreach (GridLineSegment gridLine in LineList)
                     {
@@ -972,7 +966,7 @@ namespace Geometry
                 }
 
                 // Trace.WriteLine("Enumerator: " + values.Count.ToString()); 
-                return values.ToArray();
+                return [.. values];
             }
             finally
             {
@@ -1076,7 +1070,7 @@ namespace Geometry
                     }
                 }
 
-                if(tableLineToValue.TryGetValue(BestLine, out var result))
+                if (tableLineToValue.TryGetValue(BestLine, out var result))
                     return result;
 
                 return default;
@@ -1091,11 +1085,8 @@ namespace Geometry
         {
             if (freeManagedObjectsAlso)
             {
-                if (rwLock != null)
-                {
-                    rwLock.Dispose();
-                    rwLock = null;
-                }
+                rwLock?.Dispose();
+                rwLock = null;
             }
         }
 

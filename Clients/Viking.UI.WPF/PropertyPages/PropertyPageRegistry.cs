@@ -9,12 +9,12 @@ namespace Viking.UI.WPF.PropertyPages
     internal static class PropertyPageRegistry
     {
         private static readonly Lazy<IReadOnlyList<PropertyPageDescriptor>> _descriptors =
-            new Lazy<IReadOnlyList<PropertyPageDescriptor>>(LoadDescriptors, isThreadSafe: true);
+            new(LoadDescriptors, isThreadSafe: true);
 
         private static IReadOnlyList<PropertyPageDescriptor> LoadDescriptors()
         {
             Assembly assembly = typeof(PropertyPageRegistry).Assembly;
-            var descriptorList = new List<PropertyPageDescriptor>();
+            List<PropertyPageDescriptor> descriptorList = [];
 
             foreach (Type type in assembly.GetTypes())
             {
@@ -41,7 +41,7 @@ namespace Viking.UI.WPF.PropertyPages
         {
             if (target is null)
             {
-                return Enumerable.Empty<PropertyPageDescriptor>();
+                return [];
             }
 
             Type targetRuntimeType = target.GetType();

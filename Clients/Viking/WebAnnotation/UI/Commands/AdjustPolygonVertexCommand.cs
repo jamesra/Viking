@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -20,7 +20,7 @@ namespace WebAnnotation.UI.Commands
 
         private GridPolygon OutputVolumePolygon;
         private PositionColorMeshModel polygonView;
-        private GridPolygon AdjustedPolygon = null; //The polygon we are adjusting.  This can be an interior polygon.
+        private GridPolygon? AdjustedPolygon = null; //The polygon we are adjusting.  This can be an interior polygon.
         private bool ControlPointSelected = false;
         private PolygonIndex iOriginalVolumePolyControlPoint;
         private PolygonIndex iAdjustedControlPoint; //The index of the vertex in the exterior ring to adjust. 
@@ -37,9 +37,9 @@ namespace WebAnnotation.UI.Commands
         private readonly OnCommandSuccess success_callback;
         private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
-        public string[] HelpStrings => new string[] { "Release Left Mouse Button to place control point" };
+        public string[] HelpStrings => ["Release Left Mouse Button to place control point"];
 
-        public ObservableCollection<string> ObservableHelpStrings => new ObservableCollection<string>(HelpStrings);
+        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
 
         public AdjustPolygonVertexCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridPolygon mosaic_polygon,
@@ -56,10 +56,7 @@ namespace WebAnnotation.UI.Commands
 
         }
 
-        private static async Task<PositionColorMeshModel> CreateView(GridPolygon poly, Color color, CancellationToken token)
-        {
-            return await Task.Run(() => poly.Smooth(Global.NumClosedCurveInterpolationPointsForDisplay).CreateMeshForPolygon2D(color), token);
-        }
+        private static async Task<PositionColorMeshModel> CreateView(GridPolygon poly, Color color, CancellationToken token) => await Task.Run(() => poly.Smooth(Global.NumClosedCurveInterpolationPointsForDisplay).CreateMeshForPolygon2D(color), token);
 
         protected void PopulateControlPointIndexIfNeeded(GridVector2 WorldPosition)
         {
@@ -75,7 +72,7 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        private CancellationTokenSource UpdatePositionCancellationTokenSource = null;
+        private CancellationTokenSource? UpdatePositionCancellationTokenSource = null;
 
         protected virtual async Task UpdatePosition(GridVector2 PositionDelta)
         {
@@ -87,12 +84,9 @@ namespace WebAnnotation.UI.Commands
                 return;
             }
 
-            CancellationTokenSource newTokenSource = new CancellationTokenSource();
+            CancellationTokenSource newTokenSource = new();
             CancellationTokenSource existingToken = Interlocked.Exchange(ref UpdatePositionCancellationTokenSource, newTokenSource);
-            if (existingToken != null)
-            {
-                existingToken.Cancel();
-            }
+            existingToken?.Cancel();
 
             PositionColorMeshModel result = await CreateView(AdjustedPolygon, _color, newTokenSource.Token);
             if (newTokenSource.IsCancellationRequested == false)

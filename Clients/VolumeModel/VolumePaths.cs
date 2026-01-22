@@ -1,21 +1,15 @@
-﻿using System.IO;
+using System.IO;
 
 namespace Viking.VolumeModel
 {
-    public class VolumePaths
+    public class VolumePaths(string localCachePath, string VolumeName)
     {
         /// <summary>
         /// The path we use to cache data on the local drive
         /// </summary>
-        internal readonly string LocalCachePath;
+        internal readonly string LocalCachePath = localCachePath;
 
-        internal readonly string Name;
-
-        public VolumePaths(string localCachePath, string VolumeName)
-        {
-            this.LocalCachePath = localCachePath;
-            this.Name = VolumeName;
-        }
+        internal readonly string Name = VolumeName;
 
         private string VolumeCachePath => this.LocalCachePath + System.IO.Path.DirectorySeparatorChar + this.Name;
 
@@ -68,20 +62,11 @@ namespace Viking.VolumeModel
             }
         }
 
-        public string GetStosCacheName(long mappedSection, long controlSection, string extension)
-        {
-            return System.IO.Path.Combine(this.StosCacheDir, mappedSection.ToString() + "-" + controlSection.ToString() + extension);
-        }
+        public string GetStosCacheName(long mappedSection, long controlSection, string extension) => System.IO.Path.Combine(this.StosCacheDir, mappedSection.ToString() + "-" + controlSection.ToString() + extension);
 
-        public string GetITKSCacheName(long mappedSection, long controlSection)
-        {
-            return GetStosCacheName(mappedSection, controlSection, ".stos");
-        }
+        public string GetITKSCacheName(long mappedSection, long controlSection) => GetStosCacheName(mappedSection, controlSection, ".stos");
 
-        public string GetSerializerCacheName(long mappedSection, long controlSection)
-        {
-            return GetStosCacheName(mappedSection, controlSection, ".stos_bin");
-        }
+        public string GetSerializerCacheName(long mappedSection, long controlSection) => GetStosCacheName(mappedSection, controlSection, ".stos_bin");
 
         public static void CreateDirectories(VolumePaths paths)
         {

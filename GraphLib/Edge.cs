@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -18,11 +18,11 @@ namespace GraphLib
         public virtual double Weight { get; set; } = 1.0;
 
         public bool IsLoop => SourceNodeKey.Equals(TargetNodeKey);
-         
+
         /// <summary>
         /// A collection of additional attributes that have been added to the node
         /// </summary>
-        public readonly Dictionary<string, object> Attributes = new Dictionary<string, object>();
+        public readonly Dictionary<string, object> Attributes = [];
 
 
         public Edge(NODEKEY SourceNode, NODEKEY TargetNode, bool Directional)
@@ -61,7 +61,7 @@ namespace GraphLib
         {
             NODEKEY lowestKey = this.SourceNodeKey.CompareTo(this.TargetNodeKey) < 0 ? this.SourceNodeKey : this.TargetNodeKey;
             NODEKEY highestKey = this.SourceNodeKey.CompareTo(this.TargetNodeKey) < 0 ? this.TargetNodeKey : this.SourceNodeKey;
-            return new NODEKEY[] { lowestKey, highestKey };
+            return [lowestKey, highestKey];
         }
         protected int CompareToDirectional(Edge<NODEKEY> other)
         {
@@ -82,7 +82,7 @@ namespace GraphLib
             NODEKEY[] otherKeys = other.OrderedNodeKeys();
 
             //Find if any key comparisons are unequal
-            int[] comparisons = thisKeys.Select((key, i) => key.CompareTo(otherKeys[i])).Where(c => c != 0).ToArray();
+            int[] comparisons = [.. thisKeys.Select((key, i) => key.CompareTo(otherKeys[i])).Where(c => c != 0)];
 
             if (comparisons.Length == 0)
                 return 0;
@@ -126,10 +126,7 @@ namespace GraphLib
             }
         }
 
-        public override int GetHashCode()
-        {
-            return (SourceNodeKey.GetHashCode() / 2) + (TargetNodeKey.GetHashCode() / 2);
-        }
+        public override int GetHashCode() => (SourceNodeKey.GetHashCode() / 2) + (TargetNodeKey.GetHashCode() / 2);
 
         public override bool Equals(object obj)
         {

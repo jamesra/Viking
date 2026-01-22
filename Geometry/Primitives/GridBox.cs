@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -46,7 +46,7 @@ namespace Geometry
 
         public override string ToString()
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
 
             sb.Append(minVals.ToCSV());
 
@@ -79,9 +79,9 @@ namespace Geometry
             }
         }
 
-        public GridVector3 MinCorner => new GridVector3(minVals[0], minVals[1], minVals[2]);
+        public GridVector3 MinCorner => new(minVals[0], minVals[1], minVals[2]);
 
-        public GridVector3 MaxCorner => new GridVector3(maxVals[0], maxVals[1], maxVals[2]);
+        public GridVector3 MaxCorner => new(maxVals[0], maxVals[1], maxVals[2]);
 
         public double Volume => dimensions.Aggregate((accumulator, val) => accumulator * val);
 
@@ -95,7 +95,7 @@ namespace Geometry
 
         private void ThrowOnMinGreaterThanMax()
         {
-            if(dimensions.Any(d => d < 0))
+            if (dimensions.Any(d => d < 0))
                 throw new ArgumentException("GridBox minvals must be greater than maxvals");
         }
 
@@ -127,17 +127,17 @@ namespace Geometry
 
         public GridBox(GridVector3 corner, GridVector3 oppositeCorner)
         {
-            this.minVals = corner.coords.Select((val, i) => Math.Min(val, oppositeCorner.coords[i])).ToArray();
-            this.maxVals = corner.coords.Select((val, i) => Math.Max(val, oppositeCorner.coords[i])).ToArray();
+            this.minVals = [.. corner.coords.Select((val, i) => Math.Min(val, oppositeCorner.coords[i]))];
+            this.maxVals = [.. corner.coords.Select((val, i) => Math.Max(val, oppositeCorner.coords[i]))];
 
             ThrowOnNegativeDimensions();
-            ThrowOnMinGreaterThanMax(); 
+            ThrowOnMinGreaterThanMax();
         }
 
         public GridBox(GridVector3 bottomleft, double[] dimensions)
         {
             minVals = bottomleft.coords;
-            maxVals = minVals.Select((val, i) => val + dimensions[i]).ToArray();
+            maxVals = [.. minVals.Select((val, i) => val + dimensions[i])];
 
             ThrowOnNegativeDimensions();
             ThrowOnMinGreaterThanMax();
@@ -145,8 +145,8 @@ namespace Geometry
 
         public GridBox(GridVector3 position, double radius)
         {
-            minVals = position.coords.Select(val => val - radius).ToArray();
-            maxVals = position.coords.Select(val => val + radius).ToArray();
+            minVals = [.. position.coords.Select(val => val - radius)];
+            maxVals = [.. position.coords.Select(val => val + radius)];
 
             ThrowOnNegativeDimensions();
             ThrowOnMinGreaterThanMax();
@@ -157,8 +157,8 @@ namespace Geometry
             if (position is null)
                 throw new ArgumentNullException(nameof(position));
 
-            minVals = new double[] { position.X, position.Y, position.Z };
-            maxVals = minVals.Select((val, i) => val + dimensions[i]).ToArray();
+            minVals = [position.X, position.Y, position.Z];
+            maxVals = [.. minVals.Select((val, i) => val + dimensions[i])];
 
             ThrowOnNegativeDimensions();
             ThrowOnMinGreaterThanMax();
@@ -169,8 +169,8 @@ namespace Geometry
             if (position is null)
                 throw new ArgumentNullException(nameof(position));
 
-            minVals = new double[] { position.X - radius, position.Y - radius, position.Z - radius };
-            maxVals = new double[] { position.X + radius, position.Y + radius, position.Z + radius };
+            minVals = [position.X - radius, position.Y - radius, position.Z - radius];
+            maxVals = [position.X + radius, position.Y + radius, position.Z + radius];
 
             ThrowOnNegativeDimensions();
             ThrowOnMinGreaterThanMax();
@@ -178,8 +178,8 @@ namespace Geometry
 
         public GridBox(GridRectangle bound_rect, double minZ, double maxZ)
         {
-            minVals = new double[] { bound_rect.Left, bound_rect.Bottom, minZ };
-            maxVals = new double[] { bound_rect.Right, bound_rect.Top, maxZ };
+            minVals = [bound_rect.Left, bound_rect.Bottom, minZ];
+            maxVals = [bound_rect.Right, bound_rect.Top, maxZ];
 
             ThrowOnNegativeDimensions();
             ThrowOnMinGreaterThanMax();
@@ -192,7 +192,7 @@ namespace Geometry
         /// <param name="scalar"></param>
         public GridBox Scale(double scalar)
         {
-            double[] scalars = new double[] { scalar, scalar, scalar };
+            double[] scalars = [scalar, scalar, scalar];
             return this.Scale(scalars);
         }
 
@@ -202,7 +202,7 @@ namespace Geometry
         /// <param name="scalar"></param>
         public GridBox Scale(GridVector3 scalar)
         {
-            double[] scalars = new double[] { scalar.X, scalar.Y, scalar.Z };
+            double[] scalars = [scalar.X, scalar.Y, scalar.Z];
             return this.Scale(scalars);
         }
 
@@ -216,12 +216,12 @@ namespace Geometry
             //Have to cache center because it changes as we update points
             double[] center = this.Center;
             double[] dimensions = this.dimensions;
-            double[] new_corner_distance = dimensions.Select((dist, i) => ((dist / 2.0) * scalars[i])).ToArray();
+            double[] new_corner_distance = [.. dimensions.Select((dist, i) => ((dist / 2.0) * scalars[i]))];
 
-            double[] new_mins = center.Select((c, i) => c - new_corner_distance[i]).ToArray();
-            double[] new_maxs = center.Select((c, i) => c + new_corner_distance[i]).ToArray();
+            double[] new_mins = [.. center.Select((c, i) => c - new_corner_distance[i])];
+            double[] new_maxs = [.. center.Select((c, i) => c + new_corner_distance[i])];
 
-            return new GridBox(new_mins, new_maxs); 
+            return new GridBox(new_mins, new_maxs);
         }
 
         public GridBox Translate(GridVector3 vector)
@@ -229,8 +229,8 @@ namespace Geometry
             double[] translation = vector.coords;
             Debug.Assert(translation.Length == this.numDims, "Expecting 3D shape for translation with 3D vector");
 
-            double[] translatedMins = this.minVals.Select((min, i) => min + translation[i]).ToArray();
-            double[] translatedMaxs = this.maxVals.Select((max, i) => max + translation[i]).ToArray();
+            double[] translatedMins = [.. this.minVals.Select((min, i) => min + translation[i])];
+            double[] translatedMaxs = [.. this.maxVals.Select((max, i) => max + translation[i])];
 
             return new GridBox(translatedMins, translatedMaxs);
         }
@@ -242,8 +242,8 @@ namespace Geometry
         /// <returns></returns>
         public GridBox Pad(double Radius)
         {
-            double[] padded_minVals = this.minVals.Select(val => val - Radius).ToArray();
-            double[] padded_maxVals = this.maxVals.Select(val => val + Radius).ToArray();
+            double[] padded_minVals = [.. this.minVals.Select(val => val - Radius)];
+            double[] padded_maxVals = [.. this.maxVals.Select(val => val + Radius)];
 
             return new GridBox(padded_minVals, padded_maxVals);
         }
@@ -270,10 +270,7 @@ namespace Geometry
         /// </summary>
         /// <param name="point"></param>
         /// <returns></returns>
-        public GridBox Union(GridVector3 point, out bool boundsChanged)
-        {
-            return Union(point.coords, out boundsChanged);
-        }
+        public GridBox Union(GridVector3 point, out bool boundsChanged) => Union(point.coords, out boundsChanged);
 
         /// <summary>
         /// Expands the rectange to contain the specified point.
@@ -293,10 +290,10 @@ namespace Geometry
             bool updated_maxVals = this.maxVals.Where((val, i) => coords[i] > val).Any();
 
             boundsChanged = updated_minVals || updated_maxVals;
-            if(boundsChanged)
+            if (boundsChanged)
             {
-                return new GridBox(minVals.Select((val, i) => Math.Min(val, coords[i])).ToArray(),
-                    maxVals.Select((val, i) => Math.Max(val, coords[i])).ToArray());
+                return new GridBox([.. minVals.Select((val, i) => Math.Min(val, coords[i]))],
+                    [.. maxVals.Select((val, i) => Math.Max(val, coords[i]))]);
             }
             else
             {
@@ -347,7 +344,7 @@ namespace Geometry
             if (pos is null)
                 throw new ArgumentNullException(nameof(pos));
 
-            return this.Contains(new double[] { pos.X, pos.Y, pos.Z });
+            return this.Contains([pos.X, pos.Y, pos.Z]);
         }
 
         private int CalcHashcode()
@@ -364,11 +361,9 @@ namespace Geometry
             return hashcode;
         }
 
-        public override int GetHashCode()
-        {
+        public override int GetHashCode() =>
             //Debug.Assert(!double.IsNaN(this.minVals[(int)AXIS.X]));
-            return CalcHashcode();
-        }
+            CalcHashcode();
 
         public override bool Equals(object obj)
         {
@@ -379,7 +374,7 @@ namespace Geometry
         }
 
         public static bool operator ==(GridBox A, GridBox B)
-        { 
+        {
             //Check for a default bbox
             if (A.minVals is null && B.minVals is null)
                 return true;
@@ -393,10 +388,7 @@ namespace Geometry
             return mins_match && maxs_match;
         }
 
-        public static bool operator !=(GridBox A, GridBox B)
-        {
-            return !(A == B);
-        }
+        public static bool operator !=(GridBox A, GridBox B) => !(A == B);
 
         #region Static Methods
 
@@ -417,8 +409,8 @@ namespace Geometry
             if (B.minVals is null)
                 return A.Clone();
 
-            double[] new_mins = A.minVals.Select((val, i) => Math.Min(val, B.minVals[i])).ToArray();
-            double[] new_maxs = A.maxVals.Select((val, i) => Math.Max(val, B.maxVals[i])).ToArray();
+            double[] new_mins = [.. A.minVals.Select((val, i) => Math.Min(val, B.minVals[i]))];
+            double[] new_maxs = [.. A.maxVals.Select((val, i) => Math.Max(val, B.maxVals[i]))];
 
             return new GridBox(new_mins, new_maxs);
         }
@@ -428,7 +420,7 @@ namespace Geometry
             if (points is null)
                 throw new ArgumentException("Bounding box cannot be created for null points collection");
 
-            if (points.Any() == false || points.First() == null)
+            if (!points.Any())
                 throw new ArgumentException("Bounding box cannot be created for empty points collection");
 
             int numDims = points.First().coords.Length;
@@ -444,10 +436,7 @@ namespace Geometry
             return new GridBox(new_mins, new_maxs);
         }
 
-        public GridBox Clone()
-        {
-            return new GridBox(this.minVals, this.maxVals);
-        }
+        public GridBox Clone() => new GridBox(this.minVals, this.maxVals);
 
         #endregion
     }

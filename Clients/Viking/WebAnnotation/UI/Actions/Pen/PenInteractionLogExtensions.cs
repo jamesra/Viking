@@ -21,25 +21,27 @@ namespace WebAnnotation.UI.Actions
             //Check if the origin is even in the list of entries before going into detail
             if (false == log_entries.Any(e => e.location?.ID == origin_ID))
             {
-                return new List<IAction>();
+                return [];
             }
 
-            List<IAction> listAction = new List<IAction>();
-            listAction.AddRange(IdentifyPossibleLocationLinkActions(log_entries, origin_ID));
-            listAction.AddRange(IdentifyPossibleStructureLinkActions(log_entries, origin_ID));
+            List<IAction> listAction =
+            [
+                .. IdentifyPossibleLocationLinkActions(log_entries, origin_ID),
+                .. IdentifyPossibleStructureLinkActions(log_entries, origin_ID),
+            ];
             return listAction;
         }
 
 
         public static List<IAction> IdentifyPossibleStructureLinkActions(this IReadOnlyList<LocationInteractionLogEvent> log_entries, long origin_ID)
         {
-            List<IAction> listActions = new List<IAction>();
+            List<IAction> listActions = [];
             LocationObj origin_loc = Store.Locations.GetObjectByID(origin_ID);
 
             long origin_struct_id = origin_loc.ParentID.Value;
 
             //Filter any entries with the same Structure ID
-            LocationInteractionLogEvent[] other_structure_entries = log_entries.Where(e => e.location != null).ToArray();
+            LocationInteractionLogEvent[] other_structure_entries = [.. log_entries.Where(e => e.location != null)];
 
             //Find the first entry with the origin ID. 
             int iStart = other_structure_entries.Length;
@@ -58,7 +60,7 @@ namespace WebAnnotation.UI.Actions
             //candidate_touch_count counts the number of time the path passes between each structure and the origin
             //When I wrote this 3 passes was a one-directional line, 4 passes was bidirectional.
 
-            Dictionary<long, int> candidate_touch_count = new Dictionary<long, int>();
+            Dictionary<long, int> candidate_touch_count = [];
 
             for (int i = iStart + 1; i < other_structure_entries.Length; i++)
             {
@@ -101,21 +103,14 @@ namespace WebAnnotation.UI.Actions
                 LocationObj other_location = Store.Locations[key];
                 long other_struct_id = other_location.ParentID.Value;
 
-                StructureLinkKey link_candidate;
-
-                if (touch_count % 2 > 0)
-                {
-                    link_candidate = new StructureLinkKey(origin_struct_id, other_struct_id, false);
-                }
-                else
-                {
-                    link_candidate = new StructureLinkKey(origin_struct_id, other_struct_id, true);
-                }
+                StructureLinkKey link_candidate = touch_count % 2 > 0
+                    ? new StructureLinkKey(origin_struct_id, other_struct_id, false)
+                    : new StructureLinkKey(origin_struct_id, other_struct_id, true);
 
                 //Add the link if it does not exist
                 if (false == Store.StructureLinks.Contains(link_candidate))
                 {
-                    LinkStructureAction action = new LinkStructureAction(origin_loc, other_location, link_candidate.Bidirectional);
+                    LinkStructureAction action = new(origin_loc, other_location, link_candidate.Bidirectional);
                     listActions.Add(action);
                 }
             }
@@ -132,11 +127,11 @@ namespace WebAnnotation.UI.Actions
                                        e.location.Z != origin_loc.Z);
 
             //Identify all location links that do not exist in the local store already
-            LocationLinkKey[] non_existing_links = candidates.Select(c => new LocationLinkKey(c.location.ID, origin_ID))
+            LocationLinkKey[] non_existing_links = [.. candidates.Select(c => new LocationLinkKey(c.location.ID, origin_ID))
                                                .Distinct()
-                                               .Where(ll => Store.LocationLinks.Contains(ll) == false).ToArray();
+                                               .Where(ll => Store.LocationLinks.Contains(ll) == false)];
 
-            return non_existing_links.Select(ll => new LinkLocationAction(ll) as IAction).ToList();
+            return [.. non_existing_links.Select(ll => new LinkLocationAction(ll) as IAction)];
         }
 
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IdentityModel.Policy;
@@ -19,10 +19,10 @@ namespace Annotation.Identity
 
         private static BearerTokenHelper GetTokenHelper()
         {
-            if (_tokenHelper == null)
+            if (_tokenHelper is null)
             {
                 _tokenHelper = BearerTokenHelper.CreateFromAppSettings();
-                if (_tokenHelper == null)
+                if (_tokenHelper is null)
                 {
                     // Fallback: create from settings directly
                     string IdentityServerEndpoint = VikingWebAppSettings.AppSettings.GetIdentityServerURLString();
@@ -49,13 +49,13 @@ namespace Annotation.Identity
                 var AccessToken = message.Headers.GetHeader<string>(iBearer);
 
                 var helper = GetTokenHelper();
-                if (helper == null)
+                if (helper is null)
                 {
                     message.Properties["Principal"] = CreateAnonymousUser();
                     return authPolicy;
                 }
 
-                var client = new HttpClient();
+                HttpClient client = new();
                 var disco = helper.GetDiscoveryDocumentAsync().Result;
 
                 var validation = client.IntrospectTokenAsync(new TokenIntrospectionRequest()
@@ -72,7 +72,7 @@ namespace Annotation.Identity
                 if (validation.IsError)
                 {
                     Console.WriteLine(validation.Error);
-                    return new ReadOnlyCollection<IAuthorizationPolicy>(new List<IAuthorizationPolicy>());
+                    return new ReadOnlyCollection<IAuthorizationPolicy>([]);
                 }
 
                 var IsActive = validation.Claims.FirstOrDefault(c => c.Type == "active");
@@ -95,21 +95,21 @@ namespace Annotation.Identity
                 if (AllowedOrgs.Length == 0)
                 {
                     //If the organizations are not specified then use the default role assigned to the user
-                    roles = validation.Claims.Where(c => c.Type == "role").Select(r => r.Value).ToArray();
+                    roles = [.. validation.Claims.Where(c => c.Type == "role").Select(r => r.Value)];
                 }
                 else if (IsUserInAllowedOrganization(AllowedOrgs, validation.Claims))
                 {
                     //Users have the normal permissions if they are in an allowed organization
-                    roles = validation.Claims.Where(c => c.Type == "role").Select(r => r.Value).ToArray();
+                    roles = [.. validation.Claims.Where(c => c.Type == "role").Select(r => r.Value)];
                 }
                 else
                 {
                     //Users not in an allowed organization can only read
-                    roles = new string[] { nameof(Roles.Read) };
+                    roles = [nameof(Roles.Read)];
                 }
 
-                GenericIdentity genericIdentity = new GenericIdentity(userNameClaim);
-                GenericPrincipal principal = new GenericPrincipal(genericIdentity, roles);
+                GenericIdentity genericIdentity = new(userNameClaim);
+                GenericPrincipal principal = new(genericIdentity, roles);
                 message.Properties["Principal"] = principal;
                 //     Thread.CurrentPrincipal = principal;
             }
@@ -123,15 +123,15 @@ namespace Annotation.Identity
 
         private static GenericPrincipal CreateAnonymousUser()
         {
-            GenericIdentity genericIdentity = new GenericIdentity("anonymous");
-            GenericPrincipal principal = new GenericPrincipal(genericIdentity, new string[] { nameof(Roles.Read) });
+            GenericIdentity genericIdentity = new("anonymous");
+            GenericPrincipal principal = new(genericIdentity, [nameof(Roles.Read)]);
             return principal;
         }
 
         private static bool IsUserInAllowedOrganization(string[] AllowedOrgs, IEnumerable<System.Security.Claims.Claim> claims)
         {
-            List<string> organizationClaims = claims.Where(c => c.Type == "affiliation").Select(c => c.Value).ToList();
-            foreach(string orgClaim in organizationClaims)
+            List<string> organizationClaims = [.. claims.Where(c => c.Type == "affiliation").Select(c => c.Value)];
+            foreach (string orgClaim in organizationClaims)
             {
                 if (AllowedOrgs.Contains(orgClaim))
                     return true;

@@ -10,7 +10,7 @@ using Viking.UI.Controls;
 namespace LocalBookmarks
 {
     [Viking.Common.ExtensionTab("Bookmarks", Viking.Common.TABCATEGORY.ACTION)]
-    [Viking.Common.SupportedUITypes(new Type[] { typeof(FolderUIObj), typeof(BookmarkUIObj), typeof(string) })]
+    [Viking.Common.SupportedUITypes([typeof(FolderUIObj), typeof(BookmarkUIObj), typeof(string)])]
     class FolderTreeControl : Viking.UI.BaseClasses.DockingTreeControl, IContextMenu
     {
         private ImageList imageList;
@@ -31,7 +31,7 @@ namespace LocalBookmarks
         protected void OnCreate(object sender, EventArgs e)
         {
             GenericTreeNode[] nodes = this.Tree.GetNodesForObject(sender as IUIObject);
-            if (nodes == null)
+            if (nodes is null)
                 return;
 
             if (nodes.Length > 0)
@@ -62,11 +62,9 @@ namespace LocalBookmarks
 
             if (root != null)
             {
-                List<IUIObject> TreeObjectList = new List<IUIObject>(root.Folders.Length + root.Bookmarks.Length);
-                TreeObjectList.AddRange(root.Folders);
-                TreeObjectList.AddRange(root.Bookmarks);
+                List<IUIObject> TreeObjectList = [.. root.Folders, .. root.Bookmarks];
 
-                Tree.AddObjects(TreeObjectList.ToArray());
+                Tree.AddObjects([.. TreeObjectList]);
 
                 Global.FolderUIObjRoot.ChildChanged += OnRootChildChanged;
             }
@@ -85,14 +83,13 @@ namespace LocalBookmarks
                 case NotifyCollectionChangedAction.Remove:
                     foreach (object obj in e.OldItems)
                     {
-                        IUIObject UIObj = obj as IUIObject;
-                        if (UIObj == null)
+                        if (obj is not IUIObject UIObj)
                             continue;
 
                         GenericTreeNode[] nodes = this.Tree.GetNodesForObject(UIObj);
                         foreach (GenericTreeNode node in nodes)
                         {
-                            if (node.Parent == null)
+                            if (node.Parent is null)
                                 this.Tree.RemoveNode(node);
                         }
                     }
@@ -113,28 +110,28 @@ namespace LocalBookmarks
         {
             get
             {
-                ContextMenuStrip CMenu = new ContextMenuStrip();
+                ContextMenuStrip CMenu = new();
 
-                ToolStripMenuItem bookmarkItem = new ToolStripMenuItem("Place Bookmark...");
+                ToolStripMenuItem bookmarkItem = new("Place Bookmark...");
                 bookmarkItem.Click += ContextMenuOnNewRootBookmark;
                 CMenu.Items.Add(bookmarkItem);
 
-                ToolStripMenuItem folderItem = new ToolStripMenuItem("New Folder");
+                ToolStripMenuItem folderItem = new("New Folder");
                 folderItem.Click += ContextMenuOnNewRootFolder;
                 CMenu.Items.Add(folderItem);
 
-                ToolStripMenuItem ExportMenu = new ToolStripMenuItem("Export");
+                ToolStripMenuItem ExportMenu = new("Export");
                 CMenu.Items.Add(ExportMenu);
 
-                ToolStripMenuItem ExportHTMLMenu = new ToolStripMenuItem("HTML...");
+                ToolStripMenuItem ExportHTMLMenu = new("HTML...");
                 ExportHTMLMenu.Click += ContextMenuOnExportHTML;
                 ExportMenu.DropDownItems.Add(ExportHTMLMenu);
 
-                ToolStripMenuItem ExportXMLMenu = new ToolStripMenuItem("XML...");
+                ToolStripMenuItem ExportXMLMenu = new("XML...");
                 ExportXMLMenu.Click += ContextMenuOnExportXML;
                 ExportMenu.DropDownItems.Add(ExportXMLMenu);
 
-                ToolStripMenuItem ImportMenu = new ToolStripMenuItem("Import");
+                ToolStripMenuItem ImportMenu = new("Import");
                 ImportMenu.Click += ContextMenuOnImportRootFolder;
                 CMenu.Items.Add(ImportMenu);
                 return CMenu;
@@ -148,8 +145,10 @@ namespace LocalBookmarks
         /// <param name="e"></param>
         private void ContextMenuOnNewRootFolder(object sender, EventArgs e)
         {
-            FolderUIObj newFolder = new FolderUIObj(Global.FolderUIObjRoot);
-            newFolder.Name = "New Folder";
+            FolderUIObj newFolder = new(Global.FolderUIObjRoot)
+            {
+                Name = "New Folder"
+            };
             newFolder.Save();
         }
 
@@ -160,8 +159,8 @@ namespace LocalBookmarks
         /// <param name="e"></param>
         private void ContextMenuOnNewRootBookmark(object sender, EventArgs e)
         {
-            Viking.UI.State.ViewerControl.CommandQueue.EnqueueCommand(typeof(CreateBookmarkCommand), new object[]{ Viking.UI.State.ViewerControl,
-                                                                                                    Global.FolderUIObjRoot});
+            Viking.UI.State.ViewerControl.CommandQueue.EnqueueCommand(typeof(CreateBookmarkCommand), [ Viking.UI.State.ViewerControl,
+                                                                                                    Global.FolderUIObjRoot]);
         }
 
         /// <summary>
@@ -171,11 +170,13 @@ namespace LocalBookmarks
         /// <param name="e"></param>
         private void ContextMenuOnExportHTML(object sender, EventArgs e)
         {
-            SaveFileDialog fileDialog = new SaveFileDialog();
-            fileDialog.DefaultExt = ".html";
-            fileDialog.FileName = "Bookmarks";
-            fileDialog.OverwritePrompt = true;
-            fileDialog.Title = "Export Bookmark HTML File";
+            SaveFileDialog fileDialog = new()
+            {
+                DefaultExt = ".html",
+                FileName = "Bookmarks",
+                OverwritePrompt = true,
+                Title = "Export Bookmark HTML File"
+            };
 
             if (DialogResult.OK == fileDialog.ShowDialog())
             {
@@ -190,11 +191,13 @@ namespace LocalBookmarks
         /// <param name="e"></param>
         private void ContextMenuOnExportXML(object sender, EventArgs e)
         {
-            SaveFileDialog fileDialog = new SaveFileDialog();
-            fileDialog.DefaultExt = ".xml";
-            fileDialog.FileName = "Bookmarks";
-            fileDialog.OverwritePrompt = true;
-            fileDialog.Title = "Export Bookmark XML File";
+            SaveFileDialog fileDialog = new()
+            {
+                DefaultExt = ".xml",
+                FileName = "Bookmarks",
+                OverwritePrompt = true,
+                Title = "Export Bookmark XML File"
+            };
 
             if (DialogResult.OK == fileDialog.ShowDialog())
             {
@@ -209,13 +212,15 @@ namespace LocalBookmarks
         /// <param name="e"></param>
         private void ContextMenuOnImportRootFolder(object sender, EventArgs e)
         {
-            OpenFileDialog fileDialog = new OpenFileDialog();
-            fileDialog.DefaultExt = ".xml";
-            fileDialog.Title = "Import Bookmark XML File";
-            fileDialog.CheckFileExists = true;
-            fileDialog.AddExtension = true;
-            fileDialog.AutoUpgradeEnabled = true;
-            fileDialog.Multiselect = false;
+            OpenFileDialog fileDialog = new()
+            {
+                DefaultExt = ".xml",
+                Title = "Import Bookmark XML File",
+                CheckFileExists = true,
+                AddExtension = true,
+                AutoUpgradeEnabled = true,
+                Multiselect = false
+            };
 
             if (DialogResult.OK == fileDialog.ShowDialog())
             {
@@ -230,7 +235,7 @@ namespace LocalBookmarks
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FolderTreeControl));
+            System.ComponentModel.ComponentResourceManager resources = new(typeof(FolderTreeControl));
             this.imageList = new System.Windows.Forms.ImageList(this.components);
             this.SuspendLayout();
             // 
@@ -264,14 +269,12 @@ namespace LocalBookmarks
 
         private void Tree_AfterLabelEdit(object sender, NodeLabelEditEventArgs e)
         {
-            GenericTreeNode node = e.Node as GenericTreeNode;
-            if (node == null)
+            if (e.Node is not GenericTreeNode node)
                 return;
 
-            BookmarkUIObj bookmark = node.Tag as BookmarkUIObj;
-            if (bookmark != null)
+            if (node.Tag is BookmarkUIObj bookmark)
             {
-                if (e.Label == null || e.Label.Length == 0)
+                if (e.Label is null || e.Label.Length == 0)
                 {
                     return;
                 }
@@ -284,13 +287,9 @@ namespace LocalBookmarks
                 return;
             }
 
-            FolderUIObj folder = node.Tag as FolderUIObj;
-            if (folder != null)
+            if (node.Tag is FolderUIObj folder)
             {
-                if (e.Label == null || e.Label.Length == 0)
-                    folder.Name = "Unnamed";
-                else
-                    folder.Name = e.Label;
+                folder.Name = e.Label is null || e.Label.Length == 0 ? "Unnamed" : e.Label;
 
                 folder.Save();
                 return;
@@ -338,12 +337,12 @@ namespace LocalBookmarks
             {
                 TreeNode node = Tree.GetNodeAt(e.Location);
 
-                if (node == null)
+                if (node is null)
                 {
                     Viking.UI.State.SelectedObject = null;
-                    ContextMenuStrip menu = new ContextMenuStrip();
+                    ContextMenuStrip menu = new();
 
-                    ToolStripMenuItem menuItem = new ToolStripMenuItem("New");
+                    ToolStripMenuItem menuItem = new("New");
                     menuItem.Click += ContextMenuOnNewRootFolder;
                     menu.Items.Add(menuItem);
 

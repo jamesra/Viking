@@ -1,4 +1,4 @@
-﻿using System; 
+using System;
 using System.IO;
 
 namespace VikingXNA
@@ -10,13 +10,13 @@ namespace VikingXNA
     public class BitmapFile
     {
         public readonly Int32 Width;
-        readonly Int32 PaddedWidth; 
+        readonly Int32 PaddedWidth;
         public readonly Int32 Height;
         public readonly Int32 BPP;
-        public readonly Int32 BytesPerPixel; 
+        public readonly Int32 BytesPerPixel;
 
         private FileStream _FileStream;
-        private UInt32 _PixelDataOffset; 
+        private UInt32 _PixelDataOffset;
 
         public BitmapFile(string Filename, Int32 width, Int32 height, Int32 bpp)
         {
@@ -36,9 +36,9 @@ namespace VikingXNA
         public void Close()
         {
             _FileStream.Close();
-            _FileStream = null; 
+            _FileStream = null;
         }
-        
+
         private void WriteBMPHeader()
         {
             MemoryStream stream = null;
@@ -117,20 +117,14 @@ namespace VikingXNA
                 }
                 finally
                 {
-                    if (binaryWriter != null)
-                    {
-                        binaryWriter.Close();
-                        binaryWriter = null; 
-                    }
+                    binaryWriter?.Close();
+                    binaryWriter = null;
                 }
             }
             finally
             {
-                if (stream != null)
-                {
-                    stream.Close();
-                    stream = null; 
-                }
+                stream?.Close();
+                stream = null;
             }
         }
 
@@ -145,10 +139,10 @@ namespace VikingXNA
             long offset = (Y * this.PaddedWidth) + X;
             offset = offset * BytesPerPixel;
             offset += this._PixelDataOffset;
-            
-            return offset; 
+
+            return offset;
         }
-        
+
         ///// <summary>
         ///// Write the Byte[] to the ROI of the target
         ///// </summary>

@@ -1,4 +1,4 @@
-﻿using AnnotationVizLib;
+using AnnotationVizLib;
 using Geometry;
 using Geometry.Meshing;
 using GraphLib;
@@ -36,8 +36,8 @@ namespace MorphologyMesh
             Above = aboveQuad;
             Below = belowQuad;
 
-            UpperPolyIndicies = upperPolyIndicies.ToImmutableArray();
-            LowerPolyIndicies = lowerPolyIndicies.ToImmutableArray();
+            UpperPolyIndicies = [.. upperPolyIndicies];
+            LowerPolyIndicies = [.. lowerPolyIndicies];
         }
 
         public SliceTopologyQuadTrees(QuadTreeWithUniqueValues<T> aboveQuad, QuadTreeWithUniqueValues<T> belowQuad, ImmutableArray<int> upperPolyIndicies, ImmutableArray<int> lowerPolyIndicies)
@@ -54,11 +54,8 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="iPoly"></param>
         /// <returns></returns>
-        public QuadTreeWithUniqueValues<T> GetOppositeSide(int iPoly)
-        {
-            return UpperPolyIndicies.Contains(iPoly) ? Below : Above;
-        }
-          
+        public readonly QuadTreeWithUniqueValues<T> GetOppositeSide(int iPoly) => UpperPolyIndicies.Contains(iPoly) ? Below : Above;
+
     }
 
 
@@ -67,7 +64,7 @@ namespace MorphologyMesh
     public enum CONTOUR_RELATION
     {
         Disjoint,
-        Enclosure, 
+        Enclosure,
         Intersects
     }
 
@@ -110,7 +107,7 @@ namespace MorphologyMesh
         /// <summary>
         /// Allow the chord if the edge is considered valid according to EdgeType criteria
         /// </summary>
-        EdgeType = 32,        
+        EdgeType = 32,
         /// <summary>
         /// Allow the chord if the chord will not intersect an existing face
         /// </summary>
@@ -129,7 +126,7 @@ namespace MorphologyMesh
     /// </summary>
     public class SliceChordOriginTestResultsCache
     {
-        readonly Dictionary<int, SliceChordTestType> KnownCandidateFailures = new Dictionary<int, SliceChordTestType>();
+        readonly Dictionary<int, SliceChordTestType> KnownCandidateFailures = [];
 
         public SliceChordOriginTestResultsCache()
         {
@@ -152,14 +149,14 @@ namespace MorphologyMesh
             if (failures == SliceChordTestType.None)
             {
                 return;
-            }  
+            }
 
             if (KnownCandidateFailures.TryGetValue(Target, out SliceChordTestType knownFailures))
                 KnownCandidateFailures[Target] = failures | knownFailures;
             else
-                KnownCandidateFailures.Add(Target, failures); 
+                KnownCandidateFailures.Add(Target, failures);
         }
-         
+
         /// <summary>
         /// Removes a target vertex. 
         /// </summary>
@@ -178,10 +175,10 @@ namespace MorphologyMesh
         /// Record failures.  First level is the origin, then the targets for that origin.
         /// </summary>
         private readonly Dictionary<int, SliceChordOriginTestResultsCache> Failures;
-        
+
         public SliceChordsTestResultsCache()
         {
-            Failures = new Dictionary<int, SliceChordOriginTestResultsCache>();
+            Failures = [];
         }
 
         /// <summary>
@@ -198,7 +195,7 @@ namespace MorphologyMesh
             }
             else
             {
-                SliceChordOriginTestResultsCache Obj = new SliceChordOriginTestResultsCache();
+                SliceChordOriginTestResultsCache Obj = new();
                 Failures.Add(Origin, Obj);
                 return Obj;
             }
@@ -210,10 +207,7 @@ namespace MorphologyMesh
         /// <param name="candidate"></param>
         /// <param name="requested"></param>
         /// <returns></returns>
-        public SliceChordTestType GetFailures(int Origin, int Target, SliceChordTestType requested)
-        { 
-            return Failures.TryGetValue(Origin, out var knownCandidates) == false ? SliceChordTestType.None : knownCandidates.GetFailures(Target, requested);
-        }
+        public SliceChordTestType GetFailures(int Origin, int Target, SliceChordTestType requested) => Failures.TryGetValue(Origin, out var knownCandidates) == false ? SliceChordTestType.None : knownCandidates.GetFailures(Target, requested);
 
         /// <summary>
         /// Add the failure flag to the candidate slice chord between Origin and Target.  This can prevent retesting the same chord later.
@@ -224,7 +218,7 @@ namespace MorphologyMesh
         public void RecordFailure(int Origin, int Target, SliceChordTestType failures)
         {
             //Don't bother if nothing failed
-            if(failures == SliceChordTestType.None)
+            if (failures == SliceChordTestType.None)
             {
                 return;
             }
@@ -243,18 +237,12 @@ namespace MorphologyMesh
         /// Removes a vertex.  This is done when we know the vertex is complete and no longer under consideration
         /// </summary>
         /// <param name="Origin"></param>
-        public void Remove(int Origin)
-        {
-            Failures.Remove(Origin);
-        }
+        public void Remove(int Origin) => Failures.Remove(Origin);
 
         /// <summary>
         /// Clear all results
         /// </summary>
-        public void Clear()
-        {
-            Failures.Clear();
-        }
+        public void Clear() => Failures.Clear();
     }
 
 
@@ -280,16 +268,16 @@ namespace MorphologyMesh
         }
         */
 
-            /// Convert a morphology graph to an unprocessed mesh graph
-            /// </summary>
-            /// <param name="graph"></param>
-            /// <returns></returns>
+        /// Convert a morphology graph to an unprocessed mesh graph
+        /// </summary>
+        /// <param name="graph"></param>
+        /// <returns></returns>
         public static async Task<List<BajajGeneratorMesh>> ConvertToMesh(SliceGraph sliceGraph, OnMeshGeneratedEventHandler OnMeshGenerated = null)
-        { 
+        {
             //List<MeshingGroup> MeshingGroups = CalculateMeshingGroups(graph);
-            List<BajajGeneratorMesh> listBajajMeshGenerators = new List<BajajGeneratorMesh>();
+            List<BajajGeneratorMesh> listBajajMeshGenerators = [];
 
-            List<Task<BajajGeneratorMesh>> meshGenTasks = new List<Task<BajajGeneratorMesh>>();
+            List<Task<BajajGeneratorMesh>> meshGenTasks = [];
 
             //var SimplerPolygon = CreateSimplerPolygonLookup(graph, 2.0);
 
@@ -298,16 +286,16 @@ namespace MorphologyMesh
                 //Trace.WriteLine(string.Format("Creating group {0}", group.ToString()));
 
                 //var sliceTopology = sliceGraph.GetTopology(slice);
-                
+
                 meshGenTasks.Add(Task<BajajGeneratorMesh>.Factory.StartNew(() => new BajajGeneratorMesh(sliceGraph.GetTopology(slice), slice)));
 
-//                BajajGeneratorMesh mesh = new BajajGeneratorMesh(Polygons.Select(p => p.Simplify(1.0)).ToList(), PolyZ, IsUpper);
-  //              listBajajMeshGenerators.Add(mesh);
+                //                BajajGeneratorMesh mesh = new BajajGeneratorMesh(Polygons.Select(p => p.Simplify(1.0)).ToList(), PolyZ, IsUpper);
+                //              listBajajMeshGenerators.Add(mesh);
             }
 
             var meshGenTaskArray = meshGenTasks.ToArray();
             while (meshGenTasks.Any())
-            { 
+            {
                 try
                 {
                     var finishedTask = Task.WhenAny(meshGenTasks);
@@ -332,15 +320,15 @@ namespace MorphologyMesh
                 catch (Exception e)
                 {
                     Trace.WriteLine($"Exception generating mesh {e}");
-                }  
+                }
             }
-             
+
             //listBajajMeshGenerators.AddRange(meshGenTasks.Select(t => t.Result));
 
             listBajajMeshGenerators.Sort(Comparer<BajajGeneratorMesh>.Create((a, b) => a.AverageZ.CompareTo(b.AverageZ)));  //Sorting the bajaj generators before launching tasks is optional but built the model in a predictable order for debug viewing
-            List<Task> bajajTasks = new List<Task>();
+            List<Task> bajajTasks = [];
 
-            BajajGeneratorMesh[] BajajGeneratorMeshArray = listBajajMeshGenerators.ToArray();
+            BajajGeneratorMesh[] BajajGeneratorMeshArray = [.. listBajajMeshGenerators];
             //TODO: THis should be parallelizable
             for (int iMesh = 0; iMesh < BajajGeneratorMeshArray.Length; iMesh++)
             {
@@ -350,14 +338,14 @@ namespace MorphologyMesh
                        try
                        {
                            GenerateFaces(BajajGeneratorMeshArray[(int)i]);
-                           OnMeshGenerated?.Invoke(BajajGeneratorMeshArray[(int)i], true); 
+                           OnMeshGenerated?.Invoke(BajajGeneratorMeshArray[(int)i], true);
                        }
                        catch
                        {
-                           OnMeshGenerated?.Invoke(BajajGeneratorMeshArray[(int)i], false); 
+                           OnMeshGenerated?.Invoke(BajajGeneratorMeshArray[(int)i], false);
                        }
                    }, iMesh));
-                   
+
                 //try
                 //{
                 //GenerateFaces(mesh);
@@ -366,7 +354,7 @@ namespace MorphologyMesh
                 {
                     Trace.WriteLine(string.Format("Exception building mesh {0}:\n{1}", listBajajMeshGenerators[iMesh].ToString(), e));
                     continue;
-                }*/ 
+                }*/
             }
 
             foreach (var t in bajajTasks)
@@ -481,13 +469,13 @@ namespace MorphologyMesh
 
             if (mesh.Slice != null)
             {
-                
+
                 if (mesh.Slice.HasSliceAbove == false)
                     mesh.CapMeshEnd(true);
 
                 if (mesh.Slice.HasSliceBelow == false)
-                    mesh.CapMeshEnd(false); 
-                    
+                    mesh.CapMeshEnd(false);
+
             }
 
             mesh.EnsureFacesHaveExternalNormals();
@@ -496,24 +484,24 @@ namespace MorphologyMesh
 
         private static Dictionary<GridVector2, List<int>> CreatePointToIndexMap(BajajGeneratorMesh mesh)
         {
-            var result = new Dictionary<GridVector2, List<int>>(mesh.Verticies.Count);
+            Dictionary<GridVector2, List<int>> result = new(mesh.Verticies.Count);
             foreach (MorphMeshVertex v in mesh.Verticies)
             {
                 GridVector2 p = v.Position.XY();
-                if(result.ContainsKey(p))
+                if (result.ContainsKey(p))
                 {
                     result[p].Add(v.Index);
                 }
                 else
                 {
-                    result.Add(p, new List<int>(new int[] { v.Index }));
+                    result.Add(p, [v.Index]);
                 }
             }
 
-            return result; 
+            return result;
         }
 
-        public static void AddDelaunayEdges(BajajGeneratorMesh mesh, TriangulationMesh<Vertex2D<List<int>>>.ProgressUpdate OnProgress=null)
+        public static void AddDelaunayEdges(BajajGeneratorMesh mesh, TriangulationMesh<Vertex2D<List<int>>>.ProgressUpdate OnProgress = null)
         {
             Geometry.Meshing.TriangulationMesh<Vertex2D<List<int>>> triMesh = null;
 
@@ -524,46 +512,46 @@ namespace MorphologyMesh
 
             Dictionary<GridVector2, List<int>> pointToIndexMap = CreatePointToIndexMap(mesh);
 
-            Dictionary<int, int> MeshToTriMesh = new Dictionary<int, int>(mesh.Verticies.Count);
-            Dictionary<int, List<int>> TriMeshToMesh = new Dictionary<int, List<int>>(mesh.Verticies.Count);
-             
-            GridVector2[] points = pointToIndexMap.Keys.ToArray();
+            Dictionary<int, int> MeshToTriMesh = new(mesh.Verticies.Count);
+            Dictionary<int, List<int>> TriMeshToMesh = new(mesh.Verticies.Count);
+
+            GridVector2[] points = [.. pointToIndexMap.Keys];
 
             //Adjust the points to the average values to avoid floating point precision errors
             GridVector2 avg = points.Average();
-            GridVector2[] translated_points = points.Select(p => p - avg).ToArray();
+            GridVector2[] translated_points = [.. points.Select(p => p - avg)];
 
-            var verts = points.Select((p,i) => new Vertex2D<List<int>>(translated_points[i], pointToIndexMap[p])).ToArray();
+            var verts = points.Select((p, i) => new Vertex2D<List<int>>(translated_points[i], pointToIndexMap[p])).ToArray();
             triMesh = Geometry.GenericDelaunayMeshGenerator2D<Vertex2D<List<int>>>.TriangulateToMesh(verts, OnProgress);
 
-            foreach(var v in verts)
+            foreach (var v in verts)
             {
                 List<int> listIndicies = v.Data;//pointToIndexMap[v.Position];
-                foreach(int i in listIndicies)
+                foreach (int i in listIndicies)
                 {
                     MeshToTriMesh[i] = v.Index; //Map the mesh vertex ID to the vertex ID in the triangulation.  This can be a many to one mapping for corresponding verticies.
                 }
 
                 TriMeshToMesh[v.Index] = listIndicies; //Map the triangulations vertex ID to the mesh verticies.  This is a one to many mapping for corresponding verticies
             }
-             
+
             var ContourEdges = mesh.MorphEdges.Where(e => e.Type == EdgeType.CONTOUR);
             foreach (var edge in ContourEdges)
             {
                 int A = MeshToTriMesh[edge.A];
                 int B = MeshToTriMesh[edge.B];
-                triMesh.AddConstrainedEdge(new Geometry.Meshing.ConstrainedEdge(A,B), OnProgress);
+                triMesh.AddConstrainedEdge(new Geometry.Meshing.ConstrainedEdge(A, B), OnProgress);
             }
-            
-            foreach(IFace f in triMesh.Faces)
+
+            foreach (IFace f in triMesh.Faces)
             {
                 List<int> A_List = TriMeshToMesh[f.iVerts[0]];
                 List<int> B_List = TriMeshToMesh[f.iVerts[1]];
                 List<int> C_List = TriMeshToMesh[f.iVerts[2]];
 
-                if(A_List.Count == 1 && B_List.Count == 1 && C_List.Count == 1)
+                if (A_List.Count == 1 && B_List.Count == 1 && C_List.Count == 1)
                 {
-                    MorphMeshFace mesh_face = new MorphMeshFace(A_List[0], B_List[0], C_List[0]);
+                    MorphMeshFace mesh_face = new(A_List[0], B_List[0], C_List[0]);
                     mesh.AddFace(mesh_face);
                 }
                 else
@@ -666,116 +654,116 @@ namespace MorphologyMesh
             double[] PolyZ = output.ShapeZ;
             
             */
-            
-            /*Ensure all triangulation points are in the mesh*/
 
-            /*
-            for (int iVert = 0; iVert < vertArray.Length; iVert++)
+        /*Ensure all triangulation points are in the mesh*/
+
+        /*
+        for (int iVert = 0; iVert < vertArray.Length; iVert++)
+        {
+            GridVector2 vert = vertArray[iVert];
+            List<PolygonIndex> listPointIndicies = pointToPoly[vert];
+
+            double[] PointZs = listPointIndicies.Select(p => PolyZ[p.iPoly]).ToArray();
+
+            PolygonIndex pIndex = listPointIndicies[0];
+            GridVector3 vert3 = vert.ToGridVector3(PolyZ[pIndex.iPoly]);
+
+            MorphMeshVertex meshVertex = output.GetOrAddVertex(pIndex, vert3);
+
+            TriIndexToMeshIndex[iVert] = new int[] { meshVertex.Index };
+
+            if (listPointIndicies.Count > 1)
             {
-                GridVector2 vert = vertArray[iVert];
-                List<PolygonIndex> listPointIndicies = pointToPoly[vert];
-
-                double[] PointZs = listPointIndicies.Select(p => PolyZ[p.iPoly]).ToArray();
-
-                PolygonIndex pIndex = listPointIndicies[0];
-                GridVector3 vert3 = vert.ToGridVector3(PolyZ[pIndex.iPoly]);
-
-                MorphMeshVertex meshVertex = output.GetOrAddVertex(pIndex, vert3);
-
-                TriIndexToMeshIndex[iVert] = new int[] { meshVertex.Index };
-
-                if (listPointIndicies.Count > 1)
+                //We have a CORRESPONDING pair on two sections
+                //We need to add these later or they mess up our indexing for faces
+                List<int> meshIndicies = new List<int>
                 {
-                    //We have a CORRESPONDING pair on two sections
-                    //We need to add these later or they mess up our indexing for faces
-                    List<int> meshIndicies = new List<int>
-                    {
-                        meshVertex.Index
-                    };
-                    for (int i = 1; i < listPointIndicies.Count; i++)
-                    {
-                        PolygonIndex pOtherIndex = listPointIndicies[i];
-                        if (pIndex.iPoly == pOtherIndex.iPoly)
-                            continue;
-
-                        GridVector3 otherVert3 = vert.ToGridVector3(PolyZ[pOtherIndex.iPoly]);
-                        MorphMeshVertex correspondingVertex = output.GetOrAddVertex(pOtherIndex, otherVert3);
-                        //CorrespondingVerticies[meshVertex] = correspondingVertex;
-                        meshIndicies.Add(correspondingVertex.Index);
-                    }
-
-                    TriIndexToMeshIndex[iVert] = meshIndicies.ToArray();
-                }
-            }
-
-            //Because we took verticies from mesh the indicies should line up
-            foreach (TriangleNet.Topology.Triangle tri in triMesh.Triangles)
-            {
-                int[] tri_face = new int[] { tri.GetVertexID(0), tri.GetVertexID(1), tri.GetVertexID(2) };
-                int[] face = tri_face.SelectMany(f => TriIndexToMeshIndex[f]).ToArray();
-
-                //Here we need to check for a corresponding edge being involved.  If we don't we can get an edge that should not exist in the mesh that face generation can follow to produce an incorrect mesh
-                //A corresponding edge will have two vertex entries in the table, so we check for four or more verticies in the face to go down this special path
-                if (face.Length > 4)
+                    meshVertex.Index
+                };
+                for (int i = 1; i < listPointIndicies.Count; i++)
                 {
-                    continue;
-                    //throw new NotImplementedException("Unexpected number of faces for Delaunay Triangulation conversion to mesh.  Expected each face to have three edges.");
-                }
-                else if (face.Length == 4)
-                {
-                    */  
-                    /*
-                    This code does generate faces around a corresponding vertex.  However the bajaj code that executes later produces smoother faces around corresponding points so I
-                    do not generate faces for triangles that contain corresponding verticies.
-                    */
-                    /***************
-                    
-                    //We need to make sure the face isn't twisted
-                    List<int> sortedFace = new List<int>(4);
-                    int[] correspondingEdge = tri_face.Where(f => TriIndexToMeshIndex[f].Length > 1).SelectMany(f => TriIndexToMeshIndex[f]).ToArray();
-                    System.Diagnostics.Debug.Assert(correspondingEdge.Length == 2); //I only wrote this for the case of a single corresponding edge.  While possible in theory, the multiple case should not occur in practice
-
-                    EdgeKey correspondingEdgeKey = new EdgeKey(correspondingEdge[0], correspondingEdge[1]);
-
-                    //Once we add two faces to the edge we are done
-                    if (output[correspondingEdgeKey].Faces.Count == 2)
+                    PolygonIndex pOtherIndex = listPointIndicies[i];
+                    if (pIndex.iPoly == pOtherIndex.iPoly)
                         continue;
 
-                    MorphMeshVertex[] CorrespondingVerts = new MorphMeshVertex[] { output.GetVertex(correspondingEdge[0]), output.GetVertex(correspondingEdge[1]) }.OrderBy(v => v.Position.Z).ToArray();
-                    MorphMeshVertex[] OtherVerts = face.Where(f => f != correspondingEdgeKey.A && f != correspondingEdgeKey.B).Select(f => output.GetVertex(f)).OrderBy(f => f.Position.Z).ToArray();
-
-                    int[] vertsA = new int[] { CorrespondingVerts[0].Index, CorrespondingVerts[1].Index, OtherVerts[0].Index };
-                    int[] vertsB = new int[] { OtherVerts[0].Index, CorrespondingVerts[1].Index, OtherVerts[1].Index };
-                    
-                    MorphMeshFace FaceA = new MorphMeshFace(vertsA);
-                    MorphMeshFace FaceB = new MorphMeshFace(vertsB);
-
-                    //output.SplitFace(quadFace);
-                    output.AddFace(FaceA);
-                    output.AddFace(FaceB);
-                    *******************/
-
-                    /*
-
+                    GridVector3 otherVert3 = vert.ToGridVector3(PolyZ[pOtherIndex.iPoly]);
+                    MorphMeshVertex correspondingVertex = output.GetOrAddVertex(pOtherIndex, otherVert3);
+                    //CorrespondingVerticies[meshVertex] = correspondingVertex;
+                    meshIndicies.Add(correspondingVertex.Index);
                 }
-                else
-                {
-                    GridVector2[] verts = tri_face.Select(f => vertArray[f]).ToArray();
 
-                    if (verts.AreClockwise())
-                    {
-                        output.AddFace(new MorphMeshFace(face[1], face[0], face[2]));
-                    }
-                    else
-                    {
-                        output.AddFace(new MorphMeshFace(face));
-                    }
-                }
+                TriIndexToMeshIndex[iVert] = meshIndicies.ToArray();
             }
-
-            return;
         }
+
+        //Because we took verticies from mesh the indicies should line up
+        foreach (TriangleNet.Topology.Triangle tri in triMesh.Triangles)
+        {
+            int[] tri_face = new int[] { tri.GetVertexID(0), tri.GetVertexID(1), tri.GetVertexID(2) };
+            int[] face = tri_face.SelectMany(f => TriIndexToMeshIndex[f]).ToArray();
+
+            //Here we need to check for a corresponding edge being involved.  If we don't we can get an edge that should not exist in the mesh that face generation can follow to produce an incorrect mesh
+            //A corresponding edge will have two vertex entries in the table, so we check for four or more verticies in the face to go down this special path
+            if (face.Length > 4)
+            {
+                continue;
+                //throw new NotImplementedException("Unexpected number of faces for Delaunay Triangulation conversion to mesh.  Expected each face to have three edges.");
+            }
+            else if (face.Length == 4)
+            {
+                */
+        /*
+        This code does generate faces around a corresponding vertex.  However the bajaj code that executes later produces smoother faces around corresponding points so I
+        do not generate faces for triangles that contain corresponding verticies.
         */
+        /***************
+
+        //We need to make sure the face isn't twisted
+        List<int> sortedFace = new List<int>(4);
+        int[] correspondingEdge = tri_face.Where(f => TriIndexToMeshIndex[f].Length > 1).SelectMany(f => TriIndexToMeshIndex[f]).ToArray();
+        System.Diagnostics.Debug.Assert(correspondingEdge.Length == 2); //I only wrote this for the case of a single corresponding edge.  While possible in theory, the multiple case should not occur in practice
+
+        EdgeKey correspondingEdgeKey = new EdgeKey(correspondingEdge[0], correspondingEdge[1]);
+
+        //Once we add two faces to the edge we are done
+        if (output[correspondingEdgeKey].Faces.Count == 2)
+            continue;
+
+        MorphMeshVertex[] CorrespondingVerts = new MorphMeshVertex[] { output.GetVertex(correspondingEdge[0]), output.GetVertex(correspondingEdge[1]) }.OrderBy(v => v.Position.Z).ToArray();
+        MorphMeshVertex[] OtherVerts = face.Where(f => f != correspondingEdgeKey.A && f != correspondingEdgeKey.B).Select(f => output.GetVertex(f)).OrderBy(f => f.Position.Z).ToArray();
+
+        int[] vertsA = new int[] { CorrespondingVerts[0].Index, CorrespondingVerts[1].Index, OtherVerts[0].Index };
+        int[] vertsB = new int[] { OtherVerts[0].Index, CorrespondingVerts[1].Index, OtherVerts[1].Index };
+
+        MorphMeshFace FaceA = new MorphMeshFace(vertsA);
+        MorphMeshFace FaceB = new MorphMeshFace(vertsB);
+
+        //output.SplitFace(quadFace);
+        output.AddFace(FaceA);
+        output.AddFace(FaceB);
+        *******************/
+
+        /*
+
+    }
+    else
+    {
+        GridVector2[] verts = tri_face.Select(f => vertArray[f]).ToArray();
+
+        if (verts.AreClockwise())
+        {
+            output.AddFace(new MorphMeshFace(face[1], face[0], face[2]));
+        }
+        else
+        {
+            output.AddFace(new MorphMeshFace(face));
+        }
+    }
+}
+
+return;
+}
+*/
 
         /*
         /// <summary>
@@ -818,12 +806,12 @@ namespace MorphologyMesh
             }
             */
         }
-           
+
         public static void CompleteCorrespondingVertexFaces(MorphRenderMesh mesh)
         {
             //Corresponding edges should have two faces if they are complete
 
-            MorphMeshEdge[] edges = mesh.MorphEdges.Where(e => e.Type == EdgeType.CORRESPONDING && e.Faces.Count < 2).ToArray();
+            MorphMeshEdge[] edges = [.. mesh.MorphEdges.Where(e => e.Type == EdgeType.CORRESPONDING && e.Faces.Count < 2)];
 
             foreach (MorphMeshEdge edge in edges)
             {
@@ -833,7 +821,7 @@ namespace MorphologyMesh
                 //MorphMeshVertex vUpper = mesh.IsUpperShape[vA.PolyIndex.Value.iPoly] ? vA : vB;
                 //MorphMeshVertex vLower = vUpper == vA ? vB : vA;
 
-                List<MorphMeshVertex> VertsToCheck = new List<MorphMeshVertex>(new MorphMeshVertex[] { vA, vB });
+                List<MorphMeshVertex> VertsToCheck = [vA, vB];
 
                 //TODO: I probably don't need the where statement below because I know the vertex is not face complete because the attached corresponding edge is not complete
                 //I also should probably collect all of the possible faces, then select the option with the smallest perimeter. 
@@ -844,11 +832,11 @@ namespace MorphologyMesh
 
                     List<int> Face = null;
                     Face = mesh.FindAnyCloseableFace(vA.Index, vB, edge, MaxPathLength: 4);
-                    
+
                     //Check for an existing pathway for a face, if it exists, use it to be consistent with the model
                     if (Face?.Count <= 4)
                     {
-                        MorphMeshFace face = new MorphMeshFace(Face);
+                        MorphMeshFace face = new(Face);
                         //mesh.AddFace(face);  //Split face will add the faces, so there is no need to add before we split
 
                         if (Face.Count == 4)
@@ -866,19 +854,19 @@ namespace MorphologyMesh
                         //int iVLower = mesh.IsUpperShape[vA.PolyIndex.Value.iPoly] ? iVB : iVA;
                         //int iVUpper = iVLower == iVB ? iVA : iVB;
 
-                        if(!(v.ShapeIndex is PolygonIndex vPolyIndex))
+                        if (v.ShapeIndex is not PolygonIndex vPolyIndex)
                         {
                             Trace.WriteLine("Cannot close faces between polygons and polylines yet.");
                             break;
                         }
 
-                        if (!(mesh[iVB].ShapeIndex is PolygonIndex vCorrespondingIndex))
-                        { 
+                        if (mesh[iVB].ShapeIndex is not PolygonIndex vCorrespondingIndex)
+                        {
                             Trace.WriteLine("Cannot close faces between polygons and polylines yet.");
-                            break; 
-                        } 
+                            break;
+                        }
 
-                        if(!(mesh.Shapes[vCorrespondingIndex.iPoly] is GridPolygon oppositePolygon))
+                        if (mesh.Shapes[vCorrespondingIndex.iPoly] is not GridPolygon oppositePolygon)
                             throw new ArgumentException("PolygonIndex does not point to a polygon");
 
                         //Check all of the edge cases 
@@ -896,11 +884,11 @@ namespace MorphologyMesh
 
                         if (NNValid)
                         {
-                            int[] TriFace = new int[] { mesh[vPolyIndex.Next].Index, iVA, iVB };
+                            int[] TriFace = [mesh[vPolyIndex.Next].Index, iVA, iVB];
 
-                            MorphMeshFace face = new MorphMeshFace(TriFace);
+                            MorphMeshFace face = new(TriFace);
                             mesh.AddFace(face);
-                            TriFace = new int[] { mesh[vCorrespondingIndex.Next].Index, mesh[vPolyIndex.Next].Index, iVB };
+                            TriFace = [mesh[vCorrespondingIndex.Next].Index, mesh[vPolyIndex.Next].Index, iVB];
                             face = new MorphMeshFace(TriFace);
 
                             if (FaceContainsVerticies(mesh, face, out MorphMeshVertex[] contained_verts) == false)
@@ -912,10 +900,10 @@ namespace MorphologyMesh
 
                         if (NPValid)
                         {
-                            int[] TriFace = new int[] { mesh[vPolyIndex.Next].Index, iVA, iVB };
-                            MorphMeshFace face = new MorphMeshFace(TriFace);
+                            int[] TriFace = [mesh[vPolyIndex.Next].Index, iVA, iVB];
+                            MorphMeshFace face = new(TriFace);
                             mesh.AddFace(face);
-                            TriFace = new int[] { mesh[vCorrespondingIndex.Previous].Index, mesh[vPolyIndex.Next].Index, iVB };
+                            TriFace = [mesh[vCorrespondingIndex.Previous].Index, mesh[vPolyIndex.Next].Index, iVB];
                             face = new MorphMeshFace(TriFace);
                             if (FaceContainsVerticies(mesh, face, out MorphMeshVertex[] contained_verts) == false)
                             {
@@ -926,10 +914,10 @@ namespace MorphologyMesh
 
                         if (PPValid)
                         {
-                            int[] TriFace = new int[] { mesh[vPolyIndex.Previous].Index, iVA, iVB };
-                            MorphMeshFace face = new MorphMeshFace(TriFace);
+                            int[] TriFace = [mesh[vPolyIndex.Previous].Index, iVA, iVB];
+                            MorphMeshFace face = new(TriFace);
                             mesh.AddFace(face);
-                            TriFace = new int[] { mesh[vCorrespondingIndex.Previous].Index, mesh[vPolyIndex.Previous].Index, iVB };
+                            TriFace = [mesh[vCorrespondingIndex.Previous].Index, mesh[vPolyIndex.Previous].Index, iVB];
                             face = new MorphMeshFace(TriFace);
                             if (FaceContainsVerticies(mesh, face, out MorphMeshVertex[] contained_verts) == false)
                             {
@@ -940,10 +928,10 @@ namespace MorphologyMesh
 
                         if (PNValid)
                         {
-                            int[] TriFace = new int[] { mesh[vPolyIndex.Previous].Index, iVA, iVB };
-                            MorphMeshFace face = new MorphMeshFace(TriFace);
+                            int[] TriFace = [mesh[vPolyIndex.Previous].Index, iVA, iVB];
+                            MorphMeshFace face = new(TriFace);
                             mesh.AddFace(face);
-                            TriFace = new int[] { mesh[vCorrespondingIndex.Next].Index, mesh[vPolyIndex.Previous].Index, iVB };
+                            TriFace = [mesh[vCorrespondingIndex.Next].Index, mesh[vPolyIndex.Previous].Index, iVB];
                             face = new MorphMeshFace(TriFace);
                             if (FaceContainsVerticies(mesh, face, out MorphMeshVertex[] contained_verts) == false)
                             {
@@ -954,7 +942,7 @@ namespace MorphologyMesh
 
                         //Once in a while there are not two valid edges to complete the face.  
                         //TODO: This case would be better handled by triangulating verticies contained in the face.  It would solve some of the known failures in mesh generation.
-                        if(nFacesFound == 1)
+                        if (nFacesFound == 1)
                         {
                             break; //This prevents overlapping faces from check the corresponding face
                         }
@@ -1042,27 +1030,27 @@ namespace MorphologyMesh
             GridTriangle tri;
             try
             {
-                tri = new GridTriangle(face.iVerts.Select(i => mesh.Verticies[i].Position.XY()).ToArray());
+                tri = new GridTriangle([.. face.iVerts.Select(i => mesh.Verticies[i].Position.XY())]);
             }
-            catch(ArgumentException)
+            catch (ArgumentException)
             {
                 //A zero size triangle means it cannot contain verticies
-                contained_verts = Array.Empty<MorphMeshVertex>();
+                contained_verts = [];
                 return false;
             }
 
-            contained_verts = mesh.Verticies.Where(v => face.iVerts.Contains(v.Index) == false && tri.Contains(v.Position.XY())).ToArray();
+            contained_verts = [.. mesh.Verticies.Where(v => face.iVerts.Contains(v.Index) == false && tri.Contains(v.Position.XY()))];
             return contained_verts.Length > 0;
         }
 
         public static MorphMeshRegionGraph GenerateRegionConnectionGraph(BajajGeneratorMesh mesh)
         {
-            MorphMeshRegionGraph graph = new MorphMeshRegionGraph();
+            MorphMeshRegionGraph graph = new();
 
             ///----------- Create data structures ---------- 
-            SortedDictionary<int, MorphMeshRegion> VertToRegion = new SortedDictionary<int, MorphMeshRegion>();
-            SortedSet<int> AllRegionVerts = new SortedSet<int>();
-            var RegionToEdges = new Dictionary<MorphMeshRegion, SortedSet<MorphMeshEdge>>();
+            SortedDictionary<int, MorphMeshRegion> VertToRegion = [];
+            SortedSet<int> AllRegionVerts = [];
+            Dictionary<MorphMeshRegion, SortedSet<MorphMeshEdge>> RegionToEdges = [];
 
             foreach (MorphMeshRegion region in mesh.Regions)
             {
@@ -1075,12 +1063,12 @@ namespace MorphologyMesh
 
                 AllRegionVerts.UnionWith(region.Verticies);
                 graph.AddNode(new Node<MorphMeshRegion, MorphMeshRegionGraphEdge>(region));
-                RegionToEdges.Add(region, new SortedSet<MorphMeshEdge>());
+                RegionToEdges.Add(region, []);
             }
 
             //-------------------------------------------------
             //Find all edges that connect regions
-            IEdgeKey[] EdgesConnectingRegions = mesh.Edges.Keys.Where(e => AllRegionVerts.Contains(e.A) && AllRegionVerts.Contains(e.B)).ToArray();
+            IEdgeKey[] EdgesConnectingRegions = [.. mesh.Edges.Keys.Where(e => AllRegionVerts.Contains(e.A) && AllRegionVerts.Contains(e.B))];
 
             //Create edges in the graph
             foreach (IEdgeKey edge in EdgesConnectingRegions)
@@ -1097,7 +1085,7 @@ namespace MorphologyMesh
                 if (RegionA.ZLevel.SetEquals(RegionB.ZLevel))
                     continue;
 
-                MorphMeshRegionGraphEdge graphEdge = new MorphMeshRegionGraphEdge(RegionA, RegionB);
+                MorphMeshRegionGraphEdge graphEdge = new(RegionA, RegionB);
                 if (!graph.Edges.ContainsKey(graphEdge))
                 {
                     graph.AddEdge(graphEdge);
@@ -1116,7 +1104,7 @@ namespace MorphologyMesh
                 var AllAEdges = RegionToEdges[edge.SourceNodeKey];
                 var AllBEdges = RegionToEdges[edge.TargetNodeKey];
 
-                SortedSet<MorphMeshEdge> EdgeSet = new SortedSet<MorphMeshEdge>(AllAEdges);
+                SortedSet<MorphMeshEdge> EdgeSet = [.. AllAEdges];
                 EdgeSet.IntersectWith(AllBEdges);
 
                 //The weight is the mean length of all edges
@@ -1136,10 +1124,9 @@ namespace MorphologyMesh
         /// <returns></returns>
         public static List<MorphMeshVertex> IdentifyIncompleteVerticies(this MorphRenderMesh mesh)
         {
-            return mesh.Verticies.Where(v => v as MorphMeshVertex != null &&
+            return [.. mesh.Verticies.Where(v => v as MorphMeshVertex != null &&
                                         !((MorphMeshVertex)v).IsFaceSurfaceComplete(mesh))
-                                        .Select(v => (MorphMeshVertex)v)
-                                        .ToList();
+                                        .Select(v => (MorphMeshVertex)v)];
         }
 
         #region SliceChordGeneration
@@ -1155,8 +1142,8 @@ namespace MorphologyMesh
         {
             if (BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Shapes, mesh.GetSameLevelShapes(sc), mesh.GetAdjacentLevelShapes(sc), sc.Target, ChordRTree, Tests, out SliceChordTestType failures))
             {
-                
-                var edge = new MorphMeshEdge(EdgeTypeExtensions.GetEdgeType(sc.Line, mesh.Shapes[sc.Origin.iShape], mesh.Shapes[sc.Target.iShape]), mesh[sc.Origin].Index, mesh[sc.Target].Index);
+
+                MorphMeshEdge edge = new(EdgeTypeExtensions.GetEdgeType(sc.Line, mesh.Shapes[sc.Origin.iShape], mesh.Shapes[sc.Target.iShape]), mesh[sc.Origin].Index, mesh[sc.Target].Index);
                 if (mesh.Contains(edge))
                     return false;
 
@@ -1182,16 +1169,16 @@ namespace MorphologyMesh
             SliceChordRTree rTree = mesh.CreateChordTree(ZLevels);
 
             mesh.CloseFaces();
-            List<MorphMeshVertex> IncompleteVerticies = mesh.MorphVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh)).ToList();
+            List<MorphMeshVertex> IncompleteVerticies = [.. mesh.MorphVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh))];
 
-            SliceChordTestType[] PassCriteria = new SliceChordTestType[]
-            {
+            SliceChordTestType[] PassCriteria =
+            [
                 SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4 | SliceChordTestType.LineOrientation,
                 SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4,
                 SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4 | SliceChordTestType.LineOrientation,
                 SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4,
                 //SliceChordTestType.Correspondance | SliceChordTestType.Theorem2 | SliceChordTestType.LineOrientation
-            };
+            ];
 
             //Precalulate the quad treeWithUniqueValues data structures
             var VertexQuadTrees = mesh.CreateQuadTreesForContours();
@@ -1202,7 +1189,7 @@ namespace MorphologyMesh
                 while (SliceChordGenerationPass(mesh, rTree, IncompleteVerticies, passTestCriteria, VertexQuadTrees) == true)
                 {
                     mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
-                    IncompleteVerticies = IncompleteVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh)).ToList();
+                    IncompleteVerticies = [.. IncompleteVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh))];
                 }
             }
 
@@ -1234,7 +1221,7 @@ namespace MorphologyMesh
             */
 
             mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
-            IncompleteVerticies = IncompleteVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh)).ToList();
+            IncompleteVerticies = [.. IncompleteVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh))];
             return IncompleteVerticies;
         }
 
@@ -1244,7 +1231,7 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="mesh">The mesh, which may contain edges we cannot cross</param>
         /// <param name="LevelTree">An optional parameter containing quadtrees for verticies on the upper and lower polygon sets.  It can be calculated once and passed as this parameter or left null and the function will build it.</param>
-        private static bool SliceChordGenerationPass(BajajGeneratorMesh mesh, SliceChordRTree rTree, List<MorphMeshVertex> IncompleteVerticies, SliceChordTestType TestSuite, SliceTopologyQuadTrees<MorphMeshVertex>? LevelTree=null)
+        private static bool SliceChordGenerationPass(BajajGeneratorMesh mesh, SliceChordRTree rTree, List<MorphMeshVertex> IncompleteVerticies, SliceChordTestType TestSuite, SliceTopologyQuadTrees<MorphMeshVertex>? LevelTree = null)
         {
 
             if (LevelTree.HasValue == false)
@@ -1258,7 +1245,7 @@ namespace MorphologyMesh
 
             ///Starting with the shortest chord, add all of the slice chords that do not intersect an existing chord
             //SliceChordRTree AddedChords = rTree;//new RTree.RTree<SliceChord>();
-            CandidateChords = CandidateChords.OrderBy(sc => sc.Line.Length).ToList();
+            CandidateChords = [.. CandidateChords.OrderBy(sc => sc.Line.Length)];
 
             bool addedChord = false;
             int numAdded = 0;
@@ -1281,11 +1268,10 @@ namespace MorphologyMesh
         /// <summary>
         /// Using the existing slice chords determine if any faces can be added using existing edges
         /// </summary>
-        public static void FirstPassFaceGeneration(MorphRenderMesh mesh, List<MorphMeshVertex> incompleteVerts=null)
+        public static void FirstPassFaceGeneration(MorphRenderMesh mesh, List<MorphMeshVertex> incompleteVerts = null)
         {
             //We know that all faces have a contour as part of the triangle
-            if (incompleteVerts is null)
-                incompleteVerts = new List<MorphMeshVertex>(IdentifyIncompleteVerticies(mesh));
+            incompleteVerts ??= [.. IdentifyIncompleteVerticies(mesh)];
 
             while (incompleteVerts.Count > 0)
             {
@@ -1295,7 +1281,7 @@ namespace MorphologyMesh
                 List<int> face_path = mesh.IdentifyIncompleteFace(v, MaxFaceVerts: 4);
                 if (face_path != null && face_path.Count <= 4)
                 {
-                    MorphMeshFace face = new MorphMeshFace(face_path);
+                    MorphMeshFace face = new(face_path);
                     if (face.IsTriangle)
                     {
                         mesh.AddFace(face);
@@ -1303,7 +1289,7 @@ namespace MorphologyMesh
                     else if (face.IsQuad)
                     {
                         var verts = mesh[face_path].ToArray();
-                        double[] VertZLevels = verts.Select(vert => vert.Position.Z).Distinct().ToArray();
+                        double[] VertZLevels = [.. verts.Select(vert => vert.Position.Z).Distinct()];
 
                         //This was changed just before I quit for the night
                         //int NumVertZLevels = verts.Where(vert => vert.Position.Z == VertZLevels[0]).Count();
@@ -1326,15 +1312,10 @@ namespace MorphologyMesh
                                 anchor = LevelA[0];
                                 //opposite_verts = LevelB;
                             }
-                            else if (LevelB.Length == 1)
-                            {
-                                anchor = LevelB[0];
-                                //opposite_verts = LevelA;
-                            }
                             else
                             {
-                                anchor = LevelA.Any() ? LevelA[0] : LevelB[0];
-                                //throw new InvalidOperationException("Can't find the anchor vertex for quad face");
+                                anchor = LevelB.Length == 1 ? LevelB[0] : LevelA.Any() ? LevelA[0] : LevelB[0];
+                                //opposite_verts = LevelA;
                             }
 
                             int iFaceAnchor = face_path.IndexOf(anchor.Index);
@@ -1357,8 +1338,8 @@ namespace MorphologyMesh
                             int B = face_path[iB];
                             int C = face_path[iC];
 
-                            MorphMeshFace XAB = new MorphMeshFace(O, A, B);
-                            MorphMeshFace XBC = new MorphMeshFace(O, B, C);
+                            MorphMeshFace XAB = new(O, A, B);
+                            MorphMeshFace XBC = new(O, B, C);
 
                             mesh.AddFace(XAB);
                             mesh.AddFace(XBC);
@@ -1389,7 +1370,7 @@ namespace MorphologyMesh
         /// <returns></returns>
         public static List<SliceChord> CreateChordCandidateList(MorphRenderMesh mesh, OTVTable OTVTable)
         {
-            List<SliceChord> CandidateChords = new List<SliceChord>();
+            List<SliceChord> CandidateChords = [];
 
             //Create a sorted list of proposed chord lengths
             foreach (IShapeIndex i1 in OTVTable.Keys)
@@ -1401,13 +1382,13 @@ namespace MorphologyMesh
 
                     if (p1 != p2)
                     {
-                        SliceChord sc = new SliceChord(i1, i2, mesh.Shapes);
+                        SliceChord sc = new(i1, i2, mesh.Shapes);
                         CandidateChords.Add(sc);
                     }
                     else
                     {
                         //This is a corresponding contour, both at the same X,Y position, add it to our list.
-                        var edge = new MorphMeshEdge(EdgeType.CORRESPONDING, mesh[i1].Index, mesh[i2].Index);
+                        MorphMeshEdge edge = new(EdgeType.CORRESPONDING, mesh[i1].Index, mesh[i2].Index);
                         mesh.AddEdge(edge);
                     }
                 }
@@ -1425,7 +1406,7 @@ namespace MorphologyMesh
         /// <returns></returns>
         private static List<SliceChord> CreateChordCandidateList(MorphRenderMesh mesh, ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex> OTVTable)
         {
-            List<SliceChord> CandidateChords = new List<SliceChord>();
+            List<SliceChord> CandidateChords = [];
 
             //Create a sorted list of proposed chord lengths
             foreach (MorphMeshVertex i1 in OTVTable.Keys)
@@ -1437,13 +1418,13 @@ namespace MorphologyMesh
 
                     if (p1 != p2)
                     {
-                        SliceChord sc = new SliceChord(i1.ShapeIndex, i2.ShapeIndex, mesh.Shapes);
+                        SliceChord sc = new(i1.ShapeIndex, i2.ShapeIndex, mesh.Shapes);
                         CandidateChords.Add(sc);
                     }
                     else
                     {
                         //This is a corresponding contour, both at the same X,Y position, add it to our list.
-                        var edge = new MorphMeshEdge(EdgeType.CORRESPONDING, i1.Index, i2.Index);
+                        MorphMeshEdge edge = new(EdgeType.CORRESPONDING, i1.Index, i2.Index);
                         mesh.AddEdge(edge);
                     }
                 }
@@ -1465,17 +1446,12 @@ namespace MorphologyMesh
         {
             List<SliceChord> CandidateChords = CreateChordCandidateList(mesh, OTVTable);
 
-            switch (priority)
+            CandidateChords = priority switch
             {
-                case SliceChordPriority.Distance:
-                    CandidateChords = CandidateChords.OrderBy(sc => sc.Line.Length).ToList();
-                    break;
-                case SliceChordPriority.Orientation:
-                    CandidateChords = CandidateChords.OrderBy(sc => EdgeTypeExtensions.Orientation(sc.Origin, sc.Target, mesh.Shapes)).ToList();
-                    break;
-                default:
-                    throw new ArgumentException("Unexpected slice chord priority");
-            }
+                SliceChordPriority.Distance => [.. CandidateChords.OrderBy(sc => sc.Line.Length)],
+                SliceChordPriority.Orientation => [.. CandidateChords.OrderBy(sc => EdgeTypeExtensions.Orientation(sc.Origin, sc.Target, mesh.Shapes))],
+                _ => throw new ArgumentException("Unexpected slice chord priority"),
+            };
 
             //List<SliceChord> NovelCandidateChords = CandidateChords.Where(sc => !mesh.IsAnEdge(mesh[sc.Origin].Index, mesh[sc.Target].Index)).ToList();
 
@@ -1491,11 +1467,11 @@ namespace MorphologyMesh
 
 
         #endregion
-                
+
         private static void AddIndexSetToMeshIndexMap(Dictionary<GridVector3, long> map, Geometry.Meshing.Mesh3D<IVertex3D<ulong>> mesh, Geometry.IIndexSet set)
         {
-            Geometry.Meshing.IVertex3D[] verts = mesh[set].ToArray();
-            long[] mesh_indicies = set.ToArray();
+            Geometry.Meshing.IVertex3D[] verts = [.. mesh[set]];
+            long[] mesh_indicies = [.. set];
 
             for (int iVert = 0; iVert < mesh_indicies.Length; iVert++)
             {
@@ -1511,7 +1487,7 @@ namespace MorphologyMesh
         /// <returns></returns>
         private static Dictionary<GridVector3, long> CreateVertexToMeshIndexMap(Geometry.Meshing.Mesh3D<IVertex3D<ulong>> mesh, IEnumerable<ConnectionVerticies> ports)
         {
-            Dictionary<GridVector3, long> map = new Dictionary<GridVector3, long>();
+            Dictionary<GridVector3, long> map = [];
 
             foreach (ConnectionVerticies port in ports)
             {
@@ -1526,11 +1502,8 @@ namespace MorphologyMesh
             return map;
         }
 
-        public static bool Theorem1()
-        {
-            throw new NotImplementedException();
-        }
-        
+        public static bool Theorem1() => throw new NotImplementedException();
+
         /// <summary>
         /// Theorem2 requires that the orientation of the contours connected by the slice chord match. 
         /// </summary>
@@ -1540,11 +1513,11 @@ namespace MorphologyMesh
         /// <returns></returns>
         public static bool Theorem2(IReadOnlyList<IShape2D> Polygons, IShapeIndex vertex, IShapeIndex NearestContour)
         {
-            if(!(vertex is PolygonIndex v && NearestContour is PolygonIndex nc))
+            if (!(vertex is PolygonIndex v && NearestContour is PolygonIndex nc))
                 return true; //Polylines do not have an orientation since they are visible from both sides
 
             //return EdgeTypeExtensions.OrientationsAreMatched(vertex, NearestContour, Polygons);
-            
+
             GridVector2 p1 = vertex.Point(Polygons);
             GridVector2 p2 = NearestContour.Point(Polygons);
 
@@ -1554,7 +1527,7 @@ namespace MorphologyMesh
             }
             else
             {
-                GridLineSegment SliceChord = new GridLineSegment(p1, p2);
+                GridLineSegment SliceChord = new(p1, p2);
 
                 bool MatchingOrientations = vertex.IsInner == NearestContour.IsInner;
                 /*
@@ -1575,30 +1548,30 @@ namespace MorphologyMesh
                 }*/
 
                 GridVector2[] adjacent1 = nc.ConnectedVerticies(Polygons);
-                GridVector2[] pqr = new GridVector2[] { adjacent1[0], p2, adjacent1[1] };
+                GridVector2[] pqr = [adjacent1[0], p2, adjacent1[1]];
 
                 GridVector2[] adjacent2 = v.ConnectedVerticies(Polygons);
-                GridVector2[] mno = new GridVector2[] { adjacent2[0], p1, adjacent2[1] };
+                GridVector2[] mno = [adjacent2[0], p1, adjacent2[1]];
 
                 bool IsCorrectSide = p1.IsLeftSide(pqr) != p2.IsLeftSide(mno);
-                
-                if(!MatchingOrientations)
+
+                if (!MatchingOrientations)
                 {
-                    return !IsCorrectSide; 
+                    return !IsCorrectSide;
                 }
 
                 return IsCorrectSide;
             }
-            
+
         }
 
         public static bool Theorem4(IReadOnlyList<IShape2D> sliceShapes, IShapeIndex NearestContour, GridVector2 p1)
         {
             GridVector2 p2 = NearestContour.Point(sliceShapes);
 
-            GridLineSegment ContourLine = new GridLineSegment(p1, p2);
+            GridLineSegment ContourLine = new(p1, p2);
 
-            foreach(IShape2D poly in sliceShapes)
+            foreach (IShape2D poly in sliceShapes)
             {
                 if (!Theorem4(poly, ContourLine))
                     return false;
@@ -1615,7 +1588,7 @@ namespace MorphologyMesh
         /// <param name="line"></param>
         /// <returns></returns>
         public static bool Theorem4(IReadOnlyList<IShape2D> shapes, GridLineSegment line)
-        {  
+        {
             foreach (IShape2D shape in shapes)
             {
                 if (!Theorem4(shape, line))
@@ -1634,10 +1607,10 @@ namespace MorphologyMesh
         /// <returns></returns>
         public static bool Theorem4(IShape2D shape, GridLineSegment line)
         {
-            if(shape is GridPolygon poly )
+            if (shape is GridPolygon poly)
                 return !LineIntersectionExtensions.Intersects(line, poly, true, out List<GridVector2> intersections);
 
-            if(shape is GridPolyline polyline)
+            if (shape is GridPolyline polyline)
                 return !polyline.Intersects(line);
 
             throw new NotImplementedException();
@@ -1666,7 +1639,7 @@ namespace MorphologyMesh
             if (p1 == p2)
                 return true;
 
-            GridLineSegment ChordLine = new GridLineSegment(p1, p2);
+            GridLineSegment ChordLine = new(p1, p2);
 
             if ((TestsToRun & SliceChordTestType.ChordIntersection) > 0)
             {
@@ -1678,7 +1651,7 @@ namespace MorphologyMesh
                 }
             }
 
-            if((TestsToRun & SliceChordTestType.EdgeType) > 0)
+            if ((TestsToRun & SliceChordTestType.EdgeType) > 0)
             {
                 EdgeType edgeType = EdgeTypeExtensions.GetEdgeType(vertex, candidate, Shapes, ChordLine.PointAlongLine(0.5));
                 if (!edgeType.IsValid())
@@ -1694,7 +1667,7 @@ namespace MorphologyMesh
             bool T4 = true;
             bool T4Opp = true;
 
-            if((TestsToRun & SliceChordTestType.LineOrientation) > 0)
+            if ((TestsToRun & SliceChordTestType.LineOrientation) > 0)
             {
                 AngleOrientation = EdgeTypeExtensions.OrientationsAreMatched(vertex, candidate, Shapes);
                 if (!AngleOrientation)
@@ -1712,7 +1685,7 @@ namespace MorphologyMesh
                     results |= SliceChordTestType.Theorem2;
                     return false;
                 }
-                    
+
             }
 
             //bool T2 = true;
@@ -1744,7 +1717,7 @@ namespace MorphologyMesh
             failures = SliceChordTestType.None;
             if (candidate.FacesAreComplete)
                 return false;
-             
+
             return IsSliceChordValid(vertex.ShapeIndex, mesh.Shapes, SameLevelShapes, AdjacentLevelShapes, candidate.ShapeIndex, chordTree, TestsToRun, out failures);
 
             /*
@@ -1826,13 +1799,13 @@ namespace MorphologyMesh
         {
             GridVector2 p = vertex.Point(Polygons);
 
-            List<SliceChord> listValid = new List<SliceChord>();
+            List<SliceChord> listValid = [];
 
-            foreach(PolygonIndex opposite in OppositeVerticies)
+            foreach (PolygonIndex opposite in OppositeVerticies)
             {
                 if (IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelPolys, opposite, chordTree, TestsToRun, out SliceChordTestType failures))
                 {
-                    SliceChord sc = new SliceChord(vertex, opposite, Polygons);
+                    SliceChord sc = new(vertex, opposite, Polygons);
                     listValid.Add(sc);
                 }
             }
@@ -1872,14 +1845,14 @@ namespace MorphologyMesh
             while (true)
             {
                 if (iNextTest >= oppositeVertexTreeWithUniqueValues.Count)
-                    return new PolygonIndex?(); 
+                    return new PolygonIndex?();
 
-                if((NearestList is null || iNextTest >= NearestList.Count))
+                if ((NearestList is null || iNextTest >= NearestList.Count))
                 {
                     BatchSize *= BatchMultiple;
                     NearestList = oppositeVertexTreeWithUniqueValues.FindNearestPoints(p, BatchSize);
 
-                    if(NearestList.Count < BatchSize && iNextTest >= NearestList.Count)
+                    if (NearestList.Count < BatchSize && iNextTest >= NearestList.Count)
                     {
                         return new PolygonIndex?();
                     }
@@ -1894,7 +1867,7 @@ namespace MorphologyMesh
                 }
 
                 iNextTest++;
-            }            
+            }
         }
 
         /// <summary>
@@ -1959,7 +1932,7 @@ namespace MorphologyMesh
 
                     if (testPoint.FacesAreComplete == false) //An optimization from profiling. 
                     {
-                        if(KnownCandidateFailures != null)
+                        if (KnownCandidateFailures != null)
                         {
                             if (KnownCandidateFailures.GetFailures(testPoint.Index, TestsToRun) != SliceChordTestType.None) //Check if another pass checked any of these test conditions and already failed
                             {
@@ -1971,7 +1944,7 @@ namespace MorphologyMesh
                         if (IsSliceChordValid(mesh, vertex, SameLevelShapes, AdjacentLevelShapes, testPoint, chordTree, TestsToRun, out failures))
                             return testPoint;
                         else
-                        { 
+                        {
                             KnownCandidateFailures?.RecordFailure(NearestPoint.Index, failures); //Record the failure for any future passes
                         }
                     }
@@ -1989,13 +1962,13 @@ namespace MorphologyMesh
         /// <returns></returns>
         private static SortedList<int, List<IShape2D>> ShapeByLevel(IShape2D[] polys, double[] ShapeZ)
         {
-            SortedList<int, List<IShape2D>> levels = new SortedList<int, List<IShape2D>>();
+            SortedList<int, List<IShape2D>> levels = [];
 
-            List<int> ZLevels = ShapeZ.Distinct().Select(z => (int)z).ToList();
+            List<int> ZLevels = [.. ShapeZ.Distinct().Select(z => (int)z)];
 
             foreach (int Z in ZLevels)
             {
-                List<IShape2D> level = polys.Where((p, i) => ShapeZ[i] == Z).ToList();
+                List<IShape2D> level = [.. polys.Where((p, i) => ShapeZ[i] == Z)];
                 levels.Add(Z, level);
             }
 
@@ -2005,13 +1978,13 @@ namespace MorphologyMesh
         private static SortedList<int, List<IShape2D>> ShapeByLevel(this MorphRenderMesh mesh)
         {
             //TODO:  MorphRenderMesh should simply organize the Polygons as a hash table keyed on Z with a list of polygons for each Z value
-            SortedList<int, List<IShape2D>> levels = new SortedList<int, List<IShape2D>>();
+            SortedList<int, List<IShape2D>> levels = [];
 
-            List<int> ZLevels = mesh.ShapeZ.Distinct().Select(z => (int)z).ToList();
+            List<int> ZLevels = [.. mesh.ShapeZ.Distinct().Select(z => (int)z)];
 
             foreach (int Z in ZLevels)
             {
-                List<IShape2D> level = mesh.Shapes.Where((p, i) => mesh.ShapeZ[i] == Z).ToList();
+                List<IShape2D> level = [.. mesh.Shapes.Where((p, i) => mesh.ShapeZ[i] == Z)];
                 levels.Add(Z, level);
             }
 
@@ -2082,7 +2055,7 @@ namespace MorphologyMesh
         /// <param name="PolyZ"></param>
         /// <param name="OTVTable"></param>
         public static void CreateOptimalTilingVertexTable(IEnumerable<IShapeIndex> VerticiesToMap, IShape2D[] shapes, bool[] IsUpperShape, SliceChordTestType TestsToRun, out OTVTable OTVTable, ref SliceChordRTree chordTree)
-         {
+        {
             SliceTopologyQuadTrees<IShapeIndex> LevelTree = CreateQuadTreesForShapes(shapes, IsUpperShape);
 
             ////////////////////////////////////////////////////
@@ -2092,11 +2065,11 @@ namespace MorphologyMesh
 
         public static void CreateOptimalTilingVertexTable(IEnumerable<IShapeIndex> VerticiesToMap, IShape2D[] polygons, bool[] IsUpperShape, SliceTopologyQuadTrees<IShapeIndex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
                                                           out OTVTable Table, ref SliceChordRTree chordTree)
-        { 
+        {
             Table = new OTVTable();
 
-            List<IShape2D> UpperPolygons = polygons.Where((poly, i) => IsUpperShape[i]).ToList();
-            List<IShape2D> LowerPolygons = polygons.Where((poly, i) => false == IsUpperShape[i]).ToList();
+            List<IShape2D> UpperPolygons = [.. polygons.Where((poly, i) => IsUpperShape[i])];
+            List<IShape2D> LowerPolygons = [.. polygons.Where((poly, i) => false == IsUpperShape[i])];
 
             foreach (var shapeGroup in VerticiesToMap.GroupBy(v => v.iShape))
             {
@@ -2113,7 +2086,7 @@ namespace MorphologyMesh
                 {
                     GridVector2 p1 = i.Point(shape);
                     IShapeIndex NearestOnOtherLevel = FindOptimalTilingForVertexByDistance(i, polygons, sameLevelShapes, adjacentLevelShapes, oppositeTreeWithUniqueValues, chordTree, TestsToRun);
-                    if (!(NearestOnOtherLevel is null))
+                    if (NearestOnOtherLevel is not null)
                     {
                         Table.TryAdd(i, NearestOnOtherLevel);
                     }
@@ -2121,7 +2094,7 @@ namespace MorphologyMesh
             }
         }
 
-        
+
 
         /// <summary>
         /// Find the optimal tiling vertex for the passed verticies
@@ -2140,9 +2113,9 @@ namespace MorphologyMesh
 
         public static void CreateOptimalTilingVertexTable(this BajajGeneratorMesh mesh, IEnumerable<MorphMeshVertex> VerticiesToMap, SliceTopologyQuadTrees<MorphMeshVertex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
                                                           out ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex> OTVTable, ref SliceChordRTree chordTree)
-        { 
+        {
             OTVTable = new ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex>();
-                         
+
             foreach (var polygroup in VerticiesToMap.GroupBy(v => v.ShapeIndex.iShape))
             {
                 int iPoly = polygroup.Key;
@@ -2200,26 +2173,26 @@ namespace MorphologyMesh
             QuadTreeWithUniqueValues<MorphMeshVertex> Above = BuildQuadTreeForPolyGroup(mesh, mesh.UpperShapeIndicies);
             QuadTreeWithUniqueValues<MorphMeshVertex> Below = BuildQuadTreeForPolyGroup(mesh, mesh.LowerShapeIndicies);
 
-            return new SliceTopologyQuadTrees<MorphMeshVertex>(Above, Below, mesh.UpperShapeIndicies, mesh.LowerShapeIndicies); 
+            return new SliceTopologyQuadTrees<MorphMeshVertex>(Above, Below, mesh.UpperShapeIndicies, mesh.LowerShapeIndicies);
         }
 
         private static QuadTreeWithUniqueValues<MorphMeshVertex> BuildQuadTreeForPolyGroup(BajajGeneratorMesh mesh, IReadOnlyList<int> polyset)
         {
-            if(polyset.Count == 0)
+            if (polyset.Count == 0)
             {
                 return new QuadTreeWithUniqueValues<MorphMeshVertex>();
             }
 
-            var ShapesOnLevel = polyset.Select(iPoly => mesh.Shapes[iPoly]); 
+            var ShapesOnLevel = polyset.Select(iPoly => mesh.Shapes[iPoly]);
             GridRectangle bbox = ShapesOnLevel.BoundingBox();
             bbox = GridRectangle.Scale(bbox, 1.05);
-            QuadTreeWithUniqueValues<MorphMeshVertex> quadTreeWithUniqueValues = new QuadTreeWithUniqueValues<MorphMeshVertex>(bbox);
+            QuadTreeWithUniqueValues<MorphMeshVertex> quadTreeWithUniqueValues = new(bbox);
 
-            var Verts = mesh.MorphVerticies.Where(v => v.Type == VertexOrigin.CONTOUR && !(v.ShapeIndex is null) && polyset.Contains(v.ShapeIndex.iShape));
+            var Verts = mesh.MorphVerticies.Where(v => v.Type == VertexOrigin.CONTOUR && v.ShapeIndex is not null && polyset.Contains(v.ShapeIndex.iShape));
             foreach (var vertex in Verts)
             {
                 quadTreeWithUniqueValues.TryAdd(vertex.Position.XY(), vertex);
-            } 
+            }
 
             return quadTreeWithUniqueValues;
         }
@@ -2239,18 +2212,18 @@ namespace MorphologyMesh
             var UpperPolyData = upper_lower_groups.First(group => group.Key == true).Select(group => group);
             var LowerPolyData = upper_lower_groups.First(group => group.Key == false).Select(group => group);
 
-            var UpperPolyIndicies = UpperPolyData.Select(data => data.index).ToImmutableArray();
-            var LowerPolyIndicies = LowerPolyData.Select(data => data.index).ToImmutableArray();
+            ImmutableArray<int> UpperPolyIndicies = [.. UpperPolyData.Select(data => data.index)];
+            ImmutableArray<int> LowerPolyIndicies = [.. LowerPolyData.Select(data => data.index)];
 
-            QuadTreeWithUniqueValues<IShapeIndex> Above = BuildQuadTreeForPolyGroup(UpperPolyData.Select(data => data.shape).ToArray(),
+            QuadTreeWithUniqueValues<IShapeIndex> Above = BuildQuadTreeForPolyGroup([.. UpperPolyData.Select(data => data.shape)],
                                                                                     UpperPolyIndicies);
 
-            QuadTreeWithUniqueValues<IShapeIndex> Below = BuildQuadTreeForPolyGroup(LowerPolyData.Select(data => data.shape).ToArray(),
+            QuadTreeWithUniqueValues<IShapeIndex> Below = BuildQuadTreeForPolyGroup([.. LowerPolyData.Select(data => data.shape)],
                                                                                     LowerPolyIndicies);
 
             return new SliceTopologyQuadTrees<IShapeIndex>(Above, Below, UpperPolyIndicies, LowerPolyIndicies);
         }
-        
+
         /// <summary>
         /// 
         /// </summary>
@@ -2261,22 +2234,22 @@ namespace MorphologyMesh
         {
             GridRectangle bbox = ShapesOnLevel.BoundingBox();
             bbox = GridRectangle.Scale(bbox, 1.05);
-            QuadTreeWithUniqueValues<IShapeIndex> quadTreeWithUniqueValues = new QuadTreeWithUniqueValues<IShapeIndex>(bbox);
+            QuadTreeWithUniqueValues<IShapeIndex> quadTreeWithUniqueValues = new(bbox);
 
-            for(int i = 0; i < ShapesOnLevel.Length; i++)
+            for (int i = 0; i < ShapesOnLevel.Length; i++)
             {
                 int iShape = iPolyLookup[i];
                 IShape2D shape = ShapesOnLevel[i];
 
-                if(shape is GridPolygon poly)
-                { 
+                if (shape is GridPolygon poly)
+                {
                     foreach (PolygonIndex pIndex in new PolygonVertexEnum(poly, iShape))
                     {
                         GridVector2 p1 = pIndex.Point(poly);
                         quadTreeWithUniqueValues.Add(p1, pIndex);
                     }
                 }
-                else if(shape is GridPolyline line)
+                else if (shape is GridPolyline line)
                 {
                     foreach (PolylineIndex pIndex in new PolylineVertexEnum(line, iShape))
                     {
@@ -2288,7 +2261,7 @@ namespace MorphologyMesh
 
             return quadTreeWithUniqueValues;
         }
-        
+
         /*
         /// <summary>
         /// Build a QuadTreeWithUniqueValues for each Z level containing all points in the polygons on that level
@@ -2331,11 +2304,11 @@ namespace MorphologyMesh
         /// <param name="PolysOnLevel"></param>
         /// <param name="iPolyLookup">Index of polygon we should use for PointIndex creation</param>
         /// <returns></returns>
-        private static QuadTreeWithUniqueValues<PolygonIndex> BuildQuadTreeForPolyGroup(IEnumerable<PolygonIndex> Candidates, IReadOnlyList<GridPolygon> PointIndexablePolygons,  GridPolygon[] PolysOnLevel)
+        private static QuadTreeWithUniqueValues<PolygonIndex> BuildQuadTreeForPolyGroup(IEnumerable<PolygonIndex> Candidates, IReadOnlyList<GridPolygon> PointIndexablePolygons, GridPolygon[] PolysOnLevel)
         {
             GridRectangle bbox = PolysOnLevel.BoundingBox();
             bbox = GridRectangle.Scale(bbox, 1.05);
-            QuadTreeWithUniqueValues<PolygonIndex> quadTreeWithUniqueValues = new QuadTreeWithUniqueValues<PolygonIndex>(bbox);
+            QuadTreeWithUniqueValues<PolygonIndex> quadTreeWithUniqueValues = new(bbox);
 
             foreach (var VertGroup in Candidates.GroupBy(p => p.iPoly))
             {
@@ -2350,6 +2323,6 @@ namespace MorphologyMesh
             }
 
             return quadTreeWithUniqueValues;
-        } 
+        }
     }
-} 
+}

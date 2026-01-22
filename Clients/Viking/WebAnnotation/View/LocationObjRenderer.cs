@@ -89,31 +89,31 @@ namespace WebAnnotation
             {
                 if (typeGroup.Key == typeof(LocationOpenCurveView))
                 {
-                    LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationOpenCurveView>().ToArray());
+                    LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationOpenCurveView>()]);
                 }
                 else if (typeGroup.Key == typeof(LocationClosedCurveView))
                 {
-                    LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationClosedCurveView>().ToArray());
+                    LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationClosedCurveView>()]);
                 }
                 else if (typeGroup.Key == typeof(LocationPolygonView))
                 {
-                    LocationPolygonView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationPolygonView>().ToArray());
+                    LocationPolygonView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationPolygonView>()]);
                 }
                 else if (typeGroup.Key == typeof(LocationLineView))
                 {
-                    LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<LocationLineView>().ToArray());
+                    LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationLineView>()]);
                 }
                 else if (typeGroup.Key == typeof(LocationCircleView))
                 {
-                    LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, typeGroup.Cast<LocationCircleView>().ToArray());
+                    LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationCircleView>()]);
                 }
                 else if (typeGroup.Key == typeof(AdjacentLocationCircleView))
                 {
-                    AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, typeGroup.Cast<AdjacentLocationCircleView>().ToArray(), VisibleSectionNumber);
+                    AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, [.. typeGroup.Cast<AdjacentLocationCircleView>()], VisibleSectionNumber);
                 }
                 else if (typeGroup.Key == typeof(AdjacentLocationLineView))
                 {
-                    AdjacentLocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<AdjacentLocationLineView>().ToArray(), VisibleSectionNumber);
+                    AdjacentLocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, [.. typeGroup.Cast<AdjacentLocationLineView>()], VisibleSectionNumber);
                 }
                 else
                 {
@@ -133,31 +133,31 @@ namespace WebAnnotation
             {
                 if (typeGroup.Key == typeof(LocationOpenCurveView))
                 {
-                    LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationOpenCurveView>().ToArray());
+                    LocationOpenCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationOpenCurveView>()]);
                 }
                 else if (typeGroup.Key == typeof(LocationClosedCurveView))
                 {
-                    LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationClosedCurveView>().ToArray());
+                    LocationClosedCurveView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationClosedCurveView>()]);
                 }
                 else if (typeGroup.Key == typeof(LocationPolygonView))
                 {
-                    LocationPolygonView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, typeGroup.Cast<LocationPolygonView>().ToArray());
+                    LocationPolygonView.Draw(graphicsDevice, Scene, overlayCurveManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationPolygonView>()]);
                 }
                 else if (typeGroup.Key == typeof(LocationLineView))
                 {
-                    LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<LocationLineView>().ToArray());
+                    LocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationLineView>()]);
                 }
                 else if (typeGroup.Key == typeof(LocationCircleView))
                 {
-                    LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, typeGroup.Cast<LocationCircleView>().ToArray());
+                    LocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, [.. typeGroup.Cast<LocationCircleView>()]);
                 }
                 else if (typeGroup.Key == typeof(AdjacentLocationCircleView))
                 {
-                    AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, typeGroup.Cast<AdjacentLocationCircleView>().ToArray(), VisibleSectionNumber);
+                    AdjacentLocationCircleView.Draw(graphicsDevice, Scene, basicEffect, overlayEffect, [.. typeGroup.Cast<AdjacentLocationCircleView>()], VisibleSectionNumber);
                 }
                 else if (typeGroup.Key == typeof(AdjacentLocationLineView))
                 {
-                    AdjacentLocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, typeGroup.Cast<AdjacentLocationLineView>().ToArray(), VisibleSectionNumber);
+                    AdjacentLocationLineView.Draw(graphicsDevice, Scene, overlayLineManager, basicEffect, overlayEffect, [.. typeGroup.Cast<AdjacentLocationLineView>()], VisibleSectionNumber);
                 }
                 else
                 {
@@ -212,7 +212,7 @@ namespace WebAnnotation
             topRow = topRow.TrimEnd();
             bottomRow = bottomRow.TrimEnd();
 
-            return new string[] { topRow, bottomRow };
+            return [topRow, bottomRow];
         }
     }
 }

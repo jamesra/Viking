@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Geometry.Meshing;
 using System;
 using System.Collections.Generic;
@@ -6,49 +6,23 @@ using System.Linq;
 
 namespace Geometry
 {
-    public class MedialAxisEdge : GraphLib.Edge<GridVector2>
+    public class MedialAxisEdge(GridVector2 SourceNode, GridVector2 TargetNode) : GraphLib.Edge<GridVector2>(SourceNode, TargetNode, false)
     {
-        public MedialAxisEdge(GridVector2 SourceNode, GridVector2 TargetNode) : base(SourceNode, TargetNode, false)
-        {
-        }
-
-        public GridLineSegment Line => new GridLineSegment(this.SourceNodeKey, this.TargetNodeKey);
+        public GridLineSegment Line => new(this.SourceNodeKey, this.TargetNodeKey);
     }
 
-    public class MedialAxisVertex : GraphLib.Node<GridVector2, MedialAxisEdge>
+    public class MedialAxisVertex(GridVector2 k) : GraphLib.Node<GridVector2, MedialAxisEdge>(k)
     {
-        public MedialAxisVertex(GridVector2 k) : base(k)
-        {
-        }
-
-        public override string ToString()
-        {
-            return Key.ToString();
-        }
+        public override string ToString() => Key.ToString();
     }
 
     public class MedialAxisGraph : GraphLib.Graph<GridVector2, MedialAxisVertex, MedialAxisEdge>
     {
-        public GridVector2 FindStartForBoundarySearch(GridPolygon[] shapes)
-        {
-            return Nodes.First(v => shapes.All(shape => !shape.Contains(v.Key))).Key;
-        }
+        public GridVector2 FindStartForBoundarySearch(GridPolygon[] shapes) => Nodes.First(v => shapes.All(shape => !shape.Contains(v.Key))).Key;
 
-        public GridLineSegment[] Segments
-        {
-            get
-            {
-                return this.Edges.Select(edge => edge.Value.Line).ToArray();
-            }
-        }
+        public GridLineSegment[] Segments => [.. this.Edges.Select(edge => edge.Value.Line)];
 
-        public GridVector2[] Points
-        {
-            get
-            {
-                return this.Nodes.Select(n => n.Key).ToArray();
-            }
-        }
+        public GridVector2[] Points => [.. this.Nodes.Select(n => n.Key)];
 
         /// <summary>
         /// Returns a copy of the graph with all nodes translated by the specified vector.
@@ -57,7 +31,7 @@ namespace Geometry
         /// <returns>A new MedialAxisGraph with translated nodes and edges</returns>
         public MedialAxisGraph Translate(GridVector2 vector)
         {
-            MedialAxisGraph translatedGraph = new MedialAxisGraph();
+            MedialAxisGraph translatedGraph = new();
 
             // Add all translated nodes
             foreach (var node in this.Nodes)
@@ -92,7 +66,7 @@ namespace Geometry
             var centroid = shape.Centroid;
             try
             {
-                
+
                 mesh = shape.Triangulate();
                 //Triangulate will translate the verticies to the centroid to avoid floating point rounding errors. 
                 //We will correct the medial axis verticies to match the input shape later. 
@@ -106,12 +80,12 @@ namespace Geometry
 
             //List<GridTriangle> triangles = triangulationMesh.ToTriangles();
 
-            
-            MedialAxisGraph graph; 
+
+            MedialAxisGraph graph;
             graph = BuildImprovedGraphFromMesh2D(mesh, centroid == GridVector2.Zero ? shape : shape.Translate(-centroid));
 
             //Translate the medial axis graph back to the shape centroid if necessary
-            if(centroid == GridVector2.Zero)
+            if (centroid == GridVector2.Zero)
                 return graph;
             else
                 return graph.Translate(centroid);
@@ -151,7 +125,7 @@ namespace Geometry
 
         private static MedialAxisGraph BuildGraphFromTriangles(GridTriangle[] triangles, GridPolygon boundary)
         {
-           
+
             //Create an index map of points 
             //Dictionary<GridVector2, SortedSet<int>> PointToTrianglesIndex = CreatePointToConnectedTrianglesIndexLookup(triangles);
 
@@ -169,7 +143,7 @@ namespace Geometry
         /// <returns></returns>
         private static MedialAxisGraph BuildGraphFromMesh2D(IReadOnlyMesh2D<IVertex2D> mesh, GridPolygon boundary)
         {
-            MedialAxisGraph graph = new MedialAxisGraph();
+            MedialAxisGraph graph = new();
 
             foreach (var edge in mesh.Edges.Values)
             {
@@ -186,12 +160,12 @@ namespace Geometry
                     {
                         MedialAxisVertex otherNode = null;
 
-                        var edgeCandidates = AdjacentFace.Edges.Where(e => e.Equals(edge) == false && boundary.IsExteriorOrInteriorSegment(mesh.ToGridLineSegment(e)) == false).ToList();
+                        List<IEdgeKey> edgeCandidates = [.. AdjacentFace.Edges.Where(e => e.Equals(edge) == false && boundary.IsExteriorOrInteriorSegment(mesh.ToGridLineSegment(e)) == false)];
                         if (edgeCandidates.Count == 1)
                         {
                             GridLineSegment ConnectedLine = mesh.ToGridLineSegment(edgeCandidates.First());
                             GridVector2 midpoint = ConnectedLine.Bisect();
-                            GridLineSegment ProposedMedialLine = new GridLineSegment(node.Key, midpoint);
+                            GridLineSegment ProposedMedialLine = new(node.Key, midpoint);
                             if (boundary.Intersects(ProposedMedialLine) == false && boundary.GetRelation(midpoint) == ShapeRelation.CONTAINED) //Checking for containment handles a rare edge case
                             {
                                 otherNode = GetOrAddLineBisectorVertex(graph, ConnectedLine);
@@ -199,7 +173,7 @@ namespace Geometry
                             }
                             else
                             {
-                                GridTriangle tri = new GridTriangle(mesh[AdjacentFace.iVerts].Select(v => v.Position).ToArray());
+                                GridTriangle tri = new([.. mesh[AdjacentFace.iVerts].Select(v => v.Position)]);
                                 //GridVector2 face_centroid = mesh.GetCentroid(AdjacentFace);
                                 GridVector2 face_centroid = tri.Centroid;
                                 otherNode = GetOrAddVertex(graph, face_centroid);
@@ -208,7 +182,7 @@ namespace Geometry
                         }
                         else if (edgeCandidates.Count == 2 || edgeCandidates.Count == 0) ////All edges of the face are part of the medial axis.  Add a vertex at the centroid and connect them all to the centroid
                         {
-                            GridTriangle tri = new GridTriangle(mesh[AdjacentFace.iVerts].Select(v => v.Position).ToArray());
+                            GridTriangle tri = new([.. mesh[AdjacentFace.iVerts].Select(v => v.Position)]);
                             //GridVector2 face_centroid = mesh.GetCentroid(AdjacentFace);
                             GridVector2 face_centroid = tri.Centroid;
                             //GridVector2 face_centroid = mesh.GetCentroid(AdjacentFace);
@@ -218,7 +192,7 @@ namespace Geometry
 
                         if (otherNode != null)
                         {
-                            MedialAxisEdge e = new MedialAxisEdge(node.Key, otherNode.Key);
+                            MedialAxisEdge e = new(node.Key, otherNode.Key);
                             if (!graph.Edges.ContainsKey(e))
                                 graph.AddEdge(e);
                         }
@@ -251,18 +225,18 @@ namespace Geometry
         /// <returns>A medial axis graph with vertices at triangle circumcenters</returns>
         private static MedialAxisGraph BuildImprovedGraphFromMesh2D(IReadOnlyMesh2D<IVertex2D> mesh, GridPolygon boundary)
         {
-            MedialAxisGraph graph = new MedialAxisGraph();
+            MedialAxisGraph graph = new();
 
             // Map faces to their circumcenters (only if inside boundary)
-            Dictionary<IFace, GridVector2> faceToCircumcenter = new Dictionary<IFace, GridVector2>();
+            Dictionary<IFace, GridVector2> faceToCircumcenter = [];
 
             // Step 1: Calculate circumcenters for all triangles
             foreach (var face in mesh.Faces)
             {
                 try
                 {
-                    GridVector2[] vertices = mesh[face.iVerts].Select(v => v.Position).ToArray();
-                    
+                    GridVector2[] vertices = [.. mesh[face.iVerts].Select(v => v.Position)];
+
                     // Calculate the circumcircle of the triangle
                     GridCircle circle = GridCircle.CircleFromThreePoints(vertices);
 
@@ -294,7 +268,7 @@ namespace Geometry
                     if (faceToCircumcenter.TryGetValue(faces[0], out var center1) &&
                         faceToCircumcenter.TryGetValue(faces[1], out var center2))
                     {
-                        MedialAxisEdge medialEdge = new MedialAxisEdge(center1, center2);
+                        MedialAxisEdge medialEdge = new(center1, center2);
                         if (!graph.Edges.ContainsKey(medialEdge))
                             graph.AddEdge(medialEdge);
                     }
@@ -309,7 +283,7 @@ namespace Geometry
             if (graph.TryGetValue(p, out var node)) return node;
 
             node = new MedialAxisVertex(p);
-            graph.AddNode(node); 
+            graph.AddNode(node);
             return node;
         }
 
@@ -318,11 +292,11 @@ namespace Geometry
             GridVector2 midpoint = line.Bisect();
             if (graph.TryGetValue(midpoint, out var node))
             {
-                return node; 
+                return node;
             }
 
             node = new MedialAxisVertex(midpoint);
-            graph.AddNode(node); 
+            graph.AddNode(node);
             return node;
         }
     }

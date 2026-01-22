@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="Otri.cs">
 // Original Triangle code by Jonathan Richard Shewchuk, http://www.cs.cmu.edu/~quake/triangle.html
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
@@ -25,11 +25,11 @@ namespace TriangleNet.Topology
 
         public Triangle Triangle
         {
-            get => tri;
+            readonly get => tri;
             set => tri = value;
         }
 
-        public override string ToString()
+        public override readonly string ToString()
         {
             if (tri is null)
             {
@@ -41,8 +41,8 @@ namespace TriangleNet.Topology
         #region Otri primitives (public)
 
         // For fast access
-        static readonly int[] plus1Mod3 = { 1, 2, 0 };
-        static readonly int[] minus1Mod3 = { 2, 0, 1 };
+        static readonly int[] plus1Mod3 = [1, 2, 0];
+        static readonly int[] minus1Mod3 = [2, 0, 1];
 
         // The following primitives are all described by Guibas and Stolfi.
         // However, Guibas and Stolfi use an edge-based data structure,
@@ -80,7 +80,7 @@ namespace TriangleNet.Topology
         /// Note that the edge direction is necessarily reversed, because the handle specified 
         /// by an oriented triangle is directed counterclockwise around the triangle.
         /// </remarks>
-        public void Sym(ref Otri ot)
+        public readonly void Sym(ref Otri ot)
         {
             ot.tri = tri.neighbors[orient].tri;
             ot.orient = tri.neighbors[orient].orient;
@@ -99,7 +99,7 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Find the next edge (counterclockwise) of a triangle. [lnext(abc) -> bca]
         /// </summary>
-        public void Lnext(ref Otri ot)
+        public readonly void Lnext(ref Otri ot)
         {
             ot.tri = tri;
             ot.orient = plus1Mod3[orient];
@@ -108,15 +108,12 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Find the next edge (counterclockwise) of a triangle. [lnext(abc) -> bca]
         /// </summary>
-        public void Lnext()
-        {
-            orient = plus1Mod3[orient];
-        }
+        public void Lnext() => orient = plus1Mod3[orient];
 
         /// <summary>
         /// Find the previous edge (clockwise) of a triangle. [lprev(abc) -> cab]
         /// </summary>
-        public void Lprev(ref Otri ot)
+        public readonly void Lprev(ref Otri ot)
         {
             ot.tri = tri;
             ot.orient = minus1Mod3[orient];
@@ -125,15 +122,12 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Find the previous edge (clockwise) of a triangle. [lprev(abc) -> cab]
         /// </summary>
-        public void Lprev()
-        {
-            orient = minus1Mod3[orient];
-        }
+        public void Lprev() => orient = minus1Mod3[orient];
 
         /// <summary>
         /// Find the next edge counterclockwise with the same origin. [onext(abc) -> ac*]
         /// </summary>
-        public void Onext(ref Otri ot)
+        public readonly void Onext(ref Otri ot)
         {
             //Lprev(ref ot);
             ot.tri = tri;
@@ -162,7 +156,7 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Find the next edge clockwise with the same origin. [oprev(abc) -> a*b]
         /// </summary>
-        public void Oprev(ref Otri ot)
+        public readonly void Oprev(ref Otri ot)
         {
             //Sym(ref ot);
             ot.tri = tri.neighbors[orient].tri;
@@ -189,7 +183,7 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Find the next edge counterclockwise with the same destination. [dnext(abc) -> *ba]
         /// </summary>
-        public void Dnext(ref Otri ot)
+        public readonly void Dnext(ref Otri ot)
         {
             //Sym(ref ot);
             ot.tri = tri.neighbors[orient].tri;
@@ -216,7 +210,7 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Find the next edge clockwise with the same destination. [dprev(abc) -> cb*]
         /// </summary>
-        public void Dprev(ref Otri ot)
+        public readonly void Dprev(ref Otri ot)
         {
             //Lnext(ref ot);
             ot.tri = tri;
@@ -245,7 +239,7 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Find the next edge (counterclockwise) of the adjacent triangle. [rnext(abc) -> *a*]
         /// </summary>
-        public void Rnext(ref Otri ot)
+        public readonly void Rnext(ref Otri ot)
         {
             //Sym(ref ot);
             ot.tri = tri.neighbors[orient].tri;
@@ -282,7 +276,7 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Find the previous edge (clockwise) of the adjacent triangle. [rprev(abc) -> b**]
         /// </summary>
-        public void Rprev(ref Otri ot)
+        public readonly void Rprev(ref Otri ot)
         {
             //Sym(ref ot);
             ot.tri = tri.neighbors[orient].tri;
@@ -319,31 +313,22 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Origin [org(abc) -> a]
         /// </summary>
-        public Vertex Org()
-        {
-            return tri.vertices[plus1Mod3[orient]];
-        }
+        public readonly Vertex Org() => tri.vertices[plus1Mod3[orient]];
 
         /// <summary>
         /// Destination [dest(abc) -> b]
         /// </summary>
-        public Vertex Dest()
-        {
-            return tri.vertices[minus1Mod3[orient]];
-        }
+        public readonly Vertex Dest() => tri.vertices[minus1Mod3[orient]];
 
         /// <summary>
         /// Apex [apex(abc) -> c]
         /// </summary>
-        public Vertex Apex()
-        {
-            return tri.vertices[orient];
-        }
+        public readonly Vertex Apex() => tri.vertices[orient];
 
         /// <summary>
         /// Copy an oriented triangle.
         /// </summary>
-        public void Copy(ref Otri ot)
+        public readonly void Copy(ref Otri ot)
         {
             ot.tri = tri;
             ot.orient = orient;
@@ -352,10 +337,7 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Test for equality of oriented triangles.
         /// </summary>
-        public bool Equals(Otri ot)
-        {
-            return ((tri == ot.tri) && (orient == ot.orient));
-        }
+        public readonly bool Equals(Otri ot) => ((tri == ot.tri) && (orient == ot.orient));
 
         #endregion
 
@@ -364,31 +346,22 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Set Origin
         /// </summary>
-        internal void SetOrg(Vertex v)
-        {
-            tri.vertices[plus1Mod3[orient]] = v;
-        }
+        internal readonly void SetOrg(Vertex v) => tri.vertices[plus1Mod3[orient]] = v;
 
         /// <summary>
         /// Set Destination
         /// </summary>
-        internal void SetDest(Vertex v)
-        {
-            tri.vertices[minus1Mod3[orient]] = v;
-        }
+        internal readonly void SetDest(Vertex v) => tri.vertices[minus1Mod3[orient]] = v;
 
         /// <summary>
         /// Set Apex
         /// </summary>
-        internal void SetApex(Vertex v)
-        {
-            tri.vertices[orient] = v;
-        }
+        internal readonly void SetApex(Vertex v) => tri.vertices[orient] = v;
 
         /// <summary>
         /// Bond two triangles together at the resepective handles. [bond(abc, bad)]
         /// </summary>
-        internal void Bond(ref Otri ot)
+        internal readonly void Bond(ref Otri ot)
         {
             tri.neighbors[orient].tri = ot.tri;
             tri.neighbors[orient].orient = ot.orient;
@@ -404,7 +377,7 @@ namespace TriangleNet.Topology
         /// this triangle. Usually, however, the other triangle is being deleted 
         /// entirely, or bonded to another triangle, so it doesn't matter.
         /// </remarks>
-        internal void Dissolve(Triangle dummy)
+        internal readonly void Dissolve(Triangle dummy)
         {
             tri.neighbors[orient].tri = dummy;
             tri.neighbors[orient].orient = 0;
@@ -413,39 +386,27 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Infect a triangle with the virus.
         /// </summary>
-        internal void Infect()
-        {
-            tri.infected = true;
-        }
+        internal readonly void Infect() => tri.infected = true;
 
         /// <summary>
         /// Cure a triangle from the virus.
         /// </summary>
-        internal void Uninfect()
-        {
-            tri.infected = false;
-        }
+        internal readonly void Uninfect() => tri.infected = false;
 
         /// <summary>
         /// Test a triangle for viral infection.
         /// </summary>
-        internal bool IsInfected()
-        {
-            return tri.infected;
-        }
+        internal readonly bool IsInfected() => tri.infected;
 
         /// <summary>
         /// Finds a subsegment abutting a triangle.
         /// </summary>
-        internal void Pivot(ref Osub os)
-        {
-            os = tri.subsegs[orient];
-        }
+        internal readonly void Pivot(ref Osub os) => os = tri.subsegs[orient];
 
         /// <summary>
         /// Bond a triangle to a subsegment.
         /// </summary>
-        internal void SegBond(ref Osub os)
+        internal readonly void SegBond(ref Osub os)
         {
             tri.subsegs[orient] = os;
             os.seg.triangles[os.orient] = this;
@@ -454,18 +415,12 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Dissolve a bond (from the triangle side).
         /// </summary>
-        internal void SegDissolve(SubSegment dummy)
-        {
-            tri.subsegs[orient].seg = dummy;
-        }
+        internal readonly void SegDissolve(SubSegment dummy) => tri.subsegs[orient].seg = dummy;
 
         /// <summary>
         /// Check a triangle's deallocation.
         /// </summary>
-        internal static bool IsDead(Triangle tria)
-        {
-            return tria.neighbors[0].tri is null;
-        }
+        internal static bool IsDead(Triangle tria) => tria.neighbors[0].tri is null;
 
         /// <summary>
         /// Set a triangle's deallocation.

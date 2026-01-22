@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using ODataClient.ConnectomeDataModel;
 using System;
 using System.Collections.Concurrent;
@@ -12,25 +12,25 @@ namespace AnnotationVizLib.OData
     public class ODataNeuronFactory
     {
         // Static cache of instances per endpoint
-        private static readonly ConcurrentDictionary<Uri, ODataNeuronFactory> instances = new ConcurrentDictionary<Uri, ODataNeuronFactory>();
+        private static readonly ConcurrentDictionary<Uri, ODataNeuronFactory> instances = new();
 
         // Instance-level structure type dictionary
         private SortedDictionary<long, StructureType> IDToStructureType = null;
-        private readonly SemaphoreSlim loadLock = new SemaphoreSlim(1, 1);
-        private Task structureTypeLoadTask = null;
+        private readonly SemaphoreSlim loadLock = new(1, 1);
+        private readonly Task structureTypeLoadTask = null;
 
         private readonly Uri endpoint;
 
         private ODataNeuronFactory(Uri endpoint)
         {
             this.endpoint = endpoint;
-            
+
             // Start loading structure types asynchronously
             structureTypeLoadTask = Task.Run(async () =>
             {
                 try
                 {
-                    Container container = new Container(endpoint)
+                    Container container = new(endpoint)
                     {
                         MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
                     };
@@ -47,26 +47,20 @@ namespace AnnotationVizLib.OData
         /// <summary>
         /// Gets or creates an instance for the specified endpoint
         /// </summary>
-        private static ODataNeuronFactory GetOrCreateInstance(Uri endpoint)
-        {
-            return instances.GetOrAdd(endpoint, ep => new ODataNeuronFactory(ep));
-        }
+        private static ODataNeuronFactory GetOrCreateInstance(Uri endpoint) => instances.GetOrAdd(endpoint, ep => new ODataNeuronFactory(ep));
 
         /// <summary>
         /// Synchronously builds a neuron graph from OData service
         /// </summary>
-        public static NeuronGraph FromOData(ICollection<long> StructureIDs, uint numHops, Uri Endpoint)
-        {
-            return FromODataAsync(StructureIDs, numHops, Endpoint).GetAwaiter().GetResult();
-        }
-         
+        public static NeuronGraph FromOData(ICollection<long> StructureIDs, uint numHops, Uri Endpoint) => FromODataAsync(StructureIDs, numHops, Endpoint).GetAwaiter().GetResult();
+
         /// <summary>
         /// Asynchronously builds a neuron graph from OData service
         /// </summary>
         public static async Task<NeuronGraph> FromODataAsync(
-            ICollection<long> StructureIDs, 
-            uint numHops, 
-            Uri Endpoint, 
+            ICollection<long> StructureIDs,
+            uint numHops,
+            Uri Endpoint,
             CancellationToken cancellationToken = default)
         {
             // Get or create the instance for this endpoint
@@ -78,16 +72,16 @@ namespace AnnotationVizLib.OData
         /// Asynchronously builds a neuron graph from structure IDs
         /// </summary>
         private async Task<NeuronGraph> BuildGraphAsync(
-            ICollection<long> StructureIDs, 
-            uint numHops, 
+            ICollection<long> StructureIDs,
+            uint numHops,
             CancellationToken cancellationToken)
         {
-            NeuronGraph graph = new AnnotationVizLib.NeuronGraph();
+            NeuronGraph graph = new();
 
             if (StructureIDs is null || StructureIDs.Count == 0)
                 return graph;
 
-            Container container = new Container(endpoint)
+            Container container = new(endpoint)
             {
                 MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
             };
@@ -107,17 +101,14 @@ namespace AnnotationVizLib.OData
             var structureLinks = await structureLinksTask;
 
             // Build structure dictionary for lookups
-            SortedDictionary<ulong, Structure> IDToStructure = new SortedDictionary<ulong, Structure>();
+            SortedDictionary<ulong, Structure> IDToStructure = [];
 
             // Merge child structures into parent structures
             foreach (Structure child in childStructures)
             {
                 if (child.ParentID.HasValue && networkStructures.TryGetValue((ulong)child.ParentID.Value, out var parent))
                 {
-                    if (parent.Children == null)
-                    {
-                        parent.Children = new Microsoft.OData.Client.DataServiceCollection<Structure>(null, Microsoft.OData.Client.TrackingMode.None);
-                    }
+                    parent.Children ??= new Microsoft.OData.Client.DataServiceCollection<Structure>(null, Microsoft.OData.Client.TrackingMode.None);
                     parent.Children.Add(child);
                 }
             }
@@ -130,19 +121,13 @@ namespace AnnotationVizLib.OData
             {
                 if (IDToStructure.TryGetValue((ulong)link.SourceID, out var source))
                 {
-                    if (source.SourceOfLinks == null)
-                    {
-                        source.SourceOfLinks = new Microsoft.OData.Client.DataServiceCollection<StructureLink>(null, Microsoft.OData.Client.TrackingMode.None);
-                    }
+                    source.SourceOfLinks ??= new Microsoft.OData.Client.DataServiceCollection<StructureLink>(null, Microsoft.OData.Client.TrackingMode.None);
                     source.SourceOfLinks.Add(link);
                 }
 
                 if (IDToStructure.TryGetValue((ulong)link.TargetID, out var target))
                 {
-                    if (target.TargetOfLinks == null)
-                    {
-                        target.TargetOfLinks = new Microsoft.OData.Client.DataServiceCollection<StructureLink>(null, Microsoft.OData.Client.TrackingMode.None);
-                    }
+                    target.TargetOfLinks ??= new Microsoft.OData.Client.DataServiceCollection<StructureLink>(null, Microsoft.OData.Client.TrackingMode.None);
                     target.TargetOfLinks.Add(link);
                 }
             }
@@ -180,7 +165,7 @@ namespace AnnotationVizLib.OData
             }
 
             // If still not loaded, load now
-            if (IDToStructureType == null)
+            if (IDToStructureType is null)
             {
                 var types = await container.StructureTypes.GetAllPagesToListAsync(cancellationToken);
                 await PopulateStructureTypeDictionaryAsync(types);
@@ -198,7 +183,7 @@ namespace AnnotationVizLib.OData
                 if (IDToStructureType != null)
                     return;
 
-                IDToStructureType = new SortedDictionary<long, StructureType>();
+                IDToStructureType = [];
 
                 foreach (StructureType t in types)
                 {
@@ -214,10 +199,10 @@ namespace AnnotationVizLib.OData
         /// <summary>
         /// Fetches network parent/cell structures asynchronously
         /// </summary>
-        private async Task<Dictionary<ulong, Structure>> GetNetworkStructuresAsync(
-            Container container, 
-            ICollection<long> StructureIDs, 
-            uint numHops, 
+        private static async Task<Dictionary<ulong, Structure>> GetNetworkStructuresAsync(
+            Container container,
+            ICollection<long> StructureIDs,
+            uint numHops,
             CancellationToken cancellationToken)
         {
             try
@@ -225,7 +210,7 @@ namespace AnnotationVizLib.OData
                 var structures = await container.Network(StructureIDs, (int)numHops)
                     .GetAllPagesToListAsync(cancellationToken);
 
-                var dictionary = new Dictionary<ulong, Structure>();
+                Dictionary<ulong, Structure> dictionary = [];
                 foreach (var structure in structures)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -234,7 +219,7 @@ namespace AnnotationVizLib.OData
 
                 return dictionary;
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 throw new InvalidOperationException($"Failed to fetch network structures: {ex.Message}", ex);
             }
@@ -243,10 +228,10 @@ namespace AnnotationVizLib.OData
         /// <summary>
         /// Fetches network child structures asynchronously
         /// </summary>
-        private async Task<List<Structure>> GetNetworkChildStructuresAsync(
-            Container container, 
-            ICollection<long> StructureIDs, 
-            uint numHops, 
+        private static async Task<List<Structure>> GetNetworkChildStructuresAsync(
+            Container container,
+            ICollection<long> StructureIDs,
+            uint numHops,
             CancellationToken cancellationToken)
         {
             try
@@ -256,7 +241,7 @@ namespace AnnotationVizLib.OData
 
                 return childStructures;
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 throw new InvalidOperationException($"Failed to fetch network child structures: {ex.Message}", ex);
             }
@@ -265,10 +250,10 @@ namespace AnnotationVizLib.OData
         /// <summary>
         /// Fetches network structure links asynchronously
         /// </summary>
-        private async Task<List<StructureLink>> GetNetworkLinksAsync(
-            Container container, 
-            ICollection<long> StructureIDs, 
-            uint numHops, 
+        private static async Task<List<StructureLink>> GetNetworkLinksAsync(
+            Container container,
+            ICollection<long> StructureIDs,
+            uint numHops,
             CancellationToken cancellationToken)
         {
             try
@@ -278,17 +263,17 @@ namespace AnnotationVizLib.OData
 
                 return structureLinks;
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 throw new InvalidOperationException($"Failed to fetch network structure links: {ex.Message}", ex);
             }
         }
-         
+
 
         /// <summary>
         /// Recursively populates the structure dictionary
         /// </summary>
-        private void PopulateStructureDictionary(ICollection<Structure> structs, SortedDictionary<ulong, Structure> IDToStructure)
+        private static void PopulateStructureDictionary(ICollection<Structure> structs, SortedDictionary<ulong, Structure> IDToStructure)
         {
             foreach (Structure s in structs)
             {
@@ -307,11 +292,11 @@ namespace AnnotationVizLib.OData
         /// <summary>
         /// Add all top-level structures as nodes in our graph
         /// </summary>
-        private void AddStructuresAsNodes(ICollection<Structure> structs, NeuronGraph graph)
+        private static void AddStructuresAsNodes(ICollection<Structure> structs, NeuronGraph graph)
         {
             foreach (IStructureReadOnly s in structs.Select(s => new ODataStructureAdapter(s)))
             {
-                NeuronNode node = new NeuronNode((long)s.ID, s);
+                NeuronNode node = new((long)s.ID, s);
                 graph.AddNode(node);
             }
         }
@@ -320,8 +305,8 @@ namespace AnnotationVizLib.OData
         /// Add structure links as edges in the graph
         /// </summary>
         private void AddStructureLinksAsEdges(
-            ICollection<StructureLink> structureLinks, 
-            SortedDictionary<ulong, Structure> IDToStructure, 
+            ICollection<StructureLink> structureLinks,
+            SortedDictionary<ulong, Structure> IDToStructure,
             NeuronGraph graph)
         {
             foreach (StructureLink link in structureLinks)
@@ -347,10 +332,10 @@ namespace AnnotationVizLib.OData
                 }
 
                 // Create or update edge
-                NeuronEdge edge = new NeuronEdge(
-                    (long)linkSource.ParentID.Value, 
-                    (long)linkTarget.ParentID.Value, 
-                    new ODataStructureLinkAdapter(link), 
+                NeuronEdge edge = new(
+                    (long)linkSource.ParentID.Value,
+                    (long)linkTarget.ParentID.Value,
+                    new ODataStructureLinkAdapter(link),
                     sourceTypeName);
 
                 if (graph.Edges.TryGetValue(edge, out var existingEdge))

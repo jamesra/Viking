@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Viking.Common;
@@ -22,10 +22,7 @@ namespace WebAnnotation.UI
             listLocations.TitleVisible = false;
         }
 
-        protected override void OnInitPage()
-        {
-            base.OnInitPage();
-        }
+        protected override void OnInitPage() => base.OnInitPage();
 
         protected override void OnShowObject(object Object)
         {
@@ -40,14 +37,14 @@ namespace WebAnnotation.UI
 
                 UseWaitCursor = true;
                 ICollection<LocationObj> locations = Store.Locations.GetLocationsForStructure(Obj.ID);
-                List<Location_PropertyPageViewModel> listLocationViews = new List<Location_PropertyPageViewModel>(locations.Count);
+                List<Location_PropertyPageViewModel> listLocationViews = new(locations.Count);
 
                 foreach (LocationObj loc in locations)
                 {
                     listLocationViews.Add(new Location_PropertyPageViewModel(loc.ID));
                 }
 
-                listLocations.SetLocations(listLocationViews.ToArray());
+                listLocations.SetLocations([.. listLocationViews]);
 
                 listLoaded = true;
 

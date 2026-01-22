@@ -143,10 +143,7 @@ namespace RTree
          * 
          * @return copy of this rectangle
          */
-        internal Rectangle copy()
-        {
-            return new Rectangle(min, max);
-        }
+        internal Rectangle copy() => new Rectangle(min, max);
 
         /**
          * Determine whether an edge of this rectangle overlies the equivalent 
@@ -334,10 +331,7 @@ namespace RTree
          * 
          * @return The area of this rectangle
          */
-        internal double area()
-        {
-            return (max[0] - min[0]) * (max[1] - min[1]);
-        }
+        internal double area() => (max[0] - min[0]) * (max[1] - min[1]);
 
         /**
          * Computes the union of this rectangle and the passed rectangle, storing
@@ -415,7 +409,7 @@ namespace RTree
         public override int GetHashCode()
         {
             int hashcode = 0;
-            foreach(double d in min)
+            foreach (double d in min)
             {
                 hashcode ^= d.GetHashCode();
             }
@@ -436,10 +430,7 @@ namespace RTree
          * 
          * @param o The object to compare with this rectangle.
          */
-        internal bool sameObject(object o)
-        {
-            return base.Equals(o);
-        }
+        internal bool sameObject(object o) => base.Equals(o);
 
         /**
          * Return a string representation of this rectangle, in the form: 
@@ -450,7 +441,7 @@ namespace RTree
 
         public override string ToString()
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
 
             // min coordinates
             sb.Append('(');

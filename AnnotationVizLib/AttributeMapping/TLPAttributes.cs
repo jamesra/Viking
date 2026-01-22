@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace AnnotationVizLib
 {
@@ -56,7 +56,7 @@ namespace AnnotationVizLib
             Star = 19
         }
 
-        public static SortedDictionary<string, string> ColorMap = new SortedDictionary<string, string>()
+        public static SortedDictionary<string, string> ColorMap = new()
         {
             { "clear", "(255,255,255,0)"},
             { "black", "(0,0,0,127)"},
@@ -89,7 +89,7 @@ namespace AnnotationVizLib
             { "yellow", "(255,255,0,127)"}
         };
 
-        public static SortedDictionary<string, string> StandardGraphDefaultAttributeValues = new SortedDictionary<string, string>()
+        public static SortedDictionary<string, string> StandardGraphDefaultAttributeValues = new()
         {
             {"viewColor", " \"(128,128,128,64)\" \"(128,128,128,64)\"" },
             {"viewLabel", " \"\" \"\"" },
@@ -100,7 +100,7 @@ namespace AnnotationVizLib
             {"NumLinkedStructures", " \"0\" \"0\"" },
         };
 
-        public static SortedDictionary<string, string> TLPTypeForAttribute = new SortedDictionary<string, string>()
+        public static SortedDictionary<string, string> TLPTypeForAttribute = new()
         {
             {"viewColor", "color"},
             {"viewBorderColor", "color"},
@@ -154,13 +154,10 @@ namespace AnnotationVizLib
             {"TotalTargetArea", "metric" }
         };
 
-        public static SortedSet<string> AttributesExcludedFromTLP = new SortedSet<string>(new string[]
-        {
-            "ConvexHull",
-            "BoundingRect"
-        });
+        public static SortedSet<string> AttributesExcludedFromTLP = ["ConvexHull", "BoundingRect"
+];
 
-        public static SortedDictionary<string, string> DefaultForAttribute = new SortedDictionary<string, string>()
+        public static SortedDictionary<string, string> DefaultForAttribute = new()
         {
             {"viewColor", string.Format("\"{0}\" \"{0}\"", ColorMap["grey"], ColorMap["grey"])},
             {"viewSelection", " \"false\" \"false\""},
@@ -171,7 +168,7 @@ namespace AnnotationVizLib
             {"viewShape", string.Format(" \"0\" \"{0}\"", IntForEdgeShape(EdgeShapes.BezierCurve))},
         };
 
-        public static SortedDictionary<string, string> DefaultForMorphologyAttribute = new SortedDictionary<string, string>()
+        public static SortedDictionary<string, string> DefaultForMorphologyAttribute = new()
         {
             {"viewColor", string.Format("\"{0}\" \"{0}\"", ColorMap["grey"], ColorMap["grey"])},
             {"viewSelection", " \"false\" \"false\""},
@@ -182,26 +179,19 @@ namespace AnnotationVizLib
             {"viewShape", string.Format(" \"{0}\" \"{1}\"", IntForShape(NodeShapes.Cylinder), IntForEdgeShape(EdgeShapes.Polyline))}
         };
 
-        public static string IntForShape(NodeShapes type)
-        {
-            return ((int)type).ToString();
-        }
+        public static string IntForShape(NodeShapes type) => ((int)type).ToString();
 
-        public static string IntForEdgeTerminalShape(EdgeExtremityShapes type)
-        {
-            return ((int)type).ToString();
-        }
+        public static string IntForEdgeTerminalShape(EdgeExtremityShapes type) => ((int)type).ToString();
 
-        public static string IntForEdgeShape(EdgeShapes type)
-        {
-            return ((int)type).ToString();
-        }
+        public static string IntForEdgeShape(EdgeShapes type) => ((int)type).ToString();
 
-        public static SortedList<string, string> UnknownTLPNodeAttributes = new SortedList<string, string> {
+        public static SortedList<string, string> UnknownTLPNodeAttributes = new()
+        {
             {"viewColor", ColorMap["grey"]}
         };
 
-        public static SortedList<string, string> UnknownTLPEdgeAttributes = new SortedList<string, string> {
+        public static SortedList<string, string> UnknownTLPEdgeAttributes = new()
+        {
             {"viewColor", ColorMap["grey"]}
         };
 
@@ -211,8 +201,8 @@ namespace AnnotationVizLib
         /// we search the keys in the order they appear in the list.  The first partial match
         /// has its attributes returned.
         /// </summary>
-        public static IList<AttributeMap> StandardLabelToNodeTLPAppearance = new List<AttributeMap>()
-        {
+        public static IList<AttributeMap> StandardLabelToNodeTLPAppearance =
+        [
             new AttributeMap("AXON", new SortedList<string,string> {
                             {"viewColor", ColorMap["red3"]},
                             {"viewShape", IntForShape(NodeShapes.Hexagon)}
@@ -318,10 +308,10 @@ namespace AnnotationVizLib
                             {"viewColor", ColorMap["saddlebrown"]}
                 }
             )
-        };
+        ];
 
-        public static IList<AttributeMap> StandardEdgeSourceLabelToTLPAppearance = new List<AttributeMap>()
-        {
+        public static IList<AttributeMap> StandardEdgeSourceLabelToTLPAppearance =
+        [
             new AttributeMap("RIBBON SYNAPSE", new SortedList<string,string> {
                             {"viewTgtAnchorShape", IntForEdgeTerminalShape(EdgeExtremityShapes.Arrow)},
                             {"viewColor", ColorMap["chartreuse4"]}
@@ -378,6 +368,6 @@ namespace AnnotationVizLib
                             {"viewColor", ColorMap["black"]}
                 }
             )
-        };
+        ];
     }
 }

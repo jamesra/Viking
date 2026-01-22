@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -179,7 +179,6 @@ namespace VikingXNAGraphics
         {
             set => _AnnotationTexture.SetValue(value);
         }
-        
 
         public Techniques Technique
         {
@@ -217,7 +216,7 @@ namespace VikingXNAGraphics
             get => _AnnotationHSLColor.GetValueInt32().ToXNAColor();
             set => _AnnotationHSLColor.SetValue(value.ToVector4());
         }
-        
+
         public void Init(GraphicsDevice device, ContentManager content)
         {
             this.effect = content.Load<Effect>("BillboardAnnotation");

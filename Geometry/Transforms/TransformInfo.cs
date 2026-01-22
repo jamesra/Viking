@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Geometry.Transforms
 {
@@ -60,11 +60,11 @@ namespace Geometry.Transforms
         /// Space the transform maps from
         /// </summary>
         public readonly int MappedSection;
-          
+
         int IStosTransformInfo.ControlSection => ControlSection;
 
         int IStosTransformInfo.MappedSection => MappedSection;
-            
+
         public StosTransformInfo(int cSection, int mSection) : base(DateTime.MinValue)
         {
             this.ControlSection = cSection;
@@ -78,15 +78,9 @@ namespace Geometry.Transforms
             this.MappedSection = mSection;
         }
 
-        public string GetCacheFilename(string extension)
-        {
-            return MappedSection.ToString() + "-" + ControlSection.ToString() + extension;
-        }
+        public string GetCacheFilename(string extension) => MappedSection.ToString() + "-" + ControlSection.ToString() + extension;
 
-        public override string ToString()
-        {
-            return MappedSection.ToString() + " to " + ControlSection.ToString();
-        }
+        public override string ToString() => MappedSection.ToString() + " to " + ControlSection.ToString();
 
         public static StosTransformInfo Merge(StosTransformInfo AtoB, StosTransformInfo BtoC)
         {
@@ -104,23 +98,14 @@ namespace Geometry.Transforms
     }
 
     [Serializable]
-    public class TileTransformInfo : TransformBasicInfo, ITileTransformInfo
+    public class TileTransformInfo(string TileFileName, int tileNumber, DateTime lastModified, double Width, double Height) : TransformBasicInfo(lastModified), ITileTransformInfo
     {
-        public readonly int TileNumber;
-        public readonly string TileFileName;
+        public readonly int TileNumber = tileNumber;
+        public readonly string TileFileName = TileFileName;
 
         //We record these values because as tiles are transformed the dimensions of the mapped space can change and no longer match the image size
-        public readonly double ImageWidth;
-        public readonly double ImageHeight;
-
-        public TileTransformInfo(string TileFileName, int tileNumber, DateTime lastModified, double Width, double Height)
-            : base(lastModified)
-        {
-            this.TileFileName = TileFileName;
-            this.TileNumber = tileNumber;
-            this.ImageWidth = Width;
-            this.ImageHeight = Height;
-        }
+        public readonly double ImageWidth = Width;
+        public readonly double ImageHeight = Height;
 
         int ITileTransformInfo.TileNumber => TileNumber;
 
@@ -129,11 +114,8 @@ namespace Geometry.Transforms
         double ITileTransformInfo.ImageWidth => ImageWidth;
 
         double ITileTransformInfo.ImageHeight => ImageHeight;
-          
-        public override string ToString()
-        {
-            return TileFileName;
-        }
+
+        public override string ToString() => TileFileName;
     }
 
     /// <summary>
@@ -146,7 +128,7 @@ namespace Geometry.Transforms
         private readonly string _FilenameBase;
         private readonly string _Extension;
 
-        public TransformCacheInfo(string CacheDirectory, string Filename, string extension=".stos_bin")
+        public TransformCacheInfo(string CacheDirectory, string Filename, string extension = ".stos_bin")
         {
             _Extension = extension;
             _FilenameBase = System.IO.Path.GetFileNameWithoutExtension(Filename);

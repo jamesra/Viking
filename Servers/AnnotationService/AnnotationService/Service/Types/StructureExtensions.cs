@@ -36,7 +36,7 @@ namespace AnnotationService.Types
         {
             ConnectomeDataModel.Structure dbStructObj = obj as ConnectomeDataModel.Structure;
 
-            Structure s = new Structure
+            Structure s = new()
             {
                 ID = dbStructObj.ID,
                 TypeID = dbStructObj.TypeID,
@@ -62,14 +62,7 @@ namespace AnnotationService.Types
 
             s.Links = PopulateLinks(dbStructObj);
 
-            if (IncludeChildren)
-            {
-                s.ChildIDs = dbStructObj.Children.Select(child => child.ID).ToArray();
-            }
-            else
-            {
-                s.ChildIDs = null;
-            }
+            s.ChildIDs = IncludeChildren ? [.. dbStructObj.Children.Select(child => child.ID)] : null;
 
             s.Label = dbStructObj.Label;
             s.Username = dbStructObj.Username;

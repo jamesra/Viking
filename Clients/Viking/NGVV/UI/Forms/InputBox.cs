@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Windows.Forms;
 
@@ -29,10 +29,7 @@ namespace Viking.UI.Forms
 
         }
 
-        private void textInput_Validating(object sender, CancelEventArgs e)
-        {
-            e.Cancel = !IsServerValid(this.Value);
-        }
+        private void textInput_Validating(object sender, CancelEventArgs e) => e.Cancel = !IsServerValid(this.Value);
 
         private void btnOK_Click(object sender, EventArgs e)
         {

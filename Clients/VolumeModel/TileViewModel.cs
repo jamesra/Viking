@@ -17,24 +17,19 @@ namespace Viking.VolumeModel
         /// </summary>
         public readonly string UniqueKey;
 
-        public static string CreateUniqueKey(int Section, string Transform, string Channel, int Downsample, string TextureName)
-        {
+        public static string CreateUniqueKey(int Section, string Transform, string Channel, int Downsample, string TextureName) =>
             //return "S: " + Section.ToString("D4") + " T: " + Transform + " C: " + Channel + " DS: " + Downsample.ToString("D3") + " T: " + TextureName;
-            return $"S: {Section:D04} T: {Transform} C: {Channel} DS: {Downsample:D03} T: {TextureName}";
-        }
-        
+            $"S: {Section:D04} T: {Transform} C: {Channel} DS: {Downsample:D03} T: {TextureName}";
+
         /// <summary>
         /// Cache this because we'll use it a lot
         /// </summary>
         private readonly int _UniqueKeyHashcode;
-        public override int GetHashCode()
-        {
-            return _UniqueKeyHashcode;
-        }
+        public override int GetHashCode() => _UniqueKeyHashcode;
 
         public override bool Equals(object obj)
         {
-            if (!(obj is TileViewModel t))
+            if (obj is not TileViewModel t)
                 return false;
 
             //This is faster than a full string test
@@ -43,8 +38,8 @@ namespace Viking.VolumeModel
 
             return t.UniqueKey == this.UniqueKey;
         }
-        
-      //  public static string ConstructUniqueKey(int SectionNumber, string Texture
+
+        //  public static string ConstructUniqueKey(int SectionNumber, string Texture
         public readonly PositionNormalTextureVertex[] Verticies;
 
         /// <summary>
@@ -65,7 +60,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// The amount the tile has been downsampled by
         /// </summary>
-        public readonly int Downsample;    
+        public readonly int Downsample;
 
         public readonly string TextureFullPath;
         public readonly string TextureCacheFilePath;
@@ -78,7 +73,7 @@ namespace Viking.VolumeModel
         //PORT: This is a viewModel concept
         //private int MipMapLevels = 1;
 
-        public TileViewModel(in string UniqueKey, 
+        public TileViewModel(in string UniqueKey,
                                 in PositionNormalTextureVertex[] verticies,
                                 in int[] TriangleIndicies,
                                 in string TextureFullPath,
@@ -89,10 +84,10 @@ namespace Viking.VolumeModel
             this._UniqueKeyHashcode = UniqueKey.GetHashCode();
 
             this.Size = (verticies.Length * 8 * 8) + (TriangleIndicies.Length * 4) + TextureFullPath.Length + UniqueKey.Length;
-            
+
             this.Downsample = downsample;
-            this.TextureFullPath = TextureFullPath.Replace('\\','/');
-            this.TextureCacheFilePath = cachePath.Replace('/','\\');
+            this.TextureFullPath = TextureFullPath.Replace('\\', '/');
+            this.TextureCacheFilePath = cachePath.Replace('/', '\\');
 
             Bounds = verticies.Select(v => v.Position.XY()).BoundingBox();
             //PORT: this.TextureCachedFileName = cachedTextureFileName;
@@ -101,7 +96,7 @@ namespace Viking.VolumeModel
             this.Verticies = verticies;
             Debug.Assert(verticies != null);
             Debug.Assert(verticies.Length > 0, "Tile must have verticies");
-            this.TriangleIndicies = TriangleIndicies; 
+            this.TriangleIndicies = TriangleIndicies;
         }
 
         public static PositionNormalTextureVertex[] CalculateVerticies(ITransformControlPoints transform, Geometry.Transforms.TileTransformInfo info)
@@ -113,8 +108,8 @@ namespace Viking.VolumeModel
                 GridVector2 CtrlP = transform.MapPoints[i].ControlPoint;
                 GridVector2 MapP = transform.MapPoints[i].MappedPoint;
 
-                var pos = new GridVector3(CtrlP.X, CtrlP.Y, 0);
-                var tex = new GridVector2(MapP.X / info.ImageWidth, MapP.Y / info.ImageHeight);
+                GridVector3 pos = new(CtrlP.X, CtrlP.Y, 0);
+                GridVector2 tex = new(MapP.X / info.ImageWidth, MapP.Y / info.ImageHeight);
                 var norm = GridVector3.UnitZ;
 
                 verticies[i] = new PositionNormalTextureVertex(pos, norm, tex);
@@ -128,26 +123,23 @@ namespace Viking.VolumeModel
             return verticies;
         }
 
-        static readonly int[] defaultSquareTriangulation = new int[] { 0, 1, 3, 3, 1, 2 };
+        static readonly int[] defaultSquareTriangulation = [0, 1, 3, 3, 1, 2];
         public static PositionNormalTextureVertex[] CalculateVerticies(IContinuousTransform transform, Geometry.Transforms.TileTransformInfo info, out int[] Triangulation)
         {
-            
-            PositionNormalTextureVertex[] vertices = new PositionNormalTextureVertex[]
-            {
-                new PositionNormalTextureVertex(transform.Transform(GridVector2.Zero).ToGridVector3(0), GridVector3.UnitZ, GridVector2.Zero),
-                new PositionNormalTextureVertex(transform.Transform(new GridVector2(0, info.ImageHeight)).ToGridVector3(0), GridVector3.UnitZ, GridVector2.UnitY),
-                new PositionNormalTextureVertex(transform.Transform(new GridVector2(info.ImageWidth, info.ImageHeight)).ToGridVector3(0), GridVector3.UnitZ, GridVector2.One),
-                new PositionNormalTextureVertex(transform.Transform(new GridVector2(info.ImageWidth, 0)).ToGridVector3(0), GridVector3.UnitZ, GridVector2.UnitX),
-            };
+
+            PositionNormalTextureVertex[] vertices =
+            [
+                new(transform.Transform(GridVector2.Zero).ToGridVector3(0), GridVector3.UnitZ, GridVector2.Zero),
+                new(transform.Transform(new GridVector2(0, info.ImageHeight)).ToGridVector3(0), GridVector3.UnitZ, GridVector2.UnitY),
+                new(transform.Transform(new GridVector2(info.ImageWidth, info.ImageHeight)).ToGridVector3(0), GridVector3.UnitZ, GridVector2.One),
+                new(transform.Transform(new GridVector2(info.ImageWidth, 0)).ToGridVector3(0), GridVector3.UnitZ, GridVector2.UnitX),
+            ];
 
             Triangulation = defaultSquareTriangulation;
             return vertices;
         }
 
 
-        public override string ToString()
-        {
-            return UniqueKey;
-        }
+        public override string ToString() => UniqueKey;
     }
 }

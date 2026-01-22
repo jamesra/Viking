@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 
 namespace AnnotationService.Types
@@ -27,10 +27,10 @@ namespace AnnotationService.Types
 
             return _Links;
         }
-         
+
         public static StructureType Create(this ConnectomeDataModel.StructureType type)
         {
-            StructureType st = new StructureType
+            StructureType st = new()
             {
                 ID = type.ID,
                 ParentID = type.ParentID,
@@ -42,15 +42,9 @@ namespace AnnotationService.Types
                 st.Notes = type.Notes.TrimEnd();
             st.MarkupType = type.MarkupType;
 
-            if (type.Tags is null)
-                st.Tags = Array.Empty<string>();
-            else
-                st.Tags = type.Tags.Split(';');
+            st.Tags = type.Tags is null ? [] : type.Tags.Split(';');
 
-            if (type.StructureTags is null)
-                st.StructureTags = Array.Empty<string>();
-            else
-                st.StructureTags = type.StructureTags.Split(';');
+            st.StructureTags = type.StructureTags is null ? [] : type.StructureTags.Split(';');
 
             st.Abstract = type.Abstract;
             st.Color = type.Color;
@@ -68,7 +62,7 @@ namespace AnnotationService.Types
             type.Name = st.Name;
             type.Notes = st.Notes;
             type.MarkupType = st.MarkupType;
-            
+
             string tags = "";
             foreach (string s in st.Tags)
             {

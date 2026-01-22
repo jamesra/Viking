@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Geometry;
 using SqlGeometryUtils;
 using System.Collections.Generic;
@@ -13,7 +13,7 @@ namespace AnnotationVizLib
         public readonly IScale scale;
         public readonly System.Drawing.Color structure_color;
 
-        public SortedDictionary<MorphologyEdge, ulong> MorphologyEdgeToTulipID = new SortedDictionary<MorphologyEdge, ulong>();
+        public SortedDictionary<MorphologyEdge, ulong> MorphologyEdgeToTulipID = [];
 
         protected override SortedDictionary<string, string> DefaultAttributes => TLPAttributes.DefaultForMorphologyAttribute;
 
@@ -28,7 +28,7 @@ namespace AnnotationVizLib
 
         protected new TLPViewNode createNode(ulong ID)
         {
-            TLPViewNode tempNode = new TLPViewNode(ID);
+            TLPViewNode tempNode = new(ID);
             addNode(ID, tempNode);
             return tempNode;
         }
@@ -36,15 +36,12 @@ namespace AnnotationVizLib
         /// <summary>
         /// Does not populate attributes since they are inherited
         /// </summary>
-        public TLPViewNode CreateTLPSubgraphNode(MorphologyNode node)
-        {
-            return createNode(node.Key);
-        }
+        public TLPViewNode CreateTLPSubgraphNode(MorphologyNode node) => createNode(node.Key);
 
         public TLPViewNode CreateTLPNode(MorphologyNode node, System.Drawing.Color color)
         {
             TLPViewNode tlpnode = createNode(node.Key);
-            Dictionary<string, string> NodeAttribs = new Dictionary<string, string>();
+            Dictionary<string, string> NodeAttribs = [];
             /*IDictionary<string, string> NodeAttribs = AttributeMapper.AttribsForLabel(node..Label, TLPAttributes.StandardLabelToNodeTLPAppearance);
 
             if(NodeAttribs.Count == 0)
@@ -77,9 +74,9 @@ namespace AnnotationVizLib
                 NodeAttribs.Add("viewShape", NodeShape(node));
             }
 
-            if (node.Graph != null && node.Graph.structure.Links != null && node.Graph.structure.Links.Count() > 0)
+            if (node.Graph != null && node.Graph.structure.Links != null && node.Graph.structure.Links.Count > 0)
             {
-                NodeAttribs.Add("NumLinkedStructures", node.Graph.structure.Links.Count().ToString());
+                NodeAttribs.Add("NumLinkedStructures", node.Graph.structure.Links.Count.ToString());
             }
 
             tlpnode.AddStandardizedAttributes(NodeAttribs);
@@ -89,7 +86,7 @@ namespace AnnotationVizLib
 
         public static string NodeShape(MorphologyNode node)
         {
-            if (node.Graph != null && node.Graph.structure.Links != null && node.Graph.structure.Links.Count() > 0)
+            if (node.Graph != null && node.Graph.structure.Links != null && node.Graph.structure.Links.Count > 0)
                 return TLPAttributes.IntForShape(TLPAttributes.NodeShapes.GlowSphere);
 
             return null;
@@ -115,12 +112,9 @@ namespace AnnotationVizLib
             return string.Format("({0},{1},{2})", bbox.Width, bbox.Height, 1 * scale.Z.Value);
         }
 
-        public string LabelForNode(MorphologyNode node)
-        {
-            return node.Key.ToString();
-        }
+        public static string LabelForNode(MorphologyNode node) => node.Key.ToString();
 
-        public string LabelForStructure(IStructureReadOnly s)
+        public static string LabelForStructure(IStructureReadOnly s)
         {
             if (s is null)
                 return "";
@@ -134,10 +128,7 @@ namespace AnnotationVizLib
             return string.Format("{0} #{1}", s.ID, s.Label);
         }
 
-        public static string LinkString(IStructureLink link)
-        {
-            return link.SourceID + " -> " + link.TargetID;
-        }
+        public static string LinkString(IStructureLink link) => link.SourceID + " -> " + link.TargetID;
 
         /// <summary>
         /// Does not populate attributes since they are inherited
@@ -209,7 +200,7 @@ namespace AnnotationVizLib
 
         public static MorphologyTLPView ToTLP(MorphologyGraph graph, UnitsAndScale.IScale scale, StructureMorphologyColorMap colorMap, string VolumeURL)
         {
-            MorphologyTLPView view = new MorphologyTLPView(scale, GetStructureColor(graph, colorMap), VolumeURL);
+            MorphologyTLPView view = new(scale, GetStructureColor(graph, colorMap), VolumeURL);
 
             AddAllSubgraphNodesAndEdges(view, graph, colorMap);
 
@@ -252,8 +243,8 @@ namespace AnnotationVizLib
 
         private static TLPViewSubgraph AssignNodesToSubgraphs(MorphologyTLPView view, MorphologyGraph structuregraph, StructureMorphologyColorMap colorMap)
         {
-            TLPViewSubgraph subgraph_view = new TLPViewSubgraph(view.GenerateNextSubgraphID(),
-                                                                    view.LabelForStructure(structuregraph.structure))
+            TLPViewSubgraph subgraph_view = new(view.GenerateNextSubgraphID(),
+                                                                    MorphologyTLPView.LabelForStructure(structuregraph.structure))
             {
                 Color = GetStructureColor(structuregraph, colorMap)
             };

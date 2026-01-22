@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace GeometryTests
@@ -53,17 +53,17 @@ namespace GeometryTests
         [TestMethod]
         public void LineSearchGridTestMethod()
         {
-            LineSearchGrid<string> LineSearch = new LineSearchGrid<string>(new GridRectangle(-10, 10, -10, 10), 500);
+            LineSearchGrid<string> LineSearch = new(new GridRectangle(-10, 10, -10, 10), 500);
 
-            GridLineSegment lineA = new GridLineSegment(new GridVector2(-5, 3),
+            GridLineSegment lineA = new(new GridVector2(-5, 3),
                                                         new GridVector2(5, 3));
-            GridLineSegment lineB = new GridLineSegment(new GridVector2(3, -5),
+            GridLineSegment lineB = new(new GridVector2(3, -5),
                                                         new GridVector2(3, 5));
-            GridLineSegment lineC = new GridLineSegment(new GridVector2(-6, -5),
+            GridLineSegment lineC = new(new GridVector2(-6, -5),
                                                         new GridVector2(-6, 5));
-            GridLineSegment lineD = new GridLineSegment(new GridVector2(-9, 8),
+            GridLineSegment lineD = new(new GridVector2(-9, 8),
                                                         new GridVector2(1, -8)); //Should be in seven grid cells
-            GridLineSegment lineE = new GridLineSegment(new GridVector2(-9, 8),
+            GridLineSegment lineE = new(new GridVector2(-9, 8),
                                                         new GridVector2(1, -2));
 
             LineSearch.Add(lineA, "A");
@@ -73,16 +73,16 @@ namespace GeometryTests
             LineSearch.Add(lineE, "E");
 
             string value = LineSearch.GetNearest(new GridVector2(-5, 3), out GridVector2 intersection, out double distance);
-            Assert.IsTrue(value == "A");
+            Assert.AreEqual("A", value);
 
             value = LineSearch.GetNearest(new GridVector2(-10, -10), out intersection, out distance);
-            Assert.IsTrue(value == "C");
+            Assert.AreEqual("C", value);
 
             value = LineSearch.GetNearest(new GridVector2(7, 4), out intersection, out distance);
-            Assert.IsTrue(value == "A");
+            Assert.AreEqual("A", value);
 
             value = LineSearch.GetNearest(new GridVector2(3.5, 6), out intersection, out distance);
-            Assert.IsTrue(value == "B");
+            Assert.AreEqual("B", value);
         }
     }
 }

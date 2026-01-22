@@ -11,7 +11,7 @@ namespace AnnotationVizLib
     /// </summary>
     public class ColorMapWithLong
     {
-        readonly SortedList<long, Color> _colorMapTable = new SortedList<long, Color>();
+        readonly SortedList<long, Color> _colorMapTable = [];
 
         private static long ConvertKey(string str) => System.Convert.ToInt64(str);
 
@@ -37,9 +37,9 @@ namespace AnnotationVizLib
 
         public static ColorMapWithLong Create(string config_data)
         {
-            ColorMapWithLong mapping = new ColorMapWithLong();
+            ColorMapWithLong mapping = new();
 
-            string[] lines = config_data.Split(new char[] { '\n' });
+            string[] lines = config_data.Split(['\n']);
             foreach (string line in lines)
             {
                 string trim_line = line.Trim();

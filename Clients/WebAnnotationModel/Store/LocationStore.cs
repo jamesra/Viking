@@ -1,4 +1,4 @@
-﻿using AnnotationService.Types;
+using AnnotationService.Types;
 using Geometry;
 using SqlGeometryUtils;
 using System;
@@ -12,16 +12,11 @@ using WebAnnotationModel.Service;
 
 namespace WebAnnotationModel
 {
-    public class LocationRTree
+    public class LocationRTree(LocationStore store)
     {
-        public RTree.RTree<long> SpatialSearch = new RTree.RTree<long>();
+        public RTree.RTree<long> SpatialSearch = new();
 
-        readonly LocationStore Store = null;
-
-        public LocationRTree(LocationStore store)
-        {
-            this.Store = store;
-        }
+        readonly LocationStore Store = store;
 
         public void AddObject(LocationObj obj)
         {
@@ -51,27 +46,18 @@ namespace WebAnnotationModel
         /// Maps sections to a sorted list of locations on that section.
         /// This collection is not guaranteed to match the ObjectToID collection.  Adding spin-locks to the Add/Remove functions could solve this if it becomes an issue.
         /// </summary>
-        readonly System.Collections.Concurrent.ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>> SectionToLocations = new ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>>();
+        readonly System.Collections.Concurrent.ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>> SectionToLocations = new();
 
         internal LocationRTree SpatialSearch;
-         
+
 
         #region Proxy 
 
-        protected override long[] ProxyUpdate(IAnnotateLocations proxy, Location[] objects)
-        {
-            return proxy.Update(objects);
-        }
+        protected override long[] ProxyUpdate(IAnnotateLocations proxy, Location[] objects) => proxy.Update(objects);
 
-        protected override Location ProxyGetByID(IAnnotateLocations proxy, long ID)
-        {
-            return proxy.GetLocationByID(ID);
-        }
+        protected override Location ProxyGetByID(IAnnotateLocations proxy, long ID) => proxy.GetLocationByID(ID);
 
-        protected override Location[] ProxyGetByIDs(IAnnotateLocations proxy, long[] IDs)
-        {
-            return proxy.GetLocationsByID(IDs);
-        }
+        protected override Location[] ProxyGetByIDs(IAnnotateLocations proxy, long[] IDs) => proxy.GetLocationsByID(IDs);
 
         public override ConcurrentDictionary<long, LocationObj> GetLocalObjectsForSection(long SectionNumber)
         {
@@ -84,24 +70,15 @@ namespace WebAnnotationModel
             return new ConcurrentDictionary<long, LocationObj>();
         }
 
-        public LocationObj[] GetLocalObjectsForStructure(long StructureID)
-        {
-            return IDToObject.Values.Where(l => l.ParentID.HasValue && l.ParentID.Value == StructureID).ToArray();
-        }
+        public LocationObj[] GetLocalObjectsForStructure(long StructureID) => [.. IDToObject.Values.Where(l => l.ParentID.HasValue && l.ParentID.Value == StructureID)];
 
-        protected override Location[] ProxyGetBySection(IAnnotateLocations proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out long[] deleted_objs)
-        {
-            return proxy.GetLocationChanges(out TicksAtQueryExecute, out deleted_objs, SectionNumber, LastQuery.Ticks);
-        }
+        protected override Location[] ProxyGetBySection(IAnnotateLocations proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out long[] deleted_objs) => proxy.GetLocationChanges(out TicksAtQueryExecute, out deleted_objs, SectionNumber, LastQuery.Ticks);
 
         protected override IAsyncResult ProxyBeginGetBySection(IAnnotateLocations proxy,
                                                         long SectionNumber,
                                                         DateTime LastQuery,
                                                         AsyncCallback callback,
-                                                        object asynchState)
-        {
-            return proxy.BeginGetLocationChanges(SectionNumber, LastQuery.Ticks, callback, asynchState);
-        }
+                                                        object asynchState) => proxy.BeginGetLocationChanges(SectionNumber, LastQuery.Ticks, callback, asynchState);
 
 
         protected override Location[] ProxyGetBySectionRegion(IAnnotateLocations proxy,
@@ -110,31 +87,19 @@ namespace WebAnnotationModel
                                                              double MinRadius,
                                                              DateTime LastQuery,
                                                              out long TicksAtQueryExecute,
-                                                             out long[] deleted_objs)
-        {
-            return proxy.GetLocationChangesInMosaicRegion(out TicksAtQueryExecute, out deleted_objs, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
-        }
+                                                             out long[] deleted_objs) => proxy.GetLocationChangesInMosaicRegion(out TicksAtQueryExecute, out deleted_objs, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
 
-        protected override IAsyncResult ProxyBeginGetBySectionRegion(IAnnotateLocations proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
-        {
-            return proxy.BeginGetLocationChangesInMosaicRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
-        }
+        protected override IAsyncResult ProxyBeginGetBySectionRegion(IAnnotateLocations proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState) => proxy.BeginGetLocationChangesInMosaicRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
 
         protected override Location[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute,
                                                                       out long[] DeletedLocations,
                                                                       GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj> state,
-                                                                      IAsyncResult result)
-        {
-            return state.Proxy.EndGetLocationChangesInMosaicRegion(out TicksAtQueryExecute, out DeletedLocations, result);
-        }
+                                                                      IAsyncResult result) => state.Proxy.EndGetLocationChangesInMosaicRegion(out TicksAtQueryExecute, out DeletedLocations, result);
 
         protected override Location[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
                                                               out long[] DeletedLocations,
                                                               GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj> state,
-                                                              IAsyncResult result)
-        {
-            return state.Proxy.EndGetLocationChanges(out TicksAtQueryExecute, out DeletedLocations, result);
-        }
+                                                              IAsyncResult result) => state.Proxy.EndGetLocationChanges(out TicksAtQueryExecute, out DeletedLocations, result);
 
 
         #endregion
@@ -162,11 +127,11 @@ namespace WebAnnotationModel
         {
             var proxy = CreateProxy();
             {
-                var client = (IAnnotateLocations)proxy;
+                IAnnotateLocations client = (IAnnotateLocations)proxy;
                 Location loc = client.GetLastModifiedLocation();
                 if (loc != null)
                 {
-                    LocationObj LastModifiedLoc = new LocationObj(loc);
+                    LocationObj LastModifiedLoc = new(loc);
                     LastModifiedLoc = Add(LastModifiedLoc);
                     return LastModifiedLoc;
                 }
@@ -183,11 +148,11 @@ namespace WebAnnotationModel
         /// <param name="linked_locations"></param>
         /// <returns></returns>
         public LocationObj Create(LocationObj new_location, long[] linked_locations = null)
-        { 
+        {
             LocationObj created_location = null;
             var proxy = CreateProxy();
             {
-                var client = (IAnnotateLocations)proxy;
+                IAnnotateLocations client = (IAnnotateLocations)proxy;
                 Location created_db_location = client.CreateLocation(new_location.GetData(), linked_locations);
                 if (created_db_location is null)
                     return null;
@@ -207,7 +172,7 @@ namespace WebAnnotationModel
                 Store.LocationLinks.Add(listLinks); 
                 */
                 return created_location;
-            } 
+            }
         }
 
         public override bool Remove(LocationObj obj)
@@ -229,7 +194,7 @@ namespace WebAnnotationModel
         /// <returns></returns>
         protected override ChangeInventory<LocationObj> InternalAdd(LocationObj[] newObjs)
         {
-            long[] MissingParentIDs = newObjs.Where(loc => loc.ParentID.HasValue && Store.Structures.Contains(loc.ParentID.Value) == false).Select(loc => loc.ParentID.Value).Distinct().ToArray();
+            long[] MissingParentIDs = [.. newObjs.Where(loc => loc.ParentID.HasValue && Store.Structures.Contains(loc.ParentID.Value) == false).Select(loc => loc.ParentID.Value).Distinct()];
             if (MissingParentIDs.Length > 0)
                 Store.Structures.GetObjectsByIDs(MissingParentIDs, true);
 
@@ -284,7 +249,7 @@ namespace WebAnnotationModel
         private bool TryAddLocationToSection(LocationObj obj)
         {
             ConcurrentDictionary<long, LocationObj> listSectionLocations;
-            listSectionLocations = SectionToLocations.GetOrAdd(obj.Section, (key) => { return new ConcurrentDictionary<long, LocationObj>(); });
+            listSectionLocations = SectionToLocations.GetOrAdd(obj.Section, (key) => new ConcurrentDictionary<long, LocationObj>());
 
             bool Success = listSectionLocations.TryAdd(obj.ID, obj);
             if (!Success)
@@ -315,7 +280,7 @@ namespace WebAnnotationModel
             try
             {
                 IClientChannel proxy = CreateProxy();
-                {  
+                {
 
                     data = ((IAnnotateLocations)proxy).GetLocationsForStructure(StructureID);
                 }
@@ -324,21 +289,21 @@ namespace WebAnnotationModel
             {
                 ShowStandardExceptionMessage(e);
                 data = null;
-            } 
+            }
 
             if (null == data)
                 return new LocationObj[0];
 
-            List<LocationObj> listLocations = new List<LocationObj>(data.Length);
+            List<LocationObj> listLocations = new(data.Length);
             foreach (Location loc in data)
             {
                 Debug.Assert(loc != null);
 
-                LocationObj newObj = new LocationObj(loc);
+                LocationObj newObj = new(loc);
                 listLocations.Add(newObj);
             }
 
-            ChangeInventory<LocationObj> output = InternalAdd(listLocations.ToArray()); //Add might return an existing object, which we should use instead
+            ChangeInventory<LocationObj> output = InternalAdd([.. listLocations]); //Add might return an existing object, which we should use instead
             CallOnCollectionChanged(output);
             //TODO, handle events
             return output.ObjectsInStore;
@@ -360,7 +325,7 @@ namespace WebAnnotationModel
             if (!success)
                 return true;
 
-            ICollection<LocationObj> deleted_list = InternalDelete(sectionLocations.Values.ToArray());
+            ICollection<LocationObj> deleted_list = InternalDelete([.. sectionLocations.Values]);
 
             CallOnCollectionChangedForDelete(deleted_list);
 
@@ -369,11 +334,11 @@ namespace WebAnnotationModel
         }
 
         public List<LocationObj> GetStructureLocationChangeLog(long structureid)
-        { 
-            List<LocationObj> listLocations = new List<LocationObj>();
+        {
+            List<LocationObj> listLocations = [];
             var proxy = CreateProxy();
             {
-                var client = (IAnnotateLocations)proxy;
+                IAnnotateLocations client = (IAnnotateLocations)proxy;
                 LocationHistory[] history = client.GetLocationChangeLog(structureid, new DateTime?(), new DateTime?());
 
                 listLocations.Capacity = history.Length;
@@ -386,10 +351,7 @@ namespace WebAnnotationModel
             return listLocations;
         }
 
-        public bool Contains(LocationObj o, Geometry.GridRectangle bounds)
-        {
-            return bounds.Contains(o.Position);
-        }
+        public bool Contains(LocationObj o, Geometry.GridRectangle bounds) => bounds.Contains(o.Position);
 
 
         #region Callbacks
@@ -481,17 +443,17 @@ namespace WebAnnotationModel
 
         public virtual ICollection<LocationObj> GetObjectsInRegion(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc)
         {
-            GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj> state = new GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj>(null, SectionNumber, GetLastQueryTimeForSection(SectionNumber), null);
+            GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj> state = new(null, SectionNumber, GetLastQueryTimeForSection(SectionNumber), null);
 
-            Location[] objects = new Location[0];
-            long[] deleted_objects = new long[0];
+            Location[] objects = [];
+            long[] deleted_objects = [];
             DateTime StartTime = DateTime.UtcNow;
             AnnotationSet serverAnnotations = null;
             using (var proxy = CreateProxy())
             {
                 try
                 {
-                    var client = (IAnnotateLocations)proxy;
+                    IAnnotateLocations client = (IAnnotateLocations)proxy;
 
                     serverAnnotations = client.GetAnnotationsInMosaicRegion(out long QueryExecutedTime,
                         out deleted_objects,
@@ -519,7 +481,7 @@ namespace WebAnnotationModel
         {
             DateTime TraceQueryEnd = DateTime.UtcNow;
 
-            ChangeInventory<StructureObj> structure_inventory = Store.Structures.ParseQuery(serverAnnotations.Structures, new long[] { }, null);
+            ChangeInventory<StructureObj> structure_inventory = Store.Structures.ParseQuery(serverAnnotations.Structures, [], null);
             ChangeInventory<LocationObj> location_inventory = ParseQuery(serverAnnotations.Locations, deleted_objects, null);
 
             DateTime TraceParseEnd = DateTime.UtcNow;
@@ -538,17 +500,17 @@ namespace WebAnnotationModel
                                                                                            double MinRadius,
                                                                                            DateTime? LastQueryUtc,
                                                                                            Action<ICollection<LocationObj>> OnLoadCompletedCallBack)
-        { 
+        {
 
             IAsyncResult result = null;
             IClientChannel proxy = null;
             try
             {
                 proxy = CreateProxy();
-                var client = (IAnnotateLocations)proxy;
+                IAnnotateLocations client = (IAnnotateLocations)proxy;
 
                 //                WCFOBJECT[] locations = new WCFOBJECT[0];
-                GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj> newState = new GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj>((IAnnotateLocations)proxy, SectionNumber, LastQueryUtc ?? DateTime.MinValue, OnLoadCompletedCallBack);
+                GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj> newState = new((IAnnotateLocations)proxy, SectionNumber, LastQueryUtc ?? DateTime.MinValue, OnLoadCompletedCallBack);
 
                 //Build list of Locations to check
                 result = client.BeginGetAnnotationsInMosaicRegion(SectionNumber,
@@ -567,12 +529,9 @@ namespace WebAnnotationModel
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
-                if (proxy != null)
-                {
-                    proxy.Close();
-                    proxy = null;
-                }
-            } 
+                proxy?.Close();
+                proxy = null;
+            }
 
             return new MixedLocalAndRemoteQueryResults<long, LocationObj>(result, SpatialSearch.Intersects(bounds, SectionNumber));
         }
@@ -591,7 +550,7 @@ namespace WebAnnotationModel
 
             Debug.Assert(proxy != null);
 
-            long[] DeletedLocations = Array.Empty<long>();
+            long[] DeletedLocations = [];
             long TicksAtQueryExecute = 0;
 
             AnnotationSet serverAnnotations = null;
@@ -613,7 +572,7 @@ namespace WebAnnotationModel
             {
                 ShowStandardExceptionMessage(e);
                 return;
-            } 
+            }
 
             ChangeInventory<LocationObj> location_inventory = ProcessAnnotationSet(serverAnnotations, DeletedLocations, state.StartTime, state.SectionNumber);
 
@@ -631,9 +590,6 @@ namespace WebAnnotationModel
             }
         }
 
-        public ICollection<LocationObj> GetLocalObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius)
-        {
-            return SpatialSearch.Intersects(bounds, SectionNumber).Where(l => l.Radius >= MinRadius).ToList();
-        }
+        public ICollection<LocationObj> GetLocalObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius) => [.. SpatialSearch.Intersects(bounds, SectionNumber).Where(l => l.Radius >= MinRadius)];
     }
 }

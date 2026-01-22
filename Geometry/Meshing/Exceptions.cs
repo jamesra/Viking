@@ -74,13 +74,13 @@ namespace Geometry.Meshing
         public EdgesIntersectTriangulationException(IEdgeKey edge, ICollection<IEdgeKey> intersected, string msg) : base(msg)
         {
             Edge = edge;
-            IntersectedEdges = intersected.ToArray();
+            IntersectedEdges = [.. intersected];
         }
 
         public EdgesIntersectTriangulationException(IEdgeKey edge, ICollection<IEdgeKey> intersected, string message, Exception innerException) : base(message, innerException)
         {
             Edge = edge;
-            IntersectedEdges = intersected.ToArray();
+            IntersectedEdges = [.. intersected];
         }
     }
 

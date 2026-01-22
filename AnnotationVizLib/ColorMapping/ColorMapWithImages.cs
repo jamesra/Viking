@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.Linq; 
+using System.Linq;
 using Geometry;
 using SqlGeometryUtils;
 using UnitsAndScale;
@@ -16,7 +16,7 @@ namespace AnnotationVizLib
     /// </summary>
     public class ColorMapWithImages
     {
-        readonly SortedList<int, List<ColorMapImageData>> ColorMapTable = new SortedList<int, List<ColorMapImageData>>();
+        readonly SortedList<int, List<ColorMapImageData>> ColorMapTable = [];
 
         protected ColorMapWithImages()
         {
@@ -43,7 +43,7 @@ namespace AnnotationVizLib
             }
             else
             {
-                ColorMapTable.Add(SectionNumber, new List<ColorMapImageData>(new ColorMapImageData[] { data }));
+                ColorMapTable.Add(SectionNumber, [data]);
             }
 
             return;
@@ -56,7 +56,7 @@ namespace AnnotationVizLib
             if (!ColorMapTable.TryGetValue(Z, out var colormapimages))
                 return Color.Empty;
 
-            List<Color> colors = new List<Color>(colormapimages.Count);
+            List<Color> colors = new(colormapimages.Count);
 
             for (int i = 0; i < colormapimages.Count; i++)
             {
@@ -71,7 +71,7 @@ namespace AnnotationVizLib
                 return Color.Empty;
 
             //Average the colors together
-            return AverageColors(colors);
+            return ColorMapWithImages.AverageColors(colors);
         }
 
         /// <summary>
@@ -98,11 +98,11 @@ namespace AnnotationVizLib
                 return Color.Empty;
 
             IEnumerable<GridVector3> filteredPoints = points.Where(p => ColorMapTable.ContainsKey((int)p.Z));
-            IList<Color> colors = filteredPoints.Select<GridVector3, Color>(p => GetColor(p.X, p.Y, (int)p.Z)).ToList();
-            return AverageColors(colors);
+            IList<Color> colors = [.. filteredPoints.Select<GridVector3, Color>(p => GetColor(p.X, p.Y, (int)p.Z))];
+            return ColorMapWithImages.AverageColors(colors);
         }
 
-        public Color AverageColors(ICollection<Color> colors)
+        public static Color AverageColors(ICollection<Color> colors)
         {
             if (colors.Count == 0)
                 return Color.Empty;
@@ -146,10 +146,10 @@ namespace AnnotationVizLib
         /// <param name="config"></param>
         public static ColorMapWithImages Create(string config_data, string ImageDir)
         {
-            ColorMapWithImages mapping = new ColorMapWithImages();
+            ColorMapWithImages mapping = new();
 
-            SortedList<int, List<ColorMapImageData>> ColorMapList = new SortedList<int, List<ColorMapImageData>>();
-            string[] lines = config_data.Split(new char[] { '\n' });
+            SortedList<int, List<ColorMapImageData>> ColorMapList = [];
+            string[] lines = config_data.Split(['\n']);
             foreach (string line in lines)
             {
                 try
@@ -198,15 +198,15 @@ namespace AnnotationVizLib
 
             int SectionNumber = System.Convert.ToInt32(parts[0]);
 
-            ColorImageOffset offset = new ColorImageOffset(System.Convert.ToInt32(parts[1]), System.Convert.ToInt32(parts[2]));
+            ColorImageOffset offset = new(System.Convert.ToInt32(parts[1]), System.Convert.ToInt32(parts[2]));
 
-            AxisUnits X_Scale = new AxisUnits(System.Convert.ToDouble(parts[3]), "");
-            AxisUnits Y_Scale = new AxisUnits(System.Convert.ToDouble(parts[4]), "");
-            AxisUnits Z_Scale = new AxisUnits(0, "");
+            AxisUnits X_Scale = new(System.Convert.ToDouble(parts[3]), "");
+            AxisUnits Y_Scale = new(System.Convert.ToDouble(parts[4]), "");
+            AxisUnits Z_Scale = new(0, "");
 
-            Scale scale = new Scale(X_Scale, Y_Scale, Z_Scale);
+            Scale scale = new(X_Scale, Y_Scale, Z_Scale);
 
-            ColorScalars scalars = new ColorScalars(ConfigStringHelper.NormalizedStringToByte(parts[5]),
+            ColorScalars scalars = new(ConfigStringHelper.NormalizedStringToByte(parts[5]),
                 ConfigStringHelper.NormalizedStringToByte(parts[6]),
                 ConfigStringHelper.NormalizedStringToByte(parts[7]),
                 ConfigStringHelper.NormalizedStringToByte(parts[8]));
@@ -226,7 +226,7 @@ namespace AnnotationVizLib
             {
                 if (stream != null)
                 {
-                    ColorMapImageData image = new ColorMapImageData(stream, SectionNumber, scale, scalars, offset);
+                    ColorMapImageData image = new(stream, SectionNumber, scale, scalars, offset);
                     return image;
                 }
             }

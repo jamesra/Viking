@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="RobustPredicates.cs">
 // Original Triangle code by Jonathan Richard Shewchuk, http://www.cs.cmu.edu/~quake/triangle.html
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
@@ -28,7 +28,7 @@ namespace TriangleNet
     {
         #region Default predicates instance (Singleton)
 
-        private static readonly object creationLock = new object();
+        private static readonly object creationLock = new();
         private static RobustPredicates _default;
 
         /// <summary>
@@ -42,10 +42,7 @@ namespace TriangleNet
                 {
                     lock (creationLock)
                     {
-                        if (_default is null)
-                        {
-                            _default = new RobustPredicates();
-                        }
+                        _default ??= new RobustPredicates();
                     }
                 }
 
@@ -277,10 +274,7 @@ namespace TriangleNet
         /// <returns>Return a positive value if the point pd lies inside the circle passing through 
         /// pa, pb, and pc; a negative value if it lies outside; and zero if the four points 
         /// are cocircular.</returns>
-        public double NonRegular(Point pa, Point pb, Point pc, Point pd)
-        {
-            return InCircle(pa, pb, pc, pd);
-        }
+        public double NonRegular(Point pa, Point pb, Point pc, Point pd) => InCircle(pa, pb, pc, pd);
 
         /// <summary>
         /// Find the circumcenter of a triangle.

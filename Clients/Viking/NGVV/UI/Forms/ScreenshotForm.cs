@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Windows.Forms;
 
@@ -13,14 +13,14 @@ namespace Viking.UI.Forms
             get => Properties.Settings.Default.ScreenShotNumber;
             set => Properties.Settings.Default.ScreenShotNumber = value;
         }
-        
+
         static string LastFileNamePrefix
         {
             get => Properties.Settings.Default.ScreenShotFilePrefix;
             set => Properties.Settings.Default.ScreenShotFilePrefix = value;
         }
-        
-        
+
+
         /// <summary>
         /// The string to append to the next filename captured
         /// </summary>
@@ -41,7 +41,8 @@ namespace Viking.UI.Forms
         public string Filename
         {
             get => Environment.ExpandEnvironmentVariables(System.IO.Path.Combine(textFolder.Text, textFilename.Text));
-            set {
+            set
+            {
                 textFolder.Text = System.IO.Path.GetDirectoryName(value);
                 textFilename.Text = System.IO.Path.GetFileName(value);
             }
@@ -64,10 +65,7 @@ namespace Viking.UI.Forms
 
             ViewerDownsample = Downsample;
 
-            if (ScreenshotForm.UseViewerDownsampleChecked)
-                this.Downsample = Downsample;
-            else
-                this.Downsample = ScreenshotForm.LastDownsampleValue;
+            this.Downsample = ScreenshotForm.UseViewerDownsampleChecked ? Downsample : ScreenshotForm.LastDownsampleValue;
 
             InitializeComponent();
         }
@@ -79,7 +77,7 @@ namespace Viking.UI.Forms
             this.numX.Value = (decimal)Math.Round(this.Rect.Left + (this.Rect.Width / 2));
             this.numY.Value = (decimal)Math.Round(this.Rect.Bottom + (this.Rect.Height / 2));
             this.numWidth.Value = (decimal)Math.Round(this.Rect.Width / this.Downsample);
-            this.numHeight.Value = (decimal)Math.Round(this.Rect.Height / this.Downsample);            
+            this.numHeight.Value = (decimal)Math.Round(this.Rect.Height / this.Downsample);
 
             this.textFilename.Text = ScreenshotForm.LastFileNamePrefix + "_" + ScreenshotForm.NextCaptureNumber.ToString("d03") + ".png";
 
@@ -95,14 +93,7 @@ namespace Viking.UI.Forms
             decimal width = numWidth.Value * (decimal)this.Downsample;
             decimal height = numHeight.Value * (decimal)this.Downsample;
 
-            if (this.checkUseViewerDownsample.Checked)
-            {
-                this.Downsample = ViewerDownsample;
-            }
-            else
-            {
-                this.Downsample = (double)this.numDownsample.Value;
-            }
+            this.Downsample = checkUseViewerDownsample.Checked ? ViewerDownsample : (double)this.numDownsample.Value;
 
             width /= (decimal)this.Downsample;
             height /= (decimal)this.Downsample;
@@ -110,15 +101,15 @@ namespace Viking.UI.Forms
             numWidth.Value = width;
             numHeight.Value = height;
         }
-        
+
         private static string StringCaptureNumberFromName(string filename)
         {
-            var name = System.IO.Path.GetFileNameWithoutExtension(filename); 
+            var name = System.IO.Path.GetFileNameWithoutExtension(filename);
             string captureNumberString = NextCaptureNumberString;
             if (name.EndsWith(captureNumberString))
             {
                 int i = name.LastIndexOf(captureNumberString);
-                return  name.Remove(i);
+                return name.Remove(i);
             }
 
             return name;
@@ -143,10 +134,10 @@ namespace Viking.UI.Forms
             if (ScreenshotForm.LastFileNamePrefix.EndsWith(CaptureNumberString))
             {
                 int i = ScreenshotForm.LastFileNamePrefix.LastIndexOf(CaptureNumberString);
-                ScreenshotForm.LastFileNamePrefix = ScreenshotForm.LastFileNamePrefix.Remove(i); 
+                ScreenshotForm.LastFileNamePrefix = ScreenshotForm.LastFileNamePrefix.Remove(i);
             }
-            
-            ScreenshotForm.LastFileNamePrefix = StringCaptureNumberFromName(this.textFilename.Text); 
+
+            ScreenshotForm.LastFileNamePrefix = StringCaptureNumberFromName(this.textFilename.Text);
             ScreenshotForm.NextCaptureNumber++;
 
             this.DialogResult = DialogResult.OK;
@@ -161,15 +152,13 @@ namespace Viking.UI.Forms
                 string basename = System.IO.Path.GetFileNameWithoutExtension(textFilename.Text);
                 string expandedBasename = Environment.ExpandEnvironmentVariables(basename);
                 string MetaFilename = System.IO.Path.Combine(expandedDirname, expandedBasename + ".txt");
-                using (System.IO.StreamWriter textFile = System.IO.File.CreateText(MetaFilename))
-                {
-                    double X = this.Rect.Left;
-                    double Y = this.Rect.Bottom;
-                    textFile.WriteLine("Filename:\t" + Filename);
-                    textFile.WriteLine("X: " + X.ToString() + "\tY: " + Y.ToString() + "\tZ: " + this._Z.ToString());
-                    textFile.WriteLine("Width: " + Rect.Width.ToString() + "\tHeight: " + Rect.Height.ToString());
-                    textFile.WriteLine("Downsample: " + Downsample.ToString());
-                }
+                using System.IO.StreamWriter textFile = System.IO.File.CreateText(MetaFilename);
+                double X = this.Rect.Left;
+                double Y = this.Rect.Bottom;
+                textFile.WriteLine("Filename:\t" + Filename);
+                textFile.WriteLine("X: " + X.ToString() + "\tY: " + Y.ToString() + "\tZ: " + this._Z.ToString());
+                textFile.WriteLine("Width: " + Rect.Width.ToString() + "\tHeight: " + Rect.Height.ToString());
+                textFile.WriteLine("Downsample: " + Downsample.ToString());
             }
             catch (Exception except)
             {
@@ -185,39 +174,28 @@ namespace Viking.UI.Forms
 
         private void btnBrowse_Click(object sender, EventArgs e)
         {
-            using (SaveFileDialog browserDlg = new SaveFileDialog())
+            using SaveFileDialog browserDlg = new();
+            browserDlg.FileName = this.textFilename.Text;
+            browserDlg.Title = "Choose screenshot file name";
+            browserDlg.OverwritePrompt = true;
+            browserDlg.Filter = "Portable Network Graphic|*.png";
+            browserDlg.DefaultExt = "png";
+            browserDlg.AddExtension = true;
+            browserDlg.AutoUpgradeEnabled = true;
+            browserDlg.CheckPathExists = true;
+            DialogResult result = browserDlg.ShowDialog(this);
+            if (result == DialogResult.OK)
             {
-                browserDlg.FileName = this.textFilename.Text;
-                browserDlg.Title = "Choose screenshot file name";
-                browserDlg.OverwritePrompt = true;
-                browserDlg.Filter = "Portable Network Graphic|*.png";
-                browserDlg.DefaultExt = "png";
-                browserDlg.AddExtension = true;
-                browserDlg.AutoUpgradeEnabled = true;
-                browserDlg.CheckPathExists = true;
-                DialogResult result = browserDlg.ShowDialog(this);
-                if (result == DialogResult.OK)
-                {
-                    this.textFilename.Text = System.IO.Path.GetFileNameWithoutExtension(browserDlg.FileName);
-                    
-                    this.textFilename.Text = System.IO.Path.GetDirectoryName(browserDlg.FileName);
-                }
+                this.textFilename.Text = System.IO.Path.GetFileNameWithoutExtension(browserDlg.FileName);
+
+                this.textFilename.Text = System.IO.Path.GetDirectoryName(browserDlg.FileName);
             }
         }
 
-        private void numDownsample_ValueChanged(object sender, EventArgs e)
-        {
-            UpdateDownsampleControls();
-        }
+        private void numDownsample_ValueChanged(object sender, EventArgs e) => UpdateDownsampleControls();
 
-        private void checkUseViewerDownsample_CheckedChanged(object sender, EventArgs e)
-        {
-            UpdateDownsampleControls();
-        }
+        private void checkUseViewerDownsample_CheckedChanged(object sender, EventArgs e) => UpdateDownsampleControls();
 
-        private void textFolder_TextChanged(object sender, EventArgs e)
-        {
-            Properties.Settings.Default.LastScreenshotPath = textFolder.Text;
-        }
+        private void textFolder_TextChanged(object sender, EventArgs e) => Properties.Settings.Default.LastScreenshotPath = textFolder.Text;
     }
 }

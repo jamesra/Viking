@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -36,26 +36,26 @@ namespace MonogameTestbed
         /// <summary>
         /// Labels that are displayed on the grid and should change size and position on the screen as the camera changes
         /// </summary>
-        readonly List<LabeledRectangleView> views = new List<LabeledRectangleView>();
+        readonly List<LabeledRectangleView> views = [];
 
         /// <summary>
         /// The background grid used to provide scale and visual proof that rectangles have proper dimensions
         /// </summary>
-        readonly List<CircleView> dot_views = new List<CircleView>();
+        readonly List<CircleView> dot_views = [];
 
         /// <summary>
         /// A direct rectangle view shown in the corner to verify that Rectangle Views have correct dimensions
         /// </summary>
-        List<RectangleView> rect_views = new List<RectangleView>();
+        List<RectangleView> rect_views = [];
 
         /// <summary>
         /// Rectangle labels that are positioned in screen coordinates and should not change size or scale with camera movements
         /// I did not get fixed labels working using a separate viewport and moved on.
         /// </summary>
-        readonly List<LabeledRectangleView> fixed_views = new List<LabeledRectangleView>();
-        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
-        readonly KeyboardStateTracker Keypad = new KeyboardStateTracker();
-        readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
+        readonly List<LabeledRectangleView> fixed_views = [];
+        readonly GamePadStateTracker Gamepad = new();
+        readonly KeyboardStateTracker Keypad = new();
+        readonly Cursor2DCameraManipulator CameraManipulator = new();
 
         Scene scene;
 
@@ -68,7 +68,7 @@ namespace MonogameTestbed
         {
             this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
 
-            Viewport screen_space_viewport = new Viewport(-1, -1, 2, 2);
+            Viewport screen_space_viewport = new(-1, -1, 2, 2);
             this.screen_space_scene = new Scene(window.GraphicsDevice.Viewport, new Camera());
             screen_space_scene.Viewport = screen_space_viewport;
 
@@ -76,7 +76,7 @@ namespace MonogameTestbed
             LayoutFixedButtons();
             LayoutRectangle();
 
-            int StepSize = 10; 
+            int StepSize = 10;
 
             if (dot_views.Count == 0)
             {
@@ -84,8 +84,8 @@ namespace MonogameTestbed
                 {
                     for (int y = -150; y <= 150; y += StepSize)
                     {
-                        Color color = x == 0 || y == 0 ? Color.Yellow : x % (StepSize * 5) == 0 || y % (StepSize * 5) == 0 ? Color.Green :  Color.Red;
-                        var dot = new CircleView(new GridCircle(x, y, 1), color);
+                        Color color = x == 0 || y == 0 ? Color.Yellow : x % (StepSize * 5) == 0 || y % (StepSize * 5) == 0 ? Color.Green : Color.Red;
+                        CircleView dot = new(new GridCircle(x, y, 1), color);
                         dot_views.Add(dot);
                     }
                 }
@@ -97,10 +97,10 @@ namespace MonogameTestbed
         }
 
         private void LayoutButtons()
-        {   
-            GridVector2 box_size = new GridVector2(50, 25); //Size of buttons
+        {
+            GridVector2 box_size = new(50, 25); //Size of buttons
             GridVector2 half_box_size = box_size / 2;
-            GridVector2 spacing = new GridVector2(100, 50); //Space between buttons on grid
+            GridVector2 spacing = new(100, 50); //Space between buttons on grid
 
             HorizontalAlignment hAlign = HorizontalAlignment.CENTER;
             VerticalAlignment vAlign = VerticalAlignment.CENTER;
@@ -110,7 +110,7 @@ namespace MonogameTestbed
             int x = 0;
             int y = 0;
 
-            
+
             for (x = -1; x <= 1; x++)
             {
                 hAlign = x < 0 ? HorizontalAlignment.LEFT : x == 0 ? HorizontalAlignment.CENTER : HorizontalAlignment.RIGHT;
@@ -119,39 +119,31 @@ namespace MonogameTestbed
                 {
                     vAlign = y < 0 ? VerticalAlignment.BOTTOM : y == 0 ? VerticalAlignment.CENTER : VerticalAlignment.TOP;
 
-                    Anchor anchor = new Anchor { Horizontal = hAlign, Vertical = vAlign };
+                    Anchor anchor = new() { Horizontal = hAlign, Vertical = vAlign };
                     GridVector2 origin = ((spacing) * new GridVector2(x, y));// - half_box_size;
-                    GridRectangle bbox = new GridRectangle(origin, box_size.X, box_size.Y);
+                    GridRectangle bbox = new(origin, box_size.X, box_size.Y);
 
                     string label_text = UseNewlines ? string.Format("{0}\n{1}\nGoldfish", vAlign, hAlign) : string.Format("{0} {1}", vAlign, hAlign);
-                    LabeledRectangleView new_view;
-
-                    if (PassRectanglesToConstructor)
-                    {
-                        new_view = new LabeledRectangleView(label_text, bbox, Color.Black, Color.Black.Random().SetAlpha(0.5f), alignment: new Alignment { Horizontal = hAlign, Vertical = vAlign }, fontSize: 10);
-                    }
-                    else
-                    {
-                        new_view = new LabeledRectangleView(label_text, origin, Color.Black, Color.Black.Random().SetAlpha(0.5f), anchor: anchor, alignment: new Alignment { Horizontal = hAlign, Vertical = vAlign }, fontSize: 10);
-                    }
-
-                    views.Add(new_view); 
+                    LabeledRectangleView new_view = PassRectanglesToConstructor
+                        ? new LabeledRectangleView(label_text, bbox, Color.Black, Color.Black.Random().SetAlpha(0.5f), alignment: new Alignment { Horizontal = hAlign, Vertical = vAlign }, fontSize: 10)
+                        : new LabeledRectangleView(label_text, origin, Color.Black, Color.Black.Random().SetAlpha(0.5f), anchor: anchor, alignment: new Alignment { Horizontal = hAlign, Vertical = vAlign }, fontSize: 10);
+                    views.Add(new_view);
                 }
-            } 
-            
+            }
+
         }
 
         private void LayoutFixedButtons()
         {
-            GridVector2 box_size = new GridVector2(0.1, 0.05); //Size of buttons
+            GridVector2 box_size = new(0.1, 0.05); //Size of buttons
             GridVector2 half_box_size = box_size / 2;
-            GridVector2 spacing = new GridVector2(0.5, 0.5); //Space between buttons on grid
+            GridVector2 spacing = new(0.5, 0.5); //Space between buttons on grid
 
             fixed_views.Clear();
 
             HorizontalAlignment hAlign = HorizontalAlignment.CENTER;
             VerticalAlignment vAlign = VerticalAlignment.CENTER;
-             
+
             int x = 0;
             int y = 0;
 
@@ -170,22 +162,14 @@ namespace MonogameTestbed
 
                     vAlign = y < 0 ? VerticalAlignment.BOTTOM : y == 0 ? VerticalAlignment.CENTER : VerticalAlignment.TOP;
 
-                    Anchor anchor = new Anchor { Horizontal = hAlign, Vertical = vAlign };
+                    Anchor anchor = new() { Horizontal = hAlign, Vertical = vAlign };
                     GridVector2 origin = ((spacing) * new GridVector2(x, y));// - half_box_size;
-                    GridRectangle bbox = new GridRectangle(origin, box_size.X, box_size.Y);
+                    GridRectangle bbox = new(origin, box_size.X, box_size.Y);
 
                     string label_text = UseNewlines ? string.Format("{0}\n{1}\nGoldfish", vAlign, hAlign) : string.Format("{0} {1}", vAlign, hAlign);
-                    LabeledRectangleView new_view;
-
-                    if (PassRectanglesToConstructor)
-                    {
-                        new_view = new LabeledRectangleView(label_text, bbox, Color.Black, Color.Black.Random().SetAlpha(0.5f), alignment: new Alignment { Horizontal = hAlign, Vertical = vAlign }, fontSize: 10);
-                    }
-                    else
-                    {
-                        new_view = new LabeledRectangleView(label_text, origin, Color.Black, Color.Black.Random().SetAlpha(0.5f), anchor: anchor, alignment: new Alignment { Horizontal = hAlign, Vertical = vAlign }, fontSize: 0.05);
-                    }
-                    
+                    LabeledRectangleView new_view = PassRectanglesToConstructor
+                        ? new LabeledRectangleView(label_text, bbox, Color.Black, Color.Black.Random().SetAlpha(0.5f), alignment: new Alignment { Horizontal = hAlign, Vertical = vAlign }, fontSize: 10)
+                        : new LabeledRectangleView(label_text, origin, Color.Black, Color.Black.Random().SetAlpha(0.5f), anchor: anchor, alignment: new Alignment { Horizontal = hAlign, Vertical = vAlign }, fontSize: 0.05);
                     fixed_views.Add(new_view);
                 }
             }
@@ -196,23 +180,23 @@ namespace MonogameTestbed
         /// </summary>
         private void LayoutRectangle()
         {
-            rect_views = new List<RectangleView>
-            {
+            rect_views =
+            [
                 new RectangleView(new GridRectangle(-140, -120, -140, -120), Color.Aqua)
-            };
+            ];
         }
 
-        private KeyboardState old_keyboard_state; 
+        private KeyboardState old_keyboard_state;
 
         public void Update()
-        {  
+        {
             GamePadState state = GamePad.GetState(PlayerIndex.One);
             Gamepad.Update(state);
 
             CameraManipulator.Update(scene.Camera);
 
             KeyboardState kstate = Keyboard.GetState();
-            Keypad.Update(kstate); 
+            Keypad.Update(kstate);
 
             if (kstate.IsKeyDown(Keys.Space))
             {
@@ -239,16 +223,16 @@ namespace MonogameTestbed
                     LayoutButtons();
                 }
 
-                if(Keypad.Pressed(Keys.OemPlus))
+                if (Keypad.Pressed(Keys.OemPlus))
                 {
-                    scene.Camera.Downsample -= 0.1; 
+                    scene.Camera.Downsample -= 0.1;
                 }
 
                 if (Keypad.Pressed(Keys.OemMinus))
                 {
                     scene.Camera.Downsample += 0.1;
                 }
-                
+
             }
 
             old_keyboard_state = kstate;
@@ -256,9 +240,9 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window)
         {
-            LabeledRectangleView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, views.ToArray());
-            RectangleView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, rect_views.ToArray());
-            CircleView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, dot_views.ToArray());
+            LabeledRectangleView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, [.. views]);
+            RectangleView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, [.. rect_views]);
+            CircleView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, [.. dot_views]);
             //LabeledRectangleView.Draw(window.GraphicsDevice, screen_space_scene, OverlayStyle.Alpha, fixed_views.ToArray());
         }
 

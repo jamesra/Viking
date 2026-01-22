@@ -7,9 +7,9 @@ namespace WebAnnotation.UI.ActionViews
 {
     internal class RemoveHoleActionView : IActionView, IIconTexture
     {
-        public IRenderable Passive { get; set; } = null;
+        public IRenderable? Passive { get; set; } = null;
 
-        public IRenderable Active { get; set; } = null;
+        public IRenderable? Active { get; set; } = null;
 
         public BuiltinTexture Icon { get; set; } = BuiltinTexture.Plus;
 
@@ -23,7 +23,7 @@ namespace WebAnnotation.UI.ActionViews
 
         public void CreateDefaultVisuals()
         {
-            SolidPolygonView view = new SolidPolygonView(model.VolumePolygonToRemove.Smooth(Global.NumClosedCurveInterpolationPoints),
+            SolidPolygonView view = new(model.VolumePolygonToRemove.Smooth(Global.NumClosedCurveInterpolationPoints),
                                                          Color.Magenta.SetAlpha(0.5f));
             Passive = view;
         }

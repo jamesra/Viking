@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Collections.Generic;
 
@@ -82,12 +82,12 @@ namespace Viking.VolumeModel
             return;
         }
 
-        private static ICollection<GridVector2[]> VolumeInnerRingPointsToSection(Viking.VolumeModel.IVolumeToSectionTransform mapper, ICollection<GridVector2[]> volume_innerRingPoints)
+        private static List<GridVector2[]> VolumeInnerRingPointsToSection(Viking.VolumeModel.IVolumeToSectionTransform mapper, ICollection<GridVector2[]> volume_innerRingPoints)
         {
             if (volume_innerRingPoints is null)
                 return null;
 
-            List<GridVector2[]> mosaic_innerRingPoints = new List<GridVector2[]>(volume_innerRingPoints.Count);
+            List<GridVector2[]> mosaic_innerRingPoints = new(volume_innerRingPoints.Count);
             foreach (GridVector2[] volume_ring in volume_innerRingPoints)
             {
                 mosaic_innerRingPoints.Add(mapper.VolumeToSection(volume_ring));
@@ -96,12 +96,12 @@ namespace Viking.VolumeModel
             return mosaic_innerRingPoints;
         }
 
-        private static ICollection<GridVector2[]> SectionInnerRingPointsToVolume(Viking.VolumeModel.IVolumeToSectionTransform mapper, ICollection<GridVector2[]> section_innerRingPoints)
+        private static List<GridVector2[]> SectionInnerRingPointsToVolume(Viking.VolumeModel.IVolumeToSectionTransform mapper, ICollection<GridVector2[]> section_innerRingPoints)
         {
             if (section_innerRingPoints is null)
                 return null;
 
-            List<GridVector2[]> volume_innerRingPoints = new List<GridVector2[]>(section_innerRingPoints.Count);
+            List<GridVector2[]> volume_innerRingPoints = new(section_innerRingPoints.Count);
             foreach (GridVector2[] volume_ring in section_innerRingPoints)
             {
                 volume_innerRingPoints.Add(mapper.SectionToVolume(volume_ring));

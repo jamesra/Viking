@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -6,24 +6,13 @@ using System.Text;
 
 namespace Geometry
 {
-    public class GridVector3Comparer : IComparer<GridVector3>, IComparer<IPoint>
+    public class GridVector3Comparer(bool xyOrder = true) : IComparer<GridVector3>, IComparer<IPoint>
     {
-        public bool XYOrder;
+        public bool XYOrder = xyOrder;
 
-        public GridVector3Comparer(bool xyOrder = true)
-        {
-            XYOrder = xyOrder;
-        }
+        public int Compare(IPoint A, IPoint B) => XYOrder ? GridVector3ComparerXYZ.CompareXYZ(in A, in B) : GridVector3ComparerZYX.CompareZYX(in A, in B);
 
-        public int Compare(IPoint A, IPoint B)
-        {
-            return XYOrder ? GridVector3ComparerXYZ.CompareXYZ(in A, in B) : GridVector3ComparerZYX.CompareZYX(in A, in B);
-        }
-
-        public int Compare(GridVector3 A, GridVector3 B)
-        {
-            return XYOrder ? GridVector3ComparerXYZ.CompareXYZ(A, B) : GridVector3ComparerZYX.CompareZYX(A, B);
-        }
+        public int Compare(GridVector3 A, GridVector3 B) => XYOrder ? GridVector3ComparerXYZ.CompareXYZ(A, B) : GridVector3ComparerZYX.CompareZYX(A, B);
     }
 
     public class GridVector3ComparerZYX : IComparer<GridVector3>, IComparer<IPoint>
@@ -31,8 +20,8 @@ namespace Geometry
         public static int CompareZYX(in IPoint A, in IPoint B)
         {
             double diffZ = A.Z - B.Z;
-            if(diffZ == 0)
-            { 
+            if (diffZ == 0)
+            {
                 //We need to use the same equality standard as our epsilon value
                 double diffY = A.Y - B.Y;
 
@@ -65,15 +54,9 @@ namespace Geometry
             return diffZ > 0 ? 1 : -1;
         }
 
-        public int Compare(IPoint A, IPoint B)
-        {
-            return GridVector3ComparerZYX.CompareZYX(in A, in B);
-        }
+        public int Compare(IPoint A, IPoint B) => GridVector3ComparerZYX.CompareZYX(in A, in B);
 
-        public int Compare(GridVector3 x, GridVector3 y)
-        {
-            return GridVector3ComparerZYX.CompareZYX((IPoint)x, (IPoint)y);
-        }
+        public int Compare(GridVector3 x, GridVector3 y) => GridVector3ComparerZYX.CompareZYX((IPoint)x, (IPoint)y);
     }
 
     public class GridVector3ComparerXYZ : IComparer<GridVector3>, IComparer<IPoint>
@@ -109,8 +92,8 @@ namespace Geometry
                 {
                     double diffZ = A.Z - B.Z;
 
-                    if(diffZ == 0)
-                        return 0;   
+                    if (diffZ == 0)
+                        return 0;
                     else
                         return diffZ > 0 ? 1 : -1;
                     //Edge case. The points aren't equal by our standard, so check again and figure out which axis isn't equal first
@@ -130,15 +113,9 @@ namespace Geometry
             return diffX > 0 ? 1 : -1;
         }
 
-        public int Compare(IPoint A, IPoint B)
-        {
-            return GridVector3ComparerXYZ.CompareXYZ(in A, in B);
-        }
+        public int Compare(IPoint A, IPoint B) => GridVector3ComparerXYZ.CompareXYZ(in A, in B);
 
-        public int Compare(GridVector3 a, GridVector3 b)
-        {
-            return GridVector3ComparerXYZ.CompareXYZ((IPoint)a, (IPoint)b);
-        }
+        public int Compare(GridVector3 a, GridVector3 b) => GridVector3ComparerXYZ.CompareXYZ((IPoint)a, (IPoint)b);
     }
 
     [Serializable]
@@ -155,18 +132,18 @@ namespace Geometry
         public static GridVector3 Zero { get { return new GridVector3(0, 0, 0); } }
         */
 
-        public static readonly GridVector3 UnitX = new GridVector3(1, 0, 0);
-        public static readonly GridVector3 UnitY = new GridVector3(0, 1, 0); 
-        public static readonly GridVector3 UnitZ = new GridVector3(1, 0, 1); 
-        public static readonly GridVector3 Zero = new GridVector3(0, 0, 0); 
+        public static readonly GridVector3 UnitX = new(1, 0, 0);
+        public static readonly GridVector3 UnitY = new(0, 1, 0);
+        public static readonly GridVector3 UnitZ = new(1, 0, 1);
+        public static readonly GridVector3 Zero = new(0, 0, 0);
 
 
-        public double[] coords => _coords;
+        public readonly double[] coords => _coords;
         private readonly double[] _coords;
 
-        public double X => _coords[(int)AXIS.X];
-        public double Y => _coords[(int)AXIS.Y];
-        public double Z => _coords[(int)AXIS.Z];
+        public readonly double X => _coords[(int)AXIS.X];
+        public readonly double Y => _coords[(int)AXIS.Y];
+        public readonly double Z => _coords[(int)AXIS.Z];
 
         public GridVector3(double[] input)
         {
@@ -180,31 +157,31 @@ namespace Geometry
         {
             Debug.Assert(input != null, "Passed null to GridVector3(IEnumerable<double>) constructor");
             //Make sure we copy so we don't take a reference on the array
-            _coords = input.ToArray();
-            Debug.Assert(_coords.Length == 3, string.Format("Passing an IEnumerable<double> of count {0} to GridVector3 constructor, expected 3 elements", _coords.Length));            
+            _coords = [.. input];
+            Debug.Assert(_coords.Length == 3, string.Format("Passing an IEnumerable<double> of count {0} to GridVector3 constructor, expected 3 elements", _coords.Length));
         }
 
         public GridVector3(double x, double y, double z)
         {
-            this._coords = new double[] { x, y, z };
+            this._coords = [x, y, z];
         }
 
-        public void Deconstruct(out double x, out double y, out double z)
+        public readonly void Deconstruct(out double x, out double y, out double z)
         {
             x = X;
             y = Y;
-            z = Z; 
+            z = Z;
         }
 
-        int IComparable.CompareTo(object Obj)
+        readonly int IComparable.CompareTo(object Obj)
         {
             GridVector3 B = (GridVector3)Obj;
 
             //Check for direct equality to account for epsilon scale differences
             if (this.Equals(B))
-                return 0; 
+                return 0;
 
-            double[] axisdiff = this._coords.Select((val, i) => val - B._coords[i]).ToArray();
+            double[] axisdiff = [.. this._coords.Select((val, i) => val - B._coords[i])];
 
             for (int iAxis = 0; iAxis < axisdiff.Length; iAxis++)
             {
@@ -214,17 +191,17 @@ namespace Geometry
                     return axisdiff[iAxis] > 0 ? 1 : -1;
             }
 
-            return 0; 
+            return 0;
         }
 
-        object ICloneable.Clone()
-        { 
-            var newObj = new GridVector3(_coords); //The current constructor will take care of copying the array
+        readonly object ICloneable.Clone()
+        {
+            GridVector3 newObj = new(_coords); //The current constructor will take care of copying the array
             System.Diagnostics.Debug.Assert(object.ReferenceEquals(this._coords, newObj._coords) == false);
             return newObj;
         }
 
-        public override int GetHashCode()
+        public override readonly int GetHashCode()
         {
             double prod = this._coords.Aggregate((accumulator, val) => accumulator * val);
             double code = Math.Abs(prod);
@@ -232,20 +209,14 @@ namespace Geometry
             {
                 return (int)(1.0 / code);
             }
-            return (int)prod; 
+            return (int)prod;
         }
 
-        public bool Equals(IPoint2D other)
-        {
-            return false;
-        }
+        public readonly bool Equals(IPoint2D other) => false;
 
-        public bool Equals(IPoint other)
-        {
-            return Distance(this, other) <= EpsilonSquared;
-        }
+        public readonly bool Equals(IPoint other) => Distance(this, other) <= EpsilonSquared;
 
-        public override bool Equals(object obj)
+        public override readonly bool Equals(object obj)
         {
             if (obj is GridVector3 other)
                 return Equals(other);
@@ -256,19 +227,13 @@ namespace Geometry
             return false;
         }
 
-        public bool Equals(GridVector3 B)
-        {
-            return GridVector3.Distance(this, B) <= EpsilonSquared;
-        }
+        public readonly bool Equals(GridVector3 B) => GridVector3.Distance(this, B) <= EpsilonSquared;
 
-        public override string ToString()
-        {
-            return _coords.ToCSV();
-        }
+        public override readonly string ToString() => _coords.ToCSV();
 
         public static string ToMatlab(GridVector3[] array)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.Append('[');
             for (int i = 0; i < array.Length; i++)
             {
@@ -280,16 +245,13 @@ namespace Geometry
             return sb.ToString();
         }
 
-        public static double Magnitude(GridVector3 A)
-        {
-            return GridVectorN.Magnitude(A);
-        }
+        public static double Magnitude(GridVector3 A) => GridVectorN.Magnitude(A);
 
-        public void Normalize()
+        public readonly void Normalize()
         {
             double mag = Magnitude(this);
             if (mag == 0)
-                return; 
+                return;
 
             for (int iAxis = 0; iAxis < _coords.Length; iAxis++)
             {
@@ -299,14 +261,14 @@ namespace Geometry
 
         public static GridVector3 Normalize(GridVector3 A)
         {
-            double mag = Magnitude(A); 
+            double mag = Magnitude(A);
             return new GridVector3(A._coords.Select(val => val / mag));
         }
 
         public static double Distance(GridVector3 A, GridVector3 B)
         {
             Debug.Assert(A.coords.Length == B.coords.Length);
-            double[] diff = A._coords.Select((Aval, i) => Aval - B._coords[i]).ToArray();
+            double[] diff = [.. A._coords.Select((Aval, i) => Aval - B._coords[i])];
             return Math.Sqrt(diff.Sum((val) => (val * val)));
         }
 
@@ -334,10 +296,7 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        public static double Dot(GridVector3 A, GridVector3 B)
-        {
-            return A._coords.Select((val, i) => val * B._coords[i]).Sum();
-            /*
+        public static double Dot(GridVector3 A, GridVector3 B) => A._coords.Select((val, i) => val * B._coords[i]).Sum();/*
             double AX = (double)(float)A.X;
             double AY = (double)(float)A.Y;
             double AZ = (double)(float)A.Z;
@@ -348,7 +307,6 @@ namespace Geometry
 
             return (AX * BX) + (AY * BY) + (AZ * BZ);
             */
-        }
 
         /// <summary>
         /// Return the cross product of (B - A) X (C - A)
@@ -374,14 +332,14 @@ namespace Geometry
         }
 
         public static GridVector3 Cross(GridVector3 AB, GridVector3 AC)
-        { 
+        {
             double X = (AB.Y * AC.Z) - (AC.Y * AB.Z);
             double Y = (AB.Z * AC.X) - (AC.Z * AB.X);
             double Z = (AB.X * AC.Y) - (AC.X * AB.Y);
 
             return new GridVector3(X, Y, Z);
         }
-          
+
         /// <summary>
         /// Angle to B from A
         /// </summary>
@@ -407,52 +365,25 @@ namespace Geometry
             return Angle(A, B);
         }
 
-        public static GridVector3 operator -(GridVector3 A)
-        {
-            return new GridVector3(-A.X, -A.Y, -A.Z);
-        }
+        public static GridVector3 operator -(GridVector3 A) => new GridVector3(-A.X, -A.Y, -A.Z);
 
-        public static GridVector3 operator -(GridVector3 A, GridVector3 B)
-        {
-            return new GridVector3(A.X - B.X, A.Y - B.Y, A.Z - B.Z);
-        }
-        
-        public static GridVector3 operator +(GridVector3 A, GridVector3 B)
-        {
-            return new GridVector3(A.X + B.X, A.Y + B.Y, A.Z + B.Z);
-        }
+        public static GridVector3 operator -(GridVector3 A, GridVector3 B) => new GridVector3(A.X - B.X, A.Y - B.Y, A.Z - B.Z);
 
-        public static GridVector3 operator *(GridVector3 A, double scalar)
-        {
-            return new GridVector3(A.X * scalar, A.Y * scalar, A.Z * scalar);
-        }
+        public static GridVector3 operator +(GridVector3 A, GridVector3 B) => new GridVector3(A.X + B.X, A.Y + B.Y, A.Z + B.Z);
 
-        public static GridVector3 operator *(GridVector3 A, GridVector3 B)
-        {
-            return new GridVector3(A.X * B.X, A.Y * B.Y, A.Z * B.Z);
-        }
+        public static GridVector3 operator *(GridVector3 A, double scalar) => new GridVector3(A.X * scalar, A.Y * scalar, A.Z * scalar);
 
-        public static GridVector3 operator /(GridVector3 A, double scalar)
-        {
-            return new GridVector3(A.X / scalar, A.Y / scalar, A.Z / scalar);
-        }
+        public static GridVector3 operator *(GridVector3 A, GridVector3 B) => new GridVector3(A.X * B.X, A.Y * B.Y, A.Z * B.Z);
 
-        public static GridVector3 operator /(GridVector3 A, GridVector3 B)
-        {
-            return new GridVector3(A.X / B.X, A.Y / B.Y, A.Z / B.Z);
-        }
+        public static GridVector3 operator /(GridVector3 A, double scalar) => new GridVector3(A.X / scalar, A.Y / scalar, A.Z / scalar);
 
-        public static bool operator ==(GridVector3 A, GridVector3 B)
-        {
-            return A.Equals(B);
-        }
+        public static GridVector3 operator /(GridVector3 A, GridVector3 B) => new GridVector3(A.X / B.X, A.Y / B.Y, A.Z / B.Z);
 
-        public static bool operator !=(GridVector3 A, GridVector3 B)
-        {
-            return !A.Equals(B);
-        }
+        public static bool operator ==(GridVector3 A, GridVector3 B) => A.Equals(B);
 
-        public double this[AXIS axis]
+        public static bool operator !=(GridVector3 A, GridVector3 B) => !A.Equals(B);
+
+        public readonly double this[AXIS axis]
         {
             get => coords[(int)axis];
             set => coords[(int)axis] = value;
@@ -460,7 +391,7 @@ namespace Geometry
 
         public static GridVector3 FromBarycentric(GridVector3 v1, GridVector3 v2, GridVector3 v3, double u, double v)
         {
-            double[] coords = v1._coords.Select((v1Val, i) => (v1Val * (1 - u - v)) + (v2._coords[i] * u) + (v3._coords[i] * v)).ToArray();
+            double[] coords = [.. v1._coords.Select((v1Val, i) => (v1Val * (1 - u - v)) + (v2._coords[i] * u) + (v3._coords[i] * v))];
 
             throw new NotImplementedException("GridVector3::FromBarycentric");
             /* I think the Z calculation is incorrect */
@@ -472,36 +403,27 @@ namespace Geometry
             //return new GridVector3(coords); 
         }
 
-        public static GridVector3 Scale(GridVector3 A, double scalar)
-        {
-            return new GridVector3(A._coords.Select((val,i) => val * scalar));
-        }
+        public static GridVector3 Scale(GridVector3 A, double scalar) => new GridVector3(A._coords.Select((val, i) => val * scalar));
 
-        public GridVector3 Scale(double scalar)
-        {
-            return new GridVector3(this._coords.Select(val => val * scalar));
-        }
-        
-        public static GridBox BoundingBox(GridVector3[] points)
-        {
-            return GridBox.GetBoundingBox(points); 
-        } 
-        
+        public readonly GridVector3 Scale(double scalar) => new GridVector3(this._coords.Select(val => val * scalar));
+
+        public static GridBox BoundingBox(GridVector3[] points) => GridBox.GetBoundingBox(points);
+
         #region IPoint Members
 
-        double IPoint2D.X
+        readonly double IPoint2D.X
         {
             get => _coords[(int)AXIS.X];
             set => _coords[(int)AXIS.X] = value;
         }
 
-        double IPoint2D.Y
+        readonly double IPoint2D.Y
         {
             get => _coords[(int)AXIS.Y];
             set => _coords[(int)AXIS.Y] = value;
         }
 
-        double IPoint.Z
+        readonly double IPoint.Z
         {
             get => _coords[(int)AXIS.Z];
             set => _coords[(int)AXIS.Z] = value;
@@ -509,6 +431,6 @@ namespace Geometry
 
         #endregion
 
-        IPoint2D ICentroid.Centroid => this.XY();
+        readonly IPoint2D ICentroid.Centroid => this.XY();
     }
 }

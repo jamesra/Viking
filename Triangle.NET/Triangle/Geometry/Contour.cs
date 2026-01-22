@@ -55,7 +55,7 @@ namespace TriangleNet.Geometry
 
         public List<ISegment> GetSegments()
         {
-            var segments = new List<ISegment>();
+            List<ISegment> segments = [];
 
             var p = this.Points;
 
@@ -94,7 +94,7 @@ namespace TriangleNet.Geometry
             {
                 int count = this.Points.Count;
 
-                var point = new Point(0.0, 0.0);
+                Point point = new(0.0, 0.0);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -114,7 +114,7 @@ namespace TriangleNet.Geometry
 
         private void AddPoints(IEnumerable<Vertex> points)
         {
-            this.Points = new List<Vertex>(points);
+            this.Points = [.. points];
 
             int count = Points.Count - 1;
 
@@ -129,12 +129,12 @@ namespace TriangleNet.Geometry
 
         private static Point FindPointInPolygon(List<Vertex> contour, int limit, double eps)
         {
-            var bounds = new Rectangle();
+            Rectangle bounds = new();
             bounds.Expand(contour);
 
             int length = contour.Count;
 
-            var test = new Point();
+            Point test = new();
 
             Point a, b, c; // Current corner points.
 
@@ -142,7 +142,7 @@ namespace TriangleNet.Geometry
             double dx, dy;
             double h;
 
-            var predicates = new RobustPredicates();
+            RobustPredicates predicates = new();
 
             a = contour[0];
             b = contour[1];

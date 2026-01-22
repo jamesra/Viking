@@ -10,11 +10,13 @@
 #region Using Statements
 using Microsoft.Xna.Framework.Graphics;
 using System;
-using System.Threading; 
+using System.Threading;
 using VikingXNAGraphics;
 using ServiceContainer = System.ComponentModel.Design.ServiceContainer;
 
 #endregion
+
+#nullable enable
 
 // The IGraphicsDeviceService interface requires a DeviceCreated event, but we
 // always just create the device inside our constructor, so we have no place to
@@ -144,9 +146,9 @@ namespace VikingXNAWinForms
         /// </summary>
         public void ResetDevice(int width, int height)
         {
-            if (graphicsDevice == null)
+            if (graphicsDevice is null)
                 throw new InvalidOperationException("Graphics device is not initialized");
-            
+
             System.Diagnostics.Debug.Assert(!graphicsDevice.IsDisposed, "Resetting disposed graphics device, why?");
             if (graphicsDevice.IsDisposed)
             {
@@ -185,7 +187,7 @@ namespace VikingXNAWinForms
             {
                 if (_Content is null)
                 {
-                    ServiceContainer tempContainer = new ServiceContainer();
+                    ServiceContainer tempContainer = new();
                     tempContainer.AddService(typeof(IGraphicsDeviceService), this);
                     //tempContainer.AddService<IGraphicsDeviceService>(this);
                     _Content = new Microsoft.Xna.Framework.Content.ContentManager(tempContainer, "Content");

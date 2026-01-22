@@ -1,4 +1,4 @@
-﻿using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra;
 using Microsoft.Xna.Framework;
 
 namespace VikingXNAGraphics
@@ -13,9 +13,9 @@ namespace VikingXNAGraphics
         /// <param name="Y">Up/Down Pitch</param>
         /// <param name="Z">In/Out of screen</param>
         /// <returns></returns>
-        public static Microsoft.Xna.Framework.Vector3 TranslateRelativeToViewMatrix(this Microsoft.Xna.Framework.Matrix XNAView , double X, double Y, double Z)
+        public static Microsoft.Xna.Framework.Vector3 TranslateRelativeToViewMatrix(this Microsoft.Xna.Framework.Matrix XNAView, double X, double Y, double Z)
         {
-            Vector<double> oDelta = Vector<double>.Build.DenseOfArray(new double[] { X, Y, Z, 1.0 });
+            Vector<double> oDelta = Vector<double>.Build.DenseOfArray([X, Y, Z, 1.0]);
             Matrix<double> view = XNAView.ToMathnetMatrix();
             Vector<double> tDelta = view * oDelta;
 

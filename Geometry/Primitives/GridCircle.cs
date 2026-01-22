@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -30,10 +30,7 @@ namespace Geometry
         {
         }
 
-        public override string ToString()
-        {
-            return Center.ToString() + " Radius: " + Radius.ToString("F2");
-        }
+        public override string ToString() => Center.ToString() + " Radius: " + Radius.ToString("F2");
 
         public static GridCircle CircleFromThreePoints(GridVector2[] points)
         {
@@ -76,7 +73,7 @@ namespace Geometry
                 throw new ArgumentException("Circle from three points with three points on a line");
             }
 
-            GridVector2 Center = new GridVector2(
+            GridVector2 Center = new(
                 x: (D * E - B * F) / G,
                 y: (A * F - C * E) / G
             );
@@ -150,19 +147,14 @@ namespace Geometry
             //return new GridCircle(Center, GridVector2.Distance(Center, One));
         }*/
 
-        private static double[] CreateDeterminateMatrixRow(GridVector2 p)
-        {
-            return new double[] { p.X, p.Y, (p.X * p.X) + (p.Y * p.Y), 1 };
-        }
+        private static double[] CreateDeterminateMatrixRow(GridVector2 p) => [p.X, p.Y, (p.X * p.X) + (p.Y * p.Y), 1];
 
-        private static double[][] CreateContainsDeterminateMatrixComponents(GridVector2[] cp)
-        {
+        private static double[][] CreateContainsDeterminateMatrixComponents(GridVector2[] cp) =>
             //if (cp.AreClockwise())
             //    cp = cp.Reverse().ToArray();
             //Debug.Assert(cp.AreClockwise() == false, "Determinate matrix for circle contains expects circle points to be passed in counter-clockwise order");
 
-            return cp.Select(v => CreateDeterminateMatrixRow(v)).ToArray();
-        }
+            [.. cp.Select(v => CreateDeterminateMatrixRow(v))];
 
         /// <summary>
         /// Given a center and radius, returns true if p1 is contained in the circle
@@ -173,9 +165,9 @@ namespace Geometry
         public static ShapeRelation Contains(GridVector2 cp, double radius, GridVector2 p1)
         {
             var distance = GridVector2.Distance(cp, p1);
-            if(distance < radius)
+            if (distance < radius)
                 return ShapeRelation.CONTAINED;
-            else if(distance == radius)
+            else if (distance == radius)
                 return ShapeRelation.TOUCHING;
             else
                 return ShapeRelation.NONE;
@@ -191,10 +183,10 @@ namespace Geometry
             double[][] cmat = CreateContainsDeterminateMatrixComponents(cp);
 
             MathNet.Numerics.LinearAlgebra.Matrix<double> matrix = MathNet.Numerics.LinearAlgebra.Matrix<double>.Build.DenseOfRowArrays(
-               new double[][] { cmat[0],
+               [ cmat[0],
                                 cmat[1],
                                 cmat[2],
-                                CreateDeterminateMatrixRow(p1)});
+                                CreateDeterminateMatrixRow(p1)]);
 
             double det = matrix.Determinant();
 
@@ -220,15 +212,15 @@ namespace Geometry
 
             int numPoints = points.Count();
             if (numPoints == 0)
-                return Array.Empty<ShapeRelation>();
+                return [];
 
             ShapeRelation[] results = new ShapeRelation[numPoints];
 
             MathNet.Numerics.LinearAlgebra.Matrix<double> matrix = MathNet.Numerics.LinearAlgebra.Matrix<double>.Build.DenseOfRowArrays(
-                                new double[][] { cmat[0],
+                                [ cmat[0],
                                 cmat[1],
                                 cmat[2],
-                                new double[]{0,0,0,1} });
+                                [0,0,0,1] ]);
 
             int i = 0;
             foreach (GridVector2 p in points)
@@ -249,12 +241,9 @@ namespace Geometry
             return results;
         }
 
-        public static ShapeRelation Contains(GridVector2 c1, GridVector2 c2, GridVector2 c3, GridVector2 p1)
-        {
-            return Contains(new GridVector2[] { c1, c2, c3 }, p1);
-        }
+        public static ShapeRelation Contains(GridVector2 c1, GridVector2 c2, GridVector2 c3, GridVector2 p1) => Contains([c1, c2, c3], p1);
 
-        public GridRectangle BoundingBox => new GridRectangle(this.Center, this.Radius);
+        public GridRectangle BoundingBox => new(this.Center, this.Radius);
 
         public double Area => this.RadiusSquared * Math.PI;
 
@@ -282,10 +271,7 @@ namespace Geometry
             return (XDist * XDist) + (YDist * YDist) <= this.RadiusSquared;
         }
 
-        public ShapeRelation GetRelation(in IPoint2D p)
-        {
-            return ContainsExt(p.Convert());
-        }
+        public ShapeRelation GetRelation(in IPoint2D p) => ContainsExt(p.Convert());
 
         public ShapeRelation ContainsExt(in GridVector2 p)
         {
@@ -327,10 +313,7 @@ namespace Geometry
             return false;
         }
 
-        ShapeRelation IShape2D.GetRelation(in ILineSegment2D line)
-        {
-            return ContainsExt(line.Convert());
-        }
+        ShapeRelation IShape2D.GetRelation(in ILineSegment2D line) => ContainsExt(line.Convert());
 
         public ShapeRelation ContainsExt(in GridLineSegment line)
         {
@@ -339,17 +322,13 @@ namespace Geometry
 
             if (oA == oB)
             {
-                switch (oA)
+                return oA switch
                 {
-                    case ShapeRelation.NONE:
-                        return ShapeRelation.NONE;
-                    case ShapeRelation.CONTAINED:
-                        return ShapeRelation.CONTAINED;
-                    case ShapeRelation.TOUCHING:
-                        return ShapeRelation.CONTAINED; //If both endpoints touch the edge of the circle the line is contained within 
-                    default:
-                        throw new ArgumentException("Unexpected GetRelation Result for point in circle");
-                }
+                    ShapeRelation.NONE => ShapeRelation.NONE,
+                    ShapeRelation.CONTAINED => ShapeRelation.CONTAINED,
+                    ShapeRelation.TOUCHING => ShapeRelation.CONTAINED,//If both endpoints touch the edge of the circle the line is contained within 
+                    _ => throw new ArgumentException("Unexpected GetRelation Result for point in circle"),
+                };
             }
             else
             {
@@ -381,10 +360,7 @@ namespace Geometry
         /// </summary>
         /// <param name="shape"></param>
         /// <returns></returns>
-        public bool Contains(in IShape2D shape)
-        {
-            throw new NotImplementedException();
-        }
+        public bool Contains(in IShape2D shape) => throw new NotImplementedException();
 
         /// <summary>
         /// True if the circle intersects the circle with center c and radius r
@@ -402,10 +378,7 @@ namespace Geometry
             return (XDist * XDist) + (YDist * YDist) <= CombinedRadiusSquared;
         }
 
-        public bool Intersects(in ICircle2D c)
-        {
-            return this.Intersects(c.Convert());
-        }
+        public bool Intersects(in ICircle2D c) => this.Intersects(c.Convert());
 
         public bool Intersects(in GridCircle c)
         {
@@ -431,10 +404,7 @@ namespace Geometry
             return this.Intersects(in poly);
         }
 
-        public bool Intersects(in GridPolygon poly)
-        {
-            return CircleIntersectionExtensions.Intersects(in this, in poly);
-        }
+        public bool Intersects(in GridPolygon poly) => CircleIntersectionExtensions.Intersects(in this, in poly);
 
         public bool Intersects(in IRectangle r)
         {
@@ -442,10 +412,7 @@ namespace Geometry
             return this.Intersects(in rect);
         }
 
-        public bool Intersects(in GridRectangle rect)
-        {
-            return CircleIntersectionExtensions.Intersects(in this, in rect);
-        }
+        public bool Intersects(in GridRectangle rect) => CircleIntersectionExtensions.Intersects(in this, in rect);
 
         /// <summary>
         /// Distance to the nearest point on circle if outside, otherwise zero if anywhere inside the circle
@@ -479,10 +446,7 @@ namespace Geometry
             return false;
         }
 
-        public bool Equals(ICircle2D other)
-        {
-            return this.Center.Equals(other.Center) && this.Radius.Equals(other.Radius);
-        }
+        public bool Equals(ICircle2D other) => this.Center.Equals(other.Center) && this.Radius.Equals(other.Radius);
 
 
         public override int GetHashCode()
@@ -501,20 +465,11 @@ namespace Geometry
         }
 
 
-        public bool Intersects(in IShape2D shape)
-        {
-            return ShapeExtensions.CircleIntersects(in this, in shape);
-        }
+        public bool Intersects(in IShape2D shape) => ShapeExtensions.CircleIntersects(in this, in shape);
 
-        public IShape2D Translate(in IPoint2D offset)
-        {
-            return this.Translate(offset.Convert());
-        }
+        public IShape2D Translate(in IPoint2D offset) => this.Translate(offset.Convert());
 
-        public GridCircle Translate(in GridVector2 offset)
-        {
-            return new GridCircle(this.Center + offset, this.Radius);
-        }
+        public GridCircle Translate(in GridVector2 offset) => new GridCircle(this.Center + offset, this.Radius);
 
         public static bool operator ==(in GridCircle A, in GridCircle B)
         {
@@ -522,10 +477,7 @@ namespace Geometry
                    (A.Radius == B.Radius));
         }
 
-        public static bool operator !=(in GridCircle A, in GridCircle B)
-        {
-            return !(A == B);
-        }
+        public static bool operator !=(in GridCircle A, in GridCircle B) => !(A == B);
 
         /// <summary>
         /// Given a normalized height in the range -1,1 on the Y-axis return how wide the circle is in the X-axis

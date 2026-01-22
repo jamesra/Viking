@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -10,22 +10,16 @@ namespace MorphologyMesh
         {
             get
             {
-                var set = new SortedSet<double>(this.Nodes.SelectMany(n => n.Value.Key.ZLevel).Distinct());
-                return set.ToImmutableSortedSet();
+                SortedSet<double> set = [.. this.Nodes.SelectMany(n => n.Value.Key.ZLevel).Distinct()];
+                return [.. set];
             }
         }
 
-        public void AddNode(MorphMeshRegion region)
-        {
-            this.AddNode(new GraphLib.Node<MorphMeshRegion, MorphMeshRegionGraphEdge>(region));
-        }
+        public void AddNode(MorphMeshRegion region) => this.AddNode(new GraphLib.Node<MorphMeshRegion, MorphMeshRegionGraphEdge>(region));
     }
 
-    public class MorphMeshRegionGraphEdge : GraphLib.Edge<MorphMeshRegion>
+    public class MorphMeshRegionGraphEdge(MorphMeshRegion SourceNode, MorphMeshRegion TargetNode) : GraphLib.Edge<MorphMeshRegion>(SourceNode, TargetNode, false)
     {
-        public MorphMeshRegionGraphEdge(MorphMeshRegion SourceNode, MorphMeshRegion TargetNode) : base(SourceNode, TargetNode, false)
-        {
-        }
     }
 
 }

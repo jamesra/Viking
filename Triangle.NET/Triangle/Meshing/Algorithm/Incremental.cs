@@ -28,7 +28,7 @@ namespace TriangleNet.Meshing.Algorithm
             this.mesh = new Mesh(config);
             this.mesh.TransferNodes(points);
 
-            Otri starttri = new Otri();
+            Otri starttri = new();
 
             // Create a triangular bounding box.
             GetBoundingBox();

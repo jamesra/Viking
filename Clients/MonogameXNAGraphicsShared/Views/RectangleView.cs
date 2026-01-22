@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -16,12 +16,13 @@ namespace VikingXNAGraphics
         public override GridRectangle BoundingRect
         {
             get => _BoundingRect;
-            set {
-                if(_BoundingRect != value)
+            set
+            {
+                if (_BoundingRect != value)
                 {
                     _BoundingRect = value;
                     ClearCachedData();
-                } 
+                }
             }
         }
 
@@ -46,15 +47,9 @@ namespace VikingXNAGraphics
             this.BoundingRect = boundingRect;
         }
 
-        public override void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
-        {
-            RectangleView.Draw(device, scene, Overlay, items.Select(i => i as RectangleView).Where(i => i != null).ToArray());
-        }
+        public override void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items) => RectangleView.Draw(device, scene, Overlay, [.. items.Select(i => i as RectangleView).Where(i => i != null)]);
 
-        public override void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay)
-        {
-            RectangleView.Draw(device, scene, Overlay, new RectangleView[] { this });
-        }
+        public override void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay) => RectangleView.Draw(device, scene, Overlay, [this]);
 
         public static void Draw(GraphicsDevice device,
                           VikingXNA.IScene scene,
@@ -71,11 +66,11 @@ namespace VikingXNAGraphics
             OverlayShaderEffect overlayEffect = VikingXNAGraphics.DeviceEffectsStore<OverlayShaderEffect>.TryGet(device);
             if (overlayEffect is null)
                 return;
-            
+
             BlendState originalState = device.BlendState;
             device.BlendState = BlendState.NonPremultiplied;
 
-            RectangleView[] views = listToDraw.Where(v => v != null).ToArray();
+            RectangleView[] views = [.. listToDraw.Where(v => v != null)];
             //overlayEffect.AnnotateWithTexture(null);
             overlayEffect.Technique = Overlay == OverlayStyle.Alpha ?
                 OverlayShaderEffect.Techniques.SingleColorAlphaOverlayEffect :
@@ -91,21 +86,18 @@ namespace VikingXNAGraphics
                 {
                     pass.Apply();
 
-                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 
+                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList,
                         0,
-                        0, 
-                        6, 
+                        0,
+                        6,
                         0,
                         2);
                 }
             }
 
-            device.BlendState = originalState; 
+            device.BlendState = originalState;
         }
 
-        public bool Contains(GridVector2 Position)
-        {
-            return BoundingRect.Contains(Position);
-        }
+        public bool Contains(GridVector2 Position) => BoundingRect.Contains(Position);
     }
 }

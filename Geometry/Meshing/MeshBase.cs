@@ -1,4 +1,4 @@
-﻿
+
 //#define TRACEMESH
 
 using System;
@@ -201,9 +201,9 @@ namespace Geometry.Meshing
     public abstract class MeshBase<VERTEX> : IMesh<VERTEX>
         where VERTEX : IVertex
     {
-        protected readonly List<VERTEX> _Verticies = new List<VERTEX>();
-        protected readonly Dictionary<IEdgeKey, IEdge> _Edges = new Dictionary<IEdgeKey, IEdge>();
-        protected readonly SortedSet<IFace> _Faces = new SortedSet<IFace>();
+        protected readonly List<VERTEX> _Verticies = [];
+        protected readonly Dictionary<IEdgeKey, IEdge> _Edges = [];
+        protected readonly SortedSet<IFace> _Faces = [];
 
         //        public event MeshChangeEvent OnMeshChange;
         //        public delegate void MeshChangeEvent(MeshBase<VERTEX> mesh, MeshChangeEventArgs e);
@@ -276,8 +276,8 @@ namespace Geometry.Meshing
         /// <param name="v"></param>
         /// <returns></returns>
         public virtual int AddVertex(VERTEX v)
-        { 
-            if(v.HasIndex && v.Index != _Verticies.Count)
+        {
+            if (v.HasIndex && v.Index != _Verticies.Count)
                 throw new ArgumentException("Vertex has an index that doesn't match the index we want to assign");
 
             v.SetIndex(_Verticies.Count);
@@ -302,7 +302,7 @@ namespace Geometry.Meshing
                 //In some cases callers to AddVerticies need tight control over the index of the vertex
                 //If the vertex has an index, check that it matches the index we want to assign. If it 
                 //doesn't more work needs to be done to handle this case
-                if(v.HasIndex && v.Index != iStart + Offset)
+                if (v.HasIndex && v.Index != iStart + Offset)
                 {
                     throw new ArgumentException("Vertex has an index that doesn't match the index we want to assign");
                 }
@@ -326,7 +326,7 @@ namespace Geometry.Meshing
 
         public void AddEdge(int A, int B)
         {
-            EdgeKey e = new EdgeKey(A, B);
+            EdgeKey e = new(A, B);
             AddEdge(e);
         }
 
@@ -425,7 +425,7 @@ namespace Geometry.Meshing
 
         public void AddFace(int A, int B, int C)
         {
-            IFace face = CreateFace(new int[] { A, B, C });
+            IFace face = CreateFace([A, B, C]);
             Debug.Assert(Faces.Contains(face) == false);
 
             AddFace(face);
@@ -485,14 +485,14 @@ namespace Geometry.Meshing
         /// <returns></returns>
         public List<IFace> FindFacesInPath(IFace start, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> MeetsCriteriaFunc)
         {
-            SortedSet<IFace> testedFaces = new SortedSet<IFace>();
-            Dictionary<IFace, List<IFace>> PathCache = new Dictionary<IFace, List<IFace>>();
+            SortedSet<IFace> testedFaces = [];
+            Dictionary<IFace, List<IFace>> PathCache = [];
             return RecurseFacePath(ref testedFaces, this, start, CanBePartOfPath, MeetsCriteriaFunc, PathCache);
         }
 
         public List<IFace> FindFacesInPath(IFace start, Func<IFace, bool> CanBePartOfPath, Func<IFace, bool> MeetsCriteriaFunc, ref SortedSet<IFace> CheckedFaces)
         {
-            Dictionary<IFace, List<IFace>> PathCache = new Dictionary<IFace, List<IFace>>();
+            Dictionary<IFace, List<IFace>> PathCache = [];
             return RecurseFacePath(ref CheckedFaces, this, start, CanBePartOfPath, MeetsCriteriaFunc, PathCache);
         }
 
@@ -510,20 +510,20 @@ namespace Geometry.Meshing
             //System.Diagnostics.Trace.WriteLine(Origin.ToString());
             testedFaces.Add(Origin);
 
-            List<IFace> path = new List<IFace>
-            {
+            List<IFace> path =
+            [
                 Origin
-            };
+            ];
 
             if (IsMatch(Origin))
                 return path;
 
-            if(PathCache.TryGetValue(Origin, out var pathCacheResult))
+            if (PathCache.TryGetValue(Origin, out var pathCacheResult))
             {
                 return pathCacheResult;
             }
 
-            SortedSet<IFace> untestedFaces = new SortedSet<IFace>(mesh.AdjacentFaces(Origin));
+            SortedSet<IFace> untestedFaces = [.. mesh.AdjacentFaces(Origin)];
             untestedFaces.ExceptWith(testedFaces);
 
             if (untestedFaces.Count == 0)
@@ -550,8 +550,8 @@ namespace Geometry.Meshing
             }
             else
             {
-                List<List<IFace>> listPotentialPaths = new List<List<IFace>>(untestedFaces.Count);
-                SortedSet<IFace> AllBranchesTested = new SortedSet<IFace>();
+                List<List<IFace>> listPotentialPaths = new(untestedFaces.Count);
+                SortedSet<IFace> AllBranchesTested = [];
                 foreach (IFace adjacentFace in untestedFaces)
                 {
                     if (testedFaces.Contains(adjacentFace))
@@ -564,7 +564,7 @@ namespace Geometry.Meshing
                         continue;
                     }
 
-                    SortedSet<IFace> testedFacesCopy = new SortedSet<IFace>(testedFaces);
+                    SortedSet<IFace> testedFacesCopy = [.. testedFaces];
                     List<IFace> result = RecurseFacePath(ref testedFacesCopy, mesh, adjacentFace, CanBePartOfPath, IsMatch, PathCache);
                     if (result is null)
                     {
@@ -599,10 +599,7 @@ namespace Geometry.Meshing
         /// <param name="face"></param>
         /// <param name="mesh"></param>
         /// <returns></returns>
-        public IFace[] AdjacentFaces(IFace face)
-        {
-            return face.Edges.SelectMany(e => this[e].Faces.Where(f => f.Equals(face) == false)).ToArray();
-        }
+        public IFace[] AdjacentFaces(IFace face) => [.. face.Edges.SelectMany(e => this[e].Faces.Where(f => f.Equals(face) == false))];
 
         public abstract void SplitFace(IFace face);
 

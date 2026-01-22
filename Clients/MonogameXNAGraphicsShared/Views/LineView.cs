@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Linq;
@@ -33,14 +33,11 @@ namespace VikingXNAGraphics
             get
             {
                 //Only return a DashLength for Styles that use it
-                switch (this.Style)
+                return this.Style switch
                 {
-                    case LineStyle.Ladder:
-                    case LineStyle.Dashed:
-                        return _DashLength;
-                    default:
-                        return new float?();
-                }
+                    LineStyle.Ladder or LineStyle.Dashed => _DashLength,
+                    _ => new float?(),
+                };
             }
             set
             {
@@ -89,7 +86,7 @@ namespace VikingXNAGraphics
         {
             line = new RoundLineCode.RoundLine(source.ToXNAVector2(), destination.ToXNAVector2());
             this.LineWidth = (float)width;
-            this.Color = color; 
+            this.Color = color;
             this.Style = lineStyle;
         }
 
@@ -106,14 +103,14 @@ namespace VikingXNAGraphics
 
             var renderGroups = listToDraw.GroupBy(l => new { color = UseHSLColor ? l._HSLColor : l.Color, style = l.Style, width = l.LineWidth, dashLength = l.DashLength });
 
-            foreach(var renderGroup in renderGroups)
+            foreach (var renderGroup in renderGroups)
             {
-                if(renderGroup.Key.dashLength.HasValue)
+                if (renderGroup.Key.dashLength.HasValue)
                 {
                     lineManager.DashLength = renderGroup.Key.dashLength.Value;
                 }
 
-                lineManager.Draw(renderGroup.Select(rg => rg.line).ToArray(),
+                lineManager.Draw([.. renderGroup.Select(rg => rg.line)],
                                  renderGroup.Key.width / 2.0f,
                                  renderGroup.Key.color,
                                  scene.ViewProj,
@@ -138,7 +135,7 @@ namespace VikingXNAGraphics
                     line_manager.DashLength = renderGroup.Key.dashLength.Value;
                 }
 
-                line_manager.Draw(renderGroup.Select(rg => rg.line).ToArray(),
+                line_manager.Draw([.. renderGroup.Select(rg => rg.line)],
                                  renderGroup.Key.width / 2.0f,
                                  renderGroup.Key.color,
                                  scene.ViewProj,
@@ -147,24 +144,21 @@ namespace VikingXNAGraphics
             }
         }
 
-        public void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle overlay, IRenderable[] items)
-        {
-            Draw(device, scene, overlay, items.Select(i => i as LineView).Where(i => i != null).ToArray());
-        }
+        public void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle overlay, IRenderable[] items) => Draw(device, scene, overlay, [.. items.Select(i => i as LineView).Where(i => i != null)]);
 
         public void Draw(GraphicsDevice device, IScene scene, OverlayStyle overlay)
         {
             RoundLineCode.RoundLineManager line_manager = overlay.GetLineManager(device);
             bool UseHSLColor = line_manager.UseHSLColor;
             var color = UseHSLColor ? this._HSLColor : this.Color;
-            if(this.DashLength.HasValue)
+            if (this.DashLength.HasValue)
             {
                 line_manager.DashLength = this.DashLength.Value;
             }
 
-            line_manager.Draw(this.line, 
-                              this.LineWidth / 2.0f, 
-                              color, 
+            line_manager.Draw(this.line,
+                              this.LineWidth / 2.0f,
+                              color,
                               scene.ViewProj,
                               (float)(DateTime.UtcNow.Millisecond / 1000.0),
                               this.Style.ToString());

@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Linq;
@@ -6,7 +6,7 @@ using VikingXNA;
 
 namespace VikingXNAGraphics
 {
-    public abstract class BillboardViewBase : IColorView, IViewPosition2D, IRenderable, IViewBoundingRect
+    public abstract class BillboardViewBase(Color color) : IColorView, IViewPosition2D, IRenderable, IViewBoundingRect
     {
         public abstract IShape2D Shape { get; }
 
@@ -18,15 +18,9 @@ namespace VikingXNAGraphics
 
         protected virtual void UpdateModelMatrix()
         {
-            this.ModelMatrix = Matrix.CreateScale((float)Shape.BoundingBox.Width/2,
-                                                  (float)Shape.BoundingBox.Height/2,
+            this.ModelMatrix = Matrix.CreateScale((float)Shape.BoundingBox.Width / 2,
+                                                  (float)Shape.BoundingBox.Height / 2,
                                                   1f) * Matrix.CreateTranslation(Shape.BoundingBox.Center.ToXNAVector3(0));
-        }
-
-        public BillboardViewBase(Color color)
-        { 
-            _Color = color;
-            _HSLColor = color.ConvertToHCL();
         }
 
         public virtual float Alpha
@@ -34,8 +28,8 @@ namespace VikingXNAGraphics
             get => _Color.GetAlpha();
             set => Color = this._Color.SetAlpha(value);
         }
-        
-        protected Microsoft.Xna.Framework.Color _Color;
+
+        protected Microsoft.Xna.Framework.Color _Color = color;
         public virtual Microsoft.Xna.Framework.Color Color
         {
             get => _Color;
@@ -47,7 +41,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        protected Microsoft.Xna.Framework.Color _HSLColor;
+        protected Microsoft.Xna.Framework.Color _HSLColor = color.ConvertToHCL();
         public virtual Microsoft.Xna.Framework.Color HSLColor => _HSLColor;
 
 
@@ -57,10 +51,7 @@ namespace VikingXNAGraphics
         /// <summary>
         /// Called when the position or color of the view change
         /// </summary>
-        protected virtual void ClearCachedData()
-        {
-            UpdateModelMatrix();
-        }
+        protected virtual void ClearCachedData() => UpdateModelMatrix();
 
         /// <summary>
         /// Create billboard primitive the size and position of the circle
@@ -86,7 +77,7 @@ namespace VikingXNAGraphics
 
             return Verts;
         }
-  
+
         /// <summary>
         /// The verticies should really be cached and handed up to LocationObjRenderer so all similiar objects can be rendered in one
         /// call.  This method is in the middle of a change from using triangles to draw circles to using textures. 
@@ -101,7 +92,7 @@ namespace VikingXNAGraphics
             //Can't populate until we've referenced CircleVerts
             indicies = GlobalPrimitives.SquareIndicies;
             //            float radius = (float)this.Radius;
-             
+
             float SatScalar = HSLColor.B / 255f;
 
             //Draw an opaque border around the background
@@ -122,7 +113,7 @@ namespace VikingXNAGraphics
 
             basicEffect.TextureEnabled = false;
             basicEffect.VertexColorEnabled = true;
-            basicEffect.LightingEnabled = false; 
+            basicEffect.LightingEnabled = false;
         }
 
         public static void RestoreGraphicsDevice(GraphicsDevice graphicsDevice, BasicEffect basicEffect)

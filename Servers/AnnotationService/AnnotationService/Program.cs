@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.ServiceModel;
@@ -11,12 +11,12 @@ namespace Annotation
     {
         public static void Main(string[] args)
         {
-            AssemblyResolver resolver = new AssemblyResolver(AppDomain.CurrentDomain);
+            AssemblyResolver resolver = new(AppDomain.CurrentDomain);
 
             ServiceHost serviceHost =
-                new ServiceHost(typeof(AnnotateService));
-             
-    
+                new(typeof(AnnotateService));
+
+
             serviceHost.Open();
             Console.WriteLine(
                 "Service running. Please 'Enter' to exit...");

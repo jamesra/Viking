@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,7 +10,7 @@ namespace Viking.Services
     /// Standard service names for gRPC services.
     /// </summary>
     public static class GrpcServiceNames
-    { 
-        public const string Segmentation = "SegmentationService"; 
+    {
+        public const string Segmentation = "SegmentationService";
     }
 }

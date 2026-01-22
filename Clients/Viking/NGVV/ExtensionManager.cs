@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -18,43 +18,40 @@ namespace Viking.Common
     /// </summary>
     public class ExtensionManager
     {
-        private static readonly List<System.Type> ExtensionTabList = new List<System.Type>();
+        private static readonly List<System.Type> ExtensionTabList = [];
 
-        private static readonly SortedDictionary<VikingExtensionAttribute, Assembly> ExtensionToAssemblyTable = new SortedDictionary<VikingExtensionAttribute, Assembly>();
+        private static readonly SortedDictionary<VikingExtensionAttribute, Assembly> ExtensionToAssemblyTable = [];
 
         /// <summary>
         /// List of types that can extend the section viewer control
         /// </summary>
-        private static readonly List<System.Type> SectionOverlayList = new List<System.Type>();
+        private static readonly List<System.Type> SectionOverlayList = [];
 
         /// <summary>
         /// List of types that extend menu
         /// </summary>
-        private static readonly List<System.Type> SectionMenuList = new List<System.Type>();
+        private static readonly List<System.Type> SectionMenuList = [];
 
         /// <summary>
         /// List of objects that can extend the context menu
         /// </summary>
-        private static readonly List<System.Type> ContextMenuProviderList = new List<System.Type>();
-        private static readonly List<System.Type> ModuleRegistrarTypes = new List<System.Type>();
-        private static readonly List<System.Type> ModuleInitializerTypes = new List<System.Type>();
-        private static readonly List<System.Type> LegacyInitializerTypes = new List<System.Type>();
+        private static readonly List<System.Type> ContextMenuProviderList = [];
+        private static readonly List<System.Type> ModuleRegistrarTypes = [];
+        private static readonly List<System.Type> ModuleInitializerTypes = [];
+        private static readonly List<System.Type> LegacyInitializerTypes = [];
 
         /// <summary>
         /// This maps a system.type that the user would interact with, such as a structure to a list of commands that can operate on that type 
         /// </summary>
-        private static readonly Dictionary<System.Type, List<System.Type>> ObjectTypeToCommandTable = new Dictionary<System.Type, List<System.Type>>();
+        private static readonly Dictionary<System.Type, List<System.Type>> ObjectTypeToCommandTable = [];
 
-        public static Assembly[] GetExtensionAssemblies()
-        {
-            return ExtensionToAssemblyTable.Values.ToArray();
-        }
+        public static Assembly[] GetExtensionAssemblies() => [.. ExtensionToAssemblyTable.Values];
 
         #region Property Pages
         /// <summary>
         /// Maps a system.type to a set of property pages
         /// </summary>
-        private static readonly Dictionary<System.Type, List<System.Type>> ObjectTypeToPropertyPageTable = new Dictionary<Type, List<Type>>(); 
+        private static readonly Dictionary<System.Type, List<System.Type>> ObjectTypeToPropertyPageTable = [];
 
         public static System.Type[] GetPropertyPages(object Obj)
         {
@@ -65,12 +62,12 @@ namespace Viking.Common
 
         public static System.Type[] GetPropertyPages(System.Type ObjType)
         {
-            List<Type> TypeArray = new List<Type>();
+            List<Type> TypeArray = [];
 
             //Ensure that we get all pages for both the object and types it inherits from
             while (ObjType != null && ObjType != typeof(object))
             {
-                if(ObjectTypeToPropertyPageTable.TryGetValue(ObjType, out var value))
+                if (ObjectTypeToPropertyPageTable.TryGetValue(ObjType, out var value))
                     TypeArray.AddRange(value);
 
                 //Start next step in the loop
@@ -80,7 +77,7 @@ namespace Viking.Common
             // order our pages
             TypeArray.Sort(new MyTypeComparer());
 
-            return TypeArray.ToArray();
+            return [.. TypeArray];
         }
 
         #endregion
@@ -96,16 +93,16 @@ namespace Viking.Common
             //Fetch the menu item methods
             foreach (System.Type T in SectionMenuList)
             {
-                if (!(T.GetCustomAttributes(typeof(Viking.Common.MenuAttribute), true) is MenuAttribute[] Attribs) || Attribs.Length == 0)
+                if (T.GetCustomAttributes(typeof(Viking.Common.MenuAttribute), true) is not MenuAttribute[] Attribs || Attribs.Length == 0)
                 {
                     continue;
                 }
 
-                System.Windows.Forms.ToolStripItem[] items = menuStrip.Items.Find(Attribs[0].ParentMenuName,false);
+                System.Windows.Forms.ToolStripItem[] items = menuStrip.Items.Find(Attribs[0].ParentMenuName, false);
                 System.Windows.Forms.ToolStripMenuItem ParentItem = null;
-                if(items != null && items.Length > 0)
+                if (items != null && items.Length > 0)
                 {
-                    ParentItem = items[0] as System.Windows.Forms.ToolStripMenuItem; 
+                    ParentItem = items[0] as System.Windows.Forms.ToolStripMenuItem;
                 }
 
                 if (Activator.CreateInstance(T) is IMenuFactory menuObj)
@@ -116,16 +113,10 @@ namespace Viking.Common
                     if (ParentItem != null)
                     {
                         //Trying not to stomp user extension info if it exists
-                        if (ParentItem.Tag is null)
-                        {
-                            ParentItem.Tag = T.ToString();
-                        }
+                        ParentItem.Tag ??= T.ToString();
 
                         //Assign a name if the user did not
-                        if (ParentItem.Text is null)
-                        {
-                            ParentItem.Text = Attribs[0].ParentMenuName;
-                        }
+                        ParentItem.Text ??= Attribs[0].ParentMenuName;
                     }
 
                     if (ExtensionItem != null)
@@ -135,15 +126,15 @@ namespace Viking.Common
                 //Create a menu item if we haven't yet
                 if (ParentItem is null)
                 {
-                    
+
                     ParentItem = new System.Windows.Forms.ToolStripMenuItem(Attribs[0].ParentMenuName);
                     menuStrip.Items.Add(ParentItem as System.Windows.Forms.ToolStripItem);
                 }
-                
+
                 MethodInfo[] methods = T.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
                 for (int i = 0; i < methods.Length; i++)
                 {
-                    if (!(methods[i].GetCustomAttributes(typeof(Viking.Common.MenuItemAttribute), true) is MenuItemAttribute[] ItemAttribs) || ItemAttribs.Length == 0)
+                    if (methods[i].GetCustomAttributes(typeof(Viking.Common.MenuItemAttribute), true) is not MenuItemAttribute[] ItemAttribs || ItemAttribs.Length == 0)
                         continue;
 
                     MenuItemAttribute ItemAttribute = ItemAttribs[0];
@@ -152,20 +143,19 @@ namespace Viking.Common
                     NewItem.Tag = methods[i];
                     NewItem.Click += new EventHandler(ExtensionManager.ExtensionMenuItemCallback);
                 }
-            }            
+            }
 
         }
 
         static void ExtensionMenuItemCallback(object sender, EventArgs e)
         {
-            if (!(sender is System.Windows.Forms.ToolStripItem item))
+            if (sender is not System.Windows.Forms.ToolStripItem item)
                 return;
 
-            MethodInfo method = item.Tag as MethodInfo;
-            if (method is null)
+            if (item.Tag is not MethodInfo method)
                 return;
 
-            method.Invoke(null, new object[] { sender, e }); 
+            method.Invoke(null, [sender, e]);
         }
 
         #endregion
@@ -174,11 +164,11 @@ namespace Viking.Common
         {
             get
             {
-                List<string> Names = new List<string>(ExtensionToAssemblyTable.Keys.Count);
+                List<string> Names = new(ExtensionToAssemblyTable.Keys.Count);
                 foreach (VikingExtensionAttribute Extension in ExtensionToAssemblyTable.Keys)
                     Names.Add(Extension.Name);
 
-                return Names.ToArray();
+                return [.. Names];
             }
         }
 
@@ -186,11 +176,11 @@ namespace Viking.Common
         {
             get
             {
-                List<string> Names = new List<string>(ExtensionToAssemblyTable.Keys.Count);
+                List<string> Names = new(ExtensionToAssemblyTable.Keys.Count);
                 foreach (VikingExtensionAttribute Extension in ExtensionToAssemblyTable.Keys)
                     Names.Add(Extension.Name);
 
-                return Names.ToArray();
+                return [.. Names];
             }
 
         }
@@ -199,12 +189,12 @@ namespace Viking.Common
         {
             string AssemblyDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             AssemblyDir += System.IO.Path.DirectorySeparatorChar + "Modules";
-            
+
             // Add custom assembly resolver to handle dependencies in module directories
             AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
-            
+
             //Check our own assembly for extensions, then check the module directory if possible
-            ExtensionManager.SectionOverlayList = new List<System.Type>();
+            ExtensionManager.SectionOverlayList = [];
 
             FindAssemblyExtensions(Assembly.GetExecutingAssembly());
 
@@ -237,7 +227,7 @@ namespace Viking.Common
                         Trace.WriteLine($"Skipping non-.NET assembly file: {FileName}", "ExtMan");
                         continue;
                     }
-                    
+
                     Assembly A = Assembly.LoadFrom(FileName);
 
                     VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
@@ -251,11 +241,11 @@ namespace Viking.Common
 
                     ExtensionToAssemblyTable.Add(Extension, A);
                 }
-                catch(System.BadImageFormatException e)
+                catch (System.BadImageFormatException e)
                 {
                     Trace.WriteLine("Bad image format loading assembly " + FileName + ". This can be OK if it is a support assembly and not an extension module.  Otherwise it usually indicates loading a 64-bit DLL from a 32-bit process.");
                     continue;
-                } 
+                }
             }
         }
 
@@ -281,9 +271,7 @@ namespace Viking.Common
 
         internal static List<string> RecursiveGetModules(string root)
         {
-            List<string> listFiles = new List<string>();
-
-            listFiles.AddRange(Directory.GetFiles(root, "*.DLL"));
+            List<string> listFiles = [.. Directory.GetFiles(root, "*.DLL")];
 
             string[] dirs = Directory.GetDirectories(root);
 
@@ -304,7 +292,7 @@ namespace Viking.Common
         /// <returns>True if the extension should be loaded, false otherwise</returns>
         private static bool CheckExtensionShouldLoad(Assembly assembly, IExtensionLoadContext context)
         {
-            if (assembly == null)
+            if (assembly is null)
             {
                 return true;
             }
@@ -325,21 +313,21 @@ namespace Viking.Common
                     MethodInfo shouldLoadMethod = type.GetMethod("ShouldLoad",
                         BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static,
                         null,
-                        new Type[] { typeof(IExtensionLoadContext) },
+                        [typeof(IExtensionLoadContext)],
                         null);
 
                     if (shouldLoadMethod != null && shouldLoadMethod.ReturnType == typeof(bool))
                     {
                         try
                         {
-                            object result = shouldLoadMethod.Invoke(null, new object[] { context });
+                            object result = shouldLoadMethod.Invoke(null, [context]);
                             bool shouldLoad = (bool)result;
-                            
+
                             if (!shouldLoad)
                             {
                                 Trace.WriteLine($"Extension {assembly.GetName().Name} indicated it should not load via ShouldLoad method", "ExtMan");
                             }
-                            
+
                             return shouldLoad;
                         }
                         catch (Exception ex)
@@ -385,7 +373,7 @@ namespace Viking.Common
             }
 
             int extensionCount = 0;
-            IEnumerable<VikingExtensionAttribute> extensions = ExtensionToAssemblyTable.Keys.ToArray();
+            IEnumerable<VikingExtensionAttribute> extensions = [.. ExtensionToAssemblyTable.Keys];
             foreach (VikingExtensionAttribute Extension in extensions)
             {
                 Assembly A = ExtensionToAssemblyTable[Extension];
@@ -408,18 +396,18 @@ namespace Viking.Common
                 {
                     //Remove assembly if it cannot initialize
                     ExtensionToAssemblyTable.Remove(Extension);
-                    Trace.WriteLine("Unloading assembly due to initialization failure: " + Extension.ToString(), "ExtMan"); 
+                    Trace.WriteLine("Unloading assembly due to initialization failure: " + Extension.ToString(), "ExtMan");
                     continue;
                 }
 
                 try
-                { 
+                {
                     FindAssemblyExtensions(A);
                 }
-                catch(System.Reflection.ReflectionTypeLoadException e)
+                catch (System.Reflection.ReflectionTypeLoadException e)
                 {
                     Trace.WriteLine($"Unable to load {A}.");
-                    progressReporter.Report($"Unable to load {A}.",100, 100);
+                    progressReporter.Report($"Unable to load {A}.", 100, 100);
                     foreach (var loaderException in e.LoaderExceptions)
                     {
                         Trace.WriteLine($"{loaderException}");
@@ -428,7 +416,7 @@ namespace Viking.Common
                     //Remove assembly if it cannot initialize
                     ExtensionToAssemblyTable.Remove(Extension);
 
-                    continue; 
+                    continue;
                 }
             }
 
@@ -540,15 +528,15 @@ namespace Viking.Common
             catch (System.AggregateException except)
             {
                 VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
-                
+
                 // Check if this is a FileLoadException about strongly-named assemblies
                 bool isStrongNameIssue = except.InnerExceptions.OfType<System.IO.FileLoadException>()
                     .Any(e => e.Message.Contains("strongly-named assembly") || e.HResult == 0x80131044);
-                
-                string message = isStrongNameIssue 
+
+                string message = isStrongNameIssue
                     ? "OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nThis extension requires a strongly-named assembly that is not available.\n\nException:\n" + except.ToString()
                     : "OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nException:\n" + except.ToString();
-                
+
                 DialogResult result = MessageBox.Show(message, "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
 
                 if (result == DialogResult.OK)
@@ -591,18 +579,18 @@ namespace Viking.Common
 
         private static Dictionary<string, Module> GetLoadedModuleTable()
         {
-            Dictionary<string, Module> LoadedModuleTable = new Dictionary<string, Module>();
+            Dictionary<string, Module> LoadedModuleTable = [];
             Assembly[] LoadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
             foreach (Assembly A in LoadedAssemblies)
             {
                 foreach (Module M in A.GetModules(true))
                 {
-                    string FullyQualifiedName   = null;
+                    string FullyQualifiedName = null;
                     try
                     {
                         FullyQualifiedName = M.FullyQualifiedName;
                     }
-                    catch(ArgumentException e)
+                    catch (ArgumentException e)
                     {
                         Trace.WriteLine("Could not generate FullyQualifiedName for M.ToString(), this is probably OK if it is generated code or a resource.");
                         continue;
@@ -635,11 +623,11 @@ namespace Viking.Common
                 /*Find Menu Extensions */
                 FindMenuExtensions(T);
 
-                FindContextMenuExtensions(T); 
+                FindContextMenuExtensions(T);
 
                 /*Find Overview Tab extensions*/
                 /*Find ContextMenu extensions*/
-   //             FindExtensionInterfaces(Extension, T);
+                //             FindExtensionInterfaces(Extension, T);
 
                 FindExtensionOverlays(T);
                 RegisterModuleInterfaces(T);
@@ -665,12 +653,7 @@ namespace Viking.Common
                     if (Attrib.ObjectType is null)
                         continue;
 
-                    List<System.Type> List;
-                    if (ObjectTypeToCommandTable.TryGetValue(Attrib.ObjectType, out var value))
-                        List = value;
-                    else
-                        List = new List<System.Type>();
-
+                    List<Type> List = ObjectTypeToCommandTable.TryGetValue(Attrib.ObjectType, out var value) ? value : [];
                     List.Add(T);
 
                     ObjectTypeToCommandTable[Attrib.ObjectType] = List;
@@ -699,14 +682,7 @@ namespace Viking.Common
 
                     /*The list contains lists. If one already exists then reuse it.
                         * otherwise create a new one */
-                    List<System.Type> List;
-                    if (ObjectTypeToPropertyPageTable.TryGetValue(resolvedTarget, out var value))
-                        List = value;
-                    else
-                    {
-                        List = new List<Type>();
-                    }
-
+                    List<Type> List = ObjectTypeToPropertyPageTable.TryGetValue(resolvedTarget, out var value) ? value : [];
                     List.Add(T);
 
                     ObjectTypeToPropertyPageTable[resolvedTarget] = List;
@@ -750,13 +726,13 @@ namespace Viking.Common
             System.Type Interface = T.GetInterface((typeof(Viking.Common.IProvideContextMenus).ToString()));
             if (Interface != null)
             {
-                ContextMenuProviderList.Add(T); 
+                ContextMenuProviderList.Add(T);
             }
         }
 
         public static System.Type[] GetExtensionTabCategory(TABCATEGORY Cat)
         {
-            List<Type> TabList = new List<Type>();
+            List<Type> TabList = [];
             foreach (System.Type T in ExtensionTabList)
             {
                 if (T.GetCustomAttributes(typeof(Viking.Common.ExtensionTabAttribute), true) is ExtensionTabAttribute[] Attribs && Attribs.Length > 0)
@@ -768,7 +744,7 @@ namespace Viking.Common
                 }
             }
 
-            return TabList.ToArray();
+            return [.. TabList];
         }
 
 
@@ -818,7 +794,7 @@ namespace Viking.Common
 
         public static System.Type[] GetCommandsForType(System.Type ObjType)
         {
-            List<System.Type> CommandTypeList = new List<System.Type>();
+            List<System.Type> CommandTypeList = [];
 
             //Ensure that we get all commands for both the object and types it inherits from
             while (ObjType != null)
@@ -832,12 +808,12 @@ namespace Viking.Common
                 ObjType = ObjType.BaseType;
             }
 
-            return CommandTypeList.ToArray();
+            return [.. CommandTypeList];
         }
 
-        private static ISectionOverlayExtension[] _SectionOverlays = null;
+        private static ISectionOverlayExtension[]? _SectionOverlays = null;
 
-        
+
         /// <summary>
         /// Returns null if CreateSectionOverlays or an empty array if there are no listeners
         /// </summary>
@@ -845,15 +821,15 @@ namespace Viking.Common
 
         public static ISectionOverlayExtension[] CreateSectionOverlays(Viking.UI.Controls.SectionViewerControl parent)
         {
-            List<ISectionOverlayExtension> listOverlays = new List<ISectionOverlayExtension>(ExtensionManager.SectionOverlayList.Count);
-            for (int i = 0; i < ExtensionManager.SectionOverlayList.Count; i++ )
+            List<ISectionOverlayExtension> listOverlays = new(ExtensionManager.SectionOverlayList.Count);
+            for (int i = 0; i < ExtensionManager.SectionOverlayList.Count; i++)
             {
                 System.Type ObjType = SectionOverlayList[i];
                 try
                 {
-                    ISectionOverlayExtension OverlayObj = Activator.CreateInstance(ObjType, new object[0]) as ISectionOverlayExtension;
+                    ISectionOverlayExtension OverlayObj = Activator.CreateInstance(ObjType, []) as ISectionOverlayExtension;
                     OverlayObj.SetParent(parent);
-                    listOverlays.Add(OverlayObj); 
+                    listOverlays.Add(OverlayObj);
                 }
                 catch (Exception e)
                 {
@@ -863,21 +839,21 @@ namespace Viking.Common
                     throw;
                 }
             }
-             
-            _SectionOverlays = listOverlays.OrderBy(s => s.DrawOrder()).Reverse().ToArray();
-            return _SectionOverlays; 
-       }
+
+            _SectionOverlays = [.. listOverlays.OrderBy(s => s.DrawOrder()).Reverse()];
+            return _SectionOverlays;
+        }
 
         public static Viking.Common.IProvideContextMenus[] CreateContextMenuProviders()
         {
-            List<IProvideContextMenus> listProviders = new List<IProvideContextMenus>(ContextMenuProviderList.Count);
+            List<IProvideContextMenus> listProviders = new(ContextMenuProviderList.Count);
 
             for (int i = 0; i < ExtensionManager.ContextMenuProviderList.Count; i++)
             {
                 System.Type ObjType = ExtensionManager.ContextMenuProviderList[i];
                 try
                 {
-                    IProvideContextMenus OverlayObj = Activator.CreateInstance(ObjType, new object[0]) as IProvideContextMenus;
+                    IProvideContextMenus OverlayObj = Activator.CreateInstance(ObjType, []) as IProvideContextMenus;
                     listProviders.Add(OverlayObj);
                 }
                 catch (Exception e)
@@ -887,9 +863,9 @@ namespace Viking.Common
                     i--;
                     throw;
                 }
-            } 
+            }
 
-            return listProviders.ToArray(); 
+            return [.. listProviders];
         }
 
         public static ContextMenuStrip CreateContextMenuFromProviders(object Obj, ContextMenuStrip Menu)
@@ -897,7 +873,8 @@ namespace Viking.Common
             //Create a context menu for the object
             foreach (IProvideContextMenus Provider in ExtensionManager.CreateContextMenuProviders())
             {
-                try { 
+                try
+                {
 
                     ContextMenuStrip NewMenu = Provider.BuildMenuFor(Obj, Menu);
                 }
@@ -916,7 +893,7 @@ namespace Viking.Common
         private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
         {
             try
-             {
+            {
                 // Extract the assembly name from the full name
                 string assemblyName = new AssemblyName(args.Name).Name;
                 string assemblyFileName = assemblyName + ".dll";
@@ -1005,14 +982,11 @@ namespace Viking.Common
     /// <summary>
     /// used to sort property pages by there priority
     /// </summary>
-    class MyTypeComparer : IComparer<System.Type> 
+    class MyTypeComparer : IComparer<System.Type>
     {
         int IComparer<Type>.Compare(Type x, Type y)
         {
-            PropertyPageAttribute? attrib_x = Util.GetAttribute(x, typeof(PropertyPageAttribute)) as PropertyPageAttribute;
-            PropertyPageAttribute? attrib_y = Util.GetAttribute(y, typeof(PropertyPageAttribute)) as PropertyPageAttribute;
-
-            if (attrib_x == null || attrib_y == null)
+            if (Util.GetAttribute(x, typeof(PropertyPageAttribute)) is not PropertyPageAttribute attrib_x || Util.GetAttribute(y, typeof(PropertyPageAttribute)) is not PropertyPageAttribute attrib_y)
                 return 0;
 
             return attrib_x.Priority.CompareTo(attrib_y.Priority);

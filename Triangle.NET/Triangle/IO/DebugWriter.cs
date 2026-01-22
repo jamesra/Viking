@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="DebugWriter.cs" company="">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -48,7 +48,7 @@ namespace TriangleNet.IO
 
         #region Singleton pattern
 
-        private static readonly DebugWriter instance = new DebugWriter();
+        private static readonly DebugWriter instance = new();
 
         // Explicit static constructor to tell C# compiler
         // not to mark type as beforefieldinit
@@ -91,10 +91,7 @@ namespace TriangleNet.IO
         /// <summary>
         /// Finish this session.
         /// </summary>
-        public void Finish()
-        {
-            this.Finish(session + ".mshx");
-        }
+        public void Finish() => this.Finish(session + ".mshx");
 
         private void Finish(string path)
         {
@@ -106,27 +103,22 @@ namespace TriangleNet.IO
 
                 string header = "#!N" + this.iteration + Environment.NewLine;
 
-                using (var gzFile = new FileStream(path, FileMode.Create))
+                using (FileStream gzFile = new(path, FileMode.Create))
                 {
-                    using (var gzStream = new GZipStream(gzFile, CompressionMode.Compress, false))
-                    {
-                        byte[] bytes = Encoding.UTF8.GetBytes(header);
-                        gzStream.Write(bytes, 0, bytes.Length);
+                    using GZipStream gzStream = new(gzFile, CompressionMode.Compress, false);
+                    byte[] bytes = Encoding.UTF8.GetBytes(header);
+                    gzStream.Write(bytes, 0, bytes.Length);
 
-                        // TODO: read with stream
-                        bytes = File.ReadAllBytes(tmpFile);
-                        gzStream.Write(bytes, 0, bytes.Length);
-                    }
+                    // TODO: read with stream
+                    bytes = File.ReadAllBytes(tmpFile);
+                    gzStream.Write(bytes, 0, bytes.Length);
                 }
 
                 File.Delete(this.tmpFile);
             }
         }
 
-        private void WriteGeometry(IPolygon geometry)
-        {
-            stream.WriteLine("#!G{0}", this.iteration++);
-        }
+        private void WriteGeometry(IPolygon geometry) => stream.WriteLine("#!G{0}", this.iteration++);
 
         private void WriteMesh(Mesh mesh, bool skip)
         {

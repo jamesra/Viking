@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -7,25 +7,19 @@ using VikingXNAGraphics;
 
 
 namespace VikingXNA
-{     
-    public readonly struct ChannelSumResult
+{
+    public readonly struct ChannelSumResult(in float[] channelColorSum, in int[] channelUseCount)
     {
-        public readonly float[] ChannelColorSum { get;  }
-        public readonly int[] ChannelUseCount { get;  } 
-        
-        public ChannelSumResult(in float[] channelColorSum, in int[] channelUseCount)
-        {
-            ChannelColorSum = channelColorSum;
-            ChannelUseCount = channelUseCount;
-        }
+        public readonly float[] ChannelColorSum { get; } = channelColorSum;
+        public readonly int[] ChannelUseCount { get; } = channelUseCount;
     }
 
-    public class MergeHSVImagesEffect 
+    public class MergeHSVImagesEffect
     {
         public Effect effect;
 
         private readonly EffectParameter _WorldViewProjMatrix;
-          
+
         private readonly EffectParameter _ChannelHueAlpha;
         private readonly EffectParameter _ChannelHueBeta;
 
@@ -35,7 +29,7 @@ namespace VikingXNA
 
         private readonly EffectParameter _BaseTexture;
         private readonly EffectParameter _OverlayTexture;
-        
+
         private readonly EffectParameter _OverlayChannelTotals;
 
         public readonly int MaxChannels = 4;
@@ -70,7 +64,7 @@ namespace VikingXNA
             get => _BaseTexture.GetValueTexture2D();
             set => _BaseTexture.SetValue(value);
         }
-        
+
         public Texture2D OverlayTexture
         {
             get => _OverlayTexture.GetValueTexture2D();
@@ -82,13 +76,13 @@ namespace VikingXNA
             get => _WorldViewProjMatrix.GetValueMatrix();
             set => _WorldViewProjMatrix.SetValue(value);
         }
-        
+
         public Vector4 OverlayChannelTotals
         {
             get => _OverlayChannelTotals.GetValueVector4();
             set => _OverlayChannelTotals.SetValue(value);
         }
-        
+
         public void PrepareHCLToRGB(Texture2D texture)
         {
             this.effect.CurrentTechnique = effect.Techniques["HCLToRGB"];
@@ -102,8 +96,8 @@ namespace VikingXNA
         }
 
         public void PrepareMergeHSVImages(Texture2D BaseTexture, Texture2D OverlayTexture, float Alpha, float Beta)
-        { 
-            this.HueAlpha = Alpha; 
+        {
+            this.HueAlpha = Alpha;
             this.HueBeta = Beta;
 
             this.effect.CurrentTechnique = effect.Techniques["MergeHSVImages"];
@@ -119,12 +113,12 @@ namespace VikingXNA
         /// <param name="ChannelColorSums">The sum of all ChannelColors that will be blended.</param>
         /// <returns></returns>
         public void PrepareMergeRGBImage(Texture2D BaseTexture, Texture2D OverlayTexture, Color OverlayColor)
-        {  
+        {
             this.BaseTexture = BaseTexture;
-            this.OverlayTexture = OverlayTexture; 
-              
-            var weighted_colors = OverlayColor.ToVector4();
-            
+            this.OverlayTexture = OverlayTexture;
+
+            Vector4 weighted_colors = OverlayColor.ToVector4();
+
             /*
             for(int i = 0; i < 4; i++)
             {
@@ -136,12 +130,12 @@ namespace VikingXNA
             */
 
             this._OverlayColor.SetValue(weighted_colors);
-              
+
             this.effect.CurrentTechnique = effect.Techniques["SumRGBImages"];
 
-            return; 
+            return;
         }
-        
+
         public void PrepareNormalize(Texture2D inputTexture, Vector4 channelTotals)
         {
             this.BaseTexture = inputTexture;
@@ -149,12 +143,12 @@ namespace VikingXNA
             this.effect.CurrentTechnique = effect.Techniques["NormalizeByTotal"];
         }
 
-        
+
         public static ChannelSumResult CalculateChannelTotals(Vector4[] ChannelColors)
         {
             //Sum the channel Colors
-            float[] ChannelColorSum = new float[4] {0,0,0,0};
-            int[] ChannelUseCount = new int[4] {0,0,0,0}; 
+            float[] ChannelColorSum = [0, 0, 0, 0];
+            int[] ChannelUseCount = [0, 0, 0, 0];
             foreach (Vector4 c in ChannelColors)
             {
                 ChannelColorSum[0] += (float)c.X;
@@ -165,10 +159,10 @@ namespace VikingXNA
                 ChannelUseCount[0] += c.X > 0 ? 1 : 0;
                 ChannelUseCount[1] += c.Y > 0 ? 1 : 0;
                 ChannelUseCount[2] += c.Z > 0 ? 1 : 0;
-                ChannelUseCount[3] += c.W > 0 ? 1 : 0; 
+                ChannelUseCount[3] += c.W > 0 ? 1 : 0;
             }
-            
-            var result = new ChannelSumResult(ChannelColorSum, ChannelUseCount);
+
+            ChannelSumResult result = new(ChannelColorSum, ChannelUseCount);
 
             return result;
         }
@@ -184,9 +178,9 @@ namespace VikingXNA
         {
             this.effect = effect;
 
-            _WorldViewProjMatrix = effect.Parameters["mWorldViewProj"]; 
+            _WorldViewProjMatrix = effect.Parameters["mWorldViewProj"];
             _ChannelHueAlpha = effect.Parameters["ChannelHueAlpha"];
-            _ChannelHueBeta = effect.Parameters["ChannelHueBeta"];  
+            _ChannelHueBeta = effect.Parameters["ChannelHueBeta"];
             _BaseTexture = effect.Parameters["BackgroundTexture"];
             _OverlayTexture = effect.Parameters["OverlayTexture"];
             _OverlayChannelTotals = effect.Parameters["OverlayChannelTotals"];
@@ -194,7 +188,7 @@ namespace VikingXNA
             _OverlayColorScalar = effect.Parameters["OverlayColorScalar"];
 
             effect.CurrentTechnique = effect.Techniques["MergeHSVImages"];
-            
+
         }
     }
 }

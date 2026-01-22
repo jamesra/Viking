@@ -34,7 +34,7 @@ namespace Viking.UI.WPF
         public LoginWindow()
         {
             InitializeComponent();
-            
+
             InitializeLoginStage();
         }
 
@@ -82,7 +82,7 @@ namespace Viking.UI.WPF
             _savedUsername = e.Username;
             _savedPassword = e.Password;
             _isAnonymous = e.IsAnonymous;
-            
+
             // Show volume selection stage with appropriate bearer token (null for anonymous)
             ShowVolumeStage(e.IsAnonymous ? null : BearerToken);
         }
@@ -92,23 +92,20 @@ namespace Viking.UI.WPF
             _volumeSelectionViewModel = new VolumeSelectionViewModel(bearerToken, _loginViewModel.IdentityServerUrl);
             _volumeSelectionViewModel.VolumeSelected += OnVolumeSelected;
             _volumeSelectionViewModel.SelectionCancelled += OnSelectionCancelled;
-            
+
             // Populate recent volumes from settings (will be done by hosting app)
             PopulateRecentVolumes();
-            
+
             volumeSelectionControl.DataContext = _volumeSelectionViewModel;
         }
 
         private void ShowVolumeStage(TokenResponse bearerToken)
         {
             InitializeVolumeSelectionViewModel(bearerToken);
-            
+
             _segmentationServiceSelectionViewModel = null;
-            if (segmentationSelectionControl != null)
-            {
-                segmentationSelectionControl.DataContext = null;
-            }
-            
+            segmentationSelectionControl?.DataContext = null;
+
             CurrentStage = LoginStage.VolumeSelection;
             Title = "Viking - Select Volume";
         }
@@ -126,7 +123,7 @@ namespace Viking.UI.WPF
                     var entry = RecentVolumeUrls[i];
                     if (string.IsNullOrWhiteSpace(entry))
                         continue;
-                    
+
                     // Parse entry format: "URL|Name" or just "URL"
                     string url;
                     string name = null;
@@ -141,10 +138,10 @@ namespace Viking.UI.WPF
                     {
                         url = entry;
                     }
-                    
+
                     _volumeSelectionViewModel.AddRecentVolume(url, name);
                 }
-                
+
                 // Auto-select the most recent volume if available
                 _volumeSelectionViewModel.SelectMostRecentVolumeIfAvailable();
             }
@@ -161,21 +158,18 @@ namespace Viking.UI.WPF
 
             // Validate the volume endpoint before proceeding
             bool isValid = await ValidateVolumeEndpointAsync(VolumeURL);
-            
+
             if (!isValid)
             {
                 // Validation failed - error message already displayed in UI
                 // User stays on volume selection stage
                 return;
             }
-             
+
             await PerformVolumeAuthenticationAsync(e.Name, VolumeURL);
 
             // Update the recent volumes list in the UI (remove duplicates and add to top)
-            if (_volumeSelectionViewModel != null)
-            {
-                _volumeSelectionViewModel.AddRecentVolume(VolumeURL, VolumeName);
-            }
+            _volumeSelectionViewModel?.AddRecentVolume(VolumeURL, VolumeName);
 
             // Validation successful - proceed to segmentation selection
             ShowSegmentationSelectionStage();
@@ -199,28 +193,16 @@ namespace Viking.UI.WPF
 
         private void SetViewModelLoading(bool isLoading)
         {
-            if (_volumeSelectionViewModel != null)
-            {
-                _volumeSelectionViewModel.IsLoading = isLoading;
-            }
+            _volumeSelectionViewModel?.IsLoading = isLoading;
 
-            if (_segmentationServiceSelectionViewModel != null)
-            {
-                _segmentationServiceSelectionViewModel.IsLoading = isLoading;
-            }
+            _segmentationServiceSelectionViewModel?.IsLoading = isLoading;
         }
 
         private void SetViewModelStatusMessage(string message)
         {
-            if (_volumeSelectionViewModel != null)
-            {
-                _volumeSelectionViewModel.StatusMessage = message;
-            }
+            _volumeSelectionViewModel?.StatusMessage = message;
 
-            if (_segmentationServiceSelectionViewModel != null)
-            {
-                _segmentationServiceSelectionViewModel.StatusMessage = message;
-            }
+            _segmentationServiceSelectionViewModel?.StatusMessage = message;
         }
 
         private async Task PerformVolumeAuthenticationAsync(string volumeName, string volumeUrl)
@@ -233,12 +215,10 @@ namespace Viking.UI.WPF
                 // Load and parse volume XML to get volume name and API URL
                 var (parsedVolumeName, identityApiUrl) = await LoadAndParseVolumeXml(volumeUrl);
 
-                if(volumeName is null)
-                    volumeName = parsedVolumeName;
+                volumeName ??= parsedVolumeName;
 
                 // Get identity server URL
-                Uri identityServerUrl;
-                if (!Uri.TryCreate(_loginViewModel?.IdentityServerUrl, UriKind.Absolute, out identityServerUrl))
+                if (!Uri.TryCreate(_loginViewModel?.IdentityServerUrl, UriKind.Absolute, out Uri identityServerUrl))
                 {
                     throw new Exception("Invalid Identity Server URL");
                 }
@@ -253,7 +233,7 @@ namespace Viking.UI.WPF
                 ApiToken = apiToken;
                 BearerToken = volumeToken;
 
-                UpdateViewModelStatus(false, "Authentication successful!"); 
+                UpdateViewModelStatus(false, "Authentication successful!");
             }
             catch (Exception ex)
             {
@@ -261,7 +241,7 @@ namespace Viking.UI.WPF
                 UpdateViewModelStatus(false, $"Error: {ex.Message}");
 
                 System.Diagnostics.Trace.WriteLine($"Volume authentication error: {ex}");
-                
+
                 // Show error to user
                 System.Windows.MessageBox.Show(
                     $"Failed to authenticate to volume:\n\n{ex.Message}",
@@ -301,61 +281,50 @@ namespace Viking.UI.WPF
                 }
 
                 // Create HttpClient with appropriate credentials
-                HttpClientHandler handler;
-                if (volumeUri.Scheme.ToLower() == "https" && Credentials != null)
-                {
-                    handler = new HttpClientHandler
+                HttpClientHandler handler = volumeUri.Scheme.ToLower() == "https" && Credentials != null
+                    ? new HttpClientHandler
                     {
                         Credentials = Credentials
-                    };
-                }
-                else
-                {
-                    handler = new HttpClientHandler
+                    }
+                    : new HttpClientHandler
                     {
                         UseDefaultCredentials = true
                     };
-                }
+                using HttpClient httpClient = new(handler);
+                // Set timeout to prevent hanging
+                httpClient.Timeout = TimeSpan.FromSeconds(10);
 
-                using (var httpClient = new HttpClient(handler))
+                // Try HEAD request first (more efficient)
+                try
                 {
-                    // Set timeout to prevent hanging
-                    httpClient.Timeout = TimeSpan.FromSeconds(10);
+                    using HttpRequestMessage request = new(HttpMethod.Head, volumeUri);
+                    var response = await httpClient.SendAsync(request);
 
-                    // Try HEAD request first (more efficient)
-                    try
+                    if (response.StatusCode == HttpStatusCode.OK)
                     {
-                        using (var request = new HttpRequestMessage(HttpMethod.Head, volumeUri))
-                        {
-                            var response = await httpClient.SendAsync(request);
-                            
-                            if (response.StatusCode == HttpStatusCode.OK)
-                            {
-                                UpdateViewModelStatus(false, "Volume endpoint validated successfully");
-                                return true;
-                            }
-                            else
-                            {
-                                UpdateViewModelStatus(false, $"Volume endpoint returned error: {(int)response.StatusCode} {response.StatusCode}");
-                                return false;
-                            }
-                        }
+                        UpdateViewModelStatus(false, "Volume endpoint validated successfully");
+                        return true;
                     }
-                    catch (NotSupportedException)
+                    else
                     {
-                        // HEAD not supported, fall back to GET
-                        var response = await httpClient.GetAsync(volumeUri);
-                        
-                        if (response.StatusCode == HttpStatusCode.OK)
-                        {
-                            UpdateViewModelStatus(false, "Volume endpoint validated successfully");
-                            return true;
-                        }
-                        else
-                        {
-                            UpdateViewModelStatus(false, $"Volume endpoint returned error: {(int)response.StatusCode} {response.StatusCode}");
-                            return false;
-                        }
+                        UpdateViewModelStatus(false, $"Volume endpoint returned error: {(int)response.StatusCode} {response.StatusCode}");
+                        return false;
+                    }
+                }
+                catch (NotSupportedException)
+                {
+                    // HEAD not supported, fall back to GET
+                    var response = await httpClient.GetAsync(volumeUri);
+
+                    if (response.StatusCode == HttpStatusCode.OK)
+                    {
+                        UpdateViewModelStatus(false, "Volume endpoint validated successfully");
+                        return true;
+                    }
+                    else
+                    {
+                        UpdateViewModelStatus(false, $"Volume endpoint returned error: {(int)response.StatusCode} {response.StatusCode}");
+                        return false;
                     }
                 }
             }
@@ -426,7 +395,7 @@ namespace Viking.UI.WPF
 
         private void PopulateRecentSegmentationServices()
         {
-            if (RecentSegmentationServiceUrls == null || _segmentationServiceSelectionViewModel == null)
+            if (RecentSegmentationServiceUrls is null || _segmentationServiceSelectionViewModel is null)
             {
                 return;
             }
@@ -466,10 +435,10 @@ namespace Viking.UI.WPF
             {
                 // Load the volume XML
                 var xmlDoc = await Viking.VolumeModel.Volume.LoadXDocumentAsync(volumeUrl, CancellationToken.None, Credentials);
-                
+
                 // Get the Volume element
                 var volumeElement = Viking.VolumeModel.Volume.GetVolumeElement(xmlDoc);
-                if (volumeElement == null)
+                if (volumeElement is null)
                 {
                     throw new Exception("Volume element not found in XML");
                 }
@@ -487,25 +456,25 @@ namespace Viking.UI.WPF
                 // Extract IdentityApi URL from VolumeToEndpoint element
                 var endpointElement = volumeElement.Elements()
                     .FirstOrDefault(d => d.Name == "VolumeToEndpoint");
-                
+
                 Uri identityApiUrl = null;
                 if (endpointElement != null)
                 {
                     // Try IdentityApi attribute first
                     var identityApiAttr = endpointElement.Attributes()
                         .FirstOrDefault(a => a.Name.LocalName == "IdentityApi")?.Value;
-                    
+
                     if (!string.IsNullOrEmpty(identityApiAttr))
                     {
                         Uri.TryCreate(identityApiAttr, UriKind.Absolute, out identityApiUrl);
                     }
-                    
+
                     // Fallback to Authentication attribute
-                    if (identityApiUrl == null)
+                    if (identityApiUrl is null)
                     {
                         var authAttr = endpointElement.Attributes()
                             .FirstOrDefault(a => a.Name.LocalName == "Authentication")?.Value;
-                        
+
                         if (!string.IsNullOrEmpty(authAttr))
                         {
                             Uri.TryCreate(authAttr, UriKind.Absolute, out identityApiUrl);
@@ -514,13 +483,13 @@ namespace Viking.UI.WPF
                 }
 
                 // Final fallback to IdentityServerUrl + "/api"
-                if (identityApiUrl == null && !string.IsNullOrEmpty(_loginViewModel?.IdentityServerUrl))
+                if (identityApiUrl is null && !string.IsNullOrEmpty(_loginViewModel?.IdentityServerUrl))
                 {
                     if (Uri.TryCreate(_loginViewModel.IdentityServerUrl, UriKind.Absolute, out Uri baseUri))
-                    { 
-                        var uriBuilder = new UriBuilder(baseUri)
+                    {
+                        UriBuilder uriBuilder = new(baseUri)
                         {
-                            Port = 6001, 
+                            Port = 6001,
                         };
                         identityApiUrl = uriBuilder.Uri;
                     }
@@ -545,7 +514,7 @@ namespace Viking.UI.WPF
         private async Task<(Viking.Tokens.BearerTokenHelper, Viking.Tokens.IdentityApiHelper, TokenResponse)> RequestApiToken(Uri identityApiUrl, Uri identityServerUrl)
         {
             // Create helper for API calls (using 'api' client)
-            var apiTokenHelper = new Viking.Tokens.BearerTokenHelper
+            BearerTokenHelper apiTokenHelper = new()
             {
                 IdentityServerURL = identityServerUrl,
                 ClientId = "api",
@@ -553,19 +522,19 @@ namespace Viking.UI.WPF
             };
 
             // Create IdentityApiHelper for API operations
-            var identityApiHelper = new Viking.Tokens.IdentityApiHelper
+            IdentityApiHelper identityApiHelper = new()
             {
                 IdentityApiURL = identityApiUrl
             };
 
             // Get initial token to retrieve permissions
             var idTokenResponse = await apiTokenHelper.RetrieveBearerToken(_savedUsername, _savedPassword);
-            if (idTokenResponse == null || idTokenResponse.IsError)
+            if (idTokenResponse is null || idTokenResponse.IsError)
             {
                 throw new Exception($"Failed to get identity token: {idTokenResponse?.Error}");
             }
 
-            var idToken = idTokenResponse as TokenResponse;
+            TokenResponse idToken = idTokenResponse as TokenResponse;
             return (apiTokenHelper, identityApiHelper, idToken);
         }
 
@@ -586,36 +555,36 @@ namespace Viking.UI.WPF
                 (apiTokenHelper, identityApiHelper, apiToken) = await RequestApiToken(identityApiUrl, identityServerUrl);
 
                 // Create helper for Viking client token
-                var vikingTokenHelper = new Viking.Tokens.BearerTokenHelper
+                BearerTokenHelper vikingTokenHelper = new()
                 {
                     IdentityServerURL = identityServerUrl,
                     ClientId = "Viking",
                     ClientSecret = "Correct Horse Battery Staple"
                 };
-                  
+
                 // Retrieve volume-specific permissions using the API token
                 string[] volumePermissions = await identityApiHelper.RetrieveUserVolumePermissions(apiToken, volumeName);
-                if (volumePermissions == null || volumePermissions.Length == 0)
+                if (volumePermissions is null || volumePermissions.Length == 0)
                 {
                     throw new Exception("User does not have permissions in volume");
                 }
 
                 // Build permissions list
-                var permissionsList = new List<string>
-                {
+                List<string> permissionsList =
+                [
                     "openid",
-                    "Viking.Annotation"
-                };
-                permissionsList.AddRange(volumePermissions.Select(p => $"{volumeName}.{p}"));
+                    "Viking.Annotation",
+                    .. volumePermissions.Select(p => $"{volumeName}.{p}"),
+                ];
 
                 // Request final bearer token with volume-specific permissions
-                var bearerTokenResponse = await vikingTokenHelper.RetrieveBearerToken(_savedUsername, _savedPassword, permissionsList.ToArray());
-                if (bearerTokenResponse == null || bearerTokenResponse.IsError)
+                var bearerTokenResponse = await vikingTokenHelper.RetrieveBearerToken(_savedUsername, _savedPassword, [.. permissionsList]);
+                if (bearerTokenResponse is null || bearerTokenResponse.IsError)
                 {
                     throw new Exception($"Failed to get bearer token: {bearerTokenResponse?.Error}");
                 }
 
-                var volumeToken = bearerTokenResponse as TokenResponse;
+                TokenResponse volumeToken = bearerTokenResponse as TokenResponse;
                 return (apiToken, volumeToken);
             }
             catch (Exception ex)
@@ -627,10 +596,7 @@ namespace Viking.UI.WPF
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }
 

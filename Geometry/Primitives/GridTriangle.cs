@@ -1,4 +1,4 @@
-﻿using Geometry.Graphics;
+using Geometry.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -27,11 +27,11 @@ namespace Geometry
             dotCABA = GridVector2.Dot(in vCA, in vBA);
             dotBABA = GridVector2.Dot(in vBA, in vBA);
 
-            invDenom = 1.0 / ((dotCACA * dotBABA) - (dotCABA * dotCABA)); 
+            invDenom = 1.0 / ((dotCACA * dotBABA) - (dotCABA * dotCABA));
         }
-          
+
         public BaryCoefs(in GridTriangle T) : this(T.p1, T.p2, T.p3)
-        {}  
+        { }
     }
 
     /// <summary>
@@ -42,17 +42,17 @@ namespace Geometry
     public readonly struct GridTriangle : ICloneable, IShape2D, ITriangle2D, IEquatable<GridTriangle>, IEquatable<ITriangle2D>
     {
         public readonly GridVector2[] Points;
-        IPoint2D[] ITriangle2D.Points => this.Points.Cast<IPoint2D>().ToArray();
-         
+        IPoint2D[] ITriangle2D.Points => [.. this.Points.Cast<IPoint2D>()];
+
         private GridVector2 _p1 => Points[0];
         private GridVector2 _p2 => Points[1];
         private GridVector2 _p3 => Points[2];
 
         public readonly GridRectangle BoundingBox;
         GridRectangle IShape2D.BoundingBox => this.BoundingBox;
-        
+
         public readonly GridLineSegment[] Segments;
-          
+
         private readonly BaryCoefs _BarycentricCoefficients;
 
         public GridTriangle(IReadOnlyList<GridVector2> points)
@@ -70,16 +70,16 @@ namespace Geometry
             {
                 throw new ArgumentException("This is not a triangle, it is a line");
             }
-            
-            Points = new GridVector2[] { p1, p2, p3 };
+
+            Points = [p1, p2, p3];
 
             BoundingBox = Points.BoundingBox();
-              
-            Segments = new GridLineSegment[] { new GridLineSegment(p1,p2),
-                                                new GridLineSegment(p2,p3),
-                                                new GridLineSegment(p3,p1)};
 
-            _BarycentricCoefficients = new BaryCoefs(p1,p2,p3);
+            Segments = [ new(p1,p2),
+                                                new(p2,p3),
+                                                new(p3,p1)];
+
+            _BarycentricCoefficients = new BaryCoefs(p1, p2, p3);
             /*
             this._p1.X = Math.Round(this._p1.X, 2);
             this._p2.X = Math.Round(this._p2.X, 2);
@@ -94,7 +94,7 @@ namespace Geometry
         }
 
         public override bool Equals(object obj)
-        {  
+        {
             if (obj is GridTriangle otherTri)
                 return this == otherTri;
             if (obj is IShape2D otherShape)
@@ -104,7 +104,7 @@ namespace Geometry
         }
 
         public bool Equals(IShape2D obj)
-        {  
+        {
             if (obj is ITriangle2D otherTri)
             {
                 for (int i = 0; i < Points.Length; i++)
@@ -129,7 +129,7 @@ namespace Geometry
                 if (!equal) return false;
             }
 
-            return true; 
+            return true;
         }
 
 
@@ -142,44 +142,39 @@ namespace Geometry
                    (A._p3 == B._p3));
         }
 
-        public static bool operator !=(in GridTriangle A, in GridTriangle B)
-        {
-            return !(A == B);
-        }
-         
+        public static bool operator !=(in GridTriangle A, in GridTriangle B) => !(A == B);
+
         public GridVector2 Centroid => GridVector2.FromBarycentric(p1, p2, p3, 1 / 3.0, 1 / 3.0);
 
         IPoint2D ICentroid.Centroid => Centroid;
 
-        public GridCircle Circle => GridCircle.CircleFromThreePoints(new GridVector2[] { _p1, _p2, _p3 });
+        public GridCircle Circle => GridCircle.CircleFromThreePoints([_p1, _p2, _p3]);
 
-        object ICloneable.Clone()
-        {
-            return this.MemberwiseClone();
-        }
+        object ICloneable.Clone() => this.MemberwiseClone();
 
         public GridVector2 p1 => _p1;
 
         public GridVector2 p2 => _p2;
 
         public GridVector2 p3 => _p3;
-         
+
         //public double VectorProducts => (_p1.X * (_p2.Y - _p3.Y)) + (_p2.X * (_p3.Y - _p1.Y)) + (_p3.X * (_p1.Y - _p1.Y));
 
         public double Area
         {
-            get{
+            get
+            {
                 double a = GridVector2.Distance(p1, p2);
                 double b = GridVector2.Distance(p2, p3);
                 double c = GridVector2.Distance(p3, p1);
-                double[] lengths = { a, b, c };
+                double[] lengths = [a, b, c];
                 double s = (a + b + c) / 2.0;
                 double area = Math.Sqrt(s * (s - a) * (s - b) * (s - c));
                 return area;
                 //return Math.Abs(this.VectorProducts) / 2.0;
             }
         }
-        
+
         public double[] Angles
         {
             get
@@ -199,10 +194,10 @@ namespace Geometry
                 angles[1] = Math.Acos((bsqr + csqr - asqr) / (2 * b * c));
                 angles[2] = Math.Acos((csqr + asqr - bsqr) / (2 * c * a));
 
-                return angles; 
+                return angles;
             }
         }
-        
+
         /*
         public double[] Angles
         {
@@ -250,14 +245,14 @@ namespace Geometry
             if (uv.X >= 0 && uv.Y >= 0)
             {
                 if (uv.X + uv.Y <= 1.0f)
-                    return true; 
+                    return true;
             }
 
-            return false; 
+            return false;
         }
 
         public ShapeRelation GetRelation(in IPoint2D p)
-        {  
+        {
             if (false == BoundingBox.Contains(p))
             {
                 //False positives can happen in cases where the points have floating point precision issues.
@@ -268,14 +263,14 @@ namespace Geometry
 
             //Find out if the point is on any line segment of the triangle
             GridVector2 uv = Barycentric(p);
-            GridVector3 uvw = new GridVector3(uv.X, uv.Y, 1 - uv.X - uv.Y);
+            GridVector3 uvw = new(uv.X, uv.Y, 1 - uv.X - uv.Y);
 
             if (uvw.X >= 0 && uvw.Y >= 0 && uvw.Z >= 0)
             {
                 if (uvw.X + uvw.Y + uvw.Z <= 1.0f)
                 {
                     //The point is on or inside the triangle if any barycentric coordinate is 0
-                    if(uvw.coords.Any(c => c == 0))
+                    if (uvw.coords.Any(c => c == 0))
                         return ShapeRelation.TOUCHING;
 
                     return ShapeRelation.CONTAINED;
@@ -308,7 +303,7 @@ namespace Geometry
             {
                 //Check if the line is touching the same segment in two places
                 foreach (GridLineSegment e in this.Segments)
-                    if(e.Intersects(line.A) && e.Intersects(line.B))
+                    if (e.Intersects(line.A) && e.Intersects(line.B))
                         return ShapeRelation.TOUCHING;
 
                 return ShapeRelation.CONTAINED;
@@ -320,18 +315,15 @@ namespace Geometry
                     return ShapeRelation.INTERSECTING;
 
             //OK, make sure one endpoint isn't touching and the rest of the line is outside the triangle
-            if(composite.HasFlag(ShapeRelation.TOUCHING))
-               return ShapeRelation.TOUCHING;
+            if (composite.HasFlag(ShapeRelation.TOUCHING))
+                return ShapeRelation.TOUCHING;
 
             return ShapeRelation.NONE;
         }
 
         ShapeRelation IShape2D.GetRelation(in Geometry.ILineSegment2D line) => GetRelation(line.Convert());
 
-        public GridVector2 Barycentric(in IPoint2D p)
-        {
-            return Barycentric(p.Convert());
-        }
+        public GridVector2 Barycentric(in IPoint2D p) => Barycentric(p.Convert());
 
         /// <summary>
         /// Returns u,v coordinate of point in triangle.  Calculates areas and returns fractions of area.  This can return 0,0 if the point is well outside the 
@@ -340,7 +332,7 @@ namespace Geometry
         /// <param name="point"></param>
         /// <returns></returns>
         public GridVector2 Barycentric(in GridVector2 point)
-        { 
+        {
             GridVector2 vPA = point - _p1;
 
             double dotCAPA = GridVector2.Dot(_BarycentricCoefficients.vCA, vPA);
@@ -349,7 +341,7 @@ namespace Geometry
             double u = ((_BarycentricCoefficients.dotBABA * dotCAPA) - (_BarycentricCoefficients.dotCABA * dotBAPA)) * _BarycentricCoefficients.invDenom;
             double v = ((_BarycentricCoefficients.dotCACA * dotBAPA) - (_BarycentricCoefficients.dotCABA * dotCAPA)) * _BarycentricCoefficients.invDenom;
 
-            GridVector2 uv = new GridVector2(u, v);
+            GridVector2 uv = new(u, v);
 
             //There is always a little floating point error, so cut some slack
             if (uv.X < 0 && uv.X >= -Global.Epsilon)
@@ -365,11 +357,11 @@ namespace Geometry
                 uv.X -= diff * u;
                 uv.Y -= diff * v;
 
-                Debug.Assert(uv.X + uv.Y <= 1.0f, "Failed to correct for u+v near 1.0f + epsilon case in barycentric conversion"); 
+                Debug.Assert(uv.X + uv.Y <= 1.0f, "Failed to correct for u+v near 1.0f + epsilon case in barycentric conversion");
             }
 
             return uv;
-        } 
+        }
 
         /// <summary>
         /// Returns u,v coordinate of point in triangle.  Calculates areas and returns fractions of area.  This can return 0,0 if the point is well outside the 
@@ -383,36 +375,30 @@ namespace Geometry
             for (int i = 0; i < uv.Length; i++)
             {
                 uv[i] = Barycentric(points[i]);
-            } 
+            }
 
             return uv;
-        } 
+        }
 
-        public GridVector2 BaryToVector(in GridVector2 bary)
-        {
-            return GridVector2.FromBarycentric(p1, p2, p3, bary.X, bary.Y);
-        }
-        
-        public bool Intersects(in IShape2D shape)
-        {
-            return ShapeExtensions.TriangleIntersects(this, in shape);
-        }
+        public GridVector2 BaryToVector(in GridVector2 bary) => GridVector2.FromBarycentric(p1, p2, p3, bary.X, bary.Y);
+
+        public bool Intersects(in IShape2D shape) => ShapeExtensions.TriangleIntersects(this, in shape);
 
         public bool Intersects(in GridRectangle r) => RectangleIntersectionExtensions.Intersects(r, this);
 
         public bool Intersects(in ICircle2D c) => Intersects(c.Convert());
 
         public bool Intersects(in GridCircle circle) => TriangleIntersectionExtensions.Intersects(this, circle);
-         
+
         public bool Intersects(in ILineSegment2D l) => Intersects(l.Convert());
 
         public bool Intersects(in GridLineSegment line) => TriangleIntersectionExtensions.Intersects(this, line);
 
         public bool Intersects(in ITriangle2D t) => Intersects(t.Convert());
-        
+
         public bool Intersects(in GridTriangle other)
         {
-            if (false == other.BoundingBox.Intersects( BoundingBox))
+            if (false == other.BoundingBox.Intersects(BoundingBox))
                 return false;
 
             foreach (GridVector2 p in Points)
@@ -431,13 +417,13 @@ namespace Geometry
         }
 
         public bool Intersects(in IPolygon2D p) => Intersects(p.Convert());
-        
+
         public bool Intersects(in GridPolygon poly) => TriangleIntersectionExtensions.Intersects(this, poly);
 
         public IShape2D Translate(in IPoint2D offset)
         {
             GridVector2 vector = offset.Convert();
-            return new GridTriangle(this.Points.Select(p => p + vector).ToArray());
+            return new GridTriangle([.. this.Points.Select(p => p + vector)]);
         }
 
         public RotationDirection Winding
@@ -481,6 +467,6 @@ namespace Geometry
                    this.p3 == other.p3;
         }
 
-        public ShapeType2D ShapeType => ShapeType2D.TRIANGLE; 
+        public ShapeType2D ShapeType => ShapeType2D.TRIANGLE;
     }
 }

@@ -8,7 +8,8 @@ using System.Text;
 using System.Threading.Tasks;
 using CommandLine;
 using CommandLine.Text;
-using Neo4j.Driver;
+using Neo4j.Driver.V1;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Neo4JGenerator
@@ -37,7 +38,7 @@ namespace Neo4JGenerator
         {
             var result = Parser.Default.ParseArguments<CommandLineOptions>(args);
             result.WithParsed(RunWithOptions)
-                  .WithNotParsed(HandleParseErrors);
+                  .WithNotParsed(errs => HandleParseErrors(result, errs));
         }
 
         private static void RunWithOptions(CommandLineOptions opts)
@@ -73,10 +74,10 @@ namespace Neo4JGenerator
             Console.WriteLine("All done!");
         }
 
-        private static void HandleParseErrors(IEnumerable<Error> errs)
+        private static void HandleParseErrors(ParserResult<CommandLineOptions> result, IEnumerable<Error> errs)
         {
             // Create a new help text with error information
-            var errorHelpText = HelpText.AutoBuild(Parser.Default);
+            var errorHelpText = HelpText.AutoBuild(result);
             errorHelpText.AddPreOptionsLine("ERROR: Unable to parse command line arguments.");
             errorHelpText.AddPreOptionsLine("The following errors occurred:");
             
@@ -415,6 +416,15 @@ namespace Neo4JGenerator
             using (var jsonTextReader = new JsonTextReader(sr))
             {
                 return (Newtonsoft.Json.Linq.JObject)serializer.Deserialize(jsonTextReader);
+            }
+        }
+
+        public static async Task<Newtonsoft.Json.Linq.JObject> DeserializeFromStreamAsync(string url)
+        {
+            using (var client = new System.Net.Http.HttpClient())
+            using (var stream = await client.GetStreamAsync(url))
+            {
+                return DeserializeFromStream(stream);
             }
         }
         

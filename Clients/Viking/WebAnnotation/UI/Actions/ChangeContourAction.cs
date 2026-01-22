@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using SqlGeometryUtils;
 using System;
 using System.Diagnostics;
@@ -54,7 +54,7 @@ namespace WebAnnotation.UI.Actions
         internal bool ClockwiseContour = false;
 
         public BuiltinTexture Icon { get; set; } = BuiltinTexture.None;
-        public Change2DContourAction(long locationID, RetraceCommandAction retraceType, GridPolygon newMosaicPolygon, GridPolygon newVolumePolygon = null, bool ClockwiseContour = false, IVolumeToSectionTransform transform = null)
+        public Change2DContourAction(long locationID, RetraceCommandAction retraceType, GridPolygon newMosaicPolygon, GridPolygon? newVolumePolygon = null, bool ClockwiseContour = false, IVolumeToSectionTransform? transform = null)
         {
             Debug.Assert(newMosaicPolygon.TotalUniqueVerticies < 1000, "This is a huge polygon, why?");
 
@@ -69,16 +69,14 @@ namespace WebAnnotation.UI.Actions
             NewSmoothedVolumePolygon = NewVolumePolygon;//newVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints); 
         }
 
-        public Change2DContourAction(LocationObj location, RetraceCommandAction retraceType, GridPolygon newMosaicPolygon, GridPolygon newVolumePolygon = null, bool ClockwiseContour = false, IVolumeToSectionTransform transform = null)
+        public Change2DContourAction(LocationObj location, RetraceCommandAction retraceType, GridPolygon newMosaicPolygon, GridPolygon? newVolumePolygon = null, bool ClockwiseContour = false, IVolumeToSectionTransform? transform = null)
         {
             Debug.Assert(newMosaicPolygon.TotalUniqueVerticies < 1000, "This is a huge polygon, why?");
 
             this.ClockwiseContour = ClockwiseContour;
             RetraceType = retraceType;
             Location = location;
-            Transform = transform == null ?
-                WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform
-                : transform;
+            Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 
             NewMosaicPolygon = newMosaicPolygon;
 
@@ -115,8 +113,7 @@ namespace WebAnnotation.UI.Actions
                 return false;
             }
 
-            Change2DContourAction other_action = other as Change2DContourAction;
-            if (other_action == null)
+            if (other is not Change2DContourAction other_action)
             {
                 return false;
             }
@@ -134,29 +131,26 @@ namespace WebAnnotation.UI.Actions
             return NewVolumePolygon.Equals(other.NewVolumePolygon);
         }
 
-        public override string ToString()
-        {
-            return $"{base.ToString()} {Type} {RetraceType}";
-        }
+        public override string ToString() => $"{base.ToString()} {Type} {RetraceType}";
     }
 
     /// <summary>
     /// Replace the exterior contour of an annotation with the passed contour
     /// </summary>
-    internal class Change1DContourAction : IAction, IEquatable<Change1DContourAction>
+    internal class Change1DContourAction(LocationObj location, GridPolyline newVolumePolyline, IVolumeToSectionTransform? transform = null) : IAction, IEquatable<Change1DContourAction>
     {
-        public readonly LocationObj Location;
-        private readonly IVolumeToSectionTransform Transform;
+        public readonly LocationObj Location = location;
+        private readonly IVolumeToSectionTransform Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 
         /// <summary>
         /// The volume space polygon we want to add to the location
         /// </summary>
-        public readonly GridPolyline NewVolumePolyline;
+        public readonly GridPolyline NewVolumePolyline = newVolumePolyline;
 
         /// <summary>
         /// The volume space polygon after smoothing
         /// </summary>
-        public readonly GridPolyline NewSmoothVolumePolyline;
+        public readonly GridPolyline NewSmoothVolumePolyline = newVolumePolyline.Smooth(Global.NumOpenCurveInterpolationPoints);
 
         public LocationAction Type => LocationAction.CHANGEBOUNDARY;
 
@@ -165,17 +159,6 @@ namespace WebAnnotation.UI.Actions
         public static implicit operator Action(Change1DContourAction a)
         {
             return a.Execute;
-        }
-
-        public Change1DContourAction(LocationObj location, GridPolyline newVolumePolyline, IVolumeToSectionTransform transform = null)
-        {
-            //TODO: This can be merged back into ChangeContour by passing an IShape2D parameter
-            Location = location;
-            Transform = transform == null ?
-                WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform
-                : transform;
-            NewVolumePolyline = newVolumePolyline;
-            NewSmoothVolumePolyline = newVolumePolyline.Smooth(Global.NumOpenCurveInterpolationPoints);
         }
 
         public void OnExecute()
@@ -198,8 +181,7 @@ namespace WebAnnotation.UI.Actions
                 return false;
             }
 
-            Change1DContourAction other_action = other as Change1DContourAction;
-            if (other_action == null)
+            if (other is not Change1DContourAction other_action)
             {
                 return false;
             }
@@ -217,10 +199,7 @@ namespace WebAnnotation.UI.Actions
             return NewVolumePolyline.Equals(other.NewVolumePolyline);
         }
 
-        public override string ToString()
-        {
-            return $"{base.ToString()} {Type}";
-        }
+        public override string ToString() => $"{base.ToString()} {Type}";
 
     }
 }

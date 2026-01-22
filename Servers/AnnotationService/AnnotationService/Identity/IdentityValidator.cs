@@ -36,7 +36,7 @@ namespace Annotation.Identity
             //
             // We use lenient validation here - just ensure credentials are present.
             // If the JWT token validation fails in JwtMessageInspector, the request will be rejected there.
-            
+
             if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password))
             {
                 throw new FaultException("Username and password are required.");

@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -7,11 +7,8 @@ namespace Viking
 {
     static class DisposeTextureThreadingObj
     {
-        public static System.Threading.Tasks.Task DisposeAsync(this Texture2D texture)
-        {
-            return Task.Run(() => DoDispose(texture));
-        }
-        
+        public static System.Threading.Tasks.Task DisposeAsync(this Texture2D texture) => Task.Run(() => DoDispose(texture));
+
         private static void DoDispose(Texture2D texture)
         {
             if (texture.IsDisposed == false)

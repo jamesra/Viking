@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -18,31 +18,26 @@ namespace Geometry
     {
         public static Quadrant Opposite(this Quadrant quad)
         {
-            switch (quad)
+            return quad switch
             {
-                case Quadrant.LOWERLEFT:
-                    return Quadrant.UPPERRIGHT;
-                case Quadrant.LOWERRIGHT:
-                    return Quadrant.UPPERLEFT;
-                case Quadrant.UPPERLEFT:
-                    return Quadrant.LOWERRIGHT;
-                case Quadrant.UPPERRIGHT:
-                    return Quadrant.LOWERLEFT;
-                default:
-                    throw new ArgumentException("Unexpected quadrant");
-            }
+                Quadrant.LOWERLEFT => Quadrant.UPPERRIGHT,
+                Quadrant.LOWERRIGHT => Quadrant.UPPERLEFT,
+                Quadrant.UPPERLEFT => Quadrant.LOWERRIGHT,
+                Quadrant.UPPERRIGHT => Quadrant.LOWERLEFT,
+                _ => throw new ArgumentException("Unexpected quadrant"),
+            };
         }
     }
-      
+
     public class QuadTreeNode<T>
     {
         readonly QuadTree<T> Tree;
         internal QuadTreeNode<T> Parent = null;
-         
+
         /// <summary>
         /// It is assumed the "up" has a larger Y value than "down"
         /// </summary>
-        private readonly QuadTreeNode<T>[] _quadrants = new QuadTreeNode<T>[] { null, null, null, null };
+        private readonly QuadTreeNode<T>[] _quadrants = [null, null, null, null];
 
         /// <summary>
         /// It is assumed the "up" has a larger Y value than "down"
@@ -106,7 +101,7 @@ namespace Geometry
         /// <summary>
         /// If this node is a leaf then Point contains the position of the point in this node
         /// </summary>
-        public GridVector2 Point = new GridVector2(double.MinValue, double.MinValue);
+        public GridVector2 Point = new(double.MinValue, double.MinValue);
 
         /// <summary>
         /// Set to true if the value field is valid
@@ -171,7 +166,7 @@ namespace Geometry
             this.Point = point;
             this.Value = value;
             this.HasValue = true;
-             
+
             Debug.Assert(this.Border.Contains(point));
         }
 
@@ -184,18 +179,13 @@ namespace Geometry
         {
             Quadrant quad;
 
-            
+
             GridVector2 center = this.Center;
             //Debug.Assert(center != point, "We cannot assign a quadrant for a point at the origin");
 
-            if (point.X > center.X) //Right of center
-            {
-                quad = point.Y > center.Y ? Quadrant.UPPERRIGHT : Quadrant.LOWERRIGHT;
-            }
-            else //Left of center
-            {
-                quad = point.Y > center.Y ? Quadrant.UPPERLEFT : Quadrant.LOWERLEFT;
-            }
+            quad = point.X > center.X
+                ? point.Y > center.Y ? Quadrant.UPPERRIGHT : Quadrant.LOWERRIGHT
+                : point.Y > center.Y ? Quadrant.UPPERLEFT : Quadrant.LOWERLEFT;
 
             return quad;
         }
@@ -211,7 +201,7 @@ namespace Geometry
                 }
                 else
                 {
-                    foreach (var quad in _quadrants.Where(q => !(q is null)))
+                    foreach (var quad in _quadrants.Where(q => q is not null))
                     {
                         foreach (var key in quad.Keys)
                         {
@@ -265,7 +255,7 @@ namespace Geometry
                     Quadrant quad = GetQuad(Point);
 
                     AddNodeToQuadrant(quad, Point, Value);
-                     
+
                     //Erase our point just to be safe since we aren't a leaf anymore
                     this.Point = new GridVector2();
                     this.Value = default;
@@ -295,9 +285,9 @@ namespace Geometry
         }
 
         private void AddNodeToQuadrant(Quadrant quad, GridVector2 insertingPoint, T value)
-        { 
-            var newNode = new QuadTreeNode<T>(this, quad, insertingPoint, value);
-            
+        {
+            QuadTreeNode<T> newNode = new(this, quad, insertingPoint, value);
+
             //If value already exists in the treeWithUniqueValues this will fail
             //Tree.ValueToNodeTable.Add(value, newNode);
             Tree.PointAdded(newNode, insertingPoint, value);
@@ -337,15 +327,15 @@ namespace Geometry
                     //Create a boundary centered on our root node that will cover the 2nd point
                     double quad_size = Math.Max(Math.Abs(BoxDistance.X * 2), Math.Abs(BoxDistance.Y * 2));
                     double rounded_quad_size = RoundUpToNearestPowerOfTen(quad_size);
-                    GridVector2 NewBoundsDims = new GridVector2(rounded_quad_size, rounded_quad_size);
+                    GridVector2 NewBoundsDims = new(rounded_quad_size, rounded_quad_size);
 
-                    
+
                     //Center the new boundary between the two points 
                     GridVector2 Center = (this.Point + point) / 2;
                     GridVector2 NewBoundsOrigin = Center - (NewBoundsDims / 2);
 
-                    GridRectangle Bounds = new GridRectangle(NewBoundsOrigin, NewBoundsOrigin + NewBoundsDims);
-                    this.Border = Bounds; 
+                    GridRectangle Bounds = new(NewBoundsOrigin, NewBoundsOrigin + NewBoundsDims);
+                    this.Border = Bounds;
 
                     Debug.Assert(Bounds.Contains(this.Point), "The border specified must include the node's point");
                     Debug.Assert(Bounds.Contains(point), "The border specified must include the new point");
@@ -371,33 +361,19 @@ namespace Geometry
             double ParentWidth = this.Border.Width * 2;
             double ParentHeight = this.Border.Height * 2;
             Quadrant insertquad = GetQuad(point);
-             
-            GridVector2 ParentCenter;
-            switch (insertquad)
-            {
-                case Quadrant.LOWERLEFT:
+            var
                     //We are the upper-right node of the new root.
-                    ParentCenter = Border.LowerLeft;
-                    break;
-                case Quadrant.LOWERRIGHT:
-                    //We are the Upper-left node of the new root.
-                    ParentCenter = Border.LowerRight;
-                    break;
-                case Quadrant.UPPERLEFT:
-                    //We are the Lower-Right node of the new root
-                    ParentCenter = Border.UpperLeft;
-                    break;
-                case Quadrant.UPPERRIGHT:
-                    //We are the Lower-Left node of the new root
-                    ParentCenter = Border.UpperRight;
-                    break;
-                default:
-                    throw new ArgumentException("Unexpected quadrant");
-            }
+                    ParentCenter = insertquad switch
+                    {
+                        Quadrant.LOWERLEFT => Border.LowerLeft,//We are the upper-right node of the new root.
+                        Quadrant.LOWERRIGHT => Border.LowerRight,//We are the Upper-left node of the new root.
+                        Quadrant.UPPERLEFT => Border.UpperLeft,//We are the Lower-Right node of the new root
+                        Quadrant.UPPERRIGHT => Border.UpperRight,//We are the Lower-Left node of the new root
+                        _ => throw new ArgumentException("Unexpected quadrant"),
+                    };
+            GridRectangle parent_bounds = new(ParentCenter - new GridVector2(this.Border.Width, this.Border.Height), ParentWidth, ParentHeight);
 
-            GridRectangle parent_bounds = new GridRectangle(ParentCenter - new GridVector2(this.Border.Width, this.Border.Height),  ParentWidth, ParentHeight);
-
-            QuadTreeNode<T> new_parent = new QuadTreeNode<T>(this.Tree, parent_bounds);
+            QuadTreeNode<T> new_parent = new(this.Tree, parent_bounds);
 
             Debug.Assert(new_parent.GetQuad(this.Border.Center) == insertquad.Opposite(), "When expanding the border the existing and new points should be in opposite quadrants");
             new_parent[insertquad.Opposite()] = this;
@@ -425,7 +401,7 @@ namespace Geometry
             {
                 new_root = new_parent;
                 Debug.Assert((this.IsLeaf == false) || new_root.Border.Contains(Point), "New root node must include our point");
-                Debug.Assert(new_root.Border.Contains(point), "New root node must include new point"); 
+                Debug.Assert(new_root.Border.Contains(point), "New root node must include new point");
                 return true;
             }
         }
@@ -439,7 +415,7 @@ namespace Geometry
         public void Remove(QuadTreeNode<T> node)
         {
             if (node.HasValue)
-            { 
+            {
                 Tree.PointRemoved(node, node.Point, node.Value);
                 //Tree.ValueToNodeTable.Remove(node.Value);
             }
@@ -474,7 +450,7 @@ namespace Geometry
 
         public void Remove(GridVector2 p, out T output)
         {
-            if(this.IsRoot && this.HasValue && this.Point == p)
+            if (this.IsRoot && this.HasValue && this.Point == p)
             {
                 output = this.Value;
                 this.Value = default;
@@ -482,31 +458,33 @@ namespace Geometry
                 Tree.PointRemoved(this, p, output);
             }
 
-            if(this.IsLeaf)
+            if (this.IsLeaf)
             {
                 throw new KeyNotFoundException($"{p} not in QuadTree to remove");
             }
-             
+
             if (_quadrants[(int)GetQuad(p)] is QuadTreeNode<T> quad)
             {
-                if(!quad.IsLeaf)
+                if (!quad.IsLeaf)
                     quad.Remove(p, out output); //Try to find the point in the child
                 else
                 {
-                    if(quad.Point == p)
+                    if (quad.Point == p)
                     {
                         output = quad.Value;
                         this.Remove(quad);
                         return;
                     }
-                    else {
+                    else
+                    {
                         throw new KeyNotFoundException($"{p} not in QuadTree to remove");
                     }
                 }
             }
-            else { //We have no quadrant data for where the point falls
+            else
+            { //We have no quadrant data for where the point falls
                 throw new KeyNotFoundException($"{p} not in QuadTree to remove");
-            } 
+            }
         }
 
         public void Update(GridVector2 point, T value)
@@ -524,7 +502,7 @@ namespace Geometry
             else
             {
                 var quad = GetQuad(point);
-                if (!(_quadrants[(int)quad] is null))
+                if (_quadrants[(int)quad] is not null)
                 {
                     _quadrants[(int)quad].TryUpdate(point, value);
                 }
@@ -542,7 +520,7 @@ namespace Geometry
                 Update(point, value);
                 return true;
             }
-            catch(KeyNotFoundException)
+            catch (KeyNotFoundException)
             {
                 return false;
             }
@@ -561,7 +539,7 @@ namespace Geometry
             {
                 if (this.IsRoot && HasValue == false)
                     throw new InvalidOperationException(
-                        $"{nameof(QuadTreeWithUniqueValues<T>)} has no entries, so FindNearest cannot return a valid value");
+                        $"{nameof(QuadTreeWithUniqueValues<>)} has no entries, so FindNearest cannot return a valid value");
 
                 Debug.Assert(this.HasValue);
                 distance = GridVector2.Distance(in this.Point, in point);
@@ -590,7 +568,7 @@ namespace Geometry
                 //It is OK if we didn't have a quadrant for the point in the earlier check because then the default values for 
                 //distance force the adjacent quadrants to be checked
 
-                GridRectangle rect = new GridRectangle(point, distance);
+                GridRectangle rect = new(point, distance);
 
                 //If we aren't a leaf, then check each of our children for the nearest point
                 for (int iQuad = 0; iQuad < 4; iQuad++)
@@ -658,7 +636,7 @@ namespace Geometry
                 bool PointFound = false;
 
                 Quadrant quad = GetQuad(point);
-                GridVector2 nodePoint = new GridVector2(double.MinValue, double.MinValue);
+                GridVector2 nodePoint = new(double.MinValue, double.MinValue);
 
                 //If we aren't a leaf node then do a depth first search to find the nearest point
                 if (_quadrants[(int)quad] != null)
@@ -676,7 +654,7 @@ namespace Geometry
                 if (distanceList.Count >= nPoints)
                     maxDistance = distanceList.MaxDistance;
 
-                GridRectangle rect = new GridRectangle(point, maxDistance);
+                GridRectangle rect = new(point, maxDistance);
 
                 //If we aren't a leaf, then check each of our children for the nearest point
                 for (int iQuad = 0; iQuad < 4; iQuad++)
@@ -774,7 +752,7 @@ namespace Geometry
 
         public override string ToString()
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             if (this.IsRoot)
                 sb.Append("Root: ");
             if (this.IsLeaf)

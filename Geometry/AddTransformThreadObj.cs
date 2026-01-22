@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -7,41 +7,34 @@ using System.Threading;
 
 namespace Geometry.Transforms
 {
-    class AddTransformThreadObj : IDisposable
+    class AddTransformThreadObj(int[] iMapPoints, IControlPointTriangulation warpingT, ITransform fixedT) : IDisposable
     {
-        public ManualResetEvent DoneEvent = new ManualResetEvent(false);
+        public ManualResetEvent DoneEvent = new(false);
 
         /// <summary>
         /// The output returned after processing
         /// </summary>
         public MappingGridVector2[] newPoints;
 
-        readonly int[] iPoints; 
-        readonly IControlPointTriangulation warpingTransform;
-        readonly ITransform fixedTransform;
+        readonly int[] iPoints = iMapPoints;
+        readonly IControlPointTriangulation warpingTransform = warpingT;
+        readonly ITransform fixedTransform = fixedT;
 
         /// <summary>
         /// This is set to true if every original point was transformed successfully
         /// </summary>
         public bool AllPointsTransformed = true;
 
-        public AddTransformThreadObj(int[] iMapPoints, IControlPointTriangulation warpingT, ITransform fixedT)
-        {
-            this.iPoints = iMapPoints; 
-            this.warpingTransform = warpingT;
-            this.fixedTransform = fixedT; 
-        }
-
         //TODO: Convert this entire class to an async method 
         public void ThreadPoolCallback(Object threadContext)
         {
-            bool[] mapped = fixedTransform.TryTransform(warpingTransform.MapPoints.Select(p => p.ControlPoint).ToArray(), out var MappedControlPoints);
-            
+            bool[] mapped = fixedTransform.TryTransform([.. warpingTransform.MapPoints.Select(p => p.ControlPoint)], out var MappedControlPoints);
+
             //Create new MappingGridVector2s for all the points we could cleanly transform
-            List<MappingGridVector2> newPointsList = MappedControlPoints.Select((cp, i) => mapped[i] ? 
+            List<MappingGridVector2> newPointsList = [.. MappedControlPoints.Select((cp, i) => mapped[i] ?
                 new MappingGridVector2(cp, warpingTransform.MapPoints[i].MappedPoint) :
-                default).Where((_,i) => mapped[i]).ToList();
-             
+                default).Where((_,i) => mapped[i])];
+
             if (!mapped.All(m => m))
             {
                 //Prepare to remove unmappable points
@@ -66,8 +59,8 @@ namespace Geometry.Transforms
                     {
                         int iEdgePoint = MovingEdgeIndicies[iEdge];
 
-                        GridLineSegment ctrlLine = new GridLineSegment(UnmappedPoint.ControlPoint, this.warpingTransform.MapPoints[iEdgePoint].ControlPoint);
-                        GridLineSegment mapLine = new GridLineSegment(UnmappedPoint.MappedPoint, this.warpingTransform.MapPoints[iEdgePoint].MappedPoint);
+                        GridLineSegment ctrlLine = new(UnmappedPoint.ControlPoint, this.warpingTransform.MapPoints[iEdgePoint].ControlPoint);
+                        GridLineSegment mapLine = new(UnmappedPoint.MappedPoint, this.warpingTransform.MapPoints[iEdgePoint].MappedPoint);
 
                         //Control line found in nearest line call
                         //Corresponding map line found in nearest line call
@@ -124,19 +117,16 @@ namespace Geometry.Transforms
 
             MappingGridVector2.RemoveControlSpaceDuplicates(newPointsList);
             MappingGridVector2.RemoveMappedSpaceDuplicates(newPointsList);
-            newPoints = newPointsList.ToArray();
-            DoneEvent.Set(); 
+            newPoints = [.. newPointsList];
+            DoneEvent.Set();
         }
 
         #region IDisposable Members
 
         public void Dispose()
         {
-            if (this.DoneEvent != null)
-            {
-                this.DoneEvent.Close();
-                this.DoneEvent = null;
-            }
+            this.DoneEvent?.Close();
+            this.DoneEvent = null;
         }
 
         #endregion

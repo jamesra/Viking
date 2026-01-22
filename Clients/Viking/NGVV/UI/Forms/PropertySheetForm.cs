@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using Viking.Common;
 
@@ -36,16 +37,13 @@ namespace Viking.UI.Forms
         /// Mapping of DBObject.Row instances to property sheets. Used so we only display one property sheet
         /// for any given object
         /// </summary>
-        private static readonly Dictionary<IUIObjectBasic, PropertySheetForm> ShownProperties = new Dictionary<IUIObjectBasic, PropertySheetForm>();
+        private static readonly Dictionary<IUIObjectBasic, PropertySheetForm> ShownProperties = [];
 
         #endregion
 
         #region Static Methods
 
-        public static PropertySheetForm Show(IUIObjectBasic Object)
-        {
-            return PropertySheetForm.Show(Object, UI.State.Appwindow);
-        }
+        public static PropertySheetForm Show(IUIObjectBasic Object) => PropertySheetForm.Show(Object, UI.State.Appwindow);
 
         public static PropertySheetForm Show(IUIObjectBasic Object, System.Windows.Forms.Form ParentForm)
         {
@@ -75,24 +73,22 @@ namespace Viking.UI.Forms
 
         public static PropertySheetForm[] Show(IUIObjectBasic[] Objects, System.Windows.Forms.Form ParentForm)
         {
-            List<PropertySheetForm> Forms = new List<PropertySheetForm>(Objects.Length);
-            foreach (IUIObject Obj in Objects)
+            List<PropertySheetForm> Forms = new(Objects.Length);
+            foreach (IUIObject Obj in Objects.Cast<IUIObject>())
             {
                 PropertySheetForm Form = Show(Obj, ParentForm);
                 Forms.Add(Form);
             }
 
-            return Forms.ToArray();
+            return [.. Forms];
         }
 
         public static System.Windows.Forms.DialogResult ShowDialog(IUIObjectBasic Object, System.Windows.Forms.Form ParentForm)
         {
             //If we aren't showing those properties, create a new property sheet and show it.
-            using (PropertySheetForm PropertyForm = new PropertySheetForm(Object))
-            {
-                PropertyForm.Owner = ParentForm;
-                return PropertyForm.ShowDialog();
-            }
+            using PropertySheetForm PropertyForm = new(Object);
+            PropertyForm.Owner = ParentForm;
+            return PropertyForm.ShowDialog();
         }
 
         #endregion
@@ -156,7 +152,7 @@ namespace Viking.UI.Forms
             {
                 Size MaxTabSize = TabsProperty.RecalculateMaxTabSize();
 
-                Size Margin = new Size
+                Size Margin = new()
                 {
                     Width = this.Width - TabsProperty.Width,
                     Height = this.Height - TabsProperty.Height

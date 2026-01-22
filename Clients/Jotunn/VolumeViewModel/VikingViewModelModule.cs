@@ -17,6 +17,18 @@ namespace Viking.VolumeViewModel
             this.worker = worker;
         }
 
+        public void Report(string message, double progress, double maxProgress)
+        {
+            int percent = (int)((progress / maxProgress) * 100);
+            worker.ReportProgress(percent, message);
+        }
+
+        public void Report(Viking.Common.ProgressInfo info)
+        {
+            int percent = (int)((info.Progress / info.MaxProgress) * 100);
+            worker.ReportProgress(percent, info.Message);
+        }
+
         public void ReportProgress(double PercentProgress, string message)
         {
             worker.ReportProgress((int)PercentProgress, message);

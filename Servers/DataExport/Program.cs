@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.ComponentModel;
+using System.Text.RegularExpressions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,30 +49,26 @@ app.Use(async (context, next) =>
     if (path != null)
     {
         // Normalize controller and action names to proper casing
-        var normalizedPath = System.Text.RegularExpressions.Regex.Replace(
-            path,
-            @"/network/",
-            "/Network/",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        
+        var normalizedPath = MyRegex().Replace(path, "/Network/");
+
         normalizedPath = System.Text.RegularExpressions.Regex.Replace(
             normalizedPath,
             @"/morphology/",
             "/Morphology/",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        
+
         normalizedPath = System.Text.RegularExpressions.Regex.Replace(
             normalizedPath,
             @"/motif/",
             "/Motif/",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        
+
         normalizedPath = System.Text.RegularExpressions.Regex.Replace(
             normalizedPath,
             @"/export/",
             "/Export/",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        
+
         context.Request.Path = normalizedPath;
     }
     await next();
@@ -83,4 +81,14 @@ app.MapControllers();
 // Add static file fallback for index.html if needed
 app.MapFallbackToFile("index.html");
 
-app.Run(); 
+app.Run();
+
+partial class Program
+{
+#if NETFRAMEWORK
+    private static readonly System.Text.RegularExpressions.Regex MyRegex = new System.Text.RegularExpressions.Regex(@"/network/", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled);
+#else
+    [GeneratedRegex(@"/network/", RegexOptions.IgnoreCase, "en-US")]
+    private static partial System.Text.RegularExpressions.Regex MyRegex();
+#endif
+}

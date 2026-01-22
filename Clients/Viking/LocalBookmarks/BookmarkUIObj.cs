@@ -25,9 +25,11 @@ namespace LocalBookmarks
 
         public void UpdateView()
         {
-            _labelView = new VikingXNAGraphics.LabelView(this.Name, this.GridPosition);
-            _labelView.FontSize = Global.DefaultBookmarkRadius / 2.5;
-            GridRectangle boundingRect = new GridRectangle(GridPosition, Global.DefaultBookmarkRadius);
+            _labelView = new VikingXNAGraphics.LabelView(this.Name, this.GridPosition)
+            {
+                FontSize = Global.DefaultBookmarkRadius / 2.5
+            };
+            GridRectangle boundingRect = new(GridPosition, Global.DefaultBookmarkRadius);
             _shapeView = new VikingXNAGraphics.TextureOverlayView(Parent.ShapeTexture, boundingRect, Parent.Color.SetAlpha(0.75f));
         }
 
@@ -43,7 +45,7 @@ namespace LocalBookmarks
         {
             get
             {
-                if (_shapeView == null)
+                if (_shapeView is null)
                 {
                     UpdateView();
                 }
@@ -55,7 +57,7 @@ namespace LocalBookmarks
         {
             get
             {
-                if (_labelView == null)
+                if (_labelView is null)
                 {
                     UpdateView();
                 }
@@ -72,7 +74,7 @@ namespace LocalBookmarks
         {
             if (OnCreate != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, [this, null]);
             }
         }
         public static event EventHandler Create
@@ -89,8 +91,7 @@ namespace LocalBookmarks
             set
             {
                 Data.Name = value;
-                if (Data.Name == null)
-                    Data.Name = "";
+                Data.Name ??= "";
 
                 _LabelSizeMeasured = false;
                 LabelView.Text = value;
@@ -102,8 +103,7 @@ namespace LocalBookmarks
         {
             get
             {
-                if (Data.VolumePosition == null)
-                    Data.VolumePosition = new Point2D();
+                Data.VolumePosition ??= new Point2D();
                 return Data.VolumePosition;
             }
             set => Data.VolumePosition = value;
@@ -119,8 +119,7 @@ namespace LocalBookmarks
         {
             get
             {
-                if (Data.View == null)
-                    Data.View = new View();
+                Data.View ??= new View();
                 return Data.View;
             }
             set => Data.View = value;
@@ -203,8 +202,10 @@ namespace LocalBookmarks
 
         public override Viking.UI.Controls.GenericTreeNode CreateNode()
         {
-            BookmarkTreeNode node = new BookmarkTreeNode(this);
-            node.Name = this.Name;
+            BookmarkTreeNode node = new(this)
+            {
+                Name = this.Name
+            };
             return node;
         }
 

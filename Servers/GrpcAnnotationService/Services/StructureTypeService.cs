@@ -89,7 +89,7 @@ namespace gRPCAnnotationService
             return response;
         }
 
-        public override async Task<UpdateStructureTypesResponse> UpdateStructureTypes(UpdateStructureTypesRequest request, ServerCallContext context)
+        public override async Task<UpdateStructureTypesResponse> Update(UpdateStructureTypesRequest request, ServerCallContext context)
         {
             try
             {
@@ -101,7 +101,7 @@ namespace gRPCAnnotationService
                 {
                     var ef_obj = req.Result.ToStructureType();
 
-                    PermittedStructureLinkChangeResponse row_response = new PermittedStructureLinkChangeResponse() { Action = r.Action };
+                    StructureTypeChangeResponse row_response = new StructureTypeChangeResponse() { Action = req.Action };
 
                     switch (req.Action)
                     {
@@ -109,25 +109,39 @@ namespace gRPCAnnotationService
                             row_response.Sucess = true;
                             break;
                         case DBAction.Insert:
-                            await _context.StructureTypes.AddAsync(r.Result.ToPermittedStructureLink());
+                            var insertResult = await _context.StructureTypes.AddAsync(ef_obj);
+                            row_response.Sucess = true;
+                            row_response.Result = insertResult.Entity.ToProtobufMessage();
                             break;
                         case DBAction.Update:
                             var obj = _context.StructureTypes.FirstOrDefault(t => t.Id == ef_obj.Id);
-                            
-                            
-                            psl.Bidirectional = r.Result.Bidirectional;
-                            var EF_Result = _context.PermittedStructureLinks.Update(psl);
-                            row_response.Sucess = true;
-                            row_response.Result = EF_Result.Entity.ToProtobufMessage();
+                            if (obj != null)
+                            {
+                                req.Result.Sync(ref obj);
+                                var EF_Result = _context.StructureTypes.Update(obj);
+                                row_response.Sucess = true;
+                                row_response.Result = EF_Result.Entity.ToProtobufMessage();
+                            }
+                            else
+                            {
+                                row_response.Sucess = false;
+                            }
                             break;
                         case DBAction.Delete:
-                            var EF_remove_row = _context.StructureTypes.FirstOrDefault(psl => psl.SourceTypeId == r.Result.SourceTypeId && psl.TargetTypeId == r.Result.TargetTypeId);
-                            _context.PermittedStructureLinks.Remove(EF_remove_row);
-                            row_response.Sucess = true;
+                            var EF_remove_row = _context.StructureTypes.FirstOrDefault(t => t.Id == ef_obj.Id);
+                            if (EF_remove_row != null)
+                            {
+                                _context.StructureTypes.Remove(EF_remove_row);
+                                row_response.Sucess = true;
+                            }
+                            else
+                            {
+                                row_response.Sucess = false;
+                            }
                             break;
                     }
 
-                    response.Changes.Add(row_response);
+                    response.Results.Add(row_response);
                 }
 
                 await _context.SaveChangesAsync();
@@ -136,10 +150,8 @@ namespace gRPCAnnotationService
             }
             catch (System.Exception e)
             {
-                //This means there was no row with that ID; 
-                _logger.LogInformation($"{nameof(GetPermittedStructureLinks)}: {e}");
-                throw new Grpc.Core.RpcException(new Status(StatusCode.Unknown, nameof(GetPermittedStructureLinks), e));
-
+                _logger.LogInformation($"{nameof(Update)}: {e}");
+                throw new Grpc.Core.RpcException(new Status(StatusCode.Unknown, nameof(Update), e));
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Windows;
 
@@ -9,7 +9,7 @@ namespace WebAnnotation.ViewModel
     {
         private static int CleanupCountdown = 5000;
 
-        public static NotifyPropertyChangingEventManager Current = new NotifyPropertyChangingEventManager();
+        public static NotifyPropertyChangingEventManager Current = new();
 
 
 
@@ -18,19 +18,19 @@ namespace WebAnnotation.ViewModel
             WeakEventManager.SetCurrentManager(typeof(INotifyPropertyChanging), Current);
         }
 
-        private readonly ConcurrentDictionary<object, PropertyChangingEventHandler> ObjectToHandler = new ConcurrentDictionary<object, PropertyChangingEventHandler>();
+        private readonly ConcurrentDictionary<object, PropertyChangingEventHandler> ObjectToHandler = new();
 
         protected override void StartListening(object source)
         {
             //Check if we can subscribe to the source
             INotifyPropertyChanging INotify = source as INotifyPropertyChanging;
             System.Diagnostics.Debug.Assert(INotify != null, "Attempt to create weak subscription to object that does not support it");
-            if (INotify == null)
+            if (INotify is null)
             {
                 return;
             }
 
-            PropertyChangingEventHandler eventHandler = new PropertyChangingEventHandler(OnPropertyChanging);
+            PropertyChangingEventHandler eventHandler = new(OnPropertyChanging);
             eventHandler = ObjectToHandler.GetOrAdd(source, eventHandler);
 
             INotify.PropertyChanging += eventHandler;
@@ -49,8 +49,7 @@ namespace WebAnnotation.ViewModel
         protected override void StopListening(object source)
         {
             //Check if we can subscribe to the source
-            INotifyPropertyChanging INotify = source as INotifyPropertyChanging;
-            if (INotify == null)
+            if (source is not INotifyPropertyChanging INotify)
             {
                 return;
             }
@@ -67,27 +66,19 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="source"></param>
         /// <param name="listener"></param>
-        public static void AddListener(object source, IWeakEventListener listener)
-        {
-            Current.ProtectedAddListener(source, listener);
-        }
+        public static void AddListener(object source, IWeakEventListener listener) => Current.ProtectedAddListener(source, listener);
 
         /// <summary>
         /// According to MSDN all public methods on WeakEventManager are thread safe
         /// </summary>
         /// <param name="source"></param>
         /// <param name="listener"></param>
-        public static void RemoveListener(object source, IWeakEventListener listener)
-        {
-            Current.ProtectedRemoveListener(source, listener);
-        }
+        public static void RemoveListener(object source, IWeakEventListener listener) => Current.ProtectedRemoveListener(source, listener);
 
         private delegate void DeliverEventsDelegate(object o, PropertyChangingEventArgs e);
-        protected void OnPropertyChanging(object source, PropertyChangingEventArgs e)
-        {
+        protected void OnPropertyChanging(object source, PropertyChangingEventArgs e) =>
             //DeliverEventsDelegate del = new DeliverEventsDelegate(this.DeliverEvent);
             //this.Dispatcher.BeginInvoke(del, new object[] { source, e});
             DeliverEvent(source, e);
-        }
     }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -46,16 +46,13 @@ namespace VikingXNAGraphics
         {
             set
             {
-                switch(value)
+                effect.CurrentTechnique = value switch
                 {
-                    case Techniques.ColorPolygonOverBackgroundLumaEffect:
-                        effect.CurrentTechnique = effect.Techniques["ColorPolygonOverBackgroundLumaEffect"];
-                        break;
-                    default:
-                        throw new ArgumentException("Unknown technique");
-                }
+                    Techniques.ColorPolygonOverBackgroundLumaEffect => effect.Techniques["ColorPolygonOverBackgroundLumaEffect"],
+                    _ => throw new ArgumentException("Unknown technique"),
+                };
             }
-        } 
+        }
 
         public EffectTechnique CurrentTechnique => this.effect.CurrentTechnique;
 
@@ -66,11 +63,11 @@ namespace VikingXNAGraphics
         }
 
         public PolygonOverlayEffect()
-        { 
+        {
         }
 
         public void Init(GraphicsDevice device, ContentManager content)
-        { 
+        {
             this.effect = content.Load<Effect>("PolygonOverlayShader");
             this.LoadParameters(this.effect);
             effect.CurrentTechnique = effect.Techniques["ColorPolygonOverBackgroundLumaEffect"];

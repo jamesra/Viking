@@ -1,4 +1,4 @@
-﻿using ODataClient.ConnectomeDataModel;
+using ODataClient.ConnectomeDataModel;
 using Microsoft.OData.Client;
 using System;
 using System.Collections.Generic;
@@ -34,7 +34,7 @@ namespace AnnotationVizLib.OData
             CancellationToken cancellationToken = default)
         {
             var allResults = await Task.Run(() => query.Execute(), cancellationToken);
-            return allResults.ToList();
+            return [.. allResults];
         }
 
         /// <summary>
@@ -50,7 +50,7 @@ namespace AnnotationVizLib.OData
             [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             var allResults = await Task.Run(() => query.Execute(), cancellationToken);
-            
+
             foreach (var entity in allResults)
             {
                 cancellationToken.ThrowIfCancellationRequested();

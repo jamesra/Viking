@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using SqlGeometryUtils;
 using System;
 using Viking.AnnotationServiceTypes.Interfaces;
@@ -8,9 +8,9 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Actions
 {
-    internal abstract class CreateStructureActionBase : IAction
+    internal abstract class CreateStructureActionBase(int SectionNumber, IVolumeToSectionTransform? transform = null) : IAction
     {
-        protected IVolumeToSectionTransform Transform;
+        protected IVolumeToSectionTransform Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 
         public long TypeID; //The TypeID the action will use for the new structure.   
 
@@ -20,15 +20,7 @@ namespace WebAnnotation.UI.Actions
 
         public abstract bool Equals(IAction other);
 
-        public readonly int SectionNumber;
-
-        public CreateStructureActionBase(int SectionNumber, IVolumeToSectionTransform transform = null)
-        {
-            Transform = transform == null ?
-                WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform
-                : transform;
-            this.SectionNumber = SectionNumber;
-        }
+        public readonly int SectionNumber = SectionNumber;
 
         public abstract void OnExecute();
     }
@@ -50,7 +42,7 @@ namespace WebAnnotation.UI.Actions
         public readonly GridPolygon NewSmoothVolumePolygon;
 
 
-        public Create2DStructureAction(long StructureTypeID, GridPolygon newVolumePolygon, int SectionNumber, IVolumeToSectionTransform transform = null) : base(SectionNumber, transform)
+        public Create2DStructureAction(long StructureTypeID, GridPolygon newVolumePolygon, int SectionNumber, IVolumeToSectionTransform? transform = null) : base(SectionNumber, transform)
         {
             NewVolumePolygon = newVolumePolygon;
             TypeID = StructureTypeID;
@@ -59,7 +51,7 @@ namespace WebAnnotation.UI.Actions
         public override void OnExecute()
         {
             StructureTypeObj TypeObj = Store.StructureTypes.GetObjectByID(TypeID, true);
-            if (TypeObj == null)
+            if (TypeObj is null)
             {
                 //TODO: Prompt the user with a dialog/UI interface to choose the type
                 throw new ArgumentException($"StructureTypeID {TypeID} not found when assigning type to structure");
@@ -67,9 +59,9 @@ namespace WebAnnotation.UI.Actions
 
             GridPolygon mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
 
-            StructureObj newStruct = new StructureObj(TypeObj);
+            StructureObj newStruct = new(TypeObj);
 
-            LocationObj newLocation = new LocationObj(newStruct,
+            LocationObj newLocation = new(newStruct,
                                                       SectionNumber,
                                                       LocationType.CURVEPOLYGON);
 
@@ -79,10 +71,10 @@ namespace WebAnnotation.UI.Actions
             if (TypeObj.Parent != null)
             {
                 //Enqueue extra command to select a parent
-                WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation });
+                WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), [WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation]);
             }
 
-            WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation });
+            WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), [WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation]);
 
         }
 
@@ -98,8 +90,7 @@ namespace WebAnnotation.UI.Actions
                 return false;
             }
 
-            Create2DStructureAction other_action = other as Create2DStructureAction;
-            if (other_action == null)
+            if (other is not Create2DStructureAction other_action)
             {
                 return false;
             }
@@ -107,10 +98,7 @@ namespace WebAnnotation.UI.Actions
             return Equals(other_action);
         }
 
-        public bool Equals(Create2DStructureAction other)
-        {
-            return NewVolumePolygon.Equals(other.NewVolumePolygon);
-        }
+        public bool Equals(Create2DStructureAction other) => NewVolumePolygon.Equals(other.NewVolumePolygon);
     }
 
     /// <summary>
@@ -129,7 +117,7 @@ namespace WebAnnotation.UI.Actions
         public readonly GridPolyline NewSmoothVolumeShape;
 
 
-        public Create1DStructureAction(long StructureTypeID, GridPolyline newVolumeShape, int SectionNumber, IVolumeToSectionTransform transform = null) : base(SectionNumber, transform)
+        public Create1DStructureAction(long StructureTypeID, GridPolyline newVolumeShape, int SectionNumber, IVolumeToSectionTransform? transform = null) : base(SectionNumber, transform)
         {
             NewVolumeShape = newVolumeShape;
             TypeID = StructureTypeID;
@@ -139,7 +127,7 @@ namespace WebAnnotation.UI.Actions
         public override void OnExecute()
         {
             StructureTypeObj TypeObj = Store.StructureTypes.GetObjectByID(TypeID, true);
-            if (TypeObj == null)
+            if (TypeObj is null)
             {
                 //TODO: Prompt the user with a dialog/UI interface to choose the type
                 throw new ArgumentException($"StructureTypeID {TypeID} not found when assigning type to structure");
@@ -147,9 +135,9 @@ namespace WebAnnotation.UI.Actions
 
             GridPolyline mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumeShape);
 
-            StructureObj newStruct = new StructureObj(TypeObj);
+            StructureObj newStruct = new(TypeObj);
 
-            LocationObj newLocation = new LocationObj(newStruct,
+            LocationObj newLocation = new(newStruct,
                                                       SectionNumber,
                                                       LocationType.OPENCURVE)
             {
@@ -162,10 +150,10 @@ namespace WebAnnotation.UI.Actions
             if (TypeObj.Parent != null)
             {
                 //Enqueue extra command to select a parent
-                WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation });
+                WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), [WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation]);
             }
 
-            WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation });
+            WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), [WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation]);
 
         }
 
@@ -181,8 +169,7 @@ namespace WebAnnotation.UI.Actions
                 return false;
             }
 
-            Create1DStructureAction other_action = other as Create1DStructureAction;
-            if (other_action == null)
+            if (other is not Create1DStructureAction other_action)
             {
                 return false;
             }
@@ -190,9 +177,6 @@ namespace WebAnnotation.UI.Actions
             return Equals(other_action);
         }
 
-        public bool Equals(Create1DStructureAction other)
-        {
-            return NewVolumeShape.Equals(other.NewVolumeShape);
-        }
+        public bool Equals(Create1DStructureAction other) => NewVolumeShape.Equals(other.NewVolumeShape);
     }
 }

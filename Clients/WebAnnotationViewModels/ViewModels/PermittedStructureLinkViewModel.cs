@@ -1,4 +1,4 @@
-﻿using Annotation.ViewModels.Commands;
+using Annotation.ViewModels.Commands;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -10,7 +10,7 @@ using WebAnnotationModel.Objects;
 namespace Annotation.ViewModels
 {
     public class PermittedStructureLinkViewModel : DependencyObject, INotifyPropertyChanged
-    {   
+    {
         public StructureTypeObj Model
         {
             get => (StructureTypeObj)GetValue(ModelProperty);
@@ -22,7 +22,7 @@ namespace Annotation.ViewModels
             DependencyProperty.Register("Model", typeof(StructureTypeObj), typeof(PermittedStructureLinkViewModel), new PropertyMetadata());
 
         public event PropertyChangedEventHandler PropertyChanged;
-         
+
         public ObservableCollection<PermittedStructureLinkObj> NewPermits
         {
             get => (ObservableCollection<PermittedStructureLinkObj>)GetValue(NewPermitsProperty);
@@ -32,7 +32,7 @@ namespace Annotation.ViewModels
         // Using a DependencyProperty as the backing store for NewPermits.  This enables animation, styling, binding, etc...
         public static readonly DependencyProperty NewPermitsProperty =
             DependencyProperty.Register("NewPermits", typeof(ObservableCollection<PermittedStructureLinkObj>), typeof(PermittedStructureLinkViewModel), new PropertyMetadata(new ObservableCollection<PermittedStructureLinkObj>()));
-         
+
         public System.Windows.Input.ICommand AddPermittedLinkSourceTypeCommand { get; set; }
         public System.Windows.Input.ICommand AddPermittedLinkTargetTypeCommand { get; set; }
         public System.Windows.Input.ICommand AddPermittedLinkBidirectionalTypeCommand { get; set; }
@@ -45,7 +45,7 @@ namespace Annotation.ViewModels
         public System.Windows.Input.ICommand ResetModelCommand { get; set; }
 
         public PermittedStructureLinkViewModel(StructureTypeObj model)
-        { 
+        {
             DeletePermittedLinkSourceTypeCommand = new DelegateCommand(DeletePermittedLinkSourceType, CanDeletePermittedLinkSourceType);
             DeletePermittedLinkTargetTypeCommand = new DelegateCommand(DeletePermittedLinkTargetType, CanDeletePermittedLinkTargetType);
             DeletePermittedLinkBidirectionalTypeCommand = new DelegateCommand(DeletePermittedLinkBidirectionalType, CanDeletePermittedLinkBidirectionalType);
@@ -64,18 +64,18 @@ namespace Annotation.ViewModels
         public static void PropertyChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             PermittedStructureLinkViewModel viewmodel = d as PermittedStructureLinkViewModel;
-           
-            if(e.Property == ModelProperty)
+
+            if (e.Property == ModelProperty)
             {
                 StructureTypeObj oldObj = e.OldValue as StructureTypeObj;
                 StructureTypeObj newObj = e.NewValue as StructureTypeObj;
 
-                if(oldObj != null)
+                if (oldObj != null)
                 {
                     oldObj.PermittedLinks.CollectionChanged -= viewmodel.OnPermittedLinksCollectionChanged;
                 }
-                
-                if(newObj != null)
+
+                if (newObj != null)
                 {
                     newObj.PermittedLinks.CollectionChanged += viewmodel.OnPermittedLinksCollectionChanged;
                 }
@@ -92,31 +92,13 @@ namespace Annotation.ViewModels
             }
         }
 
-        public long[] PermittedLinkSourceTypes
-        {
-            get
-            {
-                return Model.PermittedLinks.Where(pl => pl.TargetTypeID == Model.ID && pl.Bidirectional == false).Select(pl => pl.SourceTypeID).ToArray();
-            }
-        }
+        public long[] PermittedLinkSourceTypes => [.. Model.PermittedLinks.Where(pl => pl.TargetTypeID == Model.ID && pl.Bidirectional == false).Select(pl => pl.SourceTypeID)];
 
-        public long[] PermittedLinkTargetTypes
-        {
-            get
-            {
-                return Model.PermittedLinks.Where(pl => pl.SourceTypeID == Model.ID && pl.Bidirectional == false).Select(pl => pl.TargetTypeID).ToArray();
-            }
-        }
+        public long[] PermittedLinkTargetTypes => [.. Model.PermittedLinks.Where(pl => pl.SourceTypeID == Model.ID && pl.Bidirectional == false).Select(pl => pl.TargetTypeID)];
 
-        public long[] PermittedLinkBidirectionalTypes
-        {
-            get
-            {
-                return Model.PermittedLinks.Where(pl => (pl.SourceTypeID == Model.ID || pl.TargetTypeID == Model.ID) && pl.Bidirectional == true).Select(pl => pl.SourceTypeID == Model.ID ? pl.TargetTypeID : pl.SourceTypeID).ToArray();
-            }
-        }
+        public long[] PermittedLinkBidirectionalTypes => [.. Model.PermittedLinks.Where(pl => (pl.SourceTypeID == Model.ID || pl.TargetTypeID == Model.ID) && pl.Bidirectional == true).Select(pl => pl.SourceTypeID == Model.ID ? pl.TargetTypeID : pl.SourceTypeID)];
 
-#region Delete commands
+        #region Delete commands
         private void DeletePermittedLinkSourceType(object item)
         {
             long ID;
@@ -130,7 +112,7 @@ namespace Annotation.ViewModels
                 return;
             }
 
-            PermittedStructureLinkKey key = new PermittedStructureLinkKey(ID, Model.ID, false);
+            PermittedStructureLinkKey key = new(ID, Model.ID, false);
 
             var obj = Store.PermittedStructureLinks.GetObjectByID(key, false);
             if (NewPermits.Contains(obj))
@@ -139,17 +121,14 @@ namespace Annotation.ViewModels
             Store.PermittedStructureLinks.Remove(key);
         }
 
-        private bool CanDeletePermittedLinkSourceType(object item)
-        {
-            return true;
-        }
+        private bool CanDeletePermittedLinkSourceType(object item) => true;
 
         private void DeletePermittedLinkTargetType(object item)
         {
             long ID;
             try
             {
-               ID = System.Convert.ToInt64(item);
+                ID = System.Convert.ToInt64(item);
             }
             catch
             {
@@ -157,18 +136,15 @@ namespace Annotation.ViewModels
                 return;
             }
 
-            PermittedStructureLinkKey key = new PermittedStructureLinkKey(Model.ID, ID, false);
+            PermittedStructureLinkKey key = new(Model.ID, ID, false);
             var obj = Store.PermittedStructureLinks.GetObjectByID(key, false);
             if (NewPermits.Contains(obj))
                 NewPermits.Remove(obj);
 
-            Store.PermittedStructureLinks.Remove(key); 
+            Store.PermittedStructureLinks.Remove(key);
         }
 
-        private bool CanDeletePermittedLinkTargetType(object item)
-        {
-            return true;
-        }
+        private bool CanDeletePermittedLinkTargetType(object item) => true;
 
         private void DeletePermittedLinkBidirectionalType(object item)
         {
@@ -183,7 +159,7 @@ namespace Annotation.ViewModels
                 return;
             }
 
-            PermittedStructureLinkKey key = new PermittedStructureLinkKey(Model.ID, ID, true);
+            PermittedStructureLinkKey key = new(Model.ID, ID, true);
             var obj = Store.PermittedStructureLinks.GetObjectByID(key, false);
             if (NewPermits.Contains(obj))
                 NewPermits.Remove(obj);
@@ -191,10 +167,7 @@ namespace Annotation.ViewModels
             Store.PermittedStructureLinks.Remove(key);
         }
 
-        private bool CanDeletePermittedLinkBidirectionalType(object item)
-        {
-            return true;
-        }
+        private bool CanDeletePermittedLinkBidirectionalType(object item) => true;
 
         #endregion
 
@@ -219,7 +192,7 @@ namespace Annotation.ViewModels
                 }
             }
 
-            return ID; 
+            return ID;
         }
 
         #region Add commands
@@ -227,21 +200,21 @@ namespace Annotation.ViewModels
         {
             long ID = ParamterToStructureTypeID(item);
 
-            PermittedStructureLinkObj key = new PermittedStructureLinkObj(ID, Model.ID, false);
+            PermittedStructureLinkObj key = new(ID, Model.ID, false);
             Store.PermittedStructureLinks.Add(key);
         }
 
         private bool CanAddPermittedLinkSourceType(object item)
         {
             long ID = ParamterToStructureTypeID(item);
-            return Model.PermittedLinkSourceTypes.Contains(ID) == false;  
+            return Model.PermittedLinkSourceTypes.Contains(ID) == false;
         }
 
         private void AddPermittedLinkTargetType(object item)
         {
             long ID = ParamterToStructureTypeID(item);
 
-            PermittedStructureLinkObj key = new PermittedStructureLinkObj(Model.ID, ID, false);
+            PermittedStructureLinkObj key = new(Model.ID, ID, false);
             Store.PermittedStructureLinks.Add(key);
         }
 
@@ -255,7 +228,7 @@ namespace Annotation.ViewModels
         {
             long ID = ParamterToStructureTypeID(item);
 
-            PermittedStructureLinkObj key = new PermittedStructureLinkObj(Model.ID, ID, true);
+            PermittedStructureLinkObj key = new(Model.ID, ID, true);
             Store.PermittedStructureLinks.Add(key);
         }
 
@@ -269,7 +242,7 @@ namespace Annotation.ViewModels
 
         private bool CanSaveModel(object item)
         {
-            return true; 
+            return true;
             return Model.DBAction != AnnotationService.Types.DBACTION.NONE;
         }
 
@@ -277,21 +250,15 @@ namespace Annotation.ViewModels
         {
             Store.StructureTypes.Save();
 
-            foreach(PermittedStructureLinkObj newObj in NewPermits)
+            foreach (PermittedStructureLinkObj newObj in NewPermits)
             {
                 Store.PermittedStructureLinks.Create(newObj);
             }
         }
 
-        private bool CanRestoreModel(object item)
-        {
-            return Model.DBAction != AnnotationService.Types.DBACTION.NONE;
-        }
+        private bool CanRestoreModel(object item) => Model.DBAction != AnnotationService.Types.DBACTION.NONE;
 
-        private void RestoreModel(object item)
-        {
-            Store.StructureTypes.GetObjectByID(Model.ID, AskServer: true, ForceRefreshFromServer: true);
-        }
+        private void RestoreModel(object item) => Store.StructureTypes.GetObjectByID(Model.ID, AskServer: true, ForceRefreshFromServer: true);
     }
 }
 

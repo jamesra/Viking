@@ -20,7 +20,7 @@ namespace Geometry
             LOWERRIGHT = 3
         };
 
-        private readonly QuadTreeNodeTemplatePoint<TPoint, TValue>[] _quadrants = new QuadTreeNodeTemplatePoint<TPoint, TValue>[] { null, null, null, null };
+        private readonly QuadTreeNodeTemplatePoint<TPoint, TValue>[] _quadrants = [null, null, null, null];
 
         /// <summary>
         /// It is assumed the "up" has a larger Y value than "down"
@@ -148,25 +148,11 @@ namespace Geometry
             if (point.X > center.X) //Right of center
             {
 
-                if (point.Y > center.Y)
-                {
-                    quad = Quadrant.UPPERRIGHT;
-                }
-                else
-                {
-                    quad = Quadrant.LOWERRIGHT;
-                }
+                quad = point.Y > center.Y ? Quadrant.UPPERRIGHT : Quadrant.LOWERRIGHT;
             }
             else //Left of center
             {
-                if (point.Y > center.Y)
-                {
-                    quad = Quadrant.UPPERLEFT;
-                }
-                else
-                {
-                    quad = Quadrant.LOWERLEFT;
-                }
+                quad = point.Y > center.Y ? Quadrant.UPPERLEFT : Quadrant.LOWERLEFT;
             }
 
             return quad;
@@ -309,7 +295,7 @@ namespace Geometry
                 //It is OK if we didn't have a quadrant for the point in the earlier check because then the default values for 
                 //distance force the adjacent quadrants to be checked
 
-                GridRectangle rect = new GridRectangle(point, distance);
+                GridRectangle rect = new(point, distance);
 
                 //If we aren't a leaf, then check each of our children for the nearest point
                 for (int iQuad = 0; iQuad < 4; iQuad++)

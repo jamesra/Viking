@@ -15,9 +15,9 @@ namespace Viking.VolumeViewModel
     /// <summary>
     /// Represents Tiles to the view
     /// </summary>
-    public class TileViewModel : DependencyObject, IComparable<TileViewModel>, IComparable<Tile>
+    public class TileViewModel : DependencyObject, IComparable<TileViewModel>, IComparable<Viking.VolumeModel.TileViewModel>
     {
-        protected readonly Tile Tile; 
+        protected readonly Viking.VolumeModel.TileViewModel Tile; 
        
         public string UniqueKey
         {
@@ -122,7 +122,7 @@ namespace Viking.VolumeViewModel
 
         private static System.Windows.Threading.Dispatcher _MainUIDispatcher = null;
         
-        public TileViewModel(Tile t, string TilePath)
+        public TileViewModel(Viking.VolumeModel.TileViewModel t, string TilePath)
         {
             OnDownloadCompletedEventHandler = new EventHandler(DownloadCompleted);
             OnDownloadFailedEventHandler = new EventHandler<ExceptionEventArgs>(DownloadFailed);
@@ -181,7 +181,7 @@ namespace Viking.VolumeViewModel
         }
 
 
-        protected void CreateMesh(Tile t)
+        protected void CreateMesh(Viking.VolumeModel.TileViewModel t)
         {
             MeshGeometry3D mesh = null;
             
@@ -390,9 +390,9 @@ namespace Viking.VolumeViewModel
 
         #endregion
 
-        #region IComparable<Tile> Members
+        #region IComparable<TileViewModel> Members
 
-        int IComparable<Tile>.CompareTo(Tile other)
+        int IComparable<Viking.VolumeModel.TileViewModel>.CompareTo(Viking.VolumeModel.TileViewModel other)
         {
             if (this.Tile == null && other == null)
                 return 0;

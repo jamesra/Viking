@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,35 +9,27 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.ViewModel
 {
-    internal class SectionStructureLinkAnnotationsViewModel
+    internal class SectionStructureLinkAnnotationsViewModel(SectionAnnotationsView primarySection)
     {
         /// <summary>
         /// The section that is visible
         /// </summary>
-        public readonly SectionAnnotationsView PrimarySection;
+        public readonly SectionAnnotationsView PrimarySection = primarySection;
 
-        private readonly KeyTracker<StructureLinkKey> KnownStructureLinks = new KeyTracker<StructureLinkKey>();
+        private readonly KeyTracker<StructureLinkKey> KnownStructureLinks = new();
 
         /// <summary>
         /// Allows us to describe all the StructureLinks visible on a screen
         /// </summary>
-        private readonly RTree.RTree<StructureLinkKey> StructureLinksSearch = new RTree.RTree<StructureLinkKey>();
-        private readonly ConcurrentDictionary<StructureLinkKey, StructureLinkViewModelBase> StructureLinks = new ConcurrentDictionary<StructureLinkKey, StructureLinkViewModelBase>();
-
-        public SectionStructureLinkAnnotationsViewModel(SectionAnnotationsView primarySection)
-        {
-            PrimarySection = primarySection;
-        }
+        private readonly RTree.RTree<StructureLinkKey> StructureLinksSearch = new();
+        private readonly ConcurrentDictionary<StructureLinkKey, StructureLinkViewModelBase> StructureLinks = new();
 
         /// <summary>
         /// Return all the line segments visible in the passed bounds
         /// </summary>
         /// <param name="bounds"></param>
         /// <returns></returns>
-        public List<StructureLinkViewModelBase> VisibleStructureLinks(VikingXNA.Scene scene)
-        {
-            return StructureLinksSearch.Intersects(scene.VisibleWorldBounds.ToRTreeRect(PrimarySection.SectionNumber)).Select((sl_key) => StructureLinks[sl_key]).Where(sl => sl != null && sl.IsVisible(scene)).ToList();
-        }
+        public List<StructureLinkViewModelBase> VisibleStructureLinks(VikingXNA.Scene scene) => [.. StructureLinksSearch.Intersects(scene.VisibleWorldBounds.ToRTreeRect(PrimarySection.SectionNumber)).Select((sl_key) => StructureLinks[sl_key]).Where(sl => sl != null && sl.IsVisible(scene))];
 
         internal void AddStructureLinks(IEnumerable<LocationObj> locations)
         {
@@ -49,7 +41,7 @@ namespace WebAnnotation.ViewModel
                 }
 
                 StructureObj parent = Store.Structures.GetObjectByID(locObj.ParentID.Value, true);//locObj.Parent;
-                if (parent == null)
+                if (parent is null)
                 {
                     continue;
                 }
@@ -79,13 +71,13 @@ namespace WebAnnotation.ViewModel
         {
             foreach (StructureLinkObj structLinkObj in structureLinks)
             {
-                if (structLinkObj == null)
+                if (structLinkObj is null)
                 {
                     continue;
                 }
 
                 StructureLinkViewModelBase StructLink = CreateStructureLinkWithLocations(structLinkObj);
-                if (StructLink == null)
+                if (StructLink is null)
                 {
                     //Trace.WriteLine("Cannot find locations for " + structLinkObj.ToString());
                     continue;
@@ -106,7 +98,7 @@ namespace WebAnnotation.ViewModel
             foreach (LocationObj locObj in locations)
             {
                 StructureObj parent = locObj.Parent;
-                if (parent == null)
+                if (parent is null)
                 {
                     continue;
                 }
@@ -134,14 +126,14 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         internal void RemoveStructureLinks(IEnumerable<StructureLinkObj> structureLinks)
         {
-            if (structureLinks == null)
+            if (structureLinks is null)
             {
                 return;
             }
 
             foreach (StructureLinkObj structLinkObj in structureLinks)
             {
-                if (structLinkObj == null)
+                if (structLinkObj is null)
                 {
                     continue;
                 }
@@ -185,11 +177,11 @@ namespace WebAnnotation.ViewModel
                 return null;
             }
 
-            ICollection<LocationCanvasView> SourceLocations = SourceLocationIDs.ValuesCopy().Select((l_id) => PrimarySection.GetLocation(l_id)).Where(l => l != null).ToArray();
-            ICollection<LocationCanvasView> TargetLocations = TargetLocationIDs.ValuesCopy().Select((l_id) => PrimarySection.GetLocation(l_id)).Where(l => l != null).ToArray();
+            ICollection<LocationCanvasView> SourceLocations = [.. SourceLocationIDs.ValuesCopy().Select((l_id) => PrimarySection.GetLocation(l_id)).Where(l => l != null)];
+            ICollection<LocationCanvasView> TargetLocations = [.. TargetLocationIDs.ValuesCopy().Select((l_id) => PrimarySection.GetLocation(l_id)).Where(l => l != null)];
 
             SectionStructureLinkViewKey linkViewKey = SectionStructureLinkViewKey.CreateForNearestLocations(structLinkObj.ID, SourceLocations, TargetLocations);
-            if (linkViewKey == null)
+            if (linkViewKey is null)
             {
                 return null;
             }
@@ -198,27 +190,24 @@ namespace WebAnnotation.ViewModel
             return AnnotationViewFactory.Create(linkViewKey, PrimarySection.mapper);
         }
 
-        public ICollection<StructureLinkViewModelBase> GetStructureLinks()
-        {
-            return StructureLinks.Values;
-        }
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks() => StructureLinks.Values;
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridRectangle bounds)
         {
             List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(bounds.ToRTreeRect((float)PrimarySection.SectionNumber));
-            return intersectingIDs.Select(id => StructureLinks[id]).ToList();
+            return [.. intersectingIDs.Select(id => StructureLinks[id])];
         }
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridVector2 point)
         {
             List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(point.ToRTreeRect((float)PrimarySection.SectionNumber));
-            return intersectingIDs.Select(id => StructureLinks[id]).Where(sl => sl != null && sl.Contains(point)).ToList();
+            return [.. intersectingIDs.Select(id => StructureLinks[id]).Where(sl => sl != null && sl.Contains(point))];
         }
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridLineSegment line)
         {
             List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(line.BoundingBox.ToRTreeRect((float)PrimarySection.SectionNumber));
-            return intersectingIDs.Select(id => StructureLinks[id]).Where(sl => sl != null && sl.Intersects(line)).ToList();
+            return [.. intersectingIDs.Select(id => StructureLinks[id]).Where(sl => sl != null && sl.Intersects(line))];
         }
     }
 

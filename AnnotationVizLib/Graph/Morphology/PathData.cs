@@ -20,8 +20,8 @@ namespace AnnotationVizLib
 
         public static string ToMatlabStructures(ICollection<PathData> paths, string VariableName = "Path")
         {
-            StringBuilder sb = new StringBuilder();
-            double[] distances = paths.Select(p => p.Distance).ToArray();
+            StringBuilder sb = new();
+            double[] distances = [.. paths.Select(p => p.Distance)];
             sb.AppendFormat("{0}.Distances = {1};", VariableName, distances.ToMatlab());
 
             return sb.ToString();

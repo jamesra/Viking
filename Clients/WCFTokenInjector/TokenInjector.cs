@@ -1,4 +1,4 @@
-﻿using System.ServiceModel;
+using System.ServiceModel;
 using System.ServiceModel.Channels;
 
 namespace Viking.Tokens
@@ -15,13 +15,12 @@ namespace Viking.Tokens
         }
 
         public object BeforeSendRequest(ref Message request, IClientChannel channel)
-        { 
+        {
             if (BearerTokenAuthority != null && BearerToken != null)
             {
                 // Add bearer token to HTTP Authorization header
                 HttpRequestMessageProperty httpRequestMessage;
-                object httpRequestMessageObject;
-                if (request.Properties.TryGetValue(HttpRequestMessageProperty.Name, out httpRequestMessageObject))
+                if (request.Properties.TryGetValue(HttpRequestMessageProperty.Name, out object httpRequestMessageObject))
                 {
                     httpRequestMessage = httpRequestMessageObject as HttpRequestMessageProperty;
                     if (httpRequestMessage != null && string.IsNullOrEmpty(httpRequestMessage.Headers["Authorization"]))

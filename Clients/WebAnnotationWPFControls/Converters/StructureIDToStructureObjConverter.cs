@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -25,22 +25,22 @@ namespace WebAnnotation.WPF.Converters
                  throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter expects a StructureID, but got {0}", value.ToString()));
                  */
 
-            if (value == null)
+            if (value is null)
                 return null;
 
             if (value.GetType() == targetType)
-                return value; 
+                return value;
 
-            List<long> IDs = new List<long>(); 
-            if(value is IStructureTypeReadOnly s)
+            List<long> IDs = [];
+            if (value is IStructureTypeReadOnly s)
             {
-                return s; 
+                return s;
             }
-            else if(value is IEnumerable<IStructureTypeReadOnly>)
-            { 
+            else if (value is IEnumerable<IStructureTypeReadOnly>)
+            {
                 return value as IEnumerable<IStructureTypeReadOnly>;
             }
-            else if(value is IEnumerable<MockStructureType>)
+            else if (value is IEnumerable<MockStructureType>)
             {
                 return value as IEnumerable<MockStructureType>;
             }
@@ -48,10 +48,10 @@ namespace WebAnnotation.WPF.Converters
             {
                 return value as MockStructureTypes;
             }
-            else if (value is  MockStructureType)
+            else if (value is MockStructureType)
             {
                 return value as MockStructureType;
-            } 
+            }
             else if (value is StringCollection)
             {
                 StringCollection collection = value as StringCollection;
@@ -75,16 +75,16 @@ namespace WebAnnotation.WPF.Converters
             else if (value is IEnumerable<long>)
             {
                 IEnumerable<long> values = value as IEnumerable<long>;
-                return Store.StructureTypes.GetObjectsByIDs(values.ToArray(), true);
+                return Store.StructureTypes.GetObjectsByIDs([.. values], true);
             }
             else if (value is IEnumerable<ulong>)
             {
                 IEnumerable<ulong> values = value as IEnumerable<ulong>;
-                return Store.StructureTypes.GetObjectsByIDs(values.Select(i => (long)i).ToArray(), true);
+                return Store.StructureTypes.GetObjectsByIDs([.. values.Select(i => (long)i)], true);
             }
-            else if (value is IEnumerable<int> )
+            else if (value is IEnumerable<int>)
             {
-                return Store.StructureTypes.GetObjectsByIDs(((IEnumerable<int>)IDs).Select(i=> (long)i).ToArray(), true);
+                return Store.StructureTypes.GetObjectsByIDs([.. ((IEnumerable<int>)IDs).Select(i => (long)i)], true);
             }
             else if (value is IEnumerable<IStructureTypeReadOnly>)
             {
@@ -111,9 +111,9 @@ namespace WebAnnotation.WPF.Converters
                     throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter Convert got unknown IEnumerable {0}", value.ToString()));
                 }*/
             }
-            else if(value is StructureTypeObj)
+            else if (value is StructureTypeObj)
             {
-                return value; 
+                return value;
             }
             else
             {
@@ -122,13 +122,13 @@ namespace WebAnnotation.WPF.Converters
                 {
                     ID = System.Convert.ToInt64(value);
                 }
-                catch(ArgumentException e)
+                catch (ArgumentException e)
                 {
-                    throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter Convert expects a StructureID, but got {0}\n{1}", value.ToString(), e)); 
+                    throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter Convert expects a StructureID, but got {0}\n{1}", value.ToString(), e));
                 }
 
                 try
-                { 
+                {
                     return Store.StructureTypes.GetObjectByID(ID, true);
                 }
                 catch (ArgumentException)
@@ -144,24 +144,23 @@ namespace WebAnnotation.WPF.Converters
                 throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter ConvertBack back expects a StructureObj, but got {0}", value.ToString()));
 
             if (value is IStructureTypeReadOnly t)
-            { 
+            {
                 return t.ID;
             }
-            else if(value is IEnumerable<StructureTypeObj>)
+            else if (value is IEnumerable<StructureTypeObj>)
             {
-                var values = (IEnumerable < StructureTypeObj >) value;
-                List<ulong> IDs = new List<ulong>(); 
-                foreach(var obj in values)
+                IEnumerable<StructureTypeObj> values = (IEnumerable<StructureTypeObj>)value;
+                List<ulong> IDs = [];
+                foreach (var obj in values)
                 {
                     IDs.Add((ulong)obj.ID);
                 }
 
                 return IDs;
             }
-            else if (value is IEnumerable<IStructureTypeReadOnly>)
+            else if (value is IEnumerable<IStructureTypeReadOnly> values)
             {
-                var values = (IEnumerable<IStructureTypeReadOnly>)value;
-                List<ulong> IDs = new List<ulong>();
+                List<ulong> IDs = [];
                 foreach (var obj in values)
                 {
                     IDs.Add((ulong)obj.ID);

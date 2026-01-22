@@ -768,7 +768,7 @@ window.Modernizr = (function( window, document, undefined ) {
     };
 
 
-    // In FF4, if disabled, window.localStorage should === null.
+    // In FF4, if disabled, window.localStorage should =is null.
 
     // Normally, we could not test that directly and need to do a
     //   `('localStorage' in window) && ` test first because otherwise Firefox will

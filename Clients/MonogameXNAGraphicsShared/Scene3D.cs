@@ -1,9 +1,9 @@
-﻿
+
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel; 
+using System.ComponentModel;
 using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
@@ -57,7 +57,7 @@ namespace VikingXNA
                 if (_Viewport.Equals(value) == false)
                     _Viewport = value;
 
-                UpdateProjectionMatrix(); 
+                UpdateProjectionMatrix();
                 OnPropertyChanged();
             }
         }
@@ -148,14 +148,11 @@ namespace VikingXNA
         private void UpdateProjectionMatrix()
         {
             _Projection = Matrix.CreatePerspectiveFieldOfView(FieldOfView, Viewport.AspectRatio, _MinDrawDistance, _MaxDrawDistance);
-            _WorldViewProj = (World * Camera.View) * _Projection; 
+            _WorldViewProj = (World * Camera.View) * _Projection;
         }
 
 
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            OnSceneChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        protected void OnPropertyChanged([CallerMemberName] string propertyName = null) => OnSceneChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
         private void OnCameraPropertyChanged(object sender, PropertyChangedEventArgs e)
         {

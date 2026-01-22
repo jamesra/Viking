@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="VoronoiRegion.cs" company="">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -13,15 +13,15 @@ namespace TriangleNet.Voronoi.Legacy
     /// <summary>
     /// Represents a region in the Voronoi diagram.
     /// </summary>
-    public class VoronoiRegion
+    public class VoronoiRegion(Vertex generator)
     {
-        readonly int id;
-        readonly Point generator;
-        readonly List<Point> vertices;
-        bool bounded;
+        readonly int id = generator.id;
+        readonly Point generator = generator;
+        readonly List<Point> vertices = [];
+        bool bounded = true;
 
         // A map (vertex id) -> (neighbor across adjacent edge)
-        readonly Dictionary<int, VoronoiRegion> neighbors;
+        readonly Dictionary<int, VoronoiRegion> neighbors = [];
 
         /// <summary>
         /// Gets the Voronoi region id (which is the same as the generators vertex id).
@@ -47,25 +47,9 @@ namespace TriangleNet.Voronoi.Legacy
             set => bounded = value;
         }
 
-        public VoronoiRegion(Vertex generator)
-        {
-            this.id = generator.id;
-            this.generator = generator;
-            this.vertices = new List<Point>();
-            this.bounded = true;
+        public void Add(Point point) => this.vertices.Add(point);
 
-            this.neighbors = new Dictionary<int, VoronoiRegion>();
-        }
-
-        public void Add(Point point)
-        {
-            this.vertices.Add(point);
-        }
-
-        public void Add(List<Point> points)
-        {
-            this.vertices.AddRange(points);
-        }
+        public void Add(List<Point> points) => this.vertices.AddRange(points);
 
         /// <summary>
         /// Returns the neighbouring Voronoi region, that lies across the edge starting at
@@ -86,14 +70,8 @@ namespace TriangleNet.Voronoi.Legacy
             return null;
         }
 
-        internal void AddNeighbor(int id, VoronoiRegion neighbor)
-        {
-            this.neighbors.Add(id, neighbor);
-        }
+        internal void AddNeighbor(int id, VoronoiRegion neighbor) => this.neighbors.Add(id, neighbor);
 
-        public override string ToString()
-        {
-            return String.Format("R-ID {0}", id);
-        }
+        public override string ToString() => String.Format("R-ID {0}", id);
     }
 }

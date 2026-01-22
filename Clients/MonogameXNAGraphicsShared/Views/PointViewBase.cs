@@ -1,18 +1,18 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Linq; 
+using System.Linq;
 using System.Threading.Tasks;
-using VikingXNA; 
+using VikingXNA;
 
 namespace VikingXNAGraphics
 {
     public abstract class PointViewBase : IColorView, IRenderable
     {
-        private ICollection<GridVector2> _Points = new List<GridVector2>();
+        private ICollection<GridVector2> _Points = [];
         private Color _Color;
 
         public ICollection<GridVector2> Points
@@ -60,10 +60,7 @@ namespace VikingXNAGraphics
 
         public abstract void UpdateViews();
 
-        internal virtual void OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-        {
-            UpdateViews();
-        }
+        internal virtual void OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e) => UpdateViews();
 
         public abstract void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items);
         public abstract void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay);

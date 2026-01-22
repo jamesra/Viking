@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using WebAnnotationModel;
 
@@ -7,24 +7,14 @@ namespace WebAnnotation.UI.Commands
     /// <summary>
     /// This command takes a structureObj and LocationObj defined by other commands and commits them to the database
     /// </summary>
-    internal class CreateNewStructureCommand : AnnotationCommandBase
+    internal class CreateNewStructureCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                           StructureObj structure,
+                                           LocationObj location) : AnnotationCommandBase(parent)
     {
-        private readonly StructureObj newStruct;
-        private readonly LocationObj newLoc;
+        private readonly StructureObj newStruct = structure;
+        private readonly LocationObj newLoc = location;
 
-        public CreateNewStructureCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                               StructureObj structure,
-                                               LocationObj location)
-            : base(parent)
-        {
-            newStruct = structure;
-            newLoc = location;
-        }
-
-        public override void OnActivate()
-        {
-            Parent.BeginInvoke((Action)delegate () { Execute(); });
-        }
+        public override void OnActivate() => Parent.BeginInvoke((Action)delegate () { Execute(); });
 
         protected override void Execute()
         {

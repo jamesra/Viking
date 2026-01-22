@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -130,7 +130,7 @@ namespace Viking.UI
         /// </summary>
         public bool IgnoringThisPenContact { get; private set; }
 
-        public Path path = new Path();
+        public Path path = new();
 
         private double PointIntervalOnDrag => Parent.Downsample * 4.0;
 
@@ -161,14 +161,11 @@ namespace Viking.UI
                 {
                     _SimplifiedPathToleranceInPixels = value;
                     UpdatePathTolerance();
-                } 
+                }
             }
         }
 
-        private void UpdatePathTolerance()
-        {
-            path.SimplifiedPathTolerance = _SimplifiedPathToleranceInPixels * (Parent.Camera.Downsample < 1 ? 1 : Parent.Camera.Downsample);
-        }
+        private void UpdatePathTolerance() => path.SimplifiedPathTolerance = _SimplifiedPathToleranceInPixels * (Parent.Camera.Downsample < 1 ? 1 : Parent.Camera.Downsample);
 
         /// <summary>
         /// The user has stopped drawing
@@ -217,10 +214,7 @@ namespace Viking.UI
         /// </summary>
         /// <param name="p"></param>
         /// <returns></returns>
-        private static bool ControlPointCanAlwaysBePlaced(GridVector2 p)
-        {
-            return true;
-        }
+        private static bool ControlPointCanAlwaysBePlaced(GridVector2 p) => true;
 
 
         /// <summary>
@@ -328,7 +322,7 @@ namespace Viking.UI
             Parent.OnPenMove += OnPenMove;
 
             this.SimplifiedPathToleranceInPixels = simplifiedPathToleranceInPixels;
-            if(Global.TracePenEvents)
+            if (Global.TracePenEvents)
                 System.Diagnostics.Trace.WriteLine(string.Format("PenInputHelper {0} Subscribed to events", this.ID));
         }
 
@@ -365,22 +359,16 @@ namespace Viking.UI
             return p;
         }
 
-        public GridVector2 Peek()
-        {
-            return this.path.Peek();
-        }
+        public GridVector2 Peek() => this.path.Peek();
 
         public bool HasSelfIntersection => path.HasSelfIntersection;
 
-        private void FireOnProposedNextSegmentChanged(GridLineSegment? line)
-        {
-            this.OnProposedNextSegmentChanged?.Invoke(this, line);
-        }
+        private void FireOnProposedNextSegmentChanged(GridLineSegment? line) => this.OnProposedNextSegmentChanged?.Invoke(this, line);
 
         private void OnCameraPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs args)
         {
             if (args.PropertyName == nameof(Parent.Camera.Downsample))
-            { 
+            {
                 UpdatePathTolerance();
                 //this.path.SimplifiedPathTolerance = (Parent.Camera.Downsample < 1 ? 1 : Parent.Camera.Downsample) * SimplifiedPathToleranceInPixels; //Adjust our tolerance to match the camera's downsample level times a multiplier that lets simplified path drift by almost imperceptable amounts
             }
@@ -400,7 +388,7 @@ namespace Viking.UI
 
             if (EraseButtonDown && Points.Count > 1)
             {
-                GridLineSegment testLine = new GridLineSegment(this.LastPenPosition, cursor_position);
+                GridLineSegment testLine = new(this.LastPenPosition, cursor_position);
                 EraseAlongLine(testLine);
                 /*
                 double delete_distance = Parent.Scene.Camera.Downsample * 20.0;
@@ -476,7 +464,7 @@ namespace Viking.UI
                 if (Points.Count <= 1)
                     return;
 
-                OnPathCompleted?.Invoke(this, this.Points.ToArray());
+                OnPathCompleted?.Invoke(this, [.. this.Points]);
             }
         }
 
@@ -489,7 +477,7 @@ namespace Viking.UI
             if (IgnoringThisPenContact)
                 return;
 
-            OnPathCompleted?.Invoke(this, this.Points.ToArray());
+            OnPathCompleted?.Invoke(this, [.. this.Points]);
         }
 
         /// <summary>
@@ -537,7 +525,7 @@ namespace Viking.UI
             bool pen_contacted_path = path.Segments.Any(seg => seg.DistanceToPoint(cursor_position) <= complete_distance && seg.IsNearestPointWithinLineSegment(cursor_position));
             if (pen_contacted_path)
             {
-                OnPathCompleted(this, this.Points.ToArray());
+                OnPathCompleted(this, [.. this.Points]);
             }
         }
 
@@ -547,10 +535,7 @@ namespace Viking.UI
             LastPenPosition = new GridVector2?();
         }
 
-        public static double MaxInteractDistanceInPixels(double downsample)
-        {
-            return downsample * interactDistance;
-        }
+        public static double MaxInteractDistanceInPixels(double downsample) => downsample * interactDistance;
 
         private static double ResumeDistanceInPixels(double downsample)
         {
@@ -566,10 +551,7 @@ namespace Viking.UI
             return downsample * scalar;
         }
 
-        private static double CompletionDistanceInPixels(double downsample)
-        {
-            return downsample * completionDistance;
-        }
+        private static double CompletionDistanceInPixels(double downsample) => downsample * completionDistance;
 
         protected virtual void OnPenMove(object sender, PenEventArgs e)
         {
@@ -592,7 +574,7 @@ namespace Viking.UI
 
             if (EraseActive && Points.Count > 1 && this.LastPenPosition.HasValue)
             {
-                GridLineSegment testLine = new GridLineSegment(this.LastPenPosition, cursor_position);
+                GridLineSegment testLine = new(this.LastPenPosition, cursor_position);
                 EraseAlongLine(testLine);
             }
             else if (DrawActive)
@@ -669,10 +651,7 @@ namespace Viking.UI
 
         protected CurveViewControlPoints AppendProposedPointToPathCurve(GridVector2 worldPos)
         {
-            List<GridVector2> listControlPoints = new List<GridVector2>(this.Points)
-            {
-                worldPos
-            };
+            List<GridVector2> listControlPoints = [.. this.Points, worldPos];
             return new CurveViewControlPoints(listControlPoints, this.NumCurveInterpolations, TryToClose: false);
         }
 
@@ -691,7 +670,7 @@ namespace Viking.UI
             if (worldPos != Peek())
             {
                 CurveViewControlPoints curveVerticies = AppendProposedPointToPathCurve(worldPos);
-                GridVector2[] controlPoints = this.Points.ToArray();
+                GridVector2[] controlPoints = [.. this.Points];
                 GridLineSegment[] proposed_back_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.First(), worldPos));
                 GridLineSegment[] proposed_front_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(worldPos, controlPoints.Last()));
                 GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last(), controlPoints.First()));
@@ -699,14 +678,14 @@ namespace Viking.UI
                 proposed_front_curve_segments = proposed_front_curve_segments.ShortenLastVertex();
                 existing_curve_segments = existing_curve_segments.ShortenLastVertex();
 
-                GridVector2[] intersections = proposed_front_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
+                GridVector2[] intersections = [.. proposed_front_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value)];
                 if (intersections.Length > 0)
                 {
                     retval = intersections.First();
                     return retval;
                 }
 
-                intersections = proposed_back_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value).ToArray();
+                intersections = [.. proposed_back_curve_segments.Select(pcs => existing_curve_segments.IntersectionPoint(pcs, false)).Where(p => p.HasValue).Select(p => p.Value)];
                 if (intersections.Length > 0)
                 {
                     retval = intersections.First();

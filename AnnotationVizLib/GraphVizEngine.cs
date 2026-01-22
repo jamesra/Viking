@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Configuration;
-using System.Collections.Generic; 
-using System.Linq; 
+using System.Collections.Generic;
+using System.Linq;
 using System.Xml.Linq;
 using System.IO;
 using System.Text;
@@ -16,7 +16,7 @@ namespace AnnotationUtils
     {
         public string label;
 
-        public SortedDictionary<string, string> Attributes = new SortedDictionary<string, string>();
+        public SortedDictionary<string, string> Attributes = [];
 
         /// <summary>
         /// Add the list of attributes to the node
@@ -52,7 +52,7 @@ namespace AnnotationUtils
         where KEY : IComparable<KEY>
     {
         public KEY ID;
-        
+
         public GraphVizNode(KEY id, string lbl)
         {
             this.ID = id;
@@ -63,7 +63,7 @@ namespace AnnotationUtils
         {
             this.ID = id;
             this.label = id.ToString();
-        } 
+        }
     }
 
     public class GraphVizEdge<KEY> : GraphEntity<KEY>, ICloneable
@@ -71,21 +71,23 @@ namespace AnnotationUtils
     {
         public KEY from;
         public KEY to;
-        
+
         #region ICloneable Members
 
         public object Clone()
         {
-            GraphVizEdge<KEY> clone = new GraphVizEdge<KEY>();
-            clone.label = label;
-            clone.from = from;
-            clone.to = to;
+            GraphVizEdge<KEY> clone = new()
+            {
+                label = label,
+                from = from,
+                to = to
+            };
             foreach (string key in Attributes.Keys)
             {
                 clone.Attributes.Add(key, Attributes[key]);
             }
 
-            return clone; 
+            return clone;
         }
 
         /// <summary>
@@ -101,32 +103,32 @@ namespace AnnotationUtils
     {
         public string graphType;
         private string graphDefinition;
-        public string connector = "->"; 
+        public string connector = "->";
         public string graphLabel;
-        public string completePath_URL; 
-        public SortedDictionary<KEY, GraphVizNode<KEY>> nodes = new SortedDictionary<KEY, GraphVizNode<KEY>>();
-        public SortedDictionary<string, List<KEY>> subgraphs = new SortedDictionary<string, List<KEY>>(); 
-        public List<GraphVizEdge<KEY>> edges = new List<GraphVizEdge<KEY>>();
+        public string completePath_URL;
+        public SortedDictionary<KEY, GraphVizNode<KEY>> nodes = [];
+        public SortedDictionary<string, List<KEY>> subgraphs = [];
+        public List<GraphVizEdge<KEY>> edges = [];
         public string layout = "dot";
-        public List<string> outputFormats = new List<string>();
-        public bool minimize; 
+        public List<string> outputFormats = [];
+        public bool minimize;
 
-        public string virtualRoot {get;set;}
-   
+        public string virtualRoot { get; set; }
+
         public void createDirectedGraph(string name)
         {
             graphType = "Directed";
             connector = "->";
             graphLabel = name;
-            graphDefinition = "DiGraph "+name+"{\n";
+            graphDefinition = "DiGraph " + name + "{\n";
         }
-        
+
         public void createUndirectedGraph(string name)
         {
             graphType = "Undirected";
             connector = "--";
             graphLabel = name;
-            graphDefinition = "Graph "+name+"{\n";
+            graphDefinition = "Graph " + name + "{\n";
         }
 
         public void AssignNodeToSubgraph(string subgraphName, KEY NodeID)
@@ -134,8 +136,7 @@ namespace AnnotationUtils
             //Determine if we have an entry in our subgraph or if we need to add it.
             if (!this.subgraphs.ContainsKey(subgraphName))
             {
-                List<KEY> listSubgraphNodes = new List<KEY>();
-                listSubgraphNodes.Add(NodeID);
+                List<KEY> listSubgraphNodes = [NodeID];
                 subgraphs.Add(subgraphName, listSubgraphNodes);
             }
             else
@@ -147,8 +148,8 @@ namespace AnnotationUtils
 
         public GraphVizNode<KEY> addNode(KEY ID)
         {
-            GraphVizNode<KEY> tempNode = new GraphVizNode<KEY>(ID);
-            nodes.Add(ID,tempNode);
+            GraphVizNode<KEY> tempNode = new(ID);
+            nodes.Add(ID, tempNode);
             //tempNode.nodeAttributes.Add("style", "filled");
             //tempNode.nodeAttributes.Add("target", "_top");
             //tempNode.nodeAttributes.Add("penwidth", "0.0");
@@ -162,14 +163,11 @@ namespace AnnotationUtils
             if (nodes.ContainsKey(label))
                 nodes.Remove(label);
         }
-        public void addEdge(GraphVizEdge<KEY> edge)
-        {
-            edges.Add(edge); 
-        }
+        public void addEdge(GraphVizEdge<KEY> edge) => edges.Add(edge);
 
         public void removeEdge(GraphVizEdge<KEY> edge)
         {
-            if(edges.Contains(edge))
+            if (edges.Contains(edge))
                 edges.Remove(edge);
         }
 
@@ -180,7 +178,7 @@ namespace AnnotationUtils
             bool first = true;
 
             int LongestKey = 0;
-            int LongestVal = 0; 
+            int LongestVal = 0;
             foreach (KeyValuePair<string, string> attribute in dict)
             {
                 if (attribute.Key.Length > LongestKey)
@@ -203,49 +201,49 @@ namespace AnnotationUtils
                 first = false;
                 sw.Write(FormatStr, attribute.Key, "\"" + attribute.Value + "\"");
             }
-            sw.Write("];\n"); 
+            sw.Write("];\n");
         }
 
         public override string ToString()
         {
-            StringWriter sw = null; 
+            StringWriter sw = null;
 
             try
             {
                 sw = new StringWriter();
-            
+
                 //StreamWriter sw = new StreamWriter(fs);
                 sw.Write(graphDefinition);
-                 
+
                 //bool first = true;
                 sw.Write("graph");
-                WriteAttributesToDOT(sw, this.Attributes); 
-                sw.Write("\n"); 
+                WriteAttributesToDOT(sw, this.Attributes);
+                sw.Write("\n");
 
                 //Draw nodes
                 foreach (KeyValuePair<KEY, GraphVizNode<KEY>> node in this.nodes)
                 {
                     sw.Write("\"" + node.Key + "\"" + " ");
-                    WriteAttributesToDOT(sw, node.Value.Attributes); 
+                    WriteAttributesToDOT(sw, node.Value.Attributes);
                     sw.Write('\n');
                 }
 
-                sw.Write('\n'); 
+                sw.Write('\n');
 
                 //Draw Edges
                 foreach (GraphVizEdge<KEY> edge in this.edges)
                 {
                     sw.Write("\"" + edge.from + "\"" + connector + "\"" + edge.to + "\"");
                     WriteAttributesToDOT(sw, edge.Attributes);
-                    sw.Write('\n'); 
+                    sw.Write('\n');
                 }
 
-                sw.Write('\n'); 
+                sw.Write('\n');
 
                 //Assign nodes to subgraphs
                 foreach (KeyValuePair<string, List<KEY>> subgraph in this.subgraphs)
                 {
-                    
+
                     //No need for a subgraph if only one node included 
                     if (subgraph.Value.Count < 2)
                         continue;
@@ -253,17 +251,17 @@ namespace AnnotationUtils
                     if (subgraph.Key.Length < 1)
                         continue;
 
-                    StringBuilder sb = new StringBuilder(subgraph.Value.Count * 16);
+                    StringBuilder sb = new(subgraph.Value.Count * 16);
 
                     sb.Append("\nsubgraph \"" + subgraph.Key + "\" {");
 
-                    int NumValidKeys = 0; 
+                    int NumValidKeys = 0;
                     foreach (KEY nodeID in subgraph.Value)
                     {
                         if (this.nodes.ContainsKey(nodeID)) //Don't add unless we've created a node already or it will be a featureless white node
                         {
                             sb.Append(" " + nodeID.ToString());
-                            NumValidKeys += 1; 
+                            NumValidKeys += 1;
                         }
                     }
 
@@ -279,28 +277,25 @@ namespace AnnotationUtils
 
                 sw.Write("}");
 
-                return sw.ToString(); 
+                return sw.ToString();
             }
             finally
             {
-                if (sw != null)
-                {
-                    sw.Close();
-                    sw = null;
-                }
+                sw?.Close();
+                sw = null;
             }
         }
 
         public static IList<string> Convert(string GraphVizExe, string DotFileFullPath, string[] OutputExtensions)
-        { 
+        {
             int length = OutputExtensions.Count();
             string DotFilePath = System.IO.Path.GetDirectoryName(DotFileFullPath);
             string DotFileNameNoExtension = System.IO.Path.GetFileNameWithoutExtension(DotFileFullPath);
-             
+
             DateTime DotFileLastWrite = System.IO.File.GetLastWriteTimeUtc(DotFileFullPath);
 
-            List<Process> ProcessList = new List<Process>(length);
-            List<string> listOutputFiles = new List<string>();
+            List<Process> ProcessList = new(length);
+            List<string> listOutputFiles = [];
 
             string layout = System.IO.Path.GetFileNameWithoutExtension(GraphVizExe);
 
@@ -309,7 +304,7 @@ namespace AnnotationUtils
                 string type = OutputExtensions[i];
                 string OutputFile = DotFilePath + "\\" + DotFileNameNoExtension + "_" + layout + "." + type;
 
-                listOutputFiles.Add(OutputFile); 
+                listOutputFiles.Add(OutputFile);
 
                 //Don't generate files unless they are older than the .dot file we use as a source
                 if (System.IO.File.Exists(OutputFile))
@@ -318,9 +313,9 @@ namespace AnnotationUtils
                     {
                         continue;
                     }
-                } 
-                
-                Process p = new Process();
+                }
+
+                Process p = new();
                 ProcessList.Add(p);
 
                 p.StartInfo.FileName = GraphVizExe;
@@ -338,10 +333,10 @@ namespace AnnotationUtils
             foreach (Process p in ProcessList)
             {
                 p.WaitForExit();
-            } 
+            }
 
             return listOutputFiles;
         }
-       
+
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -42,7 +42,7 @@ namespace Geometry
                 diff = x.ControlPoint.Y - y.ControlPoint.Y;
             }
 
-            if(diff == 0)
+            if (diff == 0)
                 return 0;
 
             return diff > 0 ? 1 : -1;
@@ -56,16 +56,10 @@ namespace Geometry
     /// Records the position of a point in two different 2D planes
     /// </summary>
     [Serializable]
-    public readonly struct MappingGridVector2 : ICloneable, IComparable, IEquatable<MappingGridVector2>
+    public readonly struct MappingGridVector2(GridVector2 control, GridVector2 mapped) : ICloneable, IComparable, IEquatable<MappingGridVector2>
     {
-        public readonly GridVector2 MappedPoint;
-        public readonly GridVector2 ControlPoint;
-
-        public MappingGridVector2(GridVector2 control, GridVector2 mapped)
-        {
-            MappedPoint = mapped;
-            ControlPoint = control;
-        }
+        public readonly GridVector2 MappedPoint = mapped;
+        public readonly GridVector2 ControlPoint = control;
 
         /// <summary>
         /// Return the same array with duplicates removed
@@ -92,25 +86,13 @@ namespace Geometry
             }
         }
 
-        public static GridVector2[] ControlPoints(MappingGridVector2[] mapPoints)
-        {
-            return mapPoints.Select(p => p.ControlPoint).ToArray();
-        }
+        public static GridVector2[] ControlPoints(MappingGridVector2[] mapPoints) => [.. mapPoints.Select(p => p.ControlPoint)];
 
-        public static GridVector2[] MappedPoints(MappingGridVector2[] mapPoints)
-        {
-            return mapPoints.Select(p => p.MappedPoint).ToArray();
-        }
+        public static GridVector2[] MappedPoints(MappingGridVector2[] mapPoints) => [.. mapPoints.Select(p => p.MappedPoint)];
 
-        public MappingGridVector2 Copy()
-        {
-            return new MappingGridVector2(this.ControlPoint, this.MappedPoint);
-        }
+        public MappingGridVector2 Copy() => new MappingGridVector2(this.ControlPoint, this.MappedPoint);
 
-        public override string ToString()
-        {
-            return "Ctrl: " + ControlPoint.ToString() + " Mapped: " + MappedPoint.ToString();
-        }
+        public override string ToString() => "Ctrl: " + ControlPoint.ToString() + " Mapped: " + MappedPoint.ToString();
 
         public static string ToMatlab(MappingGridVector2[] array)
         {
@@ -131,7 +113,7 @@ namespace Geometry
         /// <returns></returns>
         int IComparable.CompareTo(object Obj)
         {
-            if (!(Obj is MappingGridVector2 B))
+            if (Obj is not MappingGridVector2 B)
                 return int.MaxValue;
 
             double diff = this.MappedPoint.X - B.MappedPoint.X;
@@ -149,21 +131,12 @@ namespace Geometry
             return 0;
         }
 
-        object ICloneable.Clone()
-        {
-            return this.MemberwiseClone();
-        }
+        object ICloneable.Clone() => this.MemberwiseClone();
 
-        public static GridRectangle CalculateControlBounds(MappingGridVector2[] mapPoints)
-        {
-            return mapPoints.ControlBounds();
-        }
+        public static GridRectangle CalculateControlBounds(MappingGridVector2[] mapPoints) => mapPoints.ControlBounds();
 
 
-        public static GridRectangle CalculateMappedBounds(MappingGridVector2[] mapPoints)
-        {
-            return mapPoints.MappedBounds();
-        }
+        public static GridRectangle CalculateMappedBounds(MappingGridVector2[] mapPoints) => mapPoints.MappedBounds();
 
         /// <summary>
         /// Removes duplicate points from the passed list and returns true if duplicates were removed
@@ -238,14 +211,12 @@ namespace Geometry
             return DuplicateFound;
         }
 
-        public override int GetHashCode()
-        {
+        public override int GetHashCode() =>
             //It is not possible to return a hash code for a point because a point can be within an epsilon distance of two other points which generate two 
             //different hash codes.  The solution is either to throw an exception or return a single value for GetHashCode.
 
             //throw new InvalidOperationException($"It is not mathematically possible to implement {nameof(GetHashCode)} for a point where equality is epsilon based");
-            return 0;
-        }
+            0;
 
         public override bool Equals(object obj)
         {
@@ -256,20 +227,14 @@ namespace Geometry
         }
 
         public bool Equals(MappingGridVector2 other)
-        {  
+        {
             return this.ControlPoint == other.ControlPoint &&
                    this.MappedPoint == other.MappedPoint;
         }
 
         // Implement the == operator for MappingGridVector2.
-        public static bool operator ==(MappingGridVector2 v1, MappingGridVector2 v2)
-        {
-            return v1.Equals(v2);
-        }
+        public static bool operator ==(MappingGridVector2 v1, MappingGridVector2 v2) => v1.Equals(v2);
 
-        public static bool operator !=(MappingGridVector2 v1, MappingGridVector2 v2)
-        {
-            return !v1.Equals(v2);
-        }
+        public static bool operator !=(MappingGridVector2 v1, MappingGridVector2 v2) => !v1.Equals(v2);
     }
 }

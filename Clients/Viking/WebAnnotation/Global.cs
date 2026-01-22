@@ -41,10 +41,10 @@ namespace WebAnnotation
         /// </summary>
         internal static int NumSectionsLoading => AnnotationSettings.NumSectionsLoading;
 
-        internal static Export Export = null;
+        internal static Export? Export = null;
 
         private static bool? _isSegmentationServiceAvailable;
-        private static string _segmentationServiceUrlFromVolume;
+        private static readonly string _segmentationServiceUrlFromVolume;
 
         /// <summary>
         /// Static method called by ExtensionManager to determine if this extension should be loaded.
@@ -54,20 +54,20 @@ namespace WebAnnotation
         /// <returns>True if the extension should load, false otherwise</returns>
         public static bool ShouldLoad(Viking.Common.IExtensionLoadContext context)
         {
-            if (context == null)
+            if (context is null)
             {
                 return false;
             }
 
             XElement volumeElement = context.VolumeElement;
-            if (volumeElement == null)
+            if (volumeElement is null)
             {
                 return false;
             }
 
             // Check for VolumeToEndpoint element with Endpoint attribute
             IEnumerable<XElement> mappingElements = volumeElement.Elements().Where(e => e.Name.LocalName == "VolumeToEndpoint");
-            
+
             if (!mappingElements.Any())
             {
                 return false;
@@ -75,8 +75,8 @@ namespace WebAnnotation
 
             XElement volumeToEndpointElement = mappingElements.First();
             XAttribute endpointAttribute = volumeToEndpointElement.Attribute("Endpoint");
-            
-            if (endpointAttribute == null || string.IsNullOrWhiteSpace(endpointAttribute.Value))
+
+            if (endpointAttribute is null || string.IsNullOrWhiteSpace(endpointAttribute.Value))
             {
                 return false;
             }
@@ -105,29 +105,26 @@ namespace WebAnnotation
                 }
 
                 var serviceUrl = segmentationService.Endpoint();
-                if(serviceUrl is null)
-                    return false; 
+                if (serviceUrl is null)
+                    return false;
 
                 // If no scheme is present, prepend http:// for validation (gRPC often uses host:port format)
                 string urlToValidate = serviceUrl.Contains("://") ? serviceUrl : $"http://{serviceUrl}";
-                
+
                 // Use built-in Uri validation
                 bool isValid = Uri.TryCreate(urlToValidate, UriKind.Absolute, out Uri result) &&
                                (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
 
                 _isSegmentationServiceAvailable = isValid;
                 return isValid;
-            } 
+            }
         }
 
         /// <summary>
         /// Gets the SegmentationServiceUrl from configuration or volume metadata.
         /// </summary>
-        public static string GetSegmentationServiceUrl()
-        { 
-            return AnnotationSettings.SegmentationServiceUrl;
-        }
-           
+        public static string GetSegmentationServiceUrl() => AnnotationSettings.SegmentationServiceUrl;
+
         internal static int NumSectionsInMemory => AnnotationSettings.NumSectionsInMemory;
 
         /// <summary>
@@ -135,10 +132,7 @@ namespace WebAnnotation
         /// </summary>
         public static double AdjacentLocationRadiusScalar => AnnotationSettings.AdjacentLocationRadiusScalar;
 
-        public static uint NumCurveInterpolationPoints(bool Closed)
-        {
-            return Geometry.Global.NumCurveInterpolationPoints(Closed);
-        }
+        public static uint NumCurveInterpolationPoints(bool Closed) => Geometry.Global.NumCurveInterpolationPoints(Closed);
 
         //TODO: Choose number of points based on distance between control points
         public static uint NumOpenCurveInterpolationPoints => Geometry.Global.NumOpenCurveInterpolationPoints;
@@ -152,7 +146,7 @@ namespace WebAnnotation
 
         public static double MinRadius => AnnotationSettings.MinRadius;
 
-        public static WebAnnotation.UI.Forms.PenAnnotationViewForm PenAnnotationForm = null;
+        public static WebAnnotation.UI.Forms.PenAnnotationViewForm? PenAnnotationForm = null;
 
         /// <summary>
         /// Wrapper class for annotation settings with validation
@@ -444,7 +438,7 @@ namespace WebAnnotation
         /// The full name of the settings file including filename and path
         /// </summary>
         private static readonly string UserSettingsFilePath = WebAnnotationPath + System.IO.Path.DirectorySeparatorChar + UserSettingsFileName;
-        private static XElement UserSettingsElement = null;
+        private static XElement? UserSettingsElement = null;
 
         public static bool PenMode
         {
@@ -462,9 +456,9 @@ namespace WebAnnotation
         {
             get
             {
-                if (_UserFavoriteStructureTypes == null)
+                if (_UserFavoriteStructureTypes is null)
                 {
-                    _UserFavoriteStructureTypes = new System.Collections.ObjectModel.ObservableCollection<ulong>();
+                    _UserFavoriteStructureTypes = [];
                     foreach (string ID_str in Properties.Settings.Default.FavoriteStructureIDs)
                     {
                         try
@@ -561,7 +555,7 @@ namespace WebAnnotation
 //        static internal readonly string XSDUri = "http://connectomes.utah.edu/XSD/BookmarkSchema.xsd";
 
         private static XRoot _userSettingsDoc;
-        private static Task _loadUserPreferencesTask = null;
+        private static Task? _loadUserPreferencesTask = null;
 
         public static string EndpointName
         {
@@ -569,20 +563,20 @@ namespace WebAnnotation
             internal set;
         }
 
-         
+
         internal static UserSettings UserSettings
         {
             get
             {
                 if (_userSettingsDoc is null)
                 {
-                
+
                     LoadUserPreferencesAsync();
-                    return null; 
+                    return null;
                 }
 
                 return _userSettingsDoc?.UserSettings;
-            } 
+            }
         }
 
         /// <summary>
@@ -600,10 +594,10 @@ namespace WebAnnotation
         /// <returns></returns>
         internal static bool CanContinueLastTrace(int SectionNumber)
         {
-            if (LastEditedAnnotationID == null)
+            if (LastEditedAnnotationID is null)
                 return false;
 
-            if (_userSettingsDoc == null)
+            if (_userSettingsDoc is null)
                 return false;
 
             WebAnnotationModel.LocationObj lastLoc = WebAnnotationModel.Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, false);
@@ -684,7 +678,7 @@ namespace WebAnnotation
             //Find the server hosting the volume.  Look for an XML file mapping the volume to an endpoint.
             Viking.ViewModels.VolumeViewModel volume = Viking.UI.State.volume;
 
-            if (volume == null)
+            if (volume is null)
             {
                 return false;
             }
@@ -727,35 +721,25 @@ namespace WebAnnotation
             return false;
         }
 
-        private static XDocument GetAboutXML(Uri AboutURI)
-        {
-            return GetAboutXMLAsync(AboutURI).GetAwaiter().GetResult();
-        }
+        private static XDocument GetAboutXML(Uri AboutURI) => GetAboutXMLAsync(AboutURI).GetAwaiter().GetResult();
 
         private static async Task<XDocument> GetAboutXMLAsync(Uri AboutURI)
         {
-            HttpClientHandler handler;
-            if (AboutURI.Scheme.ToLower() == "https")
-            {
-                handler = new HttpClientHandler
+            HttpClientHandler handler = AboutURI.Scheme.ToLower() == "https"
+                ? new HttpClientHandler
                 {
                     Credentials = Viking.UI.State.UserCredentials
-                };
-            }
-            else
-            {
-                handler = new HttpClientHandler()
+                }
+                : new HttpClientHandler()
                 {
                     UseDefaultCredentials = true //Use the default credentials for HTTP requests
                 };
-            }
-
-            using var httpClient = new HttpClient(handler);
+            using HttpClient httpClient = new(handler);
             try
             {
                 var response = await httpClient.GetAsync(AboutURI).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
-                    
+
                 var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return XDocument.Parse(content);
             }
@@ -773,14 +757,9 @@ namespace WebAnnotation
             {
                 case "Volume":
                     IEnumerable<XElement> SettingsElements = elem.Elements().Where(e => e.Name.LocalName == "DefaultWebAnnotationUserSettings");
-                    if (SettingsElements.Count() > 0)
-                    {
-                        UserSettingsElement = SettingsElements.First();
-                    }
-                    else
-                    {
-                        throw new XMLMissingDataException("The Volume Element is missing the <DefaultWebAnnotationUserSettings> element");
-                    }
+                    UserSettingsElement = SettingsElements.Count() > 0
+                        ? SettingsElements.First()
+                        : throw new XMLMissingDataException("The Volume Element is missing the <DefaultWebAnnotationUserSettings> element");
 
                     IEnumerable<XElement> MappingElements = elem.Elements().Where(e => e.Name.LocalName == "VolumeToEndpoint");
 
@@ -853,11 +832,11 @@ namespace WebAnnotation
             }
 
             // Create a new task with timeout
-            var cts = new CancellationTokenSource();
+            CancellationTokenSource cts = new();
             cts.CancelAfter(TimeSpan.FromSeconds(10));
 
             _loadUserPreferencesTask = LoadUserPreferencesAsyncInternal(cts.Token);
-            
+
             // Clear the task reference when it completes
             _loadUserPreferencesTask.ContinueWith(t =>
             {
@@ -881,7 +860,7 @@ namespace WebAnnotation
                     LoadFromServer = true;
                 }
 
-                if (! await CachedResourceIsValidAsync(UserSettingsFilePath, UserSettingsUri, cancellationToken))
+                if (!await CachedResourceIsValidAsync(UserSettingsFilePath, UserSettingsUri, cancellationToken))
                 {
                     LoadFromServer = true;
                 }
@@ -954,14 +933,11 @@ namespace WebAnnotation
         /// <param name="CacheFilename"></param>
         /// <param name="textureUri"></param>
         /// <returns></returns>
-        private static Task<bool> CachedResourceIsValid(string CacheFilename, Uri uri)
-        {
-            return CachedResourceIsValidAsync(CacheFilename, uri);
-        }
+        private static Task<bool> CachedResourceIsValid(string CacheFilename, Uri uri) => CachedResourceIsValidAsync(CacheFilename, uri);
 
         private static async Task<bool> CachedResourceIsValidAsync(string CacheFilename, Uri uri, CancellationToken cancellationToken = default)
         {
-            if (uri == null)
+            if (uri is null)
             {
                 return true;
             }
@@ -971,15 +947,15 @@ namespace WebAnnotation
                 return false;
             }
 
-            using var httpClient = new HttpClient();
+            using HttpClient httpClient = new();
             try
             {
-                var request = new HttpRequestMessage(HttpMethod.Head, uri);
+                HttpRequestMessage request = new(HttpMethod.Head, uri);
                 var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
                 if (!response.Content.Headers.LastModified.HasValue) return false;
                 bool valid = response.Content.Headers.LastModified.Value.UtcDateTime <= System.IO.File.GetLastWriteTimeUtc(CacheFilename);
-                return valid; 
+                return valid;
             }
             catch
             {
@@ -987,24 +963,20 @@ namespace WebAnnotation
             }
         }
 
-        private static Task<bool> LoadServerUserSettings()
-        {
-            return LoadServerUserSettingsAsync();
-        }
+        private static Task<bool> LoadServerUserSettings() => LoadServerUserSettingsAsync();
 
         private static async Task<bool> LoadServerUserSettingsAsync(CancellationToken cancellationToken = default)
         {
             //Try to download the default user settings file
             Uri uri = UserSettingsUri;
-            if(uri is null)
-                uri = new Uri("http://rouge1.codepharm.net/RABBIT/WebAnnotationUserSettings.xml");
-            
+            uri ??= new Uri("http://rouge1.codepharm.net/RABBIT/WebAnnotationUserSettings.xml");
+
             try
             {
-                using var httpClient = new HttpClient();
+                using HttpClient httpClient = new();
                 var response = await httpClient.GetAsync(uri, cancellationToken).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
-                        
+
                 byte[] data = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
 
                 cancellationToken.ThrowIfCancellationRequested();
@@ -1017,7 +989,7 @@ namespace WebAnnotation
                     }
                 }
                 catch (System.IO.IOException)
-                { 
+                {
                 }
 
                 using FileStream file = File.Open(UserSettingsFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
@@ -1039,22 +1011,14 @@ namespace WebAnnotation
             SaveUserSettings();
         }
 
-        public static void SaveUserSettings()
-        {
-            Global._userSettingsDoc.Save(UserSettingsFilePath);
-        } 
+        public static void SaveUserSettings() => Global._userSettingsDoc.Save(UserSettingsFilePath);
 
         #endregion
     }
 
-    internal sealed class WebAnnotationGrpcServiceConfiguration : IGrpcServiceConfiguration
+    internal sealed class WebAnnotationGrpcServiceConfiguration(ApplicationSettings applicationSettings) : IGrpcServiceConfiguration
     {
-        private readonly ApplicationSettings _applicationSettings;
-
-        public WebAnnotationGrpcServiceConfiguration(ApplicationSettings applicationSettings)
-        {
-            _applicationSettings = applicationSettings;
-        }
+        private readonly ApplicationSettings _applicationSettings = applicationSettings;
 
         public string Endpoint()
         {

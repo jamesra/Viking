@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows.Forms;
 
 namespace Viking.UI.Forms
@@ -30,11 +30,7 @@ namespace Viking.UI.Forms
             Downsample = (int)numDownsample.Value;
         }
 
-        private void textPath_TextChanged(object sender, EventArgs e)
-        {
-            btnOK.Enabled = textPath.Text.Length > 0;
-
-        }
+        private void textPath_TextChanged(object sender, EventArgs e) => btnOK.Enabled = textPath.Text.Length > 0;
 
         private void numericUpDown1_ValueChanged(object sender, EventArgs e)
         {
@@ -43,13 +39,11 @@ namespace Viking.UI.Forms
 
         private void btnBrowse_Click(object sender, EventArgs e)
         {
-            using (FolderBrowserDialog dlg = new FolderBrowserDialog())
+            using FolderBrowserDialog dlg = new();
+            dlg.SelectedPath = textPath.Text;
+            if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
-                dlg.SelectedPath = textPath.Text;
-                if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-                {
-                    textPath.Text = dlg.SelectedPath;
-                }
+                textPath.Text = dlg.SelectedPath;
             }
         }
     }

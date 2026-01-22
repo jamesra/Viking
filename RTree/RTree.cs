@@ -66,7 +66,7 @@ namespace RTree
         // [x] TODO eliminate this map - it should not be needed. Nodes
         // can be found by traversing the tree.
         //private TIntObjectHashMap nodeMap = new TIntObjectHashMap();
-        private readonly Dictionary<int, Node<T>> nodeMap = new Dictionary<int, Node<T>>();
+        private readonly Dictionary<int, Node<T>> nodeMap = [];
 
         // internal consistency checking - set to true if debugging tree corruption
         private const bool INTERNAL_CONSISTENCY_CHECKING = false;
@@ -81,9 +81,9 @@ namespace RTree
         // from the root down to the leaf. Enables fast lookup
         // of nodes when a split is propagated up the tree.
         //private TIntStack parents = new TIntStack();
-        private readonly Stack<int> parents = new Stack<int>();
+        private readonly Stack<int> parents = new();
         //private TIntStack parentsEntry = new TIntStack();
-        private readonly Stack<int> parentsEntry = new Stack<int>();
+        private readonly Stack<int> parentsEntry = new();
 
         // initialisation
         private int treeHeight = 1; // leaves are always level 1
@@ -98,29 +98,29 @@ namespace RTree
         // so that they can be reused. Store the IDs of nodes
         // which can be reused.
         //private TIntStack deletedNodeIds = new TIntStack();
-        private readonly Stack<int> deletedNodeIds = new Stack<int>();
+        private readonly Stack<int> deletedNodeIds = new();
 
         // List of nearest rectangles. Use a member variable to
         // avoid recreating the object each time nearest() is called.
         //private TIntArrayList nearestIds = new TIntArrayList();
-        readonly List<int> nearestIds = new List<int>();
+        readonly List<int> nearestIds = [];
 
         //Added dictionaries to support generic objects..
         //possibility to change the code to support objects without dictionaries.
-        private readonly Dictionary<int, T> IdsToItems = new Dictionary<int, T>();
-        private readonly Dictionary<T, int> ItemsToIds = new Dictionary<T, int>();
+        private readonly Dictionary<int, T> IdsToItems = [];
+        private readonly Dictionary<T, int> ItemsToIds = [];
         private volatile int idcounter = int.MinValue;
 
         /// <summary>
         /// Map of object to rectangles stored for that object in the database
         /// </summary>
-        private readonly Dictionary<T, Rectangle> ItemsToRects = new Dictionary<T, Rectangle>();
+        private readonly Dictionary<T, Rectangle> ItemsToRects = [];
 
         //the recursion methods require a delegate to retrieve data
         private delegate void intproc(int x);
 
         [NonSerialized]
-        readonly System.Threading.ReaderWriterLockSlim rwLock = new System.Threading.ReaderWriterLockSlim();
+        readonly System.Threading.ReaderWriterLockSlim rwLock = new();
 
         /// <summary>
         /// Initialize implementation dependent properties of the RTree.
@@ -177,7 +177,7 @@ namespace RTree
                 initialEntryStatus[i] = ENTRY_STATUS_UNASSIGNED;
             }
 
-            Node<T> root = new Node<T>(rootNodeId, 1, maxNodeEntries);
+            Node<T> root = new(rootNodeId, 1, maxNodeEntries);
             nodeMap.Add(rootNodeId, root);
 
             log.Info("init() " + " MaxNodeEntries = " + maxNodeEntries + ", MinNodeEntries = " + minNodeEntries);
@@ -286,7 +286,7 @@ namespace RTree
 
                 rootNodeId = getNextNodeId();
                 treeHeight++;
-                Node<T> root = new Node<T>(rootNodeId, treeHeight, maxNodeEntries);
+                Node<T> root = new(rootNodeId, treeHeight, maxNodeEntries);
                 root.addEntry(newNode.mbr, newNode.nodeId);
                 root.addEntry(oldRoot.mbr, oldRoot.nodeId);
                 nodeMap[rootNodeId] = root;
@@ -521,7 +521,7 @@ namespace RTree
             {
                 rwLock.EnterReadLock();
 
-                List<T> retval = new List<T>();
+                List<T> retval = [];
                 nearest(p, delegate (int id)
                 {
                     retval.Add(IdsToItems[id]);
@@ -556,7 +556,7 @@ namespace RTree
             try
             {
                 rwLock.EnterReadLock();
-                List<T> retval = new List<T>();
+                List<T> retval = [];
                 intersects(r, delegate (int id)
                 {
                     retval.Add(IdsToItems[id]);
@@ -598,7 +598,7 @@ namespace RTree
         /// <returns></returns>
         public List<T> Intersects(Point A, Point B)
         {
-            Rectangle r = new Rectangle(A, B);
+            Rectangle r = new(A, B);
             return this.Intersects(r);
         }
 
@@ -622,7 +622,7 @@ namespace RTree
                 try
                 {
                     rwLock.EnterReadLock();
-                    return new List<T>(this.ItemsToIds.Keys);
+                    return [.. this.ItemsToIds.Keys];
                 }
                 finally
                 {
@@ -643,7 +643,7 @@ namespace RTree
             try
             {
                 rwLock.EnterReadLock();
-                List<T> retval = new List<T>();
+                List<T> retval = [];
                 contains(r, delegate (int id)
                 {
                     retval.Add(IdsToItems[id]);
@@ -762,10 +762,7 @@ namespace RTree
         /**
          * @see com.infomatiq.jsi.SpatialIndex#getVersion()
          */
-        public string getVersion()
-        {
-            return "RTree-" + version;
-        }
+        public string getVersion() => "RTree-" + version;
         //-------------------------------------------------------------------------
         // end of SpatialIndex methods
         //-------------------------------------------------------------------------
@@ -776,15 +773,7 @@ namespace RTree
          */
         private int getNextNodeId()
         {
-            int nextNodeId = 0;
-            if (deletedNodeIds.Count > 0)
-            {
-                nextNodeId = deletedNodeIds.Pop();
-            }
-            else
-            {
-                nextNodeId = 1 + highestUsedNodeId++;
-            }
+            int nextNodeId = deletedNodeIds.Count > 0 ? deletedNodeIds.Pop() : 1 + highestUsedNodeId++;
             return nextNodeId;
         }
 
@@ -797,19 +786,13 @@ namespace RTree
         /// </summary>
         /// <param name="index"></param>
         /// <returns></returns>
-        private Node<T> getNode(int index)
-        {
-            return (Node<T>)nodeMap[index];
-        }
+        private Node<T> getNode(int index) => (Node<T>)nodeMap[index];
 
         /// <summary>
         /// Get the highest used Node&lt;T&gt; ID
         /// </summary>
         /// <returns></returns>
-        private int getHighestUsedNodeId()
-        {
-            return highestUsedNodeId;
-        }
+        private int getHighestUsedNodeId() => highestUsedNodeId;
 
         /// <summary>
         /// Get the root Node&lt;T&gt; ID
@@ -1094,13 +1077,9 @@ namespace RTree
                         {
                             nextGroup = 1;
                         }
-                        else if (newNode.entryCount < maxNodeEntries / 2)
-                        {
-                            nextGroup = 0;
-                        }
                         else
                         {
-                            nextGroup = 1;
+                            nextGroup = newNode.entryCount < maxNodeEntries / 2 ? 0 : 1;
                         }
                         maxDifference = difference;
                     }
@@ -1243,7 +1222,7 @@ namespace RTree
          * contain the nodeIds of all parents up to the root.
          */
 
-        private readonly Rectangle oldRectangle = new Rectangle(0, 0, 0, 0, 0, 0);
+        private readonly Rectangle oldRectangle = new(0, 0, 0, 0, 0, 0);
         private void condenseTree(Node<T> l)
         {
             // CT1 [Initialize] Set n=l. Set the list of eliminated
@@ -1253,7 +1232,7 @@ namespace RTree
             int parentEntry = 0;
 
             //TIntStack eliminatedNodeIds = new TIntStack();
-            Stack<int> eliminatedNodeIds = new Stack<int>();
+            Stack<int> eliminatedNodeIds = new();
 
             // CT2 [Find parent entry] If N is the root, go to CT6. Otherwise 
             // let P be the parent of N, and let En be N's entry in P  
@@ -1476,7 +1455,7 @@ namespace RTree
          */
         private Rectangle calculateMBR(Node<T> n)
         {
-            Rectangle mbr = new Rectangle(n.entries[0].min, n.entries[0].max);
+            Rectangle mbr = new(n.entries[0].min, n.entries[0].max);
 
             for (int i = 1; i < n.entryCount; i++)
             {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -26,14 +26,14 @@ namespace Geometry
         /// </summary>
         public AxisComparer(AXIS[] axisCompareOrder)
         {
-            AxisCompareOrder = axisCompareOrder.Cast<int>().ToArray();
+            AxisCompareOrder = [.. axisCompareOrder.Cast<int>()];
         }
 
         /// <summary>
         /// This constructor allows the order that axes are compared in
         /// </summary>
         /// <param name="axisCompareOrder"></param>
-        public AxisComparer(int[] axisCompareOrder) : this(axisCompareOrder, axisCompareOrder.Select(a => true).ToArray())
+        public AxisComparer(int[] axisCompareOrder) : this(axisCompareOrder, [.. axisCompareOrder.Select(a => true)])
         {
         }
 
@@ -110,7 +110,7 @@ namespace Geometry
         public GridVectorN(IEnumerable<double> input)
         {
             //Make sure we copy so we don't take a reference on the array
-            _coords = input.ToArray();
+            _coords = [.. input];
         }
 
         private static void ThrowOnDimensionMismatch(IPointN A, IPointN B)
@@ -121,10 +121,7 @@ namespace Geometry
             }
         }
 
-        public bool Equals(GridVectorN B)
-        {  
-            return (DistanceSquared(this, B) <= Global.EpsilonSquared);
-        }
+        public bool Equals(GridVectorN B) => (DistanceSquared(this, B) <= Global.EpsilonSquared);
 
         public bool Equals(IPointN B)
         {
@@ -144,10 +141,7 @@ namespace Geometry
             return false;
         }
 
-        public override int GetHashCode()
-        {
-            return ((IStructuralEquatable)this.coords).GetHashCode(EqualityComparer<double>.Default);
-        }
+        public override int GetHashCode() => ((IStructuralEquatable)this.coords).GetHashCode(EqualityComparer<double>.Default);
 
         /// <summary>
         /// The block distance along each axis between the two points
@@ -176,10 +170,7 @@ namespace Geometry
             return Diff(A, B).Select(dist => dist * dist).Sum();
         }
 
-        public static double Magnitude(IPointN A)
-        {
-            return Math.Sqrt(A.coords.Select(val => val * val).Sum());
-        }
+        public static double Magnitude(IPointN A) => Math.Sqrt(A.coords.Select(val => val * val).Sum());
 
         public void Normalize()
         {
@@ -194,7 +185,7 @@ namespace Geometry
         {
             double mag = Magnitude(A);
 
-            double[] normalized = A.coords.Select(val => val / mag).ToArray();
+            double[] normalized = [.. A.coords.Select(val => val / mag)];
             return new GridVectorN(normalized);
         }
 
@@ -205,20 +196,11 @@ namespace Geometry
             return new GridVectorN(cpy);
         }
 
-        public int CompareTo(GridVectorN other)
-        {
-            return Compare((IPointN)this, (IPointN)other);
-        }
+        public int CompareTo(GridVectorN other) => Compare((IPointN)this, (IPointN)other);
 
-        public int Compare(GridVectorN A, GridVectorN B)
-        {
-            return Compare((IPointN)A, (IPointN)B);
-        }
+        public int Compare(GridVectorN A, GridVectorN B) => Compare((IPointN)A, (IPointN)B);
 
-        public int CompareTo(IPointN other)
-        {
-            return Compare((IPointN)this, (IPointN)other);
-        }
+        public int CompareTo(IPointN other) => Compare((IPointN)this, (IPointN)other);
 
         public int Compare(IPointN A, IPointN B)
         {
@@ -257,40 +239,19 @@ namespace Geometry
             return Compare(this, B);
         }
 
-        public static GridVectorN operator -(GridVectorN A)
-        {
-            return new GridVectorN(A._coords.Select(val => -val).ToArray());
-        }
+        public static GridVectorN operator -(GridVectorN A) => new GridVectorN([.. A._coords.Select(val => -val)]);
 
-        public static GridVectorN operator -(GridVectorN A, GridVectorN B)
-        {
-            return new GridVectorN(A._coords.Select((val, i) => val - B._coords[i]).ToArray());
-        }
+        public static GridVectorN operator -(GridVectorN A, GridVectorN B) => new GridVectorN([.. A._coords.Select((val, i) => val - B._coords[i])]);
 
-        public static GridVectorN operator +(GridVectorN A, GridVectorN B)
-        {
-            return new GridVectorN(A._coords.Select((val, i) => val + B._coords[i]).ToArray());
-        }
+        public static GridVectorN operator +(GridVectorN A, GridVectorN B) => new GridVectorN([.. A._coords.Select((val, i) => val + B._coords[i])]);
 
-        public static GridVectorN operator *(GridVectorN A, double scalar)
-        {
-            return new GridVectorN(A._coords.Select((val, i) => val * scalar).ToArray());
-        }
+        public static GridVectorN operator *(GridVectorN A, double scalar) => new GridVectorN([.. A._coords.Select((val, i) => val * scalar)]);
 
-        public static GridVectorN operator *(GridVectorN A, GridVectorN B)
-        {
-            return new GridVectorN(A._coords.Select((a, i) => a * B._coords[i]).ToArray());
-        }
+        public static GridVectorN operator *(GridVectorN A, GridVectorN B) => new GridVectorN([.. A._coords.Select((a, i) => a * B._coords[i])]);
 
-        public static GridVectorN operator /(GridVectorN A, double scalar)
-        {
-            return new GridVectorN(A._coords.Select((val, i) => val / scalar).ToArray());
-        }
+        public static GridVectorN operator /(GridVectorN A, double scalar) => new GridVectorN([.. A._coords.Select((val, i) => val / scalar)]);
 
-        public static GridVectorN operator /(GridVectorN A, GridVectorN B)
-        {
-            return new GridVectorN(A._coords.Select((a, i) => a / B._coords[i]).ToArray());
-        }
+        public static GridVectorN operator /(GridVectorN A, GridVectorN B) => new GridVectorN([.. A._coords.Select((a, i) => a / B._coords[i])]);
 
         /*
         #region IPointN operators
@@ -333,30 +294,18 @@ namespace Geometry
         #endregion
         */
 
-        public static bool operator ==(GridVectorN A, GridVectorN B)
-        {
-            return A.Equals(B);
-        }
+        public static bool operator ==(GridVectorN A, GridVectorN B) => A.Equals(B);
 
-        public static bool operator !=(GridVectorN A, GridVectorN B)
-        {
-            return !A.Equals(B);
-        }
+        public static bool operator !=(GridVectorN A, GridVectorN B) => !A.Equals(B);
 
-        public static bool operator ==(GridVectorN A, IPointN B)
-        {
-            return A.Equals(B);
-        }
+        public static bool operator ==(GridVectorN A, IPointN B) => A.Equals(B);
 
-        public static bool operator !=(GridVectorN A, IPointN B)
-        {
-            return !A.Equals(B);
-        }
+        public static bool operator !=(GridVectorN A, IPointN B) => !A.Equals(B);
 
         public double this[AXIS axis]
         {
             get => coords[(int)axis];
             set => coords[(int)axis] = value;
-        } 
+        }
     }
 }

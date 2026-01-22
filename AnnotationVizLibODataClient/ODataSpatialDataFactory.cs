@@ -18,10 +18,7 @@ namespace AnnotationVizLib.OData
             NeuronGraph graph,
             Uri Endpoint,
             ICollection<long> IDs,
-            uint Hops)
-        {
-            AppendSpatialDataFromODataAsync(graph, Endpoint, IDs, Hops).GetAwaiter().GetResult();
-        }
+            uint Hops) => AppendSpatialDataFromODataAsync(graph, Endpoint, IDs, Hops).GetAwaiter().GetResult();
 
         /// <summary>
         /// Asynchronously appends spatial data to a neuron graph from OData service
@@ -33,7 +30,7 @@ namespace AnnotationVizLib.OData
             uint Hops,
             CancellationToken cancellationToken = default)
         {
-            Container container = new Container(Endpoint)
+            Container container = new(Endpoint)
             {
                 MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
             };
@@ -50,10 +47,7 @@ namespace AnnotationVizLib.OData
         /// </summary>
         public static void AppendNeuronSpatialData(
             NeuronNode node,
-            Container container)
-        {
-            AppendNeuronSpatialDataAsync(node, container).GetAwaiter().GetResult();
-        }
+            Container container) => AppendNeuronSpatialDataAsync(node, container).GetAwaiter().GetResult();
 
         /// <summary>
         /// Asynchronously appends spatial data for a single neuron node
@@ -76,7 +70,7 @@ namespace AnnotationVizLib.OData
                     AppendSpatialCacheToNode(node, cache);
                 }
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 throw new InvalidOperationException(
                     $"Failed to append spatial data for node {node.Key}: {ex.Message}", ex);
@@ -100,8 +94,8 @@ namespace AnnotationVizLib.OData
             try
             {
                 // Build query for network spatial data
-                var spatialCacheQuery = (IDs == null || IDs.Count == 0) && graph.Nodes.Count > 0
-                    ? container.NetworkSpatialData(new List<long>(), 0)
+                var spatialCacheQuery = (IDs is null || IDs.Count == 0) && graph.Nodes.Count > 0
+                    ? container.NetworkSpatialData([], 0)
                     : container.NetworkSpatialData(IDs, (int)Hops);
 
                 // Fetch all spatial cache data
@@ -119,7 +113,7 @@ namespace AnnotationVizLib.OData
                     }
                 }
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 throw new InvalidOperationException(
                     $"Failed to append neuron spatial data: {ex.Message}", ex);
@@ -142,8 +136,8 @@ namespace AnnotationVizLib.OData
                 var childToEdgeMap = BuildChildToEdgeMap(graph);
 
                 // Build query for network edge spatial data
-                var edgeSpatialQuery = (IDs == null || IDs.Count == 0) && graph.Nodes.Count > 0
-                    ? container.NetworkEdgeSpatialData(new List<long>(), 0)
+                var edgeSpatialQuery = (IDs is null || IDs.Count == 0) && graph.Nodes.Count > 0
+                    ? container.NetworkEdgeSpatialData([], 0)
                     : container.NetworkEdgeSpatialData(IDs, (int)Hops);
 
                 // Fetch all edge spatial cache data
@@ -158,7 +152,7 @@ namespace AnnotationVizLib.OData
                     AddSpatialDataToEdges(cache, childToEdgeMap);
                 }
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 throw new InvalidOperationException(
                     $"Failed to append edge spatial data: {ex.Message}", ex);
@@ -235,7 +229,7 @@ namespace AnnotationVizLib.OData
         /// </summary>
         private static Dictionary<ulong, long> BuildChildToParentMap(NeuronGraph graph)
         {
-            var childToParent = new Dictionary<ulong, long>();
+            Dictionary<ulong, long> childToParent = [];
 
             foreach (NeuronNode node in graph.Nodes.Values)
             {
@@ -258,7 +252,7 @@ namespace AnnotationVizLib.OData
         /// </summary>
         private static Dictionary<ulong, SortedSet<NeuronEdge>> BuildChildToEdgeMap(NeuronGraph graph)
         {
-            var idToEdge = new Dictionary<ulong, SortedSet<NeuronEdge>>();
+            Dictionary<ulong, SortedSet<NeuronEdge>> idToEdge = [];
 
             foreach (NeuronEdge edge in graph.Edges.Values)
             {
@@ -266,7 +260,7 @@ namespace AnnotationVizLib.OData
                 {
                     if (!idToEdge.TryGetValue(sourceID, out var edgeSet))
                     {
-                        edgeSet = new SortedSet<NeuronEdge>();
+                        edgeSet = [];
                         idToEdge[sourceID] = edgeSet;
                     }
                     edgeSet.Add(edge);
@@ -276,7 +270,7 @@ namespace AnnotationVizLib.OData
                 {
                     if (!idToEdge.TryGetValue(targetID, out var edgeSet))
                     {
-                        edgeSet = new SortedSet<NeuronEdge>();
+                        edgeSet = [];
                         idToEdge[targetID] = edgeSet;
                     }
                     edgeSet.Add(edge);

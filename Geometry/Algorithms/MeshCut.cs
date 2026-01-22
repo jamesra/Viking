@@ -1,4 +1,4 @@
-﻿//#define TRACEDELAUNAY
+//#define TRACEDELAUNAY
 
 using System;
 using System.Collections.Generic;
@@ -10,19 +10,19 @@ using System.Text;
 namespace Geometry.Meshing
 {
 
-    internal class MeshCut
+    internal class MeshCut(long[] SortedAlongAxis, long[] SortedOppositeAxis, CutDirection cutAxis, GridRectangle boundingRect)
     {
-        public GridRectangle BoundingBox;
+        public GridRectangle BoundingBox = boundingRect;
 
-        public readonly CutDirection CutAxis;
+        public readonly CutDirection CutAxis = cutAxis;
 
-        public long[] XSortedVerts;
-        public long[] YSortedVerts;
+        public long[] XSortedVerts = cutAxis == CutDirection.HORIZONTAL ? SortedAlongAxis : SortedOppositeAxis;
+        public long[] YSortedVerts = cutAxis == CutDirection.HORIZONTAL ? SortedOppositeAxis : SortedAlongAxis;
 
         /// <summary>
         /// Used for quick Contains tests
         /// </summary>
-        private readonly HashSet<long> _AllVerts;
+        private readonly HashSet<long> _AllVerts = [.. SortedAlongAxis];
 
         /// <summary>
         /// When set to true, the XSortedVerts with equal X values are sorted by ascending Y value, otherwise by descending Y value
@@ -36,10 +36,7 @@ namespace Geometry.Meshing
 
         public long Count => XSortedVerts.LongLength;
 
-        public bool Contains(long value)
-        {
-            return _AllVerts.Contains(value);
-        }
+        public bool Contains(long value) => _AllVerts.Contains(value);
 
         public IReadOnlyList<long> Verticies => CutAxis == CutDirection.HORIZONTAL ? XSortedVerts : YSortedVerts;
 
@@ -87,19 +84,9 @@ namespace Geometry.Meshing
             set => SortedOppositeCutAxisVertSet[key] = value;
         }
 
-        public MeshCut(long[] SortedAlongAxis, long[] SortedOppositeAxis, CutDirection cutAxis, GridRectangle boundingRect)
-        {
-            CutAxis = cutAxis;
-            XSortedVerts = cutAxis == CutDirection.HORIZONTAL ? SortedAlongAxis : SortedOppositeAxis;
-            YSortedVerts = cutAxis == CutDirection.HORIZONTAL ? SortedOppositeAxis : SortedAlongAxis;
-            BoundingBox = boundingRect;
-
-            _AllVerts = new HashSet<long>(SortedAlongAxis);
-        }
-
         public override string ToString()
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             foreach (long index in SortedAlongCutAxisVertSet)
             {
                 sb.AppendFormat("{0} ", index);
@@ -135,7 +122,7 @@ namespace Geometry.Meshing
             double OffAxisDividingLine = cutDirection == CutDirection.HORIZONTAL ? L.Y : L.X;
 
             //Find the start of points that are near the dividing line
-            List<int> PointsToSort = new List<int>();
+            List<int> PointsToSort = [];
             long iStart = nLowerHalf - 1;
             while (iStart >= 0)
             {
@@ -185,7 +172,7 @@ namespace Geometry.Meshing
             }
 
             int[] iSorted = sortVals.SortAndIndex();
-            long[] correctOrder = iSorted.Select(i => toSort[i]).ToArray();
+            long[] correctOrder = [.. iSorted.Select(i => toSort[i])];
 
             for (long i = iStart; i < iEnd; i++)
             {
@@ -274,7 +261,7 @@ namespace Geometry.Meshing
 #if TRACEDELAUNAY
             Trace.WriteLine(string.Format("{0}--------{1}-------",cutDirection, DivisionPoint));
 #endif
-            GridVector2[] vertPosArray = NewSortedAlongCutAxisVertSet.Select(i => mesh[(int)i].Position).ToArray();
+            GridVector2[] vertPosArray = [.. NewSortedAlongCutAxisVertSet.Select(i => mesh[(int)i].Position)];
 
             GridVector2 nudgedDivisionPoint = DivisionPoint;
 
@@ -290,13 +277,9 @@ namespace Geometry.Meshing
                         AssignToLower = iVert == LowerHalfOppAxis.Last() || LowerHalfOppAxis.Contains(iVert);
                         nudgedDivisionPoint.Y = Math.Max(vertPos.Y, DivisionPoint.Y);
                     }
-                    else if (vertPos.Y < DivisionPoint.Y)
-                    {
-                        AssignToLower = true;
-                    }
                     else
                     {
-                        AssignToLower = false;
+                        AssignToLower = vertPos.Y < DivisionPoint.Y;
                     }
                 }
                 else
@@ -306,13 +289,9 @@ namespace Geometry.Meshing
                         AssignToLower = iVert == LowerHalfOppAxis.Last() || LowerHalfOppAxis.Contains(iVert);
                         nudgedDivisionPoint.X = Math.Max(vertPos.X, DivisionPoint.X);
                     }
-                    else if (vertPos.X < DivisionPoint.X)
-                    {
-                        AssignToLower = true;
-                    }
                     else
                     {
-                        AssignToLower = false;
+                        AssignToLower = vertPos.X < DivisionPoint.X;
                     }
                 }
 
@@ -347,7 +326,7 @@ namespace Geometry.Meshing
                     SplitIntoHalves(mesh,  out LowerSubset, out UpperSubset, CutDirection.VERTICAL);
                     return;
                 }*/
-                double[] borders = new double[] { BoundingBox.Bottom, nudgedDivisionPoint.Y, BoundingBox.Top };
+                double[] borders = [BoundingBox.Bottom, nudgedDivisionPoint.Y, BoundingBox.Top];
                 Array.Sort<double>(borders);
                 LowerHalfBBox = new GridRectangle(BoundingBox.Left, BoundingBox.Right, borders[0], borders[1]);
                 UpperHalfBBox = new GridRectangle(BoundingBox.Left, BoundingBox.Right, borders[1], borders[2]);
@@ -364,7 +343,7 @@ namespace Geometry.Meshing
                     return;
                 }
                 */
-                double[] borders = new double[] { BoundingBox.Left, nudgedDivisionPoint.X, BoundingBox.Right };
+                double[] borders = [BoundingBox.Left, nudgedDivisionPoint.X, BoundingBox.Right];
                 Array.Sort<double>(borders);
                 LowerHalfBBox = new GridRectangle(borders[0], borders[1], BoundingBox.Bottom, BoundingBox.Top);
                 UpperHalfBBox = new GridRectangle(borders[1], borders[2], BoundingBox.Bottom, BoundingBox.Top);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Reflection;
 
@@ -21,13 +21,7 @@ namespace Annotation
 
             string[] fields = args.Name.Split(',');
             string assemblyName = fields[0];
-            string assemblyCulture;
-            if (fields.Length < 2)
-                assemblyCulture = null;
-            else
-                assemblyCulture = fields[2].Substring(fields[2].IndexOf('=') + 1);
-
-
+            string assemblyCulture = fields.Length < 2 ? null : fields[2].Substring(fields[2].IndexOf('=') + 1);
             string assemblyFileName = assemblyName + ".dll";
             string assemblyPath;
 
@@ -41,7 +35,7 @@ namespace Annotation
             else
             {
                 assemblyPath = Path.Combine(applicationDirectory, assemblyFileName);
-            } 
+            }
 
             if (File.Exists(assemblyPath))
             {

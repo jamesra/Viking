@@ -12,15 +12,15 @@ namespace GeometryTests.Algorithms
         public void TestImprovedMedialAxis_SimpleRectangle()
         {
             // Create a simple rectangle (must be closed - first point == last point)
-            GridVector2[] rectanglePoints = new GridVector2[]
-            {
-                new GridVector2(0, 0),
-                new GridVector2(100, 0),
-                new GridVector2(100, 50),
-                new GridVector2(0, 50),
-                new GridVector2(0, 0)  // Close the ring
-            };
-            GridPolygon rectangle = new GridPolygon(rectanglePoints);
+            GridVector2[] rectanglePoints =
+            [
+                new(0, 0),
+                new(100, 0),
+                new(100, 50),
+                new(0, 50),
+                new(0, 0)  // Close the ring
+            ];
+            GridPolygon rectangle = new(rectanglePoints);
 
             // Calculate medial axis using improved algorithm
             MedialAxisGraph graph = MedialAxisFinder.ApproximateMedialAxisImproved(rectangle);
@@ -28,7 +28,7 @@ namespace GeometryTests.Algorithms
             // Verify we got a result
             Assert.IsNotNull(graph, "Medial axis graph should not be null");
             Assert.IsTrue(graph.Nodes.Count > 0, "Medial axis graph should have at least one node");
-            
+
             // Verify all nodes are within the boundary
             foreach (var node in graph.Nodes.Values)
             {
@@ -42,21 +42,21 @@ namespace GeometryTests.Algorithms
         public void TestImprovedMedialAxis_SimpleTriangle()
         {
             // Create a simple triangle (must be closed - first point == last point)
-            GridVector2[] trianglePoints = new GridVector2[]
-            {
-                new GridVector2(0, 0),
-                new GridVector2(100, 0),
-                new GridVector2(50, 86.6), // Approximately equilateral triangle
-                new GridVector2(0, 0)  // Close the ring
-            };
-            GridPolygon triangle = new GridPolygon(trianglePoints);
+            GridVector2[] trianglePoints =
+            [
+                new(0, 0),
+                new(100, 0),
+                new(50, 86.6), // Approximately equilateral triangle
+                new(0, 0)  // Close the ring
+            ];
+            GridPolygon triangle = new(trianglePoints);
 
             // Calculate medial axis using improved algorithm
             MedialAxisGraph graph = MedialAxisFinder.ApproximateMedialAxisImproved(triangle);
 
             // Verify we got a result
             Assert.IsNotNull(graph, "Medial axis graph should not be null");
-            
+
             // Verify all nodes are within the boundary
             foreach (var node in graph.Nodes.Values)
             {
@@ -70,17 +70,17 @@ namespace GeometryTests.Algorithms
         public void TestImprovedMedialAxis_LShapedPolygon()
         {
             // Create an L-shaped polygon (must be closed - first point == last point)
-            GridVector2[] lShapePoints = new GridVector2[]
-            {
-                new GridVector2(0, 0),
-                new GridVector2(100, 0),
-                new GridVector2(100, 50),
-                new GridVector2(50, 50),
-                new GridVector2(50, 100),
-                new GridVector2(0, 100),
-                new GridVector2(0, 0)  // Close the ring
-            };
-            GridPolygon lShape = new GridPolygon(lShapePoints);
+            GridVector2[] lShapePoints =
+            [
+                new(0, 0),
+                new(100, 0),
+                new(100, 50),
+                new(50, 50),
+                new(50, 100),
+                new(0, 100),
+                new(0, 0)  // Close the ring
+            ];
+            GridPolygon lShape = new(lShapePoints);
 
             // Calculate medial axis using improved algorithm
             MedialAxisGraph graph = MedialAxisFinder.ApproximateMedialAxisImproved(lShape);
@@ -88,7 +88,7 @@ namespace GeometryTests.Algorithms
             // Verify we got a result
             Assert.IsNotNull(graph, "Medial axis graph should not be null");
             Assert.IsTrue(graph.Nodes.Count > 0, "Medial axis graph should have at least one node for L-shape");
-            
+
             // Verify all nodes are within the boundary
             foreach (var node in graph.Nodes.Values)
             {
@@ -102,15 +102,15 @@ namespace GeometryTests.Algorithms
         public void TestImprovedMedialAxis_CompareWithOriginal_Rectangle()
         {
             // Create a simple rectangle (must be closed - first point == last point)
-            GridVector2[] rectanglePoints = new GridVector2[]
-            {
-                new GridVector2(0, 0),
-                new GridVector2(200, 0),
-                new GridVector2(200, 100),
-                new GridVector2(0, 100),
-                new GridVector2(0, 0)  // Close the ring
-            };
-            GridPolygon rectangle = new GridPolygon(rectanglePoints);
+            GridVector2[] rectanglePoints =
+            [
+                new(0, 0),
+                new(200, 0),
+                new(200, 100),
+                new(0, 100),
+                new(0, 0)  // Close the ring
+            ];
+            GridPolygon rectangle = new(rectanglePoints);
 
             // Calculate medial axis using both algorithms
             MedialAxisGraph originalGraph = MedialAxisFinder.ApproximateMedialAxis(rectangle);
@@ -144,15 +144,15 @@ namespace GeometryTests.Algorithms
         public void TestImprovedMedialAxis_CircumcentersAreEquidistant()
         {
             // Create a simple rectangle (must be closed - first point == last point)
-            GridVector2[] rectanglePoints = new GridVector2[]
-            {
-                new GridVector2(0, 0),
-                new GridVector2(100, 0),
-                new GridVector2(100, 50),
-                new GridVector2(0, 50),
-                new GridVector2(0, 0)  // Close the ring
-            };
-            GridPolygon rectangle = new GridPolygon(rectanglePoints);
+            GridVector2[] rectanglePoints =
+            [
+                new(0, 0),
+                new(100, 0),
+                new(100, 50),
+                new(0, 50),
+                new(0, 0)  // Close the ring
+            ];
+            GridPolygon rectangle = new(rectanglePoints);
 
             // Calculate medial axis using improved algorithm
             MedialAxisGraph graph = MedialAxisFinder.ApproximateMedialAxisImproved(rectangle);

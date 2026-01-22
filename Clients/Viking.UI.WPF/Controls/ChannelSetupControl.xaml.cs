@@ -9,7 +9,7 @@ namespace Viking.UI.WPF.Controls
 {
     public partial class ChannelSetupControl : UserControl
     {
-        private readonly List<ChannelPickerControl> _pickerControls = new List<ChannelPickerControl>();
+        private readonly List<ChannelPickerControl> _pickerControls = [];
         private IReadOnlyList<string> _channelNames = Array.Empty<string>();
 
         public ChannelSetupControl()
@@ -24,7 +24,7 @@ namespace Viking.UI.WPF.Controls
             {
                 if (GreyscaleRadio.IsChecked == true)
                 {
-                    return Array.Empty<ChannelInfo>();
+                    return [];
                 }
 
                 foreach (ChannelPickerControl control in _pickerControls)
@@ -32,13 +32,13 @@ namespace Viking.UI.WPF.Controls
                     control.CommitChanges();
                 }
 
-                return _pickerControls.Select(p => p.Info).ToArray();
+                return [.. _pickerControls.Select(p => p.Info)];
             }
         }
 
         public void SetChannelData(ChannelInfo[] channels, string[] channelNames)
         {
-            _channelNames = channelNames ?? Array.Empty<string>();
+            _channelNames = channelNames ?? [];
 
             ClearPickers();
 
@@ -70,7 +70,7 @@ namespace Viking.UI.WPF.Controls
 
         private void AddPicker(ChannelInfo channelInfo = null)
         {
-            ChannelPickerControl picker = new ChannelPickerControl
+            ChannelPickerControl picker = new()
             {
                 ChannelNames = _channelNames
             };
@@ -137,10 +137,7 @@ namespace Viking.UI.WPF.Controls
             }
         }
 
-        private void AddChannelButton_OnClick(object sender, RoutedEventArgs e)
-        {
-            AddPicker(new ChannelInfo());
-        }
+        private void AddChannelButton_OnClick(object sender, RoutedEventArgs e) => AddPicker(new ChannelInfo());
     }
 }
 

@@ -8,6 +8,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+// using VikingXNAGraphics; // Commented out due to framework compatibility (Monographics targets net9.0, this project targets net48)
 
 
 namespace MonogameWPFLibrary.Views
@@ -21,7 +22,8 @@ namespace MonogameWPFLibrary.Views
         private static RoutedUICommand resetRotationCommand;
         private static RoutedUICommand translateCameraPositionCommand;
 
-        private VikingXNAGraphics.CircleView cView = new VikingXNAGraphics.CircleView(new Geometry.GridCircle(new Geometry.GridVector2(0, 0), 25), Color.Goldenrod);
+        // TODO: CircleView is not accessible from net48 project (Monographics targets net9.0)
+        // private CircleView cView = new CircleView(new Geometry.GridCircle(new Geometry.GridVector2(0, 0), 25), Color.Goldenrod);
           
         /// <summary>
         /// Increment the center number
@@ -201,8 +203,9 @@ namespace MonogameWPFLibrary.Views
                 Effect AnnotationOverlayShader = this.Content.Load<Effect>("AnnotationOverlayShader");
                 VikingXNA.AnnotationOverBackgroundLumaEffect overlayEffect = new AnnotationOverBackgroundLumaEffect(AnnotationOverlayShader);
                 VikingXNA.Scene scene = new VikingXNA.Scene(device.Viewport, new VikingXNA.Camera());
-                scene.Camera.LookAt = cView.Circle.Center.ToXNAVector2();
-                VikingXNAGraphics.CircleView.Draw(device, scene, effect, overlayEffect, new VikingXNAGraphics.CircleView[] { cView });
+                // TODO: cView is commented out due to framework compatibility issue
+                // scene.Camera.LookAt = cView.Circle.Center.ToXNAVector2();
+                // VikingXNAGraphics.CircleView.Draw(device, scene, effect, overlayEffect, new VikingXNAGraphics.CircleView[] { cView });
                 */
             }
 

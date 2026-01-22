@@ -3,13 +3,9 @@ using System.Collections.Generic;
 
 namespace WebAnnotation
 {
-    internal class SortByDistance : IComparer<GridVector3>
+    internal class SortByDistance(GridVector3 Origin) : IComparer<GridVector3>
     {
-        public readonly GridVector3 Origin;
-        public SortByDistance(GridVector3 Origin)
-        {
-            this.Origin = Origin;
-        }
+        public readonly GridVector3 Origin = Origin;
 
         public int Compare(GridVector3 x, GridVector3 y)
         {

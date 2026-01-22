@@ -1,19 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Geometry
 {
-    public readonly struct GridLineSegmentPair : IComparable, IComparable<GridLineSegmentPair>
+    public readonly struct GridLineSegmentPair(GridLineSegment mapline, GridLineSegment ctrlline) : IComparable, IComparable<GridLineSegmentPair>
     {
-        public readonly GridLineSegment mapLine;
-        public readonly GridLineSegment ctrlLine;
-
-        public GridLineSegmentPair(GridLineSegment mapline, GridLineSegment ctrlline)
-        {
-            mapLine = mapline;
-            ctrlLine = ctrlline;
-        } 
+        public readonly GridLineSegment mapLine = mapline;
+        public readonly GridLineSegment ctrlLine = ctrlline;
 
         public override bool Equals(object obj)
         {
@@ -23,10 +17,7 @@ namespace Geometry
             return false;
         }
 
-        public override int GetHashCode()
-        {
-            return mapLine.GetHashCode();
-        }
+        public override int GetHashCode() => mapLine.GetHashCode();
 
         public int CompareTo(object obj)
         {
@@ -40,21 +31,15 @@ namespace Geometry
         public int CompareTo(GridLineSegmentPair other)
         {
             int result = mapLine.CompareTo(other.mapLine);
-            if (result == 0) 
+            if (result == 0)
                 result = ctrlLine.CompareTo(other.ctrlLine);
 
             return result;
         }
 
-        public static bool operator ==(in GridLineSegmentPair A, in GridLineSegmentPair B)
-        {
-            return (A.mapLine == B.mapLine) && (A.ctrlLine == B.ctrlLine);
-        }
+        public static bool operator ==(in GridLineSegmentPair A, in GridLineSegmentPair B) => (A.mapLine == B.mapLine) && (A.ctrlLine == B.ctrlLine);
 
-        public static bool operator !=(in GridLineSegmentPair A, in GridLineSegmentPair B)
-        {
-            return !((A.mapLine == B.mapLine) && (A.ctrlLine == B.ctrlLine));
-        }
+        public static bool operator !=(in GridLineSegmentPair A, in GridLineSegmentPair B) => !((A.mapLine == B.mapLine) && (A.ctrlLine == B.ctrlLine));
     }
 
     /// <summary>
@@ -356,10 +341,10 @@ namespace Geometry
                     //Build the edge and find out if it intersects
                     try
                     {
-                        GridLineSegment mapLine = new GridLineSegment(_mapPoints[iPoint].MappedPoint, _mapPoints[iEdgePoint].MappedPoint);
-                        GridLineSegment ctrlLine = new GridLineSegment(_mapPoints[iPoint].ControlPoint, _mapPoints[iEdgePoint].ControlPoint);
+                        GridLineSegment mapLine = new(_mapPoints[iPoint].MappedPoint, _mapPoints[iEdgePoint].MappedPoint);
+                        GridLineSegment ctrlLine = new(_mapPoints[iPoint].ControlPoint, _mapPoints[iEdgePoint].ControlPoint);
 
-                        GridLineSegmentPair pair = new GridLineSegmentPair(mapline: mapLine, ctrlline: ctrlLine);
+                        GridLineSegmentPair pair = new(mapline: mapLine, ctrlline: ctrlLine);
 
                         IEnumerable<Coord> Coords = GetCoordsForLine(mapLine);
                         foreach (Coord coord in Coords)
@@ -381,10 +366,7 @@ namespace Geometry
             }
         }
 
-        private Coord GetCoord(GridVector2 position)
-        {
-            return GetCoord(position.X, position.Y);
-        }
+        private Coord GetCoord(GridVector2 position) => GetCoord(position.X, position.Y);
 
         private Coord GetCoord(double x, double y)
         {
@@ -424,7 +406,7 @@ namespace Geometry
             int iEndX = Math.Max(start.iX, end.iX);
             int iEndY = Math.Max(start.iY, end.iY);
 
-            List<Coord> listCoords = new List<Coord>(Math.Abs(end.iX - start.iX) * Math.Abs(end.iY - start.iY));
+            List<Coord> listCoords = new(Math.Abs(end.iX - start.iX) * Math.Abs(end.iY - start.iY));
             if (start.iX == end.iX)
             {
 
@@ -501,7 +483,7 @@ namespace Geometry
                 listCoords.Add(end);
                 listCoords.Sort();
 
-                List<Coord> uniqueCoords = new List<Coord>(listCoords.Count);
+                List<Coord> uniqueCoords = new(listCoords.Count);
 
                 //Remove duplicates
                 foreach (Coord coord in listCoords)

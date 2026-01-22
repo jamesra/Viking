@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -135,23 +135,20 @@ namespace Viking.UI.BaseClasses
 
                 //If we clicked an item on the list, show the context menu for the item.
                 //Otherwise, show the generic context menu for the item type the list shows. 
-                ContextMenuStrip menu = new ContextMenuStrip();
+                ContextMenuStrip menu = new();
                 menu = ExtensionManager.CreateContextMenuFromProviders(Item?.Tag, menu);
                 menu = ExtensionManager.CreateContextMenuFromProviders(this.GetType(), menu);
                 menu.Show(this, PointToScreen(e.Location));
             }
         }
 
-        public void DisplayObjects(IUIObject[] Objects)
-        {
-            ListItems.DisplayObjects(Objects);
-        }
+        public void DisplayObjects(IUIObject[] Objects) => ListItems.DisplayObjects(Objects);
 
         private void ListItems_MouseDoubleClick(object sender, MouseEventArgs e)
         {
             ListViewItem item = this.ListItems.GetItemAt(e.X, e.Y);
 
-            if (!(item?.Tag is IUIObject obj))
+            if (item?.Tag is not IUIObject obj)
                 return;
 
             OnObjectDoubleClick(obj);
@@ -161,10 +158,7 @@ namespace Viking.UI.BaseClasses
         private readonly CancelEventHandler? OnParentFormClosing = null;
         private readonly Form? _ParentForm = null;
 
-        protected virtual void parentForm_Closing(object sender, CancelEventArgs e)
-        {
-            this.ClearItems();
-        }
+        protected virtual void parentForm_Closing(object sender, CancelEventArgs e) => this.ClearItems();
 
         protected override void OnParentBindingContextChanged(EventArgs e)
         {

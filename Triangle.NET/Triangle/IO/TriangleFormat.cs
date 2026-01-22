@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="TriangleFormat.cs" company="">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -39,7 +39,7 @@ namespace TriangleNet.IO
 
                 if (geometry != null && triangles != null)
                 {
-                    return Converter.ToMesh(geometry, triangles.ToArray());
+                    return Converter.ToMesh(geometry, [.. triangles]);
                 }
             }
 
@@ -48,16 +48,13 @@ namespace TriangleNet.IO
 
         public void Write(IMesh mesh, string filename)
         {
-            var writer = new TriangleWriter();
+            TriangleWriter writer = new();
 
             writer.WritePoly((Mesh)mesh, Path.ChangeExtension(filename, ".poly"));
             writer.WriteElements((Mesh)mesh, Path.ChangeExtension(filename, ".ele"));
         }
 
-        public void Write(IMesh mesh, Stream stream)
-        {
-            throw new NotImplementedException();
-        }
+        public void Write(IMesh mesh, Stream stream) => throw new NotImplementedException();
 
         public IPolygon Read(string filename)
         {
@@ -76,14 +73,8 @@ namespace TriangleNet.IO
         }
 
 
-        public void Write(IPolygon polygon, string filename)
-        {
-            (new TriangleWriter()).WritePoly(polygon, filename);
-        }
+        public void Write(IPolygon polygon, string filename) => (new TriangleWriter()).WritePoly(polygon, filename);
 
-        public void Write(IPolygon polygon, Stream stream)
-        {
-            throw new NotImplementedException();
-        }
+        public void Write(IPolygon polygon, Stream stream) => throw new NotImplementedException();
     }
 }

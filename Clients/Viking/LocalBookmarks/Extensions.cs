@@ -6,53 +6,38 @@ namespace LocalBookmarks
     {
         public static ShapeType ToShape(this string shape)
         {
-            switch (shape.ToUpper())
+            return shape.ToUpper() switch
             {
-                case "ARROW":
-                    return ShapeType.ARROW;
-                case "RING":
-                    return ShapeType.RING;
-                case "STAR":
-                    return ShapeType.STAR;
-                case "INHERIT":
-                    return ShapeType.INHERIT;
-                default:
-                    throw new ArgumentException("Unknown shape: " + shape);
-            }
+                "ARROW" => ShapeType.ARROW,
+                "RING" => ShapeType.RING,
+                "STAR" => ShapeType.STAR,
+                "INHERIT" => ShapeType.INHERIT,
+                _ => throw new ArgumentException("Unknown shape: " + shape),
+            };
         }
 
         public static string ToShapeString(this ShapeType shape)
         {
-            switch (shape)
+            return shape switch
             {
-                case ShapeType.ARROW:
-                    return "Arrow";
-                case ShapeType.RING:
-                    return "Ring";
-                case ShapeType.STAR:
-                    return "Star";
-                case ShapeType.INHERIT:
-                    return "Inherit";
-                default:
-                    throw new ArgumentException("Unknown shape: " + shape.ToString());
-            }
+                ShapeType.ARROW => "Arrow",
+                ShapeType.RING => "Ring",
+                ShapeType.STAR => "Star",
+                ShapeType.INHERIT => "Inherit",
+                _ => throw new ArgumentException("Unknown shape: " + shape.ToString()),
+            };
         }
 
         public static Microsoft.Xna.Framework.Graphics.Texture2D? ToTexture(this ShapeType shape)
         {
-            switch (shape)
+            return shape switch
             {
-                case ShapeType.ARROW:
-                    return BookmarkOverlay.ArrowTexture;
-                case ShapeType.RING:
-                    return BookmarkOverlay.RingTexture;
-                case ShapeType.STAR:
-                    return BookmarkOverlay.StarTexture;
-                case ShapeType.INHERIT:
-                    return null;
-                default:
-                    throw new ArgumentException("Unknown shape: " + shape.ToString());
-            }
+                ShapeType.ARROW => BookmarkOverlay.ArrowTexture,
+                ShapeType.RING => BookmarkOverlay.RingTexture,
+                ShapeType.STAR => BookmarkOverlay.StarTexture,
+                ShapeType.INHERIT => null,
+                _ => throw new ArgumentException("Unknown shape: " + shape.ToString()),
+            };
         }
     }
 }

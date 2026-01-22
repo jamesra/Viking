@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
+    <ProjectReference Include="..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
   </ItemGroup>
 

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="Point.cs" company="">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -11,13 +11,13 @@ namespace TriangleNet.Geometry
     /// <summary>
     /// Represents a 2D point.
     /// </summary>
-    public class Point : IComparable<Point>, IEquatable<Point>
+    public class Point(double x, double y, int label) : IComparable<Point>, IEquatable<Point>
     {
         internal int id;
-        internal int label;
+        internal int label = label;
 
-        internal double x;
-        internal double y;
+        internal double x = x;
+        internal double y = y;
 #if USE_Z
         internal double z;
 #endif
@@ -30,13 +30,6 @@ namespace TriangleNet.Geometry
         public Point(double x, double y)
             : this(x, y, 0)
         {
-        }
-
-        public Point(double x, double y, int label)
-        {
-            this.x = x;
-            this.y = y;
-            this.label = label;
         }
 
         #region Public properties
@@ -115,10 +108,7 @@ namespace TriangleNet.Geometry
             return a.Equals(b);
         }
 
-        public static bool operator !=(Point a, Point b)
-        {
-            return !(a == b);
-        }
+        public static bool operator !=(Point a, Point b) => !(a == b);
 
         public override bool Equals(object obj)
         {
@@ -127,8 +117,8 @@ namespace TriangleNet.Geometry
             {
                 return false;
             }
-             
-            if (!(obj is Point p))
+
+            if (obj is not Point p)
             {
                 return false;
             }
@@ -169,9 +159,6 @@ namespace TriangleNet.Geometry
             return hash;
         }
 
-        public override string ToString()
-        {
-            return String.Format("[{0},{1}]", x, y);
-        }
+        public override string ToString() => String.Format("[{0},{1}]", x, y);
     }
 }

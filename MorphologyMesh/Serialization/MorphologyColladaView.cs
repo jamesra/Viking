@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationVizLib;
 using Geometry;
 using Geometry.Meshing;
@@ -23,17 +23,13 @@ namespace MorphologyMesh
         /// <returns></returns>
         public static string CreateKey(COLORSOURCE source, IStructureReadOnly structure)
         {
-            switch (source)
+            return source switch
             {
-                case COLORSOURCE.STRUCTURE:
-                    return string.Format("Structure{0}", structure.ID);
-                case COLORSOURCE.STRUCTURETYPE:
-                    return string.Format("Type{0}", structure.TypeID);
-                case COLORSOURCE.LOCATION:
-                    return string.Format("Structure{0}", structure.ID);
-                default:
-                    return string.Format("Default");
-            }
+                COLORSOURCE.STRUCTURE => string.Format("Structure{0}", structure.ID),
+                COLORSOURCE.STRUCTURETYPE => string.Format("Type{0}", structure.TypeID),
+                COLORSOURCE.LOCATION => string.Format("Structure{0}", structure.ID),
+                _ => string.Format("Default"),
+            };
         }
 
         /// <summary>
@@ -44,17 +40,13 @@ namespace MorphologyMesh
         /// <returns></returns>
         public static string CreateKey(COLORSOURCE source, ulong ID)
         {
-            switch (source)
+            return source switch
             {
-                case COLORSOURCE.STRUCTURE:
-                    return string.Format("Structure{0}", ID);
-                case COLORSOURCE.STRUCTURETYPE:
-                    return string.Format("Type{0}", ID);
-                case COLORSOURCE.LOCATION:
-                    return string.Format("Structure{0}", ID);
-                default:
-                    return string.Format("Default");
-            }
+                COLORSOURCE.STRUCTURE => string.Format("Structure{0}", ID),
+                COLORSOURCE.STRUCTURETYPE => string.Format("Type{0}", ID),
+                COLORSOURCE.LOCATION => string.Format("Structure{0}", ID),
+                _ => string.Format("Default"),
+            };
         }
 
         /// <summary>
@@ -84,9 +76,9 @@ namespace MorphologyMesh
         public string FXName => Key + "-fx";
     }
 
-    public class StructureModel
+    public class StructureModel(ulong id, IReadOnlyMesh3D<IVertex3D> mesh, MaterialLighting mat)
     {
-        public readonly ulong ID;
+        public readonly ulong ID = id;
 
         public string Name => $"Struct-{ID}";
 
@@ -103,26 +95,13 @@ namespace MorphologyMesh
         public string InstanceURL => GeometryURL is null ? "#" + NodeName : string.Format("{0}#{1}", GeometryURL, NodeName);
 
 
-        public readonly IReadOnlyMesh3D<IVertex3D> Mesh;
+        public readonly IReadOnlyMesh3D<IVertex3D> Mesh = mesh;
 
-        public readonly MaterialLighting Material;
+        public readonly MaterialLighting Material = mat;
 
-        private readonly SortedList<ulong, StructureModel> _ChildStructures = new SortedList<ulong, StructureModel>();
+        private readonly SortedList<ulong, StructureModel> _ChildStructures = [];
 
         public IReadOnlyDictionary<ulong, StructureModel> ChildStructures => _ChildStructures as IReadOnlyDictionary<ulong, StructureModel>;
-
-        public StructureModel(ulong id, IReadOnlyMesh3D<IVertex3D> mesh, MaterialLighting mat)
-        {
-            ID = id;
-            Mesh = mesh;
-            Material = mat;
-            
-            //GridVector3 TranslationVector = mesh.BoundingBox.CenterPoint;
-
-            //Mesh.Translate(TranslationVector);
-
-            //Translation = TranslationVector;
-        }
 
         private GridVector3 _Translation;
 
@@ -143,7 +122,7 @@ namespace MorphologyMesh
         {
             child.Translation -= this.Translation;
             //child.Translation = child.Translation;
-            _ChildStructures.Add(child.ID, child); 
+            _ChildStructures.Add(child.ID, child);
         }
 
         /// <summary>
@@ -152,13 +131,11 @@ namespace MorphologyMesh
         /// <returns></returns>
         public List<StructureModel> ModelsInTree()
         {
-            List<StructureModel> listModel = new List<MorphologyMesh.StructureModel>
-            {
-                this
-            };
-
-            listModel.AddRange(this.ChildStructures.Values.SelectMany(cs => cs.ModelsInTree()));
-            return listModel; 
+            List<StructureModel> listModel =
+            [
+                this, .. this.ChildStructures.Values.SelectMany(cs => cs.ModelsInTree())
+            ];
+            return listModel;
         }
     }
 
@@ -190,11 +167,11 @@ namespace MorphologyMesh
 
         readonly StructureColorMap Colormap = null;
 
-        public SortedDictionary<ulong, StructureModel> RootModels = new SortedDictionary<ulong, StructureModel>();
+        public SortedDictionary<ulong, StructureModel> RootModels = [];
 
-        public SortedDictionary<ulong, StructureModel> StructureModels = new SortedDictionary<ulong, StructureModel>();
+        public SortedDictionary<ulong, StructureModel> StructureModels = [];
 
-        public SortedDictionary<string, MaterialLighting> Materials = new SortedDictionary<string, MaterialLighting>();
+        public SortedDictionary<string, MaterialLighting> Materials = [];
 
         #region IColladaScene
         string IColladaScene.Title => SceneTitle;
@@ -212,8 +189,7 @@ namespace MorphologyMesh
         public BasicColladaView(IAxisUnits scale, StructureMorphologyColorMap colormap)
         {
             Colormap = colormap;
-            if (Colormap is null)
-                Colormap = new StructureColorMap(null, null);
+            Colormap ??= new StructureColorMap(null, null);
 
             this.Scale = scale;
         }
@@ -239,7 +215,7 @@ namespace MorphologyMesh
             System.Drawing.Color color = Colormap.GetColor(structure, out source);
 
             MaterialLighting material = GetOrAddMaterial(source, structure, color);
-            StructureModel model = new MorphologyMesh.StructureModel(structure.ID, structureMesh, material);
+            StructureModel model = new(structure.ID, structureMesh, material);
 
             AddModel(model);
 
@@ -254,9 +230,9 @@ namespace MorphologyMesh
         private void AddModel(StructureModel model)
         {
             StructureModels[model.ID] = model;
-            
+
             GetOrAddMaterial(model.Material);
-            
+
             foreach (var child in model.ChildStructures.Values)
             {
                 StructureModels[child.ID] = child;
@@ -292,7 +268,7 @@ namespace MorphologyMesh
         /// <returns></returns>
         private MaterialLighting GetOrAddMaterial(COLORSOURCE source, IStructureReadOnly structure, Color color)
         {
-            MaterialLighting matLighting = new MorphologyMesh.MaterialLighting(source, structure, color);
+            MaterialLighting matLighting = new(source, structure, color);
             if (Materials.TryGetValue(matLighting.Key, out var material))
             {
                 matLighting = material;
@@ -317,11 +293,11 @@ namespace MorphologyMesh
 
         readonly StructureMorphologyColorMap Colormap = null;
 
-        public SortedDictionary<ulong, StructureModel> RootModels = new SortedDictionary<ulong, StructureModel>();
+        public SortedDictionary<ulong, StructureModel> RootModels = [];
 
-        public SortedDictionary<ulong, StructureModel> StructureModels = new SortedDictionary<ulong, StructureModel>();
+        public SortedDictionary<ulong, StructureModel> StructureModels = [];
 
-        public SortedDictionary<string, MaterialLighting> Materials = new SortedDictionary<string, MaterialLighting>();
+        public SortedDictionary<string, MaterialLighting> Materials = [];
 
         #region IColladaScene
         string IColladaScene.Title => SceneTitle;
@@ -339,8 +315,7 @@ namespace MorphologyMesh
         public MorphologyColladaView(UnitsAndScale.IScale scale, StructureMorphologyColorMap colormap)
         {
             Colormap = colormap;
-            if (Colormap is null)
-                Colormap = new StructureMorphologyColorMap(null, null, null);
+            Colormap ??= new StructureMorphologyColorMap(null, null, null);
 
             Scale = scale;
         }
@@ -362,13 +337,10 @@ namespace MorphologyMesh
                 {
                     Add(child);
                 }
-            } 
+            }
         }
 
-        private StructureModel AddModel(MorphologyGraph structure)
-        {
-            throw new NotImplementedException("Look at BajajMultiTest.SaveMeshes before putting this in production.");
-            /*
+        private StructureModel AddModel(MorphologyGraph structure) => throw new NotImplementedException("Look at BajajMultiTest.SaveMeshes before putting this in production.");/*
             //MeshGraph meshGraph = structure.ConvertToMeshGraph();
             //SmoothMeshGenerator.Generate(meshGraph);
             //DynamicRenderMesh<ulong> structureMesh = TopologyMeshGenerator.Generate(meshGraph);
@@ -397,7 +369,6 @@ namespace MorphologyMesh
 
             return model;
             */
-        }
 
         /// <summary>
         /// Ensure the material is added to our dictionary and return the key
@@ -407,7 +378,7 @@ namespace MorphologyMesh
         /// <returns></returns>
         private MaterialLighting GetOrAddMaterial(COLORSOURCE source, IStructureReadOnly structure, Color color)
         {
-            MaterialLighting matLighting = new MorphologyMesh.MaterialLighting(source, structure, color);
+            MaterialLighting matLighting = new(source, structure, color);
             if (Materials.TryGetValue(matLighting.Key, out var material))
             {
                 matLighting = material;

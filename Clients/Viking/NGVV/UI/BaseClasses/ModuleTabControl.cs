@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Windows.Forms;
 
@@ -22,13 +22,13 @@ namespace Viking.UI.BaseClasses
                 try
                 {
 #endif
-                object? Obj = Activator.CreateInstance(ModuleTabType);
-                if (Obj is not Viking.Common.ITabExtension tab)
-                    continue;
+                    object? Obj = Activator.CreateInstance(ModuleTabType);
+                    if (Obj is not Viking.Common.ITabExtension tab)
+                        continue;
 
-                TabPage? Page = tab.GetPage();
-                if (Page != null)
-                    this.TabsModules.TabPages.Add(Page);
+                    TabPage? Page = tab.GetPage();
+                    if (Page != null)
+                        this.TabsModules.TabPages.Add(Page);
 #if !DEBUG
                 }
                 catch (Exception Except)

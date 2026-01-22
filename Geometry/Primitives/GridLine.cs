@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Geometry
@@ -74,10 +74,7 @@ namespace Geometry
             this.Direction = GridVector2.Normalize(new GridVector2(dir.X, dir.Y));
         }
 
-        public override string ToString()
-        {
-            return $"Line Origin {Origin} Direction {Direction}";
-        }
+        public override string ToString() => $"Line Origin {Origin} Direction {Direction}";
 
         public bool Intersects(GridLine seg, out GridVector2 Intersection)
         {
@@ -122,17 +119,14 @@ namespace Geometry
             }
         }
 
-        public GridLine Perpendicular()
-        {
-            return new GridLine(this.Origin, GridVector2.Rotate90(Direction));
-        }
+        public GridLine Perpendicular() => new GridLine(this.Origin, GridVector2.Rotate90(Direction));
 
         public bool Intersects(GridLineSegment seg, out GridVector2 Intersection)
         {
             //Function for each line
             //Ax + By = C
             Intersection = new GridVector2();
-              
+
             if (this.Direction == seg.Direction)
                 return false;
 
@@ -177,7 +171,7 @@ namespace Geometry
         {
             GridVector2 endpoint = this.Direction * Length;
             endpoint += this.Origin;
-            GridLineSegment output = new GridLineSegment(this.Origin, endpoint);
+            GridLineSegment output = new(this.Origin, endpoint);
             System.Diagnostics.Debug.Assert(Math.Abs(output.Length - Length) < Global.Epsilon, "Created line does not match requested length");
             return output;
         }

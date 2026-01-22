@@ -1,4 +1,4 @@
-﻿using SqlGeometryUtils;
+using SqlGeometryUtils;
 using System;
 using System.Threading.Tasks;
 using Viking.AnnotationServiceTypes.Interfaces;
@@ -45,7 +45,7 @@ namespace WebAnnotation.View
                 case LocationType.CURVEPOLYGON:
                 case LocationType.POLYGON:
                     {
-                        LocationPolygonView polyview = new LocationPolygonView(obj, mapping);
+                        LocationPolygonView polyview = new(obj, mapping);
                         Task.Run(() => polyview.Initialize());
                         return polyview;
                     }
@@ -90,12 +90,12 @@ namespace WebAnnotation.View
                 case LocationType.CURVEPOLYGON:
                 case LocationType.CLOSEDCURVE:
                     {
-                        AdjacentLocationCircleView view = new AdjacentLocationCircleView(obj, obj.MosaicShape.CalculateInscribedCircle(), mapping);
+                        AdjacentLocationCircleView view = new(obj, obj.MosaicShape.CalculateInscribedCircle(), mapping);
                         return view;
                     }
                 case LocationType.POLYLINE:
                     {
-                        AdjacentLocationLineView view = new AdjacentLocationLineView(obj, mapping)
+                        AdjacentLocationLineView view = new(obj, mapping)
                         {
                             Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f)
                         };
@@ -128,7 +128,7 @@ namespace WebAnnotation.View
                 case LocationType.CIRCLE:
                     return new StructureLinkCirclesView(key, mapper);
                 case LocationType.OPENCURVE:
-                    StructureLinkCurvesView view = new StructureLinkCurvesView(key, mapper);
+                    StructureLinkCurvesView view = new(key, mapper);
                     return view;
                 case LocationType.POLYLINE:
                     return new StructureLinkCurvesView(key, mapper);

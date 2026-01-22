@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using System;
 using System.Collections.Generic;
 
@@ -8,7 +8,7 @@ namespace AnnotationVizLib.SimpleOData
     {
         public static LocationLink FromDictionary(IDictionary<string, object> dict)
         {
-            LocationLink ll = new LocationLink { A = System.Convert.ToUInt64(dict["A"]), B = System.Convert.ToUInt64(dict["B"]) };
+            LocationLink ll = new() { A = System.Convert.ToUInt64(dict["A"]), B = System.Convert.ToUInt64(dict["B"]) };
             return ll;
         }
 
@@ -29,9 +29,6 @@ namespace AnnotationVizLib.SimpleOData
             return false;
         }
 
-        public bool Equals(LocationLink other)
-        {
-            return this.Equals((ILocationLink)other);
-        }
+        public bool Equals(LocationLink other) => this.Equals((ILocationLink)other);
     }
 }

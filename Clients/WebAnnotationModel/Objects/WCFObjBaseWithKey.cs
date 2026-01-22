@@ -36,7 +36,7 @@ namespace WebAnnotationModel.Objects
                 return true;
             }
 
-            if (A is object)
+            if (A is not null)
                 return A.Equals(B);
 
             return false;
@@ -49,7 +49,7 @@ namespace WebAnnotationModel.Objects
                 return false;
             }
 
-            if (A is object)
+            if (A is not null)
                 return !A.Equals(B);
 
             return true;

@@ -52,7 +52,7 @@ namespace Viking.Common
             if (url is null)
                 return null;
 
-            Uri WebsiteURI = new Uri(url);
+            Uri WebsiteURI = new(url);
             string path = WebsiteURI.GetComponents(UriComponents.Path, UriFormat.SafeUnescaped);
             if (!path.Contains('.'))
             {

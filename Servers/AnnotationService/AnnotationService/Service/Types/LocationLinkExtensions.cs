@@ -4,7 +4,7 @@
     {
         public static LocationLink Create(this ConnectomeDataModel.LocationLink link)
         {
-            LocationLink ll = new LocationLink
+            LocationLink ll = new()
             {
                 SourceID = link.A,
                 TargetID = link.B

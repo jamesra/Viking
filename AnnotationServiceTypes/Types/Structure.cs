@@ -1,4 +1,4 @@
-﻿using Annotation;
+using Annotation;
 using ProtoBuf;
 using System;
 using System.Runtime.Serialization;
@@ -15,13 +15,17 @@ namespace AnnotationService.Types
 
         [ProtoMember(1)]
         [DataMember]
-        public Structure structure { get => _structure;
+        public Structure structure
+        {
+            get => _structure;
             set => _structure = value;
         }
 
         [ProtoMember(2)]
         [DataMember]
-        public Location location { get => _location;
+        public Location location
+        {
+            get => _location;
             set => _location = value;
         }
 

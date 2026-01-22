@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using System;
 
@@ -15,7 +15,7 @@ namespace VikingXNAGraphics.Controls
     };
 
 
-    
+
 
     /// <summary>
     /// Pairs the view of a circular button control with support for clicking the button
@@ -42,8 +42,10 @@ namespace VikingXNAGraphics.Controls
         /// <returns></returns>
         public static CircularButton CreateSimple(GridCircle circle, Microsoft.Xna.Framework.Color color, Action action)
         {
-            CircularButton obj = new CircularButton(circle, color);
-            obj.OnClick = new InputDeviceEventConsumerDelegate((sender, position, input_source, input_data) => { action(); return true; });
+            CircularButton obj = new(circle, color)
+            {
+                OnClick = new InputDeviceEventConsumerDelegate((sender, position, input_source, input_data) => { action(); return true; })
+            };
             return obj;
         }
 
@@ -56,39 +58,42 @@ namespace VikingXNAGraphics.Controls
         /// <returns></returns>
         public static CircularButton CreateSimple(CircleView view, Action action)
         {
-            CircularButton obj = new CircularButton(view);
-            obj.OnClick = new InputDeviceEventConsumerDelegate((sender, position, input_source, input_data) => { action(); return true; });
+            CircularButton obj = new(view)
+            {
+                OnClick = new InputDeviceEventConsumerDelegate((sender, position, input_source, input_data) => { action(); return true; })
+            };
             return obj;
         }
 
-        public CircularButton(CircleView view, InputDeviceEventConsumerDelegate OnClick =null)
+        public CircularButton(CircleView view, InputDeviceEventConsumerDelegate OnClick = null)
         {
             this.circleView = view;
 
-            if(OnClick != null)
+            if (OnClick != null)
                 this.OnClick = OnClick;
         }
 
-        public CircularButton(GridCircle circle, Microsoft.Xna.Framework.Color color, InputDeviceEventConsumerDelegate OnClick =null)
+        public CircularButton(GridCircle circle, Microsoft.Xna.Framework.Color color, InputDeviceEventConsumerDelegate OnClick = null)
         {
             this.circleView = new CircleView(circle, color);
-            if(OnClick != null)
+            if (OnClick != null)
                 this.OnClick += OnClick;
         }
 
         public GridRectangle BoundingBox => circleView.Circle.BoundingBox;
 
-        public Color Color { get => circleView.Color;
+        public Color Color
+        {
+            get => circleView.Color;
             set => circleView.Color = value;
         }
-        public float Alpha { get => circleView.Alpha;
+        public float Alpha
+        {
+            get => circleView.Alpha;
             set => circleView.Alpha = value;
         }
 
-        public bool Contains(GridVector2 Position)
-        {
-            return Circle.Intersects(Position);
-        }
-        
+        public bool Contains(GridVector2 Position) => Circle.Intersects(Position);
+
     }
 }

@@ -1,5 +1,5 @@
 using System;
-using System.Windows; 
+using System.Windows;
 
 namespace Viking.UI.WPF.PropertyPages
 {
@@ -29,10 +29,7 @@ namespace Viking.UI.WPF.PropertyPages
             Close();
         }
 
-        private void ApplyClick(object sender, RoutedEventArgs e)
-        {
-            ApplyInternal();
-        }
+        private void ApplyClick(object sender, RoutedEventArgs e) => ApplyInternal();
 
         private bool ApplyInternal()
         {
@@ -63,6 +60,6 @@ namespace Viking.UI.WPF.PropertyPages
             DialogResult = false;
             Close();
         }
-    } 
+    }
 }
 

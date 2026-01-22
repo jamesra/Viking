@@ -11,32 +11,26 @@ namespace TriangleNet
     /// <summary>
     /// Configure advanced aspects of the library.
     /// </summary>
-    public class Configuration
+    public class Configuration(Func<IPredicates> predicates, Func<TrianglePool> trianglePool)
     {
         public Configuration()
-            : this(() => RobustPredicates.Default, () => new TrianglePool())
+            : this(() => RobustPredicates.Default, () => [])
         {
         }
 
         public Configuration(Func<IPredicates> predicates)
-            : this(predicates, () => new TrianglePool())
+            : this(predicates, () => [])
         {
-        }
-
-        public Configuration(Func<IPredicates> predicates, Func<TrianglePool> trianglePool)
-        {
-            Predicates = predicates;
-            TrianglePool = trianglePool;
         }
 
         /// <summary>
         /// Gets or sets the factory method for the <see cref="IPredicates"/> implementation.
         /// </summary>
-        public Func<IPredicates> Predicates { get; set; }
+        public Func<IPredicates> Predicates { get; set; } = predicates;
 
         /// <summary>
         /// Gets or sets the factory method for the <see cref="TrianglePool"/>.
         /// </summary>
-        public Func<TrianglePool> TrianglePool { get; set; }
+        public Func<TrianglePool> TrianglePool { get; set; } = trianglePool;
     }
 }

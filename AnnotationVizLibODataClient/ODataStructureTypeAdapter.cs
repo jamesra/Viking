@@ -1,17 +1,13 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using ODataClient.ConnectomeDataModel;
 using System;
 using System.Linq;
 
 namespace AnnotationVizLib.OData
 {
-    class ODataStructureTypeAdapter : IStructureTypeReadOnly
+    class ODataStructureTypeAdapter(StructureType t) : IStructureTypeReadOnly
     {
-        private readonly StructureType type;
-        public ODataStructureTypeAdapter(StructureType t)
-        {
-            type = t ?? throw new ArgumentNullException();
-        }
+        private readonly StructureType type = t ?? throw new ArgumentNullException();
 
         public ulong ID => (ulong)type.ID;
 
@@ -21,13 +17,7 @@ namespace AnnotationVizLib.OData
 
         public ulong? ParentID => (ulong?)type.ParentID;
 
-        public string[] Tags
-        {
-            get
-            {
-                return ObjAttribute.Parse(type.Tags).Select(a => a.ToString()).ToArray();
-            }
-        }
+        public string[] Tags => [.. ObjAttribute.Parse(type.Tags).Select(a => a.ToString())];
 
         public bool Equals(IStructureTypeReadOnly other)
         {
@@ -40,9 +30,6 @@ namespace AnnotationVizLib.OData
             return false;
         }
 
-        public bool Equals(StructureType other)
-        {
-            return this.Equals((IStructureTypeReadOnly)other);
-        }
+        public bool Equals(StructureType other) => this.Equals((IStructureTypeReadOnly)other);
     }
 }

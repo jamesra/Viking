@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
 using Viking.Common;
 
@@ -9,7 +9,7 @@ namespace WebAnnotation.UI
     [PropertyPage(typeof(StructureTypeObj), 2)]
     public partial class StructureTypesRelationsPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        private StructureTypeObj Obj = null;
+        private StructureTypeObj? Obj = null;
 
         public StructureTypesRelationsPage()
         {
@@ -33,11 +33,6 @@ namespace WebAnnotation.UI
             }
         }
 
-        protected override void OnSaveChanges()
-        {
-
-            Obj.Parent = linkParent.SourceObject as StructureTypeObj;
-
-        }
+        protected override void OnSaveChanges() => Obj.Parent = linkParent.SourceObject as StructureTypeObj;
     }
 }

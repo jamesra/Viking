@@ -36,18 +36,16 @@ namespace WebAnnotation.UI.Actions
             return a.Execute;
         }
 
-        public IRenderable Passive { get; set; } = null;
+        public IRenderable? Passive { get; set; } = null;
 
-        public IRenderable Active { get; set; } = null;
+        public IRenderable? Active { get; set; } = null;
 
         public BuiltinTexture Icon { get; set; } = BuiltinTexture.None;
 
-        public ChangeToPolygonAction(LocationObj location, GridPolygon newVolumePolygon, IVolumeToSectionTransform transform = null)
+        public ChangeToPolygonAction(LocationObj location, GridPolygon newVolumePolygon, IVolumeToSectionTransform? transform = null)
         {
             Location = location;
-            Transform = transform == null ?
-                WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform
-                : transform;
+            Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
             NewVolumePolygon = newVolumePolygon;
             NewSmoothVolumePolygon = NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
 
@@ -74,7 +72,7 @@ namespace WebAnnotation.UI.Actions
 
         public void CreateDefaultVisuals()
         {
-            SolidPolygonView view = new SolidPolygonView(NewSmoothVolumePolygon, Color.Green.SetAlpha(0.5f));
+            SolidPolygonView view = new(NewSmoothVolumePolygon, Color.Green.SetAlpha(0.5f));
             Passive = view;
             Active = new SolidPolygonView(NewSmoothVolumePolygon, Color.Green.SetAlpha(1f));
         }
@@ -91,8 +89,7 @@ namespace WebAnnotation.UI.Actions
                 return false;
             }
 
-            ChangeToPolygonAction other_action = other as ChangeToPolygonAction;
-            if (other_action == null)
+            if (other is not ChangeToPolygonAction other_action)
             {
                 return false;
             }
@@ -138,18 +135,16 @@ namespace WebAnnotation.UI.Actions
             return a.Execute;
         }
 
-        public IRenderable Passive { get; set; } = null;
+        public IRenderable? Passive { get; set; } = null;
 
-        public IRenderable Active { get; set; } = null;
+        public IRenderable? Active { get; set; } = null;
 
         public BuiltinTexture Icon { get; set; } = BuiltinTexture.None;
 
-        public ChangeToPolylineAction(LocationObj location, GridPolyline newVolumePolyline, IVolumeToSectionTransform transform = null)
+        public ChangeToPolylineAction(LocationObj location, GridPolyline newVolumePolyline, IVolumeToSectionTransform? transform = null)
         {
             Location = location;
-            Transform = transform == null ?
-                WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform
-                : transform;
+            Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
             NewVolumePolyline = newVolumePolyline;
             NewSmoothVolumePolyline = NewVolumePolyline.Smooth(Global.NumClosedCurveInterpolationPoints);
 
@@ -167,7 +162,7 @@ namespace WebAnnotation.UI.Actions
 
         public void CreateDefaultVisuals()
         {
-            PolyLineView view = new PolyLineView(NewSmoothVolumePolyline, Color.Green.SetAlpha(0.5f));
+            PolyLineView view = new(NewSmoothVolumePolyline, Color.Green.SetAlpha(0.5f));
             Passive = view;
             Active = new PolyLineView(NewSmoothVolumePolyline, Color.Green.SetAlpha(1f));
         }
@@ -184,8 +179,7 @@ namespace WebAnnotation.UI.Actions
                 return false;
             }
 
-            ChangeToPolylineAction other_action = other as ChangeToPolylineAction;
-            if (other_action == null)
+            if (other is not ChangeToPolylineAction other_action)
             {
                 return false;
             }

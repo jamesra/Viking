@@ -7,9 +7,9 @@ namespace WebAnnotation.UI.ActionViews
 {
     internal class LinkStructureActionView : IActionView, IIconTexture
     {
-        public IRenderable Passive { get; set; } = null;
+        public IRenderable? Passive { get; set; } = null;
 
-        public IRenderable Active { get; set; } = null;
+        public IRenderable? Active { get; set; } = null;
 
         public BuiltinTexture Icon { get; set; } = BuiltinTexture.Connect;
 
@@ -23,7 +23,7 @@ namespace WebAnnotation.UI.ActionViews
 
         public void CreateDefaultVisuals()
         {
-            LineView view = new LineView(model.Source.VolumePosition, model.Target.VolumePosition,
+            LineView view = new(model.Source.VolumePosition, model.Target.VolumePosition,
                 Math.Min(model.Source.Radius, model.Target.Radius),
                 Color.White.SetAlpha(0.5f), LineStyle.AnimatedLinear);
             Passive = view;

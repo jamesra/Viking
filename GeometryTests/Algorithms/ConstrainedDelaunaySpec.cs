@@ -1,11 +1,12 @@
-﻿using FsCheck;
+using FsCheck;
 using Geometry;
 using Geometry.JSON;
 using Geometry.Meshing;
 using GeometryTests.FSCheck;
 using RTree;
 using System.Collections.Generic;
-using System.Linq; 
+using System.Linq;
+using System;
 
 
 namespace GeometryTests.Algorithms
@@ -65,7 +66,7 @@ namespace GeometryTests.Algorithms
         {
             return string.Format("Model {0} with {1} constraints\n{2}",
                 mesh.ToString(), ConstraintEdges.Count,
-                new string(mesh.Verticies.Select(v => v.Position).ToArray().ToJSON().Where(c => c != '\n' && c != '\r').ToArray()));
+                new string([.. mesh.Verticies.Select(v => v.Position).ToArray().ToJSON().Where(c => c != '\n' && c != '\r')]));
         }
 
         /// <summary>
@@ -102,7 +103,7 @@ namespace GeometryTests.Algorithms
             OriginalCandidateEdges = candidateEdges;
 
             int[] EdgeVerts = SelectValidEdges(OriginalCandidateEdges, mesh);
-            this.ConstraintEdges = CreateEdges(EdgeVerts);
+            this.ConstraintEdges = ConstrainedDelaunayModel.CreateEdges(EdgeVerts);
         }
 
         public ConstrainedDelaunayModel(TriangulationMesh<IVertex2D> Original)
@@ -110,10 +111,10 @@ namespace GeometryTests.Algorithms
             mesh = Original;
 
             //Since the verticies aren't sorted, just test the edges in order
-            OriginalCandidateEdges = new int[mesh.Verticies.Count - 1].Select((v, i) => i).ToArray();
+            OriginalCandidateEdges = [.. new int[mesh.Verticies.Count - 1].Select((v, i) => i)];
 
             int[] EdgeVerts = SelectValidEdges(OriginalCandidateEdges, mesh);
-            this.ConstraintEdges = CreateEdges(EdgeVerts);
+            this.ConstraintEdges = ConstrainedDelaunayModel.CreateEdges(EdgeVerts);
         }
 
         public ConstrainedDelaunayModel(TriangulationMesh<IVertex2D> Original, List<EdgeKey> constraints)
@@ -121,27 +122,20 @@ namespace GeometryTests.Algorithms
             mesh = Original;
 
             //Since the verticies aren't sorted, just test the edges in order
-            if (mesh.Verticies.Count < 2)
-            {
-                OriginalCandidateEdges = new int[0];
-            }
-            else
-            {
-                OriginalCandidateEdges = new int[mesh.Verticies.Count - 1].Select((v, i) => i).ToArray();
-            }
+            OriginalCandidateEdges = mesh.Verticies.Count < 2 ? [] : [.. new int[mesh.Verticies.Count - 1].Select((v, i) => i)];
 
             this.ConstraintEdges = constraints;
         }
 
         public ConstrainedDelaunayModel Clone()
         {
-            var output = new ConstrainedDelaunayModel(this.mesh.Clone(), this.ConstraintEdges);
+            ConstrainedDelaunayModel output = new(this.mesh.Clone(), this.ConstraintEdges);
             return output;
         }
 
-        private List<EdgeKey> CreateEdges(int[] edge_seq)
+        private static List<EdgeKey> CreateEdges(int[] edge_seq)
         {
-            List<EdgeKey> edges = new List<EdgeKey>(edge_seq.Length);
+            List<EdgeKey> edges = new(edge_seq.Length);
             for (int i = 0; i < edge_seq.Length - 1; i++)
             {
                 edges.Add(new EdgeKey(edge_seq[i], edge_seq[i + 1]));
@@ -158,17 +152,17 @@ namespace GeometryTests.Algorithms
         private static int[] SelectValidEdges(int[] candidateEdges, TriangulationMesh<IVertex2D> mesh)
         {
             if (candidateEdges.Length == 0)
-                return new int[0];
+                return [];
 
-            List<int> AddedConstraints = new List<int>(candidateEdges.Length);
+            List<int> AddedConstraints = new(candidateEdges.Length);
             //RTree.RTree<IEdge> rTree = mesh.GenerateEdgeRTree();
-            RTree.RTree<IEdgeKey> ConstrainedEdgeTree = new RTree<IEdgeKey>();
+            RTree.RTree<IEdgeKey> ConstrainedEdgeTree = new();
 
             int EdgeStart = candidateEdges[0];
             AddedConstraints.Add(EdgeStart);
             for (int i = 1; i < candidateEdges.Length; i++)
             {
-                EdgeKey proposedEdge = new EdgeKey(EdgeStart, candidateEdges[i]);
+                EdgeKey proposedEdge = new(EdgeStart, candidateEdges[i]);
 
                 if (TryCreateConstraint(proposedEdge, mesh, ConstrainedEdgeTree))
                 {
@@ -181,7 +175,7 @@ namespace GeometryTests.Algorithms
             int lastVert = AddedConstraints.Last();
             for (int i = 0; i < AddedConstraints.Count - 2; i++)
             {
-                EdgeKey proposedEdge = new EdgeKey(EdgeStart, candidateEdges[i]);
+                EdgeKey proposedEdge = new(EdgeStart, candidateEdges[i]);
 
                 if (TryCreateConstraint(proposedEdge, mesh, ConstrainedEdgeTree))
                 {
@@ -190,7 +184,7 @@ namespace GeometryTests.Algorithms
                 }
             }
 
-            return AddedConstraints.ToArray();
+            return [.. AddedConstraints];
         }
 
         /// <summary>
@@ -207,7 +201,7 @@ namespace GeometryTests.Algorithms
 
             GridLineSegment proposedSeg = mesh.ToGridLineSegment(proposedEdge);
 
-            Edge new_edge = new Edge(proposedEdge.A, proposedEdge.B);
+            Edge new_edge = new(proposedEdge.A, proposedEdge.B);
             //EdgeStart = candidateEdges[i];
             ConstrainedEdgeTree.Add(proposedSeg.BoundingBox, new_edge);
             //AddedConstraints.Add(candidateEdges[i]);
@@ -270,7 +264,7 @@ namespace GeometryTests.Algorithms
             }
 
             //Generate a set of candidate edges
-            int[] Edges = Arb.Default.UInt32().Generator.Sample(nVerts - 1, nEdgesMax).Distinct().Select(u => (int)u).ToArray();
+            int[] Edges = [.. Arb.Default.UInt32().Generator.Sample(nVerts - 1, nEdgesMax).Distinct().Select(u => (int)u)];
 
             OriginalMesh = TriangulatedMeshGenerators.RandomMesh().Sample(nVerts, 1).First();
             OriginalModel = new ConstrainedDelaunayModel(InitialActual, Edges);
@@ -294,7 +288,7 @@ namespace GeometryTests.Algorithms
 
         public ConstrainedDelaunaySpec(GridVector2[] points, int[] Edges)
         {
-            OriginalMesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(v => new Vertex2D(v, null)).ToArray());
+            OriginalMesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh([.. points.Select(v => new Vertex2D(v, null))]);
             TriangulatedMeshGenerators.OnProgress?.Invoke(InitialActual);
 
             OriginalModel = new ConstrainedDelaunayModel(InitialActual, Edges.Where(e => e < points.Length).Distinct().ToArray());
@@ -318,7 +312,7 @@ namespace GeometryTests.Algorithms
             }
 
             //Generate a set of candidate edges
-            int[] Edges = Arb.Default.UInt32().Generator.Sample(nVerts - 1, nEdgesMax).Distinct().Select(u => (int)u).ToArray();
+            int[] Edges = [.. Arb.Default.UInt32().Generator.Sample(nVerts - 1, nEdgesMax).Distinct().Select(u => (int)u)];
 
             OriginalMesh = mesh;//TriangulatedMeshGenerators.RandomMesh().Sample(nVerts, 1).First();
             OriginalModel = new ConstrainedDelaunayModel(InitialActual, Edges);
@@ -331,14 +325,11 @@ namespace GeometryTests.Algorithms
         public Gen<Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>> Next(ConstrainedDelaunayModel value)
         {
             //If we don't have any more items then don't return a generator
-            Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel> result;
-
-            if (value.PeekConstraint() is null)
-                result = new NoOperation();
-            //return Gen.Elements(new Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>[] { });
-            //return Gen.Elements(new Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>[] { new NoOperation() });
-            else
-                result = new AddConstraint(value);
+            Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel> result = value.PeekConstraint() is null
+                ? new NoOperation()
+                //return Gen.Elements(new Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>[] { });
+                //return Gen.Elements(new Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>[] { new NoOperation() });
+                : new AddConstraint(value);
 
             //Trace.WriteLine(string.Format("Yield {0} from {1}", result, ID));
 
@@ -376,43 +367,23 @@ namespace GeometryTests.Algorithms
 
         private class NoOperation : Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>
         {
-            public override TriangulationMesh<IVertex2D> RunActual(TriangulationMesh<IVertex2D> value)
-            {
-                return value;
-            }
+            public override TriangulationMesh<IVertex2D> RunActual(TriangulationMesh<IVertex2D> value) => value;
 
-            public override ConstrainedDelaunayModel RunModel(ConstrainedDelaunayModel value)
-            {
-                return value;
-            }
+            public override ConstrainedDelaunayModel RunModel(ConstrainedDelaunayModel value) => value;
 
-            public override bool Pre(ConstrainedDelaunayModel model)
-            {
-                return false;
-            }
+            public override bool Pre(ConstrainedDelaunayModel model) => false;
 
-            public override Property Post(TriangulationMesh<IVertex2D> mesh, ConstrainedDelaunayModel model)
-            {
-                return (true).Trivial(true);
-            }
+            public override Property Post(TriangulationMesh<IVertex2D> mesh, ConstrainedDelaunayModel model) => (true).Trivial(true);
 
-            public override string ToString()
-            {
-                return "NoOp";
-            }
+            public override string ToString() => "NoOp";
         }
 
-        private class AddConstraint : Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>
+        private class AddConstraint(ConstrainedDelaunayModel model) : Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>
         {
             /// <summary>
             /// The constrained edge we will add to our model
             /// </summary>
-            public readonly IEdgeKey EdgeToAdd;
-
-            public AddConstraint(ConstrainedDelaunayModel model)
-            {
-                EdgeToAdd = model.NextConstraint();
-            }
+            public readonly IEdgeKey EdgeToAdd = model.NextConstraint();
 
             public override Property Post(TriangulationMesh<IVertex2D> mesh, ConstrainedDelaunayModel model)
             {
@@ -441,10 +412,7 @@ namespace GeometryTests.Algorithms
                 return prop;
             }
 
-            public override bool Pre(ConstrainedDelaunayModel model)
-            {
-                return base.Pre(model);
-            }
+            public override bool Pre(ConstrainedDelaunayModel model) => base.Pre(model);
 
             public override TriangulationMesh<IVertex2D> RunActual(TriangulationMesh<IVertex2D> value)
             {
@@ -453,16 +421,11 @@ namespace GeometryTests.Algorithms
                 return value;
             }
 
-            public override ConstrainedDelaunayModel RunModel(ConstrainedDelaunayModel value)
-            {
+            public override ConstrainedDelaunayModel RunModel(ConstrainedDelaunayModel value) =>
                 //value.NextConstraint();
-                return value;
-            }
+                value;
 
-            public override string ToString()
-            {
-                return string.Format("Add Constraint {0}", EdgeToAdd);
-            }
+            public override string ToString() => string.Format("Add Constraint {0}", EdgeToAdd);
         }
     }
 }

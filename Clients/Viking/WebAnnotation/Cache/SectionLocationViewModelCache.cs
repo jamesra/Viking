@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Viking.Common;
 using WebAnnotation.ViewModel;
@@ -7,7 +7,7 @@ namespace WebAnnotation
 {
     internal class SectionAnnotationsViewCacheEntry : CacheEntry<int>
     {
-        public readonly SectionAnnotationsView SLVModel = null;
+        public readonly SectionAnnotationsView? SLVModel = null;
 
         public SectionAnnotationsViewCacheEntry(int key, SectionAnnotationsView model) : base(key)
         {
@@ -38,25 +38,13 @@ namespace WebAnnotation
 
 
 
-        protected override SectionAnnotationsViewCacheEntry CreateEntry(int key, SectionAnnotationsView value)
-        {
-            return new SectionAnnotationsViewCacheEntry(key, value);
-        }
+        protected override SectionAnnotationsViewCacheEntry CreateEntry(int key, SectionAnnotationsView value) => new SectionAnnotationsViewCacheEntry(key, value);
 
-        protected override SectionAnnotationsViewCacheEntry CreateEntry(int key, Func<int, SectionAnnotationsView> valueFactory)
-        {
-            return new SectionAnnotationsViewCacheEntry(key, valueFactory(key));
-        }
+        protected override SectionAnnotationsViewCacheEntry CreateEntry(int key, Func<int, SectionAnnotationsView> valueFactory) => new SectionAnnotationsViewCacheEntry(key, valueFactory(key));
 
-        protected override Task<SectionAnnotationsViewCacheEntry> CreateEntryAsync(int key, SectionAnnotationsView value)
-        {
-            return Task.FromResult(CreateEntry(key, value));
-        }
+        protected override Task<SectionAnnotationsViewCacheEntry> CreateEntryAsync(int key, SectionAnnotationsView value) => Task.FromResult(CreateEntry(key, value));
 
-        public bool RemoveEntry(int key)
-        {
-            return Remove(key);
-        }
+        public bool RemoveEntry(int key) => Remove(key);
 
         /// <summary>
         /// Remove all cached entries

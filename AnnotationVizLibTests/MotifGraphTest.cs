@@ -1,4 +1,4 @@
-﻿using AnnotationVizLib;
+using AnnotationVizLib;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace AnnotationUtilsTests
@@ -11,7 +11,7 @@ namespace AnnotationUtilsTests
     {
         //public string Endpoint = "https://connectomes.utah.edu/Services/RabbitBinary/Annotate.svc";
         public string Endpoint = "https://websvc1.connectomes.utah.edu/RC1/Annotation/Service.svc";
-        private readonly System.Net.NetworkCredential userCredentials; 
+        private readonly System.Net.NetworkCredential userCredentials;
 
         public MotifGraphTest()
         {
@@ -54,8 +54,8 @@ namespace AnnotationUtilsTests
 
         [TestMethod]
         public void GenerateMotifGraph()
-        { 
-            AnnotationVizLib.MotifGraph graph = new MotifGraph();
+        {
+            AnnotationVizLib.MotifGraph graph = new();
             graph = AnnotationVizLib.WCFClient.WCFMotifFactory.BuildGraph(this.Endpoint, this.userCredentials);
 
             System.Diagnostics.Debug.Assert(graph != null);
@@ -66,9 +66,9 @@ namespace AnnotationUtilsTests
             dotGraph.SaveDOT(DotFileFullPath);
             Assert.IsTrue(System.IO.File.Exists(DotFileFullPath));
 
-            string[] Types = new string[] {"svg"};
+            string[] Types = ["svg"];
 
-            MotifDOTView.Convert("dot", DotFileFullPath, Types);  
+            MotifDOTView.Convert("dot", DotFileFullPath, Types);
         }
     }
 }

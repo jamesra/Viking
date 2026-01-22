@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -23,7 +23,7 @@ namespace Geometry.Transforms
                 return "Transform Base, No Info";
         }
 
-        private GridRectangle _ControlBounds = new GridRectangle();
+        private GridRectangle _ControlBounds = new();
         public GridRectangle ControlBounds
         {
             get
@@ -38,7 +38,7 @@ namespace Geometry.Transforms
             protected set => _ControlBounds = value;
         }
 
-        private GridRectangle _MappedBounds = new GridRectangle();
+        private GridRectangle _MappedBounds = new();
         public GridRectangle MappedBounds
         {
             get
@@ -58,7 +58,7 @@ namespace Geometry.Transforms
         /// be replaced during a transformation with a new list, which requires regenerating triangles and any other derived data.
         /// These points are sorted by control point x, lowest to highest
         /// </summary>
-        private MappingGridVector2[] _mapPoints = Array.Empty<MappingGridVector2>();
+        private MappingGridVector2[] _mapPoints = [];
         public MappingGridVector2[] MapPoints
         {
             get { return _mapPoints; }
@@ -78,9 +78,9 @@ namespace Geometry.Transforms
 
                 //Replace our map points with the list that had duplicates removed if necessary
                 if (ArrayHadDuplicates)
-                {                    
-                    _mapPoints = _mapPointsList.ToArray();
-                    if(_mapPoints.Length < 3)
+                {
+                    _mapPoints = [.. _mapPointsList];
+                    if (_mapPoints.Length < 3)
                         throw new ArgumentException("Not enough control points after duplicates removed");
                 }
 
@@ -232,21 +232,21 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="gridRect"></param>
         /// <returns></returns>
-        public List<MappingGridVector2> IntersectingControlRectangle(in GridRectangle gridRect) => this.controlPointsRTree.Intersects(gridRect).ToList();
+        public List<MappingGridVector2> IntersectingControlRectangle(in GridRectangle gridRect) => [.. this.controlPointsRTree.Intersects(gridRect)];
 
         /// <summary>
         /// Return mapped control points intersecting the rectangle
         /// </summary>
         /// <param name="gridRect"></param>
         /// <returns></returns>
-        public List<MappingGridVector2> IntersectingMappedRectangle(in GridRectangle gridRect) => this.mappedPointsRTree.Intersects(gridRect).ToList();
+        public List<MappingGridVector2> IntersectingMappedRectangle(in GridRectangle gridRect) => [.. this.mappedPointsRTree.Intersects(gridRect)];
 
 
         /// <summary>
         /// You need to take this lock when building or changing the QuadTrees managing the triangles of the mesh
         /// </summary>
         [NonSerialized]
-        readonly ReaderWriterLockSlim rwLockTriangles = new ReaderWriterLockSlim();
+        readonly ReaderWriterLockSlim rwLockTriangles = new();
 
         private RTree.RTree<MappingGridVector2> _mappedPointsRTree = null;
 
@@ -361,10 +361,10 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="stream"></param>
         public virtual string GetITKTransform()
-        { 
+        {
             double Downsample = 1.0;
 
-            StringBuilder output = new StringBuilder();
+            StringBuilder output = new();
             string transform = "meshtransform_double_2_2";
 
             output.Append("0\n0\n");
@@ -392,10 +392,10 @@ namespace Geometry.Transforms
             //output += string.Format("{0:g} {1:g} {2:g} {3:g}", 0,0, MappedBounds.Width, MappedBounds.Height);
 
             output.AppendFormat(" {0:d}\n", this.MapPoints.Length);
-            
+
             return output.ToString();
         }
-         
+
         public virtual void MinimizeMemory()
         {
             try

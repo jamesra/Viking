@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -53,7 +53,7 @@ namespace Geometry.Meshing
             GridVector3 minCorner = BoundingBox.MinCorner;
             GridVector3 scaledCorner = minCorner.Scale(scalar);
 
-            this._Verticies.ForEach(v => v.Position = v.Position.Scale(scalar)); 
+            this._Verticies.ForEach(v => v.Position = v.Position.Scale(scalar));
             BoundingBox = new GridBox(scaledCorner, BoundingBox.Scale(scalar).dimensions);
 
             ValidateBoundingBox();
@@ -71,25 +71,12 @@ namespace Geometry.Meshing
             ValidateBoundingBox();
         }
 
-        protected override void UpdateBoundingBox(VERTEX v)
-        {
-            if (BoundingBox.minVals is null)
-                BoundingBox = new GridBox(v.Position, 0);
-            else
-            {
-                BoundingBox = BoundingBox.Union(v.Position, out _);
-            }
-        }
+        protected override void UpdateBoundingBox(VERTEX v) => BoundingBox = BoundingBox.minVals is null ? new GridBox(v.Position, 0) : BoundingBox.Union(v.Position, out _);
 
         protected override void UpdateBoundingBox(IEnumerable<VERTEX> verts)
         {
-            GridVector3[] points = verts.Select(v => v.Position).ToArray();
-            if (BoundingBox.minVals is null)
-                BoundingBox = points.BoundingBox();
-            else
-            {
-                BoundingBox = BoundingBox.Union(points, out _);
-            }
+            GridVector3[] points = [.. verts.Select(v => v.Position)];
+            BoundingBox = BoundingBox.minVals is null ? points.BoundingBox() : BoundingBox.Union(points, out _);
         }
 
         /// <summary>
@@ -103,36 +90,33 @@ namespace Geometry.Meshing
 
             this.AddVerticies(other.Verticies);
 
-            IFace[] duplicateFaces = other.Faces.Select(f => other.CreateOffsetFace(f, f.iVerts.Select(v => v + (int)iVertMergeStart))).ToArray();
+            IFace[] duplicateFaces = [.. other.Faces.Select(f => other.CreateOffsetFace(f, f.iVerts.Select(v => v + (int)iVertMergeStart)))];
             this.AddFaces(duplicateFaces);
 
             return iVertMergeStart;
         }
 
-        public GridLineSegment ToSegment(IEdgeKey e)
-        {
-            return new GridLineSegment(_Verticies[e.A].Position, _Verticies[e.B].Position);
-        }
+        public GridLineSegment ToSegment(IEdgeKey e) => new GridLineSegment(_Verticies[e.A].Position, _Verticies[e.B].Position);
 
         public GridTriangle ToTriangle(IFace f)
         {
             if (false == f.IsTriangle())
                 throw new InvalidOperationException("Face is not a triangle: " + f.iVerts.ToString());
 
-            return new GridTriangle(this[f.iVerts].Select(v => v.Position.XY()).ToArray());
+            return new GridTriangle([.. this[f.iVerts].Select(v => v.Position.XY())]);
         }
 
         public GridVector2 GetCentroid(IFace f)
         {
-            GridVector2[] verts = this[f.iVerts].Select(v => v.Position.XY()).ToArray();
+            GridVector2[] verts = [.. this[f.iVerts].Select(v => v.Position.XY())];
             if (f.IsQuad())
             {
-                GridPolygon poly = new GridPolygon(verts);
+                GridPolygon poly = new(verts);
                 return poly.Centroid;
             }
             else if (f.IsTriangle())
             {
-                GridTriangle tri = new GridTriangle(this[f.iVerts].Select(v => v.Position.XY()).ToArray());
+                GridTriangle tri = new([.. this[f.iVerts].Select(v => v.Position.XY())]);
                 return tri.Centroid;
             }
             else
@@ -150,7 +134,7 @@ namespace Geometry.Meshing
             if (CreateOffsetFace is null)
                 throw new InvalidOperationException("No duplication method in DynamicRenderMesh specified for faces");
 
-            IEnumerable<IFace> quadFaces = this.Faces.Where(f => !f.IsTriangle()).ToList();
+            IEnumerable<IFace> quadFaces = [.. this.Faces.Where(f => !f.IsTriangle())];
 
             foreach (IFace f in quadFaces)
             {
@@ -167,25 +151,25 @@ namespace Geometry.Meshing
         public static IFace[] SplitFace(Mesh3D mesh, IFace face)
         {
             if (face.IsTriangle())
-                return new IFace[] { face };
+                return [face];
 
             if (face.IsQuad())
             {
 
-                GridVector3[] positions = mesh[face.iVerts].Select(v => v.Position).ToArray();
+                GridVector3[] positions = [.. mesh[face.iVerts].Select(v => v.Position)];
                 if (GridVector3.Distance(positions[0], positions[2]) < GridVector3.Distance(positions[1], positions[3]))
                 {
-                    IFace ABC = mesh.CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[2] });
-                    IFace ACD = mesh.CreateFace(new int[] { face.iVerts[0], face.iVerts[2], face.iVerts[3] });
+                    IFace ABC = mesh.CreateFace([face.iVerts[0], face.iVerts[1], face.iVerts[2]]);
+                    IFace ACD = mesh.CreateFace([face.iVerts[0], face.iVerts[2], face.iVerts[3]]);
 
-                    return new IFace[] { ABC, ACD };
+                    return [ABC, ACD];
                 }
                 else
                 {
-                    IFace ABD = mesh.CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[3] });
-                    IFace BCD = mesh.CreateFace(new int[] { face.iVerts[1], face.iVerts[2], face.iVerts[3] });
+                    IFace ABD = mesh.CreateFace([face.iVerts[0], face.iVerts[1], face.iVerts[3]]);
+                    IFace BCD = mesh.CreateFace([face.iVerts[1], face.iVerts[2], face.iVerts[3]]);
 
-                    return new IFace[] { ABD, BCD };
+                    return [ABD, BCD];
                 }
             }
 
@@ -207,14 +191,14 @@ namespace Geometry.Meshing
             {
                 RemoveFace(face);
 
-                GridVector3[] positions = this[face.iVerts].Select(v => v.Position).ToArray();
+                GridVector3[] positions = [.. this[face.iVerts].Select(v => v.Position)];
                 if (GridVector3.Distance(positions[0], positions[2]) < GridVector3.Distance(positions[1], positions[3]))
                 {
                     //Face ABC = new Face(face.iVerts[0], face.iVerts[1], face.iVerts[2]);
                     //Face ACD = new Face(face.iVerts[0], face.iVerts[2], face.iVerts[3]);
 
-                    IFace ABC = CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[2] });
-                    IFace ACD = CreateFace(new int[] { face.iVerts[0], face.iVerts[2], face.iVerts[3] });
+                    IFace ABC = CreateFace([face.iVerts[0], face.iVerts[1], face.iVerts[2]]);
+                    IFace ACD = CreateFace([face.iVerts[0], face.iVerts[2], face.iVerts[3]]);
                     AddFace(ABC);
                     AddFace(ACD);
                 }
@@ -223,8 +207,8 @@ namespace Geometry.Meshing
                     //Face ABD = new Face(face.iVerts[0], face.iVerts[1], face.iVerts[3]);
                     //Face BCD = new Face(face.iVerts[1], face.iVerts[2], face.iVerts[3]);
 
-                    IFace ABD = CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[3] });
-                    IFace BCD = CreateFace(new int[] { face.iVerts[1], face.iVerts[2], face.iVerts[3] });
+                    IFace ABD = CreateFace([face.iVerts[0], face.iVerts[1], face.iVerts[3]]);
+                    IFace BCD = CreateFace([face.iVerts[1], face.iVerts[2], face.iVerts[3]]);
                     AddFace(ABD);
                     AddFace(BCD);
                 }
@@ -238,7 +222,7 @@ namespace Geometry.Meshing
         /// <returns></returns>
         public GridVector3 Normal(IEnumerable<int> iVerts)
         {
-            VERTEX[] verticies = this[iVerts].ToArray();
+            VERTEX[] verticies = [.. this[iVerts]];
             if (verticies.Length != 3)
                 throw new NotImplementedException("Normal calculation for non-triangular faces not possible.");
 
@@ -257,7 +241,7 @@ namespace Geometry.Meshing
             if (f.IsTriangle() == false)
                 throw new NotImplementedException("Normal calculation for non-triangular faces not possible.");
 
-            VERTEX[] verticies = this[f.iVerts].ToArray();
+            VERTEX[] verticies = [.. this[f.iVerts]];
             GridVector3 normal = GridVector3.Cross(verticies[0].Position, verticies[1].Position, verticies[2].Position);
             normal.Normalize();
             return normal;
@@ -290,7 +274,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// This cache needs more careful analysis in the profiler
         /// </summary>
-        readonly Dictionary<IFace, GridVector3> face_normals_cache = new Dictionary<Meshing.IFace, Geometry.GridVector3>();
+        readonly Dictionary<IFace, GridVector3> face_normals_cache = [];
 
         /// <summary>
         /// Recalculate normals based on the faces touching each vertex
@@ -328,7 +312,7 @@ namespace Geometry.Meshing
 
             for (int i = 0; i < _Verticies.Count; i++)
             {
-                SortedSet<IFace> vertFaces = new SortedSet<Meshing.IFace>();
+                SortedSet<IFace> vertFaces = [];
                 IVertex3D v = this[i];
 
                 foreach (IEdgeKey ek in v.Edges)
@@ -377,7 +361,7 @@ namespace Geometry.Meshing
                 //SortedSet<IFace> vertFaces = new SortedSet<Meshing.IFace>();
                 IVertex3D v = this[i];
 
-                IFace[] vertFaces = this[v.Edges].SelectMany(e => e.Faces).Distinct().ToArray();
+                IFace[] vertFaces = [.. this[v.Edges].SelectMany(e => e.Faces).Distinct()];
 
                 GridVector3 avgNormal = GridVector3.Zero;
                 for (int iFace = 0; iFace < vertFaces.Length; iFace++)
@@ -411,11 +395,11 @@ namespace Geometry.Meshing
         public virtual int Append(MeshBase3D<VERTEX> other)
         {
             int startingAppendIndex = this._Verticies.Count;
-            this.AddVerticies(other.Verticies.Select(v =>
+            this.AddVerticies([.. other.Verticies.Select(v =>
             {
                 IVertex copy = v.ShallowCopy(v.Index + startingAppendIndex);
                 return (VERTEX)copy;
-            }).ToList());
+            })]);
 
             foreach (IEdge e in other.Edges.Values)
             {

@@ -45,7 +45,7 @@ namespace EntityFrameworkExtras
 
             var info = StoredProcedureParser.BuildStoredProcedureInfo(storedProcedure);
 
-            List<T> result = database.SqlQuery<T>(info.Sql, info.SqlParameters).ToList();
+            List<T> result = [.. database.SqlQuery<T>(info.Sql, info.SqlParameters)];
 
             SetOutputParameterValues(info.SqlParameters, storedProcedure);
 
@@ -66,13 +66,11 @@ namespace EntityFrameworkExtras
 
             var info = StoredProcedureParser.BuildStoredProcedureInfo(storedProcedure);
 
-            using (var cmd = database.Connection.CreateCommand())
-            {
-                cmd.CommandText = info.Sql;
-                cmd.Parameters.AddRange(info.SqlParameters);
+            using var cmd = database.Connection.CreateCommand();
+            cmd.CommandText = info.Sql;
+            cmd.Parameters.AddRange(info.SqlParameters);
 
-                return cmd.ExecuteReader();
-            }
+            return cmd.ExecuteReader();
         }
 
         private static void SetOutputParameterValues(IEnumerable<SqlParameter> sqlParameters, object storedProcedure)
@@ -92,7 +90,7 @@ namespace EntityFrameworkExtras
         {
             foreach (PropertyInfo propertyInfo in storedProcedure.GetType().GetProperties().Where(p => p.HasAttribute<StoredProcedureParameterAttribute>()))
             {
-                var helper = new StoredProcedureParserHelper();
+                StoredProcedureParserHelper helper = new();
 
                 var name = helper.GetParameterName(propertyInfo);
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows.Forms;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
@@ -10,24 +10,14 @@ namespace WebAnnotation.UI.Commands
     /// This command takes two LocationObj, an existing and a new one
     /// Defined by other commands and commits them to the database
     /// </summary>
-    internal class CreateNewLinkedLocationCommand : Viking.UI.Commands.Command
+    internal class CreateNewLinkedLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                           LocationObj existingLoc,
+                                           LocationObj newLoc) : Viking.UI.Commands.Command(parent)
     {
-        private readonly LocationObj NewLoc;
-        private readonly LocationObj ExistingLoc;
+        private readonly LocationObj NewLoc = newLoc;
+        private readonly LocationObj ExistingLoc = existingLoc;
 
-        public CreateNewLinkedLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                               LocationObj existingLoc,
-                                               LocationObj newLoc)
-            : base(parent)
-        {
-            NewLoc = newLoc;
-            ExistingLoc = existingLoc;
-        }
-
-        public override void OnActivate()
-        {
-            Parent.BeginInvoke((Action)delegate () { Execute(); });
-        }
+        public override void OnActivate() => Parent.BeginInvoke((Action)delegate () { Execute(); });
 
         protected override void Execute()
         {
@@ -40,7 +30,7 @@ namespace WebAnnotation.UI.Commands
                     return;
                 }
 
-                LocationObj NewLocation = Store.Locations.Create(NewLoc, new long[] { ExistingLoc.ID });
+                LocationObj NewLocation = Store.Locations.Create(NewLoc, [ExistingLoc.ID]);
                 Global.LastEditedAnnotationID = NewLocation.ID;
             }
             catch (ArgumentOutOfRangeException)

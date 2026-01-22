@@ -1,4 +1,4 @@
-﻿using Geometry.Meshing;
+using Geometry.Meshing;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -22,10 +22,7 @@ namespace MorphologyMesh
         {
         }
 
-        public new static IFace Create(IEnumerable<int> vertex_indicies)
-        {
-            return new MorphMeshFace(vertex_indicies);
-        }
+        public new static IFace Create(IEnumerable<int> vertex_indicies) => new MorphMeshFace(vertex_indicies);
 
 
         /// <summary>
@@ -33,15 +30,7 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="mesh"></param>
         /// <returns></returns>
-        public IEnumerable<MorphMeshFace> AdjacentFaces(MorphRenderMesh mesh)
-        { /*
-            IEdge[] edges = this.Edges.Select(e => mesh.Edges[e]).ToArray();
-            IFace[] Faces = edges.SelectMany(e => mesh.Edges[e].Faces).ToArray();
-            IFace[] Adjacent = Faces.Where(f => f != (IFace)this).ToArray();
-            return Adjacent.Select(f => (MorphMeshFace)f).ToArray();
-            */
-            return this.Edges.SelectMany(e => mesh.Edges[e].Faces.Where(f => f != (IFace)this)).Select(f => (MorphMeshFace)f);
-        }
+        public IEnumerable<MorphMeshFace> AdjacentFaces(MorphRenderMesh mesh) => this.Edges.SelectMany(e => mesh.Edges[e].Faces.Where(f => f != (IFace)this)).Select(f => (MorphMeshFace)f);
 
         /// <summary>
         /// Return all faces sharing an edge with this face who meet the criteria function
@@ -72,7 +61,7 @@ namespace MorphologyMesh
         public bool AllVertsAtSameZ(MorphRenderMesh mesh, out double? Z)
         {
 
-            MorphMeshVertex[] verts = this.iVerts.Select(i => (MorphMeshVertex)mesh[i]).ToArray();
+            MorphMeshVertex[] verts = [.. this.iVerts.Select(i => (MorphMeshVertex)mesh[i])];
             double ExpectedZ = verts.First().Position.Z;
             if (!verts.All(v => v.Position.Z == ExpectedZ))
             {
@@ -83,10 +72,7 @@ namespace MorphologyMesh
             return true;
         }
 
-        public bool IsInExposedRegion(MorphRenderMesh mesh)
-        {
-            return IsInExposedRegion(mesh, this);
-        }
+        public bool IsInExposedRegion(MorphRenderMesh mesh) => IsInExposedRegion(mesh, this);
 
         public static bool IsInExposedRegion(MorphRenderMesh mesh, IFace face)
         {
@@ -106,10 +92,7 @@ namespace MorphologyMesh
             return countInternal + countValid + countDirection == 3;
         }
 
-        public bool IsInUntiledRegion(MorphRenderMesh mesh)
-        {
-            return IsInUntiledRegion(mesh, this);
-        }
+        public bool IsInUntiledRegion(MorphRenderMesh mesh) => IsInUntiledRegion(mesh, this);
 
         /// <summary>
         /// Return true if the origin and adjacent face are not sharing a Contour edge. 
@@ -143,10 +126,7 @@ namespace MorphologyMesh
             return true;//countUntiled == 3;
         }
 
-        public bool IsInInvaginatedRegion(MorphRenderMesh mesh)
-        {
-            return IsInInvaginatedRegion(mesh, this);
-        }
+        public bool IsInInvaginatedRegion(MorphRenderMesh mesh) => IsInInvaginatedRegion(mesh, this);
 
         public static bool IsInInvaginatedRegion(MorphRenderMesh mesh, IFace face)
         {
@@ -168,10 +148,7 @@ namespace MorphologyMesh
             return countInternal + countValid == 3;
         }
 
-        public bool IsInHoleRegion(MorphRenderMesh mesh)
-        {
-            return IsInHoleRegion(mesh, this);
-        }
+        public bool IsInHoleRegion(MorphRenderMesh mesh) => IsInHoleRegion(mesh, this);
 
         public static bool IsInHoleRegion(MorphRenderMesh mesh, IFace face)
         {
@@ -191,19 +168,11 @@ namespace MorphologyMesh
 
         public static bool IsSurfaceEdge(EdgeType t)
         {
-            switch (t)
+            return t switch
             {
-                case EdgeType.CONTOUR:
-                case EdgeType.CORRESPONDING:
-                //case EdgeType.VALID:
-                case EdgeType.SURFACE:
-                case EdgeType.MEDIALAXIS:
-                case EdgeType.CONTOUR_TO_MEDIALAXIS:
-                    return true;
-                default:
-                    return false;
-            }
-
+                EdgeType.CONTOUR or EdgeType.CORRESPONDING or EdgeType.SURFACE or EdgeType.MEDIALAXIS or EdgeType.CONTOUR_TO_MEDIALAXIS => true,
+                _ => false,
+            };
         }
 
         public bool IsSurface(MorphRenderMesh mesh)
@@ -214,7 +183,7 @@ namespace MorphologyMesh
 
         public static IFace Duplicate(IFace old, int[] iVerts)
         {
-            MorphMeshFace newFace = new MorphMeshFace(iVerts);
+            MorphMeshFace newFace = new(iVerts);
             return newFace;
         }
     }

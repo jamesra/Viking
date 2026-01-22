@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="Segment.cs" company="">
 // Original Triangle code by Jonathan Richard Shewchuk, http://www.cs.cmu.edu/~quake/triangle.html
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
@@ -61,27 +61,15 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Gets the segments endpoint.
         /// </summary>
-        public Vertex GetVertex(int index)
-        {
-            return this.vertices[index]; // TODO: Check range?
-        }
+        public Vertex GetVertex(int index) => this.vertices[index]; // TODO: Check range?
 
         /// <summary>
         /// Gets an adjoining triangle.
         /// </summary>
-        public ITriangle GetTriangle(int index)
-        {
-            return triangles[index].tri.hash == Mesh.DUMMY ? null : triangles[index].tri;
-        }
+        public ITriangle GetTriangle(int index) => triangles[index].tri.hash == Mesh.DUMMY ? null : triangles[index].tri;
 
-        public override int GetHashCode()
-        {
-            return this.hash;
-        }
+        public override int GetHashCode() => this.hash;
 
-        public override string ToString()
-        {
-            return String.Format("SID {0}", hash);
-        }
+        public override string ToString() => String.Format("SID {0}", hash);
     }
 }

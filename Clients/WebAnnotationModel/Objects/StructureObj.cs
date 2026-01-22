@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationService.Types;
 using System;
 using System.Collections.Generic;
@@ -38,7 +38,7 @@ namespace WebAnnotationModel
         {
             get
             {
-                if(_Color.HasValue == false)
+                if (_Color.HasValue == false)
                 {
                     _Color = (uint)ID.ToString().GetHashCode() | 0xFF0707FF;
                 }
@@ -54,10 +54,7 @@ namespace WebAnnotationModel
         /// In this case make sure we always return the same hash code.  As a result this is called for each object only once.
         /// </summary>
         /// <returns></returns>
-        protected override int GenerateHashCode()
-        {
-            return (int)(ID % int.MaxValue);
-        }
+        protected override int GenerateHashCode() => (int)(ID % int.MaxValue);
 
         public string Notes
         {
@@ -112,10 +109,7 @@ namespace WebAnnotationModel
         {
             get
             {
-                if (_AttributesCache is null)
-                {
-                    _AttributesCache = ObjAttribute.Parse(Data.AttributesXml).ToList();
-                }
+                _AttributesCache ??= [.. ObjAttribute.Parse(Data.AttributesXml)];
                 return _AttributesCache;
             }
             set
@@ -147,7 +141,7 @@ namespace WebAnnotationModel
         public bool ToggleAttribute(string tag, string value = null)
         {
             //ObjAttribute attrib = new ObjAttribute(tag, value);
-            List<ObjAttribute> listAttributes = this.Attributes.ToList();
+            List<ObjAttribute> listAttributes = [.. this.Attributes];
             bool InList = listAttributes.ToggleAttribute(tag, value);
             this.Attributes = listAttributes;
             return InList;
@@ -171,7 +165,7 @@ namespace WebAnnotationModel
 
         public string Username => Data.Username;
 
-        private readonly object LinksLock = new object();
+        private readonly object LinksLock = new();
         private ObservableCollection<StructureLinkObj> _Links = null;
         internal ObservableCollection<StructureLinkObj> Links
         {
@@ -183,16 +177,16 @@ namespace WebAnnotationModel
                     {
                         if (Data.Links != null)
                         {
-                            StructureLinkKey[] keys = Data.Links.Select(l => new StructureLinkKey(l)).ToArray();
+                            StructureLinkKey[] keys = [.. Data.Links.Select(l => new StructureLinkKey(l))];
 
-                            List<StructureLinkObj> linkArray = new List<StructureLinkObj>(Data.Links.Length);
+                            List<StructureLinkObj> linkArray = new(Data.Links.Length);
                             //Initialize from the Data object
                             foreach (StructureLink link in Data.Links)
                             {
                                 Debug.Assert(link != null);
                                 //Add it if it doesn't exist, otherwise get the official version
                                 StructureLinkObj linkObj = Store.StructureLinks.GetOrAdd(new StructureLinkKey(link),
-                                                                                         new Func<StructureLinkKey, StructureLinkObj>(key => { return new StructureLinkObj(link); }),
+                                                                                         new Func<StructureLinkKey, StructureLinkObj>(key => new StructureLinkObj(link)),
                                                                                          out bool added); //This call will fire events that add the link to this.Links if it is new to the local store
                                 Debug.Assert(linkObj != null, "If structureObj has the value the store should have the value.   Does it link to itself?");
                                 linkArray.Add(linkObj);
@@ -202,7 +196,7 @@ namespace WebAnnotationModel
                         }
                         else
                         {
-                            _Links = new ObservableCollection<StructureLinkObj>();
+                            _Links = [];
                         }
 
                         _Links.CollectionChanged += this.OnLinksChanged;
@@ -234,7 +228,7 @@ namespace WebAnnotationModel
                 lock (LinksLock)
                 {
                     if (NumLinks == 0)
-                        return new StructureLinkObj[0];
+                        return [];
 
                     StructureLinkObj[] copy = new StructureLinkObj[Links.Count];
 
@@ -249,7 +243,7 @@ namespace WebAnnotationModel
             lock (LinksLock)
             {
                 //Update the underlying object we will send to the server]
-                Data.Links = _Links.Select(l => l.GetData()).ToArray();
+                Data.Links = [.. _Links.Select(l => l.GetData())];
             }
 
             SetDBActionForChange();
@@ -276,10 +270,7 @@ namespace WebAnnotationModel
         /// Because Links is an observable collection all modifications must be syncronized
         /// </summary>
         /// <param name="ID"></param>
-        internal void RemoveLink(StructureLinkObj link)
-        {
-            RemoveLink(link.ID);
-        }
+        internal void RemoveLink(StructureLinkObj link) => RemoveLink(link.ID);
 
         /// <summary>
         /// Adjust the client after a link is removed
@@ -354,7 +345,7 @@ namespace WebAnnotationModel
                 foreach (StructureLink link in data.Links)
                 {
                     Store.StructureLinks.GetOrAdd(new StructureLinkKey(link),
-                                                  new Func<StructureLinkKey, StructureLinkObj>(l => { return new StructureLinkObj(link); }),
+                                                  new Func<StructureLinkKey, StructureLinkObj>(l => new StructureLinkObj(link)),
                                                   out bool added);
                 }
             }
@@ -380,10 +371,7 @@ namespace WebAnnotationModel
         {
             get
             {
-                if (_Type is null)
-                {
-                    _Type = Store.StructureTypes.GetObjectByID(Data.TypeID);
-                }
+                _Type ??= Store.StructureTypes.GetObjectByID(Data.TypeID);
                 return _Type;
             }
             set
@@ -411,24 +399,19 @@ namespace WebAnnotationModel
 
         ulong IStructureReadOnly.TypeID => (ulong)this.TypeID;
 
-        ICollection<IStructureLink> IStructureReadOnly.Links => this.Links.Select(sl => (IStructureLink)sl).ToList();
+        ICollection<IStructureLink> IStructureReadOnly.Links => [.. this.Links.Select(sl => (IStructureLink)sl)];
 
         IStructureTypeReadOnly IStructureReadOnly.Type => this.Type;
 
         public string TagsXML => this.TagsXML;
 
-        protected override StructureObj OnMissingParent()
-        {
-            return Store.Structures.GetObjectByID(ParentID.Value, true);
-        }
+        protected override StructureObj OnMissingParent() => Store.Structures.GetObjectByID(ParentID.Value, true);
 
         protected static event EventHandler OnCreate;
-        protected void CallOnCreate()
-        {
+        protected void CallOnCreate() =>
             //TODO, create notification
             //Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null });
             OnCreate?.Invoke(this, null);
-        }
 
         public bool Equals(IStructureReadOnly other)
         {

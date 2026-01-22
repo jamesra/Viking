@@ -1,8 +1,8 @@
-﻿using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
-using System.Linq; 
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace VikingXNAGraphics
@@ -14,8 +14,8 @@ namespace VikingXNAGraphics
     public static class DeviceEffectsStore<T> where
         T : class, IInitEffect, new()
     {
-        private static readonly Dictionary<GraphicsDevice, T> ManagersForDevice = new Dictionary<GraphicsDevice, T>();
-        
+        private static readonly Dictionary<GraphicsDevice, T> ManagersForDevice = [];
+
         public static T GetOrCreateForDevice(GraphicsDevice device, ContentManager content)
         {
             if (ManagersForDevice.TryGetValue(device, out var entry))
@@ -23,7 +23,7 @@ namespace VikingXNAGraphics
                 return entry;
             }
 
-            T manager = new T();
+            T manager = new();
             manager.Init(device, content);
 
             ManagersForDevice[device] = manager;
@@ -33,10 +33,7 @@ namespace VikingXNAGraphics
             return manager;
         }
 
-        public static T TryGet(GraphicsDevice device)
-        {
-            return ManagersForDevice.TryGetValue(device, out var entry) ? entry : null;
-        }
+        public static T TryGet(GraphicsDevice device) => ManagersForDevice.TryGetValue(device, out var entry) ? entry : null;
 
         /*
         private static void OnDeviceLostOrReset(object sender, EventArgs e)

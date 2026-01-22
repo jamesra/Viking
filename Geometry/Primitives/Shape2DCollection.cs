@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
@@ -10,7 +10,7 @@ namespace Geometry
 
         public Shape2DCollection()
         {
-            Shapes = new List<Geometry.IShape2D>();
+            Shapes = [];
         }
 
         public Shape2DCollection(int capacity)
@@ -20,24 +20,14 @@ namespace Geometry
 
         public Shape2DCollection(ICollection<IShape2D> shapes)
         {
-            Shapes = new List<Geometry.IShape2D>(shapes.Count);
-            Shapes.AddRange(shapes);
+            Shapes = [.. shapes];
         }
 
-        public void Add(IShape2D shape)
-        {
-            Shapes.Add(shape);
-        }
+        public void Add(IShape2D shape) => Shapes.Add(shape);
 
-        public void AddRange(IEnumerable<IShape2D> shapes)
-        {
-            Shapes.AddRange(shapes);
-        }
+        public void AddRange(IEnumerable<IShape2D> shapes) => Shapes.AddRange(shapes);
 
-        public void Remove(IShape2D shape)
-        {
-            Shapes.Remove(shape);
-        }
+        public void Remove(IShape2D shape) => Shapes.Remove(shape);
 
         public double Area => Shapes.Sum(s => s.Area);
 
@@ -54,20 +44,20 @@ namespace Geometry
         }
 
         public ShapeRelation GetRelation(in IPoint2D p)
-        { 
+        {
             Trace.WriteLine("GetRelation on a Shape2DCollection is computationally expensive");
             ShapeRelation output = ShapeRelation.NONE;
-            foreach(var s in Shapes)
+            foreach (var s in Shapes)
             {
                 var result = s.GetRelation(p);
                 output |= result;
             }
-           
+
             return output;
         }
 
         public ShapeRelation GetRelation(in ILineSegment2D line)
-        { 
+        {
             Trace.WriteLine("GetRelation on a Shape2DCollection is computationally expensive");
             ShapeRelation output = ShapeRelation.NONE;
             foreach (var s in Shapes)
@@ -87,7 +77,7 @@ namespace Geometry
 
         public IShape2D Translate(in IPoint2D offset)
         {
-            Shape2DCollection translatedShapes = new Shape2DCollection(Shapes.Count);
+            Shape2DCollection translatedShapes = new(Shapes.Count);
             foreach (IShape2D shape in Shapes)
             {
                 translatedShapes.Add(shape.Translate(offset));
@@ -105,7 +95,7 @@ namespace Geometry
         }
 
         public bool Equals(IShapeCollection2D other)
-        { 
+        {
             if (this.Shapes.Count != other.Geometries.Count)
                 return false;
 
@@ -115,7 +105,7 @@ namespace Geometry
                 if (!equal) return false;
             }
 
-            return true; 
+            return true;
         }
     }
 }

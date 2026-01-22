@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Geometry.Meshing;
 using System;
 using System.Collections.Generic;
@@ -15,7 +15,7 @@ namespace MorphologyMesh
     public class MeshEdge : GraphLib.Edge<ulong>
     {
         public ConnectionVerticies SourcePort;
-        public ConnectionVerticies TargetPort; 
+        public ConnectionVerticies TargetPort;
 
         public MeshEdge(ulong SourceNode, ulong TargetNode, ConnectionVerticies sourcePort, ConnectionVerticies targetPort) : base(SourceNode, TargetNode, false)
         {
@@ -31,14 +31,14 @@ namespace MorphologyMesh
 
         public ConnectionVerticies GetPortForNode(ulong NodeID)
         {
-            if(NodeID == this.SourceNodeKey)
+            if (NodeID == this.SourceNodeKey)
             {
                 return SourcePort;
             }
 
-            if(NodeID == this.TargetNodeKey)
+            if (NodeID == this.TargetNodeKey)
             {
-                return TargetPort; 
+                return TargetPort;
             }
 
             throw new ArgumentException("Node ID not part of edge");
@@ -59,23 +59,20 @@ namespace MorphologyMesh
             throw new ArgumentException("Node ID not part of edge");
         }
 
-        public override string ToString()
-        {
-            return string.Format("{0}-{1}", SourceNodeKey, TargetNodeKey);
-        }
+        public override string ToString() => string.Format("{0}-{1}", SourceNodeKey, TargetNodeKey);
     }
 
 
-    public class MeshNode : GraphLib.Node<ulong, MeshEdge>
+    public class MeshNode(ulong key) : GraphLib.Node<ulong, MeshEdge>(key)
     {
-        public Mesh3D<IVertex3D<ulong>> Mesh = null; 
+        public Mesh3D<IVertex3D<ulong>> Mesh = null;
 
         public bool UpperPortCapped = false; //True if faces have been generated
         public bool LowerPortCapped = false; //True if faces have been generated
 
-        public Dictionary<ulong, ConnectionVerticies> IDToCrossSection = new Dictionary<ulong, ConnectionVerticies>();
+        public Dictionary<ulong, ConnectionVerticies> IDToCrossSection = [];
 
-        
+
         private ConnectionVerticies _CapPort;
         public ConnectionVerticies CapPort
         {
@@ -86,10 +83,10 @@ namespace MorphologyMesh
                 this.IDToCrossSection[this.Key] = value;
             }
         }
-        
+
         //public ConnectionVerticies CapPort;
 
-        public bool AdjacentToPolygon = false; 
+        public bool AdjacentToPolygon = false;
 
 
         //public GridVector3 UpperCentroid;
@@ -126,12 +123,9 @@ namespace MorphologyMesh
         /// </summary>
         public ulong[] GetEdgesAbove(MeshGraph graph = null)
         {
-            if(graph is null)
-            {
-                graph = this.MeshGraph;
-            }
+            graph ??= this.MeshGraph;
 
-            return this.Edges.Where(e => this.IsNodeAbove(graph.Nodes[e.Key])).Select(e => e.Key).ToArray();
+            return [.. this.Edges.Where(e => this.IsNodeAbove(graph.Nodes[e.Key])).Select(e => e.Key)];
         }
 
         /// <summary>
@@ -139,32 +133,15 @@ namespace MorphologyMesh
         /// </summary>
         public ulong[] GetEdgesBelow(MeshGraph graph = null)
         {
-            if (graph is null)
-            {
-                graph = this.MeshGraph;
-            }
+            graph ??= this.MeshGraph;
 
-            return this.Edges.Where(e => this.IsNodeBelow(graph.Nodes[e.Key])).Select(e => e.Key).ToArray();
+            return [.. this.Edges.Where(e => this.IsNodeBelow(graph.Nodes[e.Key])).Select(e => e.Key)];
         }
 
-        public bool IsNodeAbove(MeshNode other)
-        {
-            return other.Z > this.Z;
-        }
+        public bool IsNodeAbove(MeshNode other) => other.Z > this.Z;
 
-        public bool IsNodeBelow(MeshNode other)
-        {
-            return other.Z < this.Z;
-        }
+        public bool IsNodeBelow(MeshNode other) => other.Z < this.Z;
 
-
-        public MeshNode(ulong key) : base(key)
-        {
-        }
-
-        public override string ToString()
-        {
-            return Key.ToString() + " Z: " + Z.ToString();
-        }
+        public override string ToString() => Key.ToString() + " Z: " + Z.ToString();
     }
 }

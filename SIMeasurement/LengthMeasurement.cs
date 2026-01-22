@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 
 namespace SIMeasurement
@@ -24,21 +24,12 @@ namespace SIMeasurement
         [Description("yottametre")] Ym = 16
     }
 
-    public readonly struct LengthMeasurement
+    public readonly struct LengthMeasurement(SILengthUnits units, double scalar)
     {
-        public readonly SILengthUnits Units;
-        public readonly double Length;
+        public readonly SILengthUnits Units = units;
+        public readonly double Length = scalar;
 
-        public LengthMeasurement(SILengthUnits units, double scalar)
-        {
-            this.Units = units;
-            this.Length = scalar;
-        }
-
-        public override string ToString()
-        {
-            return Length.ToString("#0.###") + " " + Units.ToString();
-        }
+        public override string ToString() => Length.ToString("#0.###") + " " + Units.ToString();
 
         public string ToString(uint scale, bool PreserveNonSignificant = true)
         {
@@ -117,10 +108,7 @@ namespace SIMeasurement
             return new LengthMeasurement(newUnit, distance * unitScalar);
         }
 
-        public static LengthMeasurement ConvertToReadableUnits(LengthMeasurement measurement)
-        {
-            return LengthMeasurement.ConvertToReadableUnits(measurement.Units, measurement.Length);
-        }
+        public static LengthMeasurement ConvertToReadableUnits(LengthMeasurement measurement) => LengthMeasurement.ConvertToReadableUnits(measurement.Units, measurement.Length);
 
         public LengthMeasurement ConvertTo(SILengthUnits newUnit)
         {
@@ -142,10 +130,7 @@ namespace SIMeasurement
         /// </summary>
         /// <param name="other"></param>
         /// <returns></returns>
-        private LengthMeasurement ConvertToSameUnits(LengthMeasurement other)
-        {
-            return other.ConvertTo(this.Units);
-        }
+        private LengthMeasurement ConvertToSameUnits(LengthMeasurement other) => other.ConvertTo(this.Units);
 
         private static SILengthUnits LargestUnitOfMeasure(LengthMeasurement A, LengthMeasurement B)
         {
@@ -189,16 +174,10 @@ namespace SIMeasurement
 
             return A.Length / B.Length;
         }
-         
-        public static LengthMeasurement operator *(LengthMeasurement A, double B)
-        {
-            return new LengthMeasurement(A.Units, A.Length * B);
-        }
-         
-        public static LengthMeasurement operator /(LengthMeasurement A, double B)
-        {
-            return new LengthMeasurement(A.Units, A.Length / B);
-        }
+
+        public static LengthMeasurement operator *(LengthMeasurement A, double B) => new LengthMeasurement(A.Units, A.Length * B);
+
+        public static LengthMeasurement operator /(LengthMeasurement A, double B) => new LengthMeasurement(A.Units, A.Length / B);
 
         /*
          * Returns an area... not needed at this time so I'm leaving it alone.

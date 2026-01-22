@@ -11,11 +11,11 @@
     <ManifestTimestampUrl>http://timestamp.digicert.com</ManifestTimestampUrl>
     <ProductName>Viking</ProductName>
     <PublisherName>Marc Lab</PublisherName>
-		<ApplicationVersion>1.2.2.0</ApplicationVersion>
-		<FileVersion>1.2.2.0</FileVersion>
-		<AssemblyVersion>1.2.2.0</AssemblyVersion>
-		<Deterministic>True</Deterministic>
-		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <ApplicationVersion>1.2.28.0</ApplicationVersion>
+    <FileVersion>1.2.28.0</FileVersion>
+    <AssemblyVersion>1.2.28.0</AssemblyVersion>
+    <Deterministic>True</Deterministic>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <NoWarn>$(NoWarn);CS0436;CA1014;CS3009</NoWarn>
     <!-- Enable automatic binding redirects -->
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -97,9 +97,13 @@
     </None>
   </ItemGroup>
   <!--
+
 	<PropertyGroup>
+
 		<TargetDir>$(MSBuildProjectDirectory)\bin\$(\$(OutputPath)</TargetDir>
+
 	</PropertyGroup>
+
 	-->
   <!-- Post-build event to create debug output file -->
   <Target Name="CreateDebugOutputFile" AfterTargets="Build">

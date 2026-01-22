@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows.Forms;
 using WebAnnotationModel;
 
@@ -35,19 +35,19 @@ namespace WebAnnotation.UI
             StructureObj mergeStruct = Store.Structures.GetObjectByID(MergeID);
             StructureObj keepStruct = Store.Structures.GetObjectByID(KeepID);
 
-            if (keepStruct == null && mergeStruct == null)
+            if (keepStruct is null && mergeStruct is null)
             {
                 Reason = "Input IDs must be a valid structures";
                 return false;
             }
 
-            if (keepStruct == null)
+            if (keepStruct is null)
             {
                 Reason = "No structure matches Keep ID";
                 return false;
             }
 
-            if (mergeStruct == null)
+            if (mergeStruct is null)
             {
                 Reason = "No structure matches Merge ID";
                 return false;
@@ -102,10 +102,7 @@ namespace WebAnnotation.UI
             Close();
         }
 
-        private void btnCancel_Click(object sender, EventArgs e)
-        {
-            Close();
-        }
+        private void btnCancel_Click(object sender, EventArgs e) => Close();
 
         private bool IsIDValid(string Input, out string Reason)
         {
@@ -122,7 +119,7 @@ namespace WebAnnotation.UI
                 int ID = int.Parse(Input);
 
                 StructureObj obj = Store.Structures.GetObjectByID(ID, true);
-                if (obj == null)
+                if (obj is null)
                 {
                     Reason = "No structure found";
                     return false;

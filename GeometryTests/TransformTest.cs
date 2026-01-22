@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Geometry.Transforms;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -70,13 +70,13 @@ namespace GeometryTests
             //
 
 
-            GridVector2 fixedV1 = new GridVector2(0, 0);
-            GridVector2 fixedV2 = new GridVector2(10, 0);
-            GridVector2 fixedV3 = new GridVector2(0, 10);
+            GridVector2 fixedV1 = new(0, 0);
+            GridVector2 fixedV2 = new(10, 0);
+            GridVector2 fixedV3 = new(0, 10);
 
-            MappingGridVector2[] fixedPoints = new MappingGridVector2[] {new MappingGridVector2(fixedV1, fixedV1),
-                                                                         new MappingGridVector2(fixedV2, fixedV2),
-                                                                         new MappingGridVector2(fixedV3, fixedV3)};
+            MappingGridVector2[] fixedPoints = [new(fixedV1, fixedV1),
+                                                                         new(fixedV2, fixedV2),
+                                                                         new(fixedV3, fixedV3)];
 
             //
             //     3----1
@@ -85,30 +85,30 @@ namespace GeometryTests
             //        \ |
             //          2
             //
-            GridVector2 movingV1 = new GridVector2(2.5, 2.5);
-            GridVector2 movingV2 = new GridVector2(2.5, -7.5);
-            GridVector2 movingV3 = new GridVector2(-7.5, 2.5);
+            GridVector2 movingV1 = new(2.5, 2.5);
+            GridVector2 movingV2 = new(2.5, -7.5);
+            GridVector2 movingV3 = new(-7.5, 2.5);
 
-            MappingGridVector2[] movingPoints = new MappingGridVector2[] {new MappingGridVector2(movingV1, movingV1),
-                                                                         new MappingGridVector2(movingV2, movingV2),
-                                                                         new MappingGridVector2(movingV3, movingV3)};
+            MappingGridVector2[] movingPoints = [new(movingV1, movingV1),
+                                                                         new(movingV2, movingV2),
+                                                                         new(movingV3, movingV3)];
 
-            MeshTransform fixedTransform = new MeshTransform(fixedPoints, new TransformBasicInfo(DateTime.UtcNow));
-            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform fixedTransform = new(fixedPoints, new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform movingTransform = new(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
 
             ITransformControlPoints result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            MappingGridVector2[] ExpectedControlPoints = new MappingGridVector2[]
-            {
-                new MappingGridVector2(new GridVector2(2.5, 2.5), new GridVector2(2.5, 2.5)),
-                new MappingGridVector2(new GridVector2(2.5, 0), new GridVector2(2.5, 0)),
-                new MappingGridVector2( new GridVector2(0, 2.5), new GridVector2(0, 2.5)),
-                new MappingGridVector2( GridVector2.Zero, GridVector2.Zero)
-            };
-             
-            Assert.IsTrue(ExpectedControlPoints.SetEquals(newPoints)); 
+            MappingGridVector2[] ExpectedControlPoints =
+            [
+                new(new GridVector2(2.5, 2.5), new GridVector2(2.5, 2.5)),
+                new(new GridVector2(2.5, 0), new GridVector2(2.5, 0)),
+                new( new GridVector2(0, 2.5), new GridVector2(0, 2.5)),
+                new( GridVector2.Zero, GridVector2.Zero)
+            ];
+
+            Assert.IsTrue(ExpectedControlPoints.SetEquals(newPoints));
         }
 
         [TestMethod]
@@ -118,42 +118,42 @@ namespace GeometryTests
             // A simple test adding two transforms built from three points each
             //
 
-            GridVector2 fixedV1 = new GridVector2(0, 0);
-            GridVector2 fixedV2 = new GridVector2(10, 0);
-            GridVector2 fixedV3 = new GridVector2(0, 10);
-            GridVector2 fixedV4 = new GridVector2(10, 10);
+            GridVector2 fixedV1 = new(0, 0);
+            GridVector2 fixedV2 = new(10, 0);
+            GridVector2 fixedV3 = new(0, 10);
+            GridVector2 fixedV4 = new(10, 10);
 
-            MappingGridVector2[] fixedPoints = new MappingGridVector2[] {new MappingGridVector2(fixedV1, fixedV1),
-                                                                         new MappingGridVector2(fixedV2, fixedV2),
-                                                                         new MappingGridVector2(fixedV3, fixedV3),
-                                                                         new MappingGridVector2(fixedV4, fixedV4)};
+            MappingGridVector2[] fixedPoints = [new(fixedV1, fixedV1),
+                                                                         new(fixedV2, fixedV2),
+                                                                         new(fixedV3, fixedV3),
+                                                                         new(fixedV4, fixedV4)];
 
 
-            GridVector2 movingV1 = new GridVector2(2.5, 2.5);
-            GridVector2 movingV2 = new GridVector2(2.5, -7.5);
-            GridVector2 movingV3 = new GridVector2(-7.5, 2.5);
-            GridVector2 movingV4 = new GridVector2(-8.5, -8.5); //Point four should be removed by the transform
+            GridVector2 movingV1 = new(2.5, 2.5);
+            GridVector2 movingV2 = new(2.5, -7.5);
+            GridVector2 movingV3 = new(-7.5, 2.5);
+            GridVector2 movingV4 = new(-8.5, -8.5); //Point four should be removed by the transform
 
-            MappingGridVector2[] movingPoints = new MappingGridVector2[] {new MappingGridVector2(movingV1, movingV1),
-                                                                         new MappingGridVector2(movingV2, movingV2),
-                                                                         new MappingGridVector2(movingV3, movingV3),
-                                                                         new MappingGridVector2(movingV4, movingV4)};
+            MappingGridVector2[] movingPoints = [new(movingV1, movingV1),
+                                                                         new(movingV2, movingV2),
+                                                                         new(movingV3, movingV3),
+                                                                         new(movingV4, movingV4)];
 
-            MeshTransform fixedTransform = new MeshTransform(fixedPoints, new TransformBasicInfo(DateTime.UtcNow));
-            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform fixedTransform = new(fixedPoints, new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform movingTransform = new(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
 
             var result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            MappingGridVector2[] ExpectedControlPoints = new MappingGridVector2[]
-            {
-                new MappingGridVector2(new GridVector2(2.5, 2.5), new GridVector2(2.5, 2.5)),
-                new MappingGridVector2(new GridVector2(2.5, 0), new GridVector2(2.5, 0)),
-                new MappingGridVector2( new GridVector2(0, 2.5), new GridVector2(0, 2.5)),
-                new MappingGridVector2( GridVector2.Zero, GridVector2.Zero)
-            };
-             
+            MappingGridVector2[] ExpectedControlPoints =
+            [
+                new(new GridVector2(2.5, 2.5), new GridVector2(2.5, 2.5)),
+                new(new GridVector2(2.5, 0), new GridVector2(2.5, 0)),
+                new( new GridVector2(0, 2.5), new GridVector2(0, 2.5)),
+                new( GridVector2.Zero, GridVector2.Zero)
+            ];
+
             Assert.IsTrue(ExpectedControlPoints.SetEquals(newPoints));
         }
 
@@ -164,39 +164,39 @@ namespace GeometryTests
             // A simple test adding two transforms built from three points each
             //
 
-            GridVector2 fixedV1 = new GridVector2(0, 0);
-            GridVector2 fixedV2 = new GridVector2(10, 0);
-            GridVector2 fixedV3 = new GridVector2(0, 10);
-            GridVector2 fixedV4 = new GridVector2(10, 10);
+            GridVector2 fixedV1 = new(0, 0);
+            GridVector2 fixedV2 = new(10, 0);
+            GridVector2 fixedV3 = new(0, 10);
+            GridVector2 fixedV4 = new(10, 10);
 
-            MappingGridVector2[] fixedPoints = new MappingGridVector2[] {new MappingGridVector2(fixedV1, fixedV1),
-                                                                         new MappingGridVector2(fixedV2, fixedV2),
-                                                                         new MappingGridVector2(fixedV3, fixedV3),
-                                                                         new MappingGridVector2(fixedV4, fixedV4)};
-
-
-
-
-            GridVector2 movingV1 = new GridVector2(2.5, 2.5);
-            GridVector2 movingV2 = new GridVector2(2.5, 17.5);
-            GridVector2 movingV3 = new GridVector2(17.5, 2.5);
-            GridVector2 movingV4 = new GridVector2(17.5, 17.5);
-
-            MappingGridVector2[] movingPoints = new MappingGridVector2[] {new MappingGridVector2(movingV1, movingV1),
-                                                                         new MappingGridVector2(movingV2, movingV2),
-                                                                         new MappingGridVector2(movingV3, movingV3),
-                                                                         new MappingGridVector2(movingV4, movingV4)};
+            MappingGridVector2[] fixedPoints = [new(fixedV1, fixedV1),
+                                                                         new(fixedV2, fixedV2),
+                                                                         new(fixedV3, fixedV3),
+                                                                         new(fixedV4, fixedV4)];
 
 
 
-            MeshTransform fixedTransform = new MeshTransform(fixedPoints, new TransformBasicInfo(DateTime.UtcNow));
-            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
+
+            GridVector2 movingV1 = new(2.5, 2.5);
+            GridVector2 movingV2 = new(2.5, 17.5);
+            GridVector2 movingV3 = new(17.5, 2.5);
+            GridVector2 movingV4 = new(17.5, 17.5);
+
+            MappingGridVector2[] movingPoints = [new(movingV1, movingV1),
+                                                                         new(movingV2, movingV2),
+                                                                         new(movingV3, movingV3),
+                                                                         new(movingV4, movingV4)];
+
+
+
+            MeshTransform fixedTransform = new(fixedPoints, new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform movingTransform = new(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
 
             var result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            Assert.IsTrue(newPoints.Length == 4);
+            Assert.AreEqual(4, newPoints.Length);
             Assert.IsTrue(newPoints[0].ControlPoint.X == 2.5 && newPoints[0].ControlPoint.Y == 2.5);
             Assert.IsTrue(newPoints[1].ControlPoint.X == 2.5 && newPoints[1].ControlPoint.Y == 10);
             Assert.IsTrue(newPoints[2].ControlPoint.X == 10 && newPoints[2].ControlPoint.Y == 2.5);
@@ -209,43 +209,43 @@ namespace GeometryTests
             //
             // A simple test adding two transforms built from three points each
             //
-            GridVector2 fixedV1 = new GridVector2(0, 0);
-            GridVector2 fixedV2 = new GridVector2(10, 0);
-            GridVector2 fixedV3 = new GridVector2(0, 10);
-            GridVector2 fixedV4 = new GridVector2(10, 10);
+            GridVector2 fixedV1 = new(0, 0);
+            GridVector2 fixedV2 = new(10, 0);
+            GridVector2 fixedV3 = new(0, 10);
+            GridVector2 fixedV4 = new(10, 10);
 
-            MappingGridVector2[] fixedPoints = new MappingGridVector2[] {new MappingGridVector2(fixedV1, fixedV1),
-                                                                         new MappingGridVector2(fixedV2, fixedV2),
-                                                                         new MappingGridVector2(fixedV3, fixedV3),
-                                                                         new MappingGridVector2(fixedV4, fixedV4)};
-
-
+            MappingGridVector2[] fixedPoints = [new(fixedV1, fixedV1),
+                                                                         new(fixedV2, fixedV2),
+                                                                         new(fixedV3, fixedV3),
+                                                                         new(fixedV4, fixedV4)];
 
 
-            GridVector2 movingV1 = new GridVector2(2.5, 2.5);
-            GridVector2 movingV2 = new GridVector2(2.5, 17.5);
-            GridVector2 movingV3 = new GridVector2(17.5, 2.5);
-            GridVector2 movingV4 = new GridVector2(18.5, 18.5); //Point four should be removed by the transform
 
-            MappingGridVector2[] movingPoints = new MappingGridVector2[] {new MappingGridVector2(movingV1, GridVector2.Scale(movingV1,10)),
-                                                                         new MappingGridVector2(movingV2, GridVector2.Scale(movingV2,10)),
-                                                                         new MappingGridVector2(movingV3, GridVector2.Scale(movingV3,10)),
-                                                                         new MappingGridVector2(movingV4, GridVector2.Scale(movingV4,10))};
 
-            MeshTransform fixedTransform = new MeshTransform(fixedPoints, new TransformBasicInfo(DateTime.UtcNow));
-            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
+            GridVector2 movingV1 = new(2.5, 2.5);
+            GridVector2 movingV2 = new(2.5, 17.5);
+            GridVector2 movingV3 = new(17.5, 2.5);
+            GridVector2 movingV4 = new(18.5, 18.5); //Point four should be removed by the transform
+
+            MappingGridVector2[] movingPoints = [new(movingV1, GridVector2.Scale(movingV1,10)),
+                                                                         new(movingV2, GridVector2.Scale(movingV2,10)),
+                                                                         new(movingV3, GridVector2.Scale(movingV3,10)),
+                                                                         new(movingV4, GridVector2.Scale(movingV4,10))];
+
+            MeshTransform fixedTransform = new(fixedPoints, new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform movingTransform = new(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
 
             var result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            MappingGridVector2[] ExpectedControlPoints = new MappingGridVector2[]
-            {
-                new MappingGridVector2(new GridVector2(2.5, 2.5), new GridVector2(25, 25)),
-                new MappingGridVector2(new GridVector2(2.5, 10), new GridVector2(25, 100)),
-                new MappingGridVector2( new GridVector2(10, 25), new GridVector2(100, 25)),
-                new MappingGridVector2( new GridVector2(10, 10), new GridVector2(100, 100))
-            };
+            MappingGridVector2[] ExpectedControlPoints =
+            [
+                new(new GridVector2(2.5, 2.5), new GridVector2(25, 25)),
+                new(new GridVector2(2.5, 10), new GridVector2(25, 100)),
+                new( new GridVector2(10, 25), new GridVector2(100, 25)),
+                new( new GridVector2(10, 10), new GridVector2(100, 100))
+            ];
 
             Assert.IsTrue(ExpectedControlPoints.SetEquals(newPoints));
         }
@@ -258,48 +258,48 @@ namespace GeometryTests
             //
 
 
-            GridVector2[] fixedCtrlPoints = new GridVector2[]{ new GridVector2(5, 5),
-                                                              new GridVector2(5, 10),
-                                                              new GridVector2(5, 15),
-                                                              new GridVector2(15, 5),
-                                                              new GridVector2(15, 10),
-                                                              new GridVector2(15, 15)};
+            GridVector2[] fixedCtrlPoints = [ new(5, 5),
+                                                              new(5, 10),
+                                                              new(5, 15),
+                                                              new(15, 5),
+                                                              new(15, 10),
+                                                              new(15, 15)];
             //                      new GridVector2(25, 5),
             //                      new GridVector2(25, 10),
             //                      new GridVector2(25, 15)};
 
-            GridVector2[] fixedMapPoints = new GridVector2[]{new GridVector2(50, 50),
-                                                              new GridVector2(50, 100),
-                                                              new GridVector2(50, 150),
-                                                              new GridVector2(150, 50),
-                                                              new GridVector2(150, 100),
-                                                              new GridVector2(150, 150)};
+            GridVector2[] fixedMapPoints = [new(50, 50),
+                                                              new(50, 100),
+                                                              new(50, 150),
+                                                              new(150, 50),
+                                                              new(150, 100),
+                                                              new(150, 150)];
             ///                      new GridVector2(250, 50),
             ///                      new GridVector2(250, 100),
             //                      new GridVector2(250, 150)};
 
-            GridVector2[] movingCtrlPoints = new GridVector2[]{new GridVector2(100, 75),
-                                                              new GridVector2(100, 125),
-                                                              new GridVector2(100, 175),
-                                                              new GridVector2(200, 75),
-                                                              new GridVector2(200, 125),
-                                                              new GridVector2(200, 175)};
+            GridVector2[] movingCtrlPoints = [new(100, 75),
+                                                              new(100, 125),
+                                                              new(100, 175),
+                                                              new(200, 75),
+                                                              new(200, 125),
+                                                              new(200, 175)];
             //                         new GridVector2(250, 50),
             //                         new GridVector2(250, 100),
             //                         new GridVector2(250, 150)};
 
-            GridVector2[] movingMapPoints = new GridVector2[]{ new GridVector2(5, 5),
-                                                              new GridVector2(5, 10),
-                                                              new GridVector2(5, 15),
-                                                              new GridVector2(15, 5),
-                                                              new GridVector2(15, 10),
-                                                              new GridVector2(15, 15)};
+            GridVector2[] movingMapPoints = [ new(5, 5),
+                                                              new(5, 10),
+                                                              new(5, 15),
+                                                              new(15, 5),
+                                                              new(15, 10),
+                                                              new(15, 15)];
             //                         new GridVector2(25, 5),
             //                         new GridVector2(25, 10),
             //                         new GridVector2(25, 15)};
 
-            List<MappingGridVector2> fixedPoints = new List<MappingGridVector2>(fixedMapPoints.Length);
-            List<MappingGridVector2> movingPoints = new List<MappingGridVector2>(movingMapPoints.Length);
+            List<MappingGridVector2> fixedPoints = new(fixedMapPoints.Length);
+            List<MappingGridVector2> movingPoints = new(movingMapPoints.Length);
 
             for (int iFixed = 0; iFixed < fixedMapPoints.Length; iFixed++)
             {
@@ -311,14 +311,14 @@ namespace GeometryTests
                 movingPoints.Add(new MappingGridVector2(movingCtrlPoints[iMapped], movingMapPoints[iMapped]));
             }
 
-            MeshTransform fixedTransform = new MeshTransform(fixedPoints.ToArray(), new TransformBasicInfo(DateTime.UtcNow));
-            MeshTransform movingTransform = new MeshTransform(movingPoints.ToArray(), new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform fixedTransform = new([.. fixedPoints], new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform movingTransform = new([.. movingPoints], new TransformBasicInfo(DateTime.UtcNow));
 
             var result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            Assert.IsTrue(result.MapPoints.Length == 7);
+            Assert.AreEqual(7, result.MapPoints.Length);
         }
 
         [TestMethod]
@@ -328,48 +328,48 @@ namespace GeometryTests
             // A simple test adding two transforms built from three points each
             //
 
-            GridVector2[] fixedCtrlPoints = new GridVector2[]{ new GridVector2(5, 5),
-                                                              new GridVector2(5, 10),
-                                                              new GridVector2(5, 15),
-                                                              new GridVector2(15, 5),
-                                                              new GridVector2(15, 10),
-                                                              new GridVector2(15, 15)};
+            GridVector2[] fixedCtrlPoints = [ new(5, 5),
+                                                              new(5, 10),
+                                                              new(5, 15),
+                                                              new(15, 5),
+                                                              new(15, 10),
+                                                              new(15, 15)];
             //                      new GridVector2(25, 5),
             //                      new GridVector2(25, 10),
             //                      new GridVector2(25, 15)};
 
-            GridVector2[] fixedMapPoints = new GridVector2[]{new GridVector2(50, 50),
-                                                              new GridVector2(50, 100),
-                                                              new GridVector2(50, 150),
-                                                              new GridVector2(150, 50),
-                                                              new GridVector2(150, 100),
-                                                              new GridVector2(150, 150)};
+            GridVector2[] fixedMapPoints = [new(50, 50),
+                                                              new(50, 100),
+                                                              new(50, 150),
+                                                              new(150, 50),
+                                                              new(150, 100),
+                                                              new(150, 150)];
             ///                      new GridVector2(250, 50),
             ///                      new GridVector2(250, 100),
             //                      new GridVector2(250, 150)};
 
-            GridVector2[] movingCtrlPoints = new GridVector2[]{new GridVector2(100, 75),
-                                                              new GridVector2(100, 125),
-                                                              new GridVector2(100, 175),
-                                                              new GridVector2(200, 75),
-                                                              new GridVector2(200, 125),
-                                                              new GridVector2(200, 175)};
+            GridVector2[] movingCtrlPoints = [new(100, 75),
+                                                              new(100, 125),
+                                                              new(100, 175),
+                                                              new(200, 75),
+                                                              new(200, 125),
+                                                              new(200, 175)];
             //                         new GridVector2(250, 50),
             //                         new GridVector2(250, 100),
             //                         new GridVector2(250, 150)};
 
-            GridVector2[] movingMapPoints = new GridVector2[]{ new GridVector2(5, 5),
-                                                              new GridVector2(5, 10),
-                                                              new GridVector2(5, 15),
-                                                              new GridVector2(15, 5),
-                                                              new GridVector2(15, 10),
-                                                              new GridVector2(15, 15)};
+            GridVector2[] movingMapPoints = [ new(5, 5),
+                                                              new(5, 10),
+                                                              new(5, 15),
+                                                              new(15, 5),
+                                                              new(15, 10),
+                                                              new(15, 15)];
             //                         new GridVector2(25, 5),
             //                         new GridVector2(25, 10),
             //                         new GridVector2(25, 15)};
 
-            List<MappingGridVector2> fixedPoints = new List<MappingGridVector2>(fixedMapPoints.Length);
-            List<MappingGridVector2> movingPoints = new List<MappingGridVector2>(movingMapPoints.Length);
+            List<MappingGridVector2> fixedPoints = new(fixedMapPoints.Length);
+            List<MappingGridVector2> movingPoints = new(movingMapPoints.Length);
 
             for (int iFixed = 0; iFixed < fixedMapPoints.Length; iFixed++)
             {
@@ -381,14 +381,14 @@ namespace GeometryTests
                 movingPoints.Add(new MappingGridVector2(movingCtrlPoints[iMapped], movingMapPoints[iMapped]));
             }
 
-            MeshTransform fixedTransform = new MeshTransform(fixedPoints.ToArray(), new TransformBasicInfo(DateTime.UtcNow));
-            MeshTransform movingTransform = new MeshTransform(movingPoints.ToArray(), new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform fixedTransform = new([.. fixedPoints], new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform movingTransform = new([.. movingPoints], new TransformBasicInfo(DateTime.UtcNow));
 
             var result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            Assert.IsTrue(result.MapPoints.Length == 7);
+            Assert.AreEqual(7, result.MapPoints.Length);
         }
 
         [TestMethod]
@@ -397,39 +397,39 @@ namespace GeometryTests
             //
             // A simple test adding two transforms built from three points each
             // 
-            GridVector2 fixedV1 = new GridVector2(0, 0);
-            GridVector2 fixedV2 = new GridVector2(10, 0);
-            GridVector2 fixedV3 = new GridVector2(0, 10);
-            GridVector2 fixedV4 = new GridVector2(10, 10);
+            GridVector2 fixedV1 = new(0, 0);
+            GridVector2 fixedV2 = new(10, 0);
+            GridVector2 fixedV3 = new(0, 10);
+            GridVector2 fixedV4 = new(10, 10);
 
-            MappingGridVector2[] fixedPoints = new MappingGridVector2[] {new MappingGridVector2(fixedV1, fixedV1),
-                                                                         new MappingGridVector2(fixedV2, fixedV2),
-                                                                         new MappingGridVector2(fixedV3, fixedV3),
-                                                                         new MappingGridVector2(fixedV4, fixedV4)};
+            MappingGridVector2[] fixedPoints = [new(fixedV1, fixedV1),
+                                                                         new(fixedV2, fixedV2),
+                                                                         new(fixedV3, fixedV3),
+                                                                         new(fixedV4, fixedV4)];
 
-            GridVector2 movingV1 = new GridVector2(2.5, 2.5);
-            GridVector2 movingV2 = new GridVector2(2.5, -7.5);
-            GridVector2 movingV3 = new GridVector2(-7.5, 2.5);
+            GridVector2 movingV1 = new(2.5, 2.5);
+            GridVector2 movingV2 = new(2.5, -7.5);
+            GridVector2 movingV3 = new(-7.5, 2.5);
 
-            MappingGridVector2[] movingPoints = new MappingGridVector2[] {new MappingGridVector2(movingV1, movingV1),
-                                                                         new MappingGridVector2(movingV2, movingV2),
-                                                                         new MappingGridVector2(movingV3, movingV3)};
+            MappingGridVector2[] movingPoints = [new(movingV1, movingV1),
+                                                                         new(movingV2, movingV2),
+                                                                         new(movingV3, movingV3)];
 
-            GridTransform fixedTransform = new GridTransform(fixedPoints, new GridRectangle(fixedV1, 10, 10), 2, 2, new TransformBasicInfo(DateTime.UtcNow));
-            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
-             
+            GridTransform fixedTransform = new(fixedPoints, new GridRectangle(fixedV1, 10, 10), 2, 2, new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform movingTransform = new(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
+
             var result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            MappingGridVector2[] ExpectedControlPoints = new MappingGridVector2[]
-            {
-                new MappingGridVector2(new GridVector2(2.5, 2.5), new GridVector2(2.5, 2.5)),
-                new MappingGridVector2(new GridVector2(2.5, 0), new GridVector2(2.5, 0)),
-                new MappingGridVector2( new GridVector2(0, 2.5), new GridVector2(0, 2.5)),
-                new MappingGridVector2( GridVector2.Zero, GridVector2.Zero)
-            };
-             
+            MappingGridVector2[] ExpectedControlPoints =
+            [
+                new(new GridVector2(2.5, 2.5), new GridVector2(2.5, 2.5)),
+                new(new GridVector2(2.5, 0), new GridVector2(2.5, 0)),
+                new( new GridVector2(0, 2.5), new GridVector2(0, 2.5)),
+                new( GridVector2.Zero, GridVector2.Zero)
+            ];
+
             Assert.IsTrue(ExpectedControlPoints.SetEquals(newPoints));
         }
 
@@ -439,28 +439,28 @@ namespace GeometryTests
             //
             // A simple test adding two transforms built from three points each
             // 
-            GridVector2 fixedV1 = new GridVector2(0, 0);
-            GridVector2 fixedV2 = new GridVector2(10, 0);
-            GridVector2 fixedV3 = new GridVector2(0, 10);
-            GridVector2 fixedV4 = new GridVector2(10, 10);
+            GridVector2 fixedV1 = new(0, 0);
+            GridVector2 fixedV2 = new(10, 0);
+            GridVector2 fixedV3 = new(0, 10);
+            GridVector2 fixedV4 = new(10, 10);
 
-            MappingGridVector2[] fixedPoints = new MappingGridVector2[] {new MappingGridVector2(fixedV1, fixedV1),
-                                                                         new MappingGridVector2(fixedV2, fixedV2),
-                                                                         new MappingGridVector2(fixedV3, fixedV3),
-                                                                         new MappingGridVector2(fixedV4, fixedV4)};
+            MappingGridVector2[] fixedPoints = [new(fixedV1, fixedV1),
+                                                                         new(fixedV2, fixedV2),
+                                                                         new(fixedV3, fixedV3),
+                                                                         new(fixedV4, fixedV4)];
 
-            GridVector2 movingV1 = new GridVector2(2.5, 2.5);
-            GridVector2 movingV2 = new GridVector2(2.5, 12.5);
-            GridVector2 movingV3 = new GridVector2(12.5, 12.5);
-            GridVector2 movingV4 = new GridVector2(12.5, 2.5);
+            GridVector2 movingV1 = new(2.5, 2.5);
+            GridVector2 movingV2 = new(2.5, 12.5);
+            GridVector2 movingV3 = new(12.5, 12.5);
+            GridVector2 movingV4 = new(12.5, 2.5);
 
-            MappingGridVector2[] movingPoints = new MappingGridVector2[] {new MappingGridVector2(movingV1, movingV1),
-                                                                         new MappingGridVector2(movingV2, movingV2),
-                                                                         new MappingGridVector2(movingV3, movingV3),
-                                                                         new MappingGridVector2(movingV4, movingV4)};
+            MappingGridVector2[] movingPoints = [new(movingV1, movingV1),
+                                                                         new(movingV2, movingV2),
+                                                                         new(movingV3, movingV3),
+                                                                         new(movingV4, movingV4)];
 
-            GridTransform fixedTransform = new GridTransform(fixedPoints, new GridRectangle(fixedV1, 10, 10), 2, 2, new TransformBasicInfo(DateTime.UtcNow));
-            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
+            GridTransform fixedTransform = new(fixedPoints, new GridRectangle(fixedV1, 10, 10), 2, 2, new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform movingTransform = new(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
 
 
 
@@ -480,28 +480,28 @@ namespace GeometryTests
             //
             // A simple test adding two transforms built from three points each
             // 
-            GridVector2 fixedV1 = new GridVector2(0, 0);
-            GridVector2 fixedV2 = new GridVector2(10, 0);
-            GridVector2 fixedV3 = new GridVector2(0, 10);
-            GridVector2 fixedV4 = new GridVector2(10, 10);
+            GridVector2 fixedV1 = new(0, 0);
+            GridVector2 fixedV2 = new(10, 0);
+            GridVector2 fixedV3 = new(0, 10);
+            GridVector2 fixedV4 = new(10, 10);
 
 
-            GridVector2 movingV1 = new GridVector2(2.5, 2.5);
-            GridVector2 movingV2 = new GridVector2(2.5, 12.5);
-            GridVector2 movingV3 = new GridVector2(12.5, 12.5);
-            GridVector2 movingV4 = new GridVector2(12.5, 2.5);
+            GridVector2 movingV1 = new(2.5, 2.5);
+            GridVector2 movingV2 = new(2.5, 12.5);
+            GridVector2 movingV3 = new(12.5, 12.5);
+            GridVector2 movingV4 = new(12.5, 2.5);
 
-            MappingGridVector2[] transformPoints = new MappingGridVector2[] {new MappingGridVector2(fixedV1, movingV1),
-                                                                         new MappingGridVector2(fixedV2, movingV2),
-                                                                         new MappingGridVector2(fixedV3, movingV3),
-                                                                         new MappingGridVector2(fixedV4, movingV4)};
+            MappingGridVector2[] transformPoints = [new(fixedV1, movingV1),
+                                                                         new(fixedV2, movingV2),
+                                                                         new(fixedV3, movingV3),
+                                                                         new(fixedV4, movingV4)];
 
-            GridTransform fixedTransform = new GridTransform(transformPoints, new GridRectangle(fixedV1, 10, 10), 2, 2, new TransformBasicInfo(DateTime.UtcNow));
+            GridTransform fixedTransform = new(transformPoints, new GridRectangle(fixedV1, 10, 10), 2, 2, new TransformBasicInfo(DateTime.UtcNow));
 
-            GridVector2[] PointsToTransform = new GridVector2[] { new GridVector2(2.5, 2.5),
-                                                                new GridVector2(2.5, 7.5),
-                                                                new GridVector2(7.5, 2.5),
-                                                                new GridVector2(7.5, 7.5) };
+            GridVector2[] PointsToTransform = [ new(2.5, 2.5),
+                                                                new(2.5, 7.5),
+                                                                new(7.5, 2.5),
+                                                                new(7.5, 7.5) ];
 
             GridVector2[] PointsToInverseTransform = fixedTransform.Transform(PointsToTransform);
 

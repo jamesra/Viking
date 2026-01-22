@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -17,16 +17,16 @@ namespace VikingXNA
         private static Vector3 DefaultLookAtVector = Vector3.Zero;
         private static readonly Vector3 DefaultUpVector = Vector3.UnitZ;
         public static Vector3 DefaultRotationVector = Vector3.Zero;
-        
-        private Vector3 _LookAt = new Vector3(0, 0, 0);
+
+        private Vector3 _LookAt = new(0, 0, 0);
         private Vector3 _Position = Vector3.Backward;
         private readonly Vector3 _Up = DefaultUpVector;
         private Vector3 _Rotation = Vector3.Zero;
 
         private float _Pan = MathHelper.ToRadians(0f);
         private float _Tilt = MathHelper.ToRadians(0f);
-        
-        
+
+
         /// <summary>
         /// View Matrix is only worth updating when the LookAt parameter changes.
         /// </summary>
@@ -43,17 +43,15 @@ namespace VikingXNA
             {
                 _View = Matrix.CreateLookAt(Position, OffsetLookAtVector, Vector3.UnitY);
             }
-            else if(LineOfSightUnitVectorAccountingForRoundingError == -_Up)
-            {
-                _View = Matrix.CreateLookAt(Position, OffsetLookAtVector, -Vector3.UnitY);
-            }
             else
             {
-                _View = Matrix.CreateLookAt(Position, OffsetLookAtVector, Up);
+                _View = LineOfSightUnitVectorAccountingForRoundingError == -_Up
+                    ? Matrix.CreateLookAt(Position, OffsetLookAtVector, -Vector3.UnitY)
+                    : Matrix.CreateLookAt(Position, OffsetLookAtVector, Up);
             }
 
             //_View = Matrix.CreateLookAt(Position, _LookAt, Up);
-            
+
         }
 
         /// <summary>
@@ -61,9 +59,9 @@ namespace VikingXNA
         /// </summary>
         /// <returns></returns>
         private static Vector3 CalculateLineOfSightUnitVector(float yaw, float pitch)
-        { 
+        {
 
-            Vector3 LineOfSightUnitVector = new Vector3(
+            Vector3 LineOfSightUnitVector = new(
                 (float)(Math.Cos(yaw) * Math.Sin(pitch)),
                 (float)(Math.Sin(yaw) * Math.Sin(pitch)),
                 (float)(Math.Cos(pitch)));
@@ -125,7 +123,7 @@ namespace VikingXNA
 
                 CalculateRotationFromLineOfSightUnitVector(lineOfSightVector, out double yaw, out double pitch);
                 this.Rotation = new Vector3((float)yaw, (float)pitch, (float)this.Rotation.Z);
-                
+
                 //UpdateViewMatrix();
                 //CallOnPropertyChanged();
             }
@@ -152,7 +150,7 @@ namespace VikingXNA
                 CallOnPropertyChanged();
             }
         }
-         
+
         public double Yaw
         {
             get => Rotation.X;
@@ -196,9 +194,6 @@ namespace VikingXNA
             UpdateViewMatrix();
         }
 
-        protected void CallOnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        protected void CallOnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

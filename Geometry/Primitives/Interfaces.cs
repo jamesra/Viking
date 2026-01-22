@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Geometry
@@ -55,40 +55,29 @@ namespace Geometry
     {
         public static bool IsOpen(this ShapeType2D type)
         {
-            switch (type)
+            return type switch
             {
-                case ShapeType2D.LINE:
-                case ShapeType2D.POLYLINE:
-                case ShapeType2D.OPENCURVE:
-                    return true;
-            }
-
-            return false;
+                ShapeType2D.LINE or ShapeType2D.POLYLINE or ShapeType2D.OPENCURVE => true,
+                _ => false,
+            };
         }
 
         public static bool IsClosed(this ShapeType2D type)
         {
-            switch (type)
+            return type switch
             {
-                case ShapeType2D.POINT:
-                case ShapeType2D.LINE:
-                case ShapeType2D.POLYLINE:
-                case ShapeType2D.OPENCURVE:
-                    return false;
-            }
-
-            return true;
+                ShapeType2D.POINT or ShapeType2D.LINE or ShapeType2D.POLYLINE or ShapeType2D.OPENCURVE => false,
+                _ => true,
+            };
         }
 
         public static bool IsPoint(this ShapeType2D type)
         {
-            switch (type)
+            return type switch
             {
-                case ShapeType2D.POINT:
-                    return true;
-            }
-
-            return false;
+                ShapeType2D.POINT => true,
+                _ => false,
+            };
         }
     }
 
@@ -97,7 +86,7 @@ namespace Geometry
     /// </summary>
     public interface IPointN
     {
-        double[] coords { get; } 
+        double[] coords { get; }
     }
 
     public interface ICentroid
@@ -173,7 +162,7 @@ namespace Geometry
 
     public interface ITriangle2D : IShape2D, IEquatable<ITriangle2D>, ICentroid
     {
-        IPoint2D[] Points { get; } 
+        IPoint2D[] Points { get; }
     }
 
     public interface ILineSegment2D : IShape2D, IEquatable<ILineSegment2D>, ICentroid

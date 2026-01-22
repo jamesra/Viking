@@ -19,17 +19,17 @@ namespace Viking.UI.BaseClasses
 
         public void SetDragDropTypes()
         {
-            if (!(this.GetType().GetCustomAttributes(typeof(SupportedUITypesAttribute), true) is SupportedUITypesAttribute[] attribs))
+            if (this.GetType().GetCustomAttributes(typeof(SupportedUITypesAttribute), true) is not SupportedUITypesAttribute[] attribs)
                 return;
 
             //Should only be one entry, but lets be safe and add them together
-            List<Type> supportedTypes = new List<Type>();
+            List<Type> supportedTypes = [];
             foreach (SupportedUITypesAttribute attrib in attribs)
             {
                 supportedTypes.AddRange(attrib.Types);
             }
 
-            Tree.ValidDragDropTypes = supportedTypes.ToArray();
+            Tree.ValidDragDropTypes = [.. supportedTypes];
         }
 
         #region Properties

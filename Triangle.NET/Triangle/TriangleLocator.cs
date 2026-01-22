@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="TriangleLocator.cs" company="">
 // Original Triangle code by Jonathan Richard Shewchuk, http://www.cs.cmu.edu/~quake/triangle.html
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
@@ -22,12 +22,12 @@ namespace TriangleNet
     /// Delaunay Triangulations," Proceedings of the Twelfth Annual Symposium on
     /// Computational Geometry, ACM, May 1996.
     /// </remarks>
-    public class TriangleLocator
+    public class TriangleLocator(Mesh mesh, IPredicates predicates)
     {
-        readonly TriangleSampler sampler;
-        readonly Mesh mesh;
+        readonly TriangleSampler sampler = new(mesh);
+        readonly Mesh mesh = mesh;
 
-        readonly IPredicates predicates;
+        readonly IPredicates predicates = predicates;
 
         // Pointer to a recently visited triangle. Improves point location if
         // proximate vertices are inserted sequentially.
@@ -38,22 +38,11 @@ namespace TriangleNet
         {
         }
 
-        public TriangleLocator(Mesh mesh, IPredicates predicates)
-        {
-            this.mesh = mesh;
-            this.predicates = predicates;
-
-            sampler = new TriangleSampler(mesh);
-        }
-
         /// <summary>
         /// Suggest the given triangle as a starting triangle for point location.
         /// </summary>
         /// <param name="otri"></param>
-        public void Update(ref Otri otri)
-        {
-            otri.Copy(ref recenttri);
-        }
+        public void Update(ref Otri otri) => otri.Copy(ref recenttri);
 
         public void Reset()
         {

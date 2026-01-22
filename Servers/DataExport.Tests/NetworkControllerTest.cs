@@ -6,14 +6,14 @@ namespace DataExport.Tests;
 [TestClass]
 public class NetworkControllerTest
 {
-    private Mock<IWebHostEnvironment> CreateMockEnvironment()
+    private static Mock<IWebHostEnvironment> CreateMockEnvironment()
     {
-        var mockEnv = new Mock<IWebHostEnvironment>();
+        Mock<IWebHostEnvironment> mockEnv = new();
         mockEnv.Setup(m => m.ContentRootPath).Returns(AppContext.BaseDirectory);
         return mockEnv;
     }
 
-    private IConfiguration CreateConfiguration()
+    private static IConfiguration CreateConfiguration()
     {
         return new ConfigurationBuilder()
             .SetBasePath(AppContext.BaseDirectory)
@@ -21,16 +21,16 @@ public class NetworkControllerTest
             .Build();
     }
 
-    private DefaultHttpContext CreateMockHttpContext(string queryString, Dictionary<string, StringValues>? queryParams = null)
+    private static DefaultHttpContext CreateMockHttpContext(string queryString, Dictionary<string, StringValues>? queryParams = null)
     {
-        var context = new DefaultHttpContext();
+        DefaultHttpContext context = new();
         context.Request.QueryString = new QueryString(queryString);
-        
+
         if (queryParams != null)
         {
             context.Request.Query = new QueryCollection(queryParams);
         }
-        
+
         return context;
     }
 
@@ -40,14 +40,14 @@ public class NetworkControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=0", 
-            new Dictionary<string, StringValues> 
-            { 
+        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=0",
+            new Dictionary<string, StringValues>
+            {
                 { "id", "172" },
                 { "hops", "0" }
             });
 
-        var controller = new NetworkController(mockEnv.Object, config)
+        NetworkController controller = new(mockEnv.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -64,9 +64,9 @@ public class NetworkControllerTest
         catch (Exception ex)
         {
             // Expected without OData service
-            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") || 
-                         ex.GetType().Name.Contains("Http") || 
-                         ex is TypeInitializationException, 
+            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") ||
+                         ex.GetType().Name.Contains("Http") ||
+                         ex is TypeInitializationException,
                          $"Unexpected exception type: {ex.GetType().Name}, Message: {ex.Message}");
         }
     }
@@ -77,14 +77,14 @@ public class NetworkControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=1", 
-            new Dictionary<string, StringValues> 
-            { 
+        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=1",
+            new Dictionary<string, StringValues>
+            {
                 { "id", "172" },
                 { "hops", "1" }
             });
 
-        var controller = new NetworkController(mockEnv.Object, config)
+        NetworkController controller = new(mockEnv.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -101,9 +101,9 @@ public class NetworkControllerTest
         catch (Exception ex)
         {
             // Expected without OData service
-            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") || 
-                         ex.GetType().Name.Contains("Http") || 
-                         ex is TypeInitializationException, 
+            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") ||
+                         ex.GetType().Name.Contains("Http") ||
+                         ex is TypeInitializationException,
                          $"Unexpected exception type: {ex.GetType().Name}, Message: {ex.Message}");
         }
     }
@@ -114,14 +114,14 @@ public class NetworkControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=2", 
-            new Dictionary<string, StringValues> 
-            { 
+        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=2",
+            new Dictionary<string, StringValues>
+            {
                 { "id", "172" },
                 { "hops", "2" }
             });
 
-        var controller = new NetworkController(mockEnv.Object, config)
+        NetworkController controller = new(mockEnv.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -138,9 +138,9 @@ public class NetworkControllerTest
         catch (Exception ex)
         {
             // Expected without OData service
-            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") || 
-                         ex.GetType().Name.Contains("Http") || 
-                         ex is TypeInitializationException, 
+            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") ||
+                         ex.GetType().Name.Contains("Http") ||
+                         ex is TypeInitializationException,
                          $"Unexpected exception type: {ex.GetType().Name}, Message: {ex.Message}");
         }
     }
@@ -151,10 +151,10 @@ public class NetworkControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        var mockedHttpContext = CreateMockHttpContext("?id=172", 
+        var mockedHttpContext = CreateMockHttpContext("?id=172",
             new Dictionary<string, StringValues> { { "id", "172" } });
 
-        var controller = new NetworkController(mockEnv.Object, config)
+        NetworkController controller = new(mockEnv.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -171,9 +171,9 @@ public class NetworkControllerTest
         catch (Exception ex)
         {
             // Expected without OData service
-            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") || 
-                         ex.GetType().Name.Contains("Http") || 
-                         ex is TypeInitializationException, 
+            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") ||
+                         ex.GetType().Name.Contains("Http") ||
+                         ex is TypeInitializationException,
                          $"Unexpected exception type: {ex.GetType().Name}, Message: {ex.Message}");
         }
     }
@@ -184,14 +184,14 @@ public class NetworkControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=0", 
-            new Dictionary<string, StringValues> 
-            { 
+        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=0",
+            new Dictionary<string, StringValues>
+            {
                 { "id", "172" },
                 { "hops", "0" }
             });
 
-        var controller = new NetworkController(mockEnv.Object, config)
+        NetworkController controller = new(mockEnv.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -208,9 +208,9 @@ public class NetworkControllerTest
         catch (Exception ex)
         {
             // Expected without OData service
-            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") || 
-                         ex.GetType().Name.Contains("Http") || 
-                         ex is TypeInitializationException, 
+            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") ||
+                         ex.GetType().Name.Contains("Http") ||
+                         ex is TypeInitializationException,
                          $"Unexpected exception type: {ex.GetType().Name}, Message: {ex.Message}");
         }
     }
@@ -221,14 +221,14 @@ public class NetworkControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=1", 
-            new Dictionary<string, StringValues> 
-            { 
+        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=1",
+            new Dictionary<string, StringValues>
+            {
                 { "id", "172" },
                 { "hops", "1" }
             });
 
-        var controller = new NetworkController(mockEnv.Object, config)
+        NetworkController controller = new(mockEnv.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -245,9 +245,9 @@ public class NetworkControllerTest
         catch (Exception ex)
         {
             // Expected without OData service
-            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") || 
-                         ex.GetType().Name.Contains("Http") || 
-                         ex is TypeInitializationException, 
+            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") ||
+                         ex.GetType().Name.Contains("Http") ||
+                         ex is TypeInitializationException,
                          $"Unexpected exception type: {ex.GetType().Name}, Message: {ex.Message}");
         }
     }
@@ -258,14 +258,14 @@ public class NetworkControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=2", 
-            new Dictionary<string, StringValues> 
-            { 
+        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=2",
+            new Dictionary<string, StringValues>
+            {
                 { "id", "172" },
                 { "hops", "2" }
             });
 
-        var controller = new NetworkController(mockEnv.Object, config)
+        NetworkController controller = new(mockEnv.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -282,9 +282,9 @@ public class NetworkControllerTest
         catch (Exception ex)
         {
             // Expected without OData service
-            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") || 
-                         ex.GetType().Name.Contains("Http") || 
-                         ex is TypeInitializationException, 
+            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") ||
+                         ex.GetType().Name.Contains("Http") ||
+                         ex is TypeInitializationException,
                          $"Unexpected exception type: {ex.GetType().Name}, Message: {ex.Message}");
         }
     }
@@ -295,10 +295,10 @@ public class NetworkControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        var mockedHttpContext = CreateMockHttpContext("?id=172", 
+        var mockedHttpContext = CreateMockHttpContext("?id=172",
             new Dictionary<string, StringValues> { { "id", "172" } });
 
-        var controller = new NetworkController(mockEnv.Object, config)
+        NetworkController controller = new(mockEnv.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -315,9 +315,9 @@ public class NetworkControllerTest
         catch (Exception ex)
         {
             // Expected without OData service
-            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") || 
-                         ex.GetType().Name.Contains("Http") || 
-                         ex is TypeInitializationException, 
+            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") ||
+                         ex.GetType().Name.Contains("Http") ||
+                         ex is TypeInitializationException,
                          $"Unexpected exception type: {ex.GetType().Name}, Message: {ex.Message}");
         }
     }
@@ -329,7 +329,7 @@ public class NetworkControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        
+
         // Skip test if OData URL is not configured or not accessible
         string? odataUrl = config["AppSettings:ODataURL"];
         if (string.IsNullOrEmpty(odataUrl) || !IsODataServiceConfigured(odataUrl))
@@ -338,14 +338,14 @@ public class NetworkControllerTest
             return;
         }
 
-        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=0", 
-            new Dictionary<string, StringValues> 
-            { 
+        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=0",
+            new Dictionary<string, StringValues>
+            {
                 { "id", "172" },
                 { "hops", "0" }
             });
 
-        var controller = new NetworkController(mockEnv.Object, config)
+        NetworkController controller = new(mockEnv.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -357,13 +357,13 @@ public class NetworkControllerTest
         try
         {
             IActionResult result = await controller.GetDot();
-            
+
             // Assert
             Assert.IsTrue(result is FileResult);
-            var fileResult = result as FileResult;
+            FileResult? fileResult = result as FileResult;
             Assert.IsNotNull(fileResult);
             Assert.AreEqual("text/plain", fileResult.ContentType);
-            
+
             // Save the output file for inspection
             string outputPath = TestOutputHelper.GetOutputPath("Network", "GetDot", "dot", config);
             await TestOutputHelper.SaveFileResultAsync(fileResult, outputPath);
@@ -386,7 +386,7 @@ public class NetworkControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        
+
         // Skip test if OData URL is not configured or not accessible
         string? odataUrl = config["AppSettings:ODataURL"];
         if (string.IsNullOrEmpty(odataUrl) || !IsODataServiceConfigured(odataUrl))
@@ -395,14 +395,14 @@ public class NetworkControllerTest
             return;
         }
 
-        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=1", 
-            new Dictionary<string, StringValues> 
-            { 
+        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=1",
+            new Dictionary<string, StringValues>
+            {
                 { "id", "172" },
                 { "hops", "1" }
             });
 
-        var controller = new NetworkController(mockEnv.Object, config)
+        NetworkController controller = new(mockEnv.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -414,13 +414,13 @@ public class NetworkControllerTest
         try
         {
             IActionResult result = await controller.GetTLP();
-            
+
             // Assert
             Assert.IsTrue(result is FileResult);
-            var fileResult = result as FileResult;
+            FileResult? fileResult = result as FileResult;
             Assert.IsNotNull(fileResult);
             Assert.AreEqual("text/plain", fileResult.ContentType);
-            
+
             // Save the output file for inspection
             string outputPath = TestOutputHelper.GetOutputPath("Network", "GetTlp", "tlp", config);
             await TestOutputHelper.SaveFileResultAsync(fileResult, outputPath);
@@ -443,7 +443,7 @@ public class NetworkControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        
+
         // Skip test if OData URL is not configured or not accessible
         string? odataUrl = config["AppSettings:ODataURL"];
         if (string.IsNullOrEmpty(odataUrl) || !IsODataServiceConfigured(odataUrl))
@@ -452,14 +452,14 @@ public class NetworkControllerTest
             return;
         }
 
-        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=2", 
-            new Dictionary<string, StringValues> 
-            { 
+        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=2",
+            new Dictionary<string, StringValues>
+            {
                 { "id", "172" },
                 { "hops", "2" }
             });
 
-        var controller = new NetworkController(mockEnv.Object, config)
+        NetworkController controller = new(mockEnv.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -471,13 +471,13 @@ public class NetworkControllerTest
         try
         {
             IActionResult result = await controller.GetGML();
-            
+
             // Assert
             Assert.IsTrue(result is FileResult);
-            var fileResult = result as FileResult;
+            FileResult? fileResult = result as FileResult;
             Assert.IsNotNull(fileResult);
             Assert.AreEqual("text/plain", fileResult.ContentType);
-            
+
             // Save the output file for inspection
             string outputPath = TestOutputHelper.GetOutputPath("Network", "GetGml", "gml", config);
             await TestOutputHelper.SaveFileResultAsync(fileResult, outputPath);
@@ -500,7 +500,7 @@ public class NetworkControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        
+
         // Skip test if OData URL is not configured or not accessible
         string? odataUrl = config["AppSettings:ODataURL"];
         if (string.IsNullOrEmpty(odataUrl) || !IsODataServiceConfigured(odataUrl))
@@ -509,10 +509,10 @@ public class NetworkControllerTest
             return;
         }
 
-        var mockedHttpContext = CreateMockHttpContext("?id=172", 
+        var mockedHttpContext = CreateMockHttpContext("?id=172",
             new Dictionary<string, StringValues> { { "id", "172" } });
 
-        var controller = new NetworkController(mockEnv.Object, config)
+        NetworkController controller = new(mockEnv.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -524,13 +524,13 @@ public class NetworkControllerTest
         try
         {
             IActionResult result = await controller.GetJSON();
-            
+
             // Assert
             Assert.IsTrue(result is FileResult);
-            var fileResult = result as FileResult;
+            FileResult? fileResult = result as FileResult;
             Assert.IsNotNull(fileResult);
             Assert.AreEqual("text/plain", fileResult.ContentType);
-            
+
             // Save the output file for inspection
             string outputPath = TestOutputHelper.GetOutputPath("Network", "GetJson", "json", config);
             await TestOutputHelper.SaveFileResultAsync(fileResult, outputPath);
@@ -553,7 +553,7 @@ public class NetworkControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        
+
         // Skip test if OData URL is not configured or not accessible
         string? odataUrl = config["AppSettings:ODataURL"];
         if (string.IsNullOrEmpty(odataUrl) || !IsODataServiceConfigured(odataUrl))
@@ -562,14 +562,14 @@ public class NetworkControllerTest
             return;
         }
 
-        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=0", 
-            new Dictionary<string, StringValues> 
-            { 
+        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=0",
+            new Dictionary<string, StringValues>
+            {
                 { "id", "172" },
                 { "hops", "0" }
             });
 
-        var controller = new NetworkController(mockEnv.Object, config)
+        NetworkController controller = new(mockEnv.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -581,10 +581,10 @@ public class NetworkControllerTest
         try
         {
             IActionResult result = await controller.PostDot(null);
-            
+
             // Assert
             Assert.IsTrue(result is RedirectResult);
-            var redirectResult = result as RedirectResult;
+            RedirectResult? redirectResult = result as RedirectResult;
             Assert.IsNotNull(redirectResult);
             Assert.IsTrue(redirectResult.Url.Contains("/Output/"));
         }
@@ -605,7 +605,7 @@ public class NetworkControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        
+
         // Skip test if OData URL is not configured or not accessible
         string? odataUrl = config["AppSettings:ODataURL"];
         if (string.IsNullOrEmpty(odataUrl) || !IsODataServiceConfigured(odataUrl))
@@ -614,14 +614,14 @@ public class NetworkControllerTest
             return;
         }
 
-        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=1", 
-            new Dictionary<string, StringValues> 
-            { 
+        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=1",
+            new Dictionary<string, StringValues>
+            {
                 { "id", "172" },
                 { "hops", "1" }
             });
 
-        var controller = new NetworkController(mockEnv.Object, config)
+        NetworkController controller = new(mockEnv.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -633,10 +633,10 @@ public class NetworkControllerTest
         try
         {
             IActionResult result = await controller.PostTLP(null);
-            
+
             // Assert
             Assert.IsTrue(result is RedirectResult);
-            var redirectResult = result as RedirectResult;
+            RedirectResult? redirectResult = result as RedirectResult;
             Assert.IsNotNull(redirectResult);
             Assert.IsTrue(redirectResult.Url.Contains("/Output/"));
         }
@@ -657,7 +657,7 @@ public class NetworkControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        
+
         // Skip test if OData URL is not configured or not accessible
         string? odataUrl = config["AppSettings:ODataURL"];
         if (string.IsNullOrEmpty(odataUrl) || !IsODataServiceConfigured(odataUrl))
@@ -666,14 +666,14 @@ public class NetworkControllerTest
             return;
         }
 
-        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=2", 
-            new Dictionary<string, StringValues> 
-            { 
+        var mockedHttpContext = CreateMockHttpContext("?id=172&hops=2",
+            new Dictionary<string, StringValues>
+            {
                 { "id", "172" },
                 { "hops", "2" }
             });
 
-        var controller = new NetworkController(mockEnv.Object, config)
+        NetworkController controller = new(mockEnv.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -685,10 +685,10 @@ public class NetworkControllerTest
         try
         {
             IActionResult result = await controller.PostGML(null);
-            
+
             // Assert
             Assert.IsTrue(result is RedirectResult);
-            var redirectResult = result as RedirectResult;
+            RedirectResult? redirectResult = result as RedirectResult;
             Assert.IsNotNull(redirectResult);
             Assert.IsTrue(redirectResult.Url.Contains("/Output/"));
         }
@@ -709,7 +709,7 @@ public class NetworkControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        
+
         // Skip test if OData URL is not configured or not accessible
         string? odataUrl = config["AppSettings:ODataURL"];
         if (string.IsNullOrEmpty(odataUrl) || !IsODataServiceConfigured(odataUrl))
@@ -718,10 +718,10 @@ public class NetworkControllerTest
             return;
         }
 
-        var mockedHttpContext = CreateMockHttpContext("?id=172", 
+        var mockedHttpContext = CreateMockHttpContext("?id=172",
             new Dictionary<string, StringValues> { { "id", "172" } });
 
-        var controller = new NetworkController(mockEnv.Object, config)
+        NetworkController controller = new(mockEnv.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -733,10 +733,10 @@ public class NetworkControllerTest
         try
         {
             IActionResult result = await controller.PostJSON(null);
-            
+
             // Assert
             Assert.IsTrue(result is RedirectResult);
-            var redirectResult = result as RedirectResult;
+            RedirectResult? redirectResult = result as RedirectResult;
             Assert.IsNotNull(redirectResult);
             Assert.IsTrue(redirectResult.Url.Contains("/Output/"));
         }
@@ -756,11 +756,11 @@ public class NetworkControllerTest
         // For now, just check if it's a valid URL and not a placeholder
         if (string.IsNullOrEmpty(odataUrl))
             return false;
-            
+
         // Check if it's a placeholder value
         if (odataUrl.Contains("example.com") || odataUrl.Contains("localhost") || odataUrl.Contains("CHANGEME"))
             return false;
-            
+
         return Uri.TryCreate(odataUrl, UriKind.Absolute, out _);
     }
 }

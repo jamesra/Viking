@@ -1,4 +1,4 @@
-﻿using AnnotationService.Types;
+using AnnotationService.Types;
 using System;
 using System.Collections.Concurrent;
 using System.ServiceModel;
@@ -23,7 +23,7 @@ namespace WebAnnotationModel
         }
 
         #region Proxy
-         
+
 
         /*
     public override StructureTypeObj Create()
@@ -68,36 +68,24 @@ namespace WebAnnotationModel
     }
 */
 
-        protected override long[] ProxyUpdate(IAnnotateStructureTypes proxy, StructureType[] objects)
-        {
-            return proxy.UpdateStructureTypes(objects);
-        }
+        protected override long[] ProxyUpdate(IAnnotateStructureTypes proxy, StructureType[] objects) => proxy.UpdateStructureTypes(objects);
 
-        protected override StructureType ProxyGetByID(IAnnotateStructureTypes proxy, long ID)
-        {
-            return proxy.GetStructureTypeByID(ID);
-        }
+        protected override StructureType ProxyGetByID(IAnnotateStructureTypes proxy, long ID) => proxy.GetStructureTypeByID(ID);
 
-        protected override StructureType[] ProxyGetByIDs(IAnnotateStructureTypes proxy, long[] IDs)
-        {
-            return proxy.GetStructureTypesByIDs(IDs);
-        }
+        protected override StructureType[] ProxyGetByIDs(IAnnotateStructureTypes proxy, long[] IDs) => proxy.GetStructureTypesByIDs(IDs);
 
 
 
         protected override StructureType[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
                                                                      out long[] DeletedLocations,
                                                                      GetObjectBySectionCallbackState<IAnnotateStructureTypes, StructureTypeObj> state,
-                                                                     IAsyncResult result)
-        {
-            throw new NotImplementedException();
-        }
+                                                                     IAsyncResult result) => throw new NotImplementedException();
 
         protected override StructureType[] ProxyGetBySection(IAnnotateStructureTypes proxy, long SectionNumber, DateTime LastQuery,
                                                                 out long TicksAtQueryExecute,
                                                                 out long[] deleted_objects)
         {
-            deleted_objects = new long[0];
+            deleted_objects = [];
             TicksAtQueryExecute = 0;
             return proxy.GetStructureTypes();
         }
@@ -106,7 +94,7 @@ namespace WebAnnotationModel
                                                                 out long TicksAtQueryExecute,
                                                                 out long[] deleted_objects)
         {
-            deleted_objects = new long[0];
+            deleted_objects = [];
             TicksAtQueryExecute = 0;
             return proxy.GetStructureTypes();
         }
@@ -115,27 +103,15 @@ namespace WebAnnotationModel
                                                              long SectionNumber,
                                                              DateTime LastQuery,
                                                              AsyncCallback callback,
-                                                             object asynchState)
-        {
-            throw new NotImplementedException();
-        }
+                                                             object asynchState) => throw new NotImplementedException();
 
-        protected override IAsyncResult ProxyBeginGetBySectionRegion(IAnnotateStructureTypes proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
-        {
-            throw new NotImplementedException();
-        }
+        protected override IAsyncResult ProxyBeginGetBySectionRegion(IAnnotateStructureTypes proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState) => throw new NotImplementedException();
 
-        public override ConcurrentDictionary<long, StructureTypeObj> GetLocalObjectsForSection(long SectionNumber)
-        {
-            throw new NotImplementedException();
-        }
+        public override ConcurrentDictionary<long, StructureTypeObj> GetLocalObjectsForSection(long SectionNumber) => throw new NotImplementedException();
 
         #endregion
 
-        public override void Init()
-        {
-            LoadStructureTypes();
-        }
+        public override void Init() => LoadStructureTypes();
 
 
         public StructureTypeObj Create(StructureTypeObj new_type)
@@ -163,16 +139,16 @@ namespace WebAnnotationModel
             IClientChannel proxy = null;
             try
             {
-                proxy = CreateProxy(); 
+                proxy = CreateProxy();
                 types = ((IAnnotateStructureTypes)proxy).GetStructureTypes();
                 if (types is null)
                     return;
-            } 
+            }
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
                 throw;
-            } 
+            }
 
             //Populate our cache
             StructureTypeObj[] objList = new StructureTypeObj[types.Length];
@@ -199,9 +175,6 @@ namespace WebAnnotationModel
              */
         }
 
-        protected override StructureType[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, GetObjectBySectionCallbackState<IAnnotateStructureTypes, StructureTypeObj> state, IAsyncResult result)
-        {
-            throw new NotImplementedException();
-        }
+        protected override StructureType[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, GetObjectBySectionCallbackState<IAnnotateStructureTypes, StructureTypeObj> state, IAsyncResult result) => throw new NotImplementedException();
     }
 }

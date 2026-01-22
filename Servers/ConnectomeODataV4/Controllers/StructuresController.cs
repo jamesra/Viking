@@ -1,4 +1,4 @@
-﻿using ConnectomeDataModel;
+using ConnectomeDataModel;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNet.OData.Routing;
@@ -24,19 +24,13 @@ namespace ConnectomeODataV4.Controllers
     builder.EntitySet<StructureLink>("StructureLinks"); 
     config.Routes.MapODataServiceRoute("odata", "odata", builder.GetEdmModel());
     */
-    public class StructuresController : ODataController
+    /// <summary>
+    /// Constructor with dependency injection
+    /// </summary>
+    public class StructuresController(ConnectomeEntities db, ILogger<StructuresController> logger) : ODataController
     {
-        private readonly ConnectomeEntities _db;
-        private readonly ILogger<StructuresController> _logger;
-
-        /// <summary>
-        /// Constructor with dependency injection
-        /// </summary>
-        public StructuresController(ConnectomeEntities db, ILogger<StructuresController> logger)
-        {
-            _db = db ?? throw new ArgumentNullException(nameof(db));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
+        private readonly ConnectomeEntities _db = db ?? throw new ArgumentNullException(nameof(db));
+        private readonly ILogger<StructuresController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // GET: odata/Structures
         [EnableQuery(PageSize = 2048)]
@@ -209,7 +203,7 @@ namespace ConnectomeODataV4.Controllers
             return _db.StructureLocationLinks(key);
         }
 
-        
+
 
         // GET: odata/Structures(5)/Children
         [EnableQuery]
@@ -268,7 +262,7 @@ namespace ConnectomeODataV4.Controllers
             _db.ConfigureAsReadOnly();
             return _db.StructureLocationLinks(key);
         }
-        
+
         /*
         [HttpGet]
         [EnableQuery]
@@ -321,7 +315,7 @@ namespace ConnectomeODataV4.Controllers
             return Structures;
         }
         */
-    
+
 
         [HttpGet]
         [EnableQuery()]
@@ -333,7 +327,7 @@ namespace ConnectomeODataV4.Controllers
             return _db.SelectNetworkChildStructures(IDs, Hops);
 
             // https://github.com/OData/WebApi/issues/255 
-             
+
         }
 
         [HttpGet]
@@ -343,16 +337,13 @@ namespace ConnectomeODataV4.Controllers
             _db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
             return _db.Structures.Select(s => s.Label).Distinct();
-            
+
             // https://github.com/OData/WebApi/issues/255
 
         }
 
         // No need for Dispose override - DI container handles disposal
 
-        private bool StructureExists(long key)
-        {
-            return _db.Structures.Count(e => e.ID == key) > 0;
-        }
+        private bool StructureExists(long key) => _db.Structures.Count(e => e.ID == key) > 0;
     }
 }

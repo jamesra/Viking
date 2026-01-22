@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Windows.Forms;
@@ -24,14 +24,14 @@ namespace WebAnnotation.UI
         protected override void InitializeTree()
         {
             ICollection<StructureTypeObj> listTypes = Store.StructureTypes.GetObjectsByIDs(Store.StructureTypes.RootObjects, true);
-            List<StructureType> listRootTypes = new List<StructureType>(listTypes.Count);
+            List<StructureType> listRootTypes = new(listTypes.Count);
             foreach (StructureTypeObj type in listTypes)
             {
-                StructureType rootType = new StructureType(type);
+                StructureType rootType = new(type);
                 listRootTypes.Add(rootType);
             }
 
-            Tree.AddObjects(listRootTypes.ToArray());
+            Tree.AddObjects([.. listRootTypes]);
         }
 
         protected void UpdateNodeChildren(StructureType obj)
@@ -46,12 +46,12 @@ namespace WebAnnotation.UI
         protected void AddNewObjects(ICollection<StructureTypeObj> added)
         {
             //Find all of the root objects
-            List<StructureType> listRoots = new List<StructureType>(added.Count);
-            Dictionary<long, StructureType> listParents = new Dictionary<long, StructureType>(added.Count);
+            List<StructureType> listRoots = new(added.Count);
+            Dictionary<long, StructureType> listParents = new(added.Count);
 
             foreach (StructureTypeObj newTypeObj in added)
             {
-                StructureType newType = new StructureType(newTypeObj);
+                StructureType newType = new(newTypeObj);
                 if (!newTypeObj.ParentID.HasValue)
                 {
                     if (!Tree.Contains(newType))
@@ -94,7 +94,7 @@ namespace WebAnnotation.UI
                 {
                     case NotifyCollectionChangedAction.Add:
 
-                        List<StructureTypeObj> newItems = new List<StructureTypeObj>(args.NewItems.Count);
+                        List<StructureTypeObj> newItems = new(args.NewItems.Count);
                         //I'd rather case, but can't figure it out with IList interface...
                         foreach (object obj in args.NewItems)
                         {
@@ -126,7 +126,7 @@ namespace WebAnnotation.UI
                             StructureTypeObj oldTypeObj = o as StructureTypeObj;
                             if (oldTypeObj != null)
                             {
-                                StructureType oldType = new StructureType(oldTypeObj);
+                                StructureType oldType = new(oldTypeObj);
                                 Viking.UI.Controls.GenericTreeNode[] nodes = Tree.GetNodesForObject(oldType);
                                 foreach (Viking.UI.Controls.GenericTreeNode node in nodes)
                                 {
@@ -142,7 +142,7 @@ namespace WebAnnotation.UI
                             StructureTypeObj TypeObj = o as StructureTypeObj;
                             if (TypeObj != null)
                             {
-                                StructureType t = new StructureType(TypeObj);
+                                StructureType t = new(TypeObj);
                                 if (t.Parent != null)
                                 {
                                     UpdateNodeChildren(t);
@@ -157,7 +157,7 @@ namespace WebAnnotation.UI
                             StructureTypeObj TypeObj = o as StructureTypeObj;
                             if (TypeObj != null)
                             {
-                                StructureType t = new StructureType(TypeObj);
+                                StructureType t = new(TypeObj);
                                 if (t.Parent != null)
                                 {
                                     UpdateNodeChildren(t);
@@ -177,12 +177,12 @@ namespace WebAnnotation.UI
                 TreeNode node = Tree.GetNodeAt(e.Location);
 
                 // Only handle empty space clicks - node clicks are handled by ObjectTreeView.OnMouseDown
-                if (node == null)
+                if (node is null)
                 {
                     Viking.UI.State.SelectedObject = null;
-                    ContextMenuStrip menu = new ContextMenuStrip();
+                    ContextMenuStrip menu = new();
 
-                    ToolStripMenuItem menuItem = new ToolStripMenuItem("New");
+                    ToolStripMenuItem menuItem = new("New");
                     menuItem.Click += OnNewStructureType;
                     menu.Items.Add(menuItem);
 
@@ -193,8 +193,8 @@ namespace WebAnnotation.UI
 
         private void OnNewStructureType(object sender, EventArgs e)
         {
-            StructureTypeObj newTypeObj = new StructureTypeObj();
-            StructureType newType = new StructureType(newTypeObj);
+            StructureTypeObj newTypeObj = new();
+            StructureType newType = new(newTypeObj);
 
             if (newType.ShowPropertiesDialog(ParentForm) == DialogResult.OK)
             {

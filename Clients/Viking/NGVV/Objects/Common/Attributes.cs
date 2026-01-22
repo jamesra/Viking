@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Viking.Common
 {
@@ -12,14 +12,9 @@ namespace Viking.Common
     /// extend or create a top-level menu
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
-    public sealed class MenuAttribute : System.Attribute
+    public sealed class MenuAttribute(string ParentMenu) : System.Attribute
     {
-        public string ParentMenuName;
-
-        public MenuAttribute(string ParentMenu)
-        {
-            ParentMenuName = ParentMenu;
-        }
+        public string ParentMenuName = ParentMenu;
     }
 
     /// <summary>
@@ -28,14 +23,9 @@ namespace Viking.Common
     /// class with the MenuAttribute
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
-    public sealed class MenuItemAttribute : System.Attribute
+    public sealed class MenuItemAttribute(string Label) : System.Attribute
     {
-        public string LabelName;
-
-        public MenuItemAttribute(string Label)
-        {
-            LabelName = Label;
-        }
+        public string LabelName = Label;
     }
 
 
@@ -88,77 +78,49 @@ namespace Viking.Common
 
         public SupportedUITypesAttribute(System.Type T)
         {
-            this.Types = new Type[] { T };
+            this.Types = [T];
         }
 
         public SupportedUITypesAttribute(System.Type[] types)
         {
             this.Types = types;
-            if (this.Types is null)
-                this.Types = new Type[0];
+            this.Types ??= [];
         }
     }
 
 
     [AttributeUsage(AttributeTargets.Class)]
-    public sealed class SectionOverlayAttribute : System.Attribute
+    public sealed class SectionOverlayAttribute(string Name) : System.Attribute
     {
-        public string Name = "";
+        public string Name = Name;
 
-        public SectionOverlayAttribute(string Name)
-        {
-            this.Name = Name;
-        }
+        public override int GetHashCode() => Name.GetHashCode();
 
-        public override int GetHashCode()
-        {
-            return Name.GetHashCode();
-        }
-
-        public override bool Equals(object obj)
-        {
-            return Name.Equals(obj);
-        }
+        public override bool Equals(object obj) => Name.Equals(obj);
     }
 
     /// <summary>
     /// Extensions with this attribute located in the modules directory will be loaded as extensions to the UI
     /// </summary>
     [AttributeUsage(AttributeTargets.Assembly)]
-    public sealed class VikingExtensionAttribute : System.Attribute, IComparable
+    public sealed class VikingExtensionAttribute(string Name) : System.Attribute, IComparable
     {
         /// <summary>
         /// Name of the extension
         /// </summary>
-        public string Name = "";
+        public string Name = Name;
 
+        public override string ToString() => Name;
 
-        public VikingExtensionAttribute(string Name)
-        {
-            this.Name = Name;
-        }
+        public override int GetHashCode() => Name.GetHashCode();
 
-        public override string ToString()
-        {
-            return Name;
-        }
-
-        public override int GetHashCode()
-        {
-            return Name.GetHashCode();
-        }
-
-        public override bool Equals(object obj)
-        {
-            return Name.Equals(obj);
-        }
+        public override bool Equals(object obj) => Name.Equals(obj);
 
         #region IComparable Members
 
         public int CompareTo(object? obj)
         {
-            VikingExtensionAttribute? attrib = obj as VikingExtensionAttribute;
-            if (attrib is null)
+            if (obj is not VikingExtensionAttribute attrib)
                 return -1;
 
             return Name.CompareTo(attrib.Name);
@@ -206,14 +168,9 @@ namespace Viking.Common
     /// Event sent when the user selects an object
     /// Object can be null if the user deselects
     /// </summary>
-    public class ObjectSelectedEventArgs : System.EventArgs
+    public class ObjectSelectedEventArgs(IUIObjectBasic Selected) : System.EventArgs
     {
-        public IUIObjectBasic Object;
-
-        public ObjectSelectedEventArgs(IUIObjectBasic Selected)
-        {
-            Object = Selected;
-        }
+        public IUIObjectBasic Object = Selected;
     }
     public delegate void ObjectSelectedEventHandler(object sender, Viking.Common.ObjectSelectedEventArgs e);
 }

@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Geometry.Transforms
 {
@@ -34,13 +35,10 @@ namespace Geometry.Transforms
         {
             try
             {
-                using (Stream binFile = System.IO.File.OpenRead(CacheStosPath))
-                {
-                    var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                    object trans = binaryFormatter.Deserialize(binFile);
-                    return trans as ITransform;
-
-                }
+                using Stream binFile = System.IO.File.OpenRead(CacheStosPath);
+                BinaryFormatter binaryFormatter = new();
+                object trans = binaryFormatter.Deserialize(binFile);
+                return trans as ITransform;
             }
             catch (System.Runtime.Serialization.SerializationException e)
             {
@@ -54,11 +52,9 @@ namespace Geometry.Transforms
 
         public static void SaveSerializedTransformToCache(string CacheStosPath, object transform)
         {
-            using (Stream binFile = System.IO.File.OpenWrite(CacheStosPath))
-            {
-                var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                binaryFormatter.Serialize(binFile, transform);
-            }
+            using Stream binFile = System.IO.File.OpenWrite(CacheStosPath);
+            BinaryFormatter binaryFormatter = new();
+            binaryFormatter.Serialize(binFile, transform);
         }
     }
 }

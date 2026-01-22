@@ -6,16 +6,12 @@ using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-    internal abstract class RotateTranslateScaleCommand : TranslateScaleCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal abstract class RotateTranslateScaleCommand(Viking.UI.Controls.SectionViewerControl parent, Geometry.GridVector2 VolumePosition) : TranslateScaleCommandBase(parent, VolumePosition), Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
-        public new static string[] DefaultMouseHelpStrings = new string[]
-        {
+        public new static string[] DefaultMouseHelpStrings =
+        [
             "Hold Right click and drag: Rotate"
-        };
-
-        public RotateTranslateScaleCommand(Viking.UI.Controls.SectionViewerControl parent, Geometry.GridVector2 VolumePosition) : base(parent, VolumePosition)
-        {
-        }
+        ];
 
         /// <summary>
         /// This is the center point about which we are rotating.  Usually the center of the shape
@@ -47,11 +43,11 @@ namespace WebAnnotation.UI.Commands
         {
             get
             {
-                List<string> s = new List<string>(RotateTranslateScaleCommand.DefaultMouseHelpStrings);
+                List<string> s = [.. RotateTranslateScaleCommand.DefaultMouseHelpStrings];
                 s.AddRange(TranslateScaleCommandBase.DefaultMouseHelpStrings);
                 s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
                 s.Sort();
-                return s.ToArray();
+                return [.. s];
             }
         }
 
@@ -99,6 +95,6 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        public ObservableCollection<string> ObservableHelpStrings => new ObservableCollection<string>(HelpStrings);
+        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
     }
 }

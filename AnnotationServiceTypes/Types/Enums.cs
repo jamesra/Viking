@@ -1,4 +1,4 @@
-﻿using ProtoBuf;
+using ProtoBuf;
 using System;
 using System.Runtime.Serialization;
 
@@ -8,7 +8,7 @@ namespace AnnotationService.Types
     [DataContract]
     [ProtoContract]
     public enum DBACTION : int
-    { 
+    {
         [EnumMember]
         [ProtoEnum]
         NONE = 0,

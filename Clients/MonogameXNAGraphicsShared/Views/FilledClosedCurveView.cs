@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
@@ -22,11 +22,11 @@ namespace VikingXNAGraphics
         private CurveViewControlPoints _ExteriorCurveControlPoints;
         private ICollection<CurveViewControlPoints> _InteriorCurveControlPoints;
 
-        private MeshModel<VertexPositionColor> _mesh;
+        private readonly MeshModel<VertexPositionColor> _mesh;
 
         public FilledClosedCurvePolygonView(ICollection<GridVector2> exteriorControlPoints, ICollection<GridVector2[]> interiorPolyControlPoints, Color color, uint numInterpolations)
         {
-            this.Color = color; 
+            this.Color = color;
             InitializeCurveControlPoints(exteriorControlPoints, interiorPolyControlPoints, numInterpolations);
             _mesh = CreateMesh();
         }
@@ -39,7 +39,7 @@ namespace VikingXNAGraphics
 
             foreach (GridVector2[] interiorPoints in interiorPolyControlPoints)
             {
-                CurveViewControlPoints interiorCurve = new CurveViewControlPoints(interiorPoints, numInterpolations, true);
+                CurveViewControlPoints interiorCurve = new(interiorPoints, numInterpolations, true);
                 _InteriorCurveControlPoints.Add(interiorCurve);
             }
         }
@@ -47,14 +47,11 @@ namespace VikingXNAGraphics
         private MeshModel<VertexPositionColor> CreateMesh()
         {
             MeshModel<VertexPositionColor> mesh = TriangleNetExtensions.CreateMeshForPolygon2D(_ExteriorCurveControlPoints.CurvePoints,
-                                                                                               _InteriorCurveControlPoints.Select(ic => ic.CurvePoints).ToArray(),
+                                                                                               [.. _InteriorCurveControlPoints.Select(ic => ic.CurvePoints)],
                                                                                                Color);
             return mesh;
         }
 
-        public static void Draw(GraphicsDevice device, IScene scene, IEnumerable<FilledClosedCurvePolygonView> views)
-        {
-            MeshView<VertexPositionColor>.Draw(device, scene, DeviceEffectsStore<PolygonOverlayEffect>.TryGet(device), meshmodels: views.Select(v => v._mesh));
-        }
+        public static void Draw(GraphicsDevice device, IScene scene, IEnumerable<FilledClosedCurvePolygonView> views) => MeshView<VertexPositionColor>.Draw(device, scene, DeviceEffectsStore<PolygonOverlayEffect>.TryGet(device), meshmodels: views.Select(v => v._mesh));
     }
 }

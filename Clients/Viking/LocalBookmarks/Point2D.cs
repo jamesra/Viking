@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 
 namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd
 {
@@ -18,9 +18,6 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd
             this.Y = Y;
         }
 
-        public GridVector2 ToGridVector2()
-        {
-            return new GridVector2(this.X, this.Y);
-        }
+        public GridVector2 ToGridVector2() => new GridVector2(this.X, this.Y);
     }
 }

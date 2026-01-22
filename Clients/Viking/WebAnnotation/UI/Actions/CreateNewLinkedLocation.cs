@@ -34,13 +34,11 @@ namespace WebAnnotation.UI.Actions
         /// </summary>
         public int SectionNumber;
 
-        public CreateNewLinkedLocationAction(long existingLocID, IShape2D newMosaicPolygon, IShape2D newVolumePolygon, int SectionNumber, IVolumeToSectionTransform transform = null)
+        public CreateNewLinkedLocationAction(long existingLocID, IShape2D newMosaicPolygon, IShape2D newVolumePolygon, int SectionNumber, IVolumeToSectionTransform? transform = null)
         {
             this.SectionNumber = SectionNumber;
             ExistingLocID = existingLocID;
-            Transform = transform == null ?
-                WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform
-                : transform;
+            Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 
             NewMosaicShape = newMosaicPolygon;
             NewVolumeShape = newVolumePolygon ?? Transform.TryMapShapeSectionToVolume(newMosaicPolygon.ToSqlGeometry()).ToIShape2D();
@@ -51,13 +49,13 @@ namespace WebAnnotation.UI.Actions
             try
             {
                 LocationObj existingLoc = Store.Locations[ExistingLocID];
-                LocationObj newLoc = new LocationObj(existingLoc.Parent,
+                LocationObj newLoc = new(existingLoc.Parent,
                                                      NewMosaicShape.ToSqlGeometry(),
                                                      NewVolumeShape.ToSqlGeometry(),
                                                      SectionNumber,
                                                      NewMosaicShape.ShapeType.IsClosed() ? Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON : Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYLINE);
 
-                LocationObj NewLocation = Store.Locations.Create(newLoc, new long[] { ExistingLocID });
+                LocationObj NewLocation = Store.Locations.Create(newLoc, [ExistingLocID]);
                 Global.LastEditedAnnotationID = NewLocation.ID;
             }
             catch (ArgumentOutOfRangeException)

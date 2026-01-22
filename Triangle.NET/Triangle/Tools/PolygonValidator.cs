@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="PolygonValidator.cs">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -177,18 +177,14 @@ namespace TriangleNet.Tools
         }
 
         //  Returns the dot product <AB, BC>.
-        private static double DotProduct(Point a, Point b, Point c)
-        {
+        private static double DotProduct(Point a, Point b, Point c) =>
             //  Calculate the dot product.
-            return (a.x - b.x) * (c.x - b.x) + (a.y - b.y) * (c.y - b.y);
-        }
+            (a.x - b.x) * (c.x - b.x) + (a.y - b.y) * (c.y - b.y);
 
         //  Returns the length of cross product AB x BC.
-        private static double CrossProductLength(Point a, Point b, Point c)
-        {
+        private static double CrossProductLength(Point a, Point b, Point c) =>
             //  Calculate the Z coordinate of the cross product.
-            return (a.x - b.x) * (c.y - b.y) - (a.y - b.y) * (c.x - b.x);
-        }
+            (a.x - b.x) * (c.y - b.y) - (a.y - b.y) * (c.x - b.x);
 
         private static int CheckVertexIDs(IPolygon poly, int count)
         {
@@ -227,7 +223,7 @@ namespace TriangleNet.Tools
 
         private static int CheckDuplicateIDs(IPolygon poly)
         {
-            var ids = new HashSet<int>();
+            HashSet<int> ids = [];
 
             // Check for duplicate ids.
             foreach (var p in poly.Points)

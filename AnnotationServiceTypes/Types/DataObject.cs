@@ -1,4 +1,4 @@
-﻿using ProtoBuf;
+using ProtoBuf;
 using System;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -23,7 +23,7 @@ namespace AnnotationService.Types
 
         [DataMember]
         [ProtoMember(1)]
-        public DBACTION DBAction 
+        public DBACTION DBAction
         {
             get => _DBAction;
             set => _DBAction = value;
@@ -60,7 +60,7 @@ namespace AnnotationService.Types
             set => _ID = value;
         }
     }
-    
+
     /// <summary>
     /// A generic database object that exposes an ID value and Parent of
     /// the same type referring to a row in the same table

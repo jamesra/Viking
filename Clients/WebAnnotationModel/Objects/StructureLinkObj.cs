@@ -1,15 +1,15 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationService.Types;
 using System;
 using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
-    public readonly struct StructureLinkKey : IEquatable<StructureLinkKey>, IComparable<StructureLinkKey>, IStructureLink
+    public readonly struct StructureLinkKey(long SourceID, long TargetID, bool Bidirectional) : IEquatable<StructureLinkKey>, IComparable<StructureLinkKey>, IStructureLink
     {
-        readonly long _SourceID;
-        readonly long _TargetID;
-        readonly bool _Bidirectional;
+        readonly long _SourceID = SourceID;
+        readonly long _TargetID = TargetID;
+        readonly bool _Bidirectional = Bidirectional;
 
         //public long SourceID { get { return link != null ? link.SourceID : _SourceID;  } }
         //public long TargetID { get { return link != null ? link.TargetID : _TargetID; } }
@@ -33,31 +33,18 @@ namespace WebAnnotationModel
         {
         }
 
-        public StructureLinkKey(long SourceID, long TargetID, bool Bidirectional)
-        {
-            //We have UI to toggle bidirectional on and off.  I consider a bidirectional link
-            //equal if both IDs are the same even if the order is reversed on the other link.
-            //However in the database it is not handled that way.
-            _SourceID = SourceID;
-            _TargetID = TargetID;
-            _Bidirectional = Bidirectional;
-        }
-
         public override bool Equals(object obj)
         {
             if (obj is null)
                 return false;
 
-            if (!(obj is IStructureLink other))
+            if (obj is not IStructureLink other)
                 return false;
 
             return ((IStructureLink)this).Equals(other);
         }
 
-        public override int GetHashCode()
-        {
-            return (int)(SourceID % int.MaxValue);
-        }
+        public override int GetHashCode() => (int)(SourceID % int.MaxValue);
 
         public bool Equals(StructureLinkKey other)
         {
@@ -77,7 +64,7 @@ namespace WebAnnotationModel
         }
 
         public int CompareTo(StructureLinkKey other)
-        { 
+        {
             if (this.Bidirectional == other.Bidirectional && this.Bidirectional)
             {
                 var A_Low = Math.Min(SourceID, TargetID);
@@ -169,10 +156,7 @@ namespace WebAnnotationModel
     {
         public override StructureLinkKey ID => new(this);
 
-        protected override int GenerateHashCode()
-        {
-            return (int)(SourceID % int.MaxValue);
-        }
+        protected override int GenerateHashCode() => (int)(SourceID % int.MaxValue);
 
         public long SourceID => Data.SourceID;
 

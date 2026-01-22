@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Windows.Forms;
 using Viking.Common;
@@ -9,17 +9,14 @@ namespace WebAnnotation.UI
     [PropertyPage(typeof(StructureType), 1)]
     public partial class StructureTypeGeneralPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        private StructureType Obj = null;
+        private StructureType? Obj = null;
 
         public StructureTypeGeneralPage()
         {
             InitializeComponent();
         }
 
-        protected override void OnInitPage()
-        {
-            base.OnInitPage();
-        }
+        protected override void OnInitPage() => base.OnInitPage();
 
         protected override void OnShowObject(object Object)
         {

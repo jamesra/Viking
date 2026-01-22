@@ -42,7 +42,7 @@ namespace EntityFrameworkExtras.EF6
 
             var info = StoredProcedureParser.BuildStoredProcedureInfo(storedProcedure);
 
-            List<T> result = context.ExecuteStoreQuery<T>(info.Sql, info.SqlParameters).ToList();
+            List<T> result = [.. context.ExecuteStoreQuery<T>(info.Sql, info.SqlParameters)];
 
             SetOutputParameterValues(info.SqlParameters, storedProcedure);
 
@@ -54,7 +54,7 @@ namespace EntityFrameworkExtras.EF6
         {
             foreach (PropertyInfo propertyInfo in storedProcedure.GetType().GetProperties().Where(p => p.HasAttribute<StoredProcedureParameterAttribute>()))
             {
-                var helper = new StoredProcedureParserHelper();
+                StoredProcedureParserHelper helper = new();
 
                 var name = helper.GetParameterName(propertyInfo);
 

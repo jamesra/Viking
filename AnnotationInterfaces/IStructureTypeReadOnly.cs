@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Viking.AnnotationServiceTypes.Interfaces
-{ 
+{
 
     public interface IStructureTypeReadOnly : IEquatable<IStructureTypeReadOnly>
     {

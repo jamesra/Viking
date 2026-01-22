@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -7,26 +7,22 @@ using System.Text;
 
 namespace AnnotationVizLib
 {
-    public class GraphVizNode<KEY> : GraphViewNode<KEY>
+    public class GraphVizNode<KEY>(KEY key) : GraphViewNode<KEY>(key)
         where KEY : IComparable<KEY>
     {
-        public GraphVizNode(KEY key) : base(key) { }
     }
 
     public class GraphVizEdge<KEY> : GraphViewEdge<KEY>, ICloneable
         where KEY : IComparable<KEY>
     {
 
-        public void Reverse()
-        {
-            (this.from, this.to) = (this.to, this.from);
-        }
+        public void Reverse() => (this.from, this.to) = (this.to, this.from);
 
         #region ICloneable Members
 
         public object Clone()
         {
-            GraphVizEdge<KEY> clone = new GraphVizEdge<KEY>
+            GraphVizEdge<KEY> clone = new()
             {
                 label = label,
                 from = from,
@@ -57,7 +53,7 @@ namespace AnnotationVizLib
         public string graphLabel;
         public string completePath_URL;
         public string layout = "dot";
-        public List<string> outputFormats = new List<string>();
+        public List<string> outputFormats = [];
         public bool minimize;
 
         protected void createDirectedGraph(string name)
@@ -155,7 +151,7 @@ namespace AnnotationVizLib
                     if (subgraph.Key.Length < 1)
                         continue;
 
-                    StringBuilder sb = new StringBuilder(subgraph.Value.Count * 16);
+                    StringBuilder sb = new(subgraph.Value.Count * 16);
 
                     sb.Append("\nsubgraph \"" + subgraph.Key + "\" {");
 
@@ -185,17 +181,14 @@ namespace AnnotationVizLib
             }
             finally
             {
-                if (sw != null)
-                {
-                    sw.Close();
-                    sw = null;
-                }
+                sw?.Close();
+                sw = null;
             }
         }
 
         public void SaveDOT(string DotFileFullPath)
         {
-            using (StreamWriter write = new StreamWriter(DotFileFullPath, false))
+            using (StreamWriter write = new(DotFileFullPath, false))
             {
                 write.Write(this.ToString());
                 write.Close();
@@ -215,14 +208,14 @@ namespace AnnotationVizLib
         {
             Debug.Assert(System.IO.File.Exists(DotFileFullPath), "Input dot file does not exist");
 
-            int length = OutputExtensions.Count();
+            int length = OutputExtensions.Length;
             string DotFilePath = System.IO.Path.GetDirectoryName(DotFileFullPath);
             string DotFileNameNoExtension = System.IO.Path.GetFileNameWithoutExtension(DotFileFullPath);
 
             DateTime DotFileLastWrite = System.IO.File.GetLastWriteTimeUtc(DotFileFullPath);
 
-            List<Process> ProcessList = new List<Process>(length);
-            List<string> listOutputFiles = new List<string>();
+            List<Process> ProcessList = new(length);
+            List<string> listOutputFiles = [];
 
             string layout = System.IO.Path.GetFileNameWithoutExtension(GraphVizExe);
 
@@ -244,7 +237,7 @@ namespace AnnotationVizLib
                     }
                 }
 
-                Process p = new Process();
+                Process p = new();
                 ProcessList.Add(p);
 
                 p.StartInfo.FileName = GraphVizExe;

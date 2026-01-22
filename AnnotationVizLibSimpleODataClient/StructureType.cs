@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using System;
 
 namespace AnnotationVizLib.SimpleOData
@@ -46,9 +46,6 @@ namespace AnnotationVizLib.SimpleOData
             return false;
         }
 
-        public bool Equals(StructureType other)
-        {
-            return this.Equals((IStructureTypeReadOnly)other);
-        }
+        public bool Equals(StructureType other) => this.Equals((IStructureTypeReadOnly)other);
     }
 }

@@ -56,17 +56,14 @@ namespace TriangleNet.Voronoi
         {
             mesh.Renumber();
 
-            base.edges = new List<HalfEdge>();
-            this.rays = new List<HalfEdge>();
+            base.edges = [];
+            this.rays = [];
 
             // Allocate space for Voronoi diagram.
-            var vertices = new Vertex[mesh.triangles.Count + mesh.hullsize];
-            var faces = new Face[mesh.vertices.Count];
+            Vertex[] vertices = new Vertex[mesh.triangles.Count + mesh.hullsize];
+            Face[] faces = new Face[mesh.vertices.Count];
 
-            if (factory is null)
-            {
-                factory = new DefaultVoronoiFactory();
-            }
+            factory ??= new DefaultVoronoiFactory();
 
             factory.Initialize(vertices.Length, 2 * mesh.NumberOfEdges, faces.Length);
 
@@ -84,8 +81,8 @@ namespace TriangleNet.Voronoi
             // At this point all edges are computed, but the (edge.next) pointers aren't set.
             ConnectEdges(map);
 
-            base.vertices = new List<Vertex>(vertices);
-            base.faces = new List<Face>(faces);
+            base.vertices = [.. vertices];
+            base.faces = [.. faces];
         }
 
         /// <summary>
@@ -101,7 +98,7 @@ namespace TriangleNet.Voronoi
             int id;
 
             // Maps all vertices to a list of leaving edges.
-            var map = new List<HalfEdge>[mesh.triangles.Count];
+            List<HalfEdge>[] map = new List<HalfEdge>[mesh.triangles.Count];
 
             // Compue triangle circumcenters
             foreach (var t in mesh.triangles)
@@ -115,7 +112,7 @@ namespace TriangleNet.Voronoi
                 vertex.id = id;
 
                 vertices[id] = vertex;
-                map[id] = new List<HalfEdge>();
+                map[id] = [];
             }
 
             return map;
@@ -266,7 +263,7 @@ namespace TriangleNet.Voronoi
 
         protected override IEnumerable<IEdge> EnumerateEdges()
         {
-            var edges = new List<IEdge>(this.edges.Count / 2);
+            List<IEdge> edges = new(this.edges.Count / 2);
 
             foreach (var edge in this.edges)
             {

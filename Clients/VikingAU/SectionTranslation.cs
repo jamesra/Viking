@@ -1,4 +1,4 @@
-﻿using Geometry.Graphics;
+using Geometry.Graphics;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -19,45 +19,38 @@ namespace Viking.AU
     }
 
     internal class SectionTranslationEntryJSON
-    { 
+    {
         /// <summary>
         /// Amount to translate in X
         /// </summary>
         public double X { get; set; }
 
         public double Y { get; set; }
-          
+
         /// <summary>
         /// Only modify annotations before the specified date
         /// </summary>
         public DateTime? TranslateBefore { get; set; }
     }
 
-    public readonly struct SectionTranslation
+    public readonly struct SectionTranslation(long sectionNumber, GridVector2 offset, DateTime datecutoff)
     {
         /// <summary>
         /// Section number to translate
         /// </summary>
-        public readonly long SectionNumber;
+        public readonly long SectionNumber = sectionNumber;
 
-        public readonly GridVector2 Offset;
+        public readonly GridVector2 Offset = offset;
 
         /// <summary>
         /// Only modify annotations before the specified date
         /// </summary>
-        public readonly DateTime TranslateBefore;
-
-        public SectionTranslation(long sectionNumber, GridVector2 offset, DateTime datecutoff)
-        {
-            SectionNumber = sectionNumber;
-            Offset = offset;
-            TranslateBefore = datecutoff;
-        }
+        public readonly DateTime TranslateBefore = datecutoff;
     }
 
     class SectionTranslations : IReadOnlyDictionary<long, SectionTranslation>
     {
-        readonly SortedList<long, SectionTranslation> _offsetTable = new SortedList<long, SectionTranslation>();
+        readonly SortedList<long, SectionTranslation> _offsetTable = [];
         private static long ConvertKey(string str) => System.Convert.ToInt64(str);
 
         public void Add(long key, SectionTranslation color) => _offsetTable.Add(key, color);
@@ -78,9 +71,9 @@ namespace Viking.AU
                 throw new System.IO.FileNotFoundException("Translation file not found " + full_path);
             }
 
-            System.IO.FileInfo fi = new System.IO.FileInfo(config_txt_full_path);
+            System.IO.FileInfo fi = new(config_txt_full_path);
 
-            SectionTranslations output = new SectionTranslations();
+            SectionTranslations output = [];
             string config = System.IO.File.ReadAllText(full_path);
             //Use the last write time as the date cutoff, this discourages users from re-translating the same sections
             output.AddFromJSON(config, fi.LastWriteTimeUtc);
@@ -111,8 +104,8 @@ namespace Viking.AU
             defaultCutoffDate = input.DefaultTranslateBefore ?? defaultCutoffDate;
 
             foreach (var kvp in input.Sections)
-            {  
-                var sectionData = new SectionTranslation(kvp.Key, 
+            {
+                SectionTranslation sectionData = new(kvp.Key,
                                              new GridVector2(kvp.Value.X, kvp.Value.Y),
                                              kvp.Value.TranslateBefore ?? defaultCutoffDate);
 
@@ -129,5 +122,5 @@ namespace Viking.AU
         public int Count => _offsetTable.Count;
     }
 
-    
-} 
+
+}

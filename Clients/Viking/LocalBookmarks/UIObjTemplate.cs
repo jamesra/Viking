@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows.Forms;
 using Viking.Common;
 
@@ -9,7 +9,7 @@ namespace LocalBookmarks
         /// <summary>
         /// Set this parameter if we are loading the data and don't need to create the child in the store
         /// </summary>
-        protected FolderUIObj _Parent = null;
+        protected FolderUIObj? _Parent = null;
 
         /// <summary>
         /// Everyone can use this method to adjust which parent the object has
@@ -20,15 +20,9 @@ namespace LocalBookmarks
             get => _Parent;
             set
             {
-                if (_Parent != null)
-                {
-                    _Parent.RemoveChild(this);
-                }
+                _Parent?.RemoveChild(this);
 
-                if (value == null)
-                    _Parent = Global.FolderUIObjRoot;
-                else
-                    _Parent = value;
+                _Parent = value is null ? Global.FolderUIObjRoot : value;
 
                 _Parent.AddChild(this);
             }
@@ -51,15 +45,12 @@ namespace LocalBookmarks
                 return Name;
         }
 
-        public override string ToString()
-        {
-            return Name;
-        }
+        public override string ToString() => Name;
         /*
         public override bool Equals(object obj)
         {
             UIObjTemplate<T> objT = obj as UIObjTemplate<T>;
-            if (objT == null)
+            if (objT is null)
                 return false;
 
             return objT.FullPathString() == this.FullPathString();
@@ -79,13 +70,13 @@ namespace LocalBookmarks
         {
             get
             {
-                ContextMenuStrip menu = new ContextMenuStrip();
+                ContextMenuStrip menu = new();
 
-                ToolStripMenuItem menuProperties = new ToolStripMenuItem("Properties...");
+                ToolStripMenuItem menuProperties = new("Properties...");
                 menuProperties.Click += OnPropertiesClick;
                 menu.Items.Add(menuProperties);
 
-                ToolStripMenuItem menuDelete = new ToolStripMenuItem("Delete");
+                ToolStripMenuItem menuDelete = new("Delete");
                 menuDelete.Click += OnDeleteClick;
                 menu.Items.Add(menuDelete);
 
@@ -100,26 +91,15 @@ namespace LocalBookmarks
             CallAfterSave();
         }
 
-        protected virtual void OnPropertiesClick(object sender, EventArgs e)
-        {
-            Viking.UI.Forms.PropertySheetForm.Show(this);
-        }
+        protected virtual void OnPropertiesClick(object sender, EventArgs e) => Viking.UI.Forms.PropertySheetForm.Show(this);
 
-        protected virtual void OnDeleteClick(object sender, EventArgs e)
-        {
-            this.Delete();
-        }
+        protected virtual void OnDeleteClick(object sender, EventArgs e) => this.Delete();
 
-        public override Type[] AssignableParentTypes
-        {
-            get { return new Type[] { typeof(FolderUIObj) }; }
-        }
+        public override Type[] AssignableParentTypes => [typeof(FolderUIObj)];
 
         public override void SetParent(IUIObject parent)
         {
-            FolderUIObj? parentFolder = parent as FolderUIObj;
-
-            if (parentFolder != null)
+            if (parent is FolderUIObj parentFolder)
                 Parent = parentFolder;
         }
 

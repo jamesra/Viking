@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -48,7 +48,7 @@ namespace WebAnnotationModel
                 return null;
             }
 
-            StringBuilder sbuilder = new StringBuilder();
+            StringBuilder sbuilder = new();
             using (System.Xml.XmlWriter xwriter = XmlWriter.Create(sbuilder))
             {
                 xwriter.WriteStartElement("Structure");
@@ -83,7 +83,7 @@ namespace WebAnnotationModel
         public static List<ObjAttribute> Parse(string serverXml)
         {
             if (serverXml is null)
-                return new List<ObjAttribute>();
+                return [];
 
             if (serverXml.StartsWith("<"))
             {
@@ -102,7 +102,7 @@ namespace WebAnnotationModel
 
             XElement structureElem = doc.Element("Structure");
             if (structureElem is null)
-                return new List<ObjAttribute>();
+                return [];
 
             return ObjAttribute.ElementToAttribs(structureElem);
 
@@ -110,14 +110,14 @@ namespace WebAnnotationModel
 
         private static List<ObjAttribute> ElementToAttribs(XElement structureElem)
         {
-            List<ObjAttribute> listAttrib = new List<ObjAttribute>();
+            List<ObjAttribute> listAttrib = [];
             foreach (XElement attribElem in structureElem.Elements("Attrib"))
             {
                 XAttribute nameAttr = attribElem.Attribute("Name");
-                if (nameAttr == null || string.IsNullOrEmpty(nameAttr.Value))
+                if (nameAttr is null || string.IsNullOrEmpty(nameAttr.Value))
                     continue;
 
-                ObjAttribute a = new ObjAttribute
+                ObjAttribute a = new()
                 {
                     Name = nameAttr.Value
                 };
@@ -137,13 +137,13 @@ namespace WebAnnotationModel
         public static List<ObjAttribute> TagStringsToList(IEnumerable<string> tags)
         {
             if (tags is null)
-                return new List<ObjAttribute>();
+                return [];
 
-            List<ObjAttribute> listTags = new List<ObjAttribute>();
+            List<ObjAttribute> listTags = [];
 
             foreach (string tagString in tags)
             {
-                ObjAttribute tag = new ObjAttribute();
+                ObjAttribute tag = new();
                 string trimmedTag = tagString.Trim();
                 string key = trimmedTag;
 
@@ -184,10 +184,7 @@ namespace WebAnnotationModel
                 return compval;
         }
 
-        public int CompareTo(string other)
-        {
-            return String.Compare(this.Name, other);
-        }
+        public int CompareTo(string other) => String.Compare(this.Name, other);
 
         public static bool operator ==(ObjAttribute A, ObjAttribute B)
         {
@@ -215,24 +212,18 @@ namespace WebAnnotationModel
 
         public override bool Equals(object obj)
         {
-            if(obj is String s)
+            if (obj is String s)
                 return this.Name == s;
 
-            if (!(obj is ObjAttribute Other))
+            if (obj is not ObjAttribute Other)
                 return false;
 
             return Other.Name == this.Name;
         }
 
-        public bool Equals(string other)
-        {
-            return this.Name == other;
-        }
+        public bool Equals(string other) => this.Name == other;
 
-        public override int GetHashCode()
-        {
-            return this.Name.GetHashCode();
-        }
+        public override int GetHashCode() => this.Name.GetHashCode();
     }
 
 }

@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Geometry;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
@@ -10,15 +10,9 @@ namespace WebAnnotationModel
 {
     public static class Extensions
     {
-        public static AnnotationService.Types.BoundingRectangle ToBoundingRectangle(this GridRectangle rect)
-        {
-            return new AnnotationService.Types.BoundingRectangle() { XMin = rect.Left, XMax = rect.Right, YMin = rect.Bottom, YMax = rect.Top };
-        }
+        public static AnnotationService.Types.BoundingRectangle ToBoundingRectangle(this GridRectangle rect) => new AnnotationService.Types.BoundingRectangle() { XMin = rect.Left, XMax = rect.Right, YMin = rect.Bottom, YMax = rect.Top };
 
-        public static GridRectangle ToGridRectangle(this AnnotationService.Types.BoundingRectangle bbox)
-        {
-            return new GridRectangle(bbox.XMin, bbox.XMax, bbox.YMin, bbox.YMax);
-        }
+        public static GridRectangle ToGridRectangle(this AnnotationService.Types.BoundingRectangle bbox) => new GridRectangle(bbox.XMin, bbox.XMax, bbox.YMin, bbox.YMax);
 
         public static SqlGeometry ToGeometry(GridVector2[] points, double Z, double radius, LocationType type)
         {
@@ -65,10 +59,7 @@ namespace WebAnnotationModel
             }
         }
 
-        public static void RaiseEventOnUIThread(this PropertyChangedEventHandler theEvent, PropertyChangedEventArgs args)
-        {
-            theEvent.RaiseEventOnUIThread(new object[] { args });
-        }
+        public static void RaiseEventOnUIThread(this PropertyChangedEventHandler theEvent, PropertyChangedEventArgs args) => theEvent.RaiseEventOnUIThread([args]);
     }
 
 
@@ -90,23 +81,19 @@ namespace WebAnnotationModel
             }
             else
             {
-                ObjAttribute attrib = new ObjAttribute(tag, value);
+                ObjAttribute attrib = new(tag, value);
                 listAttributes.Add(attrib);
                 return true;
             }
         }
 
-        public static bool Contains(this List<WebAnnotationModel.ObjAttribute> listAttributes, string tag)
-        {
+        public static bool Contains(this List<WebAnnotationModel.ObjAttribute> listAttributes, string tag) =>
             //We cannot use the built-in contains function because ObjAttribute equality comparer also checks the value of the attribute
-            return listAttributes.Exists(a => a.Name == tag);
-        }
+            listAttributes.Exists(a => a.Name == tag);
 
-        public static int RemoveAll(this List<WebAnnotationModel.ObjAttribute> listAttributes, string tag)
-        {
+        public static int RemoveAll(this List<WebAnnotationModel.ObjAttribute> listAttributes, string tag) =>
             //We cannot use the built-in contains function because ObjAttribute equality comparer also checks the value of the attribute
-            return listAttributes.RemoveAll(a => a.Name == tag);
-        }
+            listAttributes.RemoveAll(a => a.Name == tag);
     }
 
 }

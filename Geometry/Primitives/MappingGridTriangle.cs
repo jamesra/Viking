@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Linq;
 
@@ -8,13 +8,13 @@ namespace Geometry
     /// <summary>
     /// Maps points from one triangle to another using barycentric coordinates
     /// </summary>
-    public class MappingGridTriangle : ICloneable, IEquatable<MappingGridTriangle>, ITransform
+    public class MappingGridTriangle(MappingGridVector2[] nodes, int n1, int n2, int n3) : ICloneable, IEquatable<MappingGridTriangle>, ITransform
     {
-        internal readonly MappingGridVector2[] Nodes;
+        internal readonly MappingGridVector2[] Nodes = nodes;
 
-        internal readonly int N1; //Index of first node
-        internal readonly int N2; //Index of second node 
-        internal readonly int N3; //Index of third node
+        internal readonly int N1 = n1; //Index of first node
+        internal readonly int N2 = n2; //Index of second node 
+        internal readonly int N3 = n3; //Index of third node
 
         public override bool Equals(object obj)
         {
@@ -30,10 +30,7 @@ namespace Geometry
             return false;
         }
 
-        public override int GetHashCode()
-        {
-            return N1 + N2 + N3;
-        }
+        public override int GetHashCode() => N1 + N2 + N3;
 
         #region MapBounds
 
@@ -101,7 +98,7 @@ namespace Geometry
             }
         }
 
-        public GridRectangle MappedBoundingBox => new GridRectangle(MinMapX, MaxMapX, MinMapY, MaxMapY);
+        public GridRectangle MappedBoundingBox => new(MinMapX, MaxMapX, MinMapY, MaxMapY);
 
         #endregion
 
@@ -173,40 +170,20 @@ namespace Geometry
 
         #endregion
 
-        public GridRectangle ControlBoundingBox => new GridRectangle(MinCtrlX, MaxCtrlX, MinCtrlY, MaxCtrlY);
+        public GridRectangle ControlBoundingBox => new(MinCtrlX, MaxCtrlX, MinCtrlY, MaxCtrlY);
 
 
-        public GridTriangle Control => new GridTriangle(Nodes[N1].ControlPoint, Nodes[N2].ControlPoint, Nodes[N3].ControlPoint);
+        public GridTriangle Control => new(Nodes[N1].ControlPoint, Nodes[N2].ControlPoint, Nodes[N3].ControlPoint);
 
-        public GridTriangle Mapped => new GridTriangle(Nodes[N1].MappedPoint, Nodes[N2].MappedPoint, Nodes[N3].MappedPoint);
+        public GridTriangle Mapped => new(Nodes[N1].MappedPoint, Nodes[N2].MappedPoint, Nodes[N3].MappedPoint);
 
-        public MappingGridTriangle(MappingGridVector2[] nodes, int n1, int n2, int n3)
-        {
-            this.Nodes = nodes;
-            this.N1 = n1;
-            this.N2 = n2;
-            this.N3 = n3;
-        }
+        public MappingGridTriangle Copy() => (MappingGridTriangle)((ICloneable)this).Clone();
 
-        public MappingGridTriangle Copy()
-        {
-            return (MappingGridTriangle)((ICloneable)this).Clone();
-        }
+        object ICloneable.Clone() => this.MemberwiseClone();
 
-        object ICloneable.Clone()
-        {
-            return this.MemberwiseClone();
-        }
+        public bool CanTransform(in GridVector2 Point) => Mapped.Contains(Point);
 
-        public bool CanTransform(in GridVector2 Point)
-        {
-            return Mapped.Contains(Point);
-        }
-
-        public bool CanInverseTransform(in GridVector2 Point)
-        {
-            return Control.Contains(Point);
-        }
+        public bool CanInverseTransform(in GridVector2 Point) => Control.Contains(Point);
 
         private static bool BarycentricCoordIsMappable(in GridVector2 uv) =>
             uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0);
@@ -215,7 +192,7 @@ namespace Geometry
         {
             GridVector2 uv = Mapped.Barycentric(Point);
             Debug.Assert(BarycentricCoordIsMappable(uv));
-             
+
             GridVector2 translated = GridVector2.FromBarycentric(Control.p1, Control.p2, Control.p3, uv.Y, uv.X);
             return translated.Round(Global.TransformSignificantDigits);
 
@@ -235,7 +212,7 @@ namespace Geometry
             var uv_points = Points.Select(Point => Mapped.Barycentric(Point));
             Debug.Assert(uv_points.All(uv => uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0)));
 
-            return uv_points.Select(uv => GridVector2.FromBarycentric(Control.p1, Control.p2, Control.p3, uv.Y, uv.X).Round(Global.TransformSignificantDigits)).ToArray();
+            return [.. uv_points.Select(uv => GridVector2.FromBarycentric(Control.p1, Control.p2, Control.p3, uv.Y, uv.X).Round(Global.TransformSignificantDigits))];
         }
 
         public GridVector2[] InverseTransform(in GridVector2[] Points)
@@ -243,7 +220,7 @@ namespace Geometry
             var uv_points = Points.Select(Point => Control.Barycentric(Point));
             //  Debug.Assert(uv_points.All(uv => uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0)));
 
-            return uv_points.Select(uv => GridVector2.FromBarycentric(Mapped.p1, Mapped.p2, Mapped.p3, uv.Y, uv.X).Round(Global.TransformSignificantDigits)).ToArray();
+            return [.. uv_points.Select(uv => GridVector2.FromBarycentric(Mapped.p1, Mapped.p2, Mapped.p3, uv.Y, uv.X).Round(Global.TransformSignificantDigits))];
         }
 
         public bool Equals(MappingGridTriangle other)
@@ -256,7 +233,7 @@ namespace Geometry
 
             return this.N1 == other.N1 && this.N2 == other.N2 && this.N3 == other.N3;
         }
-         
+
         public bool TryTransform(in GridVector2 Point, out GridVector2 translated)
         {
             GridVector2 uv = Mapped.Barycentric(Point);
@@ -282,14 +259,14 @@ namespace Geometry
                     output[i] = default;
                     continue;
                 }
-                    
+
                 output[i] = GridVector2.FromBarycentric(Control.p1, Control.p2, Control.p3, output[i].Y, output[i].X);
                 output[i] = output[i].Round(Global.TransformSignificantDigits);
-            } 
-            
+            }
+
             return wasMapped;
         }
-         
+
         public bool TryInverseTransform(in GridVector2 Point, out GridVector2 translated)
         {
             GridVector2 uv = Control.Barycentric(Point);
@@ -315,11 +292,11 @@ namespace Geometry
                     output[i] = default;
                     continue;
                 }
-                    
+
                 output[i] = GridVector2.FromBarycentric(Mapped.p1, Mapped.p2, Mapped.p3, output[i].Y, output[i].X);
                 output[i] = output[i].Round(Global.TransformSignificantDigits);
-            } 
-            
+            }
+
             return wasMapped;
         }
     }

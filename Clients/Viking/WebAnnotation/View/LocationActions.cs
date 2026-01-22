@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using System;
@@ -87,34 +87,21 @@ namespace WebAnnotation
     {
         public static Cursor GetCursor(this LocationAction action)
         {
-            switch (action)
+            return action switch
             {
-                case LocationAction.NONE:
-                    return Cursors.Default;
-                case LocationAction.SCALETRANSLATE:
-                case LocationAction.TRANSLATE:
-                    return Cursors.Hand;
-                case LocationAction.SCALE:
-                    return Cursors.SizeAll;
-                case LocationAction.ADJUST:
-                    return Cursors.SizeAll;
-                case LocationAction.ADDCONTROLPOINT:
-                    return new Cursor(Viking.Properties.Resources.Create.Handle);
-                case LocationAction.REMOVECONTROLPOINT:
-                    return Cursors.No;
-                case LocationAction.CREATELINK:
-                    return new Cursor(Viking.Properties.Resources.Link.Handle);
-                case LocationAction.CREATELINKEDLOCATION:
-                    return Cursors.Cross;
-                case LocationAction.CUTHOLE:
-                    return new Cursor(Viking.Properties.Resources.Scissors2.Handle);
-                case LocationAction.REMOVEHOLE:
-                    return new Cursor(Viking.Properties.Resources.PaintBucketFill.Handle);
-                case LocationAction.CHANGEBOUNDARY:
-                    return Cursors.Cross;
-                default:
-                    return Cursors.Default;
-            }
+                LocationAction.NONE => Cursors.Default,
+                LocationAction.SCALETRANSLATE or LocationAction.TRANSLATE => Cursors.Hand,
+                LocationAction.SCALE => Cursors.SizeAll,
+                LocationAction.ADJUST => Cursors.SizeAll,
+                LocationAction.ADDCONTROLPOINT => new Cursor(Viking.Properties.Resources.Create.Handle),
+                LocationAction.REMOVECONTROLPOINT => Cursors.No,
+                LocationAction.CREATELINK => new Cursor(Viking.Properties.Resources.Link.Handle),
+                LocationAction.CREATELINKEDLOCATION => Cursors.Cross,
+                LocationAction.CUTHOLE => new Cursor(Viking.Properties.Resources.Scissors2.Handle),
+                LocationAction.REMOVEHOLE => new Cursor(Viking.Properties.Resources.PaintBucketFill.Handle),
+                LocationAction.CHANGEBOUNDARY => Cursors.Cross,
+                _ => Cursors.Default,
+            };
         }
 
         /// <summary>
@@ -133,24 +120,16 @@ namespace WebAnnotation
             Viking.UI.State.SelectedObject = null;
             //            CreateNewLinkedLocationCommand.LastEditedLocation = null; 
 
-            switch (loc.TypeCode)
+            return loc.TypeCode switch
             {
-                case LocationType.CIRCLE:
-                    return CreateCommandForCircles(action, Parent, loc, volumePosition);
-                case LocationType.POLYLINE:
-                    return CreateCommandForlineOrOpenCurve(action, Parent, loc, volumePosition);
-                case LocationType.OPENCURVE:
-                    return CreateCommandForlineOrOpenCurve(action, Parent, loc, volumePosition);
-                case LocationType.CLOSEDCURVE:
-                    return CreateCommandForClosedCurve(action, Parent, loc, volumePosition);
-                case LocationType.POLYGON:
-                case LocationType.CURVEPOLYGON:
-                    return CreateCommandForPolygon(action, Parent, loc, volumePosition);
-                case LocationType.POINT:
-                    throw new NotImplementedException("No commands available for polygons");
-                default:
-                    throw new NotImplementedException("Unexpected location type");
-            }
+                LocationType.CIRCLE => CreateCommandForCircles(action, Parent, loc, volumePosition),
+                LocationType.POLYLINE => CreateCommandForlineOrOpenCurve(action, Parent, loc, volumePosition),
+                LocationType.OPENCURVE => CreateCommandForlineOrOpenCurve(action, Parent, loc, volumePosition),
+                LocationType.CLOSEDCURVE => CreateCommandForClosedCurve(action, Parent, loc, volumePosition),
+                LocationType.POLYGON or LocationType.CURVEPOLYGON => CreateCommandForPolygon(action, Parent, loc, volumePosition),
+                LocationType.POINT => throw new NotImplementedException("No commands available for polygons"),
+                _ => throw new NotImplementedException("Unexpected location type"),
+            };
         }
 
 
@@ -180,10 +159,7 @@ namespace WebAnnotation
                     return new ResizeCircleCommand(Parent,
                             System.Drawing.Color.FromArgb((int)loc.Parent.Type.Color).SetAlpha(0.5f),
                             VolumeCircleCenter,
-                            (radius) =>
-                            {
-                                WebAnnotation.LocationActions.UpdateCircleLocationCallback(loc, loc.VolumePosition, loc.Position, radius);
-                            });
+                            (radius) => WebAnnotation.LocationActions.UpdateCircleLocationCallback(loc, loc.VolumePosition, loc.Position, radius));
                 case LocationAction.ADJUST:
                     return null;
                 case LocationAction.CREATESTRUCTURE:
@@ -203,7 +179,7 @@ namespace WebAnnotation
 
                                                                        SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out SqlGeometry VolumeShape);
 
-                                                                       LocationObj newLoc = new LocationObj(loc.Parent,
+                                                                       LocationObj newLoc = new(loc.Parent,
                                                                             MosaicShape,
                                                                             VolumeShape,
                                                                             Parent.Section.Number,
@@ -213,7 +189,7 @@ namespace WebAnnotation
                                                                        NewMosaicPosition = section_mapper.VolumeToSection(NewVolumePosition);
                                                                        UpdateCircleLocationNoSaveCallback(newLoc, NewVolumePosition, NewMosaicPosition, NewRadius);
 
-                                                                       Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
+                                                                       Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [Parent, loc, newLoc]);
                                                                    }));
                 default:
                     return null;
@@ -242,14 +218,14 @@ namespace WebAnnotation
                                                              volumePosition,
                                                              loc.MosaicShape.ToPoints(),
                                                              loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                             loc.Width.HasValue ? loc.Width.Value : 16.0,
+                                                             loc.Width ?? 16.0,
                                                              (VolumeControlPoints, MosaicControlPoints, LineWidth) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints, LineWidth));
                 case LocationAction.SCALE:
                     return null;
                 case LocationAction.ADJUST:
                     return new AdjustCurveControlPointCommand(Parent, loc.MosaicShape.ToPoints(),
                                                                       loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                                      loc.Width.HasValue ? loc.Width.Value : 16.0,
+                                                                      loc.Width ?? 16.0,
                                                                       IsClosedCurve(loc),
                                                                       (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
                 case LocationAction.CREATELINK:
@@ -281,10 +257,10 @@ namespace WebAnnotation
                                                              volumePosition,
                                                              MosaicShape.ToPoints(),
                                                              loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                             loc.Width.HasValue ? loc.Width.Value : 16.0,
+                                                             loc.Width ?? 16.0,
                                                              (NewVolumeControlPoints, NewMosaicControlPoints, NewWidth) =>
                                                                 {
-                                                                    LocationObj newLoc = new LocationObj(loc.Parent,
+                                                                    LocationObj newLoc = new(loc.Parent,
                                                                        MosaicShape,
                                                                        VolumeShape,
                                                                        Parent.Section.Number,
@@ -294,7 +270,7 @@ namespace WebAnnotation
                                                                     NewMosaicControlPoints = section_mapper.VolumeToSection(NewVolumeControlPoints);
 
                                                                     UpdateLineLocationNoSaveCallback(newLoc, NewVolumeControlPoints, NewMosaicControlPoints, NewWidth);
-                                                                    Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
+                                                                    Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [Parent, loc, newLoc]);
                                                                 }
                                                              );
                 default:
@@ -324,7 +300,7 @@ namespace WebAnnotation
                                                              loc.MosaicShape.Centroid(),
                                                              loc.MosaicShape.ToPoints(),
                                                              loc.Parent.Type.Color.ToXNAColor().SetAlpha(0.5f),
-                                                             loc.Width.HasValue ? loc.Width.Value : 16.0,
+                                                             loc.Width ?? 16.0,
                                                              (VolumeControlPoints, MosaicControlPoints, LineWidth) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints, LineWidth));
                 case LocationAction.SCALE:
                     return null;
@@ -362,10 +338,10 @@ namespace WebAnnotation
                                                              MosaicShape.Centroid(),
                                                              MosaicShape.ToPoints(),
                                                              loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                             loc.Width.HasValue ? loc.Width.Value : 16.0,
+                                                             loc.Width ?? 16.0,
                                                              (NewVolumeControlPoints, NewMosaicControlPoints, NewWidth) =>
                                                              {
-                                                                 LocationObj newLoc = new LocationObj(loc.Parent,
+                                                                 LocationObj newLoc = new(loc.Parent,
                                                                     MosaicShape,
                                                                     VolumeShape,
                                                                     Parent.Section.Number,
@@ -376,7 +352,7 @@ namespace WebAnnotation
 
                                                                  UpdateLineLocationNoSaveCallback(newLoc, NewVolumeControlPoints, NewMosaicControlPoints, NewWidth);
 
-                                                                 Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
+                                                                 Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [Parent, loc, newLoc]);
                                                              }
                                                              );
                 default:
@@ -481,7 +457,7 @@ namespace WebAnnotation
                                                                 loc.MosaicShape.ToPolygon(),
                                                                 Microsoft.Xna.Framework.Color.White.SetAlpha(0.5f),//loc.Parent.Type.Color.ToXNAColor(0.5f),
                                                                 volumePosition,
-                                                                loc.Width.HasValue ? loc.Width.Value : Global.DefaultClosedLineWidth,
+                                                                loc.Width ?? Global.DefaultClosedLineWidth,
                                                                 (sender, volume_points) =>
                                                                 {
                                                                     GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
@@ -544,17 +520,17 @@ namespace WebAnnotation
 
                         SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out SqlGeometry VolumeShape);
 
-                        if(Global.IsSegmentationServiceAvailable)
+                        if (Global.IsSegmentationServiceAvailable)
                         {
                             //Fetch the medial axis of the polygon.  Pass those points to the translation algorithm.  Extract the medial axis points and pass them to the segmentation command. 
                             var mosaic_shape_poly = MosaicShape.ToPolygon();
-                            
+
                             var mosaic_centroid = mosaic_shape_poly.Centroid; //TODO:  I am temporarily using the mosaic shape centroid instead of the medial axis until the Medial Axis code improves
 
                             return new TranslatePolygonCommand(Parent,
                                 mosaic_shape_poly,
                                 volumePosition,
-                                new GridVector2[] {mosaic_centroid }, //medial_axis_points,
+                                [mosaic_centroid], //medial_axis_points,
                                 loc.Parent.Type.Color.ToXNAColor(0.25f),
                                 (polygon, points) =>
                                 {
@@ -563,23 +539,23 @@ namespace WebAnnotation
                                     var transformed = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(points, out var volume_points);
                                     var transformed_medial_axis = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(points, out var transformed_medial_axis_points);
                                     var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                                    Parent.CommandQueue.EnqueueCommand(typeof(SegmentationCommand), 
-                                        new object[] {Parent, medial_axis_points, Array.Empty<GridVector2>(), new SegmentationCommand.OnCommandSuccess( (segmentedVolumePolygon) =>
+                                    Parent.CommandQueue.EnqueueCommand(typeof(SegmentationCommand),
+                                        [Parent, medial_axis_points, Array.Empty<GridVector2>(), new SegmentationCommand.OnCommandSuccess( (segmentedVolumePolygon) =>
                                             {
-                                                LocationObj newLoc = new LocationObj(loc.Parent,
+                                                LocationObj newLoc = new(loc.Parent,
                                                     Parent.Section.Number,
                                                     loc.TypeCode);
                                                 try
                                                 {
                                                     newLoc.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, segmentedVolumePolygon.ToSqlGeometry());
-                                                    Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
+                                                    Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [Parent, loc, newLoc]);
                                                 }
                                                 catch (ArgumentException e)
                                                 {
                                                     MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                                 }
-                                            }), channelManager});
-                                    
+                                            }), channelManager]);
+
                                 }
                             );
                         }
@@ -590,13 +566,13 @@ namespace WebAnnotation
                                                                  loc.Parent.Type.Color.ToXNAColor(0.25f),
                                                                  (mosaicPolygon, points) =>
                                                                  {
-                                                                     LocationObj newLoc = new LocationObj(loc.Parent,
+                                                                     LocationObj newLoc = new(loc.Parent,
                                                                         Parent.Section.Number,
                                                                         loc.TypeCode);
                                                                      try
                                                                      {
                                                                          newLoc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, mosaicPolygon.ToSqlGeometry());
-                                                                         Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
+                                                                         Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [Parent, loc, newLoc]);
                                                                      }
                                                                      catch (ArgumentException e)
                                                                      {
@@ -611,10 +587,10 @@ namespace WebAnnotation
                         GridVector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
                         //SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
 
-                        RetraceAndReplacePathCommand retracecmd = new RetraceAndReplacePathCommand(Parent,
+                        RetraceAndReplacePathCommand retracecmd = new(Parent,
                                                                  loc.MosaicShape.ToPolygon(),
                                                                  loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                                 loc.Width.HasValue ? loc.Width.Value : Global.DefaultClosedLineWidth,
+                                                                 loc.Width ?? Global.DefaultClosedLineWidth,
                                                                  (sender, MosaicPolygon) =>
                                                                  {
                                                                      //Drawing from inside to outside:
@@ -661,10 +637,7 @@ namespace WebAnnotation
             return DestinationSectionTransform.TryMapShapeVolumeToSection(VolumeShape);
         }
 
-        private static bool IsClosedCurve(LocationObj loc)
-        {
-            return loc.TypeCode == LocationType.CLOSEDCURVE;
-        }
+        private static bool IsClosedCurve(LocationObj loc) => loc.TypeCode == LocationType.CLOSEDCURVE;
 
         private static void UpdateLineLocationCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints)
         {

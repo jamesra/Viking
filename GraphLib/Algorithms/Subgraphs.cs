@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -14,10 +14,7 @@ namespace GraphLib
         public static IList<SortedSet<KEY>> IsolatedSubgraphs<KEY, NODETYPE, EDGETYPE>(Graph<KEY, NODETYPE, EDGETYPE> graph)
             where KEY : IComparable<KEY>, IEquatable<KEY>
             where NODETYPE : Node<KEY, EDGETYPE>
-            where EDGETYPE : Edge<KEY>
-        {
-            return Graph<KEY, NODETYPE, EDGETYPE>.IsolatedSubgraphs(graph);
-        }
+            where EDGETYPE : Edge<KEY> => Graph<KEY, NODETYPE, EDGETYPE>.IsolatedSubgraphs(graph);
     }
 
     public partial class Graph<KEY, NODETYPE, EDGETYPE>
@@ -29,9 +26,9 @@ namespace GraphLib
         /// <returns></returns>
         public static IList<SortedSet<KEY>> IsolatedSubgraphs(Graph<KEY, NODETYPE, EDGETYPE> graph)
         {
-            List<SortedSet<KEY>> subgraphs = new List<SortedSet<KEY>>();
+            List<SortedSet<KEY>> subgraphs = [];
 
-            SortedSet<KEY> mappedNodes = new SortedSet<KEY>();
+            SortedSet<KEY> mappedNodes = [];
 
             foreach (NODETYPE node in graph.Nodes.Values)
             {
@@ -39,7 +36,7 @@ namespace GraphLib
                     continue;
 
                 //Record all of the nodes linked to our new root node
-                SortedSet<KEY> subgraph = new SortedSet<KEY>();
+                SortedSet<KEY> subgraph = [];
                 ConnectedNodes(ref subgraph, graph, node);
 
                 //Record all of the nodes in the subgraph so we don't re-record

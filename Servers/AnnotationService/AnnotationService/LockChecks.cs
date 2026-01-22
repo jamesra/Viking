@@ -1,4 +1,4 @@
-﻿using ConnectomeDataModel;
+using ConnectomeDataModel;
 using System.Linq;
 
 namespace Annotation
@@ -23,7 +23,7 @@ namespace Annotation
                 return false;
 
             if (UniqueStructures.Any(s => s.Verified))
-                return true; 
+                return true;
 
             //Check parents for verified
             IQueryable<ConnectomeDataModel.Structure> ParentStructures =
@@ -32,7 +32,7 @@ namespace Annotation
                  on s.ParentID equals p.ID
                  where s.ParentID.HasValue
                  select s).Distinct();
-            
+
             return ParentStructures.AreAnyStructuresLocked(db);
         }
 

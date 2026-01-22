@@ -2,18 +2,12 @@
 
 namespace WebAnnotation
 {
-    internal class Export
+    /// <summary>
+    /// URL to use for file exports
+    /// </summary>
+    internal class Export(Uri URL)
     {
-        public Uri ExportURL;
-
-
-        /// <summary>
-        /// URL to use for file exports
-        /// </summary>
-        public Export(Uri URL)
-        {
-            ExportURL = URL;
-        }
+        public Uri ExportURL = URL;
 
 
         //Fetch morphology
@@ -21,7 +15,7 @@ namespace WebAnnotation
         {
             string subpath_template = "morphology/tlp?id={0}";
             string subpath = string.Format(subpath_template, id);
-            Uri uri_path = new Uri(exportURL, subpath);
+            Uri uri_path = new(exportURL, subpath);
 
             return uri_path;
         }
@@ -47,7 +41,7 @@ namespace WebAnnotation
                 subpath = string.Format(subpath_template, id);
             }
 
-            Uri uri_path = new Uri(exportURL, subpath);
+            Uri uri_path = new(exportURL, subpath);
 
             return uri_path;
         }
@@ -62,7 +56,7 @@ namespace WebAnnotation
         protected static Uri BuildMotifRequest(Uri exportURL)
         {
             string subpath_template = "motifs/tlp";
-            Uri uri_path = new Uri(exportURL, subpath_template);
+            Uri uri_path = new(exportURL, subpath_template);
 
             return uri_path;
         }

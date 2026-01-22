@@ -9,9 +9,9 @@ namespace GeometryTests
         [TestMethod]
         public void FitPointsWithLagrange()
         {
-            GridVector2[] points = {new GridVector2(0,7),
-                                    new GridVector2(3,5),
-                                    new GridVector2(0,4)};
+            GridVector2[] points = [new(0,7),
+                                    new(3,5),
+                                    new(0,4)];
 
             GridVector2[] Output = Geometry.Lagrange.FitCurve(points, 5);
 

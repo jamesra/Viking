@@ -1,4 +1,4 @@
-﻿//#define TRACEMESH
+//#define TRACEMESH
 
 using FsCheck;
 using Geometry;
@@ -16,25 +16,13 @@ namespace GeometryTests.FSCheck
             Global.ResetRollingSeed();
         }
 
-        public static Arbitrary<GridVector2> PointGenerator()
-        {
-            return GridVector2Generators.ArbRandomPoint();
-        }
+        public static Arbitrary<GridVector2> PointGenerator() => GridVector2Generators.ArbRandomPoint();
 
-        public static Arbitrary<GridVector2[]> DistinctPointsGenerator()
-        {
-            return GridVector2Generators.ArbRandomDistinctPoints();
-        }
+        public static Arbitrary<GridVector2[]> DistinctPointsGenerator() => GridVector2Generators.ArbRandomDistinctPoints();
 
-        public static Arbitrary<GridLineSegment> LineSegmentGenerator()
-        {
-            return GridLineSegmentGenerators.ArbRandomLine();
-        }
+        public static Arbitrary<GridLineSegment> LineSegmentGenerator() => GridLineSegmentGenerators.ArbRandomLine();
 
-        public static Arbitrary<GridPolyline> PolyLineGenerator()
-        {
-            return GridLineSegmentGenerators.ArbPolyLine();
-        }
+        public static Arbitrary<GridPolyline> PolyLineGenerator() => GridLineSegmentGenerators.ArbPolyLine();
     }
 
     /*

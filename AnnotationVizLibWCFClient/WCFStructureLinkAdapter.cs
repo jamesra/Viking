@@ -3,14 +3,9 @@ using AnnotationService.Types;
 
 namespace AnnotationVizLib.WCFClient
 {
-    class WCFStructureLinkAdapter : IStructureLink
+    class WCFStructureLinkAdapter(StructureLink sl) : IStructureLink
     {
-        private readonly StructureLink structureLink;
-
-        public WCFStructureLinkAdapter(StructureLink sl)
-        {
-            this.structureLink = sl;
-        }
+        private readonly StructureLink structureLink = sl;
 
         public bool Directional => !structureLink.Bidirectional;
 

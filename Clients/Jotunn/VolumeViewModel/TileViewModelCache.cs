@@ -1,4 +1,6 @@
-﻿using Viking.Common;
+﻿using System;
+using System.Threading.Tasks;
+using Viking.Common;
 
 namespace Viking.VolumeViewModel
 {
@@ -31,6 +33,19 @@ namespace Viking.VolumeViewModel
         {
             TileViewModelCacheEntry cacheEntry = new TileViewModelCacheEntry(key, value);
             return cacheEntry;
+        }
+
+        protected override TileViewModelCacheEntry CreateEntry(string key, Func<string, TileViewModel> valueFactory)
+        {
+            TileViewModel value = valueFactory(key);
+            TileViewModelCacheEntry cacheEntry = new TileViewModelCacheEntry(key, value);
+            return cacheEntry;
+        }
+
+        protected override Task<TileViewModelCacheEntry> CreateEntryAsync(string key, TileViewModel value)
+        {
+            TileViewModelCacheEntry cacheEntry = new TileViewModelCacheEntry(key, value);
+            return Task.FromResult(cacheEntry);
         }
     }
 }

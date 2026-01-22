@@ -1,4 +1,4 @@
-﻿using RTree;
+using RTree;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,27 +11,18 @@ namespace Geometry
     /// testing intersections on two arrays of shapes. 
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public readonly struct ArrayIntersection<T>
+    public readonly struct ArrayIntersection<T>(T a, T b, int I, int J, IShape2D intersection)
         where T : IShape2D
     {
         ///
         /// This struct is the Combo struct with an extra field
         /// 
 
-        public readonly int iA;
-        public readonly int iB;
-        public readonly T A;
-        public readonly T B;
-        public readonly IShape2D Intersection;
-
-        public ArrayIntersection(T a, T b, int I, int J, IShape2D intersection)
-        {
-            iA = I;
-            iB = J;
-            A = a;
-            B = b;
-            Intersection = intersection;
-        }
+        public readonly int iA = I;
+        public readonly int iB = J;
+        public readonly T A = a;
+        public readonly T B = b;
+        public readonly IShape2D Intersection = intersection;
 
         public override bool Equals(object obj)
         {
@@ -42,25 +33,13 @@ namespace Geometry
             return other.iA == this.iA && other.iB == this.iB;
         }
 
-        public override int GetHashCode()
-        {
-            return (iA * 23) + iB;
-        }
+        public override int GetHashCode() => (iA * 23) + iB;
 
-        public static bool operator ==(ArrayIntersection<T> left, ArrayIntersection<T> right)
-        {
-            return left.Equals(right);
-        }
+        public static bool operator ==(ArrayIntersection<T> left, ArrayIntersection<T> right) => left.Equals(right);
 
-        public static bool operator !=(ArrayIntersection<T> left, ArrayIntersection<T> right)
-        {
-            return !(left == right);
-        }
+        public static bool operator !=(ArrayIntersection<T> left, ArrayIntersection<T> right) => !(left == right);
 
-        public override string ToString()
-        {
-            return $"Intersection: {iA} {iB} {Intersection}";
-        }
+        public override string ToString() => $"Intersection: {iA} {iB} {Intersection}";
     }
 
     public static class ShapeDecomposition
@@ -70,51 +49,48 @@ namespace Geometry
         /// </summary>
         /// <param name="triangles"></param>
         /// <returns></returns>
-        public static GridLineSegment[] Edges(this ICollection<GridTriangle> triangles)
-        {
-            return triangles.SelectMany(t => t.Segments).Distinct().ToArray();
-        }
+        public static GridLineSegment[] Edges(this ICollection<GridTriangle> triangles) => [.. triangles.SelectMany(t => t.Segments).Distinct()];
     }
 
     public static class ShapeExtensions
     {
         public static GridVector2 Convert(this IPoint2D p)
         {
-            if (p is GridVector2 v) 
-                return v; 
+            if (p is GridVector2 v)
+                return v;
 
             return new GridVector2(p.X, p.Y);
         }
 
         public static GridLineSegment Convert(this ILineSegment2D line)
         {
-            if (line is GridLineSegment l) 
-                return l; 
+            if (line is GridLineSegment l)
+                return l;
 
             return new GridLineSegment(line.A, line.B);
         }
 
         public static GridCircle Convert(this ICircle2D c)
         {
-            if (c is GridCircle circle) 
-                return circle; 
+            if (c is GridCircle circle)
+                return circle;
 
             return new GridCircle(c.Center, c.Radius);
         }
 
         public static GridTriangle Convert(this ITriangle2D t)
         {
-            if (t is GridTriangle tri) 
-                return tri; 
+            if (t is GridTriangle tri)
+                return tri;
 
-            GridVector2[] points = t.Points.Select(p => p.Convert()).ToArray();
+            GridVector2[] points = [.. t.Points.Select(p => p.Convert())];
             return new GridTriangle(points[0], points[1], points[2]);
         }
 
         public static GridRectangle Convert(this IRectangle r)
         {
-            if (r is GridRectangle rect) 
-                return rect; 
+            if (r is GridRectangle rect)
+                return rect;
 
             return new GridRectangle(r.Left, r.Right, r.Bottom, r.Top);
         }
@@ -122,8 +98,8 @@ namespace Geometry
 
         public static GridPolygon Convert(this IPolygon2D poly)
         {
-            if (poly is GridPolygon p) 
-                return p; 
+            if (poly is GridPolygon p)
+                return p;
 
             return new GridPolygon(poly.ExteriorRing, poly.InteriorRings);
         }
@@ -133,34 +109,23 @@ namespace Geometry
             if (false == shape.BoundingBox.Intersects(other.BoundingBox))
                 return false;
 
-            switch (shape.ShapeType)
+            return shape.ShapeType switch
             {
-                case ShapeType2D.POINT:
-                    return PointIntersects(shape as IPoint2D, other);
-                case ShapeType2D.CIRCLE:
-                    return CircleIntersects(shape as ICircle2D, other);
-                case ShapeType2D.RECTANGLE:
-                    return RectangleIntersects(shape as IRectangle, other);
-                case ShapeType2D.TRIANGLE:
-                    return TriangleIntersects(shape as ITriangle2D, other);
-                case ShapeType2D.LINE:
-                    return LineIntersects(shape as ILineSegment2D, other);
-                case ShapeType2D.POLYGON:
-                    return PolygonIntersects(shape as IPolygon2D, other);
-                case ShapeType2D.ELLIPSE:
-                default:
-                    throw new NotImplementedException();
-            }
+                ShapeType2D.POINT => PointIntersects(shape as IPoint2D, other),
+                ShapeType2D.CIRCLE => CircleIntersects(shape as ICircle2D, other),
+                ShapeType2D.RECTANGLE => RectangleIntersects(shape as IRectangle, other),
+                ShapeType2D.TRIANGLE => TriangleIntersects(shape as ITriangle2D, other),
+                ShapeType2D.LINE => LineIntersects(shape as ILineSegment2D, other),
+                ShapeType2D.POLYGON => PolygonIntersects(shape as IPolygon2D, other),
+                _ => throw new NotImplementedException(),
+            };
         }
 
-        private static bool PointIntersects(IPoint2D point, IShape2D other)
-        {
-            return other.Contains(point);
-        }
+        private static bool PointIntersects(IPoint2D point, IShape2D other) => other.Contains(point);
 
         internal static bool CircleIntersects(ICircle2D c, IShape2D other)
         {
-            GridCircle circle = new GridCircle(c.Center, c.Radius);
+            GridCircle circle = new(c.Center, c.Radius);
             return CircleIntersects(circle, other);
         }
 
@@ -233,9 +198,9 @@ namespace Geometry
                 case ShapeType2D.POLYGON:
                     return tri.Intersects(((IPolygon2D)other).Convert());
                 case ShapeType2D.RECTANGLE:
-                    if(other is GridRectangle rect)
+                    if (other is GridRectangle rect)
                         return RectangleIntersectionExtensions.Intersects(rect, tri);
-                    else if(other is IRectangle r)
+                    else if (other is IRectangle r)
                         return RectangleIntersectionExtensions.Intersects(r.Convert(), tri);
 
                     throw new ArgumentException("Unexpected rectangle object");
@@ -468,10 +433,7 @@ namespace Geometry
         /// <param name="circle"></param>
         /// <param name="poly"></param>
         /// <returns></returns>
-        public static ShapeRelation ContainsExt(in GridCircle circle, GridPolygon poly)
-        {
-            throw new NotImplementedException();
-            /*
+        public static ShapeRelation ContainsExt(in GridCircle circle, GridPolygon poly) => throw new NotImplementedException();/*
             GridRectangle? overlap = circle.BoundingBox.Intersection(poly.BoundingBox);
             if (!overlap.HasValue)
                 return ShapeRelation.NONE;
@@ -519,15 +481,11 @@ namespace Geometry
 
             return false;
             */
-        }
     }
 
     public static class RectangleIntersectionExtensions
     {
-        public static bool Intersects(in GridRectangle rect, in GridCircle circle)
-        {
-            return CircleIntersectionExtensions.Intersects(circle, rect);
-        }
+        public static bool Intersects(in GridRectangle rect, in GridCircle circle) => CircleIntersectionExtensions.Intersects(circle, rect);
 
         public static bool Intersects(in GridRectangle rect, in GridLineSegment line)
         {
@@ -602,15 +560,9 @@ namespace Geometry
 
     public static class TriangleIntersectionExtensions
     {
-        public static bool Intersects(in GridTriangle tri, in GridCircle circle)
-        {
-            return CircleIntersectionExtensions.Intersects(circle, tri);
-        }
+        public static bool Intersects(in GridTriangle tri, in GridCircle circle) => CircleIntersectionExtensions.Intersects(circle, tri);
 
-        public static bool Intersects(in GridTriangle tri, in GridRectangle rect)
-        {
-            return RectangleIntersectionExtensions.Intersects(rect, tri);
-        }
+        public static bool Intersects(in GridTriangle tri, in GridRectangle rect) => RectangleIntersectionExtensions.Intersects(rect, tri);
 
         public static bool Intersects(in GridTriangle tri, in GridLineSegment line)
         {
@@ -666,20 +618,11 @@ namespace Geometry
 
     public static class LineIntersectionExtensions
     {
-        public static bool Intersects(in GridLineSegment line, in GridCircle circle)
-        {
-            return CircleIntersectionExtensions.Intersects(circle, line);
-        }
+        public static bool Intersects(in GridLineSegment line, in GridCircle circle) => CircleIntersectionExtensions.Intersects(circle, line);
 
-        public static bool Intersects(in GridLineSegment line, in GridRectangle rect)
-        {
-            return RectangleIntersectionExtensions.Intersects(rect, line);
-        }
+        public static bool Intersects(in GridLineSegment line, in GridRectangle rect) => RectangleIntersectionExtensions.Intersects(rect, line);
 
-        public static bool Intersects(in GridLineSegment line, in GridTriangle tri)
-        {
-            return TriangleIntersectionExtensions.Intersects(tri, line);
-        }
+        public static bool Intersects(in GridLineSegment line, in GridTriangle tri) => TriangleIntersectionExtensions.Intersects(tri, line);
 
         public static bool Intersects(this in GridLineSegment line, in GridPolygon poly, out GridVector2 intersection)
         {
@@ -693,10 +636,7 @@ namespace Geometry
             return intersected;
         }
 
-        public static bool Intersects(this in GridLineSegment line, in GridPolygon poly, bool EndpointsOnRingDoNotIntersect = false)
-        {
-            return Intersects(line, poly, EndpointsOnRingDoNotIntersect, out List<GridVector2> intersections);
-        }
+        public static bool Intersects(this in GridLineSegment line, in GridPolygon poly, bool EndpointsOnRingDoNotIntersect = false) => Intersects(line, poly, EndpointsOnRingDoNotIntersect, out List<GridVector2> intersections);
 
         /// <summary>
         /// Return true if any of the segments of the polygon intersect the line
@@ -708,12 +648,12 @@ namespace Geometry
         /// <returns></returns>
         public static bool Intersects(this in GridLineSegment line, GridPolygon poly, bool EndpointsOnRingDoNotIntersect, out List<GridVector2> intersections)
         {
-            intersections = new List<GridVector2>();
+            intersections = [];
 
             if (false == line.BoundingBox.Intersects(poly.BoundingBox))
                 return false;
 
-            List<GridLineSegment> listCandidates = poly.SegmentRTree.Intersects(line.BoundingBox.ToRTreeRect(0)).Select(p => p.Segment(poly)).ToList();
+            List<GridLineSegment> listCandidates = [.. poly.SegmentRTree.Intersects(line.BoundingBox.ToRTreeRect(0)).Select(p => p.Segment(poly))];
 
             foreach (GridLineSegment poly_line in listCandidates)
             {
@@ -744,10 +684,10 @@ namespace Geometry
             }
             */
             var lambda_copy = line;
-            intersections = intersections.Distinct().ToList(); //Remove duplicates if our line happens to pass directly through a vertex
+            intersections = [.. intersections.Distinct()]; //Remove duplicates if our line happens to pass directly through a vertex
             if (EndpointsOnRingDoNotIntersect)
             {
-                intersections = intersections.Where(i => !lambda_copy.IsEndpoint(i)).ToList();
+                intersections = [.. intersections.Where(i => !lambda_copy.IsEndpoint(i))];
             }
 
             return intersections.Count > 0;
@@ -761,10 +701,7 @@ namespace Geometry
         /// <param name="poly"></param>
         /// <param name="Intersections"></param>
         /// <returns></returns>
-        public static bool Crosses(this in GridLineSegment line, in GridPolygon poly)
-        {
-            return line.Crosses(poly, out List<GridVector2> Intersections);
-        }
+        public static bool Crosses(this in GridLineSegment line, in GridPolygon poly) => line.Crosses(poly, out List<GridVector2> Intersections);
 
         /// <summary>
         /// Returns true if any portion of the line is inside the polygon
@@ -775,7 +712,7 @@ namespace Geometry
         /// <returns></returns>
         public static bool Crosses(this in GridLineSegment line, in GridPolygon poly, out List<GridVector2> Intersections)
         {
-            Intersections = new List<GridVector2>();
+            Intersections = [];
 
             if (false == line.BoundingBox.Intersects(poly.BoundingBox))
                 return false;
@@ -810,10 +747,7 @@ namespace Geometry
             return false;
         }
 
-        public static List<GridLineSegment> Intersections(this in GridLineSegment line, in IReadOnlyList<GridLineSegment> lines, out GridVector2[] IntersectionPoints)
-        {
-            return Intersections(line, lines, true, out IntersectionPoints);
-        }
+        public static List<GridLineSegment> Intersections(this in GridLineSegment line, in IReadOnlyList<GridLineSegment> lines, out GridVector2[] IntersectionPoints) => Intersections(line, lines, true, out IntersectionPoints);
 
 
         /// <summary>
@@ -827,8 +761,8 @@ namespace Geometry
         public static List<GridLineSegment> Intersections(this GridLineSegment line, in IReadOnlyList<GridLineSegment> lines, bool EndpointsOnLineDoNotIntersect, out GridVector2[] IntersectionPoints)
         {
             //Cannot use an out parameter in the anonymous method I use below, so I have a bit of redundancy in tracking added points
-            List<GridVector2> NewPoints = new List<Geometry.GridVector2>(lines.Count);
-            List<GridLineSegment> IntersectingLines = new List<GridLineSegment>(lines.Count);
+            List<GridVector2> NewPoints = new(lines.Count);
+            List<GridLineSegment> IntersectingLines = new(lines.Count);
 
             foreach (GridLineSegment testLine in lines)
             {
@@ -848,12 +782,12 @@ namespace Geometry
                 }
             }
 
-            double[] dotValues = NewPoints.Select(p => line.Dot(p)).ToArray();
+            double[] dotValues = [.. NewPoints.Select(p => line.Dot(p))];
             int[] sortedIndicies = dotValues.SortAndIndex();
 
-            IntersectionPoints = sortedIndicies.Select(i => NewPoints[i]).ToArray();
+            IntersectionPoints = [.. sortedIndicies.Select(i => NewPoints[i])];
 
-            return sortedIndicies.Select(i => IntersectingLines[i]).ToList();
+            return [.. sortedIndicies.Select(i => IntersectingLines[i])];
         }
 
         /// <summary>
@@ -866,8 +800,8 @@ namespace Geometry
         /// <returns>The lines that intersect the line parameter</returns>
         public static List<Tuple<GridLineSegment, GridLineSegment>> Intersections(this IEnumerable<GridLineSegment> ALines, IReadOnlyList<GridLineSegment> BLines, bool EndpointsOnLineDoNotIntersect, out GridVector2[] IntersectionPoints)
         {
-            List<Tuple<GridLineSegment, GridLineSegment>> listLinePairIntersections = new List<Tuple<GridLineSegment, GridLineSegment>>();
-            List<GridVector2> listIntersections = new List<GridVector2>();
+            List<Tuple<GridLineSegment, GridLineSegment>> listLinePairIntersections = [];
+            List<GridVector2> listIntersections = [];
             foreach (GridLineSegment line in ALines)
             {
                 List<GridLineSegment> intersectedLines = line.Intersections(BLines, EndpointsOnLineDoNotIntersect, out GridVector2[] intersections);
@@ -875,7 +809,7 @@ namespace Geometry
                 listIntersections.AddRange(intersections);
             }
 
-            IntersectionPoints = listIntersections.ToArray();
+            IntersectionPoints = [.. listIntersections];
             return listLinePairIntersections;
         }
 
@@ -889,8 +823,8 @@ namespace Geometry
         /// <returns>The lines that intersect the line parameter</returns>
         public static List<ArrayIntersection<GridLineSegment>> Intersections(this IReadOnlyList<GridLineSegment> ALines, IReadOnlyList<GridLineSegment> BLines, bool EndpointsOnLineDoNotIntersect)
         {
-            var listLinePairIntersections = new List<ArrayIntersection<GridLineSegment>>();
-            List<GridVector2> listIntersections = new List<GridVector2>();
+            List<ArrayIntersection<GridLineSegment>> listLinePairIntersections = [];
+            List<GridVector2> listIntersections = [];
 
             for (int iA = 0; iA < ALines.Count; iA++)
             {
@@ -901,7 +835,7 @@ namespace Geometry
 
                     if (A.Intersects(B, EndpointsOnLineDoNotIntersect, out IShape2D Intersection))
                     {
-                        var Result = new ArrayIntersection<GridLineSegment>(A, B, iA, iB, Intersection);
+                        ArrayIntersection<GridLineSegment> Result = new(A, B, iA, iB, Intersection);
                         listLinePairIntersections.Add(Result);
                     }
                 }
@@ -912,17 +846,13 @@ namespace Geometry
 
         public static bool IsEndpointIntersectionExpected(this LineSetOrdering order, int iLine, int jLine, int list_length)
         {
-            switch (order)
+            return order switch
             {
-                case LineSetOrdering.NONE:
-                    return false;
-                case LineSetOrdering.POLYLINE:
-                    return iLine + 1 == jLine;
-                case LineSetOrdering.CLOSED:
-                    return iLine + 1 == jLine || (iLine == 0 && jLine == (list_length - 1));
-                default:
-                    throw new ArgumentException("Unexpected LineSetOrdering provided to IsEndpointInteresectionExpected");
-            }
+                LineSetOrdering.NONE => false,
+                LineSetOrdering.POLYLINE => iLine + 1 == jLine,
+                LineSetOrdering.CLOSED => iLine + 1 == jLine || (iLine == 0 && jLine == (list_length - 1)),
+                _ => throw new ArgumentException("Unexpected LineSetOrdering provided to IsEndpointInteresectionExpected"),
+            };
         }
 
         /// <summary>
@@ -972,10 +902,7 @@ namespace Geometry
         /// <param name="lines">A set of lines</param>
         /// <param name="order">Information as to how the lines are connected. </param>
         /// <returns></returns>
-        public static bool SelfIntersects(this in GridLineSegment addition, in IReadOnlyList<GridLineSegment> lines, LineSetOrdering order)
-        {
-            return SelfIntersects(in addition, in lines, order, out GridLineSegment? intersected);
-        }
+        public static bool SelfIntersects(this in GridLineSegment addition, in IReadOnlyList<GridLineSegment> lines, LineSetOrdering order) => SelfIntersects(in addition, in lines, order, out GridLineSegment? intersected);
 
         /// <summary>
         /// Return true if the passed Polyline intersects itself. 
@@ -1010,7 +937,7 @@ namespace Geometry
         {
             List<GridLineSegment> Unused = line.Intersections(lines, out IntersectionPoints);
 
-            List<GridLineSegment> DividedLines = new List<Geometry.GridLineSegment>(IntersectionPoints.Length + 2);
+            List<GridLineSegment> DividedLines = new(IntersectionPoints.Length + 2);
             if (IntersectionPoints.Length == 0)
             {
                 DividedLines.Add(line);
@@ -1036,21 +963,12 @@ namespace Geometry
         {
             RTree.RTree<GridLineSegment> rTree = lines.ToRTree();
 
-            IList<GridLineSegment> sortedLines;
-            if (lines is IList<GridLineSegment> existing)
-            {
-                sortedLines = existing;
-            }
-            else
-            {
-                sortedLines = new List<Geometry.GridLineSegment>(lines);
-            }
+            IList<GridLineSegment> sortedLines = lines is IList<GridLineSegment> existing ? existing : [.. lines];
+            SortedSet<GridLineSegment> output = [];
 
-            SortedSet<GridLineSegment> output = new SortedSet<Geometry.GridLineSegment>();
+            Stack<GridLineSegment> linesToTest = new(lines);
 
-            Stack<GridLineSegment> linesToTest = new Stack<Geometry.GridLineSegment>(lines);
-
-            AddedPoints = new SortedSet<Geometry.GridVector2>();
+            AddedPoints = [];
 
             while (linesToTest.Count > 0)
             {
@@ -1101,37 +1019,25 @@ namespace Geometry
 
     public static class PolygonIntersectionExtensions
     {
-        public static bool Intersects(GridPolygon poly, in GridCircle circle)
-        {
-            return CircleIntersectionExtensions.Intersects(in circle, poly);
-        }
+        public static bool Intersects(GridPolygon poly, in GridCircle circle) => CircleIntersectionExtensions.Intersects(in circle, poly);
 
-        public static bool Intersects(GridPolygon poly, in GridRectangle rect)
-        {
-            return RectangleIntersectionExtensions.Intersects(rect, poly);
-        }
+        public static bool Intersects(GridPolygon poly, in GridRectangle rect) => RectangleIntersectionExtensions.Intersects(rect, poly);
 
-        public static bool Intersects(GridPolygon poly, in GridTriangle tri)
-        {
-            return TriangleIntersectionExtensions.Intersects(in tri, poly);
-        }
+        public static bool Intersects(GridPolygon poly, in GridTriangle tri) => TriangleIntersectionExtensions.Intersects(in tri, poly);
 
-        public static bool Intersects(GridPolygon poly, in GridLineSegment line)
-        {
-            return LineIntersectionExtensions.Intersects(in line, poly);
-        }
+        public static bool Intersects(GridPolygon poly, in GridLineSegment line) => LineIntersectionExtensions.Intersects(in line, poly);
 
         public static bool Intersections(in GridPolygon A, GridPolygon B, out GridLineSegment[] AIntersections, out GridLineSegment[] BIntersections)
         {
             if (false == A.BoundingBox.Intersects(B.BoundingBox))
             {
-                AIntersections = Array.Empty<GridLineSegment>();
-                BIntersections = Array.Empty<GridLineSegment>();
+                AIntersections = [];
+                BIntersections = [];
                 return false;
             }
 
-            List<GridLineSegment> AMatches = new List<Geometry.GridLineSegment>();
-            List<GridLineSegment> BMatches = new List<Geometry.GridLineSegment>();
+            List<GridLineSegment> AMatches = [];
+            List<GridLineSegment> BMatches = [];
 
             foreach (GridLineSegment ALine in A.ExteriorSegments)
             {
@@ -1151,8 +1057,8 @@ namespace Geometry
                 }
             }
 
-            AIntersections = AMatches.ToArray();
-            BIntersections = BMatches.ToArray();
+            AIntersections = [.. AMatches];
+            BIntersections = [.. BMatches];
 
             return AIntersections.Length > 0 || BIntersections.Length > 0;
         }
@@ -1195,7 +1101,7 @@ namespace Geometry
 
         private static List<GridLineSegment> FindIntersectingSegments(RTree.RTree<GridLineSegment> rTree, ICollection<GridLineSegment> segments)
         {
-            List<GridLineSegment> Intersecting = new List<Geometry.GridLineSegment>();
+            List<GridLineSegment> Intersecting = [];
 
             foreach (GridLineSegment l in segments)
             {
@@ -1234,7 +1140,7 @@ namespace Geometry
         /// <returns></returns>
         private static List<GridLineSegment> FindNonIntersectingSegments(RTree.RTree<GridLineSegment> rTree, ICollection<GridLineSegment> segments)
         {
-            List<GridLineSegment> NonIntersecting = new List<Geometry.GridLineSegment>();
+            List<GridLineSegment> NonIntersecting = [];
 
             foreach (GridLineSegment l in segments)
             {
@@ -1264,7 +1170,7 @@ namespace Geometry
         {
             //RTree.RTree<GridLineSegment> SegmentRTree = new RTree<GridLineSegment>();
 
-            List<GridLineSegment> segments = new List<GridLineSegment>();
+            List<GridLineSegment> segments = [];
 
             foreach (GridPolygon poly in Polygons)
             {
@@ -1285,14 +1191,14 @@ namespace Geometry
         /// <returns></returns>
         public static List<GridLineSegment> NonIntersectingSegments(this GridPolygon[] Polygons)
         {
-            RTree.RTree<GridLineSegment> SegmentRTree = new RTree<GridLineSegment>();
+            RTree.RTree<GridLineSegment> SegmentRTree = new();
 
             foreach (GridPolygon poly in Polygons)
             {
                 AddPolygonSegmentsToRTree(SegmentRTree, poly);
             }
 
-            List<GridLineSegment> NonIntersecting = new List<Geometry.GridLineSegment>();
+            List<GridLineSegment> NonIntersecting = [];
 
             //Identify which line segments do not intersect with segments in the RTree
             foreach (GridPolygon poly in Polygons)
@@ -1312,15 +1218,15 @@ namespace Geometry
         /// <returns></returns>
         public static SortedSet<GridLineSegment> NonIntersectingSegments(this GridPolygon[] Polygons, bool AddPointsAtIntersections, out SortedSet<GridVector2> AddedPoints)
         {
-            RTree.RTree<GridLineSegment> SegmentRTree = new RTree<GridLineSegment>();
+            RTree.RTree<GridLineSegment> SegmentRTree = new();
 
             foreach (GridPolygon poly in Polygons)
             {
                 AddPolygonSegmentsToRTree(SegmentRTree, poly);
             }
 
-            SortedSet<GridLineSegment> NonIntersecting = new SortedSet<Geometry.GridLineSegment>();
-            AddedPoints = new SortedSet<Geometry.GridVector2>();
+            SortedSet<GridLineSegment> NonIntersecting = [];
+            AddedPoints = [];
 
             //Identify which line segments do not intersect with segments in the RTree
             foreach (GridPolygon poly in Polygons)
@@ -1333,7 +1239,7 @@ namespace Geometry
                 return NonIntersecting;
             }
 
-            SortedSet<GridLineSegment> IntersectingLines = new SortedSet<GridLineSegment>(SegmentRTree.Items);
+            SortedSet<GridLineSegment> IntersectingLines = [.. SegmentRTree.Items];
             IntersectingLines.ExceptWith(NonIntersecting);
 
             SortedSet<GridLineSegment> SplitIntersectionLines = IntersectingLines.SplitLinesAtIntersections(out AddedPoints);
@@ -1350,13 +1256,13 @@ namespace Geometry
         /// <param name="Polys"></param>
         public static List<GridVector2> AddCorrespondingVerticies(this IReadOnlyList<GridPolygon> Polys)
         {
-            List<GridVector2> added_intersections = new List<GridVector2>();
+            List<GridVector2> added_intersections = [];
             foreach (var combo in Polys.CombinationPairs())
             {
                 GridPolygon A = combo.A;
                 GridPolygon B = combo.B;
-                List<GridVector2> newIntersections = A.AddPointsAtIntersections(B); 
-                added_intersections.AddRange(newIntersections); 
+                List<GridVector2> newIntersections = A.AddPointsAtIntersections(B);
+                added_intersections.AddRange(newIntersections);
 
 #if DEBUG
                 foreach (GridVector2 p in newIntersections)
@@ -1367,7 +1273,7 @@ namespace Geometry
 #endif
             }
 
-            return added_intersections.Distinct().ToList();
+            return [.. added_intersections.Distinct()];
         }
 
         /// <summary>
@@ -1376,7 +1282,7 @@ namespace Geometry
         /// <param name="Polys"></param>
         public static List<GridVector2> AddCorrespondingVerticies(this IReadOnlyList<GridPolyline> lines)
         {
-            List<GridVector2> added_intersections = new List<GridVector2>();
+            List<GridVector2> added_intersections = [];
             foreach (var combo in lines.CombinationPairs())
             {
                 GridPolyline A = combo.A;
@@ -1406,7 +1312,7 @@ namespace Geometry
         /// <param name="shapes"></param>
         public static List<GridVector2> AddCorrespondingVerticies(this IReadOnlyList<IShape2D> shapes)
         {
-            List<GridVector2> added_intersections = new List<GridVector2>();
+            List<GridVector2> added_intersections = [];
             foreach (var combo in shapes.CombinationPairs())
             {
                 IShape2D A = combo.A;
@@ -1417,9 +1323,9 @@ namespace Geometry
                     var newAIntersections = polyA.AddPointsAtIntersections(polyB);
 
                     //var newBIntersections = polyB.AddPointsAtIntersections(polyA);
-                    added_intersections.AddRange(newAIntersections.Union(newAIntersections)); 
+                    added_intersections.AddRange(newAIntersections.Union(newAIntersections));
                 }
-                else if(A is GridPolyline lineA && B is GridPolyline lineB)
+                else if (A is GridPolyline lineA && B is GridPolyline lineB)
                 {
                     var newAIntersections = lineA.AddPointsAtIntersections(lineB);
                     //var newBIntersections = lineB.AddPointsAtIntersections(lineA);
@@ -1430,9 +1336,9 @@ namespace Geometry
                     throw new NotImplementedException("Corresponding points for polygons and polylines not implemented yet.");
                 }
             }
-            
+
             //added_intersections.RemoveAdjacentDuplicates();
-            if(added_intersections.Count() > 1)
+            if (added_intersections.Count() > 1)
                 return added_intersections.RemoveAdjacentDuplicates();
             else
                 return added_intersections;
@@ -1454,7 +1360,7 @@ namespace Geometry
 
             //Determine the rough t-value (distance along the curve) and figure out where we'd expect the point to be
             var newPositions = CatmullRom.FitCurveSegment(p1, p2, p3, p4,
-                                                new double[] { GridVector2.Distance(vPos, p2) / (GridVector2.Distance(p2, vPos) + GridVector2.Distance(vPos, p3)) });
+                                                [GridVector2.Distance(vPos, p2) / (GridVector2.Distance(p2, vPos) + GridVector2.Distance(vPos, p3))]);
 
             return newPositions[0];
         }
@@ -1472,13 +1378,13 @@ namespace Geometry
             foreach (GridVector2 correspondingPoint in correspondingPoints)
             {
                 //Determine polygon indicies of corresponding verticies
-                output[iOutput] = Polygons.Select((poly, iPoly) =>
+                output[iOutput] = [.. Polygons.Select((poly, iPoly) =>
                 {
                     if (poly.TryGetIndex(correspondingPoint, out PolygonIndex index))
                         return index.Reindex(iPoly);
                     else
                         return new PolygonIndex?();
-                }).Where(index => index.HasValue).Select(index => index.Value).ToArray();
+                }).Where(index => index.HasValue).Select(index => index.Value)];
                 iOutput += 1;
             }
 

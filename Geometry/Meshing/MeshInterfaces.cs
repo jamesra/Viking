@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 
@@ -20,7 +20,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// True if an index has been set for this vertex
         /// </summary>
-        bool HasIndex { get;}
+        bool HasIndex { get; }
 
         ImmutableSortedSet<IEdgeKey> Edges { get; }
 
@@ -69,25 +69,14 @@ namespace Geometry.Meshing
         T Data { get; }
     }
 
-    public struct EdgeAngle
+    public struct EdgeAngle(long origin, long target, double angle, bool clockwise)
     {
-        public long Origin;
-        public long Target;
-        public double Angle;
-        public bool IsClockwise;
+        public long Origin = origin;
+        public long Target = target;
+        public double Angle = angle;
+        public bool IsClockwise = clockwise;
 
-        public EdgeAngle(long origin, long target, double angle, bool clockwise)
-        {
-            Origin = origin;
-            Target = target;
-            Angle = angle;
-            IsClockwise = clockwise;
-        }
-
-        public override string ToString()
-        {
-            return string.Format("{0}->{1} a: {2} cw: {3}", Origin, Target, Angle, IsClockwise);
-        }
+        public override readonly string ToString() => string.Format("{0}->{1} a: {2} cw: {3}", Origin, Target, Angle, IsClockwise);
     }
 
     /// <summary>

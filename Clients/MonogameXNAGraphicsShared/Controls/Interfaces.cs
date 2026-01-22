@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 
 namespace VikingXNAGraphics.Controls
@@ -8,7 +8,7 @@ namespace VikingXNAGraphics.Controls
         Mouse,
         Pen
     }
-     
+
     //public delegate void OnClickEventHandler(object sender, VikingXNAGraphics.Controls.MouseButton button);
 
     /// <summary>
@@ -40,7 +40,7 @@ namespace VikingXNAGraphics.Controls
         /// Called by the owner window or control when the IHitTesting.Contains implementation is true for the point clicked.
         /// </summary>
         /// <returns>True if the button contained the point and an event was fired</returns>
-        InputDeviceEventConsumerDelegate OnClick { get; } 
+        InputDeviceEventConsumerDelegate OnClick { get; }
     }
 
     /// <summary>
@@ -67,31 +67,23 @@ namespace VikingXNAGraphics.Controls
     /// an arbitrary OnClick implementation assigned at construction.
     /// Useful to pair with a view to isolate views from UI actions
     /// </summary>
-    public class ClickableGeometryWrapper : IClickable
+    public class ClickableGeometryWrapper(IShape2D shape) : IClickable
     {
-        public IShape2D Shape;
+        public IShape2D Shape = shape;
 
         public static ClickableGeometryWrapper CreateSimple(IShape2D shape, Action action)
         {
-            ClickableGeometryWrapper obj = new ClickableGeometryWrapper(shape);
-            obj.OnClick = new InputDeviceEventConsumerDelegate((sender, position, input_source, input_data) => { action(); return true; });
+            ClickableGeometryWrapper obj = new(shape)
+            {
+                OnClick = new InputDeviceEventConsumerDelegate((sender, position, input_source, input_data) => { action(); return true; })
+            };
             return obj;
-        }
-
-        public ClickableGeometryWrapper(IShape2D shape)
-        {
-            if (shape == null)
-                throw new ArgumentNullException("IShape2D being wrapped cannot be null");
-            Shape = shape;
-        }
+        } 
 
         public InputDeviceEventConsumerDelegate OnClick { get; set; }
 
         public GridRectangle BoundingBox => Shape.BoundingBox;
-        
-        public bool Contains(GridVector2 Position)
-        {
-            return Shape.Contains(Position);
-        }
+
+        public bool Contains(GridVector2 Position) => Shape.Contains(Position);
     }
 }

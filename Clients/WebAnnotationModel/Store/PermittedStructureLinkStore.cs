@@ -1,4 +1,4 @@
-﻿using AnnotationService.Types;
+using AnnotationService.Types;
 using System;
 using System.Collections.Generic;
 using System.ServiceModel;
@@ -22,43 +22,25 @@ namespace WebAnnotationModel
         public override void Init()
         {
             return;
-        } 
+        }
 
         protected override PermittedStructureLinkKey[] ProxyUpdate(IAnnotatePermittedStructureLinks proxy, PermittedStructureLink[] linkObjs)
         {
             proxy.UpdatePermittedStructureLinks(linkObjs);
-            return new PermittedStructureLinkKey[0];
+            return [];
         }
 
-        protected override PermittedStructureLink ProxyGetByID(IAnnotatePermittedStructureLinks proxy, PermittedStructureLinkKey ID)
-        {
-            throw new NotImplementedException();
-        }
+        protected override PermittedStructureLink ProxyGetByID(IAnnotatePermittedStructureLinks proxy, PermittedStructureLinkKey ID) => throw new NotImplementedException();
 
-        protected override PermittedStructureLink[] ProxyGetByIDs(IAnnotatePermittedStructureLinks proxy, PermittedStructureLinkKey[] IDs)
-        {
-            throw new NotImplementedException();
-        }
+        protected override PermittedStructureLink[] ProxyGetByIDs(IAnnotatePermittedStructureLinks proxy, PermittedStructureLinkKey[] IDs) => throw new NotImplementedException();
 
-        public override System.Collections.Concurrent.ConcurrentDictionary<PermittedStructureLinkKey, PermittedStructureLinkObj> GetLocalObjectsForSection(long SectionNumber)
-        {
-            throw new NotImplementedException();
-        }
+        public override System.Collections.Concurrent.ConcurrentDictionary<PermittedStructureLinkKey, PermittedStructureLinkObj> GetLocalObjectsForSection(long SectionNumber) => throw new NotImplementedException();
 
-        protected override PermittedStructureLink[] ProxyGetBySection(IAnnotatePermittedStructureLinks proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out PermittedStructureLinkKey[] DeletedLocations)
-        {
-            throw new NotImplementedException();
-        }
+        protected override PermittedStructureLink[] ProxyGetBySection(IAnnotatePermittedStructureLinks proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out PermittedStructureLinkKey[] DeletedLocations) => throw new NotImplementedException();
 
-        protected override IAsyncResult ProxyBeginGetBySectionRegion(IAnnotatePermittedStructureLinks proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
-        {
-            throw new NotImplementedException();
-        }
+        protected override IAsyncResult ProxyBeginGetBySectionRegion(IAnnotatePermittedStructureLinks proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState) => throw new NotImplementedException();
 
-        protected override PermittedStructureLink[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out PermittedStructureLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<IAnnotatePermittedStructureLinks, PermittedStructureLinkObj> state, IAsyncResult result)
-        {
-            throw new NotImplementedException();
-        }
+        protected override PermittedStructureLink[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out PermittedStructureLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<IAnnotatePermittedStructureLinks, PermittedStructureLinkObj> state, IAsyncResult result) => throw new NotImplementedException();
 
         protected override PermittedStructureLink[] ProxyGetBySectionRegion(IAnnotatePermittedStructureLinks proxy,
                                                              long SectionNumber,
@@ -66,29 +48,20 @@ namespace WebAnnotationModel
                                                              double MinRadius,
                                                              DateTime LastQuery,
                                                              out long TicksAtQueryExecute,
-                                                             out PermittedStructureLinkKey[] DeletedLocations)
-        {
-            throw new NotImplementedException();
-        }
+                                                             out PermittedStructureLinkKey[] DeletedLocations) => throw new NotImplementedException();
 
 
-        protected override IAsyncResult ProxyBeginGetBySection(IAnnotatePermittedStructureLinks proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
-        {
-            throw new NotImplementedException();
-        }
+        protected override IAsyncResult ProxyBeginGetBySection(IAnnotatePermittedStructureLinks proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState) => throw new NotImplementedException();
 
-        protected override PermittedStructureLink[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out PermittedStructureLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<IAnnotatePermittedStructureLinks, PermittedStructureLinkObj> state, IAsyncResult result)
-        {
-            throw new NotImplementedException();
-        }
+        protected override PermittedStructureLink[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out PermittedStructureLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<IAnnotatePermittedStructureLinks, PermittedStructureLinkObj> state, IAsyncResult result) => throw new NotImplementedException();
 
         public PermittedStructureLinkObj Create(PermittedStructureLinkObj link)
         {
             var proxy = CreateProxy();
             {
-                var client = (IAnnotatePermittedStructureLinks)proxy;
+                IAnnotatePermittedStructureLinks client = (IAnnotatePermittedStructureLinks)proxy;
                 PermittedStructureLink dblink = client.CreatePermittedStructureLink(link.GetData());
-                PermittedStructureLinkObj created_link = new PermittedStructureLinkObj(dblink);
+                PermittedStructureLinkObj created_link = new(dblink);
                 Add(created_link);
                 return created_link;
             }
@@ -96,7 +69,7 @@ namespace WebAnnotationModel
 
         protected override ChangeInventory<PermittedStructureLinkObj> InternalAdd(PermittedStructureLinkObj[] newObjs)
         {
-            List<PermittedStructureLinkObj> ValidObjs = new List<PermittedStructureLinkObj>(newObjs.Length);
+            List<PermittedStructureLinkObj> ValidObjs = new(newObjs.Length);
 
             foreach (PermittedStructureLinkObj link in newObjs)
             {
@@ -112,7 +85,7 @@ namespace WebAnnotationModel
                 ValidObjs.Add(link);
             }
 
-            return base.InternalAdd(ValidObjs.ToArray());
+            return base.InternalAdd([.. ValidObjs]);
         }
 
         protected override List<PermittedStructureLinkObj> InternalDelete(PermittedStructureLinkKey[] linkKeys)

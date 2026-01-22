@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -13,27 +13,20 @@ namespace Viking.VolumeModel
     /// </summary>
     public abstract class TileGridMappingBase : MappingBase
     {
-        protected readonly struct TileKey : IEquatable<TileKey>
+        protected readonly struct TileKey(int x, int y, int downsample) : IEquatable<TileKey>
         {
-            
-            public readonly int X;
-            public readonly int Y;
-            public readonly int Downsample;
-            
-            public TileKey(int x, int y, int downsample)
-            {
-                this.X = x;
-                this.Y = y;
-                this.Downsample =downsample;
-            }
+
+            public readonly int X = x;
+            public readonly int Y = y;
+            public readonly int Downsample = downsample;
 
             public override bool Equals(object obj)
             {
-                if(!(obj is TileKey))
-                    return false; 
-                
+                if (obj is not TileKey)
+                    return false;
+
                 TileKey tk = (TileKey)obj;
-                
+
                 return this.X == tk.X && this.Y == tk.Y &&
                        this.Downsample == tk.Downsample;
             }
@@ -57,34 +50,19 @@ namespace Viking.VolumeModel
                 }
             }
         }
-        
-        protected readonly struct CreateTileTaskResult
+
+        protected readonly struct CreateTileTaskResult(TileViewModel tile, TileGridMappingBase.TileKey key)
         {
-            public readonly TileViewModel Tile; 
-            public readonly TileKey Key;
-            
-            public CreateTileTaskResult(TileViewModel tile, TileKey key)
-            {
-                Key = key;
-                Tile = tile; 
-            }
+            public readonly TileViewModel Tile = tile;
+            public readonly TileKey Key = key;
         }
-        
-        protected readonly struct GridInfo
+
+        protected readonly struct GridInfo(int XDim, int YDim, int downsample, string path)
         {
-            public readonly int GridXDim;
-            public readonly int GridYDim;
-            public readonly int Downsample;
-            public readonly string Path;
-
-
-            public GridInfo(int XDim, int YDim, int downsample, string path)
-            {
-                GridXDim = XDim;
-                GridYDim = YDim;
-                Downsample = downsample;
-                this.Path = path;
-            }
+            public readonly int GridXDim = XDim;
+            public readonly int GridYDim = YDim;
+            public readonly int Downsample = downsample;
+            public readonly string Path = path;
         }
 
         protected readonly int TileSizeX;
@@ -94,8 +72,8 @@ namespace Viking.VolumeModel
 
         private int _MaxDownsample = int.MinValue;
         private int _MinDownsample = int.MaxValue;
-        
-        protected ConcurrentDictionary<TileKey, Task<CreateTileTaskResult>> TileTasks = new ConcurrentDictionary<TileKey, Task<CreateTileTaskResult>>();
+
+        protected ConcurrentDictionary<TileKey, Task<CreateTileTaskResult>> TileTasks = new();
 
         public int MaxDownsample
         {
@@ -111,7 +89,7 @@ namespace Viking.VolumeModel
 
         protected readonly string TileGridPath;
 
-        protected SortedDictionary<int, GridInfo> LevelToGridInfo = new SortedDictionary<int, GridInfo>();
+        protected SortedDictionary<int, GridInfo> LevelToGridInfo = [];
 
         private int[] _AvailableLevels = null;
         public override int[] AvailableLevels
@@ -216,7 +194,7 @@ namespace Viking.VolumeModel
         protected virtual string TileTextureCacheFileName(int downsample, int iX, int iY)
         {
             char sep = System.IO.Path.DirectorySeparatorChar;
-            return $"{Name}{sep}{downsample:D3}{sep}{TileTextureFileName(iX, iY)}"; 
+            return $"{Name}{sep}{downsample:D3}{sep}{TileTextureFileName(iX, iY)}";
         }
 
         /// <summary>
@@ -225,10 +203,7 @@ namespace Viking.VolumeModel
         /// <param name="iX"></param>
         /// <param name="iY"></param>
         /// <returns></returns>
-        protected virtual string TileTextureFileName(int iX, int iY)
-        {
-            return $"{this.TilePrefix}X{iX:D3}_Y{iY:D3}{this.TilePostfix}";
-        }
+        protected virtual string TileTextureFileName(int iX, int iY) => $"{this.TilePrefix}X{iX:D3}_Y{iY:D3}{this.TilePostfix}";
 
         #endregion
 
@@ -267,7 +242,7 @@ namespace Viking.VolumeModel
 
             foreach (GridInfo info in ToCopy.LevelToGridInfo.Values)
             {
-                GridInfo infoCopy = new GridInfo(info.GridXDim, info.GridYDim, info.Downsample, info.Path);
+                GridInfo infoCopy = new(info.GridXDim, info.GridYDim, info.Downsample, info.Path);
                 LevelToGridInfo.Add(infoCopy.Downsample, infoCopy);
             }
         }
@@ -300,7 +275,7 @@ namespace Viking.VolumeModel
             if (Downsample < this.MinDownsample)
                 this.MinDownsample = Downsample;
 
-            GridInfo Level = new GridInfo(GridDimX, GridDimY, Downsample, LevelPath);
+            GridInfo Level = new(GridDimX, GridDimY, Downsample, LevelPath);
             if (LevelToGridInfo.ContainsKey(Downsample))
             {
                 System.Diagnostics.Trace.WriteLine($"Duplicate Tileset Level {Section.Number}-{LevelPath}");
@@ -315,34 +290,31 @@ namespace Viking.VolumeModel
 
         protected virtual PositionNormalTextureVertex[] CalculateVerticies(int iX, int iY, int roundedDownsample)
         {
-            PositionNormalTextureVertex[] verticies = new PositionNormalTextureVertex[4];
-
-            verticies[0] = new PositionNormalTextureVertex(new GridVector3(iX * this.TileSizeX * roundedDownsample, iY * this.TileSizeY * roundedDownsample, 0),
-                                                               GridVector3.UnitZ,
-                                                           new GridVector2(0, 0));
-            verticies[1] = new PositionNormalTextureVertex(new GridVector3((iX + 1) * this.TileSizeX * roundedDownsample, iY * this.TileSizeY * roundedDownsample, 0),
-                                                               GridVector3.UnitZ,
-                                                           new GridVector2(1, 0));
-            verticies[2] = new PositionNormalTextureVertex(new GridVector3(iX * this.TileSizeX * roundedDownsample, (iY + 1) * this.TileSizeY * roundedDownsample, 0),
-                                                               GridVector3.UnitZ,
-                                                           new GridVector2(0, 1));
-            verticies[3] = new PositionNormalTextureVertex(new GridVector3((iX + 1) * this.TileSizeX * roundedDownsample, (iY + 1) * this.TileSizeY * roundedDownsample, 0),
-                                                               GridVector3.UnitZ,
-                                                           new GridVector2(1, 1));
-
+            PositionNormalTextureVertex[] verticies =
+            [
+                new PositionNormalTextureVertex(new GridVector3(iX * this.TileSizeX * roundedDownsample, iY * this.TileSizeY * roundedDownsample, 0),
+                                                                   GridVector3.UnitZ,
+                                                               new GridVector2(0, 0)),
+                new PositionNormalTextureVertex(new GridVector3((iX + 1) * this.TileSizeX * roundedDownsample, iY * this.TileSizeY * roundedDownsample, 0),
+                                                                   GridVector3.UnitZ,
+                                                               new GridVector2(1, 0)),
+                new PositionNormalTextureVertex(new GridVector3(iX * this.TileSizeX * roundedDownsample, (iY + 1) * this.TileSizeY * roundedDownsample, 0),
+                                                                   GridVector3.UnitZ,
+                                                               new GridVector2(0, 1)),
+                new PositionNormalTextureVertex(new GridVector3((iX + 1) * this.TileSizeX * roundedDownsample, (iY + 1) * this.TileSizeY * roundedDownsample, 0),
+                                                                   GridVector3.UnitZ,
+                                                               new GridVector2(1, 1)),
+            ];
             return verticies;
         }
 
-        protected static readonly int[] TriangleEdges = new int[] { 0, 1, 2, 1, 3, 2 }; 
+        protected static readonly int[] TriangleEdges = [0, 1, 2, 1, 3, 2];
 
-        public override Task<TilePyramid> VisibleTilesAsync(GridRectangle VisibleBounds, double DownSample)
-        {
-            return Task.Run(() => VisibleTiles(VisibleBounds, DownSample));
-        }
+        public override Task<TilePyramid> VisibleTilesAsync(GridRectangle VisibleBounds, double DownSample) => Task.Run(() => VisibleTiles(VisibleBounds, DownSample));
 
         public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
         {
-            TilePyramid VisibleTiles = new TilePyramid(VisibleBounds);
+            TilePyramid VisibleTiles = new(VisibleBounds);
 
             //double scaledDownsampleLevel = AdjustDownsampleForScale(DownSample);
 
@@ -396,8 +368,8 @@ namespace Viking.VolumeModel
 
             iMinX = iMinX < 0 ? 0 : iMinX;
             iMinY = iMinY < 0 ? 0 : iMinY;
-            iMaxX = iMaxX >= gridInfo.GridXDim-1 ? gridInfo.GridXDim-1 : iMaxX;
-            iMaxY = iMaxY >= gridInfo.GridYDim-1 ? gridInfo.GridYDim-1 : iMaxY;
+            iMaxX = iMaxX >= gridInfo.GridXDim - 1 ? gridInfo.GridXDim - 1 : iMaxX;
+            iMaxY = iMaxY >= gridInfo.GridYDim - 1 ? gridInfo.GridYDim - 1 : iMaxY;
 
             if (iMaxX < 0)
                 iMaxX = 0;
@@ -409,27 +381,27 @@ namespace Viking.VolumeModel
                 iMinY = iMaxY;
 
             int ExpectedTileCount = (iMaxX - iMinX) * (iMaxY - iMinY);
-            List<TileViewModel> TilesToDraw = new List<TileViewModel>(ExpectedTileCount);
+            List<TileViewModel> TilesToDraw = new(ExpectedTileCount);
             //List<Task<TileViewModel>> tileTasks = new List<Task<TileViewModel>>(ExpectedTileCount);
 
             for (int iX = iMinX; iX <= iMaxX; iX++)
             {
                 for (int iY = iMinY; iY <= iMaxY; iY++)
                 {
-                    var tilekey = new TileKey(iX, iY, roundedDownsample);
-                    if(TileTasks.ContainsKey(tilekey))
+                    TileKey tilekey = new(iX, iY, roundedDownsample);
+                    if (TileTasks.ContainsKey(tilekey))
                         continue; //We are already getting this tile, so continue
-                    
+
                     string UniqueID = TileViewModel.CreateUniqueKey(Section.Number, Name, Name, roundedDownsample, this.TileTextureFileName(iX, iY));
                     string TextureFileName = TileFullPath(iX, iY, roundedDownsample);
-                    
+
                     if (Global.TileCache.TryGetValue(UniqueID, out TileViewModel tileViewModel) && tileViewModel != null)
                     {
                         TilesToDraw.Add(tileViewModel);
                     }
                     else
-                    {  
-                        
+                    {
+
                         //Func<string, int, int, int, string, string,Tile> a = CreateTile;
                         int ixc = iX;
                         int iyc = iY;
@@ -437,10 +409,10 @@ namespace Viking.VolumeModel
                         var tileTask = Task.Run<CreateTileTaskResult>(() => CreateTile(UniqueID, tilekey, TextureFileName, Name));
                         tileTask.ContinueWith(previousTask => OnTileCreated(previousTask.Result));
                         TileTasks.TryAdd(tilekey, tileTask);
-                        
+
                         //tileTasks.Add(T);
                         //TilesToDraw.Add(CreateTile(UniqueID, ixc, iyc, rd, TextureFileName, Name));
-                    } 
+                    }
                 }
             }
 
@@ -462,8 +434,8 @@ namespace Viking.VolumeModel
             //First create a new tile
             //PORT: string TextureCacheFileName = TileCacheName(iX, iY, roundedDownsample);
             PositionNormalTextureVertex[] verticies = CalculateVerticies(iX, iY, roundedDownsample);
-            
-            if(MipMapLevels.HasValue == false)
+
+            if (MipMapLevels.HasValue == false)
                 MipMapLevels = roundedDownsample == this.AvailableLevels[AvailableLevels.Length - 1] ? 0 : 1; //0 = Generate mipmaps for lowest res texture, 1 == no MipMaps for higher res textures in the pyramid
 
             var tile = Global.TileCache.ConstructTile(uniqueID,
@@ -482,11 +454,11 @@ namespace Viking.VolumeModel
             //                        int iTempDownsample = roundedDownsample * 2;
             return new CreateTileTaskResult(tile, tileKey);
         }
-        
+
         protected void OnTileCreated(CreateTileTaskResult tileview)
         {
             CreateTileTaskResult result = tileview;
-            TileTasks.TryRemove(result.Key, out var value); 
+            TileTasks.TryRemove(result.Key, out var value);
         }
-    } 
+    }
 }

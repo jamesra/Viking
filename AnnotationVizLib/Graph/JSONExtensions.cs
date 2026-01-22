@@ -12,23 +12,14 @@ namespace AnnotationVizLib
             foreach (string key in attribs.Keys)
             {
                 object value = attribs[key];
-                JToken token;
-                if (value as JToken != null)
-                {
-                    token = (JToken)value;
-                }
-                else
-                {
-                    token = JToken.FromObject(value);
-                }
-
+                JToken token = value as JToken != null ? (JToken)value : JToken.FromObject(value);
                 obj[key] = token;
             }
         }
 
         public static JArray ToJArray(this IEnumerable<IStructureReadOnly> structs)
         {
-            JArray arr = new JArray();
+            JArray arr = [];
             foreach (IStructureReadOnly s in structs)
             {
                 JObject obj = s.ToJObject();

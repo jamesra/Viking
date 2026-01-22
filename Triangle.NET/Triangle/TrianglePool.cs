@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="TrianglePool.cs" company="">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -169,10 +169,7 @@ namespace TriangleNet
             }
         }
 
-        public void Add(Triangle item)
-        {
-            throw new NotImplementedException();
-        }
+        public void Add(Triangle item) => throw new NotImplementedException();
 
         public void Clear()
         {
@@ -223,41 +220,23 @@ namespace TriangleNet
 
         public bool IsReadOnly => true;
 
-        public bool Remove(Triangle item)
-        {
-            throw new NotImplementedException();
-        }
+        public bool Remove(Triangle item) => throw new NotImplementedException();
 
-        public IEnumerator<Triangle> GetEnumerator()
-        {
-            return new Enumerator(this);
-        }
+        public IEnumerator<Triangle> GetEnumerator() => new Enumerator(this);
 
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 
-        class Enumerator : IEnumerator<Triangle>
+        class Enumerator(TrianglePool pool) : IEnumerator<Triangle>
         {
             // TODO: enumerator should be able to tell if collection changed.
 
-            readonly int count;
+            readonly int count = pool.Count;
 
-            readonly Triangle[][] pool;
+            readonly Triangle[][] pool = pool.pool;
 
             Triangle current;
 
-            int index, offset;
-
-            public Enumerator(TrianglePool pool)
-            {
-                this.count = pool.Count;
-                this.pool = pool.pool;
-
-                index = 0;
-                offset = 0;
-            }
+            int index = 0, offset = 0;
 
             public Triangle Current => current;
 
@@ -285,10 +264,7 @@ namespace TriangleNet
                 return false;
             }
 
-            public void Reset()
-            {
-                index = offset = 0;
-            }
+            public void Reset() => index = offset = 0;
         }
     }
 }

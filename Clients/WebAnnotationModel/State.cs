@@ -5,7 +5,7 @@ namespace WebAnnotationModel
 {
     public class State
     {
-        public static System.Net.NetworkCredential UserCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
+        public static System.Net.NetworkCredential UserCredentials = new("anonymous", "connectome");
 
         public static bool UseAsynchEvents = true;
 

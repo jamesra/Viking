@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using VikingXNAGraphics;
@@ -12,7 +12,7 @@ namespace VikingXNAGraphics
     public interface IRenderInfo : IPrimitiveRenderInfo, ILabelRenderInfo
     {
     }
-     
+
     public interface IPrimitiveRenderInfo
     {
         GraphicsDevice device { get; }

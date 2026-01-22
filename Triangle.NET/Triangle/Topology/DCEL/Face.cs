@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="Face.cs">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -106,9 +106,6 @@ namespace TriangleNet.Topology.DCEL
             } while (edge.ID != first);
         }
 
-        public override string ToString()
-        {
-            return string.Format("F-ID {0}", id);
-        }
+        public override string ToString() => string.Format("F-ID {0}", id);
     }
 }

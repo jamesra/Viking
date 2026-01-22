@@ -16,7 +16,7 @@ namespace WebAnnotation.View
 {
     public delegate ContextMenuStrip ContextMenuGeneratorDelegate(IViewLocation locationID);
 
-    public abstract class LocationCanvasView : IComparable<LocationCanvasView>, IUIObjectBasic, ICanvasGeometryView, IEquatable<LocationCanvasView>,
+    public abstract class LocationCanvasView(LocationObj obj) : IComparable<LocationCanvasView>, IUIObjectBasic, ICanvasGeometryView, IEquatable<LocationCanvasView>,
                                                IMouseActionSupport, IPenActionSupport, IViewLocation, IHelpStrings, IContextMenu
     {
         #region static
@@ -55,18 +55,11 @@ namespace WebAnnotation.View
 
         #endregion
 
-        protected readonly LocationObj modelObj;
+        protected readonly LocationObj modelObj = obj;
 
         public abstract SqlGeometry VolumeShapeAsRendered { get; }
 
-        public LocationCanvasView(LocationObj obj)
-        {
-            modelObj = obj;
-
-            ContextMenuGenerator = Location_CanvasContextMenuView.ContextMenuGenerator;
-        }
-
-        public readonly ContextMenuGeneratorDelegate ContextMenuGenerator = null;
+        public readonly ContextMenuGeneratorDelegate ContextMenuGenerator = Location_CanvasContextMenuView.ContextMenuGenerator;
 
         public int VisualHeight => ParentDepth;
 
@@ -89,7 +82,7 @@ namespace WebAnnotation.View
 
         private int CalculateParentDepth(StructureObj obj)
         {
-            if (obj == null)
+            if (obj is null)
             {
                 return 0;
             }
@@ -116,22 +109,19 @@ namespace WebAnnotation.View
 
         public bool IsVericosityCap => modelObj.VericosityCap;
 
-        private Structure _Parent = null;
-        private void ResetParentCache() { _Parent = null; }
+        private Structure? _Parent = null;
+        private void ResetParentCache() => _Parent = null;
 
         public Structure Parent
         {
             get
             {
-                if (modelObj.Parent == null)
+                if (modelObj.Parent is null)
                 {
                     return null;
                 }
 
-                if (_Parent == null)
-                {
-                    _Parent = new Structure(modelObj.Parent);
-                }
+                _Parent ??= new Structure(modelObj.Parent);
 
                 return _Parent;
             }
@@ -145,15 +135,9 @@ namespace WebAnnotation.View
             set;
         }
 
-        public override string ToString()
-        {
-            return modelObj.ToString();
-        }
+        public override string ToString() => modelObj.ToString();
 
-        protected string StructureIDLabelWithTypeCode()
-        {
-            return Parent.Type.Code + " " + ParentID.ToString();
-        }
+        protected string StructureIDLabelWithTypeCode() => Parent.Type.Code + " " + ParentID.ToString();
 
         /// <summary>
         /// Full label and tag text
@@ -188,7 +172,7 @@ namespace WebAnnotation.View
 
         protected string TagLabel()
         {
-            if (Parent == null)
+            if (Parent is null)
             {
                 return "";
             }
@@ -215,10 +199,7 @@ namespace WebAnnotation.View
                 PropertyName == "Attributes";
         }
 
-        public override int GetHashCode()
-        {
-            return modelObj.GetHashCode();
-        }
+        public override int GetHashCode() => modelObj.GetHashCode();
 
         public override bool Equals(object obj)
         {
@@ -237,14 +218,14 @@ namespace WebAnnotation.View
             return false;
         }
 
-        public static bool operator ==(LocationCanvasView A, object B)
+        public static bool operator ==(LocationCanvasView? A, object? B)
         {
             if (System.Object.ReferenceEquals(A, B))
             {
                 return true;
             }
 
-            if ((object)A != null)
+            if (A is not null)
             {
                 return A.Equals(B);
             }
@@ -252,14 +233,14 @@ namespace WebAnnotation.View
             return false;
         }
 
-        public static bool operator !=(LocationCanvasView A, object B)
+        public static bool operator !=(LocationCanvasView? A, object? B)
         {
             if (System.Object.ReferenceEquals(A, B))
             {
                 return false;
             }
 
-            if ((object)A != null)
+            if (A is not null)
             {
                 return !A.Equals(B);
             }
@@ -286,12 +267,12 @@ namespace WebAnnotation.View
 
         public bool Equals(LocationCanvasView x, LocationCanvasView y)
         {
-            if (x == null && y == null)
+            if (x is null && y is null)
             {
                 return true;
             }
 
-            if (x == null || y == null)
+            if (x is null || y is null)
             {
                 return false;
             }
@@ -301,7 +282,7 @@ namespace WebAnnotation.View
 
         public int GetHashCode(LocationCanvasView obj)
         {
-            if (obj == null)
+            if (obj is null)
             {
                 throw new ArgumentNullException("obj", "GetHashCode");
             }
@@ -311,12 +292,12 @@ namespace WebAnnotation.View
 
         public bool Equals(LocationObj x, LocationObj y)
         {
-            if (x == null && y == null)
+            if (x is null && y is null)
             {
                 return true;
             }
 
-            if (x == null || y == null)
+            if (x is null || y is null)
             {
                 return false;
             }
@@ -324,14 +305,11 @@ namespace WebAnnotation.View
             return x.ID == y.ID;
         }
 
-        public int GetHashCode(LocationObj obj)
-        {
-            return obj.GetHashCode();
-        }
+        public int GetHashCode(LocationObj obj) => obj.GetHashCode();
 
         int IComparable<LocationCanvasView>.CompareTo(LocationCanvasView other)
         {
-            if (other == null)
+            if (other is null)
             {
                 return 1;
             }
@@ -382,46 +360,28 @@ namespace WebAnnotation.View
 
         public void ShowProperties()
         {
-            Location_CanvasContextMenuView contextView = new Location_CanvasContextMenuView(ID);
+            Location_CanvasContextMenuView contextView = new(ID);
             contextView.ShowProperties();
         }
 
-        public void Save()
-        {
-            throw new NotImplementedException();
-        }
+        public void Save() => throw new NotImplementedException();
 
-        public virtual bool Contains(GridVector2 Position)
-        {
-            return VolumeShapeAsRendered.Intersects(Position);
-        }
+        public virtual bool Contains(GridVector2 Position) => VolumeShapeAsRendered.Intersects(Position);
 
-        public virtual bool Intersects(GridLineSegment line)
-        {
-            return VolumeShapeAsRendered.Intersects(line);
-        }
+        public virtual bool Intersects(GridLineSegment line) => VolumeShapeAsRendered.Intersects(line);
 
-        public virtual bool Intersects(SqlGeometry shape)
-        {
-            return VolumeShapeAsRendered.STIntersects(shape).IsTrue;
-        }
+        public virtual bool Intersects(SqlGeometry shape) => VolumeShapeAsRendered.STIntersects(shape).IsTrue;
 
-        public virtual double Distance(GridVector2 Position)
-        {
-            return VolumeShapeAsRendered.Distance(Position);
-        }
+        public virtual double Distance(GridVector2 Position) => VolumeShapeAsRendered.Distance(Position);
 
-        public virtual double Distance(SqlGeometry Shape)
-        {
-            return VolumeShapeAsRendered.STDistance(Shape).Value;
-        }
+        public virtual double Distance(SqlGeometry Shape) => VolumeShapeAsRendered.STDistance(Shape).Value;
 
         public abstract bool IsVisible(Scene scene);
         public abstract double DistanceFromCenterNormalized(GridVector2 Position);
 
         public bool Equals(LocationCanvasView other)
         {
-            if ((object)other == null)
+            if (other is null)
             {
                 return false;
             }

@@ -5,14 +5,9 @@ using System.Linq;
 
 namespace AnnotationVizLib.WCFClient
 {
-    class WCFStructureAdapter : IStructureReadOnly
+    class WCFStructureAdapter(Structure s) : IStructureReadOnly
     {
-        private readonly Structure structure;
-
-        public WCFStructureAdapter(Structure s)
-        {
-            this.structure = s;
-        }
+        private readonly Structure structure = s;
 
         public ulong ID => (ulong)structure.ID;
 
@@ -23,9 +18,9 @@ namespace AnnotationVizLib.WCFClient
             get
             {
                 if (structure.Links is null)
-                    return new IStructureLink[0];
+                    return [];
 
-                return structure.Links.Select(l => new WCFStructureLinkAdapter(l)).ToArray();
+                return [.. structure.Links.Select(l => new WCFStructureLinkAdapter(l))];
             }
         }
 

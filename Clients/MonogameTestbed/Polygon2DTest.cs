@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
@@ -17,30 +17,30 @@ namespace MonogameTestbed
 
         public static GridVector2[] CreateTestPolygon(GridVector2? offset = new GridVector2?())
         {
-            GridVector2[] output = new GridVector2[] {new GridVector2(10,10),
-                                      new GridVector2(5, 20),
-                                      new GridVector2(15, 30),
-                                      new GridVector2(30, 30),
-                                      new GridVector2(25, 15),
-                                      new GridVector2(45, 15),
-                                      new GridVector2(45, 10),
-                                      new GridVector2(55, 0),
-                                      new GridVector2(25, 5)};
-            if(offset.HasValue)
-                output = output.Select(p => p + offset.Value).ToArray();
+            GridVector2[] output = [new(10,10),
+                                      new(5, 20),
+                                      new(15, 30),
+                                      new(30, 30),
+                                      new(25, 15),
+                                      new(45, 15),
+                                      new(45, 10),
+                                      new(55, 0),
+                                      new(25, 5)];
+            if (offset.HasValue)
+                output = [.. output.Select(p => p + offset.Value)];
 
             return output;
         }
 
         public static GridVector2[] CreateInteriorRing(GridVector2? offset = new GridVector2?())
         {
-            GridVector2[] output = new GridVector2[] {new GridVector2(12.5,12.5),
-                                      new GridVector2(22.5, 12.5),
-                                      new GridVector2(24.5, 17.5),
-                                      new GridVector2(12.5, 17.5)};
+            GridVector2[] output = [new(12.5,12.5),
+                                      new(22.5, 12.5),
+                                      new(24.5, 17.5),
+                                      new(12.5, 17.5)];
 
             if (offset.HasValue)
-                output = output.Select(p => p + offset.Value).ToArray();
+                output = [.. output.Select(p => p + offset.Value)];
 
             return output;
         }
@@ -49,30 +49,30 @@ namespace MonogameTestbed
 
         public Task Init(MonoTestbed window)
         {
-            _initialized = true; 
+            _initialized = true;
             GridVector2[] cps = CreateTestPolygon(new GridVector2(-50, 0));
 
             //GridVector2[] ordered_cps = cps.OrderBy((v) => v).ToArray();
-            
+
             this.meshView = new MeshView<VertexPositionColor>();
-            
+
             MeshModel<VertexPositionColor> model = TriangleNetExtensions.CreateMeshForPolygon2D(cps, null, Color.Goldenrod);
             this.meshView.models.Add(model);
 
             GridVector2[] holy_cps = CreateTestPolygon();
             GridVector2[] holy_hole = CreateInteriorRing();
 
-            List<GridVector2[]> listInnerRings = new List<GridVector2[]>
-            {
+            List<GridVector2[]> listInnerRings =
+            [
                 holy_hole
-            };
+            ];
             MeshModel<VertexPositionColor> holy_model = TriangleNetExtensions.CreateMeshForPolygon2D(holy_cps, listInnerRings, Color.Aquamarine);
             this.meshView.models.Add(holy_model);
 
             GridVector2[] cv_output_points = holy_cps.ConvexHull(out int[] Convex_hull_idx);
 
-            List<GridVector2> listCvPoints = new List<GridVector2>(Convex_hull_idx.Select(i => holy_cps[i]));
-            GridPolygon convex_hull_poly = new GridPolygon(listCvPoints.ToArray());
+            List<GridVector2> listCvPoints = [.. Convex_hull_idx.Select(i => holy_cps[i])];
+            GridPolygon convex_hull_poly = new(listCvPoints.ToArray());
 
             convex_hull_poly = convex_hull_poly.Translate(new GridVector2(0, 40));
 
@@ -96,7 +96,7 @@ namespace MonogameTestbed
 
         public void UnloadContent(MonoTestbed window)
         {
-            
+
         }
 
         /*
@@ -116,9 +116,6 @@ namespace MonogameTestbed
         {
         }
 
-        public void Draw(MonoTestbed window)
-        {
-            meshView.Draw(window.GraphicsDevice, window.Scene, CullMode.None);
-        }
+        public void Draw(MonoTestbed window) => meshView.Draw(window.GraphicsDevice, window.Scene, CullMode.None);
     }
 }

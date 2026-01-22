@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,18 +13,18 @@ namespace MorphologyMesh
         readonly SliceGraph Graph;
 
         readonly SortedSet<ulong> UnprocessedSlices = null;
-        readonly SortedSet<ulong> SlicesWithActiveTasks = new SortedSet<ulong>();
-        readonly SortedSet<ulong> CompletedSlices = new SortedSet<ulong>();
+        readonly SortedSet<ulong> SlicesWithActiveTasks = [];
+        readonly SortedSet<ulong> CompletedSlices = [];
 
-        readonly System.Threading.ReaderWriterLockSlim rwLock = new System.Threading.ReaderWriterLockSlim();
-        readonly System.Threading.ManualResetEventSlim AllDoneEvent = new System.Threading.ManualResetEventSlim();
+        readonly System.Threading.ReaderWriterLockSlim rwLock = new();
+        readonly System.Threading.ManualResetEventSlim AllDoneEvent = new();
 
         readonly Dictionary<ulong, SliceTopology> SliceToTopology;
 
         public ConcurrentTopologyInitializer(SliceGraph graph)
         {
             Graph = graph;
-            UnprocessedSlices = new SortedSet<ulong>(Graph.Nodes.Keys);
+            UnprocessedSlices = [.. Graph.Nodes.Keys];
             SliceToTopology = new Dictionary<ulong, SliceTopology>(Graph.Nodes.Count);
         }
 
@@ -39,12 +39,12 @@ namespace MorphologyMesh
                 SlicesWithActiveTasks.Remove(s.Key);
                 CompletedSlices.Add(s.Key);
 
-                foreach(ulong adjacent in s.Edges.Keys)
+                foreach (ulong adjacent in s.Edges.Keys)
                 {
                     TryStartSlice(adjacent);
                 }
 
-                if(UnprocessedSlices.Count == 0 && SlicesWithActiveTasks.Count == 0)
+                if (UnprocessedSlices.Count == 0 && SlicesWithActiveTasks.Count == 0)
                 {
                     AllDoneEvent.Set();
                 }
@@ -61,7 +61,7 @@ namespace MorphologyMesh
         /// <param name="node"></param>
         /// <returns></returns>
         private bool CanStartSlice(Slice node)
-        { 
+        {
             if (UnprocessedSlices.Contains(node.Key) == false)
                 return false;
 
@@ -108,15 +108,15 @@ namespace MorphologyMesh
         public Dictionary<ulong, SliceTopology> InitializeSliceTopology(double tolerance = 0)
         {
             var MorphNodeToShape = Graph.MorphNodeToShape;
-             
-            List<Slice> SlicesToStart = new List<Slice>(UnprocessedSlices.Count);
+
+            List<Slice> SlicesToStart = new(UnprocessedSlices.Count);
             bool TasksStarted = false;
             try
             {
                 rwLock.EnterWriteLock();
 
-                ulong[] UnprocessedSlicesArray = UnprocessedSlices.ToArray();
-                
+                ulong[] UnprocessedSlicesArray = [.. UnprocessedSlices];
+
                 for (int iSlice = UnprocessedSlices.Count - 1; iSlice >= 0; iSlice--)
                 {
                     var outputTask = TryStartSlice(UnprocessedSlicesArray[iSlice]);
@@ -127,9 +127,9 @@ namespace MorphologyMesh
             {
                 rwLock.ExitWriteLock();
             }
-            
+
             //We need to ensure there are tasks to wait on. This was an edge case for structures with one annotation.
-            if(TasksStarted)
+            if (TasksStarted)
                 AllDoneEvent.Wait();
 
             return this.SliceToTopology;

@@ -1,4 +1,4 @@
-﻿using System.ServiceModel.Description;
+using System.ServiceModel.Description;
 using System.ServiceModel.Dispatcher;
 
 
@@ -12,10 +12,7 @@ namespace Viking.Tokens
             // No implementation necessary  
         }
 
-        public void ApplyClientBehavior(ServiceEndpoint endpoint, ClientRuntime clientRuntime)
-        {
-            clientRuntime.MessageInspectors.Add(new TokenInjector());
-        }
+        public void ApplyClientBehavior(ServiceEndpoint endpoint, ClientRuntime clientRuntime) => clientRuntime.MessageInspectors.Add(new TokenInjector());
 
         public void ApplyDispatchBehavior(ServiceEndpoint endpoint, EndpointDispatcher endpointDispatcher)
         {

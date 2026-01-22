@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -23,7 +23,7 @@ namespace Geometry.Meshing
         {
             if (_Index.HasValue && index != this.Index)
                 throw new InvalidOperationException("Index already set for vertex");
-            
+
             _Index = index;
         }
 
@@ -43,11 +43,11 @@ namespace Geometry.Meshing
         protected SortedSet<IEdgeKey> _Edges;
 
         private ImmutableSortedSet<IEdgeKey> _ImmutableEdges;
-        public ImmutableSortedSet<IEdgeKey> Edges => _ImmutableEdges ?? (_ImmutableEdges = _Edges.ToImmutableSortedSet(_Edges.Comparer));
+        public ImmutableSortedSet<IEdgeKey> Edges => _ImmutableEdges ??= _Edges.ToImmutableSortedSet(_Edges.Comparer);
 
         protected VertexBase()
         {
-            _Edges = new SortedSet<IEdgeKey>();
+            _Edges = [];
             _ImmutableEdges = null;
         }
 
@@ -80,15 +80,9 @@ namespace Geometry.Meshing
             return false;
         }
 
-        public int CompareTo(IVertex other)
-        {
-            return this.Index.CompareTo(other.Index);
-        }
+        public int CompareTo(IVertex other) => this.Index.CompareTo(other.Index);
 
-        public int CompareTo(VertexBase other)
-        {
-            return this.Index.CompareTo(other.Index);
-        }
+        public int CompareTo(VertexBase other) => this.Index.CompareTo(other.Index);
 
         public bool Equals(IVertex other)
         {
@@ -114,21 +108,15 @@ namespace Geometry.Meshing
         {
             if (!_Index.HasValue) throw new InvalidOperationException("Index must be set before Equals is called.");
 
-            switch (obj)
+            return obj switch
             {
-                case VertexBase other:
-                    return this.Index == other.Index;
-                case IVertex other2:
-                    return this.Index == other2.Index;
-                default:
-                    return base.Equals(obj);
-            }
+                VertexBase other => this.Index == other.Index,
+                IVertex other2 => this.Index == other2.Index,
+                _ => base.Equals(obj),
+            };
         }
 
-        public override int GetHashCode()
-        {
-            return _Index.HasValue ? _Index.Value : throw new InvalidOperationException("Index must be set before GetHashCode is called.");
-        }
+        public override int GetHashCode() => _Index ?? throw new InvalidOperationException("Index must be set before GetHashCode is called.");
 
         public virtual void RemoveEdge(IEdgeKey e)
         {
@@ -205,7 +193,7 @@ namespace Geometry.Meshing
         {
             _Position = p;
             Normal = n;
-        } 
+        }
 
         public Vertex3D(int index, GridVector3 p) : base(index)
         {
@@ -268,7 +256,7 @@ namespace Geometry.Meshing
 
         public override IVertex ShallowCopy(int index) => new Vertex2D<T>(index, Position, Data, this.EdgeComparer);
 
-        public override string ToString() => Data == null ? $"I: {this.Index} P: {Position}" : $"I: {this.Index} P: {Position} Data: {Data?.ToString()}";
+        public override string ToString() => Data is null ? $"I: {this.Index} P: {Position}" : $"I: {this.Index} P: {Position} Data: {Data?.ToString()}";
     }
 
     /// <summary>

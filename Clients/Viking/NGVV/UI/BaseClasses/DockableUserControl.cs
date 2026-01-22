@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Windows.Forms;
 using Viking.Common;
 
@@ -45,10 +45,7 @@ namespace Viking.UI.BaseClasses
             return _StandaloneForm;
         }
 
-        protected void OnStandaloneFormClosed(object sender, System.EventArgs e)
-        {
-            this._StandaloneForm = null;
-        }
+        protected void OnStandaloneFormClosed(object sender, System.EventArgs e) => this._StandaloneForm = null;
 
         public DockableUserControl()
         {
@@ -57,14 +54,11 @@ namespace Viking.UI.BaseClasses
 
         #region ITabExtension Members
 
-        public TabPage GetPage()
-        {
-            return OnGetTabPage();
-        }
+        public TabPage GetPage() => OnGetTabPage();
 
         protected virtual System.Windows.Forms.TabPage OnGetTabPage()
         {
-            TabPage OverviewPage = new TabPage(this.Title);
+            TabPage OverviewPage = new(this.Title);
             OverviewPage.Controls.Add(this);
 
             this.Dock = DockStyle.Fill;

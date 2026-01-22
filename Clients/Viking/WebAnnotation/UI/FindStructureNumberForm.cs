@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows.Forms;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
@@ -25,22 +25,19 @@ namespace WebAnnotation.UI
             }
 
             StructureObj structure = Store.Structures.GetObjectByID(StructureNumber);
-            if (structure == null)
+            if (structure is null)
             {
                 MessageBox.Show(this, "No structure found with that ID", "Error", MessageBoxButtons.OK);
                 return;
             }
 
-            Structure structView = new Structure(structure);
+            Structure structView = new(structure);
 
             structView.ShowProperties();
 
             Close();
         }
 
-        private void btnCancel_Click(object sender, EventArgs e)
-        {
-            Close();
-        }
+        private void btnCancel_Click(object sender, EventArgs e) => Close();
     }
 }

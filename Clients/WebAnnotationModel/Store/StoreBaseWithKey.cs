@@ -1,4 +1,4 @@
-﻿using AnnotationService.Types;
+using AnnotationService.Types;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -12,18 +12,15 @@ using WebAnnotationModel.Objects;
 namespace WebAnnotationModel
 {
 
-    public class GetObjectBySectionCallbackState<PROXY, T> : IEquatable<GetObjectBySectionCallbackState<PROXY, T>>
+    public class GetObjectBySectionCallbackState<PROXY, T>(PROXY proxy, long number, DateTime lastQueryExecutedTime, Action<ICollection<T>> LoadCompletedCallback) : IEquatable<GetObjectBySectionCallbackState<PROXY, T>>
     {
-        public readonly PROXY Proxy;
-        public readonly long SectionNumber;
-        public readonly DateTime LastQueryExecutedTime;
+        public readonly PROXY Proxy = proxy;
+        public readonly long SectionNumber = number;
+        public readonly DateTime LastQueryExecutedTime = lastQueryExecutedTime;
         public readonly DateTime StartTime = DateTime.UtcNow;
-        public readonly Action<ICollection<T>> OnLoadCompletedCallBack;
+        public readonly Action<ICollection<T>> OnLoadCompletedCallBack = LoadCompletedCallback;
 
-        public override string ToString()
-        {
-            return SectionNumber.ToString() + " : " + StartTime.TimeOfDay.ToString();
-        }
+        public override string ToString() => SectionNumber.ToString() + " : " + StartTime.TimeOfDay.ToString();
 
         public bool Equals(GetObjectBySectionCallbackState<PROXY, T> other)
         {
@@ -31,14 +28,6 @@ namespace WebAnnotationModel
                 return false;
 
             return SectionNumber == other.SectionNumber;
-        }
-
-        public GetObjectBySectionCallbackState(PROXY proxy, long number, DateTime lastQueryExecutedTime, Action<ICollection<T>> LoadCompletedCallback)
-        {
-            this.Proxy = proxy;
-            SectionNumber = number;
-            this.LastQueryExecutedTime = lastQueryExecutedTime;
-            this.OnLoadCompletedCallBack = LoadCompletedCallback;
         }
     }
 
@@ -55,21 +44,21 @@ namespace WebAnnotationModel
         /// <summary>
         /// Maps IDs to the corresponding object
         /// </summary>
-        protected ConcurrentDictionary<KEY, OBJECT> IDToObject = new ConcurrentDictionary<KEY, OBJECT>();
+        protected ConcurrentDictionary<KEY, OBJECT> IDToObject = new();
 
         /// <summary>
         /// When we query the database for objects on a section we store the query time for the section
         /// That way on the next query we only need to store the updates.
         /// </summary>
-        private readonly ConcurrentDictionary<long, DateTime> LastQueryForSection = new ConcurrentDictionary<long, DateTime>();
+        private readonly ConcurrentDictionary<long, DateTime> LastQueryForSection = new();
 
         /// <summary>
         /// A collection of values indicating which sections have an outstanding query. 
         /// The existence of a key indicates a query is in progress
         /// </summary>
-        private readonly ConcurrentDictionary<long, GetObjectBySectionCallbackState<INTERFACE, OBJECT>> OutstandingSectionQueries = new ConcurrentDictionary<long, GetObjectBySectionCallbackState<INTERFACE, OBJECT>>();
+        private readonly ConcurrentDictionary<long, GetObjectBySectionCallbackState<INTERFACE, OBJECT>> OutstandingSectionQueries = new();
 
-        protected ConcurrentDictionary<KEY, OBJECT> ChangedObjects = new ConcurrentDictionary<KEY, OBJECT>();
+        protected ConcurrentDictionary<KEY, OBJECT> ChangedObjects = new();
 
         protected System.ComponentModel.PropertyChangedEventHandler OnOBJECTPropertyChangedEventHandler;
 
@@ -82,8 +71,7 @@ namespace WebAnnotationModel
         {
             if (e.PropertyName.ToLower() == "dbaction")
             {
-                OBJECT obj = sender as OBJECT;
-                if (obj is null)
+                if (sender is not OBJECT obj)
                     return;
 
                 if (obj.DBAction == DBACTION.NONE)
@@ -205,10 +193,7 @@ namespace WebAnnotationModel
             return null;
         }
 
-        public OBJECT GetOrAdd(KEY key, Func<KEY, OBJECT> createFunc, out bool added)
-        {
-            return this.InternalGetOrAdd(key, createFunc, out added);
-        }
+        public OBJECT GetOrAdd(KEY key, Func<KEY, OBJECT> createFunc, out bool added) => this.InternalGetOrAdd(key, createFunc, out added);
 
         /// <summary>
         /// Add an item to the store and send notification events
@@ -221,7 +206,7 @@ namespace WebAnnotationModel
         public override ICollection<OBJECT> Add(ICollection<OBJECT> objs)
         {
             //Default implementation
-            ChangeInventory<OBJECT> inventory = InternalAdd(objs.ToArray());
+            ChangeInventory<OBJECT> inventory = InternalAdd([.. objs]);
             CallOnCollectionChanged(inventory);
             return inventory.ObjectsInStore;
         }
@@ -282,7 +267,7 @@ namespace WebAnnotationModel
         /// <returns></returns>
         protected ChangeInventory<OBJECT> InternalAdd(OBJECT newObj)
         {
-            ChangeInventory<OBJECT> retVal = InternalAdd(new OBJECT[] { newObj });
+            ChangeInventory<OBJECT> retVal = InternalAdd([newObj]);
             return retVal;
         }
 
@@ -298,7 +283,7 @@ namespace WebAnnotationModel
         /// <returns></returns>
         internal OBJECT InternalUpdate(OBJECT newObj)
         {
-            OBJECT[] retVal = InternalUpdate(new OBJECT[] { newObj });
+            OBJECT[] retVal = InternalUpdate([newObj]);
             if (retVal != null && retVal.Length > 0)
                 return retVal[0];
             return null;
@@ -316,7 +301,7 @@ namespace WebAnnotationModel
         /// <returns></returns>
         protected OBJECT InternalDelete(KEY ID)
         {
-            List<OBJECT> listDeleted = InternalDelete(new KEY[] { ID });
+            List<OBJECT> listDeleted = InternalDelete([ID]);
             if (listDeleted.Count == 0)
                 return null;
 
@@ -329,10 +314,7 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="ID"></param>
         /// <param name="newObj"></param>
-        protected ChangeInventory<OBJECT> InternalReplace(KEY ID, OBJECT newObj)
-        {
-            return InternalReplace(new KEY[] { ID }, new OBJECT[] { newObj });
-        }
+        protected ChangeInventory<OBJECT> InternalReplace(KEY ID, OBJECT newObj) => InternalReplace([ID], [newObj]);
 
         /*
         /// <summary>
@@ -394,10 +376,7 @@ namespace WebAnnotationModel
         /// <param name="key"></param>
         /// <param name="value"></param>
         /// <returns>True if key in local store, otherwise false</returns>
-        public bool TryGetValue(KEY key, out OBJECT value)
-        {
-            return this.IDToObject.TryGetValue(key, out value);
-        }
+        public bool TryGetValue(KEY key, out OBJECT value) => this.IDToObject.TryGetValue(key, out value);
 
         public OBJECT this[KEY index] => IDToObject[index];
         public IEnumerable<KEY> Keys => IDToObject.Keys;
@@ -418,7 +397,7 @@ namespace WebAnnotationModel
                 AskServer = true;
 
             if (!ForceRefreshFromServer)
-            { 
+            {
                 if (IDToObject.TryGetValue(ID, out var existingObj))
                     return existingObj;
             }
@@ -427,13 +406,13 @@ namespace WebAnnotationModel
                 return null;
 
             //If not check if the server knows what we're asking for
-            WCFOBJECT data = null; 
+            WCFOBJECT data = null;
             try
             {
                 var proxy = CreateProxy();
-                { 
+                {
                     Trace.WriteLine("Going to server to retrieve " + this.ToString() + " parent with ID: " + ID.ToString(), "WebAnnotation");
-                    var client = (INTERFACE)proxy;
+                    INTERFACE client = (INTERFACE)proxy;
                     data = ProxyGetByID(client, ID);
                 }
             }
@@ -442,7 +421,7 @@ namespace WebAnnotationModel
                 Trace.WriteLine(e.ToString(), "WebAnnotation");
                 Trace.WriteLine(e.Message, "WebAnnotation");
                 data = null;
-            } 
+            }
 
             if (data != null)
             {
@@ -485,20 +464,20 @@ namespace WebAnnotationModel
 
             if (!AskServer || listRemoteObjs.Count == 0)
             {
-                ChangeInventory<OBJECT> inventory = new ChangeInventory<OBJECT>(IDs.Count);
+                ChangeInventory<OBJECT> inventory = new(IDs.Count);
                 inventory.UnchangedObjects.AddRange(listLocalObjs);
                 return inventory;
             }
 
             //If not check if the server knows what we're asking for
-            WCFOBJECT[] listServerObjs = null; 
+            WCFOBJECT[] listServerObjs = null;
             try
             {
                 var proxy = CreateProxy();
-                { 
+                {
                     //Trace.WriteLine("Going to server to retrieve " + this.ToString() + " parent with ID: " + ID.ToString(), "WebAnnotation");
 
-                    listServerObjs = ProxyGetByIDs((INTERFACE)proxy, listRemoteObjs.ToArray());
+                    listServerObjs = ProxyGetByIDs((INTERFACE)proxy, [.. listRemoteObjs]);
                 }
             }
             catch (Exception e)
@@ -506,9 +485,9 @@ namespace WebAnnotationModel
                 Trace.WriteLine(e.ToString(), "WebAnnotation");
                 Trace.WriteLine(e.Message, "WebAnnotation");
                 listServerObjs = null;
-            } 
+            }
 
-            ChangeInventory<OBJECT> server_inventory = ParseQuery(listServerObjs, new KEY[0], null);
+            ChangeInventory<OBJECT> server_inventory = ParseQuery(listServerObjs, [], null);
 
             server_inventory.UnchangedObjects.AddRange(listLocalObjs);
 
@@ -524,7 +503,7 @@ namespace WebAnnotationModel
         /// <returns></returns>
         private List<OBJECT> GetLocalObjects(ICollection<KEY> IDs, out List<KEY> listKeysNotFound)
         {
-            List<OBJECT> localObjs = new List<OBJECT>(IDs.Count);
+            List<OBJECT> localObjs = new(IDs.Count);
             listKeysNotFound = new List<KEY>(IDs.Count);
             foreach (KEY ID in IDs)
             {
@@ -548,24 +527,24 @@ namespace WebAnnotationModel
 
         public virtual ConcurrentDictionary<KEY, OBJECT> GetObjectsForSection(long SectionNumber)
         {
-            GetObjectBySectionCallbackState<INTERFACE, OBJECT> state = new GetObjectBySectionCallbackState<INTERFACE, OBJECT>(null, SectionNumber, GetLastQueryTimeForSection(SectionNumber), null);
+            GetObjectBySectionCallbackState<INTERFACE, OBJECT> state = new(null, SectionNumber, GetLastQueryTimeForSection(SectionNumber), null);
 
-            WCFOBJECT[] objects = new WCFOBJECT[0];
-            KEY[] deleted_objects = new KEY[0]; 
+            WCFOBJECT[] objects = [];
+            KEY[] deleted_objects = [];
             DateTime StartTime = DateTime.UtcNow;
 
             try
             {
 
                 var proxy = CreateProxy();
-                { 
-                
+                {
+
                     objects = ProxyGetBySection((INTERFACE)proxy,
                                                         SectionNumber,
                                                         state.LastQueryExecutedTime,
                                                         out long QueryExecutedTime,
                                                         out deleted_objects);
-                } 
+                }
             }
             catch (EndpointNotFoundException e)
             {
@@ -574,7 +553,7 @@ namespace WebAnnotationModel
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
-            } 
+            }
 
             DateTime TraceQueryEnd = DateTime.UtcNow;
 
@@ -611,15 +590,15 @@ namespace WebAnnotationModel
             if (OutstandingRequest)
             {
                 return new MixedLocalAndRemoteQueryResults<KEY, OBJECT>(null, knownObjects.Values);
-            } 
+            }
 
             IAsyncResult result = null;
             try
             {
                 var proxy = CreateProxy();
-                { 
+                {
                     //                WCFOBJECT[] locations = new WCFOBJECT[0];
-                    GetObjectBySectionCallbackState<INTERFACE, OBJECT> newState = new GetObjectBySectionCallbackState<INTERFACE, OBJECT>((INTERFACE)proxy, SectionNumber, GetLastQueryTimeForSection(SectionNumber), OnLoadCompletedCallBack);
+                    GetObjectBySectionCallbackState<INTERFACE, OBJECT> newState = new((INTERFACE)proxy, SectionNumber, GetLastQueryTimeForSection(SectionNumber), OnLoadCompletedCallBack);
                     bool NoOutstandingRequest = OutstandingSectionQueries.TryAdd(SectionNumber, newState);
                     if (NoOutstandingRequest)
                     {
@@ -650,10 +629,7 @@ namespace WebAnnotationModel
             return new MixedLocalAndRemoteQueryResults<KEY, OBJECT>(result, knownObjects.Values);
         }
 
-        private RTree.Rectangle BuildRTreeRectangle(long SectionNumber, Geometry.GridRectangle bounds)
-        {
-            return new RTree.Rectangle(bounds.Left, bounds.Bottom, bounds.Right, bounds.Top, SectionNumber, SectionNumber);
-        }
+        private RTree.Rectangle BuildRTreeRectangle(long SectionNumber, Geometry.GridRectangle bounds) => new RTree.Rectangle(bounds.Left, bounds.Bottom, bounds.Right, bounds.Top, SectionNumber, SectionNumber);
 
 
 
@@ -666,7 +642,7 @@ namespace WebAnnotationModel
 
         private string PrepareQueryDetails(long SectionNumber, long numObjects, DateTime StartTime, DateTime QueryEndTime, DateTime ParseEndTime)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.AppendFormat("Sxn {0} finished {1} query, {2} returned\n", SectionNumber, typeof(OBJECT), numObjects);
             sb.AppendFormat("\tQuery time: {0} (sec)\n", new TimeSpan(QueryEndTime.Ticks - StartTime.Ticks).TotalSeconds);
             sb.AppendFormat("\tParse time: {0} (sec)\n", new TimeSpan(ParseEndTime.Ticks - QueryEndTime.Ticks).TotalSeconds);
@@ -676,7 +652,7 @@ namespace WebAnnotationModel
 
         private string PrepareQueryDetails(long SectionNumber, long numObjects, DateTime StartTime, DateTime QueryEndTime, DateTime ParseEndTime, DateTime EventsEndTime)
         {
-            StringBuilder sb = new StringBuilder(PrepareQueryDetails(SectionNumber, numObjects, StartTime, QueryEndTime, ParseEndTime));
+            StringBuilder sb = new(PrepareQueryDetails(SectionNumber, numObjects, StartTime, QueryEndTime, ParseEndTime));
             sb.AppendFormat("\tEvents Time: {0} (sec)\n", new TimeSpan(EventsEndTime.Ticks - ParseEndTime.Ticks).TotalSeconds);
             return sb.ToString();
         }
@@ -713,7 +689,7 @@ namespace WebAnnotationModel
 
             Debug.Assert(client != null);
 
-            KEY[] DeletedLocations = new KEY[0];
+            KEY[] DeletedLocations = [];
             long TicksAtQueryExecute = 0;
 
             WCFOBJECT[] objs;
@@ -850,8 +826,8 @@ namespace WebAnnotationModel
             if (serverObjects is null)
                 return new ChangeInventory<OBJECT>();
 
-            OBJECT[] listObj = new OBJECT[0];
-            List<OBJECT> deleted = new List<OBJECT>(serverDeletedObjects.Length);
+            OBJECT[] listObj = [];
+            List<OBJECT> deleted = new(serverDeletedObjects.Length);
             if (serverDeletedObjects != null)
             {
                 deleted = InternalDelete(serverDeletedObjects);
@@ -860,7 +836,7 @@ namespace WebAnnotationModel
             OBJECT[] listNewObj = new OBJECT[serverObjects.Length];
             System.Threading.Tasks.Parallel.For(0, serverObjects.Length, (i) =>
             {
-                OBJECT newObj = new OBJECT();
+                OBJECT newObj = new();
                 newObj.Synch(serverObjects[i]);
                 listNewObj[i] = newObj;
             });
@@ -872,14 +848,11 @@ namespace WebAnnotationModel
 
         #endregion
 
-        public DateTime GetLastQueryTimeForSection(long SectionNumber)
-        {
-            return LastQueryForSection.GetOrAdd(SectionNumber, DateTime.MinValue);
-        }
+        public DateTime GetLastQueryTimeForSection(long SectionNumber) => LastQueryForSection.GetOrAdd(SectionNumber, DateTime.MinValue);
 
         private bool TrySetLastQueryTimeForSection(long SectionNumber, long TicksAtQueryExecute, DateTime OldQueryExecuteTime)
         {
-            DateTime QueryExecuteTime = new DateTime(TicksAtQueryExecute, DateTimeKind.Utc);
+            DateTime QueryExecuteTime = new(TicksAtQueryExecute, DateTimeKind.Utc);
             if (!LastQueryForSection.TryAdd(SectionNumber, QueryExecuteTime))
             {
                 return LastQueryForSection.TryUpdate(SectionNumber, QueryExecuteTime, OldQueryExecuteTime);
@@ -919,7 +892,7 @@ namespace WebAnnotationModel
             if (OutstandingSectionQueries.Count > LoadingSectionLimit)
             {
                 //Sort the outstanding queries and kill the oldest
-                List<GetObjectBySectionCallbackState<INTERFACE, OBJECT>> stateList = OutstandingSectionQueries.Values.ToList<GetObjectBySectionCallbackState<INTERFACE, OBJECT>>();
+                List<GetObjectBySectionCallbackState<INTERFACE, OBJECT>> stateList = [.. OutstandingSectionQueries.Values];
                 stateList.Sort(CompareCallbacksByTime);
 
                 int indexOfCutoff = stateList.Count - (LoadingSectionLimit + 1);
@@ -940,7 +913,7 @@ namespace WebAnnotationModel
             //Return if we are under the limit
             if (LastQueryForSection.Count >= LoadedSectionLimit)
             {
-                List<DateTime> listQueryTimes = LastQueryForSection.Values.ToList<DateTime>();
+                List<DateTime> listQueryTimes = [.. LastQueryForSection.Values];
                 listQueryTimes.Sort();
 
                 int indexOfCutoff = LastQueryForSection.Values.Count - (LoadedSectionLimit + 1);
@@ -949,7 +922,7 @@ namespace WebAnnotationModel
 
                     DateTime CutoffTime = listQueryTimes[indexOfCutoff];
 
-                    foreach (int SectionNumber in LastQueryForSection.Keys)
+                    foreach (int SectionNumber in LastQueryForSection.Keys.Select(v => (int)v))
                     {
                         bool success = LastQueryForSection.TryGetValue(SectionNumber, out var lastQuery);
                         if (!success)
@@ -979,14 +952,11 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="SectionNumber"></param>
         /// <returns></returns>
-        public virtual bool RemoveSection(int SectionNumber)
-        {
-            throw new NotImplementedException();
-        }
+        public virtual bool RemoveSection(int SectionNumber) => throw new NotImplementedException();
 
         public virtual bool Save()
         {
-            List<OBJECT> changed = new List<OBJECT>(ChangedObjects.Count);
+            List<OBJECT> changed = new(ChangedObjects.Count);
 
             while (ChangedObjects.Count > 0)
             {
@@ -1003,7 +973,7 @@ namespace WebAnnotationModel
 
             return Save(changed);
         }
-        
+
 
         /// <summary>
         /// Save all changes to locations, returns true if the method completed without errors, otherwise false
@@ -1019,7 +989,7 @@ namespace WebAnnotationModel
             if (changedObjects.Count == 0)
                 return true;
 
-            List<WCFOBJECT> changedDBObj = new List<WCFOBJECT>(changedObjects.Count);
+            List<WCFOBJECT> changedDBObj = new(changedObjects.Count);
             KEY[] keys;
 
             try
@@ -1031,18 +1001,18 @@ namespace WebAnnotationModel
 
                 try
                 {
-                    IClientChannel proxy = CreateProxy(); 
-                    keys = ProxyUpdate((INTERFACE)proxy, changedDBObj.ToArray());
+                    IClientChannel proxy = CreateProxy();
+                    keys = ProxyUpdate((INTERFACE)proxy, [.. changedDBObj]);
                 }
                 catch (Exception e)
                 {
                     Trace.WriteLine("An error occurred during the update:\n" + e.Message);
                     throw;
-                } 
+                }
 
-                List<OBJECT> addObjList = new List<OBJECT>(changedDBObj.Count);
-                List<OBJECT> updateObjList = new List<OBJECT>(changedDBObj.Count);
-                List<KEY> delObjList = new List<KEY>(changedDBObj.Count);
+                List<OBJECT> addObjList = new(changedDBObj.Count);
+                List<OBJECT> updateObjList = new(changedDBObj.Count);
+                List<KEY> delObjList = new(changedDBObj.Count);
 
                 //Reset DBAction of each object, fire events
                 for (int iObj = 0; iObj < changedDBObj.Count; iObj++)
@@ -1051,8 +1021,7 @@ namespace WebAnnotationModel
                     DBACTION lastAction = data.DBAction;
                     data.DBAction = DBACTION.NONE;
 
-                    WCFObjBaseWithKey<KEY, WCFOBJECT> keyObj = data as WCFObjBaseWithKey<KEY, WCFOBJECT>;
-                    if (keyObj is null)
+                    if (data is not WCFObjBaseWithKey<KEY, WCFOBJECT> keyObj)
                         continue;
 
                     OBJECT obj = IDToObject[keys[iObj]];
@@ -1075,8 +1044,8 @@ namespace WebAnnotationModel
                     }
                 }
 
-                ChangeInventory<OBJECT> inventory = InternalAdd(addObjList.ToArray());
-                inventory.DeletedObjects.AddRange(InternalDelete(delObjList.ToArray()));
+                ChangeInventory<OBJECT> inventory = InternalAdd([.. addObjList]);
+                inventory.DeletedObjects.AddRange(InternalDelete([.. delObjList]));
                 inventory.OldObjectsReplaced = updateObjList;
                 inventory.NewObjectReplacements = updateObjList;
                 inventory.UpdatedObjects = updateObjList;
@@ -1096,8 +1065,7 @@ namespace WebAnnotationModel
 
                         if (data.DBAction == DBACTION.INSERT)
                         {
-                            WCFObjBaseWithKey<KEY, WCFOBJECT> keyObj = data as WCFObjBaseWithKey<KEY, WCFOBJECT>;
-                            if (keyObj is null)
+                            if (data is not WCFObjBaseWithKey<KEY, WCFOBJECT> keyObj)
                                 continue;
 
                             InternalDelete(keyObj.ID);
@@ -1131,10 +1099,10 @@ namespace WebAnnotationModel
 
         protected virtual ChangeInventory<OBJECT> InternalAdd(OBJECT[] newObjs)
         {
-            List<OBJECT> listAddedObj = new List<OBJECT>(newObjs.Length);
+            List<OBJECT> listAddedObj = new(newObjs.Length);
 
             //This list records objects we can't add which must be updated instead
-            List<OBJECT> listUpdateObj = new List<OBJECT>(newObjs.Length);
+            List<OBJECT> listUpdateObj = new(newObjs.Length);
 
             for (int iObj = 0; iObj < newObjs.Length; iObj++)
             {
@@ -1151,14 +1119,14 @@ namespace WebAnnotationModel
                 }
             }
 
-            ChangeInventory<OBJECT> changeInventory = new ChangeInventory<OBJECT>(newObjs.Length)
+            ChangeInventory<OBJECT> changeInventory = new(newObjs.Length)
             {
                 AddedObjects = listAddedObj
             };
 
             if (listUpdateObj.Count > 0)
             {
-                changeInventory.UpdatedObjects.AddRange(InternalUpdate(listUpdateObj.ToArray()));
+                changeInventory.UpdatedObjects.AddRange(InternalUpdate([.. listUpdateObj]));
             }
 
             return changeInventory;
@@ -1181,7 +1149,7 @@ namespace WebAnnotationModel
 
         protected virtual OBJECT[] InternalUpdate(OBJECT[] updateObjs)
         {
-            List<OBJECT> listUpdatedObjs = new List<OBJECT>(updateObjs.Length);
+            List<OBJECT> listUpdatedObjs = new(updateObjs.Length);
             //List<OBJECT> listOldObjs = new List<OBJECT>(updateObjs.Length);
 
             for (int iObj = 0; iObj < updateObjs.Length; iObj++)
@@ -1199,7 +1167,7 @@ namespace WebAnnotationModel
             //            if(listUpdatedObjs.Count > 0)
             //                CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, listUpdatedObjs, listOldObjs));
 
-            return listUpdatedObjs.ToArray();
+            return [.. listUpdatedObjs];
         }
 
 
@@ -1210,7 +1178,7 @@ namespace WebAnnotationModel
         /// <returns></returns>
         protected virtual List<OBJECT> InternalDelete(KEY[] Keys)
         {
-            List<OBJECT> listDeleted = new List<OBJECT>(Keys.Length);
+            List<OBJECT> listDeleted = new(Keys.Length);
 
             for (int iObj = 0; iObj < Keys.Length; iObj++)
             {
@@ -1229,10 +1197,10 @@ namespace WebAnnotationModel
 
         protected virtual ChangeInventory<OBJECT> InternalReplace(KEY[] Keys, OBJECT[] newObjs)
         {
-            ChangeInventory<OBJECT> output = new ChangeInventory<OBJECT>(Keys.Length);
+            ChangeInventory<OBJECT> output = new(Keys.Length);
             Debug.Assert(Keys.Length == newObjs.Length);
-            List<KEY> listReplacedObjects = new List<KEY>(Keys.Length);
-            List<OBJECT> listAddedObjects = new List<OBJECT>();
+            List<KEY> listReplacedObjects = new(Keys.Length);
+            List<OBJECT> listAddedObjects = [];
             for (int iObj = 0; iObj < Keys.Length; iObj++)
             {
                 KEY Key = Keys[iObj];
@@ -1281,7 +1249,7 @@ namespace WebAnnotationModel
         /// <returns></returns>
         public virtual OBJECT Refresh(KEY key)
         {
-            List<OBJECT> listForgotten = Refresh(new KEY[] { key });
+            List<OBJECT> listForgotten = Refresh([key]);
             return listForgotten.First();
         }
 
@@ -1307,7 +1275,7 @@ namespace WebAnnotationModel
         /// <returns></returns>
         public virtual OBJECT ForgetLocally(KEY key)
         {
-            List<OBJECT> listForgotten = ForgetLocally(new KEY[] { key });
+            List<OBJECT> listForgotten = ForgetLocally([key]);
             if (listForgotten.Count == 0)
                 return null;
 
@@ -1366,15 +1334,9 @@ namespace WebAnnotationModel
         }
 
 
-        public IEnumerator<KeyValuePair<KEY, OBJECT>> GetEnumerator()
-        {
-            return this.IDToObject.GetEnumerator();
-        }
+        public IEnumerator<KeyValuePair<KEY, OBJECT>> GetEnumerator() => this.IDToObject.GetEnumerator();
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         public int Count => this.IDToObject.Count;
     }

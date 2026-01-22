@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -8,30 +8,18 @@ using VikingXNAWinForms;
 
 namespace Viking.UI.Commands
 {
-    public class RectangleCommand : DefaultCommand, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    public class RectangleCommand(Viking.UI.Controls.SectionViewerControl parent) : DefaultCommand(parent), Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
         protected GridVector2 Origin;
         protected Geometry.GridRectangle MyRect;
         protected Microsoft.Xna.Framework.Color Color;
 
-        public override string[] HelpStrings
-        {
-            get
-            {
-                return new string[] {
+        public override string[] HelpStrings => [
                     "Left click to set origin of rectangle",
                     "Drag mouse to size rectangle",
-                    "Release left button to finish rectangle"};
-            }
-        }
+                    "Release left button to finish rectangle"];
 
         public override ObservableCollection<string> ObservableHelpStrings => new(this.HelpStrings);
-
-        public RectangleCommand(Viking.UI.Controls.SectionViewerControl parent)
-            : base(parent)
-        {
-
-        }
 
         protected override void OnMouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
         {
@@ -53,7 +41,7 @@ namespace Viking.UI.Commands
         {
             try
             {
-                if(NewPosition == Origin)
+                if (NewPosition == Origin)
                     return false;
 
                 MyRect = new GridRectangle(NewPosition, Origin);
@@ -108,22 +96,22 @@ namespace Viking.UI.Commands
 
             basicEffect.VertexColorEnabled = true;
             basicEffect.TextureEnabled = false;
-            VertexPositionColor[] verts = new VertexPositionColor[] { new VertexPositionColor( new Vector3((float)MyRect.Left, (float)MyRect.Bottom, 1), Color.Yellow),
-                                                                       new VertexPositionColor( new Vector3((float)MyRect.Right, (float)MyRect.Bottom, 1), Color.Yellow),
-                                                                        new VertexPositionColor( new Vector3((float)MyRect.Right, (float)MyRect.Top, 1), Color.Yellow),
-                                                                         new VertexPositionColor( new Vector3((float)MyRect.Left, (float)MyRect.Top, 1), Color.Yellow)};
+            VertexPositionColor[] verts = [ new( new Vector3((float)MyRect.Left, (float)MyRect.Bottom, 1), Color.Yellow),
+                                                                       new( new Vector3((float)MyRect.Right, (float)MyRect.Bottom, 1), Color.Yellow),
+                                                                        new( new Vector3((float)MyRect.Right, (float)MyRect.Top, 1), Color.Yellow),
+                                                                         new( new Vector3((float)MyRect.Left, (float)MyRect.Top, 1), Color.Yellow)];
 
-            Color CrossColor = new Color(Color.Yellow.R, Color.Yellow.G, Color.Yellow.B, 0.25f);
+            Color CrossColor = new(Color.Yellow.R, Color.Yellow.G, Color.Yellow.B, 0.25f);
             float EightWidth = (float)(MyRect.Width / 16);
             float EightHeight = (float)(MyRect.Height / 16);
 
-            VertexPositionColor[] crossVerts = new VertexPositionColor[] { new VertexPositionColor( new Vector3((float)MyRect.Center.X - EightWidth, (float)MyRect.Center.Y, 1), CrossColor),
-                                                                       new VertexPositionColor( new Vector3((float)MyRect.Center.X + EightWidth, (float)MyRect.Center.Y, 1), CrossColor),
-                                                                        new VertexPositionColor( new Vector3((float)MyRect.Center.X, (float)MyRect.Center.Y - EightHeight, 1), CrossColor),
-                                                                         new VertexPositionColor( new Vector3((float)MyRect.Center.X, (float)MyRect.Center.Y + EightHeight, 1), CrossColor)};
+            VertexPositionColor[] crossVerts = [ new( new Vector3((float)MyRect.Center.X - EightWidth, (float)MyRect.Center.Y, 1), CrossColor),
+                                                                       new( new Vector3((float)MyRect.Center.X + EightWidth, (float)MyRect.Center.Y, 1), CrossColor),
+                                                                        new( new Vector3((float)MyRect.Center.X, (float)MyRect.Center.Y - EightHeight, 1), CrossColor),
+                                                                         new( new Vector3((float)MyRect.Center.X, (float)MyRect.Center.Y + EightHeight, 1), CrossColor)];
 
-            int[] indicies = new int[] { 0, 1, 2, 3, 0 };
-            int[] crossIndicies = new int[] { 0, 1, 2, 3 };
+            int[] indicies = [0, 1, 2, 3, 0];
+            int[] crossIndicies = [0, 1, 2, 3];
 
             foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
             {

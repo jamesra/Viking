@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows.Forms;
 using Viking.Common;
 using WebAnnotationModel;
@@ -31,7 +31,7 @@ namespace WebAnnotation.View
 
         public static ContextMenuStrip ContextMenuGenerator(IViewStructureLink link)
         {
-            StructureLink_CanvasContextMenuView contextMenuView = new StructureLink_CanvasContextMenuView(link.Key);
+            StructureLink_CanvasContextMenuView contextMenuView = new(link.Key);
             return contextMenuView.ContextMenu;
         }
 
@@ -39,22 +39,24 @@ namespace WebAnnotation.View
         {
             get
             {
-                ContextMenuStrip menu = new ContextMenuStrip();
-                
+                ContextMenuStrip menu = new();
+
                 if (!modelObj.Bidirectional)
                 {
-                    ToolStripMenuItem menuFlip = new ToolStripMenuItem("Flip Direction");
+                    ToolStripMenuItem menuFlip = new("Flip Direction");
                     menuFlip.Click += ContextMenu_OnFlip;
                     menu.Items.Add(menuFlip);
                 }
 
-                ToolStripMenuItem menuBidirectional = new ToolStripMenuItem("Bidirectional");
-                menuBidirectional.Checked = modelObj.Bidirectional;
+                ToolStripMenuItem menuBidirectional = new("Bidirectional")
+                {
+                    Checked = modelObj.Bidirectional
+                };
                 menuBidirectional.Click += ContextMenu_OnBidirectional;
                 menu.Items.Add(menuBidirectional);
 
                 menu.Items.Add(new ToolStripSeparator());
-                ToolStripMenuItem menuDelete = new ToolStripMenuItem("Delete");
+                ToolStripMenuItem menuDelete = new("Delete");
                 menuDelete.Click += ContextMenu_OnDelete;
                 menu.Items.Add(menuDelete);
 
@@ -69,7 +71,7 @@ namespace WebAnnotation.View
             {
                 Store.StructureLinks.Save();
 
-                StructureLinkObj newLink = new StructureLinkObj(TargetID, SourceID, Bidirectional);
+                StructureLinkObj newLink = new(TargetID, SourceID, Bidirectional);
                 Store.StructureLinks.Create(newLink);
                 //              this.modelObj = newLink;
                 //CreateView(newLink);
@@ -87,7 +89,7 @@ namespace WebAnnotation.View
             {
                 Store.StructureLinks.Save();
 
-                StructureLinkObj newLink = new StructureLinkObj(SourceID, TargetID, !Bidirectional);
+                StructureLinkObj newLink = new(SourceID, TargetID, !Bidirectional);
                 Store.StructureLinks.Create(newLink);
                 //              this.modelObj = newLink;
                 //CreateView(newLink);
@@ -98,10 +100,7 @@ namespace WebAnnotation.View
             }
         }
 
-        protected void ContextMenu_OnDelete(object sender, EventArgs e)
-        {
-            Delete();
-        }
+        protected void ContextMenu_OnDelete(object sender, EventArgs e) => Delete();
 
         public void Delete()
         {

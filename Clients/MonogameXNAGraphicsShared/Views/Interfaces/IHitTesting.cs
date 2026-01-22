@@ -1,11 +1,11 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Threading.Tasks;
 
 namespace VikingXNAGraphics
 {
     public interface IHitTesting
-    { 
+    {
         /// <summary>
         /// The bounding box of the region we are interested in hit testing
         /// </summary>

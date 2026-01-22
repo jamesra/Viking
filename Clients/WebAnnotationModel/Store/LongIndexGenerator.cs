@@ -1,4 +1,4 @@
-﻿namespace WebAnnotationModel
+namespace WebAnnotationModel
 {
     /// <summary>
     /// Generates a key for classes using a long as a key
@@ -10,9 +10,6 @@
         public LongIndexGenerator()
         { }
 
-        long IKeyGenerator<long>.NextKey()
-        {
-            return nextID--;
-        }
+        long IKeyGenerator<long>.NextKey() => nextID--;
     }
 }

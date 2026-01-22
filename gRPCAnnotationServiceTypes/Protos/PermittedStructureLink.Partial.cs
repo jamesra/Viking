@@ -7,13 +7,13 @@ using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
 {
-    public partial class PermittedStructureLink : IPermittedStructureLink
+    public partial class PermittedStructureLink : IPermittedStructureLinkReadOnly
     {
-        public ulong SourceTypeID { get => SourceTypeID; set => SourceTypeID = value; }
-        public ulong TargetTypeID { get => TargetTypeID; set => TargetTypeID = value; }
-        public bool Directional { get => Directional; set => Directional = value; }
+        ulong IPermittedStructureLinkReadOnly.SourceTypeID => (ulong)this.SourceTypeId;
+        ulong IPermittedStructureLinkReadOnly.TargetTypeID => (ulong)this.TargetTypeId;
+        bool IPermittedStructureLinkReadOnly.Directional => !this.Bidirectional;
 
-        public bool Equals(IPermittedStructureLink other)
+        public bool Equals(IPermittedStructureLinkReadOnly other)
         {
             if (ReferenceEquals(other, this))
                 return true;
@@ -21,8 +21,8 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
             if (ReferenceEquals(other, null))
                 return false;
 
-            return SourceTypeID == other.SourceTypeID &&
-                   TargetTypeID == other.TargetTypeID;
+            return ((IPermittedStructureLinkReadOnly)this).SourceTypeID == other.SourceTypeID &&
+                   ((IPermittedStructureLinkReadOnly)this).TargetTypeID == other.TargetTypeID;
         }
     }
 }

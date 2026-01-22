@@ -12,10 +12,7 @@ namespace AnnotationVizLib.OData
         /// <summary>
         /// Synchronously builds a motif graph from OData service
         /// </summary>
-        public static MotifGraph FromOData(Uri endpoint)
-        {
-            return FromODataAsync(endpoint).GetAwaiter().GetResult();
-        }
+        public static MotifGraph FromOData(Uri endpoint) => FromODataAsync(endpoint).GetAwaiter().GetResult();
 
         /// <summary>
         /// Asynchronously builds a motif graph from OData service
@@ -24,12 +21,12 @@ namespace AnnotationVizLib.OData
             Uri endpoint,
             CancellationToken cancellationToken = default)
         {
-            Container container = new Container(endpoint)
+            Container container = new(endpoint)
             {
                 MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
             };
 
-            MotifGraph graph = new MotifGraph();
+            MotifGraph graph = new();
 
             // Get structure types
             var structureTypesTask = container.StructureTypes.GetAllPagesToListAsync(cancellationToken);
@@ -42,7 +39,7 @@ namespace AnnotationVizLib.OData
             var structureTypes = await structureTypesTask;
             var structureLinks = await structureLinksTask;
 
-            SortedDictionary<long, StructureType> typeIdToType = new SortedDictionary<long, StructureType>();
+            SortedDictionary<long, StructureType> typeIdToType = [];
             foreach (var type in structureTypes)
             {
                 if (!typeIdToType.ContainsKey(type.ID))
@@ -57,7 +54,7 @@ namespace AnnotationVizLib.OData
             }
 
             // Get unique structure IDs involved in links
-            var structureIds = new HashSet<long>();
+            HashSet<long> structureIds = [];
             foreach (var link in structureLinks)
             {
                 structureIds.Add(link.SourceID);
@@ -65,12 +62,12 @@ namespace AnnotationVizLib.OData
             }
 
             // Load structures
-            var linkedStructures = await LoadStructuresByIDsAsync(container, structureIds.ToArray(), cancellationToken);
+            var linkedStructures = await LoadStructuresByIDsAsync(container, [.. structureIds], cancellationToken);
 
             // Build structure dictionaries
-            SortedDictionary<long, Structure> idToStructure = new SortedDictionary<long, Structure>();
-            SortedDictionary<long, Structure> childIdToParent = new SortedDictionary<long, Structure>();
-            List<long> parentIds = new List<long>();
+            SortedDictionary<long, Structure> idToStructure = [];
+            SortedDictionary<long, Structure> childIdToParent = [];
+            List<long> parentIds = [];
 
             // Find parent IDs
             foreach (var structure in linkedStructures)
@@ -91,7 +88,7 @@ namespace AnnotationVizLib.OData
             }
 
             // Load parent structures
-            var parentStructures = await LoadStructuresByIDsAsync(container, parentIds.ToArray(), cancellationToken);
+            var parentStructures = await LoadStructuresByIDsAsync(container, [.. parentIds], cancellationToken);
 
             foreach (var parentStructure in parentStructures)
             {
@@ -111,13 +108,13 @@ namespace AnnotationVizLib.OData
             }
 
             // Group parent structures by label to create nodes
-            var labelToStructures = new SortedList<string, List<Structure>>();
+            SortedList<string, List<Structure>> labelToStructures = [];
             foreach (var parentStructure in parentStructures)
             {
                 string label = GetBaseLabel(parentStructure.Label);
                 if (!labelToStructures.ContainsKey(label))
                 {
-                    labelToStructures.Add(label, new List<Structure>());
+                    labelToStructures.Add(label, []);
                 }
                 labelToStructures[label].Add(parentStructure);
             }
@@ -125,12 +122,12 @@ namespace AnnotationVizLib.OData
             // Create motif nodes
             foreach (var kvp in labelToStructures)
             {
-                var node = new MotifNode(kvp.Key, kvp.Value.ConvertAll(s => new ODataStructureAdapter(s)));
+                MotifNode node = new(kvp.Key, kvp.Value.ConvertAll(s => new ODataStructureAdapter(s)));
                 graph.AddNode(node);
             }
 
             // Build motif edges
-            var dictEdges = new SortedDictionary<MotifEdge, MotifEdge>();
+            SortedDictionary<MotifEdge, MotifEdge> dictEdges = [];
 
             foreach (var link in structureLinks)
             {
@@ -155,7 +152,7 @@ namespace AnnotationVizLib.OData
                     string sourceLabel = GetBaseLabel(parentOfSource.Label);
                     string targetLabel = GetBaseLabel(parentOfTarget.Label);
 
-                    var edge = new MotifEdge(sourceLabel, targetLabel, connectionLabel);
+                    MotifEdge edge = new(sourceLabel, targetLabel, connectionLabel);
 
                     if (dictEdges.TryGetValue(edge, out var existingEdge))
                     {
@@ -194,7 +191,7 @@ namespace AnnotationVizLib.OData
             {
                 return await container.StructureLinks.GetAllPagesToListAsync(cancellationToken);
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 throw new InvalidOperationException($"Failed to retrieve structure links: {ex.Message}", ex);
             }
@@ -208,9 +205,9 @@ namespace AnnotationVizLib.OData
             long[] structureIds,
             CancellationToken cancellationToken = default)
         {
-            if (structureIds == null || structureIds.Length == 0)
+            if (structureIds is null || structureIds.Length == 0)
             {
-                return new List<Structure>();
+                return [];
             }
 
             try
@@ -220,9 +217,9 @@ namespace AnnotationVizLib.OData
                 ).ToArray();
 
                 var results = await Task.WhenAll(tasks);
-                return results.Where(s => s != null).ToList();
+                return [.. results.Where(s => s != null)];
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 throw new InvalidOperationException($"Failed to load structures: {ex.Message}", ex);
             }

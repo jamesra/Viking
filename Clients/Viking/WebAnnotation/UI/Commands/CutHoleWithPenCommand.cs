@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
@@ -36,7 +36,7 @@ namespace WebAnnotation.UI.Commands
             OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
             //SmoothedVolumePolygon = OriginalVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
 
-            ExteriorSegments = OriginalVolumePolygon.ExteriorSegments.ToList();
+            ExteriorSegments = [.. OriginalVolumePolygon.ExteriorSegments];
 
             //PenInput.Push(origin);
         }
@@ -56,7 +56,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override bool IsProposedClosedLoopValid(IReadOnlyCollection<GridVector2> proposed_curve)
         {
-            GridPolygon proposed_hole = new GridPolygon(proposed_curve.ToArray().EnsureClosedRing());
+            GridPolygon proposed_hole = new(proposed_curve.ToArray().EnsureClosedRing());
             return false == GridPolygon.SegmentsIntersect(OriginalVolumePolygon, proposed_hole);
         }
 
@@ -76,10 +76,7 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="WorldPos"></param>
         /// <returns></returns>
-        protected override bool CanCommandComplete()
-        {
-            return PenInput.HasSelfIntersection && ShapeIsValid();
-        }
+        protected override bool CanCommandComplete() => PenInput.HasSelfIntersection && ShapeIsValid();
 
         protected override bool ShapeIsValid()
         {

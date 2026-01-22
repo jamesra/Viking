@@ -45,26 +45,26 @@ namespace Viking.UI.WPF.Models
         {
             if (string.IsNullOrWhiteSpace(volumeLocalDir))
             {
-                return new Dictionary<int, SectionReferences>();
+                return [];
             }
 
             string filePath = Path.Combine(volumeLocalDir, SettingsFileName);
 
             if (!File.Exists(filePath))
             {
-                return new Dictionary<int, SectionReferences>();
+                return [];
             }
 
             try
             {
                 string json = File.ReadAllText(filePath);
                 var settings = JsonSerializer.Deserialize<Dictionary<int, SectionReferences>>(json);
-                return settings ?? new Dictionary<int, SectionReferences>();
+                return settings ?? [];
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Trace.WriteLine($"Failed to load section reference settings from {filePath}: {ex.Message}");
-                return new Dictionary<int, SectionReferences>();
+                return [];
             }
         }
 
@@ -91,7 +91,7 @@ namespace Viking.UI.WPF.Models
                 string filePath = Path.Combine(volumeLocalDir, SettingsFileName);
 
                 // If settings dictionary is empty, delete the file
-                if (settings == null || settings.Count == 0)
+                if (settings is null || settings.Count == 0)
                 {
                     if (File.Exists(filePath))
                     {
@@ -100,7 +100,7 @@ namespace Viking.UI.WPF.Models
                     return;
                 }
 
-                var options = new JsonSerializerOptions
+                JsonSerializerOptions options = new()
                 {
                     WriteIndented = true
                 };
@@ -119,10 +119,7 @@ namespace Viking.UI.WPF.Models
         /// </summary>
         /// <param name="currentSectionNumber">The current section number</param>
         /// <returns>Tuple of (defaultAbove, defaultBelow)</returns>
-        public static (int defaultAbove, int defaultBelow) GetDefaultReferences(int currentSectionNumber)
-        {
-            return (currentSectionNumber + 1, currentSectionNumber - 1);
-        }
+        public static (int defaultAbove, int defaultBelow) GetDefaultReferences(int currentSectionNumber) => (currentSectionNumber + 1, currentSectionNumber - 1);
 
         /// <summary>
         /// Check if the given references are different from defaults
@@ -142,7 +139,7 @@ namespace Viking.UI.WPF.Models
         /// </summary>
         public static ChannelInfoDto ToDto(ChannelInfo channelInfo)
         {
-            if (channelInfo == null)
+            if (channelInfo is null)
             {
                 return null;
             }
@@ -161,12 +158,12 @@ namespace Viking.UI.WPF.Models
         /// </summary>
         public static ChannelInfo FromDto(ChannelInfoDto dto)
         {
-            if (dto == null)
+            if (dto is null)
             {
                 return null;
             }
 
-            var channelInfo = new ChannelInfo
+            ChannelInfo channelInfo = new()
             {
                 ChannelName = dto.ChannelName ?? string.Empty,
                 SectionSource = (ChannelInfo.SectionInfo)dto.SectionSource,
@@ -176,14 +173,9 @@ namespace Viking.UI.WPF.Models
             // Parse color from hex string
             try
             {
-                if (!string.IsNullOrWhiteSpace(dto.ColorHex))
-                {
-                    channelInfo.Color = Geometry.Graphics.Color.FromInteger(dto.ColorHex);
-                }
-                else
-                {
-                    channelInfo.Color = new Geometry.Graphics.Color(255, 255, 255, 255);
-                }
+                channelInfo.Color = !string.IsNullOrWhiteSpace(dto.ColorHex)
+                    ? Geometry.Graphics.Color.FromInteger(dto.ColorHex)
+                    : new Geometry.Graphics.Color(255, 255, 255, 255);
             }
             catch (Exception ex)
             {
@@ -199,12 +191,12 @@ namespace Viking.UI.WPF.Models
         /// </summary>
         public static ChannelInfoDto[] ToDto(ChannelInfo[] channels)
         {
-            if (channels == null || channels.Length == 0)
+            if (channels is null || channels.Length == 0)
             {
                 return null;
             }
 
-            return channels.Select(ToDto).ToArray();
+            return [.. channels.Select(ToDto)];
         }
 
         /// <summary>
@@ -212,21 +204,18 @@ namespace Viking.UI.WPF.Models
         /// </summary>
         public static ChannelInfo[] FromDto(ChannelInfoDto[] dtos)
         {
-            if (dtos == null || dtos.Length == 0)
+            if (dtos is null || dtos.Length == 0)
             {
-                return Array.Empty<ChannelInfo>();
+                return [];
             }
 
-            return dtos.Select(FromDto).Where(c => c != null).ToArray();
+            return [.. dtos.Select(FromDto).Where(c => c != null)];
         }
 
         /// <summary>
         /// Check if channel settings differ from defaults (default is empty array for greyscale mode)
         /// </summary>
-        public static bool HasNonDefaultChannels(ChannelInfo[] channels)
-        {
-            return channels != null && channels.Length > 0;
-        }
+        public static bool HasNonDefaultChannels(ChannelInfo[] channels) => channels != null && channels.Length > 0;
     }
 }
 

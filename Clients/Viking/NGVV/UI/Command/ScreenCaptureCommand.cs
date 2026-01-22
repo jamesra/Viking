@@ -16,7 +16,7 @@ namespace Viking.UI.Commands
         /// </summary>
         protected override void Execute()
         {
-            using (ScreenshotForm form = new ScreenshotForm(MyRect, Parent.Downsample, Parent.Section.Number))
+            using (ScreenshotForm form = new(MyRect, Parent.Downsample, Parent.Section.Number))
             {
                 form.ShowDialog();
 

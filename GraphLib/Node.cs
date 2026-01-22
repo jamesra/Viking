@@ -1,37 +1,29 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 
 namespace GraphLib
 {
     [Serializable]
-    public class Node<KEY, EDGETYPE> : IComparer<Node<KEY, EDGETYPE>>, IComparable<Node<KEY, EDGETYPE>>, IEquatable<Node<KEY, EDGETYPE>>, ISerializable
+    public class Node<KEY, EDGETYPE>(KEY k) : IComparer<Node<KEY, EDGETYPE>>, IComparable<Node<KEY, EDGETYPE>>, IEquatable<Node<KEY, EDGETYPE>>, ISerializable
         where KEY : IComparable<KEY>, IEquatable<KEY>
         where EDGETYPE : Edge<KEY>
     {
-        public readonly KEY Key;
+        public readonly KEY Key = k;
 
         /// <summary>
         /// Keys are the ID of the other node in the edge, or our iD if it is a circular reference
         /// </summary>
-        private readonly SortedDictionary<KEY, SortedSet<EDGETYPE>> _Edges = new SortedDictionary<KEY, SortedSet<EDGETYPE>>();
+        private readonly SortedDictionary<KEY, SortedSet<EDGETYPE>> _Edges = [];
 
         public IReadOnlyDictionary<KEY, SortedSet<EDGETYPE>> Edges => _Edges;
 
         /// <summary>
         /// A collection of additional attributes that have been added to the node
         /// </summary>
-        public readonly Dictionary<string, object> Attributes = new Dictionary<string, object>();
+        public readonly Dictionary<string, object> Attributes = [];
 
-        public Node(KEY k)
-        {
-            this.Key = k;
-        }
-
-        public void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            info.AddValue("Key", Key, typeof(KEY));
-        }
+        public void GetObjectData(SerializationInfo info, StreamingContext context) => info.AddValue("Key", Key, typeof(KEY));
 
         internal void AddEdge(EDGETYPE Link)
         {
@@ -52,7 +44,7 @@ namespace GraphLib
             }
             else
             {
-                edgeList = new SortedSet<EDGETYPE>();
+                edgeList = [];
                 _Edges[PartnerKey] = edgeList;
             }
 
@@ -90,15 +82,9 @@ namespace GraphLib
             }
         }
 
-        public int Compare(Node<KEY, EDGETYPE> x, Node<KEY, EDGETYPE> y)
-        {
-            return this.CompareTo(y);
-        }
+        public int Compare(Node<KEY, EDGETYPE> x, Node<KEY, EDGETYPE> y) => this.CompareTo(y);
 
-        public int CompareTo(Node<KEY, EDGETYPE> other)
-        {
-            return this.Key.CompareTo(other.Key);
-        }
+        public int CompareTo(Node<KEY, EDGETYPE> other) => this.Key.CompareTo(other.Key);
 
         public override bool Equals(object other)
         {
@@ -120,10 +106,7 @@ namespace GraphLib
             return this.Key.Equals(other.Key);
         }
 
-        public override int GetHashCode()
-        {
-            return this.Key.GetHashCode();
-        }
+        public override int GetHashCode() => this.Key.GetHashCode();
 
 
         public static bool operator ==(Node<KEY, EDGETYPE> A, Node<KEY, EDGETYPE> B)
@@ -133,7 +116,7 @@ namespace GraphLib
                 return true;
             }
 
-            if (A is object)
+            if (A is not null)
                 return A.Equals(B);
 
             return false;
@@ -146,7 +129,7 @@ namespace GraphLib
                 return false;
             }
 
-            if (A is object)
+            if (A is not null)
                 return !A.Equals(B);
 
             return true;

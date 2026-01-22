@@ -198,11 +198,7 @@ technique Textured
 		AlphaBlendEnable = true;
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
-		BlendOp = Add;
-		ZEnable = true;
-		ZFunc = LessEqual;
-		StencilEnable = true;
-		StencilFunc = GreaterEqual;
+		BlendOp = Add; 
 		vertexShader = compile vs_4_0 CurveVertexShader();
 		pixelShader = compile ps_4_0 MyPSTextured();
 	}

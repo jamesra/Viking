@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System.Threading.Tasks;
@@ -14,16 +14,16 @@ namespace MonogameTestbed
     {
         public string Title => this.GetType().Name;
         Scene scene;
-        readonly PointSetViewCollection Points_A = new PointSetViewCollection(Color.Blue, Color.BlueViolet, Color.PowderBlue);
-        readonly PointSetViewCollection Points_B = new PointSetViewCollection(Color.Red, Color.Pink, Color.Plum);
-        readonly PointSetViewCollection Points_C = new PointSetViewCollection(Color.Red, Color.Pink, Color.GreenYellow);
-        readonly UntiledRegionView PolyBorderView = new UntiledRegionView();
-        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
-        readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
+        readonly PointSetViewCollection Points_A = new(Color.Blue, Color.BlueViolet, Color.PowderBlue);
+        readonly PointSetViewCollection Points_B = new(Color.Red, Color.Pink, Color.Plum);
+        readonly PointSetViewCollection Points_C = new(Color.Red, Color.Pink, Color.GreenYellow);
+        readonly UntiledRegionView PolyBorderView = new();
+        readonly GamePadStateTracker Gamepad = new();
+        readonly Cursor2DCameraManipulator CameraManipulator = new();
 
         GridVector2 Cursor;
         CircleView cursorView;
-        LabelView cursorLabel; 
+        LabelView cursorLabel;
 
         public double PointRadius = 2.0;
 
@@ -49,18 +49,15 @@ namespace MonogameTestbed
             return Task.CompletedTask;
         }
 
-        public void UnloadContent(MonoTestbed window)
-        {
-            this.scene.SaveCamera(TestMode.MESH);
-        }
+        public void UnloadContent(MonoTestbed window) => this.scene.SaveCamera(TestMode.MESH);
 
         public void Update()
         {
             GamePadState state = GamePad.GetState(PlayerIndex.One);
-            Gamepad.Update(state); 
+            Gamepad.Update(state);
 
             CameraManipulator.Update(scene.Camera);
-             
+
             if (state.ThumbSticks.Left != Vector2.Zero)
             {
                 Cursor += state.ThumbSticks.Left.ToGridVector2();
@@ -104,16 +101,16 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window)
         {
-            if(cursorView != null)
+            if (cursorView != null)
                 CircleView.Draw(window.GraphicsDevice, this.scene, OverlayStyle.Alpha, new CircleView[] { cursorView });
-             
+
             PolyBorderView.Draw(window, scene);
 
             Points_A.Draw(window, scene);
             Points_B.Draw(window, scene);
             Points_C.Draw(window, scene);
 
-            if(cursorLabel != null)
+            if (cursorLabel != null)
                 LabelView.Draw(window.spriteBatch, window.fontArial, this.scene, new LabelView[] { cursorLabel });
         }
 
@@ -147,6 +144,6 @@ namespace MonogameTestbed
         }
         */
 
-        
+
     }
 }

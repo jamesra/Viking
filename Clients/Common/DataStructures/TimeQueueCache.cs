@@ -1,4 +1,4 @@
-﻿/******************************************************************************
+/******************************************************************************
  * Viking is Open Source under a Creative Commons License:
  * Attribution-NonCommercial-ShareAlike
  * http://creativecommons.org/licenses/by-nc-sa/3.0/legalcode
@@ -44,7 +44,7 @@ namespace Viking.Common
 
         protected Int64 TotalCacheSize = 0;
 
-        protected ConcurrentDictionary<KEY, CACHEENTRY> dictEntries = new ConcurrentDictionary<KEY, CACHEENTRY>();
+        protected ConcurrentDictionary<KEY, CACHEENTRY> dictEntries = new();
 
         protected abstract FETCHTYPE Fetch(CACHEENTRY key);
 
@@ -58,7 +58,7 @@ namespace Viking.Common
         /// <returns></returns>
         protected abstract CACHEENTRY CreateEntry(KEY key, ADDTYPE value);
 
-        protected abstract CACHEENTRY CreateEntry(KEY key, Func<KEY,ADDTYPE> valueFactory);
+        protected abstract CACHEENTRY CreateEntry(KEY key, Func<KEY, ADDTYPE> valueFactory);
 
         protected abstract Task<CACHEENTRY> CreateEntryAsync(KEY key, ADDTYPE value);
 
@@ -86,11 +86,11 @@ namespace Viking.Common
                 dictEntries[key] = entry; 
             }
              */
-             
+
         }
 
         public bool TryGetValue(KEY key, out FETCHTYPE output)
-        { 
+        {
             output = default;
 
             bool success = dictEntries.TryGetValue(key, out var entry);
@@ -101,9 +101,9 @@ namespace Viking.Common
             entry.WasUsedSinceLastCheckpoint = true;
             entry.LastAccessed = DateTime.UtcNow;
 
-            output = Fetch(entry); 
+            output = Fetch(entry);
 
-            return !(output is null);
+            return output is not null;
         }
 
         /// <summary>
@@ -175,7 +175,7 @@ namespace Viking.Common
         /// <param name="key"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public virtual FETCHTYPE GetOrAdd(KEY key, Func<KEY,ADDTYPE> newEntryGenerator)
+        public virtual FETCHTYPE GetOrAdd(KEY key, Func<KEY, ADDTYPE> newEntryGenerator)
         {
             //Check before we create an entry...
             bool found = dictEntries.TryGetValue(key, out var dictEntry);
@@ -185,9 +185,9 @@ namespace Viking.Common
             }
 
             //OK, try to create an entry and add it
-            CACHEENTRY entry = CreateEntry(key,newEntryGenerator(key));
+            CACHEENTRY entry = CreateEntry(key, newEntryGenerator(key));
             dictEntry = dictEntries.GetOrAdd(key, entry);
-            
+
             if (object.ReferenceEquals(dictEntry, entry))
             {
                 ChangeCacheSize(entry.Size);
@@ -263,21 +263,21 @@ namespace Viking.Common
                 return;
 
             //If there is another cleaning task already running do nothing
-            if (!(CleaningTask is null) && !(CleaningTask.IsCompleted || CleaningTask.IsCanceled ||CleaningTask.IsFaulted))
+            if (CleaningTask is not null && !(CleaningTask.IsCompleted || CleaningTask.IsCanceled || CleaningTask.IsFaulted))
                 return;
 
             this.CleaningTask = Task.Run(() => ReduceCacheFootprintAsync(state));
         }
 
         private async Task ReduceCacheFootprintAsync(object state)
-        { 
+        {
             int RemoveCount = 0;
             int LostCount = 0;
             long FreedCount = 0;
             if (dictEntries.IsEmpty)
                 return;
 
-            List<CACHEENTRY> listEntries = dictEntries.Values.ToList<CACHEENTRY>();
+            List<CACHEENTRY> listEntries = [.. dictEntries.Values];
             listEntries.Sort();
 
             while (TotalCacheSize > MaxCacheSize)
@@ -291,7 +291,7 @@ namespace Viking.Common
                 {
                     LostCount++;
                 }
-                else if(entry.WasUsedSinceLastCheckpoint == false)
+                else if (entry.WasUsedSinceLastCheckpoint == false)
                 {
                     FreedCount += entry.Size;
                     RemoveEntry(entry);
@@ -315,7 +315,7 @@ namespace Viking.Common
         /// </summary>
         public void Checkpoint()
         {
-            CACHEENTRY[] EntryListCopy = dictEntries.Values.ToArray<CACHEENTRY>();
+            CACHEENTRY[] EntryListCopy = [.. dictEntries.Values];
 
             int FailCount = 0;
 
@@ -385,18 +385,12 @@ namespace Viking.Common
         /// Returns true if the entry was successfully cleaned up, otherwise false
         /// </summary>
         /// <param name="entry"></param>
-        protected virtual bool OnRemoveEntry(CACHEENTRY entry)
-        {
-            return true;
-        }
+        protected virtual bool OnRemoveEntry(CACHEENTRY entry) => true;
 
         /// <summary>
         /// Default implementation removes an entry which has not been used since the last checkpoint
         /// </summary>
         /// <param name="entry"></param>
-        protected virtual void OnCheckpointFailed(CACHEENTRY entry)
-        {
-            RemoveEntry(entry);
-        }
+        protected virtual void OnCheckpointFailed(CACHEENTRY entry) => RemoveEntry(entry);
     }
 }

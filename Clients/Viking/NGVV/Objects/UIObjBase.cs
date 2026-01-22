@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using Viking.Common;
 
@@ -26,7 +26,7 @@ namespace Viking.Objects
             {
                 //We need to ensure these events are invoked on the main thread since UI controls listen to them and they can only 
                 //change state on the main thread 
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnValueChanged, new object[] { this, new PropertyChangedEventArgs(Column) });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnValueChanged, [this, new PropertyChangedEventArgs(Column)]);
             }
         }
 
@@ -35,7 +35,7 @@ namespace Viking.Objects
         {
             if (OnBeforeSave != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnBeforeSave, new object?[] { this, null });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnBeforeSave, [this, null]);
             }
         }
 
@@ -43,7 +43,7 @@ namespace Viking.Objects
         {
             if (OnAfterSave != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnAfterSave, new object?[] { this, null });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnAfterSave, [this, null]);
             }
         }
 
@@ -51,7 +51,7 @@ namespace Viking.Objects
         {
             if (OnBeforeDelete != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnBeforeDelete, new object?[] { this, null });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnBeforeDelete, [this, null]);
             }
         }
 
@@ -59,7 +59,7 @@ namespace Viking.Objects
         {
             if (OnAfterDelete != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnAfterDelete, new object?[] { this, null });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnAfterDelete, [this, null]);
             }
         }
 
@@ -67,7 +67,7 @@ namespace Viking.Objects
         {
             if (OnChildChanged != null)
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnChildChanged, new object[] { this, args });
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnChildChanged, [this, args]);
             }
         }
 
@@ -112,15 +112,9 @@ namespace Viking.Objects
             remove => OnChildChanged -= value;
         }
 
-        public virtual void ShowProperties()
-        {
-            Viking.UI.Forms.PropertySheetForm.Show(this);
-        }
+        public virtual void ShowProperties() => Viking.UI.Forms.PropertySheetForm.Show(this);
 
-        public virtual System.Windows.Forms.DialogResult ShowPropertiesDialog(System.Windows.Forms.Form ParentForm)
-        {
-            return Viking.UI.Forms.PropertySheetForm.ShowDialog(this, ParentForm);
-        }
+        public virtual System.Windows.Forms.DialogResult ShowPropertiesDialog(System.Windows.Forms.Form ParentForm) => Viking.UI.Forms.PropertySheetForm.ShowDialog(this, ParentForm);
 
         public virtual System.Windows.Forms.ContextMenuStrip ContextMenu => throw new NotImplementedException();
 
@@ -128,22 +122,13 @@ namespace Viking.Objects
 
         public virtual string ToolTip => this.ToString();
 
-        public virtual void Save()
-        {
-            throw new NotImplementedException();
-        }
+        public virtual void Save() => throw new NotImplementedException();
 
         public virtual Type[] AssignableParentTypes => throw new NotImplementedException();
 
-        public virtual void SetParent(IUIObject? parent)
-        {
-            throw new NotImplementedException();
-        }
+        public virtual void SetParent(IUIObject? parent) => throw new NotImplementedException();
 
-        public virtual Viking.UI.Controls.GenericTreeNode CreateNode()
-        {
-            throw new NotImplementedException();
-        }
+        public virtual Viking.UI.Controls.GenericTreeNode CreateNode() => throw new NotImplementedException();
 
         public virtual int TreeImageIndex => 0;
 

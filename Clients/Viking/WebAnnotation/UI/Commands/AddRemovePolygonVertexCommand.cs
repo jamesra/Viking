@@ -101,7 +101,7 @@ namespace WebAnnotation.UI.Commands
         public static GridPolygon RemoveControlPoint(GridPolygon polygon, GridVector2 RemovedControlPointPosition)
         {
             polygon.PointIntersectsAnyPolygonSegment(RemovedControlPointPosition, Global.DefaultClosedLineWidth, out GridPolygon intersectingPolygon);
-            if (intersectingPolygon == null)
+            if (intersectingPolygon is null)
             {
                 return null;
             }
@@ -127,7 +127,7 @@ namespace WebAnnotation.UI.Commands
         protected override void Execute()
         {
             GridPolygon mosaic_polygon;
-            if (UpdatedVolumePolygon == null)
+            if (UpdatedVolumePolygon is null)
             {
                 base.Execute();
                 return;

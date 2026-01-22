@@ -25,13 +25,9 @@ namespace Viking.UI.Forms
         {
             InitializeComponent();
 
-            List<string> servers = new List<string>(Settings.Default.ServerURLs.Count);
-            foreach (string server in Settings.Default.ServerURLs)
-            {
-                servers.Add(server);
-            }
+            List<string> servers = [.. Settings.Default.ServerURLs];
 
-            volumeList.SetServers(servers.ToArray());
+            volumeList.SetServers([.. servers]);
         }
 
         private void btnOK_Click(object sender, EventArgs e)

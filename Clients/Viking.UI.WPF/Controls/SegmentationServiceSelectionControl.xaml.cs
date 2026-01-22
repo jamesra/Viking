@@ -29,7 +29,7 @@ namespace Viking.UI.WPF.Controls
                         viewModel.SelectedService = null;
                     }
                 }
-                else if (e.NewValue == null)
+                else if (e.NewValue is null)
                 {
                     // Clear selection when deselected
                     viewModel.SelectedService = null;
@@ -41,7 +41,7 @@ namespace Viking.UI.WPF.Controls
         {
             if (DataContext is SegmentationServiceSelectionViewModel viewModel && lstRecentServices.SelectedItem is SegmentationServiceInfo serviceInfo)
             {
-                var node = new SegmentationServiceTreeNode
+                SegmentationServiceTreeNode node = new()
                 {
                     Service = serviceInfo,
                     Name = serviceInfo.Name,

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,29 +23,17 @@ namespace Geometry
             throw new ArgumentException($"Unexpected shape {shape} cannot be converted to WKT");
         }
 
-        public static string ToWKT(IPoint2D point)
-        {
-            return $"Point ({point.X} {point.Y})";
-        }
+        public static string ToWKT(IPoint2D point) => $"Point ({point.X} {point.Y})";
 
-        public static string ToWKT(ILineSegment2D line)
-        {
-            return $"LINESTRING ({line.A.X} {line.A.Y}, {line.B.X} {line.B.Y})";
-        }
+        public static string ToWKT(ILineSegment2D line) => $"LINESTRING ({line.A.X} {line.A.Y}, {line.B.X} {line.B.Y})";
 
-        public static string ToWKT(IPolyLine2D line)
-        {
-            return $"LINESTRING {ToSqlCoordinateList(line.Points, false)}";
-        }
+        public static string ToWKT(IPolyLine2D line) => $"LINESTRING {ToSqlCoordinateList(line.Points, false)}";
 
-        public static string ToWKT(ICircle2D circle)
-        {
-            return $"CURVEPOLYGON ({CircleExtensions.ScaleAndTranslateCircle(CircleExtensions.circleFourCardinalPoints, circle.Center.X, circle.Center.Y, circle.Radius).ToSqlCoordinateList(true)})";
-        }
+        public static string ToWKT(ICircle2D circle) => $"CURVEPOLYGON ({CircleExtensions.ScaleAndTranslateCircle(CircleExtensions.circleFourCardinalPoints, circle.Center.X, circle.Center.Y, circle.Radius).ToSqlCoordinateList(true)})";
 
         public static string ToWKT(IPolygon2D poly)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.Append("POLYGON (");
             sb.Append(poly.ExteriorRing.ToSqlCoordinateList(true));
             foreach (var innerPoly in poly.InteriorRings)
@@ -60,7 +48,7 @@ namespace Geometry
 
         public static string ToSqlCoordinateList(this GridVector2[] points, bool closed = false)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.Append("(");
             for (int i = 0; i < points.Length; i++)
             {
@@ -80,7 +68,7 @@ namespace Geometry
 
         public static string ToSqlCoordinateList(this IEnumerable<IPoint2D> points, bool closed = false)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.Append("(");
             bool needComma = false;
             IPoint2D first = null;
@@ -120,28 +108,28 @@ namespace Geometry
         /// <summary>
         /// A unit circle with points along the East, NorthEast, North, compass points...
         /// </summary>
-        public static GridVector2[] circleEightCardinalPoints = new GridVector2[]
-        {
-            new GridVector2(1, 0),
-            new GridVector2(Math.Cos(1.0/8.0 * tau), Math.Sin(1.0/8.0 * tau)),
-            new GridVector2(0, 1),
-            new GridVector2(Math.Cos(3.0/8.0 * tau), Math.Sin(3.0/8.0 * tau)),
-            new GridVector2(-1, 0),
-            new GridVector2(Math.Cos(5.0/8.0 * tau), Math.Sin(5.0/8.0 * tau)),
-            new GridVector2(0, -1),
-            new GridVector2(Math.Cos(7.0/8.0 * tau), Math.Sin(7.0/8.0 * tau)),
-        };
+        public static GridVector2[] circleEightCardinalPoints =
+        [
+            new(1, 0),
+            new(Math.Cos(1.0/8.0 * tau), Math.Sin(1.0/8.0 * tau)),
+            new(0, 1),
+            new(Math.Cos(3.0/8.0 * tau), Math.Sin(3.0/8.0 * tau)),
+            new(-1, 0),
+            new(Math.Cos(5.0/8.0 * tau), Math.Sin(5.0/8.0 * tau)),
+            new(0, -1),
+            new(Math.Cos(7.0/8.0 * tau), Math.Sin(7.0/8.0 * tau)),
+        ];
 
         /// <summary>
         /// A unit circle with points on the East, North, West, South 
         /// </summary>
-        public static GridVector2[] circleFourCardinalPoints = new GridVector2[]
-        {
-            new GridVector2(1, 0),
-            new GridVector2(0, 1),
-            new GridVector2(-1, 0),
-            new GridVector2(0, -1)
-        };
+        public static GridVector2[] circleFourCardinalPoints =
+        [
+            new(1, 0),
+            new(0, 1),
+            new(-1, 0),
+            new(0, -1)
+        ];
 
         /// <summary>
         /// 

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="EdgeEnumerator.cs" company="">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -36,10 +36,7 @@ namespace TriangleNet.Meshing.Iterators
 
         public Edge Current => current;
 
-        public void Dispose()
-        {
-            this.triangles.Dispose();
-        }
+        public void Dispose() => this.triangles.Dispose();
 
         object System.Collections.IEnumerator.Current => current;
 
@@ -87,9 +84,6 @@ namespace TriangleNet.Meshing.Iterators
             return true;
         }
 
-        public void Reset()
-        {
-            this.triangles.Reset();
-        }
+        public void Reset() => this.triangles.Reset();
     }
 }

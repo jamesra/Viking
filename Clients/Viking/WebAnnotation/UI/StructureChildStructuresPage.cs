@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Viking.Common;
@@ -20,10 +20,7 @@ namespace WebAnnotation.UI
             InitializeComponent();
         }
 
-        protected override void OnInitPage()
-        {
-            base.OnInitPage();
-        }
+        protected override void OnInitPage() => base.OnInitPage();
 
         protected override void OnShowObject(object Object)
         {
@@ -38,7 +35,7 @@ namespace WebAnnotation.UI
 
                 UseWaitCursor = true;
                 ICollection<StructureObj> childStructureObjs = Store.Structures.GetChildStructuresForStructure(Obj.ID);
-                List<Structure> childStructures = new List<Structure>(childStructureObjs.Count);
+                List<Structure> childStructures = new(childStructureObjs.Count);
 
                 foreach (StructureObj s in childStructureObjs)
                 {
@@ -47,7 +44,7 @@ namespace WebAnnotation.UI
 
                 if (!IsDisposed)
                 {
-                    listStructures.SetStructures(childStructures.ToArray());
+                    listStructures.SetStructures([.. childStructures]);
 
                     listLoaded = true;
 

@@ -35,7 +35,7 @@ namespace Viking.AnnotationServiceTypes
                 return true;
             }
 
-            if (A is object)
+            if (A is not null)
                 return A.Equals(B);
 
             return false;
@@ -48,7 +48,7 @@ namespace Viking.AnnotationServiceTypes
                 return false;
             }
 
-            if (A is object)
+            if (A is not null)
                 return !A.Equals(B);
 
             return true;

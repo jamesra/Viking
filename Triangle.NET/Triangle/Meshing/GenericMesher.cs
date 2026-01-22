@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="GenericMesher.cs">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -15,10 +15,10 @@ namespace TriangleNet.Meshing
     /// <summary>
     /// Create meshes of point sets or polygons.
     /// </summary>
-    public class GenericMesher
+    public class GenericMesher(ITriangulator triangulator, Configuration config)
     {
-        readonly Configuration config;
-        readonly ITriangulator triangulator;
+        readonly Configuration config = config;
+        readonly ITriangulator triangulator = triangulator;
 
         public GenericMesher()
             : this(new Dwyer(), new Configuration())
@@ -35,43 +35,25 @@ namespace TriangleNet.Meshing
         {
         }
 
-        public GenericMesher(ITriangulator triangulator, Configuration config)
-        {
-            this.config = config;
-            this.triangulator = triangulator;
-        }
+        /// <inheritdoc />
+        public IMesh Triangulate(IList<Vertex> points) => triangulator.Triangulate(points, config);
 
         /// <inheritdoc />
-        public IMesh Triangulate(IList<Vertex> points)
-        {
-            return triangulator.Triangulate(points, config);
-        }
+        public IMesh Triangulate(IPolygon polygon) => Triangulate(polygon, null, null);
 
         /// <inheritdoc />
-        public IMesh Triangulate(IPolygon polygon)
-        {
-            return Triangulate(polygon, null, null);
-        }
+        public IMesh Triangulate(IPolygon polygon, ConstraintOptions options) => Triangulate(polygon, options, null);
 
         /// <inheritdoc />
-        public IMesh Triangulate(IPolygon polygon, ConstraintOptions options)
-        {
-            return Triangulate(polygon, options, null);
-        }
-
-        /// <inheritdoc />
-        public IMesh Triangulate(IPolygon polygon, QualityOptions quality)
-        {
-            return Triangulate(polygon, null, quality);
-        }
+        public IMesh Triangulate(IPolygon polygon, QualityOptions quality) => Triangulate(polygon, null, quality);
 
         /// <inheritdoc />
         public IMesh Triangulate(IPolygon polygon, ConstraintOptions options, QualityOptions quality)
         {
-            var mesh = (Mesh)triangulator.Triangulate(polygon.Points, config);
+            Mesh mesh = (Mesh)triangulator.Triangulate(polygon.Points, config);
 
-            var cmesher = new ConstraintMesher(mesh, config);
-            var qmesher = new QualityMesher(mesh, config);
+            ConstraintMesher cmesher = new(mesh, config);
+            QualityMesher qmesher = new(mesh, config);
 
             mesh.SetQualityMesher(qmesher);
 
@@ -116,7 +98,7 @@ namespace TriangleNet.Meshing
         /// <returns>Mesh</returns>
         public static IMesh StructuredMesh(Rectangle bounds, int nx, int ny)
         {
-            var polygon = new Polygon((nx + 1) * (ny + 1));
+            Polygon polygon = new((nx + 1) * (ny + 1));
 
             double x, y, dx, dy, left, bottom;
 
@@ -129,7 +111,7 @@ namespace TriangleNet.Meshing
             int i, j, k, l, n = 0;
 
             // Add vertices.
-            var points = new Vertex[(nx + 1) * (ny + 1)];
+            Vertex[] points = new Vertex[(nx + 1) * (ny + 1)];
 
             for (i = 0; i <= nx; i++)
             {
@@ -199,7 +181,7 @@ namespace TriangleNet.Meshing
             }
 
             // Add triangles.
-            var triangles = new InputTriangle[2 * nx * ny];
+            InputTriangle[] triangles = new InputTriangle[2 * nx * ny];
 
             n = 0;
 

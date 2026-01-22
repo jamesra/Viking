@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Annotation.ViewModels;
 using System;
 using System.Diagnostics;
@@ -11,7 +11,7 @@ namespace WebAnnotation.UI.Forms
     /// <summary>
     /// Interaction logic for StructureTypeChooser.xaml
     /// </summary>
-    public partial class SelectStructureTypeForm 
+    public partial class SelectStructureTypeForm
     {
 
         /*public System.Collections.ObjectModel.ObservableCollection<IStructureType> RootStructureTypes
@@ -36,8 +36,8 @@ namespace WebAnnotation.UI.Forms
             DependencyProperty.Register("FavoriteStructureTypeIDs", typeof(ObservableCollection<ulong>), typeof(SelectStructureTypeForm), new PropertyMetadata());
         */
 
-        public SelectStructureTypeForm( )
-        { 
+        public SelectStructureTypeForm()
+        {
             InitializeComponent();
             this.MaxHeight = System.Windows.SystemParameters.FullPrimaryScreenHeight / 2;
         }
@@ -45,8 +45,8 @@ namespace WebAnnotation.UI.Forms
         private void StructureTypeTreeItem_Click(object sender, RoutedEventArgs e)
         {
             Control ctrl = sender as Control;
-            if(ctrl == null)
-            { 
+            if (ctrl is null)
+            {
                 Trace.WriteLine(string.Format("Clicked {0} which was not a control, exiting handler", ctrl.DataContext));
                 return;
             }
@@ -55,17 +55,16 @@ namespace WebAnnotation.UI.Forms
                 Trace.WriteLine(string.Format("Clicked {0}", ctrl.DataContext));
             }
 
-            var StructureType = ctrl.DataContext as IStructureTypeReadOnly;
-            if(StructureType == null)
+            if (ctrl.DataContext is not IStructureTypeReadOnly StructureType)
             {
                 throw new ArgumentException(string.Format("Expected an IStructureType in Data Context"));
             }
 
-            var viewModel = this.DataContext as FavoriteStructureIDsViewModel;
+            FavoriteStructureIDsViewModel viewModel = this.DataContext as FavoriteStructureIDsViewModel;
 
-            viewModel.FavoriteStructureTypeIDs.Add(StructureType.ID); 
+            viewModel.FavoriteStructureTypeIDs.Add(StructureType.ID);
         }
-          
+
         /// <summary>
         /// Remove the structure type from the list of favorites
         /// </summary>
@@ -74,9 +73,8 @@ namespace WebAnnotation.UI.Forms
         /// <exception cref="ArgumentException"></exception>
         private void FavoriteStructureTypes_DeleteClick(object sender, RoutedEventArgs e)
         {
-            
             Control ctrl = sender as Control;
-            if (ctrl == null)
+            if (ctrl is null)
             {
                 Trace.WriteLine(string.Format("Clicked {0} which was not a control, exiting handler", ctrl.DataContext));
                 return;
@@ -86,15 +84,14 @@ namespace WebAnnotation.UI.Forms
                 Trace.WriteLine(string.Format("Clicked {0}", ctrl.DataContext));
             }
 
-            var StructureType = ctrl.DataContext as IStructureTypeReadOnly;
-            if (StructureType == null)
+            if (ctrl.DataContext is not IStructureTypeReadOnly StructureType)
             {
                 throw new ArgumentException(string.Format("Expected an IStructureType in Data Context"));
             }
 
-            var viewModel = this.DataContext as FavoriteStructureIDsViewModel;
+            FavoriteStructureIDsViewModel viewModel = this.DataContext as FavoriteStructureIDsViewModel;
 
-            viewModel.FavoriteStructureTypeIDs.Remove(StructureType.ID); 
+            viewModel.FavoriteStructureTypeIDs.Remove(StructureType.ID);
         }
     }
 }

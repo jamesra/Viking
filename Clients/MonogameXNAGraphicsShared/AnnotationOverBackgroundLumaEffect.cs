@@ -1,8 +1,8 @@
-﻿ 
+
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
-using System; 
+using System;
 
 
 namespace VikingXNAGraphics
@@ -19,7 +19,7 @@ namespace VikingXNAGraphics
         public Effect effect;
 
         private EffectParameter _WorldViewProjMatrix;
-        private EffectParameter _RenderTargetSize; 
+        private EffectParameter _RenderTargetSize;
 
         private EffectParameter _BackgroundTexture;
         private EffectParameter _AnnotationTexture;
@@ -27,7 +27,7 @@ namespace VikingXNAGraphics
         private EffectParameter _BackgroundSize;
 
         private EffectParameter _RadiusSquared;
-        private EffectParameter _BorderStartRadius; 
+        private EffectParameter _BorderStartRadius;
         private EffectParameter _BorderStartSquared;
 
         private EffectParameter _BorderBlendStartRadius;
@@ -55,24 +55,19 @@ namespace VikingXNAGraphics
         {
             set
             {
-                switch (value)
+                effect.CurrentTechnique = value switch
                 {
-                    case Techniques.RGBCircleOverBackgroundValueOverlayEffect:
-                        effect.CurrentTechnique = effect.Techniques["RGBCircleOverBackgroundValueOverlayEffect"];
-                        break;
-                    case Techniques.RGBTextureOverBackgroundValueOverlayEffect:
-                        effect.CurrentTechnique = effect.Techniques["RGBTextureOverBackgroundValueOverlayEffect"];
-                        break;
-                    default:
-                        throw new ArgumentException("Unknown technique");
-                }
+                    Techniques.RGBCircleOverBackgroundValueOverlayEffect => effect.Techniques["RGBCircleOverBackgroundValueOverlayEffect"],
+                    Techniques.RGBTextureOverBackgroundValueOverlayEffect => effect.Techniques["RGBTextureOverBackgroundValueOverlayEffect"],
+                    _ => throw new ArgumentException("Unknown technique"),
+                };
             }
-        } 
+        }
 
         public EffectTechnique CurrentTechnique => this.effect.CurrentTechnique;
 
         public void AnnotateWithTexture(Texture2D AnnotationTexture)
-        {            
+        {
             _AnnotationTexture.SetValue(AnnotationTexture);
             Technique = Techniques.RGBTextureOverBackgroundValueOverlayEffect;
         }

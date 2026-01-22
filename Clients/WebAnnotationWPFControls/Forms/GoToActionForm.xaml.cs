@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -108,21 +108,15 @@ namespace WebAnnotation.UI.Forms
             //WebAnnotation.AnnotationOverlay.GoToLocation(this.ID);
         }
 
-        private void Cancel_Button_Click(object sender, RoutedEventArgs e)
-        {
-            this.Close();
-        }
+        private void Cancel_Button_Click(object sender, RoutedEventArgs e) => this.Close();
 
         private static bool IsNonNumeric(string text)
         {
-            Regex regex = new Regex("[^0-9]"); //regex that matches disallowed text
+            Regex regex = new("[^0-9]"); //regex that matches disallowed text
             return regex.IsMatch(text);
         }
 
-        private void NumberTextbox_PreviewTextInput(object sender, TextCompositionEventArgs e)
-        {
-            e.Handled = IsNonNumeric(e.Text);
-        }
+        private void NumberTextbox_PreviewTextInput(object sender, TextCompositionEventArgs e) => e.Handled = IsNonNumeric(e.Text);
 
         private CancellationTokenSource cancelIDUpdateTokenSource;
 
@@ -145,10 +139,10 @@ namespace WebAnnotation.UI.Forms
         private void QueueEnabledCheck(long ID)
         {
             //Cancel any existing enabled checks if they exist
-            var newCancelTokenSource = new CancellationTokenSource();
+            CancellationTokenSource newCancelTokenSource = new();
             var originalCancellationToken = Interlocked.Exchange(ref cancelIDUpdateTokenSource, newCancelTokenSource);
             originalCancellationToken?.Cancel();
-            
+
             Task.Run(() => EnabledCheckTask(ID, newCancelTokenSource.Token), newCancelTokenSource.Token);
         }
 
@@ -160,7 +154,7 @@ namespace WebAnnotation.UI.Forms
                 if (token.IsCancellationRequested)
                     return Task.FromCanceled(token);
 
-                this.Dispatcher.BeginInvoke(new Action(()=>IsActionEnabled = result));
+                this.Dispatcher.BeginInvoke(new Action(() => IsActionEnabled = result));
             }
             catch (System.Threading.Tasks.TaskCanceledException)
             {

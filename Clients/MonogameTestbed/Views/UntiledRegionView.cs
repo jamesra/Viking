@@ -14,18 +14,18 @@ namespace MonogameTestbed
     /// </summary>
     class UntiledRegionView
     {
-        public List<PointSet> Sets = new List<PointSet>();
+        public List<PointSet> Sets = [];
 
-        public List<GridPolygon> Shapes = new List<GridPolygon>();
+        public List<GridPolygon> Shapes = [];
 
         public TriangleNet.Voronoi.VoronoiBase Voronoi;
 
-        public List<LineSetView> PolygonViews = new List<LineSetView>();
-        public LineSetView VoronoiView = new LineSetView();
-        public LineSetView DelaunayView = new LineSetView();
-        public LineSetView BoundaryView = new LineSetView();
+        public List<LineSetView> PolygonViews = [];
+        public LineSetView VoronoiView = new();
+        public LineSetView DelaunayView = new();
+        public LineSetView BoundaryView = new();
 
-        public List<LabelView> listLabels = new List<LabelView>();
+        public List<LabelView> listLabels = [];
 
         public Color Color
         {
@@ -41,7 +41,7 @@ namespace MonogameTestbed
         {
             Sets.Add(set);
             Shapes.Add(null);
-            LineSetView newView = new MonogameTestbed.LineSetView
+            LineSetView newView = new()
             {
                 color = new Color().Random()
             };
@@ -86,7 +86,7 @@ namespace MonogameTestbed
 
             PolygonViews[i].UpdateViews(Shapes[i]);
 
-            GridPolygon[] ShapeArray = Shapes.Where(s => s != null).ToArray();
+            GridPolygon[] ShapeArray = [.. Shapes.Where(s => s != null)];
 
             TriangleNet.Meshing.IMesh mesh = null;
             try
@@ -101,7 +101,7 @@ namespace MonogameTestbed
             //List<GridLineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(mesh, Shapes);
 
             if (mesh is null)
-                DelaunayView.UpdateViews(new GridVector2[0]);
+                DelaunayView.UpdateViews(Array.Empty<GridVector2>());
             else
                 DelaunayView.UpdateViews(mesh.ToLines());
 
@@ -114,7 +114,7 @@ namespace MonogameTestbed
             List<GridLineSegment> listBoundaryLines = BoundaryFinder.DetermineBoundary(ShapeArray);
             BoundaryView.UpdateViews(listBoundaryLines);
 
-            listLabels = listBoundaryLines.Select(line => new LabelView(line.A.ToLabel(), line.A)).ToList();
+            listLabels = [.. listBoundaryLines.Select(line => new LabelView(line.A.ToLabel(), line.A))];
             listLabels.ForEach(label =>
             {
                 label.FontSize = 2;
@@ -129,9 +129,9 @@ namespace MonogameTestbed
         /// </summary>
         /// <param name="PointSets"></param>
         /// <returns></returns>
-        private TriangleNet.Meshing.IMesh TriangulatePolygons(List<GridVector2[]> PointSets)
+        private static TriangleNet.Meshing.IMesh TriangulatePolygons(List<GridVector2[]> PointSets)
         {
-            GridVector2[] AllPoints = PointSets.SelectMany(ps => ps.EnsureOpenRing()).ToArray();
+            GridVector2[] AllPoints = [.. PointSets.SelectMany(ps => ps.EnsureOpenRing())];
 
             if (AllPoints.Length < 3)
                 return null;
@@ -155,9 +155,9 @@ namespace MonogameTestbed
             return mesh;
         }
 
-        private List<LabelView> LabelDistances(IReadOnlyList<GridPolygon> shapes)
+        private static List<LabelView> LabelDistances(IReadOnlyList<GridPolygon> shapes)
         {
-            List<LabelView> labels = new List<LabelView>();
+            List<LabelView> labels = [];
             for (int i = 0; i < shapes.Count; i++)
             {
                 GridPolygon iPoly = shapes[i];
@@ -172,7 +172,7 @@ namespace MonogameTestbed
 
                     double minDistance = iPoly.Distance(jPoly);
 
-                    LabelView newLabel = new LabelView(minDistance.ToString(), (iPoly.Centroid + jPoly.Centroid) / 2.0);
+                    LabelView newLabel = new(minDistance.ToString(), (iPoly.Centroid + jPoly.Centroid) / 2.0);
                     newLabel.FontSize /= 4.0;
 
                     labels.Add(newLabel);
@@ -185,15 +185,15 @@ namespace MonogameTestbed
         public void Draw(MonoTestbed window, Scene scene)
         {
             if (BoundaryView.LineViews != null)
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, BoundaryView.LineViews.ToArray());
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. BoundaryView.LineViews]);
 
             if (DelaunayView.LineViews != null)
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, DelaunayView.LineViews.ToArray());
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. DelaunayView.LineViews]);
 
             if (VoronoiView.LineViews != null)
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, VoronoiView.LineViews.ToArray());
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. VoronoiView.LineViews]);
 
-            LineView.Draw(window.GraphicsDevice, scene, window.lineManager, PolygonViews.Where(poly => poly.LineViews != null).SelectMany(poly => poly.LineViews).ToArray());
+            LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. PolygonViews.Where(poly => poly.LineViews != null).SelectMany(poly => poly.LineViews)]);
 
             if (listLabels != null)
                 LabelView.Draw(window.spriteBatch, window.fontArial, scene, listLabels);

@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 
@@ -18,17 +18,11 @@ namespace GeometryTests
 
         }
 
-        private TestContext testContextInstance;
-
         /// <summary>
         ///Gets or sets the test context which provides
         ///information about and functionality for the current test run.
         ///</summary>
-        public TestContext TestContext
-        {
-            get => testContextInstance;
-            set => testContextInstance = value;
-        }
+        public TestContext TestContext { get; set; }
 
         #region Additional test attributes
         //
@@ -58,26 +52,26 @@ namespace GeometryTests
             //
             // TODO: Add test logic	here
             //
-            GridVector2[] points = new GridVector2[]  {new GridVector2(5, 0),
-                                                        new GridVector2(0, 5),
-                                                        new GridVector2(-5,0)};
+            GridVector2[] points = [new(5, 0),
+                                                        new(0, 5),
+                                                        new(-5,0)];
 
             GridCircle circle = Geometry.GridCircle.CircleFromThreePoints(points);
             Assert.IsTrue(circle.Center.X == 0.0 && circle.Center.Y == 0.0);
-            Assert.IsTrue(circle.Radius == 5.0);
+            Assert.AreEqual(5.0, circle.Radius);
 
-            points = new GridVector2[]  {new GridVector2(0,-5),
-                                                        new GridVector2(0, 5),
-                                                        new GridVector2(Math.Cos(-0.5) * 5, Math.Sin(-0.5) * 5)};
+            points = [new(0,-5),
+                                                        new(0, 5),
+                                                        new(Math.Cos(-0.5) * 5, Math.Sin(-0.5) * 5)];
 
 
             circle = Geometry.GridCircle.CircleFromThreePoints(points);
             Assert.IsTrue(GridVector2.Distance(circle.Center, new GridVector2(0, 0)) < Geometry.Global.Epsilon);
             Assert.IsTrue(circle.Radius > 5.0 - Geometry.Global.Epsilon && circle.Radius < 5.0 + Geometry.Global.Epsilon);
 
-            points = new GridVector2[]  {new GridVector2(5,0),
-                                                        new GridVector2(10, 5),
-                                                        new GridVector2(5, 10)};
+            points = [new(5,0),
+                                                        new(10, 5),
+                                                        new(5, 10)];
 
 
             circle = Geometry.GridCircle.CircleFromThreePoints(points);
@@ -85,26 +79,26 @@ namespace GeometryTests
             Assert.IsTrue(circle.Radius > 5.0 - Geometry.Global.Epsilon && circle.Radius < 5.0 + Geometry.Global.Epsilon);
 
 
-            points = new GridVector2[]  {new GridVector2(5,0),
-                                                        new GridVector2(5, 10),
-                                                        new GridVector2(10, 5)};
+            points = [new(5,0),
+                                                        new(5, 10),
+                                                        new(10, 5)];
 
 
             circle = Geometry.GridCircle.CircleFromThreePoints(points);
             Assert.IsTrue(GridVector2.Distance(circle.Center, new GridVector2(5, 5)) < Geometry.Global.Epsilon);
             Assert.IsTrue(circle.Radius > 5.0 - Geometry.Global.Epsilon && circle.Radius < 5.0 + Geometry.Global.Epsilon);
 
-            points = new GridVector2[]  {new GridVector2(Math.Cos(0.5) * 5, Math.Sin(0.5) * 5),
-                                                        new GridVector2(5, 0),
-                                                        new GridVector2(Math.Cos(-0.5) * 5, Math.Sin(-0.5) * 5)};
+            points = [new(Math.Cos(0.5) * 5, Math.Sin(0.5) * 5),
+                                                        new(5, 0),
+                                                        new(Math.Cos(-0.5) * 5, Math.Sin(-0.5) * 5)];
 
             circle = Geometry.GridCircle.CircleFromThreePoints(points);
             Assert.IsTrue(GridVector2.Distance(circle.Center, new GridVector2(0, 0)) < Geometry.Global.Epsilon);
             Assert.IsTrue(circle.Radius > 5.0 - Geometry.Global.Epsilon && circle.Radius < 5.0 + Geometry.Global.Epsilon);
 
-            points = new GridVector2[]  {new GridVector2((Math.Cos(0.5) * 5) + 5, (Math.Sin(0.5) * 5) + 5),
-                                                        new GridVector2(10, 5),
-                                                        new GridVector2((Math.Cos(-0.5) * 5)+5, (Math.Sin(-0.5) * 5)+5)};
+            points = [new((Math.Cos(0.5) * 5) + 5, (Math.Sin(0.5) * 5) + 5),
+                                                        new(10, 5),
+                                                        new((Math.Cos(-0.5) * 5)+5, (Math.Sin(-0.5) * 5)+5)];
 
             circle = Geometry.GridCircle.CircleFromThreePoints(points);
             Assert.IsTrue(GridVector2.Distance(circle.Center, new GridVector2(5, 5)) < Geometry.Global.Epsilon);

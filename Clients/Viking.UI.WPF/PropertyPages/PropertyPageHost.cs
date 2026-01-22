@@ -2,17 +2,11 @@ using Viking.Common;
 
 namespace Viking.UI.WPF.PropertyPages
 {
-    internal sealed class PropertyPageHost
+    internal sealed class PropertyPageHost(IPropertyPageView view, PropertyPageAttribute metadata)
     {
-        public PropertyPageHost(IPropertyPageView view, PropertyPageAttribute metadata)
-        {
-            View = view;
-            Metadata = metadata;
-        }
+        public IPropertyPageView View { get; } = view;
 
-        public IPropertyPageView View { get; }
-
-        public PropertyPageAttribute Metadata { get; }
+        public PropertyPageAttribute Metadata { get; } = metadata;
     }
 }
 

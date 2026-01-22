@@ -1,4 +1,4 @@
-﻿using Duende.IdentityModel.Client;
+using Duende.IdentityModel.Client;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -25,8 +25,8 @@ namespace Viking.Tokens
         /// The resource's type, e.g., "Volume", "SegmentationService", etc.
         /// </summary>
         public string ResourceType { get; set; }
-        public List<UserResourcePermissions> Volumes { get; set; } = new List<UserResourcePermissions>();
-        public List<ApiVolumeTreeNode> Children { get; set; } = new List<ApiVolumeTreeNode>();
+        public List<UserResourcePermissions> Volumes { get; set; } = [];
+        public List<ApiVolumeTreeNode> Children { get; set; } = [];
     }
 
     public class UserResourcePermissions
@@ -59,7 +59,7 @@ namespace Viking.Tokens
         /// <summary>
         /// Additional resource metadata - set as needed (optional)
         /// </summary>
-        public Dictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
+        public Dictionary<string, object> Metadata { get; set; } = [];
     }
 }
 
@@ -91,7 +91,7 @@ namespace Viking.Tokens
         private DiscoveryCache _disco = null;
 
         // Cache HttpClient instances per IdentityServerURL endpoint
-        private static readonly ConcurrentDictionary<string, HttpClient> _httpClientCache = new ConcurrentDictionary<string, HttpClient>();
+        private static readonly ConcurrentDictionary<string, HttpClient> _httpClientCache = new();
 
         public BearerTokenHelper()
         {
@@ -107,7 +107,7 @@ namespace Viking.Tokens
             {
                 // Try to use VikingWebAppSettings if available (server-side)
                 // Use reflection to avoid compile-time dependency
-                var appSettingsType = Type.GetType("VikingWebAppSettings.AppSettings, VikingWebAppSettings");
+                Type appSettingsType = Type.GetType("VikingWebAppSettings.AppSettings, VikingWebAppSettings");
                 if (appSettingsType != null)
                 {
                     var getMethod = appSettingsType.GetMethod("GetIdentityServerURLString");
@@ -137,7 +137,7 @@ namespace Viking.Tokens
         /// </summary>
         private HttpClient GetHttpClient()
         {
-            if (IdentityServerURL == null)
+            if (IdentityServerURL is null)
                 return Viking.Common.SharedResources.HttpClient;
 
             string key = IdentityServerURL.ToString();
@@ -148,19 +148,19 @@ namespace Viking.Tokens
         {
             if (_disco is null)
             {
-                if (IdentityServerURL == null)
+                if (IdentityServerURL is null)
                     throw new InvalidOperationException("IdentityServerURL must be set before calling GetDiscoveryDocumentAsync");
                 _disco = new DiscoveryCache(IdentityServerURL.ToString());
             }
 
             var result = await _disco.GetAsync();
-            if(result is null)
+            if (result is null)
             {
-                throw new Exception($"No discovery document returned from identity server: {IdentityServerURL.ToString()}");
+                throw new Exception($"No discovery document returned from identity server: {IdentityServerURL}");
             }
-            else if(result.IsError)
+            else if (result.IsError)
             {
-                throw new Exception($"result.Error from { IdentityServerURL.ToString() }");
+                throw new Exception($"result.Error from {IdentityServerURL}");
             }
 
             return result;
@@ -180,7 +180,7 @@ namespace Viking.Tokens
             {
                 return false;
             }
-             
+
             var disco = disco_response;
 
             if (disco.IntrospectionEndpoint is null)
@@ -202,7 +202,7 @@ namespace Viking.Tokens
 #endif
                 return false;
             }
-             
+
             bool FoundClaim = false;
             foreach (var c in validation.Claims)
             {
@@ -222,22 +222,22 @@ namespace Viking.Tokens
         /// <returns></returns>
         public async Task<ProtocolResponse> RetrieveBearerToken(string username, string password, string[] scopes = null)
         {
-            scopes ??= new string[] { "openid profile Viking.Annotation" };
+            scopes ??= ["openid profile Viking.Annotation"];
 
             string scopes_string = string.Join(" ", scopes);
 
             // discover endpoints from metadata 
             var disco_response = await GetDiscoveryDocumentAsync();
             if (disco_response.IsError)
-            { 
+            {
                 return disco_response;
             }
 
-            var disco = disco_response as DiscoveryDocumentResponse;
+            DiscoveryDocumentResponse disco = disco_response as DiscoveryDocumentResponse;
 
             var client = GetHttpClient();
             // request token
-            PasswordTokenRequest request = new PasswordTokenRequest()
+            PasswordTokenRequest request = new()
             {
                 Address = disco.TokenEndpoint,
                 ClientId = ClientId,
@@ -285,14 +285,14 @@ namespace Viking.Tokens
         /// <summary>
         /// JSON serializer options configured to match ASP.NET Core's default camelCase naming policy
         /// </summary>
-        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
+        private static readonly JsonSerializerOptions JsonOptions = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             PropertyNameCaseInsensitive = true
         };
 
         // Cache HttpClient instances per IdentityApiURL endpoint
-        private static readonly ConcurrentDictionary<string, HttpClient> _httpClientCache = new ConcurrentDictionary<string, HttpClient>();
+        private static readonly ConcurrentDictionary<string, HttpClient> _httpClientCache = new();
 
         public IdentityApiHelper()
         {
@@ -303,7 +303,7 @@ namespace Viking.Tokens
         /// </summary>
         private HttpClient GetHttpClient()
         {
-            if (IdentityApiURL == null)
+            if (IdentityApiURL is null)
                 return Viking.Common.SharedResources.HttpClient;
 
             string key = IdentityApiURL.ToString();
@@ -326,14 +326,14 @@ namespace Viking.Tokens
         private async Task<T> GetAuthenticatedJsonAsync<T>(TokenResponse token, string relativePath, string operationName = null)
         {
             var client = GetHttpClient();
-            var address_uri = new Uri(IdentityApiURL, relativePath);
-            
+            Uri address_uri = new(IdentityApiURL, relativePath);
+
             if (!string.IsNullOrEmpty(operationName))
             {
                 LogApiRequest(operationName, address_uri);
             }
 
-            using var request = new HttpRequestMessage(HttpMethod.Get, address_uri);
+            using HttpRequestMessage request = new(HttpMethod.Get, address_uri);
             request.SetBearerToken(token.AccessToken);
 
             var response = await client.SendAsync(request);
@@ -341,7 +341,7 @@ namespace Viking.Tokens
 
             var json = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<T>(json, JsonOptions);
-            
+
             if (!string.IsNullOrEmpty(operationName))
             {
                 Trace.WriteLine($"[IdentityApiHelper] Retrieved {GetResultCount(result)} items for {operationName}");
@@ -352,7 +352,7 @@ namespace Viking.Tokens
 
         private int GetResultCount<T>(T result)
         {
-            if (result == null) return 0;
+            if (result is null) return 0;
             if (result is System.Collections.ICollection collection)
                 return collection.Count;
             if (result is System.Collections.Generic.IDictionary<long, object> dict)
@@ -369,8 +369,8 @@ namespace Viking.Tokens
         public async Task<string[]> RetrieveUserVolumePermissions(TokenResponse user_token, string VolumeName)
         {
             var permissions = await GetAuthenticatedJsonAsync<string[]>(user_token, $"Permissions/resource/{VolumeName}");
-            Trace.WriteLine($"[IdentityApiHelper] Retrieved permissions: {string.Join(", ", permissions ?? Array.Empty<string>())}");
-            return permissions ?? Array.Empty<string>();
+            Trace.WriteLine($"[IdentityApiHelper] Retrieved permissions: {string.Join(", ", permissions ?? [])}");
+            return permissions ?? [];
         }
 
         /// <summary>
@@ -378,20 +378,14 @@ namespace Viking.Tokens
         /// </summary>
         /// <param name="user_token">The user's bearer token</param>
         /// <returns>Dictionary mapping volume IDs to volume metadata objects</returns>
-        public async Task<System.Collections.Generic.Dictionary<long, object>> RetrieveUserAccessibleVolumes(TokenResponse user_token)
-        {
-            return await GetAuthenticatedJsonAsync<System.Collections.Generic.Dictionary<long, object>>(user_token, "Permissions/AccessibleVolumes", "UserAccessibleVolumes");
-        }
+        public async Task<System.Collections.Generic.Dictionary<long, object>> RetrieveUserAccessibleVolumes(TokenResponse user_token) => await GetAuthenticatedJsonAsync<System.Collections.Generic.Dictionary<long, object>>(user_token, "Permissions/AccessibleVolumes", "UserAccessibleVolumes");
 
         /// <summary>
         /// Retrieves all segmentation services accessible to the authenticated user.
         /// </summary>
         /// <param name="user_token">The user's bearer token</param>
         /// <returns>Dictionary mapping segmentation service IDs to metadata objects</returns>
-        public async Task<System.Collections.Generic.Dictionary<long, object>> RetrieveUserAccessibleSegmentationServices(TokenResponse user_token)
-        {
-            return await GetAuthenticatedJsonAsync<System.Collections.Generic.Dictionary<long, object>>(user_token, "Permissions/AccessibleSegmentationServices", "UserAccessibleSegmentationServices");
-        }
+        public async Task<System.Collections.Generic.Dictionary<long, object>> RetrieveUserAccessibleSegmentationServices(TokenResponse user_token) => await GetAuthenticatedJsonAsync<System.Collections.Generic.Dictionary<long, object>>(user_token, "Permissions/AccessibleSegmentationServices", "UserAccessibleSegmentationServices");
 
         /// <summary>
         /// Retrieves the hierarchical volume tree accessible to the authenticated user.
@@ -401,7 +395,7 @@ namespace Viking.Tokens
         public async Task<List<ApiVolumeTreeNode>> RetrieveUserAccessibleVolumeTree(TokenResponse user_token)
         {
             var result = await GetAuthenticatedJsonAsync<List<ApiVolumeTreeNode>>(user_token, "Permissions/UserAccessibleVolumeTree", "UserAccessibleVolumeTree");
-            return result ?? new List<ApiVolumeTreeNode>();
+            return result ?? [];
         }
-    } 
+    }
 }

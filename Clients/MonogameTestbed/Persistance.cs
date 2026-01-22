@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 using System.Configuration;
 using VikingXNA;
@@ -13,14 +13,14 @@ namespace MonogameTestbed
 
         static void Init()
         {
-            if(TestViewState.Initialized)
+            if (TestViewState.Initialized)
             {
                 return;
             }
 
-            ExistingProperties = new SortedSet<string>();
+            ExistingProperties = [];
 
-            foreach(SettingsProperty propname in Properties.Settings.Default.Properties)
+            foreach (SettingsProperty propname in Properties.Settings.Default.Properties)
             {
                 ExistingProperties.Add(propname.Name);
             }
@@ -41,7 +41,7 @@ namespace MonogameTestbed
                 var YObj = Properties.Settings.Default.Properties[lookatYkey];
 
                 if (XObj is null || YObj is null)
-                    return false; 
+                    return false;
 
                 float X = (float)XObj.DefaultValue;
                 float Y = (float)YObj.DefaultValue;
@@ -60,11 +60,11 @@ namespace MonogameTestbed
             if (ExistingProperties.Contains(name))
                 return false;
 
-            LocalFileSettingsProvider localFileSettingsProvider = new LocalFileSettingsProvider();
-            
+            LocalFileSettingsProvider localFileSettingsProvider = new();
+
             var existingProperty = Properties.Settings.Default.Properties["Template"];
 
-            SettingsProperty prop = new SettingsProperty(name, type, existingProperty.Provider, false, null, SettingsSerializeAs.Xml, null, true, true);
+            SettingsProperty prop = new(name, type, existingProperty.Provider, false, null, SettingsSerializeAs.Xml, null, true, true);
             Properties.Settings.Default.Properties.Remove(name);
             Properties.Settings.Default.Properties.Add(prop);
             return true;
@@ -77,7 +77,7 @@ namespace MonogameTestbed
             try
             {
                 if (scene is null)
-                    return false; 
+                    return false;
 
                 string lookatXkey = test.ToString() + "_lookat_X";
                 string lookatYkey = test.ToString() + "_lookat_Y";

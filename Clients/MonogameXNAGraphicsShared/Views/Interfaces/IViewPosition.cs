@@ -1,5 +1,5 @@
-﻿using Geometry;
-using System; 
+using Geometry;
+using System;
 using System.Threading.Tasks;
 
 namespace VikingXNAGraphics
@@ -11,7 +11,7 @@ namespace VikingXNAGraphics
     {
         GridVector2 Position { get; set; }
     }
-    
+
     /// <summary>
     /// Interface for 2D views with a bounding box
     /// </summary>

@@ -1,7 +1,7 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System; 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -105,10 +105,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        public bool IsVisible(VikingXNA.Scene scene)
-        {
-            return this.LineWidth / scene.DevicePixelWidth > 3;
-        }
+        public bool IsVisible(VikingXNA.Scene scene) => this.LineWidth / scene.DevicePixelWidth > 3;
 
         private void BeginInvokeGenerateTexture(GraphicsDevice device, SpriteBatch spritebatch, SpriteFont font)
         {
@@ -119,7 +116,7 @@ namespace VikingXNAGraphics
                 this.TextureGenerating = true;
                 //Func<String, GraphicsDevice, SpriteBatch, SpriteFont, Color, float, RenderTarget2D> CreateTextureFunc = CreateTextureForLabel;
                 //CreateTextureFunc.BeginInvoke(Label, device, spritebatch, font, this.Color, 2.0f, EndInvokeGenerateTexture, CreateTextureFunc);
-                Action a = new Action(() =>
+                Action a = new(() =>
                 {
                     this._LabelTexture = CreateTextureForLabel(this.Text, device, spritebatch, font, Color);
                     this.TextureGenerating = false;
@@ -155,7 +152,7 @@ namespace VikingXNAGraphics
         public static CurveLabel CreateLineLabel(string label, GridLineSegment line, Microsoft.Xna.Framework.Color color,
                             Texture2D texture = null, double lineWidth = 16.0)
         {
-            CurveLabel labelView = new CurveLabel(label, new GridVector2[] { line.A, line.B }, color, false, texture: texture, lineWidth: lineWidth, numInterpolations: 0);
+            CurveLabel labelView = new(label, [line.A, line.B], color, false, texture: texture, lineWidth: lineWidth, numInterpolations: 0);
             return labelView;
         }
 
@@ -170,10 +167,7 @@ namespace VikingXNAGraphics
             UpdateView();
         }
 
-        private void UpdateView()
-        {
-            this.Curve = new RoundCurve.RoundCurve(_CurveControlPoints.CurvePoints, _CurveControlPoints.TryCloseCurve);
-        }
+        private void UpdateView() => this.Curve = new RoundCurve.RoundCurve(_CurveControlPoints.CurvePoints, _CurveControlPoints.TryCloseCurve);
 
         public static RenderTarget2D CreateTextureForLabel(string label, Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
                               Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
@@ -186,7 +180,7 @@ namespace VikingXNAGraphics
 
             Vector2 labelDimensions = font.MeasureString(label);
             labelDimensions *= scale;
-            RenderTarget2D target = new RenderTarget2D(device, (int)labelDimensions.X, (int)labelDimensions.Y, mipMap: true, preferredFormat: SurfaceFormat.Color, preferredDepthFormat: DepthFormat.None);
+            RenderTarget2D target = new(device, (int)labelDimensions.X, (int)labelDimensions.Y, mipMap: true, preferredFormat: SurfaceFormat.Color, preferredDepthFormat: DepthFormat.None);
 
             //RenderTargetBinding[] oldRenderTargets = device.GetRenderTargets();
             //TODO: Setting the render target when the scene is being drawn causes flickering

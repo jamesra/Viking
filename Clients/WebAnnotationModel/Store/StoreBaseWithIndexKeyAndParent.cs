@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -22,11 +22,11 @@ namespace WebAnnotationModel
         where WCFOBJECT : AnnotationService.Types.DataObjectWithParentOfLong, new()
     {
 
-        protected ReaderWriterLockSlim _rwLockRootObjects = new ReaderWriterLockSlim();
+        protected ReaderWriterLockSlim _rwLockRootObjects = new();
         /// <summary>
         /// Known objects with no parent object
         /// </summary>
-        private readonly ObservableCollection<KEY> _rootObjects = new ObservableCollection<KEY>();
+        private readonly ObservableCollection<KEY> _rootObjects = [];
         private KEY[] _readOnlyRootObjects;
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -51,7 +51,7 @@ namespace WebAnnotationModel
                             return _readOnlyRootObjects;
                         }
 
-                        _readOnlyRootObjects = _rootObjects.ToArray();
+                        _readOnlyRootObjects = [.. _rootObjects];
                         return _readOnlyRootObjects;
                     }
                     finally
@@ -158,10 +158,7 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="updateObj"></param>
         /// <returns></returns>
-        protected override ChangeInventory<OBJECT> InternalAdd(OBJECT[] newType)
-        {
-            return InternalAdd(newType, false);
-        }
+        protected override ChangeInventory<OBJECT> InternalAdd(OBJECT[] newType) => InternalAdd(newType, false);
 
         /// <summary>
         /// Used to populate cache when a call returns from the server
@@ -170,15 +167,15 @@ namespace WebAnnotationModel
         /// <returns></returns>
         protected virtual ChangeInventory<OBJECT> InternalAdd(OBJECT[] addObjs, bool LoadParents)
         {
-            List<OBJECT> listAddedObj = new List<OBJECT>(addObjs.Length);
+            List<OBJECT> listAddedObj = new(addObjs.Length);
 
             //This list records objects we can't add which must be updated instead
-            List<OBJECT> listUpdateObj = new List<OBJECT>(addObjs.Length);
+            List<OBJECT> listUpdateObj = new(addObjs.Length);
 
             //List of all parent objects which are missing.  These need to be loaded.
-            List<KEY> listMissingParents = new List<KEY>(addObjs.Length);
+            List<KEY> listMissingParents = new(addObjs.Length);
 
-            List<OBJECT> listObjNeedingParents = new List<OBJECT>(addObjs.Length);
+            List<OBJECT> listObjNeedingParents = new(addObjs.Length);
 
             for (int iObj = 0; iObj < addObjs.Length; iObj++)
             {
@@ -222,20 +219,20 @@ namespace WebAnnotationModel
                 }
             }
 
-            ChangeInventory<OBJECT> inventory = new ChangeInventory<OBJECT>();
+            ChangeInventory<OBJECT> inventory = new();
             inventory.AddedObjects.AddRange(listAddedObj);
 
             //Go find all of the missing parent objects and make sure they have been downloaded
             if (listMissingParents.Count > 0)
             {
-                ChangeInventory<OBJECT> parent_inventory = InternalGetObjectsByIDs(listMissingParents.ToArray(), true);
+                ChangeInventory<OBJECT> parent_inventory = InternalGetObjectsByIDs([.. listMissingParents], true);
                 inventory.Add(parent_inventory);
             }
 
 
             if (listUpdateObj.Count > 0)
             {
-                OBJECT[] updatedObjs = InternalUpdate(listUpdateObj.ToArray());
+                OBJECT[] updatedObjs = InternalUpdate([.. listUpdateObj]);
                 inventory.UpdatedObjects.AddRange(updatedObjs);
             }
 
@@ -254,10 +251,7 @@ namespace WebAnnotationModel
             return inventory;
         }
 
-        protected override OBJECT[] InternalUpdate(OBJECT[] newObjs)
-        {
-            return InternalUpdate(newObjs, false);
-        }
+        protected override OBJECT[] InternalUpdate(OBJECT[] newObjs) => InternalUpdate(newObjs, false);
 
         /// <summary>
         /// Used to populate cache when a call returns from the server
@@ -266,8 +260,8 @@ namespace WebAnnotationModel
         /// <returns></returns>
         internal virtual OBJECT[] InternalUpdate(OBJECT[] updateObjs, bool LoadParent)
         {
-            List<OBJECT> listUpdatedObjs = new List<OBJECT>(updateObjs.Length);
-            List<OBJECT> listOldObjs = new List<OBJECT>(updateObjs.Length);
+            List<OBJECT> listUpdatedObjs = new(updateObjs.Length);
+            List<OBJECT> listOldObjs = new(updateObjs.Length);
 
             for (int iObj = 0; iObj < updateObjs.Length; iObj++)
             {
@@ -314,7 +308,7 @@ namespace WebAnnotationModel
                 }
             }
 
-            return listUpdatedObjs.ToArray();
+            return [.. listUpdatedObjs];
         }
 
 
@@ -326,7 +320,7 @@ namespace WebAnnotationModel
         /// <returns></returns>
         protected override List<OBJECT> InternalDelete(KEY[] IDs)
         {
-            List<OBJECT> listDeleted = new List<OBJECT>(IDs.Length);
+            List<OBJECT> listDeleted = new(IDs.Length);
 
             for (int iObj = 0; iObj < IDs.Length; iObj++)
             {
@@ -343,7 +337,7 @@ namespace WebAnnotationModel
 
 
         protected override OBJECT TryRemoveObject(KEY key)
-        { 
+        {
             if (IDToObject.TryRemove(key, out var existingObj))
             {
                 existingObj.PropertyChanged -= this.OnOBJECTPropertyChangedEventHandler;

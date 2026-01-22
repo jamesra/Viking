@@ -1,6 +1,6 @@
-﻿using System;
+using System;
 using System.Diagnostics;
-using System.Linq; 
+using System.Linq;
 
 namespace Geometry
 {
@@ -31,17 +31,14 @@ namespace Geometry
         public readonly GridLineSegment[] Segments;
 
         IPoint2D IRectangle.Center => Center;
-         
-        public override string ToString()
-        {
-            return $"{Left},{Bottom} W: {Width} H: {Height} Center:{Center}";
-        }
+
+        public override string ToString() => $"{Left},{Bottom} W: {Width} H: {Height} Center:{Center}";
 
         public double Width => Right - Left;
 
         public double Height => Top - Bottom;
 
-        public GridVector2 Center => new GridVector2(LowerLeft.X + (Width / 2.0), LowerLeft.Y + (Height / 2.0));
+        public GridVector2 Center => new(LowerLeft.X + (Width / 2.0), LowerLeft.Y + (Height / 2.0));
 
         public GridVector2 LowerLeft => Corners?[(int)Corner.LowerLeft] ?? default;
 
@@ -53,16 +50,16 @@ namespace Geometry
 
         public double Area => Width * Height;
 
-        public GridLineSegment LeftEdge => new GridLineSegment(Corners?[(int)Corner.LowerLeft] ?? default, Corners?[(int)Corner.UpperLeft] ?? default);
+        public GridLineSegment LeftEdge => new(Corners?[(int)Corner.LowerLeft] ?? default, Corners?[(int)Corner.UpperLeft] ?? default);
 
-        public GridLineSegment RightEdge => new GridLineSegment(Corners?[(int)Corner.LowerRight] ?? default, Corners?[(int)Corner.UpperRight] ?? default);
+        public GridLineSegment RightEdge => new(Corners?[(int)Corner.LowerRight] ?? default, Corners?[(int)Corner.UpperRight] ?? default);
 
-        public GridLineSegment TopEdge => new GridLineSegment(Corners?[(int)Corner.UpperLeft] ?? default, Corners?[(int)Corner.UpperRight] ?? default);
+        public GridLineSegment TopEdge => new(Corners?[(int)Corner.UpperLeft] ?? default, Corners?[(int)Corner.UpperRight] ?? default);
 
-        public GridLineSegment BottomEdge => new GridLineSegment(Corners?[(int)Corner.LowerLeft] ?? default, Corners?[(int)Corner.LowerRight] ?? default);
+        public GridLineSegment BottomEdge => new(Corners?[(int)Corner.LowerLeft] ?? default, Corners?[(int)Corner.LowerRight] ?? default);
 
-        public GridLineSegment[] Edges => new GridLineSegment[] { TopEdge, BottomEdge, LeftEdge, RightEdge };
-         
+        public GridLineSegment[] Edges => [TopEdge, BottomEdge, LeftEdge, RightEdge];
+
         public GridRectangle BoundingBox => this;
 
         public ShapeType2D ShapeType => ShapeType2D.RECTANGLE;
@@ -76,10 +73,10 @@ namespace Geometry
         double IRectangle.Bottom => Bottom;
 
         public readonly GridVector2[] Corners;
-          
+
         public GridRectangle(in GridVector2 corner, in GridVector2 oppositeCorner)
-        {  
-            GridVector2 RectOrigin = new GridVector2(Math.Min(corner.X, oppositeCorner.X), Math.Min(corner.Y, oppositeCorner.Y));
+        {
+            GridVector2 RectOrigin = new(Math.Min(corner.X, oppositeCorner.X), Math.Min(corner.Y, oppositeCorner.Y));
             double width = Math.Abs(corner.X - oppositeCorner.X);
             double height = Math.Abs(corner.Y - oppositeCorner.Y);
             if (width == 0 || height == 0)
@@ -91,7 +88,7 @@ namespace Geometry
             Bottom = RectOrigin.Y;
             Top = RectOrigin.Y + height;
             Right = RectOrigin.X + width;
-            
+
             Corners = CalculateCorners(Left, Bottom, Right, Top);
             _HashCode = CalcHashCode(Left, Bottom, Right, Top);
             Segments = CalculateSegments(Corners);
@@ -125,11 +122,11 @@ namespace Geometry
         }
 
         public GridRectangle(in double left, in double right, in double bottom, in double top)
-        {  
+        {
             Left = left;
             Bottom = bottom;
             Top = top;
-            Right = right; 
+            Right = right;
 
             Corners = CalculateCorners(Left, Bottom, Right, Top);
             _HashCode = CalcHashCode(Left, Bottom, Right, Top);
@@ -146,11 +143,11 @@ namespace Geometry
         }
 
         public GridRectangle(in GridVector2 position, double width, double height)
-        {  
+        {
             Left = position.X;
             Bottom = position.Y;
             Top = Bottom + height;
-            Right = Left + width; 
+            Right = Left + width;
 
             Corners = CalculateCorners(Left, Bottom, Right, Top);
             _HashCode = CalcHashCode(Left, Bottom, Right, Top);
@@ -164,11 +161,11 @@ namespace Geometry
         }
 
         public GridRectangle(in GridVector2 position, in double radius)
-        {  
+        {
             Left = position.X - radius;
             Bottom = position.Y - radius;
             Top = position.Y + radius;
-            Right = position.X + radius; 
+            Right = position.X + radius;
 
             Corners = CalculateCorners(Left, Bottom, Right, Top);
             _HashCode = CalcHashCode(Left, Bottom, Right, Top);
@@ -178,14 +175,14 @@ namespace Geometry
         }
 
         public GridRectangle(in IPoint position, in double width, in double height)
-        {  
+        {
             if (position is null)
                 throw new ArgumentNullException(nameof(position));
 
             Left = position.X;
             Bottom = position.Y;
             Top = Bottom + height;
-            Right = Left + width; 
+            Right = Left + width;
 
             Corners = CalculateCorners(Left, Bottom, Right, Top);
             _HashCode = CalcHashCode(Left, Bottom, Right, Top);
@@ -199,14 +196,14 @@ namespace Geometry
         }
 
         public GridRectangle(in IPoint position, in double radius)
-        {  
+        {
             if (position is null)
                 throw new ArgumentNullException(nameof(position));
 
             Left = position.X - radius;
             Bottom = position.Y - radius;
             Top = position.Y + radius;
-            Right = position.X + radius; 
+            Right = position.X + radius;
 
             Corners = CalculateCorners(Left, Bottom, Right, Top);
             _HashCode = CalcHashCode(Left, Bottom, Right, Top);
@@ -217,8 +214,8 @@ namespace Geometry
             {
                 throw new ArgumentException("Grid Rectangle must have non-negative width and height");
             }
-        } 
-           
+        }
+
         /// <summary>
         /// Returns true if the passed rectangle in inside or overlaps this rectangle
         /// </summary>
@@ -282,7 +279,7 @@ namespace Geometry
 
         public bool Intersects(in GridCircle circle) => RectangleIntersectionExtensions.Intersects(this, circle);
 
-        public bool Intersects(in ILineSegment2D l) => Intersects(l.Convert()); 
+        public bool Intersects(in ILineSegment2D l) => Intersects(l.Convert());
 
         public bool Intersects(in GridLineSegment line) => RectangleIntersectionExtensions.Intersects(this, line);
 
@@ -312,7 +309,7 @@ namespace Geometry
             return new GridRectangle(minx, maxx, miny, maxy);
         }
 
-        
+
 
         /// <summary>
         /// Returns true if the passed rectangle is entirely inside this rectangle
@@ -467,7 +464,7 @@ namespace Geometry
                 (LRTouch && UDTouch))
                 return ShapeRelation.TOUCHING;
 
-            
+
             if (rect.Width == 0 || rect.Height == 0 || this.Width == 0 || this.Height == 0)
             {
                 //If we are dealing with a zero height rectangle then check some edge cases
@@ -489,10 +486,7 @@ namespace Geometry
 
         public override int GetHashCode() => _HashCode;
 
-        private static int CalcHashCode(in double left, in double bottom, in double right, in double top)
-        {
-            return left.GetHashCode() ^ bottom.GetHashCode() ^ right.GetHashCode() ^ top.GetHashCode();
-        }
+        private static int CalcHashCode(in double left, in double bottom, in double right, in double top) => left.GetHashCode() ^ bottom.GetHashCode() ^ right.GetHashCode() ^ top.GetHashCode();
 
         public override bool Equals(object obj)
         {
@@ -514,11 +508,11 @@ namespace Geometry
         }
 
         public bool Equals(IRectangle other)
-        { 
-                return Left.Equals(other.Left) &&
-                       Right.Equals(other.Right) &&
-                       Top.Equals(other.Top) &&
-                       Bottom.Equals(other.Bottom);
+        {
+            return Left.Equals(other.Left) &&
+                   Right.Equals(other.Right) &&
+                   Top.Equals(other.Top) &&
+                   Bottom.Equals(other.Bottom);
         }
 
         public bool Equals(GridRectangle other)
@@ -527,7 +521,7 @@ namespace Geometry
                    Right.Equals(other.Right) &&
                    Top.Equals(other.Top) &&
                    Bottom.Equals(other.Bottom);
-        } 
+        }
 
         #region Static Methods
 
@@ -544,10 +538,7 @@ namespace Geometry
                     (A.Bottom == B.Bottom));
         }
 
-        public static bool operator !=(in GridRectangle A, in GridRectangle B)
-        {
-            return !(A == B);
-        }
+        public static bool operator !=(in GridRectangle A, in GridRectangle B) => !(A == B);
 
         /// <summary>
         /// Pads the border by the specified amount
@@ -555,10 +546,7 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="scalar"></param>
         /// <returns></returns>
-        public static GridRectangle operator +(in GridRectangle A, double scalar)
-        {
-            return GridRectangle.Scale(A, scalar);
-        }
+        public static GridRectangle operator +(in GridRectangle A, double scalar) => GridRectangle.Scale(A, scalar);
 
         /// <summary>
         /// Performs a union of the rectangle and the point
@@ -566,10 +554,7 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="scalar"></param>
         /// <returns></returns>
-        public static GridRectangle operator +(in GridRectangle A, in GridVector2 p)
-        {
-            return GridRectangle.Union(A, p);
-        }
+        public static GridRectangle operator +(in GridRectangle A, in GridVector2 p) => GridRectangle.Union(A, p);
 
         /// <summary>
         /// Performs a union of the rectangle and the bounding box of the shape
@@ -577,10 +562,7 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="scalar"></param>
         /// <returns></returns>
-        public static GridRectangle operator +(in GridRectangle A, in IShape2D shape)
-        {
-            return GridRectangle.Union(A, shape.BoundingBox);
-        }
+        public static GridRectangle operator +(in GridRectangle A, in IShape2D shape) => GridRectangle.Union(A, shape.BoundingBox);
 
         /// <summary>
         /// Performs a union of both rectangles and returns the bounding box of both
@@ -588,30 +570,18 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="scalar"></param>
         /// <returns></returns>
-        public static GridRectangle operator +(in GridRectangle A, in GridRectangle B)
-        {
-            return GridRectangle.Union(A, B);
-        }
+        public static GridRectangle operator +(in GridRectangle A, in GridRectangle B) => GridRectangle.Union(A, B);
 
-        public static GridRectangle operator *(in GridRectangle A, in double scalar)
-        {
-            return GridRectangle.Scale(A, scalar);
-        }
+        public static GridRectangle operator *(in GridRectangle A, in double scalar) => GridRectangle.Scale(A, scalar);
 
-        public static GridRectangle operator /(in GridRectangle A, in double scalar)
-        {
-            return GridRectangle.Scale(A, 1.0 / scalar);
-        }
+        public static GridRectangle operator /(in GridRectangle A, in double scalar) => GridRectangle.Scale(A, 1.0 / scalar);
 
         /// <summary>
         /// Pad the requested amount onto the bounding box
         /// </summary>
         /// <param name="Radius"></param>
         /// <returns></returns>
-        public static GridRectangle Pad(in GridRectangle rect, in double radius)
-        {
-            return new GridRectangle(rect.Left - radius, rect.Right + radius, rect.Bottom - radius, rect.Top + radius);
-        }
+        public static GridRectangle Pad(in GridRectangle rect, in double radius) => new GridRectangle(rect.Left - radius, rect.Right + radius, rect.Bottom - radius, rect.Top + radius);
 
         public static GridRectangle Scale(in GridRectangle rect, in double scalar)
         {
@@ -642,10 +612,7 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        public static GridRectangle Union(in IShape2D a, in IShape2D b)
-        {
-            return GridRectangle.Union(a.BoundingBox, b.BoundingBox);
-        }
+        public static GridRectangle Union(in IShape2D a, in IShape2D b) => GridRectangle.Union(a.BoundingBox, b.BoundingBox);
 
         /// <summary>
         /// Returns a rectangle bounding the passed rectangles
@@ -694,27 +661,18 @@ namespace Geometry
             return new GridRectangle(MinX, MaxX, MinY, MaxY);
         }
 
-        public IShape2D Translate(in IPoint2D offset)
-        {
-            return this.Translate(offset.Convert());
-        }
+        public IShape2D Translate(in IPoint2D offset) => this.Translate(offset.Convert());
 
-        public GridRectangle Translate(in GridVector2 offset)
-        {
-            return new GridRectangle(this.LowerLeft + offset, this.UpperRight + offset);
-        }
+        public GridRectangle Translate(in GridVector2 offset) => new GridRectangle(this.LowerLeft + offset, this.UpperRight + offset);
 
-        public object Clone()
-        {
-            return new GridRectangle(this.LowerLeft, this.Width, this.Height);
-        }
+        public object Clone() => new GridRectangle(this.LowerLeft, this.Width, this.Height);
 
-        private static GridVector2[] CalculateCorners(in double Left, in double Bottom, in double Right, in double Top) => 
-            new GridVector2[] { new GridVector2(Left, Bottom),
-                                new GridVector2(Left, Top),
-                                new GridVector2(Right, Top),
-                                new GridVector2(Right, Bottom) };
-         
+        private static GridVector2[] CalculateCorners(in double Left, in double Bottom, in double Right, in double Top) =>
+            [ new(Left, Bottom),
+                                new(Left, Top),
+                                new(Right, Top),
+                                new(Right, Bottom) ];
+
         private static GridLineSegment[] CalculateSegments(in GridVector2[] corners)
         {
             var size = corners[(int)Corner.UpperRight] - corners[(int)Corner.LowerLeft];
@@ -723,45 +681,45 @@ namespace Geometry
 
             if (width > Global.Epsilon && height > Global.Epsilon)
             {
-                return new GridLineSegment[] {  new GridLineSegment(corners[(int)Corner.LowerLeft], corners[(int)Corner.UpperLeft]),
-                                                new GridLineSegment(corners[(int)Corner.UpperLeft], corners[(int)Corner.UpperRight]),
-                                                new GridLineSegment(corners[(int)Corner.UpperRight], corners[(int)Corner.LowerRight]),
-                                                new GridLineSegment(corners[(int)Corner.LowerRight], corners[(int)Corner.LowerLeft])};
+                return [  new(corners[(int)Corner.LowerLeft], corners[(int)Corner.UpperLeft]),
+                                                new(corners[(int)Corner.UpperLeft], corners[(int)Corner.UpperRight]),
+                                                new(corners[(int)Corner.UpperRight], corners[(int)Corner.LowerRight]),
+                                                new(corners[(int)Corner.LowerRight], corners[(int)Corner.LowerLeft])];
             }
             else if (width < Global.Epsilon && height < Global.Epsilon)
             {
-                return Array.Empty<GridLineSegment>();
+                return [];
             }
             else
             {
-                return new GridLineSegment[] { new GridLineSegment(corners[(int)Corner.LowerLeft], corners[(int)Corner.UpperRight]) };
+                return [new(corners[(int)Corner.LowerLeft], corners[(int)Corner.UpperRight])];
             }
         }
 
         private static GridLineSegment[] CalculateSegments(in double left, in double right, in double bottom, in double top)
-        { 
+        {
             var width = right - left;
             var height = top - bottom;
 
-            GridVector2 LowerLeft = new GridVector2(left, bottom);
-            GridVector2 UpperLeft = new GridVector2(left, top);
-            GridVector2 LowerRight = new GridVector2(right, bottom);
-            GridVector2 UpperRight = new GridVector2(right, top);
+            GridVector2 LowerLeft = new(left, bottom);
+            GridVector2 UpperLeft = new(left, top);
+            GridVector2 LowerRight = new(right, bottom);
+            GridVector2 UpperRight = new(right, top);
 
             if (width > Global.Epsilon && height > Global.Epsilon)
             {
-                return new GridLineSegment[] {  new GridLineSegment(LowerLeft, UpperLeft),
-                    new GridLineSegment(UpperLeft, UpperRight),
-                    new GridLineSegment(UpperRight, LowerRight),
-                    new GridLineSegment(LowerRight, LowerLeft)};
+                return [  new(LowerLeft, UpperLeft),
+                    new(UpperLeft, UpperRight),
+                    new(UpperRight, LowerRight),
+                    new(LowerRight, LowerLeft)];
             }
             else if (width < Global.Epsilon && height < Global.Epsilon)
             {
-                return Array.Empty<GridLineSegment>();
+                return [];
             }
             else
             {
-                return new GridLineSegment[] { new GridLineSegment(LowerLeft, UpperRight) };
+                return [new(LowerLeft, UpperRight)];
             }
         }
 

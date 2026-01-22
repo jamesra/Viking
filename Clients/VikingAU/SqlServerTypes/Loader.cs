@@ -7,10 +7,16 @@ namespace SqlServerTypes.Utilities
     /// <summary>
     /// Utility methods related to CLR Types for SQL Server 
     /// </summary>
-    public class SqlServerTypesUtilities
+    public partial class SqlServerTypesUtilities
     {
-        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+#if NETFRAMEWORK
+        [System.Security.SuppressUnmanagedCodeSecurity]
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern IntPtr LoadLibrary(string libname);
+#else
+        [LibraryImport("kernel32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        private static partial IntPtr LoadLibrary(string libname);
+#endif
 
         /// <summary>
         /// Loads the required native assemblies for the current architecture (x86 or x64)

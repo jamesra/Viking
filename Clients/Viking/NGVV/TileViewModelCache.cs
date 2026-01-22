@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Viking.Common;
 using Viking.ViewModels;
@@ -18,10 +18,7 @@ namespace Viking
             Size = T.Size;
         }
 
-        public override string ToString()
-        {
-            return $"{LastAccessed} - {TileView.TextureFileName}";
-        }
+        public override string ToString() => $"{LastAccessed} - {TileView.TextureFileName}";
 
         public override void Dispose()
         {
@@ -39,15 +36,9 @@ namespace Viking
             this.MaxCacheSize = 1 << 28;
         }
 
-        protected static string TileKey(string textureFileName, string TransformName)
-        {
-            return $"{textureFileName} {TransformName}";
-        }
+        protected static string TileKey(string textureFileName, string TransformName) => $"{textureFileName} {TransformName}";
 
-        public TileView GetTile(string textureFileName, string TransformName)
-        {
-            return this.Fetch(TileKey(textureFileName, TransformName));
-        }
+        public TileView GetTile(string textureFileName, string TransformName) => this.Fetch(TileKey(textureFileName, TransformName));
 
         protected override TileView Fetch(TileViewModelCacheEntry key)
         {
@@ -94,11 +85,8 @@ namespace Viking
             }
             catch (Exception)
             {
-                if (tileView != null)
-                {
-                    tileView.Dispose();
-                    tileView = null;
-                }
+                tileView?.Dispose();
+                tileView = null;
                 throw;
             }
 
@@ -135,19 +123,13 @@ namespace Viking
 
         protected override TileViewModelCacheEntry CreateEntry(string key, TileView value)
         {
-            TileViewModelCacheEntry entry = new TileViewModelCacheEntry(key, value);
+            TileViewModelCacheEntry entry = new(key, value);
             return entry;
         }
 
-        protected override TileViewModelCacheEntry CreateEntry(string key, Func<string,TileView> valueFactory)
-        {
-            return new TileViewModelCacheEntry(key, valueFactory(key));
-        }
+        protected override TileViewModelCacheEntry CreateEntry(string key, Func<string, TileView> valueFactory) => new TileViewModelCacheEntry(key, valueFactory(key));
 
-        protected override Task<TileViewModelCacheEntry> CreateEntryAsync(string key, TileView value)
-        {
-            return Task.FromResult(CreateEntry(key, value));
-        }
+        protected override Task<TileViewModelCacheEntry> CreateEntryAsync(string key, TileView value) => Task.FromResult(CreateEntry(key, value));
 
         /// <summary>
         /// Cleanup the memory allocated for this cache entry. 

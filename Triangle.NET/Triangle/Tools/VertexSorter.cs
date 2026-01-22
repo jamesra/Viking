@@ -34,7 +34,7 @@ namespace TriangleNet.Tools
         /// <param name="seed">Random seed used for pivoting.</param>
         public static void Sort(Vertex[] array, int seed = RANDOM_SEED)
         {
-            var qs = new VertexSorter(array, seed);
+            VertexSorter qs = new(array, seed);
 
             qs.QuickSort(0, array.Length - 1);
         }
@@ -47,7 +47,7 @@ namespace TriangleNet.Tools
         /// <param name="seed">Random seed used for pivoting.</param>
         public static void Alternate(Vertex[] array, int length, int seed = RANDOM_SEED)
         {
-            var qs = new VertexSorter(array, seed);
+            VertexSorter qs = new(array, seed);
 
             int divider = length >> 1;
 

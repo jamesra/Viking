@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -8,19 +8,19 @@ namespace Viking.UI
     public enum TouchHitTesting
     {
         Default = 0, //WM_TOUCHHITTESTING messages are not sent to the target window but are sent to child windows.
-        Client =  1, //messages are sent to the target window.
-        None   =  2 //messages are not sent to the target window or child windows.
+        Client = 1, //messages are sent to the target window.
+        None = 2 //messages are not sent to the target window or child windows.
     };
 
     [Flags]
     public enum TouchRegisterOptions
     {
-        None =      0,
+        None = 0,
         FineTouch = 0b0001,
-        WantPalm  = 0b0010
+        WantPalm = 0b0010
     }
 
-    
+
     public enum PointerType : System.UInt32
     {
         /// <summary>
@@ -40,7 +40,7 @@ namespace Viking.UI
         /// <summary>
         /// The barrel button is pressed
         /// </summary>
-        Barrel   = 0b0001,
+        Barrel = 0b0001,
         /// <summary>
         /// The pen is inverted
         /// </summary>
@@ -48,7 +48,7 @@ namespace Viking.UI
         /// <summary>
         /// The eraser button is pressed
         /// </summary>
-        Eraser   = 0b0100
+        Eraser = 0b0100
     }
 
 
@@ -70,16 +70,16 @@ namespace Viking.UI
         /// <summary>
         /// Indicates that this pointer is in contact with the digitizer surface.
         /// </summary>
-        InContact =    0x04, 
-        FirstButton =  0x10,
+        InContact = 0x04,
+        FirstButton = 0x10,
         SecondButton = 0x20,
-        ThirdButton =  0x40,
+        ThirdButton = 0x40,
         FourthButton = 0x80,
         FifthButton = 0x100,
         /// <summary>
         /// Indicates that this pointer has been designated as the primary pointer.
         /// </summary>
-        Primary =    0x2000,
+        Primary = 0x2000,
         /// <summary>
         /// Confidence is a suggestion from the source device about whether the pointer represents an intended or accidental interaction
         /// </summary>
@@ -87,27 +87,27 @@ namespace Viking.UI
         /// <summary>
         /// Indicates that the pointer is departing in an abnormal manner, such as when the system receives invalid input for the pointer or when a device with active pointers departs abruptly.
         /// </summary>
-        Cancelled =  0x8000,
+        Cancelled = 0x8000,
         /// <summary>
         /// Indicates that this pointer transitioned to a down state; that is, it made contact with the digitizer surface.
         /// </summary>
-        Down =      0x10000,
+        Down = 0x10000,
         /// <summary>
         /// Indicates that this is a simple update that does not include pointer state changes.
         /// </summary>
-        Update =    0x20000,
+        Update = 0x20000,
         /// <summary>
         /// Indicates that this pointer transitioned to an up state; that is, contact with the digitizer surface ended.
         /// </summary>
-        Up =        0x40000,
+        Up = 0x40000,
         /// <summary>
         /// Indicates input associated with a pointer wheel. 
         /// </summary>
-        Wheel =     0x80000,
+        Wheel = 0x80000,
         /// <summary>
         /// Indicates input associated with a pointer h-wheel.
         /// </summary>
-        HWheel =   0x100000,
+        HWheel = 0x100000,
         /// <summary>
         /// Indicates that this pointer was captured by (associated with) another element and the original element has lost capture
         /// </summary>
@@ -121,11 +121,11 @@ namespace Viking.UI
     [Flags]
     public enum PenMask : System.UInt32
     {
-        None =     0x0,
+        None = 0x0,
         Pressure = 0b0001,
         Rotation = 0b0010,
-        TiltX =    0b0100,
-        TiltY =    0b1000
+        TiltX = 0b0100,
+        TiltY = 0b1000
     }
 
     public enum PointerButtonChangeType : System.UInt32
@@ -169,7 +169,7 @@ namespace Viking.UI
 
         public PointerMessageFlags(IntPtr wParam)
         {
-            Flags = (PointerFlags)wParam.HiWord(); 
+            Flags = (PointerFlags)wParam.HiWord();
         }
 
         public PointerMessageFlags(PointerFlags flags)
@@ -177,77 +177,50 @@ namespace Viking.UI
             Flags = flags;
         }
 
-        public override string ToString()
-        {
-            return string.Format("{0}", Flags);
-        }
+        public override string ToString() => string.Format("{0}", Flags);
     }
 
-    public readonly struct PointerMessageData
+    public readonly struct PointerMessageData(System.Windows.Forms.Message message)
     {
-        public readonly PointerMessageFlags Flags;
+        public readonly PointerMessageFlags Flags = new(message.WParam);
 
         public int X => (int)msg.LParam.SignedLowWord();
         public int Y => (int)msg.LParam.SignedHiWord();
 
         public System.UInt32 PointerID => msg.WParam.LowWord();
 
-        public readonly System.Windows.Forms.Message msg;
+        public readonly System.Windows.Forms.Message msg = message;
 
-        public PointerMessageData(System.Windows.Forms.Message message)
-        {
-            this.msg = message;
-            this.Flags = new PointerMessageFlags(message.WParam);
-        }
-
-        public override string ToString()
-        {
-            return string.Format("ID: {0} X: {1} Y: {2}", this.PointerID, this.X, this.Y); 
-        }
+        public override string ToString() => string.Format("ID: {0} X: {1} Y: {2}", this.PointerID, this.X, this.Y);
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public readonly struct TouchPoint : IEquatable<TouchPoint> 
+    public readonly struct TouchPoint(System.Int32 x, System.Int32 y) : IEquatable<TouchPoint>
     {
-        readonly System.Int32 x; //LONG in the C++ definition
-        readonly System.Int32 y; //LONG in the C++ definition
+        readonly System.Int32 x = x; //LONG in the C++ definition
+        readonly System.Int32 y = y; //LONG in the C++ definition
 
-        public TouchPoint(System.Int32 x, System.Int32 y)
-        {
-            this.x = x;
-            this.y = y;
-        }
-
-        public bool Equals(TouchPoint other)
-        {
-            return other.x == this.x && other.y == this.y;
-        }
+        public bool Equals(TouchPoint other) => other.x == this.x && other.y == this.y;
 
         public override bool Equals(object other)
         {
             if (other is TouchPoint other_point)
                 return x == other_point.x && y == other_point.y;
 
-            if (!(other is IEquatable<TouchPoint> IOther))
+            if (other is not IEquatable<TouchPoint> IOther)
                 return false;
 
             return IOther.Equals(this);
         }
 
-        public override int GetHashCode()
-        {  
-            return (this.x << 16) + this.y;
-        }
+        public override int GetHashCode() => (this.x << 16) + this.y;
 
-        public override string ToString()
-        {
-            return string.Format("X: {0} Y: {1}", x, y);
-        }
+        public override string ToString() => string.Format("X: {0} Y: {1}", x, y);
 
-        
+
     }
 
-        [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential)]
     public readonly struct PointerInfo
     {
         public readonly PointerType pointerType;
@@ -280,7 +253,7 @@ namespace Viking.UI
         public readonly System.Int32 tiltY;
 
         public bool PenFlagsChange(PointerPenInfo other)
-        { 
+        {
             PenFlags pen_flags_changed = this.flags ^ other.flags;
             return pen_flags_changed > 0;
         }
@@ -291,13 +264,13 @@ namespace Viking.UI
                 return true;
 
             if (PenFlagsChange(other))
-                return true; 
+                return true;
 
             PenMask changed = this.mask ^ other.mask;
             PenMask comparable = this.mask & other.mask;
             if (changed > 0)
                 return true;
-            
+
             if (this.pressure != other.pressure && (comparable & PenMask.Pressure) > 0)
                 return true;
 
@@ -315,7 +288,7 @@ namespace Viking.UI
 
         public override string ToString()
         {
-            StringBuilder sb = new StringBuilder($"{flags} {pointerInfo.ptPixelLocation}");
+            StringBuilder sb = new($"{flags} {pointerInfo.ptPixelLocation}");
             sb.Append(pointerInfo.ButtonChange != PointerButtonChangeType.None ? $"{pointerInfo.ButtonChange}" : "");
             sb.Append((mask & PenMask.Pressure) > 0 ? $" Pressure: {pressure}" : "");
             sb.Append((mask & PenMask.Rotation) > 0 ? $" Rotation: {rotation}" : "");
@@ -343,8 +316,8 @@ namespace Viking.UI
         WM_POINTERHWHEEL = 0x024F,
         DM_POINTERHITTEST = 0x0250,
 
-     
-}
+
+    }
 
     /// <summary>
     /// Contains variables that can be adjusted to change user experience
@@ -379,10 +352,7 @@ namespace Viking.UI
         public readonly short x;
         public readonly short y;
 
-        public override string ToString()
-        {
-            return $"{x}, {y}";
-        }
+        public override string ToString() => $"{x}, {y}";
 
         public static implicit operator System.Drawing.Point(WinMsgPoints obj)
         {
@@ -412,10 +382,10 @@ namespace Viking.UI
         public const int WM_GESTURE = 0x0119;
         public const int WM_GESTURENOTIFY = 0x011A;
 
-        public static TouchConfig Config = new TouchConfig();
+        public static TouchConfig Config = new();
 
-        public static System.UInt16 HiWord(this IntPtr param) { return (System.UInt16)(param.ToInt32() >> 16); } //Shift away the low word
-        public static System.UInt16 LowWord(this IntPtr param) { return (System.UInt16)(param.ToInt32() & 0xFFFF); }
+        public static System.UInt16 HiWord(this IntPtr param) => (System.UInt16)(param.ToInt32() >> 16);  //Shift away the low word
+        public static System.UInt16 LowWord(this IntPtr param) => (System.UInt16)(param.ToInt32() & 0xFFFF);
 
 
         public static System.Int16 SignedHiWord(this IntPtr param)
@@ -436,16 +406,16 @@ namespace Viking.UI
             }
         }
 
-        public static int HiWord(this int param) { return (int)(param & 0xFFFF0000); }
-        public static int LowWord(this int param) { return (int)(param & 0xFFFF); }
+        public static int HiWord(this int param) => (int)(param & 0xFFFF0000);
+        public static int LowWord(this int param) => (int)(param & 0xFFFF);
 
-        public static uint GetPointerID(IntPtr wParam) { return wParam.LowWord(); }
+        public static uint GetPointerID(IntPtr wParam) => wParam.LowWord();
 
         public static bool IsPenEvent(out System.UInt32 pointerID)
         {
             uint word = (uint)GetMessageExtraInfo();
-            const uint SignatureMask =   0xFFFFFF00;
-            const uint PointerIDMask =    0x0000007F;
+            const uint SignatureMask = 0xFFFFFF00;
+            const uint PointerIDMask = 0x0000007F;
             const uint MI_WP_SIGNATURE = 0xFF515700;
             uint signature = word & SignatureMask;
             pointerID = word & PointerIDMask;
@@ -476,7 +446,7 @@ namespace Viking.UI
 
         public static bool GetPenInfo(out PointerPenInfo info)
         {
-            if(IsPenEvent(out uint pointerID))
+            if (IsPenEvent(out uint pointerID))
             {
                 info = GetPenInfo(pointerID);
                 return true;
@@ -492,8 +462,8 @@ namespace Viking.UI
             if (Global.TracePenEvents == false)
                 return;
 
-            PointerMessageData data = new PointerMessageData(msg);
-            
+            PointerMessageData data = new(msg);
+
             bool success = WinMsgInput.GetPointerPenInfo(data.PointerID, out PointerPenInfo info);
             if (success)
             {
@@ -530,10 +500,7 @@ namespace Viking.UI
         [DllImport("User32.dll")]
         public static extern bool GetPointerPenInfo(System.UInt32 pPointerID, out PointerPenInfo info);
 
-        public static bool SetGestureConfig(IntPtr hWnd, GestureConfig[] configs)
-        {
-            return SetGestureConfig(hWnd, 0, (UInt32)configs.Length, configs, (UInt32)Marshal.SizeOf<GestureConfig>());
-        }
+        public static bool SetGestureConfig(IntPtr hWnd, GestureConfig[] configs) => SetGestureConfig(hWnd, 0, (UInt32)configs.Length, configs, (UInt32)Marshal.SizeOf<GestureConfig>());
 
         /// <summary>
         /// 

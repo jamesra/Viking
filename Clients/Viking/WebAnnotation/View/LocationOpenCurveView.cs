@@ -38,7 +38,7 @@ namespace WebAnnotation.View
             //RegisterForLocationEvents();
             //RegisterForStructureChangeEvents();
 
-            Color color = obj.Parent == null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
+            Color color = obj.Parent is null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
             curveView = new CurveView(VolumeControlPoints, color, false, Global.NumOpenCurveInterpolationPoints,
                 lineWidth: lineWidth, lineStyle: LineStyle.Tubular, controlPointRadius: lineWidth / 2.0,
                 ShowControlPoints: !Global.PenMode);
@@ -50,7 +50,7 @@ namespace WebAnnotation.View
             //RegisterForLocationEvents();
             //RegisterForStructureChangeEvents();
 
-            Color color = obj.Parent == null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
+            Color color = obj.Parent is null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
             curveView = new CurveView(VolumeControlPoints, color, false, Global.NumOpenCurveInterpolationPoints,
                 lineWidth: obj.Width.Value, lineStyle: LineStyle.Tubular, controlPointRadius: obj.Width.Value / 2.0,
                 ShowControlPoints: !Global.PenMode);
@@ -79,11 +79,7 @@ namespace WebAnnotation.View
         {
             get
             {
-                if (_MosaicCurveControlPoints == null)
-                {
-                    _MosaicCurveControlPoints = MosaicControlPoints.CalculateCurvePoints(NumInterpolationPoints, false)
-                        .ToArray();
-                }
+                _MosaicCurveControlPoints ??= [.. MosaicControlPoints.CalculateCurvePoints(NumInterpolationPoints, false)];
 
                 return _MosaicCurveControlPoints;
             }
@@ -93,11 +89,7 @@ namespace WebAnnotation.View
         {
             get
             {
-                if (_VolumeCurveControlPoints == null)
-                {
-                    _VolumeCurveControlPoints = VolumeControlPoints.CalculateCurvePoints(NumInterpolationPoints, false)
-                        .ToArray();
-                }
+                _VolumeCurveControlPoints ??= [.. VolumeControlPoints.CalculateCurvePoints(NumInterpolationPoints, false)];
 
                 return _VolumeCurveControlPoints;
             }
@@ -107,10 +99,7 @@ namespace WebAnnotation.View
         {
             get
             {
-                if (_RenderedVolumeShape == null)
-                {
-                    _RenderedVolumeShape = VolumeCurveControlPoints.ToSqlGeometry().STBuffer(LineWidth / 2.0);
-                }
+                _RenderedVolumeShape ??= VolumeCurveControlPoints.ToSqlGeometry().STBuffer(LineWidth / 2.0);
 
                 return _RenderedVolumeShape;
             }
@@ -142,23 +131,23 @@ namespace WebAnnotation.View
         /// <param name="DirectionToVisiblePlane">The Z distance of the location to the plane viewed by user.</param>
         public void DrawLabel(GraphicsDevice device, SpriteBatch spriteBatch, SpriteFont font, Scene scene)
         {
-            if (font == null)
+            if (font is null)
             {
                 throw new ArgumentNullException("font");
             }
 
-            if (spriteBatch == null)
+            if (spriteBatch is null)
             {
                 throw new ArgumentNullException("spriteBatch");
             }
 
             CurveManager curveManager = DeviceEffectsStore<CurveManager>.TryGet(device);
-            if (curveManager == null)
+            if (curveManager is null)
             {
                 return;
             }
 
-            CurveLabel.Draw(device, scene, spriteBatch, font, curveManager, new[] { curveLabel, curveParentLabel });
+            CurveLabel.Draw(device, scene, spriteBatch, font, curveManager, [curveLabel, curveParentLabel]);
         }
 
         private void CreateLabelViews(GridVector2[] controlPoints, long? ParentID)
@@ -174,7 +163,7 @@ namespace WebAnnotation.View
 
             Color LabelColor = modelObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black;
             LabelColor = LabelColor.SetAlpha(0.5f);
-            Color ParentLabelColor = new Color(1.0f, 0, 0, 0.5f);
+            Color ParentLabelColor = new(1.0f, 0, 0, 0.5f);
 
             curveLabel = new CurveLabel(LabelText, controlPoints, LabelColor, false, lineWidth: LineWidth);
             curveParentLabel = new CurveLabel(ParentStructureLabelText, controlPoints, ParentLabelColor, false,
@@ -198,7 +187,7 @@ namespace WebAnnotation.View
             LocationOpenCurveView[] listToDraw)
         {
             CurveView.Draw(device, scene, curveManager, basicEffect, overlayEffect, 0,
-                listToDraw.Select(l => l.curveView).ToArray());
+                [.. listToDraw.Select(l => l.curveView)]);
         }
 
 
@@ -225,7 +214,7 @@ namespace WebAnnotation.View
         public override List<IAction> GetPenActionsForShapeAnnotation(Path path,
             IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
         {
-            List<IAction> listActions = new List<IAction>();
+            List<IAction> listActions = [];
             IVolumeToSectionTransform mapper =
                 AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 

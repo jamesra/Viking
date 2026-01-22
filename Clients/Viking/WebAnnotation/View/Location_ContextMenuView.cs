@@ -4,10 +4,8 @@ using WebAnnotation.ViewModel;
 
 namespace WebAnnotation.View
 {
-    internal class Location_CanvasContextMenuView : Location_ViewModelBase
+    internal class Location_CanvasContextMenuView(long LocationID) : Location_ViewModelBase(LocationID)
     {
-        public Location_CanvasContextMenuView(long LocationID) : base(LocationID) { }
-
         public static ContextMenuStrip ContextMenuGenerator(IViewLocation loc)
         {
             Location_CanvasContextMenuView contextMenuView = null;
@@ -17,7 +15,7 @@ namespace WebAnnotation.View
             }
             catch (ArgumentException)
             {
-                ContextMenuStrip menu = new ContextMenuStrip();
+                ContextMenuStrip menu = new();
                 menu.Items.Add($"Unable to load location {loc.ID}");
                 return menu;
             }
@@ -29,8 +27,8 @@ namespace WebAnnotation.View
         {
             get
             {
-                ContextMenuStrip menu = new ContextMenuStrip();
-                var propertiesItem = new ToolStripMenuItem("Properties");
+                ContextMenuStrip menu = new();
+                ToolStripMenuItem propertiesItem = new("Properties");
                 propertiesItem.Click += ContextMenu_OnProperties;
                 menu.Items.Add(propertiesItem);
 

@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Geometry.Meshing;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
@@ -15,23 +15,23 @@ namespace MonogameTestbed
 
     class BranchPortView
     {
-        public List<PointSet> Sets = new List<PointSet>();
-        public List<GridPolygon> Shapes = new List<GridPolygon>();
+        public List<PointSet> Sets = [];
+        public List<GridPolygon> Shapes = [];
 
-        private  PointSet _BranchPoints = null;
+        private PointSet _BranchPoints = null;
         public PointSet BranchPoints
         {
             get => _BranchPoints;
             set
             {
-                if(_BranchPoints != null)
+                if (_BranchPoints != null)
                 {
                     _BranchPoints.CollectionChanged -= this.OnBranchShapeChanged;
                 }
 
                 _BranchPoints = value;
 
-                if(_BranchPoints != null)
+                if (_BranchPoints != null)
                 {
                     _BranchPoints.CollectionChanged += this.OnBranchShapeChanged;
                 }
@@ -39,10 +39,10 @@ namespace MonogameTestbed
         }
 
         public GridPolygon BranchShape = null;
-        public LineSetView BranchShapeView = new LineSetView();
-        public LineSetView ScaledBranchShapeView = new LineSetView();
+        public LineSetView BranchShapeView = new();
+        public LineSetView ScaledBranchShapeView = new();
 
-        public List<LineSetView> PolygonViews = new List<LineSetView>();
+        public List<LineSetView> PolygonViews = [];
 
         public BranchPortView()
         {
@@ -55,7 +55,7 @@ namespace MonogameTestbed
         {
             Sets.Add(set);
             Shapes.Add(null);
-            LineSetView newView = new MonogameTestbed.LineSetView
+            LineSetView newView = new()
             {
                 color = new Color().Random()
             };
@@ -69,15 +69,8 @@ namespace MonogameTestbed
 
         public void OnBranchShapeChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            PointSet updatedSet = sender as PointSet; 
-            if(updatedSet.Count >= 3)
-            {
-                BranchShape = new GridPolygon(updatedSet.Points.EnsureClosedRing().ToArray());
-            }
-            else
-            {
-                BranchShape = null; 
-            }
+            PointSet updatedSet = sender as PointSet;
+            BranchShape = updatedSet.Count >= 3 ? new GridPolygon(updatedSet.Points.EnsureClosedRing().ToArray()) : null;
 
             BranchShapeView.UpdateViews(BranchShape);
             CalculateBranchPorts();
@@ -113,7 +106,7 @@ namespace MonogameTestbed
                 Shapes[i] = null;
             }
 
-            PolygonViews[i].UpdateViews(Shapes[i]); 
+            PolygonViews[i].UpdateViews(Shapes[i]);
         }
 
         public void CalculateBranchPorts()
@@ -121,26 +114,26 @@ namespace MonogameTestbed
             if (BranchShape is null)
                 return;
 
-            GridPolygon[] UseableShapes = Shapes.Where(s => s != null).ToArray();
+            GridPolygon[] UseableShapes = [.. Shapes.Where(s => s != null)];
 
-            if (UseableShapes.Count() == 0)
+            if (!UseableShapes.Any())
                 return;
-             
+
             GridRectangle BranchPortBoundingRect = BranchShape.BoundingBox;
 
-            GridVector2[] shapePoints = UseableShapes.SelectMany(s => s.ExteriorRing.EnsureOpenRing()).ToArray();
+            GridVector2[] shapePoints = [.. UseableShapes.SelectMany(s => s.ExteriorRing.EnsureOpenRing())];
             GridRectangle shapeBoundingBox = shapePoints.BoundingBox();
 
-            GridPolygon convex_hull = new GridPolygon(shapePoints.ConvexHull());
+            GridPolygon convex_hull = new(shapePoints.ConvexHull());
             GridVector2 translate_vector = convex_hull.BoundingBox.Center - BranchShape.BoundingBox.Center;
 
             GridPolygon ScaledBranchPort = BranchShape.Translate(translate_vector);
 
             double maxDistance = double.MinValue;
-             
-            GridVector2 furthest_point = new GridVector2();
+
+            GridVector2 furthest_point = new();
             foreach (GridVector2 p in convex_hull.ExteriorRing.EnsureOpenRing())
-            { 
+            {
                 double distance = GridVector2.Distance(ScaledBranchPort.Centroid, p);
                 if (distance > maxDistance)
                 {
@@ -149,8 +142,8 @@ namespace MonogameTestbed
                 }
             }
 
-            GridLineSegment lineToFurthestPoint = new GridLineSegment(ScaledBranchPort.Centroid, furthest_point);
-            GridVector2 IntersectionOnLine = new GridVector2();
+            GridLineSegment lineToFurthestPoint = new(ScaledBranchPort.Centroid, furthest_point);
+            GridVector2 IntersectionOnLine = new();
             double maxDistanceToIntersection = double.MinValue;
             foreach (GridLineSegment line in ScaledBranchPort.ExteriorSegments)
             {
@@ -164,7 +157,7 @@ namespace MonogameTestbed
                     }
                 }
             }
-                         
+
             double DistanceToCentroid = GridVector2.Distance(IntersectionOnLine, ScaledBranchPort.Centroid);
             double DistanceToPoint = maxDistance;
 
@@ -196,37 +189,37 @@ namespace MonogameTestbed
             double HeightScalar = DistanceToPoint / DistanceToCentroid;
 
             ScaledBranchPort = ScaledBranchPort.Scale(new GridVector2(WidthScalar, HeightScalar));
-               
-            ScaledBranchShapeView.UpdateViews(ScaledBranchPort); 
+
+            ScaledBranchShapeView.UpdateViews(ScaledBranchPort);
         }
 
         public void Draw(MonoTestbed window, Scene scene)
         {
             if (BranchShapeView != null)
             {
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, BranchShapeView.LineViews.ToArray());
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. BranchShapeView.LineViews]);
             }
 
             if (ScaledBranchShapeView != null)
             {
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, ScaledBranchShapeView.LineViews.ToArray());
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. ScaledBranchShapeView.LineViews]);
             }
 
             if (PolygonViews != null)
             {
-                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, PolygonViews.SelectMany(pv => pv.LineViews).ToArray());
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. PolygonViews.SelectMany(pv => pv.LineViews)]);
             }
         }
     }
-    
+
     class BranchPointTest : IGraphicsTest
     {
         public string Title => this.GetType().Name;
         Scene scene;
-        readonly List<PointSet> PointSets = new List<PointSet>();
-        readonly List<PointSetView> PointSetViews = new List<PointSetView>();
-        readonly BranchPortView PortView = new BranchPortView();
-        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
+        readonly List<PointSet> PointSets = [];
+        readonly List<PointSetView> PointSetViews = [];
+        readonly BranchPortView PortView = new();
+        readonly GamePadStateTracker Gamepad = new();
 
         GridVector2 Cursor;
         CircleView cursorView;
@@ -244,27 +237,27 @@ namespace MonogameTestbed
             this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
 
             //Create four point sets
-            PointSets.Add(new PointSet());
-            PointSets.Add(new PointSet());
-            PointSets.Add(new PointSet());
-            PointSets.Add(new PointSet());
+            PointSets.Add([]);
+            PointSets.Add([]);
+            PointSets.Add([]);
+            PointSets.Add([]);
 
             PortView.BranchPoints = PointSets[0];
             PortView.AddSet(PointSets[1]);
             PortView.AddSet(PointSets[2]);
             PortView.AddSet(PointSets[3]);
 
-            
-            foreach(PointSet set in PointSets)
+
+            foreach (PointSet set in PointSets)
             {
-                PointSetView view = new PointSetView
+                PointSetView view = new()
                 {
                     Points = set,
                     Color = new Color().Random()
                 };
                 PointSetViews.Add(view);
             }
-            
+
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
 
             UpdateCursorViews(Cursor);
@@ -357,7 +350,7 @@ namespace MonogameTestbed
         {
             PortView.Draw(window, scene);
 
-            foreach(var view in PointSetViews)
+            foreach (var view in PointSetViews)
             {
                 view.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha);
             }

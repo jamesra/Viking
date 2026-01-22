@@ -19,21 +19,14 @@ using System.Collections.Concurrent;
 
 namespace WebAnnotation.ViewModel
 {
-    public class Location_CanvasViewModel : Location_ViewModelBase
+    public class Location_CanvasViewModel(LocationObj location) : Location_ViewModelBase(location.ID)
     {
-        public Location_CanvasViewModel(LocationObj location)
-            : base(location.ID)
-        {
-
-        }
-
-
         public override ContextMenuStrip ContextMenu
         {
             get
             {
-                ContextMenuStrip menu = new ContextMenuStrip();
-                var propertiesItem = new ToolStripMenuItem("Properties");
+                ContextMenuStrip menu = new();
+                ToolStripMenuItem propertiesItem = new("Properties");
                 propertiesItem.Click += ContextMenu_OnProperties;
                 menu.Items.Add(propertiesItem);
 

@@ -1,4 +1,4 @@
-﻿using GraphLib;
+using GraphLib;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 
@@ -25,9 +25,9 @@ namespace GraphLibTest
     [TestClass]
     public class PathTest
     {
-        
 
-        private bool IsPathEqual(IList<long> path, long[] expected_path)
+
+        private static bool IsPathEqual(IList<long> path, long[] expected_path)
         {
             if (path.Count != expected_path.Length)
                 return false;
@@ -47,9 +47,9 @@ namespace GraphLibTest
             SimpleGraph graph = SimpleGraph.CreateGraphWithCycle();
 
             IList<long> path = SimpleGraph.ShortestPath(graph, 1, 8);
-            long[] expected_path = new long[] { 1, 2, 3, 4, 5, 8 };
+            long[] expected_path = [1, 2, 3, 4, 5, 8];
 
-            Assert.IsTrue(IsPathEqual(path, expected_path));   
+            Assert.IsTrue(IsPathEqual(path, expected_path));
         }
 
         [TestMethod]
@@ -58,7 +58,7 @@ namespace GraphLibTest
             SimpleGraph graph = SimpleGraph.CreateGraphWithCycle();
 
             IList<long> path = SimpleGraph.ShortestPath(graph, 3, 5);
-            long[] expected_path = new long[] { 3, 4, 5};
+            long[] expected_path = [3, 4, 5];
 
             Assert.IsTrue(IsPathEqual(path, expected_path));
         }
@@ -69,18 +69,18 @@ namespace GraphLibTest
             SimpleGraph graph = SimpleGraph.CreateGraphWithCycle();
 
             IList<long> path = SimpleGraph.ShortestPath(graph, 11, 6);
-            long[] expected_path = new long[] { 11, 6 };
+            long[] expected_path = [11, 6];
 
             Assert.IsTrue(IsPathEqual(path, expected_path));
         }
-        
+
         [TestMethod]
         public void TestPathAroundCycle8_8()
         {
             SimpleGraph graph = SimpleGraph.CreateGraphWithCycle();
 
             IList<long> path = SimpleGraph.ShortestPath(graph, 8, 8);
-            long[] expected_path = new long[] {8 };
+            long[] expected_path = [8];
 
             Assert.IsTrue(IsPathEqual(path, expected_path));
         }
@@ -99,8 +99,8 @@ namespace GraphLibTest
         {
             SimpleGraph graph = SimpleGraph.CreateGraphWithCycle();
             IList<long> path = graph.FindCycle(3);
-            long[] expected_path = new long[] { 11,6,5,4,3,11 };
-            long[] reverse_expected_path = new long[] { 4, 5, 6, 11, 3, 4 };
+            long[] expected_path = [11, 6, 5, 4, 3, 11];
+            long[] reverse_expected_path = [4, 5, 6, 11, 3, 4];
             Assert.IsTrue(IsPathEqual(path, expected_path) || IsPathEqual(path, reverse_expected_path));
         }
 
@@ -137,27 +137,27 @@ namespace GraphLibTest
              *     |     | 
              *     10    6
              */
-             
+
             SimpleGraph graph = SimpleGraph.CreateGraphWithCycle();
 
             IList<long> path = SimpleGraph.ShortestPath(graph, 1, 7);
-            long[] expected_short_path = new long[] { 1,2,3,11,6,7 };
+            long[] expected_short_path = [1, 2, 3, 11, 6, 7];
             Assert.IsTrue(IsPathEqual(path, expected_short_path));
 
             //Remove 11-6
-            SimpleEdge edgeToRemove = new GraphLibTest.SimpleEdge(6, 11);
+            SimpleEdge edgeToRemove = new(6, 11);
             graph.RemoveEdge(edgeToRemove);
 
             Assert.IsFalse(graph.Nodes[11].Edges.ContainsKey(6));
             Assert.IsFalse(graph.Nodes[6].Edges.ContainsKey(11));
 
             IList<long> new_path = SimpleGraph.ShortestPath(graph, 1, 7);
-            long[] expected_long_path = new long[] { 1, 2, 3, 4, 5, 6, 7 };
+            long[] expected_long_path = [1, 2, 3, 4, 5, 6, 7];
             Assert.IsTrue(IsPathEqual(new_path, expected_long_path));
 
             //----------- Add a directional path ---
 
-            SimpleEdge directionalEdge = new SimpleEdge(6, 11, true);
+            SimpleEdge directionalEdge = new(6, 11, true);
             graph.AddEdge(directionalEdge);
 
             Assert.IsTrue(graph.Nodes[11].Edges.ContainsKey(6));
@@ -169,11 +169,11 @@ namespace GraphLibTest
 
             //Shortcut using the direction
             IList<long> short_path = SimpleGraph.ShortestPath(graph, 7, 1);
-            long[] expected_short_reversed_path = new long[] { 7,6,11,3,2,1 };
+            long[] expected_short_reversed_path = [7, 6, 11, 3, 2, 1];
             Assert.IsTrue(IsPathEqual(short_path, expected_short_reversed_path));
 
             //----------- Add a second directional edge, making the link effectively bidirectional ------
-            SimpleEdge directionalEdge2 = new SimpleEdge(11, 6, true);
+            SimpleEdge directionalEdge2 = new(11, 6, true);
             graph.AddEdge(directionalEdge2);
 
             IList<long> restored_short_path = SimpleGraph.ShortestPath(graph, 1, 7);
@@ -202,17 +202,17 @@ namespace GraphLibTest
 
             long NodeToRemove = 11;
             IList<long> path = SimpleGraph.ShortestPath(graph, 1, 7);
-            long[] expected_short_path = new long[] { 1, 2, 3, 11, 6, 7 };
+            long[] expected_short_path = [1, 2, 3, 11, 6, 7];
             Assert.IsTrue(IsPathEqual(path, expected_short_path));
 
-            ICollection<long> partners = new List<long>(graph.Nodes[NodeToRemove].Edges.Keys);
-            Assert.IsTrue(partners.Count == 2);
+            ICollection<long> partners = [.. graph.Nodes[NodeToRemove].Edges.Keys];
+            Assert.AreEqual(2, partners.Count);
 
             graph.RemoveNode(NodeToRemove);
             VerifyNodeRemoved(graph, NodeToRemove, partners);
 
             IList<long> new_path = SimpleGraph.ShortestPath(graph, 1, 7);
-            long[] expected_long_path = new long[] { 1, 2, 3, 4, 5, 6, 7 };
+            long[] expected_long_path = [1, 2, 3, 4, 5, 6, 7];
             Assert.IsTrue(IsPathEqual(new_path, expected_long_path));
 
             graph.AddNode(11);

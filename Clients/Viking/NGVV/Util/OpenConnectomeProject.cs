@@ -8,20 +8,20 @@ namespace Viking.Common
     {
         public static string[] ReadServer(Uri OCPServerURL)
         {
-            WebClient client = new WebClient();
+            WebClient client = new();
             try
             {
                 string responseString = client.DownloadString(OCPServerURL);
                 string[]? array = Newtonsoft.Json.JsonConvert.DeserializeObject<string[]>(responseString);
-                return array ?? Array.Empty<string>();
+                return array ?? [];
             }
             catch (WebException e)
             {
-                return new string[] { e.Message };
+                return [e.Message];
             }
             catch (Newtonsoft.Json.JsonReaderException e)
             {
-                return new string[] { e.Message };
+                return [e.Message];
             }
         }
     }

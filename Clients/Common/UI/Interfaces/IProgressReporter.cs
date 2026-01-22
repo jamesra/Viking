@@ -1,17 +1,10 @@
-﻿namespace Viking.Common
+namespace Viking.Common
 {
-    public struct ProgressInfo
-    { 
-        public string Message { get; }
-        public double Progress { get; }
-        public double MaxProgress { get; }
-
-        public ProgressInfo(string message, double progress, double maxProgress = 100)
-        {
-            Message = message;
-            Progress = progress;
-            MaxProgress = maxProgress;
-        }
+    public readonly struct ProgressInfo(string message, double progress, double maxProgress = 100)
+    {
+        public string Message { get; } = message;
+        public double Progress { get; } = progress;
+        public double MaxProgress { get; } = maxProgress;
     }
 
     public interface IProgressReporter : System.IProgress<ProgressInfo>

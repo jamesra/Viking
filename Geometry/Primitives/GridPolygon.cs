@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -42,7 +42,7 @@ namespace Geometry
                 if (_ExteriorRingArea < 0) //Negative area indicates Clockwise orientation, we use counter-clockwise
                 {
                     _ExteriorRingArea = -_ExteriorRingArea;
-                    _ExteriorRing = value.Reverse().ToArray();
+                    _ExteriorRing = [.. ((IEnumerable<GridVector2>)value).Reverse()];
                 }
                 else
                 {
@@ -88,10 +88,7 @@ namespace Geometry
         {
             get
             {
-                if (_SegmentRTree is null)
-                {
-                    _SegmentRTree = CreatePointIndexSegmentBoundingBoxRTree(this);
-                }
+                _SegmentRTree ??= CreatePointIndexSegmentBoundingBoxRTree(this);
 
                 return _SegmentRTree;
             }
@@ -122,10 +119,7 @@ namespace Geometry
         /// </summary>
         /// <param name="segment"></param>
         /// <returns></returns>
-        public bool IsExteriorOrInteriorSegment(GridLineSegment segment)
-        {
-            return SegmentRTree.Intersects(segment.BoundingBox.ToRTreeRectEpsilonPadded()).Any(p => p.Segment(this) == segment);  //No need to check in further detail because they should be identical GridLineSegments
-        }
+        public bool IsExteriorOrInteriorSegment(GridLineSegment segment) => SegmentRTree.Intersects(segment.BoundingBox.ToRTreeRectEpsilonPadded()).Any(p => p.Segment(this) == segment);  //No need to check in further detail because they should be identical GridLineSegments
 
         /// <summary>
         /// Cached centroid of the polygon
@@ -146,7 +140,7 @@ namespace Geometry
             }
         }
 
-        readonly List<GridPolygon> _InteriorPolygons = new List<GridPolygon>();
+        readonly List<GridPolygon> _InteriorPolygons = [];
 
         /// <summary>
         /// Read only please
@@ -156,13 +150,7 @@ namespace Geometry
         /// <summary>
         /// Read only please
         /// </summary>
-        public IReadOnlyList<GridVector2[]> InteriorRings
-        {
-            get
-            {
-                return _InteriorPolygons.Select(p => p._ExteriorRing).ToList();
-            }
-        }
+        public IReadOnlyList<GridVector2[]> InteriorRings => [.. _InteriorPolygons.Select(p => p._ExteriorRing)];
 
         /// <summary>
         /// Return a list of all exterior and interior line segments
@@ -171,7 +159,7 @@ namespace Geometry
         {
             get
             {
-                List<GridLineSegment> listLines = this.ExteriorSegments.ToList();
+                List<GridLineSegment> listLines = [.. this.ExteriorSegments];
 
                 listLines.AddRange(this.InteriorPolygons.SelectMany(inner => inner.AllSegments));
 
@@ -216,7 +204,7 @@ namespace Geometry
 
             if (exteriorRing.AreClockwise())
             {
-                exteriorRing = exteriorRing.Reverse().ToArray();
+                exteriorRing = [.. ((IEnumerable<GridVector2>)exteriorRing).Reverse()];
             }
 
             ExteriorRing = exteriorRing;
@@ -224,8 +212,8 @@ namespace Geometry
 
 
         public GridPolygon(IEnumerable<IPoint2D> exteriorRing, IEnumerable<IPoint2D[]> interiorRings)
-            : this(exteriorRing.Select(p => p.Convert()).ToArray(),
-                   interiorRings.Select(inner_ring => inner_ring.Select(p => p.Convert()).ToArray()).ToArray())
+            : this([.. exteriorRing.Select(p => p.Convert())],
+                   [.. interiorRings.Select(inner_ring => inner_ring.Select(p => p.Convert()).ToArray())])
         {
         }
 
@@ -266,16 +254,16 @@ namespace Geometry
 
         public ShapeType2D ShapeType => ShapeType2D.POLYGON;
 
-        IReadOnlyList<IPoint2D> IPolygon2D.ExteriorRing => this.ExteriorRing.Select(p => p as IPoint2D).ToArray();
+        IReadOnlyList<IPoint2D> IPolygon2D.ExteriorRing => [.. this.ExteriorRing.Select(p => p as IPoint2D)];
 
-        IReadOnlyList<IPoint2D[]> IPolygon2D.InteriorRings => this.InteriorRings.Select(ir => ir.Select(p => p as IPoint2D).ToArray()).ToArray();
+        IReadOnlyList<IPoint2D[]> IPolygon2D.InteriorRings => [.. this.InteriorRings.Select(ir => ir.Select(p => p as IPoint2D).ToArray())];
 
         IReadOnlyList<IPolygon2D> IPolygon2D.InteriorPolygons => this._InteriorPolygons; //.Select(inner => inner as IPolygon2D).ToArray();
 
         /// <summary>
         /// All unique verticies.  This is calculated for every use
         /// </summary>
-        public GridVector2[] AllVerticies => ExteriorRing.Union(InteriorRings.SelectMany(i => i)).Distinct().ToArray();
+        public GridVector2[] AllVerticies => [.. ExteriorRing.Union(InteriorRings.SelectMany(i => i)).Distinct()];
 
         /// <summary>
         /// Total verticies, including the duplicate verticies at the end of each ring
@@ -295,7 +283,7 @@ namespace Geometry
         /// <param name="interiorRing"></param>
         public void AddInteriorRing(IEnumerable<GridVector2> interiorRing)
         {
-            GridPolygon innerPoly = new Geometry.GridPolygon(interiorRing);
+            GridPolygon innerPoly = new(interiorRing);
 
             //TODO: Make sure the inner poly does not  intersect the outer ring or any existing inner ring
             AddInteriorRing(innerPoly);
@@ -710,10 +698,7 @@ namespace Geometry
         /// Removes the vertex from the exterior ring of a polgon only
         /// </summary>
         /// <param name="iVertex"></param>
-        public void RemoveVertex(int iVertex)
-        {
-            RemoveVertex(new PolygonIndex(0, iVertex, this.ExteriorRing.Length - 1));
-            /*
+        public void RemoveVertex(int iVertex) => RemoveVertex(new PolygonIndex(0, iVertex, this.ExteriorRing.Length - 1));/*
             //We must have at least 3 points to create a polygon
             if (ExteriorSegments.Length <= 3)
             {
@@ -750,7 +735,6 @@ namespace Geometry
                 InsertVertex(removedVertex, new PointIndex(0, iVertex, this._ExteriorRing.Length - 1));
                 throw new ArgumentException(string.Format("Removing vertex {0} of {1} from polygon resulted in an invalid state", iVertex, this.ExteriorRing.Length - 1));
             }*/
-        }
 
         #region Cached Values Update Code
 
@@ -789,10 +773,10 @@ namespace Geometry
             /////////////////////////////////////////////////////////////////
 
             //This function needs a revisit.  I haven't decided whether the passed index should represent the expanded ring or the current ring.
-            GridLineSegment oldSeg = new GridLineSegment(this[index.Previous], this[index.Next]);
+            GridLineSegment oldSeg = new(this[index.Previous], this[index.Next]);
 
-            GridLineSegment newSeg = new GridLineSegment(this[index.Previous], this[index]);
-            GridLineSegment newNextSeg = new GridLineSegment(this[index], this[index.Next]);
+            GridLineSegment newSeg = new(this[index.Previous], this[index]);
+            GridLineSegment newNextSeg = new(this[index], this[index.Next]);
 
             bool RTreePreviousItemFound = _SegmentRTree.Delete(index.Previous, out PolygonIndex rTreeRemovedPreviousItem);
             Debug.Assert(RTreePreviousItemFound, "Expected to find removed segment (previous) in the RTree");
@@ -814,8 +798,8 @@ namespace Geometry
             if (_SegmentRTree is null)
                 return;
 
-            GridLineSegment newPrevSeg = new GridLineSegment(this[index.Previous], this[index]);
-            GridLineSegment newSeg = new GridLineSegment(this[index], this[index.Next]);
+            GridLineSegment newPrevSeg = new(this[index.Previous], this[index]);
+            GridLineSegment newSeg = new(this[index], this[index.Next]);
 
             //Update the exterior segments if we are not updating an internal polygon, 
             //if this is an internal polygon it should have updated its own exterior segments
@@ -858,9 +842,9 @@ namespace Geometry
             }
 
             //The index scaled to the new ring size
-            PolygonIndex new_index = new PolygonIndex(removed_index.iPoly, removed_index.iInnerPoly, removed_index.iVertex, poly.ExteriorRing.Length - 1);
+            PolygonIndex new_index = new(removed_index.iPoly, removed_index.iInnerPoly, removed_index.iVertex, poly.ExteriorRing.Length - 1);
 
-            GridLineSegment newSeg = new GridLineSegment(this[new_index.Previous], this[new_index]);
+            GridLineSegment newSeg = new(this[new_index.Previous], this[new_index]);
 
             bool RTreeItemFound = _SegmentRTree.Delete(removed_index, out PolygonIndex rTreeRemovedItem);
             Debug.Assert(RTreeItemFound, "Expected to find removed segment in the RTree");
@@ -935,7 +919,7 @@ namespace Geometry
             if (_SegmentRTree is null)
                 return;
 
-            PolygonIndex index = new PolygonIndex(0, iInnerRing, 0, this.InteriorRings[iInnerRing].Length - 1);
+            PolygonIndex index = new(0, iInnerRing, 0, this.InteriorRings[iInnerRing].Length - 1);
             do
             {
                 _SegmentRTree.Add(index.Segment(this).BoundingBox, index);
@@ -966,10 +950,7 @@ namespace Geometry
         /// <param name="oldPoint"></param>
         /// <param name="newPoint"></param>
         /// <returns>True if the bounding box changed</returns>
-        private void UpdateBoundingBoxForAdd(GridVector2 point)
-        {
-            _BoundingRect += point;
-        }
+        private void UpdateBoundingBoxForAdd(GridVector2 point) => _BoundingRect += point;
 
         /// <summary>
         /// Shrink a bounding box if a removed point was on the boundaries
@@ -1006,7 +987,7 @@ namespace Geometry
             }
             else
             {
-                GridPolygon externalPolyOnly = new GridPolygon(this.ExteriorRing);
+                GridPolygon externalPolyOnly = new(this.ExteriorRing);
 
                 //Check interior polygons for validity against the exterior
                 for (int iInnerPoly = 0; iInnerPoly < this.InteriorPolygons.Count; iInnerPoly++)
@@ -1036,7 +1017,7 @@ namespace Geometry
         {
             IReadOnlyList<GridLineSegment> lines = poly.ExteriorSegments;
 
-            PolygonIndex Index = new PolygonIndex(0, 0, poly.ExteriorRing.Length - 1);
+            PolygonIndex Index = new(0, 0, poly.ExteriorRing.Length - 1);
             PolygonIndex FirstRingIndex = Index.FirstInRing;
 
             do
@@ -1096,7 +1077,7 @@ namespace Geometry
         /// <returns></returns>
         private bool AnyInnerPolygonsIntersect()
         {
-            int[] InnerIndicies = this.InteriorPolygons.Select((p, i) => i).ToArray();
+            int[] InnerIndicies = [.. this.InteriorPolygons.Select((p, i) => i)];
             foreach (var combo in InnerIndicies.CombinationPairs())
             {
                 GridPolygon A = InteriorPolygons[combo.A];
@@ -1123,7 +1104,7 @@ namespace Geometry
             if (innerPoly.IsValid() == false)
                 return false;
 
-            GridPolygon externalPolyOnly = new GridPolygon(this.ExteriorRing);
+            GridPolygon externalPolyOnly = new(this.ExteriorRing);
 
             //Do a quick sanity check that all interior verticies are inside the external polygon
             if (innerPoly.ExteriorRing.Any(v => externalPolyOnly.BoundingBox.Contains(v) == false))
@@ -1230,9 +1211,9 @@ namespace Geometry
         /// <returns></returns>
         public List<PolygonIndex> TryGetIndicies(ICollection<GridVector2> points)
         {
-            List<PolygonIndex> found = new List<PolygonIndex>(points.Count);
+            List<PolygonIndex> found = new(points.Count);
             var candidates = points.Where(p => BoundingBox.Contains(p));
-            List<GridVector2> notExterior = new List<GridVector2>(points.Count);
+            List<GridVector2> notExterior = new(points.Count);
 
             foreach (GridVector2 point in points)
             {
@@ -1278,7 +1259,7 @@ namespace Geometry
                 return Concavity.PARALLEL;
             else if (Angle < Global.Epsilon)
             {
-                var AB = new GridLineSegment(ExteriorRing[A], ExteriorRing[B]);
+                GridLineSegment AB = new(ExteriorRing[A], ExteriorRing[B]);
                 if (AB.DistanceToPoint(ExteriorRing[iVert]) < Global.Epsilon)
                     return Concavity.PARALLEL;
             }
@@ -1320,10 +1301,7 @@ namespace Geometry
         /// </summary>
         /// <param name="iVert"></param>
         /// <returns></returns>
-        public bool IsConvex()
-        {
-            return this.VertexConcavity(out double[] angles).All(c => c != Concavity.CONCAVE);
-        }
+        public bool IsConvex() => this.VertexConcavity(out double[] angles).All(c => c != Concavity.CONCAVE);
 
         /// <summary>
         /// Returns the Polygon vertex closest to the point.  May return interior verticies
@@ -1342,7 +1320,7 @@ namespace Geometry
             do
             {
                 CloserVertexFound = false;
-                var bbox = new GridRectangle(WorldPosition, nearestVertexDistance);
+                GridRectangle bbox = new(WorldPosition, nearestVertexDistance);
                 //Try to find a nearer segment than our initial point, if we do, then repeat the search
                 foreach (PolygonIndex index in SegmentRTree.IntersectionGenerator(bbox))
                 {
@@ -1424,7 +1402,7 @@ namespace Geometry
                 CloserSegmentFound = false;
 
                 //Create a search box around our point of the minimum distance we know of
-                var bbox = new GridRectangle(WorldPosition, nearestPolyDistance);
+                GridRectangle bbox = new(WorldPosition, nearestPolyDistance);
 
                 //Try to find a nearer segment than our initial point, if we do, then repeat the search
                 foreach (PolygonIndex index in SegmentRTree.IntersectionGenerator(bbox))
@@ -1464,17 +1442,14 @@ namespace Geometry
         }
 
 
-        public bool Contains(in IPoint2D point_param)
-        {
-            return GetRelation(point_param) != ShapeRelation.NONE;
-        }
+        public bool Contains(in IPoint2D point_param) => GetRelation(point_param) != ShapeRelation.NONE;
 
         public ShapeRelation GetRelation(in IPoint2D point_param)
         {
             if (!_BoundingRect.Contains(point_param))
                 return ShapeRelation.NONE;
 
-            GridVector2 p = new GridVector2(point_param.X, point_param.Y);
+            GridVector2 p = new(point_param.X, point_param.Y);
 
             //Create a line we know must pass outside the polygon
             //There is an edge case where the test line passes through a polygon vertex, so make sure the test line does not cross any verticies
@@ -1486,27 +1461,10 @@ namespace Geometry
             //GridLineSegment test_line = test_ray.ToLine(Math.Max(BoundingBox.Width, BoundingBox.Height) * 2);
 
 
-            List<GridLineSegment> segmentsToTest;
-
-            if (_ExteriorSegments.Length > 32)// || HasInteriorRings)
-            {
-                segmentsToTest = _ExteriorSegments.ToList();
-
-                ///This doesn't work because rTree returns the points in arbitrary order, and the line list must be passed to IsPointInsidePolygon in the order they appear on the ring.
-                /*
-                GridVector2 line_endpoint_translation = new GridVector2(BoundingBox.Width * 1.5, 0);
-                GridLineSegment test_line_seg = new Geometry.GridLineSegment(p - line_endpoint_translation, p + line_endpoint_translation);
-                var intersectingSegments = this.GetIntersectingSegments(test_line_seg.BoundingBox);
-                segmentsToTest = this.AllSegments.Where(s => intersectingSegments.Contains(s)).ToList();
-                */
-            }
-            else
-            {
-                segmentsToTest = _ExteriorSegments.ToList();
-            }
+            List<GridLineSegment> segmentsToTest = _ExteriorSegments.Length > 32 ? [.. _ExteriorSegments] : [.. _ExteriorSegments];
 
             //Make a horizontal line
-            GridLine test_line = new GridLine(p, GridVector2.UnitX);
+            GridLine test_line = new(p, GridVector2.UnitX);
 
             //Test all of the line segments for both interior and exterior polygons
             //return IsPointInsidePolygonByWindingTest(segmentsToTest, test_line); 
@@ -1597,17 +1555,7 @@ namespace Geometry
             if (!(this.Contains(line.A) && this.Contains(line.B) && this.Contains(line.PointAlongLine(0.5))))
                 return false;
 
-            IEnumerable<GridLineSegment> segmentsToTest;
-
-            if (_ExteriorSegments.Length > 32 || HasInteriorRings)
-            {
-                segmentsToTest = this.GetIntersectingSegments(line);
-            }
-            else
-            {
-                segmentsToTest = _ExteriorSegments.ToList();
-            }
-
+            IEnumerable<GridLineSegment> segmentsToTest = _ExteriorSegments.Length > 32 || HasInteriorRings ? this.GetIntersectingSegments(line) : [.. _ExteriorSegments];
             bool intersects = line.Intersects(segmentsToTest, true); //It is OK for endpoints to be on the exterior ring.
             if (intersects)
             {
@@ -1624,7 +1572,7 @@ namespace Geometry
             return true;
         }
 
-        ShapeRelation IShape2D.GetRelation(in ILineSegment2D line) => GetRelation(line.Convert()); 
+        ShapeRelation IShape2D.GetRelation(in ILineSegment2D line) => GetRelation(line.Convert());
 
         public ShapeRelation GetRelation(in GridLineSegment line)
         {
@@ -1636,17 +1584,7 @@ namespace Geometry
             if (!(this.Contains(line.A) && this.Contains(line.B) && this.Contains(line.PointAlongLine(0.5))))
                 return ShapeRelation.NONE;
 
-            IEnumerable<GridLineSegment> segmentsToTest;
-
-            if (_ExteriorSegments.Length > 32 || HasInteriorRings)
-            {
-                segmentsToTest = this.GetIntersectingSegments(line);
-            }
-            else
-            {
-                segmentsToTest = _ExteriorSegments.ToList();
-            }
-
+            IEnumerable<GridLineSegment> segmentsToTest = _ExteriorSegments.Length > 32 || HasInteriorRings ? this.GetIntersectingSegments(line) : [.. _ExteriorSegments];
             bool intersects = line.Intersects(segmentsToTest, true); //It is OK for endpoints to be on the exterior ring.
             if (intersects)
             {
@@ -1709,10 +1647,7 @@ namespace Geometry
         /// </summary>
         /// <param name="other"></param>
         /// <returns></returns>
-        public ShapeRelation GetRelation(in GridCircle other)
-        {
-            throw new NotImplementedException();
-            /*
+        public ShapeRelation GetRelation(in GridCircle other) => throw new NotImplementedException();/*
             GridRectangle? overlap = BoundingBox.Intersection(other.BoundingBox);
             if (!overlap.HasValue)
                 return ShapeRelation.NONE;
@@ -1752,7 +1687,6 @@ namespace Geometry
             //Check case of line segment passing through a convex polygon or an interior polygon
             return true;
             */
-        }
 
         /// <summary>
         /// Return true if the polygon is completely inside the other
@@ -1787,7 +1721,7 @@ namespace Geometry
             return !GridPolygon.SegmentsIntersect(this, other);
             */
         }
-         
+
 
 
         /// <summary>
@@ -1813,10 +1747,7 @@ namespace Geometry
             return ShapeRelation.NONE;
         }
 
-        public bool InteriorPolygonContains(in GridVector2 p)
-        {
-            return InteriorPolygonContains(p, out GridPolygon intersectedPoly);
-        }
+        public bool InteriorPolygonContains(in GridVector2 p) => InteriorPolygonContains(p, out GridPolygon intersectedPoly);
 
         public bool InteriorPolygonContains(in GridVector2 p, out GridPolygon interiorPolygon)
         {
@@ -1837,10 +1768,7 @@ namespace Geometry
             return false;
         }
 
-        public bool InteriorPolygonIntersects(in GridLineSegment line)
-        {
-            return InteriorPolygonIntersects(line, out GridPolygon intersectedPoly);
-        }
+        public bool InteriorPolygonIntersects(in GridLineSegment line) => InteriorPolygonIntersects(line, out GridPolygon intersectedPoly);
 
         public bool InteriorPolygonIntersects(in GridLineSegment line, out GridPolygon interiorPolygon)
         {
@@ -1871,32 +1799,24 @@ namespace Geometry
         /// <summary>
         /// The results of whether a polygon segment is left, right, or on a test line
         /// </summary>
-        private readonly struct SegmentIsLeftData
+        private readonly struct SegmentIsLeftData(int a_is_left, int b_is_left, GridLineSegment seg, int? is_p_left_of_seg)
         {
             /// <summary>
             /// Is S.A left of the line?
             /// </summary>
-            public readonly int A_is_left;
+            public readonly int A_is_left = a_is_left;
 
             /// <summary>
             /// Is S.B left of the line?
             /// </summary>
-            public readonly int B_is_left;
+            public readonly int B_is_left = b_is_left;
 
             /// <summary>
             /// The polygon segment that was tested.  (Not the 
             /// </summary>
-            public readonly GridLineSegment S;
+            public readonly GridLineSegment S = seg;
 
-            public readonly int? IsPLeftOfSeg;
-
-            public SegmentIsLeftData(int a_is_left, int b_is_left, GridLineSegment seg, int? is_p_left_of_seg)
-            {
-                A_is_left = a_is_left;
-                B_is_left = b_is_left;
-                S = seg;
-                IsPLeftOfSeg = is_p_left_of_seg;
-            }
+            public readonly int? IsPLeftOfSeg = is_p_left_of_seg;
 
             /// <summary>
             /// The segment crosses the line, with one endpoint on one side and the the other across it
@@ -1957,12 +1877,12 @@ namespace Geometry
         {
             GridVector2 test_point = test_line.Origin;
 #if DEBUG
-            var OriginalSegments = polygonSegments.ToList(); //Create a copy so we can examine the debugger
+            List<GridLineSegment> OriginalSegments = [.. polygonSegments]; //Create a copy so we can examine the debugger
 #endif
             //OK, now we need to condense any instance where IsLeft.A or IsLeft.B == 0.  That is, the segment does not cross the line, mearly touches it. 
             //If we have opposite IsLeftValues we create a new edge that entirely crosses the line.  Otherwise we ignore the edge, which is the case where the segment touches the test_line but does not cross.
 
-            List<SegmentIsLeftData> IsLeft = new List<SegmentIsLeftData>(polygonSegments.Count);
+            List<SegmentIsLeftData> IsLeft = new(polygonSegments.Count);
 
             for (int i = 0; i < polygonSegments.Count; i++)
             {
@@ -1972,7 +1892,7 @@ namespace Geometry
                     return ShapeRelation.TOUCHING;
                 }
 
-                var seg = new SegmentIsLeftData(a_is_left: test_line.IsLeft(s.A), b_is_left: test_line.IsLeft(s.B), seg: s, is_p_left_of_seg: new int?());
+                SegmentIsLeftData seg = new(a_is_left: test_line.IsLeft(s.A), b_is_left: test_line.IsLeft(s.B), seg: s, is_p_left_of_seg: new int?());
                 if (seg.TouchesLine)
                 {
                     //Check the case of the segment crossing, contacting, or perfectly overlapped to the line within epsilon error limit
@@ -1998,7 +1918,7 @@ namespace Geometry
             if (IsLeft.Count == 0)
                 return ShapeRelation.NONE;
 
-            polygonSegments = IsLeft.Select(left => left.S).ToList();
+            polygonSegments = [.. IsLeft.Select(left => left.S)];
 
             //Find all segments that touch the line.  Remove the endpoints that touch the line and create a virtual segment that runs between the endpoints that did not touch the line.  This prevents double-counting windings.
             //InfiniteSequentialIndexSet SegEnumerator = new InfiniteSequentialIndexSet(0, IsLeft.Count, 0);
@@ -2035,12 +1955,12 @@ namespace Geometry
                     }
                     else  //We touch the line and then cross over it.  We can remove both entries and add a new one
                     {
-                        GridLineSegment virtualPolySegment = new GridLineSegment(seg.S.A, nextSegEndpoint);
+                        GridLineSegment virtualPolySegment = new(seg.S.A, nextSegEndpoint);
                         polygonSegments.RemoveAt(i);
                         polygonSegments.Insert(i, virtualPolySegment);
                         polygonSegments.RemoveAt(iNext);
 
-                        var newEntry = new SegmentIsLeftData(a_is_left: seg.A_is_left,
+                        SegmentIsLeftData newEntry = new(a_is_left: seg.A_is_left,
                             b_is_left: nextSegIsLeft,
                             seg: virtualPolySegment,
                             is_p_left_of_seg: new int?(seg.S.IsLeft(test_point))); //Record whether the lines were left of the test_point in case the new line moves to the other side of the point.
@@ -2069,14 +1989,7 @@ namespace Geometry
 
                 IsAboveToBelow = SegData.S.A.Y.CompareTo(SegData.S.B.Y);
 
-                if (SegData.IsPLeftOfSeg.HasValue == false)
-                {
-                    pIsLeft = polySeg.IsLeft(test_point);
-                }
-                else
-                {
-                    pIsLeft = SegData.IsPLeftOfSeg.Value;
-                }
+                pIsLeft = SegData.IsPLeftOfSeg.HasValue == false ? polySeg.IsLeft(test_point) : SegData.IsPLeftOfSeg.Value;
 
                 /*if(IsAboveToBelow == 0) //Case of parallel line
                 {
@@ -2117,7 +2030,7 @@ namespace Geometry
 
             if (polygonSegments.Count > 128)
             {
-                System.Collections.Concurrent.ConcurrentBag<GridVector2> intersectionsBag = new System.Collections.Concurrent.ConcurrentBag<Geometry.GridVector2>();
+                System.Collections.Concurrent.ConcurrentBag<GridVector2> intersectionsBag = [];
 
                 IntersectedSegments = polygonSegments.Where(line =>
                 {
@@ -2130,13 +2043,13 @@ namespace Geometry
                     return intersected;
                 }).AsParallel().ToList(); //Need ToList here to ensure the query executes fully
 
-                intersections = new List<GridVector2>(intersectionsBag);
+                intersections = [.. intersectionsBag];
             }
             else
             {
                 intersections = new List<GridVector2>(polygonSegments.Count);
 
-                IntersectedSegments = polygonSegments.Where(line =>
+                IntersectedSegments = [.. polygonSegments.Where(line =>
                 {
                     bool intersected = line.Intersects(test_line, out GridVector2 Intersection);
                     if (intersected)
@@ -2145,12 +2058,12 @@ namespace Geometry
                     }
 
                     return intersected;
-                }).ToList(); //Need ToList here to ensure the query executes fully
+                })]; //Need ToList here to ensure the query executes fully
             }
 
             //Ensure the line doesn't pass through on a line endpoint
             //SortedSet<GridVector2> intersectionPoints = new SortedSet<GridVector2>();
-            GridVector2[] UniqueIntersections = intersections.Distinct().ToArray();
+            GridVector2[] UniqueIntersections = [.. intersections.Distinct()];
 
             if (UniqueIntersections.Any(p => test_line.IsEndpoint(p)))
                 return true; //If the point is exactly on the line then we can often have two intersections as the line leaves the polygon which results in a false negative.
@@ -2182,7 +2095,7 @@ namespace Geometry
 
             for (int iPoint = 0; iPoint < ring_points.Length - 1; iPoint++)
             {
-                GridLineSegment line = new Geometry.GridLineSegment(ring_points[iPoint], ring_points[iPoint + 1]);
+                GridLineSegment line = new(ring_points[iPoint], ring_points[iPoint + 1]);
                 lines[iPoint] = line;
             }
 
@@ -2191,7 +2104,7 @@ namespace Geometry
 
         private static RTree.RTree<GridLineSegment> CreateSegmentBoundingBoxRTree(GridLineSegment[] segments)
         {
-            RTree.RTree<GridLineSegment> R = new RTree.RTree<GridLineSegment>();
+            RTree.RTree<GridLineSegment> R = new();
 
             foreach (GridLineSegment l in segments)
             {
@@ -2210,9 +2123,9 @@ namespace Geometry
         /// <returns></returns>
         private static RTree.RTree<PolygonIndex> CreatePointIndexSegmentBoundingBoxRTree(GridPolygon poly)
         {
-            RTree.RTree<PolygonIndex> R = new RTree.RTree<PolygonIndex>();
+            RTree.RTree<PolygonIndex> R = new();
 
-            PolygonVertexEnum enumerator = new PolygonVertexEnum(poly);
+            PolygonVertexEnum enumerator = new(poly);
             foreach (PolygonIndex p in enumerator)
             {
                 GridLineSegment s = p.Segment(poly);
@@ -2232,7 +2145,7 @@ namespace Geometry
             GridRectangle bbox = line.BoundingBox;
             if (!this.BoundingBox.Intersects(bbox))
             {
-                return new List<Geometry.GridLineSegment>(0);
+                return Array.Empty<GridLineSegment>();
             }
 
             //return SegmentRTree.Intersects(bbox.ToRTreeRect(0)).Select(p => p.Segment(this)).Where(segment => line.Intersects(segment, false)).ToList();
@@ -2248,12 +2161,12 @@ namespace Geometry
         {
             if (!this.BoundingBox.Intersects(bbox))
             {
-                return new List<Geometry.GridLineSegment>(0);
+                return [];
             }
 
             var intersections = SegmentRTree.Intersects(bbox.ToRTreeRectEpsilonPadded(0));
             var segments = intersections.Select(p => p.Segment(this));
-            var candidates = segments.Where(segment => bbox.Intersects(segment)).ToList();
+            List<GridLineSegment> candidates = [.. segments.Where(segment => bbox.Intersects(segment))];
             return candidates;
 
         }
@@ -2273,7 +2186,7 @@ namespace Geometry
 
             GridVector2[] RotatedRing = this.ExteriorRing.Rotate(angle, origin.Value);
 
-            GridPolygon poly = new GridPolygon(RotatedRing);
+            GridPolygon poly = new(RotatedRing);
 
             foreach (GridPolygon innerRing in this._InteriorPolygons)
             {
@@ -2284,10 +2197,7 @@ namespace Geometry
             return poly;
         }
 
-        public GridPolygon Scale(double scalar, GridVector2? origin = null)
-        {
-            return this.Scale(new GridVector2(scalar, scalar), origin);
-        }
+        public GridPolygon Scale(double scalar, GridVector2? origin = null) => this.Scale(new GridVector2(scalar, scalar), origin);
 
         /// <summary>
         /// Scale the polygon by the specified factor from the specified origin
@@ -2304,7 +2214,7 @@ namespace Geometry
 
             GridVector2[] ScaledRing = this.ExteriorRing.Scale(scalar, origin.Value);
 
-            GridPolygon poly = new GridPolygon(ScaledRing);
+            GridPolygon poly = new(ScaledRing);
 
             foreach (GridPolygon innerRing in this._InteriorPolygons)
             {
@@ -2324,7 +2234,7 @@ namespace Geometry
         {
             GridVector2[] TranslatedRing = this.ExteriorRing.Translate(offset);
 
-            GridPolygon poly = new GridPolygon(TranslatedRing);
+            GridPolygon poly = new(TranslatedRing);
 
             foreach (GridPolygon innerRing in this._InteriorPolygons)
             {
@@ -2341,7 +2251,7 @@ namespace Geometry
             double accumulator_Y = 0;
 
             //To prevent precision errors we subtract the average value and add it again
-            ExteriorRing = ExteriorRing.EnsureClosedRing().ToArray();
+            ExteriorRing = [.. ExteriorRing.EnsureClosedRing()];
             GridVector2 Average = ExteriorRing.Average();
             GridVector2[] translated_Points = ExteriorRing.Translate(-Average);
 
@@ -2360,10 +2270,7 @@ namespace Geometry
             return new GridVector2((accumulator_X / scalar) + Average.X, (accumulator_Y / scalar) + Average.Y);
         }
 
-        public GridPolygon Smooth(uint NumInterpolationPoints)
-        {
-            return GridPolygon.Smooth(this, NumInterpolationPoints);
-        }
+        public GridPolygon Smooth(uint NumInterpolationPoints) => GridPolygon.Smooth(this, NumInterpolationPoints);
 
         public static GridPolygon Smooth(GridPolygon poly, uint NumInterpolationPoints)
         {
@@ -2371,7 +2278,7 @@ namespace Geometry
 
             //GridVector2[] simplifiedCurve = smoothedCurve.DouglasPeuckerReduction(.5, poly.ExteriorRing).EnsureClosedRing().ToArray();
 
-            GridPolygon smoothed_poly = new GridPolygon(smoothedCurve);
+            GridPolygon smoothed_poly = new(smoothedCurve);
 
             foreach (GridPolygon inner_poly in poly.InteriorPolygons)
             {
@@ -2391,8 +2298,8 @@ namespace Geometry
         /// <returns></returns>
         public GridPolygon SimplifyControlPoints(double MaxDistanceFromSimplifiedToIdeal = 1.0)
         {
-            GridVector2[] simpler_ring = CatmullRomControlPointSimplification.IdentifyControlPoints(this.ExteriorRing, MaxDistanceFromSimplifiedToIdeal, true).ToArray();
-            GridPolygon output = new GridPolygon(simpler_ring);
+            GridVector2[] simpler_ring = [.. CatmullRomControlPointSimplification.IdentifyControlPoints(this.ExteriorRing, MaxDistanceFromSimplifiedToIdeal, true)];
+            GridPolygon output = new(simpler_ring);
 
             foreach (var inner_ring in this.InteriorRings)
             {
@@ -2403,10 +2310,7 @@ namespace Geometry
             return output;
         }
 
-        public double Distance(GridVector2 p)
-        {
-            return this.ExteriorSegments.Min(line => line.DistanceToPoint(p));
-        }
+        public double Distance(GridVector2 p) => this.ExteriorSegments.Min(line => line.DistanceToPoint(p));
 
         public double Distance(GridVector2 p, out GridLineSegment nearestLine)
         {
@@ -2465,9 +2369,9 @@ namespace Geometry
         /// <param name="p"></param>
         public double DistanceFromCenterNormalized(GridVector2 p)
         {
-            GridLine line = new Geometry.GridLine(Centroid, p - Centroid);
+            GridLine line = new(Centroid, p - Centroid);
 
-            List<GridVector2> Intersections = new List<Geometry.GridVector2>(ExteriorRing.Length);
+            List<GridVector2> Intersections = new(ExteriorRing.Length);
             for (int i = 0; i < _ExteriorSegments.Length; i++)
             {
                 if (line.Intersects(this._ExteriorSegments[i], out GridVector2 intersection))
@@ -2493,7 +2397,7 @@ namespace Geometry
 
         public object Clone()
         {
-            GridPolygon clone = new Geometry.GridPolygon(this.ExteriorRing.Clone() as GridVector2[]);
+            GridPolygon clone = new(this.ExteriorRing.Clone() as GridVector2[]);
             foreach (GridPolygon innerPoly in this.InteriorPolygons)
             {
                 GridPolygon innerClone = innerPoly.Clone() as GridPolygon;
@@ -2510,14 +2414,14 @@ namespace Geometry
         /// <returns></returns>
         public GridPolygon Round(int precision)
         {
-            GridVector2[] roundedPoints = this.ExteriorRing.Select(e => e.Round(precision)).ToArray();
+            GridVector2[] roundedPoints = [.. this.ExteriorRing.Select(e => e.Round(precision))];
             for (int i = roundedPoints.Length - 1; i > 0; i--)
             {
                 if (roundedPoints[i] == roundedPoints[i - 1])
                     roundedPoints.RemoveAt(i);
             }
 
-            GridPolygon clone = new Geometry.GridPolygon(roundedPoints);
+            GridPolygon clone = new(roundedPoints);
             foreach (GridPolygon innerPoly in this.InteriorPolygons)
             {
                 GridPolygon innerClone = innerPoly.Round(precision);
@@ -2539,10 +2443,7 @@ namespace Geometry
             }
         }
 
-        public bool Intersects(in IShape2D shape)
-        {
-            return ShapeExtensions.PolygonIntersects(this, shape);
-        }
+        public bool Intersects(in IShape2D shape) => ShapeExtensions.PolygonIntersects(this, shape);
 
 
         public bool Intersects(in ICircle2D c)
@@ -2551,15 +2452,9 @@ namespace Geometry
             return this.Intersects(circle);
         }
 
-        public bool Intersects(in GridCircle circle)
-        {
-            return PolygonIntersectionExtensions.Intersects(this, circle);
-        }
+        public bool Intersects(in GridCircle circle) => PolygonIntersectionExtensions.Intersects(this, circle);
 
-        public bool Intersects(in GridRectangle rect)
-        {
-            return RectangleIntersectionExtensions.Intersects(rect, this);
-        }
+        public bool Intersects(in GridRectangle rect) => RectangleIntersectionExtensions.Intersects(rect, this);
 
 
         public bool Intersects(in ILineSegment2D l)
@@ -2568,10 +2463,7 @@ namespace Geometry
             return this.Intersects(line);
         }
 
-        public bool Intersects(in GridLineSegment line)
-        {
-            return PolygonIntersectionExtensions.Intersects(this, line);
-        }
+        public bool Intersects(in GridLineSegment line) => PolygonIntersectionExtensions.Intersects(this, line);
 
         public bool Intersects(in ITriangle2D t)
         {
@@ -2579,10 +2471,7 @@ namespace Geometry
             return this.Intersects(tri);
         }
 
-        public bool Intersects(in GridTriangle tri)
-        {
-            return PolygonIntersectionExtensions.Intersects(this, tri);
-        }
+        public bool Intersects(in GridTriangle tri) => PolygonIntersectionExtensions.Intersects(this, tri);
 
         public bool Intersects(in IPolygon2D p)
         {
@@ -2636,10 +2525,7 @@ namespace Geometry
             return false;
         }
 
-        bool IShape2D.Contains(in IPoint2D p)
-        {
-            return this.Contains(p.Convert());
-        }
+        bool IShape2D.Contains(in IPoint2D p) => this.Contains(p.Convert());
 
         IShape2D IShape2D.Translate(in IPoint2D offset)
         {
@@ -2654,24 +2540,24 @@ namespace Geometry
         /// <returns>All intersection points, including pre-existing and added</returns>
         public List<GridVector2> AddPointsAtIntersections(GridPolygon other)
         {
-            List<GridVector2> found_or_added_intersections = new List<GridVector2>();
+            List<GridVector2> found_or_added_intersections = [];
             GridRectangle? overlap = this.BoundingBox.Intersection(other.BoundingBox);
 
             //No work to do if there is no overlap
             if (!overlap.HasValue)
                 return found_or_added_intersections;
 
-            List<GridVector2> newRing = new List<Geometry.GridVector2>();
+            List<GridVector2> newRing = [];
 
-            var vertEnumerator = new PolygonVertexEnum(this, reverse: true);
+            PolygonVertexEnum vertEnumerator = new(this, reverse: true);
 
-            QuadTreeWithUniqueValues<GridVector2> addedVertexQuad = new QuadTreeWithUniqueValues<GridVector2>();
+            QuadTreeWithUniqueValues<GridVector2> addedVertexQuad = new();
 
             //Enumerate in reverse so we do not break our index values as we insert
             //Handle an edge case where we insert at the end of the loop, but the .Next index wraps to zero which changes the index of every item in the loop.
             foreach (PolygonIndex originalpolyIndex in vertEnumerator)
             {
-                GridVector2[] IntersectionPoints = Array.Empty<GridVector2>();
+                GridVector2[] IntersectionPoints = [];
 
                 //This block identifies intersection points
                 {
@@ -2707,7 +2593,7 @@ namespace Geometry
                 }
 
                 //Reverse the intersection list so we are adding points furthest to nearest.  This prevents our polyIndex from pointing at the wrong index after adding a point when there are multiple intersections for a segment.
-                IntersectionPoints = IntersectionPoints.Reverse().ToArray();
+                IntersectionPoints = [.. ((IEnumerable<GridVector2>)IntersectionPoints).Reverse()];
 
                 //Remove any duplicates of the existing endpoints 
                 for (int iInter = 0; iInter < IntersectionPoints.Length; iInter++)
@@ -2882,11 +2768,11 @@ namespace Geometry
             if (!overlap.HasValue)
                 return;
 
-            List<GridVector2> newRing = new List<Geometry.GridVector2>(ExteriorRing.Length);
+            List<GridVector2> newRing = new(ExteriorRing.Length);
 
             for (int i = 0; i < ExteriorRing.Length - 1; i++)
             {
-                GridLineSegment ls = new GridLineSegment(ExteriorRing[i], ExteriorRing[i + 1]);
+                GridLineSegment ls = new(ExteriorRing[i], ExteriorRing[i + 1]);
 
                 newRing.Add(ExteriorRing[i]);
 
@@ -2898,7 +2784,7 @@ namespace Geometry
                     //The intersection could be a line, which we can't really add an infinite number of points for... we could add internal endpoints, but for now we add point intersections only.
                     if (intersection is IPoint2D point)
                     {
-                        GridVector2 p = new GridVector2(point.X, point.Y);
+                        GridVector2 p = new(point.X, point.Y);
                         System.Diagnostics.Debug.Assert(!newRing.Contains(p));
                         newRing.Add(p);
                     }
@@ -2910,7 +2796,7 @@ namespace Geometry
             //Ensure we are not accidentally adding duplicate points, other than to close the ring
             System.Diagnostics.Debug.Assert(newRing.Count == newRing.Distinct().Count() + 1);
 
-            this.ExteriorRing = newRing.ToArray();
+            this.ExteriorRing = [.. newRing];
 
             foreach (GridPolygon innerPolygon in this._InteriorPolygons)
             {
@@ -2930,11 +2816,11 @@ namespace Geometry
             //Only check the lines that could intersect our polygon
             var other = input.Where(o => this.BoundingBox.Intersects(o.BoundingBox)).ToArray();
 
-            List<GridVector2> newRing = new List<Geometry.GridVector2>();
+            List<GridVector2> newRing = [];
 
             for (int i = 0; i < ExteriorRing.Length - 1; i++)
             {
-                GridLineSegment ls = new GridLineSegment(ExteriorRing[i], ExteriorRing[i + 1]);
+                GridLineSegment ls = new(ExteriorRing[i], ExteriorRing[i + 1]);
 
                 //Don't add the point if it is too close
                 if (newRing.Count == 0 || GridVector2.DistanceSquared(newRing.Last(), ExteriorRing[i]) > Global.EpsilonSquared)
@@ -2958,7 +2844,7 @@ namespace Geometry
             //Ensure we are not accidentally adding duplicate points, other than to close the ring
             System.Diagnostics.Debug.Assert(newRing.Count == newRing.Distinct().Count() + 1);
 
-            this.ExteriorRing = newRing.ToArray();
+            this.ExteriorRing = [.. newRing];
 
             foreach (GridPolygon innerPolygon in this._InteriorPolygons)
             {
@@ -2974,8 +2860,8 @@ namespace Geometry
         /// <returns></returns>
         public QuadTreeWithUniqueValues<PolygonIndex> CreatePointToPolyMap()
         {
-            var map = CreatePointToPolyMap(new GridPolygon[] { this });
-            QuadTreeWithUniqueValues<PolygonIndex> flatMap = new QuadTreeWithUniqueValues<PolygonIndex>(); //The map without the possibility of multiple verticies at the same position
+            var map = CreatePointToPolyMap([this]);
+            QuadTreeWithUniqueValues<PolygonIndex> flatMap = new(); //The map without the possibility of multiple verticies at the same position
 
             foreach (GridVector2 p in map.Keys)
             {
@@ -2992,7 +2878,7 @@ namespace Geometry
         /// <returns></returns>
         public static QuadTreeWithUniqueValues<PolygonIndex> CreatePointToPolyMap2D(GridPolygon[] Polygons)
         {
-            QuadTreeWithUniqueValues<PolygonIndex> pointToPoly = new QuadTreeWithUniqueValues<PolygonIndex>();
+            QuadTreeWithUniqueValues<PolygonIndex> pointToPoly = new();
             for (int iPoly = 0; iPoly < Polygons.Length; iPoly++)
             {
                 GridPolygon poly = Polygons[iPoly];
@@ -3002,7 +2888,7 @@ namespace Geometry
                 for (int iVertex = 0; iVertex < poly.ExteriorRing.Length - 1; iVertex++)
                 {
                     GridVector2 p = poly.ExteriorRing[iVertex];
-                    PolygonIndex value = new PolygonIndex(iPoly, iVertex, Polygons);
+                    PolygonIndex value = new(iPoly, iVertex, Polygons);
 
                     if (pointToPoly.ContainsKey(p))
                     {
@@ -3022,7 +2908,7 @@ namespace Geometry
                     {
                         GridVector2 p = innerPolygon.ExteriorRing[iVertex];
 
-                        PolygonIndex value = new PolygonIndex(iPoly, iInnerPoly, iVertex, Polygons);
+                        PolygonIndex value = new(iPoly, iInnerPoly, iVertex, Polygons);
                         if (pointToPoly.ContainsKey(p))
                         {
                             throw new ArgumentException($"Duplicate inner polygon vertex {p}");
@@ -3048,7 +2934,7 @@ namespace Geometry
         /// <returns></returns>
         public static QuadTreeWithUniqueValues<List<PolygonIndex>> CreatePointToPolyMap(GridPolygon[] Polygons, IReadOnlyList<int> PolygonIndicies = null)
         {
-            QuadTreeWithUniqueValues<List<PolygonIndex>> pointToPoly = new QuadTreeWithUniqueValues<List<PolygonIndex>>();
+            QuadTreeWithUniqueValues<List<PolygonIndex>> pointToPoly = new();
             for (int iPoly = 0; iPoly < Polygons.Length; iPoly++)
             {
                 int iPolygon = iPoly; //Used to adjust polygon index if PolygonIndicies is remapping those values
@@ -3062,20 +2948,20 @@ namespace Geometry
                 for (int iVertex = 0; iVertex < poly.ExteriorRing.Length - 1; iVertex++)
                 {
                     GridVector2 p = poly.ExteriorRing[iVertex];
-                    PolygonIndex value = new PolygonIndex(iPolygon, iVertex, Polygons);
+                    PolygonIndex value = new(iPolygon, iVertex, Polygons);
 
-                    if(pointToPoly.TryGetValue(p, out List<PolygonIndex> existing))
+                    if (pointToPoly.TryGetValue(p, out List<PolygonIndex> existing))
                     {
                         existing.Add(value);
                     }
                     else
                     {
-                        List<PolygonIndex> indexList = new List<Geometry.PolygonIndex>
-                        {
+                        List<PolygonIndex> indexList =
+                        [
                             value
-                        };
+                        ];
                         pointToPoly.Add(p, indexList);
-                    }     
+                    }
                 }
 
                 for (int iInnerPoly = 0; iInnerPoly < poly.InteriorPolygons.Count; iInnerPoly++)
@@ -3086,16 +2972,17 @@ namespace Geometry
                     {
                         GridVector2 p = innerPolygon.ExteriorRing[iVertex];
 
-                        PolygonIndex value = new PolygonIndex(iPolygon, iInnerPoly, iVertex, Polygons);
+                        PolygonIndex value = new(iPolygon, iInnerPoly, iVertex, Polygons);
                         if (pointToPoly.TryGetValue(p, out var existing))
                         {
                             existing.Add(value);
                         }
-                        else { 
-                            List<PolygonIndex> indexList = new List<Geometry.PolygonIndex>
-                            {
+                        else
+                        {
+                            List<PolygonIndex> indexList =
+                            [
                                 value
-                            };
+                            ];
                             pointToPoly.Add(p, indexList);
                         }
                     }
@@ -3105,10 +2992,7 @@ namespace Geometry
             return pointToPoly;
         }
 
-        public static GridPolygon WalkPolygonCut(GridPolygon input, RotationDirection direction, IList<GridVector2> cutLine)
-        {
-            return WalkPolygonCut(input, direction, cutLine, out PolygonIndex FirstIntersection, out PolygonIndex LastIntersection, out List<GridVector2> intersecting_cutline_verts);
-        }
+        public static GridPolygon WalkPolygonCut(GridPolygon input, RotationDirection direction, IList<GridVector2> cutLine) => WalkPolygonCut(input, direction, cutLine, out PolygonIndex FirstIntersection, out PolygonIndex LastIntersection, out List<GridVector2> intersecting_cutline_verts);
 
 
         /// <summary>
@@ -3125,8 +3009,8 @@ namespace Geometry
 
             //Find a possible intersection point for the retrace
             GridLineSegment[] cutLines = cutLine.ToLineSegments();
-            intersecting_cutline_verts = new List<GridVector2>(); //Every vert in the path that crosses the two polygon
-            List<PolygonIndex> IntersectingPointIndicies = new List<PolygonIndex>();
+            intersecting_cutline_verts = []; //Every vert in the path that crosses the two polygon
+            List<PolygonIndex> IntersectingPointIndicies = [];
             bool FirstCutIntersectionFound = false;
 
             //Add the intersection points to the polygon
@@ -3136,7 +3020,7 @@ namespace Geometry
             //Identify where the cut crosses the polygon rings 
             for (int iVert = 0; iVert < cutLine.Count - 1; iVert++)
             {
-                GridLineSegment segment = new GridLineSegment(cutLine[iVert], cutLine[iVert + 1]);
+                GridLineSegment segment = new(cutLine[iVert], cutLine[iVert + 1]);
 
                 var intersections = output.IntersectingSegments(segment);
 
@@ -3229,7 +3113,7 @@ namespace Geometry
             }
 
             //Walk the ring using Next to find perimeter on one side, the walk using prev to find perimeter on the other
-            List<GridVector2> walkedPoints = new List<GridVector2>();
+            List<GridVector2> walkedPoints = [];
             PolygonIndex current = start_index;
 
             //Add the points from the polygon
@@ -3237,10 +3121,7 @@ namespace Geometry
             {
                 Debug.Assert(walkedPoints.Contains(current.Point(originPolygon)) == false);
                 walkedPoints.Add(current.Point(originPolygon));
-                if (direction == RotationDirection.COUNTERCLOCKWISE)
-                    current = current.Next;
-                else
-                    current = current.Previous;
+                current = direction == RotationDirection.COUNTERCLOCKWISE ? current.Next : current.Previous;
 
             }
             while (current != end_index);
@@ -3250,7 +3131,7 @@ namespace Geometry
             //Add the intersection point of where we crossed the boundary 
             //List<GridVector2> SimplifiedPath = CurveSimplificationExtensions.DouglasPeuckerReduction(cutLine, Global.PenSimplifyThreshold);
             //Since we start walking the polygon from the first intersection point we always add the cutline in reverse order to return to the cirst intersection point.
-            List<GridVector2> SimplifiedPath = cutLine.Reverse().ToList();
+            List<GridVector2> SimplifiedPath = [.. cutLine.Reverse()];
 
             //The intersection point marks where we enter the polygon.  The first point in the path is not added because it indicates where the line exited the cut region. 
             //Add the PenInput.Path 
@@ -3287,7 +3168,7 @@ namespace Geometry
                 walkedPoints.Reverse();
             }
              */
-            GridPolygon output = new GridPolygon(walkedPoints.EnsureClosedRing());
+            GridPolygon output = new(walkedPoints.EnsureClosedRing());
 
             //Add any interior polygons contained within our cut
             for (int iRing = 0; iRing < originPolygon.InteriorRings.Count; iRing++)

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="Segment.cs" company="">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -11,12 +11,15 @@ namespace TriangleNet.Geometry
     /// <summary>
     /// Represents a straight line segment in 2D space.
     /// </summary>
-    public class Segment : ISegment
+    /// <remarks>
+    /// Initializes a new instance of the <see cref="Segment" /> class.
+    /// </remarks>
+    public class Segment(Vertex v0, Vertex v1, int label) : ISegment
     {
-        readonly Vertex v0;
-        readonly Vertex v1;
+        readonly Vertex v0 = v0;
+        readonly Vertex v1 = v1;
 
-        int label;
+        int label = label;
 
         /// <summary>
         /// Gets or sets the segments boundary mark.
@@ -45,17 +48,6 @@ namespace TriangleNet.Geometry
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Segment" /> class.
-        /// </summary>
-        public Segment(Vertex v0, Vertex v1, int label)
-        {
-            this.v0 = v0;
-            this.v1 = v1;
-
-            this.label = label;
-        }
-
-        /// <summary>
         /// Gets the specified segment endpoint.
         /// </summary>
         /// <param name="index">The endpoint index (0 or 1).</param>
@@ -78,9 +70,6 @@ namespace TriangleNet.Geometry
         /// <summary>
         /// WARNING: not implemented.
         /// </summary>
-        public ITriangle GetTriangle(int index)
-        {
-            throw new NotImplementedException();
-        }
+        public ITriangle GetTriangle(int index) => throw new NotImplementedException();
     }
 }

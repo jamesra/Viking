@@ -23,12 +23,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int viewportWidth,
             int viewportHeight)
         {
-            if (protoPolygon == null || protoPolygon.Points.Count < 3)
+            if (protoPolygon is null || protoPolygon.Points.Count < 3)
                 return null;
 
             // Transform each point from viewport pixel coordinates to world coordinates
-            List<GridVector2> worldPoints = new List<GridVector2>(protoPolygon.Points.Count);
-            
+            List<GridVector2> worldPoints = new(protoPolygon.Points.Count);
+
             GridVector2 topLeft = viewportBounds.LowerLeft;
             GridVector2 bottomRight = viewportBounds.UpperRight;
 
@@ -39,7 +39,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 double normalizedY = (double)point.Y / viewportHeight;
 
                 // Transform normalized coordinates to world coordinates
-                GridVector2 worldPoint = new GridVector2(
+                GridVector2 worldPoint = new(
                     topLeft.X + normalizedX * (bottomRight.X - topLeft.X),
                     topLeft.Y + normalizedY * (bottomRight.Y - topLeft.Y)
                 );

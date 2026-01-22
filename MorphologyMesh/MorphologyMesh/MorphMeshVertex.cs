@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Geometry.Meshing;
 using System;
 using System.Collections.Generic;
@@ -32,7 +32,7 @@ namespace MorphologyMesh
         {
             get
             {
-                if (!(ShapeIndex is null))
+                if (ShapeIndex is not null)
                 {
                     return VertexOrigin.CONTOUR;
                 }
@@ -80,15 +80,12 @@ namespace MorphologyMesh
         {
             if (old is MorphMeshVertex vert)
             {
-                switch (vert.Type)
+                return vert.Type switch
                 {
-                    case VertexOrigin.MEDIALAXIS:
-                        return new MorphMeshVertex(vert.MedialAxisIndex.Value, vert.Position, vert.Normal);
-                    case VertexOrigin.CONTOUR:
-                        return new MorphMeshVertex(vert.ShapeIndex, vert.Position, vert.Normal);
-                    default:
-                        throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis");
-                }
+                    VertexOrigin.MEDIALAXIS => new MorphMeshVertex(vert.MedialAxisIndex.Value, vert.Position, vert.Normal),
+                    VertexOrigin.CONTOUR => new MorphMeshVertex(vert.ShapeIndex, vert.Position, vert.Normal),
+                    _ => throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis"),
+                };
             }
 
             throw new ArgumentException("Vertex must be not null");
@@ -104,15 +101,12 @@ namespace MorphologyMesh
         {
             if (old is MorphMeshVertex vert)
             {
-                switch (vert.Type)
+                return vert.Type switch
                 {
-                    case VertexOrigin.MEDIALAXIS:
-                        return new MorphMeshVertex(vert.MedialAxisIndex.Value, vert.Position, vert.Normal);
-                    case VertexOrigin.CONTOUR:
-                        return new MorphMeshVertex(vert.ShapeIndex.Reindex(iShape), vert.Position, vert.Normal);
-                    default:
-                        throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis");
-                }
+                    VertexOrigin.MEDIALAXIS => new MorphMeshVertex(vert.MedialAxisIndex.Value, vert.Position, vert.Normal),
+                    VertexOrigin.CONTOUR => new MorphMeshVertex(vert.ShapeIndex.Reindex(iShape), vert.Position, vert.Normal),
+                    _ => throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis"),
+                };
             }
 
             throw new ArgumentException("Vertex must be not null");
@@ -122,28 +116,22 @@ namespace MorphologyMesh
 
         public override IVertex ShallowCopy()
         {
-            switch (Type)
+            return Type switch
             {
-                case VertexOrigin.MEDIALAXIS:
-                    return new MorphMeshVertex(Index, MedialAxisIndex.Value, Position, Normal);
-                case VertexOrigin.CONTOUR:
-                    return new MorphMeshVertex(Index, ShapeIndex, Position, Normal);
-                default:
-                    throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis");
-            }
+                VertexOrigin.MEDIALAXIS => new MorphMeshVertex(Index, MedialAxisIndex.Value, Position, Normal),
+                VertexOrigin.CONTOUR => new MorphMeshVertex(Index, ShapeIndex, Position, Normal),
+                _ => throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis"),
+            };
         }
 
         public override IVertex ShallowCopy(int index)
         {
-            switch (Type)
+            return Type switch
             {
-                case VertexOrigin.MEDIALAXIS:
-                    return new MorphMeshVertex(index, MedialAxisIndex.Value, Position, Normal);
-                case VertexOrigin.CONTOUR:
-                    return new MorphMeshVertex(index, ShapeIndex, Position, Normal);
-                default:
-                    throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis");
-            }
+                VertexOrigin.MEDIALAXIS => new MorphMeshVertex(index, MedialAxisIndex.Value, Position, Normal),
+                VertexOrigin.CONTOUR => new MorphMeshVertex(index, ShapeIndex, Position, Normal),
+                _ => throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis"),
+            };
         }
 
         /// <summary>
@@ -194,15 +182,9 @@ namespace MorphologyMesh
             return FacesAreComplete;
         }
 
-        int IComparable<IVertex2D>.CompareTo(IVertex2D other)
-        {
-            return this.Index.CompareTo(other.Index);
-        }
+        int IComparable<IVertex2D>.CompareTo(IVertex2D other) => this.Index.CompareTo(other.Index);
 
-        bool IEquatable<IVertex2D>.Equals(IVertex2D other)
-        {
-            return this.Index == other.Index;
-        }
+        bool IEquatable<IVertex2D>.Equals(IVertex2D other) => this.Index == other.Index;
     }
 
 }

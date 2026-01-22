@@ -1,4 +1,4 @@
-﻿using ConnectomeDataModel;
+using ConnectomeDataModel;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNet.OData.Query;
 using Microsoft.Extensions.Logging;
@@ -19,20 +19,14 @@ namespace ConnectomeODataV4.Controllers
     builder.EntitySet<SelectStructureLocations_Result>("SelectStructureLocations_Result");
     config.Routes.MapODataServiceRoute("odata", "odata", builder.GetEdmModel());
     */
-    public class SelectStructureLocationsController : ODataController
+    /// <summary>
+    /// Constructor with dependency injection
+    /// </summary>
+    public class SelectStructureLocationsController(ConnectomeEntities db, ILogger<SelectStructureLocationsController> logger) : ODataController
     {
-        private readonly ConnectomeEntities _db;
-        private readonly ILogger<SelectStructureLocationsController> _logger;
-        private static readonly ODataValidationSettings _validationSettings = new ODataValidationSettings();
-
-        /// <summary>
-        /// Constructor with dependency injection
-        /// </summary>
-        public SelectStructureLocationsController(ConnectomeEntities db, ILogger<SelectStructureLocationsController> logger)
-        {
-            _db = db ?? throw new ArgumentNullException(nameof(db));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
+        private readonly ConnectomeEntities _db = db ?? throw new ArgumentNullException(nameof(db));
+        private readonly ILogger<SelectStructureLocationsController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        private static readonly ODataValidationSettings _validationSettings = new();
 
         // GET: odata/SelectStructureLocations
         [EnableQuery(PageSize = WebApiConfig.PageSize)]
@@ -42,10 +36,10 @@ namespace ConnectomeODataV4.Controllers
             {
                 // validate the query.
                 queryOptions.Validate(_validationSettings);
-                
+
                 _logger.LogInformation("Fetching all structure locations");
                 _db.ConfigureAsReadOnly();
-                return Ok<IList<Location>>(_db.SelectAllStructureLocations().ToList());
+                return Ok<IList<Location>>([.. _db.SelectAllStructureLocations()]);
             }
             catch (Exception ex)
             {
@@ -61,10 +55,10 @@ namespace ConnectomeODataV4.Controllers
             {
                 // validate the query.
                 queryOptions.Validate(_validationSettings);
-                
+
                 _logger.LogInformation("Fetching structure locations for structure ID {StructureId}", key);
                 _db.ConfigureAsReadOnly();
-                return Ok<IList<Location>>(_db.SelectStructureLocations(new long?(key)).ToList());
+                return Ok<IList<Location>>([.. _db.SelectStructureLocations(new long?(key))]);
             }
             catch (Exception ex)
             {

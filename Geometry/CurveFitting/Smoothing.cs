@@ -13,7 +13,7 @@ namespace Geometry
         /// <returns></returns>
         public static GridVector2[] Gaussian(GridVector2[] points)
         {
-            double[] kernel = { 0.25, 0.5, 0.25 };
+            double[] kernel = [0.25, 0.5, 0.25];
             Debug.Assert(kernel.Sum() == 1.0, "Kernel values should sum to 1");
             Debug.Assert((kernel.Length % 2) == 1, "Kernel should have an odd number of values");
 

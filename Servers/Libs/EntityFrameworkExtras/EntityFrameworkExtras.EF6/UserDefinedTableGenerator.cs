@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
@@ -7,21 +7,14 @@ using System.Reflection;
 
 namespace EntityFrameworkExtras.EF6
 {
-    public class UserDefinedTableGenerator
+    public class UserDefinedTableGenerator(Type type, object value)
     {
-        private readonly Type _type;
-        private readonly object _value;
+        private readonly Type _type = type ?? throw new ArgumentNullException("type");
+        private readonly object _value = value ?? throw new ArgumentNullException("value");
 
-        public UserDefinedTableGenerator(Type type, object value)
-        { 
-            _type = type ?? throw new ArgumentNullException("type");
-            _value = value ?? throw new ArgumentNullException("value");
-        }
-
-        
         public DataTable GenerateTable()
         {
-            var dt = new DataTable();
+            DataTable dt = new();
 
             List<ColumnInformation> columns = GetColumnInformation();
 
@@ -37,11 +30,11 @@ namespace EntityFrameworkExtras.EF6
             {
                 Type type = column.Property.PropertyType;
 
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof (Nullable<>))
+                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
                 {
                     type = type.GetGenericArguments()[0];
                 }
-                
+
                 dt.Columns.Add(column.Name, type);
             }
         }
@@ -63,7 +56,7 @@ namespace EntityFrameworkExtras.EF6
 
         private List<ColumnInformation> GetColumnInformation()
         {
-            var columns = new List<ColumnInformation>();
+            List<ColumnInformation> columns = [];
 
             foreach (PropertyInfo propertyInfo in _type.GetProperties())
             {
@@ -71,7 +64,7 @@ namespace EntityFrameworkExtras.EF6
 
                 if (attribute != null)
                 {
-                    var column = new ColumnInformation
+                    ColumnInformation column = new()
                     {
                         Name = attribute.Name ?? propertyInfo.Name,
                         Property = propertyInfo,
@@ -82,7 +75,7 @@ namespace EntityFrameworkExtras.EF6
                 }
             }
 
-            return columns.OrderBy(info => info.Order).ToList();
+            return [.. columns.OrderBy(info => info.Order)];
 
         }
     }

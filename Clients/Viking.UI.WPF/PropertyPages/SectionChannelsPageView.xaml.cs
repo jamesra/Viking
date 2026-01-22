@@ -20,16 +20,16 @@ namespace Viking.UI.WPF.PropertyPages
         protected override void OnContextUpdated(object context)
         {
             _section = context ?? throw new ArgumentNullException(nameof(context));
-            
+
             // Try to load persisted channel settings first
             ChannelInfo[] channelInfos = LoadPersistedChannels();
-            
+
             // If no persisted settings, use current section's channel info
-            if (channelInfos == null || channelInfos.Length == 0)
+            if (channelInfos is null || channelInfos.Length == 0)
             {
                 channelInfos = _section.ChannelInfoArray as ChannelInfo[];
             }
-            
+
             string[] channelNames = _section.VolumeViewModel.ChannelNames as string[];
             ChannelSetup.SetChannelData(channelInfos, channelNames);
         }
@@ -40,14 +40,14 @@ namespace Viking.UI.WPF.PropertyPages
             {
                 int currentNumber = (int)_section.Number;
                 string volumeLocalDir = GetVolumeLocalDirectory();
-                
+
                 if (string.IsNullOrWhiteSpace(volumeLocalDir))
                 {
                     return null;
                 }
 
                 var allSettings = SectionReferenceSettings.LoadForVolume(volumeLocalDir);
-                
+
                 if (allSettings.TryGetValue(currentNumber, out var sectionRefs))
                 {
                     if (sectionRefs.Channels != null && sectionRefs.Channels.Length > 0)
@@ -55,7 +55,7 @@ namespace Viking.UI.WPF.PropertyPages
                         return SectionReferenceSettings.FromDto(sectionRefs.Channels);
                     }
                 }
-                
+
                 return null;
             }
             catch (Exception ex)
@@ -65,11 +65,9 @@ namespace Viking.UI.WPF.PropertyPages
             }
         }
 
-        public override bool ValidateChanges()
-        {
+        public override bool ValidateChanges() =>
             // currently no validation rules beyond greyscale vs color selection.
-            return true;
-        }
+            true;
 
         public override void SaveChanges()
         {
@@ -80,7 +78,7 @@ namespace Viking.UI.WPF.PropertyPages
             // Persist channel settings if non-default (non-empty array)
             int currentNumber = (int)_section.Number;
             string volumeLocalDir = GetVolumeLocalDirectory();
-            
+
             if (string.IsNullOrWhiteSpace(volumeLocalDir))
             {
                 return;
@@ -108,9 +106,9 @@ namespace Viking.UI.WPF.PropertyPages
             }
 
             // Remove entire section entry if both channels and references are default
-            if (sectionRefs.Channels == null && 
-                sectionRefs.ReferenceAbove == null && 
-                sectionRefs.ReferenceBelow == null)
+            if (sectionRefs.Channels is null &&
+                sectionRefs.ReferenceAbove is null &&
+                sectionRefs.ReferenceBelow is null)
             {
                 allSettings.Remove(currentNumber);
             }
@@ -124,14 +122,14 @@ namespace Viking.UI.WPF.PropertyPages
             try
             {
                 dynamic volume = _section?.VolumeViewModel;
-                if (volume == null)
+                if (volume is null)
                 {
                     return null;
                 }
 
                 // Access the Volume object through the ViewModel
                 dynamic volumeModel = volume.Volume;
-                if (volumeModel == null)
+                if (volumeModel is null)
                 {
                     return null;
                 }

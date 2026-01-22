@@ -1,6 +1,7 @@
 ﻿using Geometry;
 using Geometry.Meshing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Linq;
 
 namespace GeometryTests
 {
@@ -10,12 +11,12 @@ namespace GeometryTests
         [TestMethod]
         public void TestEdgeOperations()
         {
-            Edge A1 = new Edge(1, 2);
-            Edge A2 = new Edge(2, 1);
+            Edge A1 = new(1, 2);
+            Edge A2 = new(2, 1);
 
             Assert.AreEqual(A1, A2);
 
-            Edge B = new Edge(2, 3);
+            Edge B = new(2, 3);
             Assert.AreNotEqual(A1, B);
 
             Assert.IsTrue(A1.CompareTo(B) < 0);
@@ -24,12 +25,12 @@ namespace GeometryTests
         [TestMethod]
         public void TestFaceOperations()
         {
-            Face A1 = new Face(1, 2, 3);
-            Face A2 = new Face(2, 1, 3);
+            Face A1 = new(1, 2, 3);
+            Face A2 = new(2, 1, 3);
 
             Assert.AreEqual(A1, A2);
 
-            Face B = new Face(2, 3, 4);
+            Face B = new(2, 3, 4);
             Assert.AreNotEqual(A1, B);
 
             Assert.IsTrue(A1.CompareTo(B) < 0);
@@ -38,62 +39,62 @@ namespace GeometryTests
         [TestMethod]
         public void TestFaceAdjacenyOperations()
         {
-            Mesh3D mesh = new Mesh3D();
+            Mesh3D mesh = new();
 
-            Vertex3D[] verts = CreateTetrahedronVerts();
+            Vertex3D[] verts = MeshTest.CreateTetrahedronVerts();
 
             foreach (Vertex3D v in verts)
             {
                 mesh.AddVertex(v);
             }
 
-            Face A = new Face(0, 1, 2);
-            Face B = new Face(0, 2, 3);
+            Face A = new(0, 1, 2);
+            Face B = new(0, 2, 3);
             Assert.AreNotEqual(A, B);
 
             mesh.AddFace(A);
             mesh.AddFace(B);
-            EdgeKey zero_two_key = new EdgeKey(0, 2);
+            EdgeKey zero_two_key = new(0, 2);
             Assert.IsTrue(mesh.Contains(zero_two_key));
 
             IEdge zero_two = mesh.Edges[zero_two_key];
-            Assert.AreEqual(zero_two.Faces.Count, 2); //After adding both faces the edge count should be 2 for the shared edge
+            Assert.AreEqual(2, zero_two.Faces.Count); //After adding both faces the edge count should be 2 for the shared edge
         }
 
 
 
-        private Vertex3D[] CreateTetrahedronVerts()
+        private static Vertex3D[] CreateTetrahedronVerts()
         {
-            return new Vertex3D[] {new Vertex3D(new GridVector3(0, 0, 0), new GridVector3(0, 0, 0)),
-                                     new Vertex3D(new GridVector3(0, 1, 0), new GridVector3(0, 1, 0)),
-                                     new Vertex3D(new GridVector3(0, 0, 1), new GridVector3(0, 0, 1)),
-                                     new Vertex3D(new GridVector3(1, 0, 0), new GridVector3(1, 0, 0)) };
+            return [new(new GridVector3(0, 0, 0), new GridVector3(0, 0, 0)),
+                                     new(new GridVector3(0, 1, 0), new GridVector3(0, 1, 0)),
+                                     new(new GridVector3(0, 0, 1), new GridVector3(0, 0, 1)),
+                                     new(new GridVector3(1, 0, 0), new GridVector3(1, 0, 0)) ];
         }
 
-        private Face[] CreateTetrahedronFaces()
+        private static Face[] CreateTetrahedronFaces()
         {
-            return new Face[] {new Face(0,1,2),
-                               new Face(0,3,1),
-                               new Face(0,2,3),
-                               new Face(1,3,2) };
+            return [new(0,1,2),
+                               new(0,3,1),
+                               new(0,2,3),
+                               new(1,3,2) ];
         }
 
         [TestMethod]
         public void CreateTetrahedronWithPoints()
         {
 
-            Mesh3D mesh = new Mesh3D();
+            Mesh3D mesh = new();
 
-            Vertex3D[] verts = CreateTetrahedronVerts();
+            Vertex3D[] verts = MeshTest.CreateTetrahedronVerts();
 
             int iFirstIndex = mesh.AddVerticies(verts);
             Assert.AreEqual(0, iFirstIndex);
 
-            Face[] faces = CreateTetrahedronFaces();
+            Face[] faces = MeshTest.CreateTetrahedronFaces();
 
             foreach (Face f in faces)
             {
-                foreach (EdgeKey e in f.Edges)
+                foreach (EdgeKey e in f.Edges.Select(v => (EdgeKey)v))
                 {
                     if (!mesh.Edges.ContainsKey(e))
                         mesh.AddEdge(e);
@@ -109,16 +110,16 @@ namespace GeometryTests
         [TestMethod]
         public void CreateTetrahedronWithFaces()
         {
-            Mesh3D mesh = new Mesh3D();
+            Mesh3D mesh = new();
 
-            Vertex3D[] verts = CreateTetrahedronVerts();
+            Vertex3D[] verts = MeshTest.CreateTetrahedronVerts();
 
             foreach (Vertex3D v in verts)
             {
                 mesh.AddVertex(v);
             }
 
-            Face[] faces = CreateTetrahedronFaces();
+            Face[] faces = MeshTest.CreateTetrahedronFaces();
 
             foreach (Face f in faces)
             {
@@ -127,7 +128,7 @@ namespace GeometryTests
 
             foreach (Face f in faces)
             {
-                foreach (EdgeKey e in f.Edges)
+                foreach (EdgeKey e in f.Edges.Select(v => (EdgeKey)v))
                 {
                     Assert.IsTrue(mesh.Edges.ContainsKey(e));
                 }

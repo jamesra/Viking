@@ -10,7 +10,7 @@ namespace ColladaIOTest
             ColorMapWithLong StructureTypeColors = ColorMapWithLong.CreateFromConfigFile(System.IO.Path.Combine(directory, "StructureTypeColors.txt"));
             ColorMapWithImages ImageColors = ColorMapWithImages.CreateFromConfigFile(System.IO.Path.Combine(directory, "ImageColorMaps.txt"));
 
-            StructureMorphologyColorMap colorMap = new StructureMorphologyColorMap(StructureTypeColors, StructureColors, ImageColors);
+            StructureMorphologyColorMap colorMap = new(StructureTypeColors, StructureColors, ImageColors);
             return colorMap;
         }
     }

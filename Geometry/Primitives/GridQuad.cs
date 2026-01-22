@@ -1,4 +1,4 @@
-﻿using Geometry.Graphics;
+using Geometry.Graphics;
 using System;
 
 namespace Geometry
@@ -8,10 +8,10 @@ namespace Geometry
     /// </summary>
     /// 
     [Serializable]
-    public readonly struct GridQuad 
+    public readonly struct GridQuad
     {
         readonly GridTriangle T0;
-        readonly GridTriangle T1;  
+        readonly GridTriangle T1;
 
         public GridQuad(GridVector2 pos, double Width, double Height)
             : this(pos, new GridVector2(pos.X + Width, pos.Y), new GridVector2(pos.X, pos.Y + Height), new GridVector2(pos.X + Width, pos.Y + Height))
@@ -27,8 +27,8 @@ namespace Geometry
         /// <param name="color"></param>
         public GridQuad(GridVector2 p1, GridVector2 p2, GridVector2 p3, GridVector2 p4)
         {
-           T0 = new GridTriangle(p1,p2,p3); 
-           T1 = new GridTriangle(p2,p4,p3);
+            T0 = new GridTriangle(p1, p2, p3);
+            T1 = new GridTriangle(p2, p4, p3);
         }
 
         public GridQuad(GridRectangle rect)
@@ -39,7 +39,7 @@ namespace Geometry
 
 
         public GridVector2 Center => new GridLineSegment(T0.p2, T0.p3).Bisect();
-         
+
         public GridVector2 BottomLeft => T0.p1;
 
         /*set {
@@ -82,12 +82,12 @@ namespace Geometry
 
         public bool Contains(in GridVector2 p)
         {
-            if(this.T0.Contains(p))
+            if (this.T0.Contains(p))
                 return true;
-            if(this.T1.Contains(p))
+            if (this.T1.Contains(p))
                 return true;
 
-            return false; 
+            return false;
         }
 
         public bool Contains(in GridRectangle R)
@@ -95,7 +95,7 @@ namespace Geometry
             if (false == (T0.Intersects(R) || T1.Intersects(R)))
                 return false;
 
-            return Contains(new GridQuad(new GridVector2(R.Left, R.Bottom), R.Width, R.Height) ); 
+            return Contains(new GridQuad(new GridVector2(R.Left, R.Bottom), R.Width, R.Height));
         }
 
         public bool Contains(in GridQuad R)
@@ -112,20 +112,20 @@ namespace Geometry
 
             if (R.T0.Contains(TopLeft) || R.T0.Contains(TopRight) || R.T0.Contains(BottomLeft) || R.T0.Contains(BottomRight) ||
                 R.T1.Contains(TopLeft) || R.T1.Contains(TopRight) || R.T1.Contains(BottomLeft) || R.T1.Contains(BottomRight))
-                return true; 
+                return true;
 
-            GridLineSegment RL1 = new GridLineSegment(v1, v2);
-            GridLineSegment RL2 = new GridLineSegment(v2, v3);
-            GridLineSegment RL3 = new GridLineSegment(v3, v4);
-            GridLineSegment RL4 = new GridLineSegment(v4, v1);
+            GridLineSegment RL1 = new(v1, v2);
+            GridLineSegment RL2 = new(v2, v3);
+            GridLineSegment RL3 = new(v3, v4);
+            GridLineSegment RL4 = new(v4, v1);
 
-            GridLineSegment L1 = new GridLineSegment(this.BottomLeft, this.BottomRight);
-            GridLineSegment L2 = new GridLineSegment(this.BottomRight, this.TopRight);
-            GridLineSegment L3 = new GridLineSegment(this.TopRight, this.TopLeft);
-            GridLineSegment L4 = new GridLineSegment(this.TopLeft, this.BottomLeft);
+            GridLineSegment L1 = new(this.BottomLeft, this.BottomRight);
+            GridLineSegment L2 = new(this.BottomRight, this.TopRight);
+            GridLineSegment L3 = new(this.TopRight, this.TopLeft);
+            GridLineSegment L4 = new(this.TopLeft, this.BottomLeft);
 
-            GridLineSegment[] RA = new GridLineSegment[4] { RL1, RL2, RL3, RL4 };
-            GridLineSegment[] A = new GridLineSegment[4] { L1, L2, L3, L4 };
+            GridLineSegment[] RA = [RL1, RL2, RL3, RL4];
+            GridLineSegment[] A = [L1, L2, L3, L4];
 
             foreach (GridLineSegment RL in RA)
             {
@@ -136,9 +136,9 @@ namespace Geometry
                 }
             }
 
-            return false; 
+            return false;
         }
 
-        public double Area => T0.Area + T1.Area; 
+        public double Area => T0.Area + T1.Area;
     }
 }

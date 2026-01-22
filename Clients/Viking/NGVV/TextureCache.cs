@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -13,12 +13,12 @@ namespace Viking
     {
         public LocalTextureCacheEntry(string filename)
             : this(new FileInfo(filename))
-        { 
+        {
         }
 
         public LocalTextureCacheEntry(FileInfo fileinfo)
             : base(fileinfo.FullName)
-        { 
+        {
             this.Size = fileinfo.Length;
             this.LastAccessed = fileinfo.LastAccessTimeUtc;
         }
@@ -47,12 +47,7 @@ namespace Viking
             this.MaxCacheSize <<= 30;
         }
 
-        public async Task PopulateCache(string Path, CancellationToken token)
-        {
-            await _PopulateCacheThreadStart(Path, token);
-            //Action<string> checkAction = new Action<string>(_PopulateCacheThreadStart);
-            //checkAction.BeginInvoke(Path, null, null); 
-        }
+        public async Task PopulateCache(string Path, CancellationToken token) => await _PopulateCacheThreadStart(Path, token);//Action<string> checkAction = new Action<string>(_PopulateCacheThreadStart);//checkAction.BeginInvoke(Path, null, null); 
 
         /// <summary>
         /// Add all textures found under the specified directory to the cache
@@ -62,15 +57,15 @@ namespace Viking
         {
             DateTime Start = DateTime.Now;
             Trace.WriteLine("Populating cache", "TextureUse");
-            var dirinfo = new DirectoryInfo(path);
+            DirectoryInfo dirinfo = new(path);
             if (false == dirinfo.Exists)
             {
                 dirinfo.Create();
             }
-                
+
             await CheckDirectory(dirinfo, token);
 
-            TimeSpan elapsed = new TimeSpan(DateTime.Now.Ticks - Start.Ticks);
+            TimeSpan elapsed = new(DateTime.Now.Ticks - Start.Ticks);
             Trace.WriteLine("Finish cache populate: " + elapsed.ToString(), "TextureUse");
         }
 
@@ -82,8 +77,8 @@ namespace Viking
         {
             if (path.Exists == false)
                 return;
-             
-            System.Collections.Generic.List<Task> listTasks = new System.Collections.Generic.List<Task>(128);
+
+            System.Collections.Generic.List<Task> listTasks = new(128);
             foreach (var subdir in path.EnumerateDirectories())
             {
                 if (token.IsCancellationRequested)
@@ -91,11 +86,11 @@ namespace Viking
 
                 listTasks.Add(CheckDirectory(subdir, token));
             }
-              
+
             foreach (var file in path.EnumerateFiles())
             {
-                LocalTextureCacheEntry entry = new LocalTextureCacheEntry(file);
-                 
+                LocalTextureCacheEntry entry = new(file);
+
                 if (!AddEntry(entry))
                 {
                     entry.Dispose();
@@ -105,7 +100,7 @@ namespace Viking
                 if (token.IsCancellationRequested)
                     return;
             }
-             
+
             await Task.WhenAll(listTasks);
 
             return;
@@ -141,22 +136,20 @@ namespace Viking
         protected override LocalTextureCacheEntry CreateEntry(string filename, byte[] textureBuffer)
         {
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
-            using (var output = new FileStream(filename, FileMode.Create, FileAccess.Write))
+            using FileStream output = new(filename, FileMode.Create, FileAccess.Write);
+            try
             {
-                try
-                {
-                    output.Write(textureBuffer, 0, textureBuffer.Length); 
+                output.Write(textureBuffer, 0, textureBuffer.Length);
 
-                    LocalTextureCacheEntry entry = new LocalTextureCacheEntry(filename);
-                    return entry; 
-                }
-                catch (System.IO.IOException ioexception)
-                {
-                    Trace.WriteLine(ioexception.Message);
-                    Trace.WriteLine(ioexception.StackTrace);
+                LocalTextureCacheEntry entry = new(filename);
+                return entry;
+            }
+            catch (System.IO.IOException ioexception)
+            {
+                Trace.WriteLine(ioexception.Message);
+                Trace.WriteLine(ioexception.StackTrace);
 
-                    return null;
-                }
+                return null;
             }
 
             //     stream.Close();
@@ -169,10 +162,7 @@ namespace Viking
         /// </summary>
         /// <param name="filename"></param>
         /// <param name="textureStream"></param>
-        protected override LocalTextureCacheEntry CreateEntry(string filename, Func<string,byte[]> textureBufferFactory)
-        {
-            return CreateEntry(filename, textureBufferFactory(filename)); 
-        }
+        protected override LocalTextureCacheEntry CreateEntry(string filename, Func<string, byte[]> textureBufferFactory) => CreateEntry(filename, textureBufferFactory(filename));
 
         /// <summary>
         /// Creates a file for the texture passed.
@@ -182,22 +172,20 @@ namespace Viking
         protected override async Task<LocalTextureCacheEntry> CreateEntryAsync(string filename, byte[] textureBuffer)
         {
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
-            using (var output = new FileStream(filename, FileMode.Create, FileAccess.Write))
+            using FileStream output = new(filename, FileMode.Create, FileAccess.Write);
+            try
             {
-                try
-                {
-                    await output.WriteAsync(textureBuffer, 0, textureBuffer.Length);
+                await output.WriteAsync(textureBuffer, 0, textureBuffer.Length);
 
-                    LocalTextureCacheEntry entry = new LocalTextureCacheEntry(filename);
-                    return entry;
-                }
-                catch (System.IO.IOException ioexception)
-                {
-                    Trace.WriteLine(ioexception.Message);
-                    Trace.WriteLine(ioexception.StackTrace);
+                LocalTextureCacheEntry entry = new(filename);
+                return entry;
+            }
+            catch (System.IO.IOException ioexception)
+            {
+                Trace.WriteLine(ioexception.Message);
+                Trace.WriteLine(ioexception.StackTrace);
 
-                    return null;
-                }
+                return null;
             }
 
             //     stream.Close();
@@ -223,29 +211,27 @@ namespace Viking
             {
                 //If the directory does not exist then create it and try again
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
-                return await CreateEntryAssumeDirectoryExistsAsync(filename, textureBuffer); 
+                return await CreateEntryAssumeDirectoryExistsAsync(filename, textureBuffer);
             }
 
-            return null; 
+            return null;
         }
 
         private async Task<LocalTextureCacheEntry> CreateEntryAssumeDirectoryExistsAsync(string filename,
             Stream textureBuffer)
         {
-            using (var output = new FileStream(filename, FileMode.Create, FileAccess.Write))
+            using FileStream output = new(filename, FileMode.Create, FileAccess.Write);
+            try
             {
-                try
-                {
-                    await textureBuffer.CopyToAsync(output);
-                    return new LocalTextureCacheEntry(filename); 
-                }
-                catch (System.IO.IOException ioexception)
-                {
-                    Trace.WriteLine(ioexception.Message);
-                    Trace.WriteLine(ioexception.StackTrace);
+                await textureBuffer.CopyToAsync(output);
+                return new LocalTextureCacheEntry(filename);
+            }
+            catch (System.IO.IOException ioexception)
+            {
+                Trace.WriteLine(ioexception.Message);
+                Trace.WriteLine(ioexception.StackTrace);
 
-                    return null;
-                }
+                return null;
             }
         }
 
@@ -274,7 +260,7 @@ namespace Viking
 
             return true;
         }
-         
+
 
         /// <summary>
         /// Creates a file for the texture passed.
@@ -283,7 +269,7 @@ namespace Viking
         /// <param name="textureStream"></param>
         public virtual async Task<bool> AddAsync(string key, Stream value)
         {
-            var entry = await CreateEntryAsync(key,value);
+            var entry = await CreateEntryAsync(key, value);
             if (entry is null)
                 return false;
 

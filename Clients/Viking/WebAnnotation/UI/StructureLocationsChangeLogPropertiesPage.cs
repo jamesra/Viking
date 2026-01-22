@@ -13,7 +13,7 @@ namespace WebAnnotation.UI
     public partial class StructureLocationsChangeLogPropertiesPage : Viking.UI.BaseClasses.PropertyPageBase
     {
         private Structure Obj;
-        private readonly BindingList<WebAnnotationModel.ObjAttribute> ListTags = null;
+        private readonly BindingList<WebAnnotationModel.ObjAttribute>? ListTags = null;
         private bool listLoaded = false;
 
         public StructureLocationsChangeLogPropertiesPage()
@@ -37,14 +37,14 @@ namespace WebAnnotation.UI
                 listLoaded = true;
                 UseWaitCursor = true;
                 ICollection<LocationObj> locations = Store.Locations.GetStructureLocationChangeLog(Obj.ID);
-                List<Location_PropertyPageViewModel> listLocationViews = new List<Location_PropertyPageViewModel>(locations.Count);
+                List<Location_PropertyPageViewModel> listLocationViews = new(locations.Count);
 
                 foreach (LocationObj loc in locations)
                 {
                     listLocationViews.Add(new Location_PropertyPageViewModel(loc.ID));
                 }
 
-                listLocations.SetLocations(listLocationViews.ToArray());
+                listLocations.SetLocations([.. listLocationViews]);
 
                 UseWaitCursor = false;
             }

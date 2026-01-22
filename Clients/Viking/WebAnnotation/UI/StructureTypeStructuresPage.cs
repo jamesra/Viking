@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Viking.Common;
@@ -10,7 +10,7 @@ namespace WebAnnotation.UI
     [PropertyPage(typeof(StructureType), 3)]
     public partial class StructureTypeStructuresPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        private StructureType Obj = null;
+        private StructureType? Obj = null;
         private bool listLoaded = false;
 
         public StructureTypeStructuresPage()
@@ -20,10 +20,7 @@ namespace WebAnnotation.UI
             Title = "Structures";
         }
 
-        protected override void OnInitPage()
-        {
-            base.OnInitPage();
-        }
+        protected override void OnInitPage() => base.OnInitPage();
 
         protected override void OnShowObject(object Object)
         {
@@ -44,14 +41,14 @@ namespace WebAnnotation.UI
 
                 ICollection<StructureObj> structureObjs = Store.Structures.GetStructuresOfType(Obj.ID);
 
-                List<Structure> structures = new List<Structure>(structureObjs.Count);
+                List<Structure> structures = new(structureObjs.Count);
 
                 foreach (StructureObj s in structureObjs)
                 {
                     structures.Add(new Structure(s));
                 }
 
-                listStructures.SetStructures(structures.ToArray());
+                listStructures.SetStructures([.. structures]);
 
                 listLoaded = true;
 

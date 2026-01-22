@@ -8,26 +8,26 @@ using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos 
 {
-    public partial class StructureType : IStructureType, IChangeAction
+    public partial class StructureType : IStructureTypeReadOnly, IChangeAction
     {
-        // IStructureType interface implementation
-        ulong IStructureType.ID => (ulong)this.Id;
+        // IStructureTypeReadOnly interface implementation
+        ulong IStructureTypeReadOnly.ID => (ulong)this.Id;
 
-        ulong? IStructureType.ParentID => this.HasParentId ? (ulong?)this.ParentId : null;
+        ulong? IStructureTypeReadOnly.ParentID => this.HasParentId ? (ulong?)this.ParentId : null;
 
-        string IStructureType.Name => this.Name;
+        string IStructureTypeReadOnly.Name => this.Name;
 
-        string IStructureType.Code => this.Code;
+        string IStructureTypeReadOnly.Code => this.Code;
 
         // Tags field doesn't exist in protobuf, return empty array
-        string[] IStructureType.Tags => new string[0];
+        string[] IStructureTypeReadOnly.Tags => Array.Empty<string>();
 
         // IChangeAction implementation
         DBACTION _DBAction = DBACTION.NONE;
         DBACTION IChangeAction.DBAction { get => _DBAction; set => _DBAction = value; }
 
         // IEquatable implementation
-        bool IEquatable<IStructureType>.Equals(IStructureType other)
+        bool IEquatable<IStructureTypeReadOnly>.Equals(IStructureTypeReadOnly other)
         {
             if (ReferenceEquals(this, other))
                 return true;

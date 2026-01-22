@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Windows.Input;
 
 namespace Annotation.ViewModels.Commands
 {
     public class DelegateCommand : System.Windows.Input.ICommand
-    {  
+    {
         public readonly Action<object> on_execute;
         public readonly Func<object, bool> can_execute;
         private readonly ICommand assignParentCommand;
@@ -16,10 +16,7 @@ namespace Annotation.ViewModels.Commands
             remove => CommandManager.RequerySuggested -= value;
         }
 
-        public void RaiseCanExecuteChanged()
-        {
-            CommandManager.InvalidateRequerySuggested();
-        }
+        public void RaiseCanExecuteChanged() => CommandManager.InvalidateRequerySuggested();
 
         public DelegateCommand(Action<object> Execute, Func<object, bool> CanExecute)
         {
@@ -48,10 +45,10 @@ namespace Annotation.ViewModels.Commands
         }
     }
 
-    public class DelegateCommand<T> : System.Windows.Input.ICommand
-    {  
-        public Action<T> on_execute;
-        public Func<T, bool> can_execute;
+    public class DelegateCommand<T>(Action<T> Execute, Func<T, bool> CanExecute) : System.Windows.Input.ICommand
+    {
+        public Action<T> on_execute = Execute;
+        public Func<T, bool> can_execute = CanExecute;
 
         public event EventHandler CanExecuteChanged
         {
@@ -59,16 +56,7 @@ namespace Annotation.ViewModels.Commands
             remove => CommandManager.RequerySuggested -= value;
         }
 
-        public void RaiseCanExecuteChanged()
-        {
-            CommandManager.InvalidateRequerySuggested();
-        }
-
-        public DelegateCommand(Action<T> Execute, Func<T, bool> CanExecute)
-        {
-            on_execute = Execute;
-            can_execute = CanExecute;
-        }
+        public void RaiseCanExecuteChanged() => CommandManager.InvalidateRequerySuggested();
 
         public bool CanExecute(object parameter)
         {

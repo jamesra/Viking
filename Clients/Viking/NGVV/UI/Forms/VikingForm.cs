@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows.Forms;
 using Viking.Common;
@@ -13,13 +13,13 @@ namespace Viking.UI.Forms
         /// <summary>
         /// Tab that represents this form on the TabsOpenForms control.
         /// </summary>
-        public TabPage Tab;
+        public TabPage? Tab;
         //        object FormObject = null;
 
         /// <summary>
         /// This table tracks which objects are already being shown so we can give those forms focus instead of launching a new one
         /// </summary>
-        private static readonly Dictionary<object, VikingForm> ShownFormsTable = new Dictionary<object, VikingForm>();
+        private static readonly Dictionary<object, VikingForm> ShownFormsTable = [];
 
         public VikingForm()
         {

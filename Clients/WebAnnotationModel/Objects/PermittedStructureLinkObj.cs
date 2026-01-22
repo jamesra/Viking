@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationService.Types;
 using System;
 
@@ -52,16 +52,13 @@ namespace WebAnnotationModel.Objects
 
         public override bool Equals(object obj)
         {
-            if (!(obj is IPermittedStructureLinkReadOnly other))
+            if (obj is not IPermittedStructureLinkReadOnly other)
                 return false;
 
             return ((IPermittedStructureLinkReadOnly)this).Equals(other);
         }
 
-        public override int GetHashCode()
-        {
-            return (int)(SourceTypeID % int.MaxValue);
-        }
+        public override int GetHashCode() => (int)(SourceTypeID % int.MaxValue);
 
         public bool Equals(PermittedStructureLinkKey other)
         {
@@ -81,7 +78,7 @@ namespace WebAnnotationModel.Objects
         }
 
         public int CompareTo(PermittedStructureLinkKey other)
-        {  
+        {
             if (this.Bidirectional == other.Bidirectional && this.Bidirectional)
             {
                 var A_Low = Math.Min(SourceTypeID, TargetTypeID);
@@ -176,10 +173,7 @@ namespace WebAnnotationModel.Objects
     {
         public override PermittedStructureLinkKey ID => new(this);
 
-        protected override int GenerateHashCode()
-        {
-            return (int)(SourceTypeID % int.MaxValue);
-        }
+        protected override int GenerateHashCode() => (int)(SourceTypeID % int.MaxValue);
 
         public long SourceTypeID => Data.SourceTypeID;
 
@@ -201,10 +195,7 @@ namespace WebAnnotationModel.Objects
                 return string.Format("{0} -> {1}", SourceTypeID, TargetTypeID);
         }
 
-        public bool Equals(IPermittedStructureLinkReadOnly other)
-        {
-            return ((IPermittedStructureLinkReadOnly)ID).Equals(other);
-        }
+        public bool Equals(IPermittedStructureLinkReadOnly other) => ((IPermittedStructureLinkReadOnly)ID).Equals(other);
 
         public PermittedStructureLinkObj(long SourceTypeID, long TargetTypeID,
                                 bool Bidirectional) : base()

@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -40,29 +40,18 @@ namespace VikingXNAGraphics
         /// </summary>
         public PrimitiveType Primitive { get; set; } = PrimitiveType.TriangleList;
 
-        public int PrimitiveCount
+        public int PrimitiveCount => Primitive switch
         {
-            get
-            {
-                switch (Primitive)
-                {
-                    case PrimitiveType.TriangleList:
-                        return this.Edges.Length / 3;
-                    case PrimitiveType.LineList:
-                        return this.Edges.Length / 2;
-                    case PrimitiveType.LineStrip:
-                        return this.Edges.Length - 1;
-                    case PrimitiveType.TriangleStrip:
-                        return this.Edges.Length - 2;
-                    default:
-                        throw new NotImplementedException("Unexpected primitive type");
-                }
-            }
-        }
+            PrimitiveType.TriangleList => this.Edges.Length / 3,
+            PrimitiveType.LineList => this.Edges.Length / 2,
+            PrimitiveType.LineStrip => this.Edges.Length - 1,
+            PrimitiveType.TriangleStrip => this.Edges.Length - 2,
+            _ => throw new NotImplementedException("Unexpected primitive type"),
+        };
 
         static MeshModel()
         {
-            VERTEXTYPE v = new VERTEXTYPE();
+            VERTEXTYPE v = new();
             VertexElement[] vertex_elements = v.VertexDeclaration.GetVertexElements();
             _HasNormal = vertex_elements.Any(e => e.VertexElementUsage == VertexElementUsage.Normal);
             _HasColor = vertex_elements.Any(e => e.VertexElementUsage == VertexElementUsage.Color);
@@ -85,17 +74,17 @@ namespace VikingXNAGraphics
         {
             if (Verticies is null)
             {
-                Verticies = input.ToArray();
+                Verticies = [.. input];
                 return 0;
             }
 
             int iInsert = Verticies.Length;
-            
+
             /////////////////////////
             //Extend our vertex array
             //VERTEXTYPE[] newVerts = new VERTEXTYPE[input.Count + Verticies.Length];
             //Array.Copy(Verticies, newVerts, Verticies.Length);
-            Verticies = Verticies.AddRange(input.ToArray());
+            Verticies = Verticies.AddRange([.. input]);
             /////////////////////////
 
             //Array.Copy(input.ToArray(), 0, Verticies, iInsert, input.Count);
@@ -107,12 +96,12 @@ namespace VikingXNAGraphics
         {
             if (Edges is null)
             {
-                Edges = newEdges.ToArray();
+                Edges = [.. newEdges];
             }
             else
             {
                 //Edges = Edges.Concat(newEdges).ToArray();
-                Edges = Edges.AddRange(newEdges.ToArray());
+                Edges = Edges.AddRange([.. newEdges]);
             }
         }
 
@@ -132,7 +121,7 @@ namespace VikingXNAGraphics
     /// A helper class that assumes the entire mesh model is the same color
     /// </summary>
     public class PositionColorMeshModel : MeshModel<VertexPositionColor>, IColorView
-    { 
+    {
 
         public PositionColorMeshModel()
         {
@@ -161,9 +150,9 @@ namespace VikingXNAGraphics
 
             set
             {
-                if(value != Color)
+                if (value != Color)
                 {
-                    for(int i =0; i < Verticies.Length; i++)
+                    for (int i = 0; i < Verticies.Length; i++)
                     {
                         Verticies[i].Color = value;
                     }

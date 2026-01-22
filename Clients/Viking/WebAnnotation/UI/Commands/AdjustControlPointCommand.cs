@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -22,9 +22,9 @@ namespace WebAnnotation.UI.Commands
         private readonly OnCommandSuccess success_callback;
         private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
-        public string[] HelpStrings => new string[] { "Release Left Mouse Button to place control point" };
+        public string[] HelpStrings => ["Release Left Mouse Button to place control point"];
 
-        public ObservableCollection<string> ObservableHelpStrings => new ObservableCollection<string>(HelpStrings);
+        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
 
         public AdjustCurveControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridVector2[] OriginalMosaicControlPoints,
@@ -41,21 +41,18 @@ namespace WebAnnotation.UI.Commands
 
         private void CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color, double LineWidth, bool IsClosed)
         {
-            curveView = new CurveView(ControlPoints.ToList(), color, IsClosed,
+            curveView = new CurveView([.. ControlPoints], color, IsClosed,
                                       Global.NumCurveInterpolationPoints(IsClosed),
                                       lineWidth: LineWidth);
         }
 
-        protected virtual void UpdatePosition(GridVector2 PositionDelta)
-        {
-            curveView.SetPoint(iAdjustedControlPoint, curveView.ControlPoints[iAdjustedControlPoint] + PositionDelta);
-        }
+        protected virtual void UpdatePosition(GridVector2 PositionDelta) => curveView.SetPoint(iAdjustedControlPoint, curveView.ControlPoints[iAdjustedControlPoint] + PositionDelta);
 
         protected void PopulateControlPointIndexIfNeeded(GridVector2 WorldPosition)
         {
             if (iAdjustedControlPoint < 0)
             {
-                double[] DistanceArray = curveView.ControlPoints.Select(p => GridVector2.Distance(p, WorldPosition)).ToArray();
+                double[] DistanceArray = [.. curveView.ControlPoints.Select(p => GridVector2.Distance(p, WorldPosition))];
                 iAdjustedControlPoint = Array.IndexOf(DistanceArray, DistanceArray.Min());
             }
         }
@@ -94,10 +91,7 @@ namespace WebAnnotation.UI.Commands
         }
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene,
-                                    Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
-        {
-            CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
-        }
+                                    Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect) => CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, [curveView]);
 
         protected override void Execute()
         {
@@ -108,17 +102,17 @@ namespace WebAnnotation.UI.Commands
 
                 if (curveView.TryCloseCurve)
                 {
-                    List<GridVector2> LoopedPointsList = new List<GridVector2>(curveView.ControlPoints);
+                    List<GridVector2> LoopedPointsList = [.. curveView.ControlPoints];
                     if (curveView.ControlPoints.First() != curveView.ControlPoints.Last())
                     {
                         LoopedPointsList.Add(LoopedPointsList.First());
                     }
 
-                    TranslatedOriginalControlPoints = LoopedPointsList.ToArray();
+                    TranslatedOriginalControlPoints = [.. LoopedPointsList];
                 }
                 else
                 {
-                    TranslatedOriginalControlPoints = curveView.ControlPoints.ToArray();
+                    TranslatedOriginalControlPoints = [.. curveView.ControlPoints];
                 }
 
                 try

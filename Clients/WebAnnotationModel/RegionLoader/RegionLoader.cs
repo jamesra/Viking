@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -24,7 +24,7 @@ namespace WebAnnotationModel
         /// </summary>
         public string debug_message;
 
-        static readonly ConcurrentDictionary<string, string> active_requests = new ConcurrentDictionary<string, string>();
+        static readonly ConcurrentDictionary<string, string> active_requests = new();
 #endif
 
 
@@ -49,7 +49,7 @@ namespace WebAnnotationModel
         /// <summary>
         /// Functions to call when the load is complete
         /// </summary>
-        public List<Action<ICollection<OBJECT>>> OnCompletionCallbacks = new List<Action<ICollection<OBJECT>>>();
+        public List<Action<ICollection<OBJECT>>> OnCompletionCallbacks = [];
 
         public RegionRequestData()
         {
@@ -100,7 +100,7 @@ namespace WebAnnotationModel
 #endif
                 foreach (Action<ICollection<OBJECT>> a in this.OnCompletionCallbacks)
                 {
-                    Task.Run(() => { a(objects); });
+                    Task.Run(() => a(objects));
                 }
 
                 this.OnCompletionCallbacks.Clear();
@@ -109,27 +109,22 @@ namespace WebAnnotationModel
             }
         }
 
-        public override string ToString()
-        {
+        public override string ToString() =>
 #if DEBUG
-            return (this.debug_message ?? "") +  $" {this.LastQuery} InProgress: {this.OutstandingQuery} OutstandingQuery: {this.OutstandingQuery}";
+            (this.debug_message ?? "") +  $" {this.LastQuery} InProgress: {this.OutstandingQuery} OutstandingQuery: {this.OutstandingQuery}";
 #else
-            return $" {this.LastQuery} InProgress: {this.OutstandingQuery} OutstandingQuery: {this.OutstandingQuery}";
+            $" {this.LastQuery} InProgress: {this.OutstandingQuery} OutstandingQuery: {this.OutstandingQuery}";
 #endif
-        }
+
     }
 
-    public class AnnotationRegions<OBJECT> : BoundlessRegionPyramid<RegionRequestData<OBJECT>>
+    public class AnnotationRegions<OBJECT>(GridCellDimensions cellDimensions, double PowerScale) : BoundlessRegionPyramid<RegionRequestData<OBJECT>>(cellDimensions, PowerScale)
         where OBJECT : class
     {
         /// <summary>
         /// If set to true any threads using this objects should cancel loading operations
         /// </summary>
         public bool CancelRunningOperations = false;
-
-        public AnnotationRegions(GridCellDimensions cellDimensions, double PowerScale)
-            : base(cellDimensions, PowerScale)
-        { }
     }
 
 
@@ -137,49 +132,36 @@ namespace WebAnnotationModel
     /// Return a flatter pyramid instead of a new level for every power of 2
     /// </summary>
     /// <typeparam name="OBJECT"></typeparam>
-    public class RegionPyramid<OBJECT> : BoundlessRegionPyramid<RegionRequestData<OBJECT>>
+    public class RegionPyramid<OBJECT>(GridCellDimensions cellDimensions, double PowerScale) : BoundlessRegionPyramid<RegionRequestData<OBJECT>>(cellDimensions, PowerScale)
         where OBJECT : class
     {
-        public RegionPyramid(GridCellDimensions cellDimensions, double PowerScale) : base(cellDimensions, PowerScale)
-        {
-
-        }
     }
 
     /// <summary>
     /// Loads objects from a section based on region queries
     /// </summary>
-    public class RegionLoader<KEY, OBJECT>
+    /// <remarks>
+    /// 
+    /// </remarks>
+    /// <param name="store"></param>
+    /// <param name="CellSize">Size of full-resolution region at level 0.</param>
+    /// <param name="LevelPowerScalar">The exponent we use to map a request to a pyramid level</param>
+    public class RegionLoader<KEY, OBJECT>(IRegionQuery<KEY, OBJECT> store, GridCellDimensions CellSize, double LevelPowerScalar)
         where KEY : struct
         where OBJECT : class
     {
-        readonly GridCellDimensions CellDimensions;
-        readonly double PowerScale;
+        readonly GridCellDimensions CellDimensions = CellSize;
+        readonly double PowerScale = LevelPowerScalar;
         static readonly double RegionUpdateInterval = 180;
-        readonly IRegionQuery<KEY, OBJECT> objectStore;
+        readonly IRegionQuery<KEY, OBJECT> objectStore = store;
 
-        readonly ConcurrentDictionary<int, RegionPyramid<OBJECT>> sectionPyramids = new ConcurrentDictionary<int, RegionPyramid<OBJECT>>();
+        readonly ConcurrentDictionary<int, RegionPyramid<OBJECT>> sectionPyramids = new();
 
         public RegionLoader(IRegionQuery<KEY, OBJECT> store) : this(store, new GridCellDimensions(2000, 2000), 3)
         {
 
             this.objectStore = store;
         }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="store"></param>
-        /// <param name="CellSize">Size of full-resolution region at level 0.</param>
-        /// <param name="LevelPowerScalar">The exponent we use to map a request to a pyramid level</param>
-        public RegionLoader(IRegionQuery<KEY, OBJECT> store, GridCellDimensions CellSize, double LevelPowerScalar)
-        {
-            this.objectStore = store;
-            this.CellDimensions = CellSize;
-            this.PowerScale = LevelPowerScalar;
-        }
-
-
 
         private static bool RegionIsDueForRefresh(RegionRequestData<OBJECT> cell)
         {
@@ -200,7 +182,7 @@ namespace WebAnnotationModel
                                                     double ScreenPixelSizeInVolume,
                                                     int SectionNumber,
                                                     Action<ICollection<OBJECT>> OnServerObjectsLoadedCallback,
-                                                    Action<ICollection<OBJECT>> FoundCachedLocalObjectsCallback, 
+                                                    Action<ICollection<OBJECT>> FoundCachedLocalObjectsCallback,
                                                     CancellationToken token)
         {
             if (!VolumeBounds.HasValue)
@@ -266,16 +248,13 @@ namespace WebAnnotationModel
             }
         }
 
-        private RegionPyramid<OBJECT> GetOrAddRegionPyramidForSection(int SectionNumber)
-        {
-            return this.sectionPyramids.GetOrAdd(SectionNumber, (Number) => new RegionPyramid<OBJECT>(CellDimensions, PowerScale));
-        }
+        private RegionPyramid<OBJECT> GetOrAddRegionPyramidForSection(int SectionNumber) => this.sectionPyramids.GetOrAdd(SectionNumber, (Number) => new RegionPyramid<OBJECT>(CellDimensions, PowerScale));
 
 
         private RegionRequestData<OBJECT> CreateRegionRequest(IRegionPyramidLevel<RegionRequestData<OBJECT>> level, GridIndex iCell, int SectionNumber, Action<ICollection<OBJECT>> OnLoadCompletedCallback)
         {
             //Create a new cell and hand it the callback
-            RegionRequestData<OBJECT> newCell = new RegionRequestData<OBJECT>();
+            RegionRequestData<OBJECT> newCell = new();
 
             AttachRequestForRegion(newCell, level, iCell, SectionNumber, OnLoadCompletedCallback);
 

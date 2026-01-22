@@ -28,10 +28,10 @@ namespace SqlServerTypesLoader
 
             // Load the Visual C++ runtime first
             LoadNativeAssembly(nativeBinaryPath, "msvcr120.dll");
-            
+
             // Try to load SqlServerSpatial160.dll first (newer version)
             try
-            { 
+            {
                 LoadNativeAssembly(nativeBinaryPath, "SqlServerSpatial160.dll");
                 Trace.WriteLine("Successfully loaded SqlServerSpatial160.dll");
             }
@@ -40,7 +40,8 @@ namespace SqlServerTypesLoader
                 // If SqlServerSpatial160.dll is not found, try loading the older version
                 Trace.WriteLine($"SqlServerSpatial160.dll loading exception {e.Message}\n\nFalling back to SqlServerSpatial140.dll ");
 
-                try { 
+                try
+                {
                     LoadNativeAssembly(nativeBinaryPath, "SqlServerSpatial140.dll");
                     Trace.WriteLine("Successfully loaded SqlServerSpatial140.dll");
                 }
@@ -48,7 +49,7 @@ namespace SqlServerTypesLoader
                 {
                     Trace.WriteLine($"SqlServerSpatial140.dll loading exception: {etwo.Message}");
                     throw new DllNotFoundException(
-                        $"Failed to load SQL Server Spatial DLLs. Tried both SqlServerSpatial160.dll and SqlServerSpatial140.dll from path: {nativeBinaryPath}", 
+                        $"Failed to load SQL Server Spatial DLLs. Tried both SqlServerSpatial160.dll and SqlServerSpatial140.dll from path: {nativeBinaryPath}",
                         etwo);
                 }
             }
@@ -57,13 +58,13 @@ namespace SqlServerTypesLoader
         private static void LoadNativeAssembly(string nativeBinaryPath, string assemblyName)
         {
             var path = Path.Combine(nativeBinaryPath, assemblyName);
-            
+
             // Check if file exists before trying to load
             if (!File.Exists(path))
             {
                 throw new FileNotFoundException($"Native assembly not found: {path}");
             }
-            
+
             var ptr = LoadLibrary(path);
             if (ptr == IntPtr.Zero)
             {

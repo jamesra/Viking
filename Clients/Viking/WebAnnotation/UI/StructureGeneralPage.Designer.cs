@@ -1,4 +1,4 @@
-﻿namespace WebAnnotation.UI
+namespace WebAnnotation.UI
 {
     partial class StructureGeneralPage
     {
@@ -109,9 +109,9 @@
             this.dataGridTags.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
             this.dataGridTags.Size = new System.Drawing.Size(374, 323);
             this.dataGridTags.TabIndex = 14;
-            this.dataGridTags.CellErrorTextChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridTags_CellErrorTextChanged);
+            this.dataGridTags.CellErrorTextChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.DataGridTags_CellErrorTextChanged);
             this.dataGridTags.CellValidating += new System.Windows.Forms.DataGridViewCellValidatingEventHandler(this.dataGridTags_CellValidating);
-            this.dataGridTags.RowErrorTextChanged += new System.Windows.Forms.DataGridViewRowEventHandler(this.dataGridTags_RowErrorTextChanged);
+            this.dataGridTags.RowErrorTextChanged += new System.Windows.Forms.DataGridViewRowEventHandler(this.DataGridTags_RowErrorTextChanged);
             this.dataGridTags.KeyDown += new System.Windows.Forms.KeyEventHandler(this.dataGridTags_KeyDown);
             // 
             // nameDataGridViewTextBoxColumn

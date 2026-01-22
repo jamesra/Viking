@@ -1,29 +1,18 @@
-﻿using System;
+using System;
 using System.ServiceModel;
 using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Commands
 {
-    internal class ToggleStructureTag : Viking.UI.Commands.Command
+    internal class ToggleStructureTag(Viking.UI.Controls.SectionViewerControl parent,
+        StructureObj structure,
+        string tag, string value) : Viking.UI.Commands.Command(parent)
     {
-        private readonly StructureObj target;
-        private readonly string tag;
-        private readonly string value;
+        private readonly StructureObj target = structure;
+        private readonly string tag = tag;
+        private readonly string value = value;
 
-        public ToggleStructureTag(Viking.UI.Controls.SectionViewerControl parent,
-            StructureObj structure,
-            string tag, string value)
-            : base(parent)
-        {
-            target = structure;
-            this.tag = tag;
-            this.value = value;
-        }
-
-        public override void OnActivate()
-        {
-            Parent.BeginInvoke((Action)Execute);
-        }
+        public override void OnActivate() => Parent.BeginInvoke((Action)Execute);
 
         protected override void Execute()
         {
@@ -43,26 +32,15 @@ namespace WebAnnotation.UI.Commands
         }
     }
 
-    internal class ToggleLocationTag : Viking.UI.Commands.Command
+    internal class ToggleLocationTag(Viking.UI.Controls.SectionViewerControl parent,
+        LocationObj loc,
+        string tag, string value) : Viking.UI.Commands.Command(parent)
     {
-        private readonly LocationObj target;
-        private readonly string tag;
-        private readonly string value;
+        private readonly LocationObj target = loc;
+        private readonly string tag = tag;
+        private readonly string value = value;
 
-        public ToggleLocationTag(Viking.UI.Controls.SectionViewerControl parent,
-            LocationObj loc,
-            string tag, string value)
-            : base(parent)
-        {
-            target = loc;
-            this.tag = tag;
-            this.value = value;
-        }
-
-        public override void OnActivate()
-        {
-            Parent.BeginInvoke((Action)Execute);
-        }
+        public override void OnActivate() => Parent.BeginInvoke((Action)Execute);
 
         protected override void Execute()
         {

@@ -7,8 +7,8 @@ namespace Viking.Common
 {
     public static class GetTypeExtensions
     {
-        public static HashSet<Type> NumericTypes = new HashSet<Type>
-        {
+        public static HashSet<Type> NumericTypes =
+        [
             typeof(Byte),
             typeof(SByte),
             typeof(UInt16),
@@ -20,7 +20,7 @@ namespace Viking.Common
             typeof(Double),
             typeof(Single),
             typeof(Decimal)
-        };
+        ];
 
         public static bool IsNumericType(this Type t)
         {
@@ -40,17 +40,11 @@ namespace Viking.Common
     /// <summary>
     /// Summary description for ListViewColumnSorter.
     /// </summary>
-    public class ListViewColumnSorter : IComparer
+    public class ListViewColumnSorter(int SortOnIndex, Type ColumnType) : IComparer
     {
-        public int SortIndex = 0;
+        public int SortIndex = SortOnIndex;
         public bool AscendingSort = true;
-        public Type? ColumnType = null;
-
-        public ListViewColumnSorter(int SortOnIndex, Type ColumnType)
-        {
-            this.SortIndex = SortOnIndex;
-            this.ColumnType = ColumnType;
-        }
+        public Type? ColumnType = ColumnType;
 
         int IComparer.Compare(object A, object B)
         {

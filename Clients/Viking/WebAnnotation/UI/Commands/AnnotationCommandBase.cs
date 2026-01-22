@@ -1,15 +1,8 @@
 ﻿namespace WebAnnotation.UI.Commands
 {
-    internal abstract class AnnotationCommandBase : Viking.UI.Commands.Command
+    internal abstract class AnnotationCommandBase(Viking.UI.Controls.SectionViewerControl parent) : Viking.UI.Commands.Command(parent)
     {
-        protected AnnotationOverlay Overlay;
-
-        public AnnotationCommandBase(Viking.UI.Controls.SectionViewerControl parent)
-            : base(parent)
-        {
-            //I hate this, but I have to live with it until Jotunn
-            Overlay = AnnotationOverlay.CurrentOverlay;
-        }
+        protected AnnotationOverlay Overlay = AnnotationOverlay.CurrentOverlay;
 
         protected override void OnDeactivate()
         {

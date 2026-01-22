@@ -144,7 +144,7 @@ namespace TriangleNet.Voronoi.Legacy
             int blinded = 0;
 
             Stack<Triangle> triangles;
-            subsegMap = new Dictionary<int, SubSegment>();
+            subsegMap = [];
 
             Otri f = default;
             Otri f0 = default;
@@ -230,7 +230,7 @@ namespace TriangleNet.Voronoi.Legacy
         /// <returns>Returns true, if the triangle is blinded.</returns>
         private bool TriangleIsBlinded(ref Otri tri, ref Osub seg)
         {
-            Point c, pt;
+            Point c;
 
             Vertex torg = tri.Org();
             Vertex tdest = tri.Dest();
@@ -241,7 +241,7 @@ namespace TriangleNet.Voronoi.Legacy
 
             c = this.points[tri.tri.id];
 
-            if (SegmentsIntersect(sorg, sdest, c, torg, out pt, true))
+            if (SegmentsIntersect(sorg, sdest, c, torg, out Point pt, true))
             {
                 return true;
             }
@@ -261,7 +261,7 @@ namespace TriangleNet.Voronoi.Legacy
 
         private void ConstructCell(Vertex vertex)
         {
-            VoronoiRegion region = new VoronoiRegion(vertex);
+            VoronoiRegion region = new(vertex);
             regions.Add(region);
 
             Otri f = default;
@@ -275,7 +275,7 @@ namespace TriangleNet.Voronoi.Legacy
             int n = mesh.triangles.Count;
 
             // Call P the polygon (cell) in construction
-            List<Point> vpoints = new List<Point>();
+            List<Point> vpoints = [];
 
             // Call f_init a triangle incident to x
             vertex.tri.Copy(ref f_init);
@@ -373,7 +373,7 @@ namespace TriangleNet.Voronoi.Legacy
 
         private void ConstructBoundaryCell(Vertex vertex)
         {
-            VoronoiRegion region = new VoronoiRegion(vertex);
+            VoronoiRegion region = new(vertex);
             regions.Add(region);
 
             Otri f = default;
@@ -389,7 +389,7 @@ namespace TriangleNet.Voronoi.Legacy
             int n = mesh.triangles.Count;
 
             // Call P the polygon (cell) in construction
-            List<Point> vpoints = new List<Point>();
+            List<Point> vpoints = [];
 
             // Call f_init a triangle incident to x
             vertex.tri.Copy(ref f_init);
@@ -509,7 +509,7 @@ namespace TriangleNet.Voronoi.Legacy
                         // have to add the intersection with the segment.
 
                         // Center of f edge dest->apex
-                        Point bisec = new Point((tdest.x + tapex.x) / 2, (tdest.y + tapex.y) / 2);
+                        Point bisec = new((tdest.x + tapex.x) / 2, (tdest.y + tapex.y) / 2);
 
                         // Find intersection of seg with line through f's bisector and circumcenter
                         if (SegmentsIntersect(sorg, sdest, bisec, cc_f, out p, false))
@@ -556,7 +556,7 @@ namespace TriangleNet.Voronoi.Legacy
                             // have to add the intersection with the segment.
 
                             // Center of f_next edge org->dest
-                            Point bisec = new Point((torg.x + tdest.x) / 2, (torg.y + tdest.y) / 2);
+                            Point bisec = new((torg.x + tdest.x) / 2, (torg.y + tdest.y) / 2);
 
                             // Find intersection of seg with line through f_next's bisector and circumcenter
                             if (SegmentsIntersect(sorg, sdest, bisec, cc_f_next, out p, false))
@@ -653,7 +653,7 @@ namespace TriangleNet.Voronoi.Legacy
         {
             // Copy edges
             Point first, last;
-            var edges = new List<IEdge>(this.Regions.Count * 2);
+            List<IEdge> edges = new(this.Regions.Count * 2);
             foreach (var region in this.Regions)
             {
                 first = null;

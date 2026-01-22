@@ -1,4 +1,4 @@
-﻿namespace GeometryTests
+namespace GeometryTests
 {
     public static class Global
     {
@@ -10,10 +10,7 @@
         //public static readonly FsCheck.Random.StdGen StdGenSeed = FsCheck.Random.StdGen.NewStdGen(1825931114, 296730464);
 
         public static readonly FsCheck.Random.StdGen StdGenSeed = FsCheck.Random.newSeed();
-        public static void ResetRollingSeed()
-        {
-            _RollingStdGenSeed = StdGenSeed;
-        }
+        public static void ResetRollingSeed() => _RollingStdGenSeed = StdGenSeed;
 
         private static FsCheck.Random.StdGen _RollingStdGenSeed = StdGenSeed;
         public static FsCheck.Random.StdGen RollingStdGenSeed

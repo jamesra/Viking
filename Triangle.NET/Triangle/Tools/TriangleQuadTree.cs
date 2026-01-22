@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="TriangleQuadTree.cs" company="">
 // Original code by Frank Dockhorn, [not available anymore: http://sourceforge.net/projects/quadtreesim/]
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
@@ -42,7 +42,7 @@ namespace TriangleNet.Tools
             this.maxDepth = maxDepth;
             this.sizeBound = sizeBound;
 
-            triangles = mesh.Triangles.ToArray();
+            triangles = [.. mesh.Triangles];
 
             int currentDepth = 0;
 
@@ -52,7 +52,7 @@ namespace TriangleNet.Tools
 
         public ITriangle Query(double x, double y)
         {
-            var point = new Point(x, y);
+            Point point = new(x, y);
             var indices = root.FindTriangles(point);
 
             foreach (var i in indices)
@@ -79,15 +79,15 @@ namespace TriangleNet.Tools
         internal static bool IsPointInTriangle(Point p, Point t0, Point t1, Point t2)
         {
             // TODO: no need to create new Point instances here
-            Point d0 = new Point(t1.x - t0.x, t1.y - t0.y);
-            Point d1 = new Point(t2.x - t0.x, t2.y - t0.y);
-            Point d2 = new Point(p.x - t0.x, p.y - t0.y);
+            Point d0 = new(t1.x - t0.x, t1.y - t0.y);
+            Point d1 = new(t2.x - t0.x, t2.y - t0.y);
+            Point d2 = new(p.x - t0.x, p.y - t0.y);
 
             // crossproduct of (0, 0, 1) and d0
-            Point c0 = new Point(-d0.y, d0.x);
+            Point c0 = new(-d0.y, d0.x);
 
             // crossproduct of (0, 0, 1) and d1
-            Point c1 = new Point(-d1.y, d1.x);
+            Point c1 = new(-d1.y, d1.x);
 
             // Linear combination d2 = s * d0 + v * d1.
             //
@@ -109,10 +109,7 @@ namespace TriangleNet.Tools
             return false;
         }
 
-        internal static double DotProduct(Point p, Point q)
-        {
-            return p.x * q.x + p.y * q.y;
-        }
+        internal static double DotProduct(Point p, Point q) => p.x * q.x + p.y * q.y;
 
         /// <summary>
         /// A node of the quadtree.
@@ -126,7 +123,7 @@ namespace TriangleNet.Tools
 
             const double EPS = 1e-6;
 
-            static readonly byte[] BITVECTOR = { 0x1, 0x2, 0x4, 0x8 };
+            static readonly byte[] BITVECTOR = [0x1, 0x2, 0x4, 0x8];
 
             readonly Rectangle bounds;
             readonly Point pivot;
@@ -151,7 +148,7 @@ namespace TriangleNet.Tools
                 this.bitRegions = 0;
 
                 this.regions = new QuadNode[4];
-                this.triangles = new List<int>();
+                this.triangles = [];
 
                 if (init)
                 {

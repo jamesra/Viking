@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -19,14 +19,14 @@ namespace ColladaIO
     /// </summary>
     public partial class COLLADA
     {
-        private static readonly Regex regex = new Regex(@"\s+");
+        private static readonly Regex regex = MyRegex();
 
         public static string ConvertFromArray<T>(IList<T> array)
         {
             if (array is null)
                 return null;
 
-            StringBuilder text = new StringBuilder();
+            StringBuilder text = new();
             if (typeof(T) == typeof(double))
             {
                 // If type is double, then use a plain ToString with no exponent
@@ -39,12 +39,12 @@ namespace ColladaIO
                             "0.000000",
                             NumberFormatInfo.InvariantInfo));
                     if ((i + 1) < array.Count)
-                        text.Append(" ");
+                        text.Append(' ');
                 }
             }
-            else if(typeof(T) == typeof(Byte))
+            else if (typeof(T) == typeof(Byte))
             {
-                return Encoding.UTF8.GetString(((IList<Byte>)array).ToArray());
+                return Encoding.UTF8.GetString([.. ((IList<Byte>)array)]);
             }
             else
             {
@@ -52,7 +52,7 @@ namespace ColladaIO
                 {
                     text.Append(Convert.ToString(array[i], NumberFormatInfo.InvariantInfo));
                     if ((i + 1) < array.Count)
-                        text.Append(" ");
+                        text.Append(' ');
                 }
             }
             return text.ToString();
@@ -119,14 +119,11 @@ namespace ColladaIO
             return ret;
         }
 
-        internal static byte[] ConvertByteArray(string arrayStr)
-        {
-            return Encoding.UTF8.GetBytes(arrayStr);
-        }
-        
+        internal static byte[] ConvertByteArray(string arrayStr) => Encoding.UTF8.GetBytes(arrayStr);
+
         public static COLLADA Load(string fileName)
         {
-            FileStream stream = new FileStream(fileName, FileMode.Open);
+            FileStream stream = new(fileName, FileMode.Open);
             COLLADA result;
             try
             {
@@ -141,8 +138,8 @@ namespace ColladaIO
 
         public static COLLADA Load(Stream stream)
         {
-            StreamReader str = new StreamReader(stream);
-            XmlSerializer xSerializer = new XmlSerializer(typeof(COLLADA));
+            StreamReader str = new(stream);
+            XmlSerializer xSerializer = new(typeof(COLLADA));
 
             return (COLLADA)xSerializer.Deserialize(str);
         }
@@ -152,23 +149,22 @@ namespace ColladaIO
             if (System.IO.File.Exists(Filename))
                 System.IO.File.Delete(Filename);
 
-            using (Stream stream = File.Open(Filename, FileMode.Create))
-            {
-                XmlSerializer serializer = new XmlSerializer(typeof(COLLADA));
-                serializer.Serialize(stream, this);
-                stream.Flush();
-            }
+            using Stream stream = File.Open(Filename, FileMode.Create);
+            XmlSerializer serializer = new(typeof(COLLADA));
+            serializer.Serialize(stream, this);
+            stream.Flush();
         }
 
         public void Save(Stream stream)
         {
-            using (XmlTextWriter writer = new XmlTextWriter(stream, Encoding.UTF8))
-            {
-                writer.Formatting = Formatting.Indented;
+            using XmlTextWriter writer = new(stream, Encoding.UTF8);
+            writer.Formatting = Formatting.Indented;
 
-                XmlSerializer xSerializer = new XmlSerializer(typeof(COLLADA));
-                xSerializer.Serialize(writer, this);
-            }
+            XmlSerializer xSerializer = new(typeof(COLLADA));
+            xSerializer.Serialize(writer, this);
         }
+
+        [GeneratedRegex(@"\s+")]
+        private static partial Regex MyRegex();
     }
 }

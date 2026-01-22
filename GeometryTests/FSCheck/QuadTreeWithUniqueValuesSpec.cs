@@ -1,4 +1,4 @@
-﻿using FsCheck;
+using FsCheck;
 using Geometry;
 using GeometryTests.Algorithms;
 using GeometryTests.FSCheck;
@@ -17,26 +17,23 @@ namespace GeometryTests.FSCheck
     {
         public List<DistanceToPoint<PointTuple>> Nearest(GridVector2 point)
         {
-            var listPoints = this.Select((p, i) => new DistanceToPoint<PointTuple>(p, GridVector2.Distance(p, point), p)).ToList();
+            List<DistanceToPoint<PointTuple>> listPoints = [.. this.Select((p, i) => new DistanceToPoint<PointTuple>(p, GridVector2.Distance(p, point), p))];
             listPoints.Sort(new DistanceToPointSorter<PointTuple>());
             return listPoints;
         }
 
-        public bool Contains(GridVector2 point)
-        {
-            return this.Any(pt => pt.Point.Equals(point));
-        }
+        public bool Contains(GridVector2 point) => this.Any(pt => pt.Point.Equals(point));
     }
 
     internal class QuadTreeWithUniqueValuesSpec : ICommandGenerator<QuadTreeWithUniqueValues<int>, QuadTreeModel>
-    {  
+    {
         public QuadTreeWithUniqueValuesSpec()
         {
         }
 
-        public Geometry.QuadTreeWithUniqueValues<int> InitialActual => new QuadTreeWithUniqueValues<int>();
+        public Geometry.QuadTreeWithUniqueValues<int> InitialActual => new();
 
-        public QuadTreeModel InitialModel => new QuadTreeModel();
+        public QuadTreeModel InitialModel => [];
 
         public static Property ClassifySize(Property prop, int size)
         {
@@ -124,7 +121,7 @@ namespace GeometryTests.FSCheck
 
                 return Gen.Frequency(
                     Tuple.Create(3, GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>)),
-                    Tuple.Create(1, Gen.Choose(0, InitialModel.Count-1 < 0 ? 0 : InitialModel.Count-1).Select(i => new RemovePointOperation(value[i]) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>)),
+                    Tuple.Create(1, Gen.Choose(0, InitialModel.Count - 1 < 0 ? 0 : InitialModel.Count - 1).Select(i => new RemovePointOperation(value[i]) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>)),
                     Tuple.Create(1, Gen.Zip(GridVector2Generators.ArbRandomPoint().Generator,
                                             Gen.Choose(0, InitialModel.Count))
                                                                         .Select((val) => new NearestPointsOperation(val.Item1, (int)val.Item2) as Command<Geometry.QuadTreeWithUniqueValues<int>, QuadTreeModel>)));
@@ -133,18 +130,13 @@ namespace GeometryTests.FSCheck
             //GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>);
         }
 
-        private class AddPointOperation : Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>
+        private class AddPointOperation(GridVector2 point) : Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>
         {
-            public readonly PointTuple Point;
+            public readonly PointTuple Point = new(point, System.Threading.Interlocked.Increment(ref NextPointID));
 
             private static int NextPointID = -1;
 
             public bool AddResult { get; private set; } = false;
-
-            public AddPointOperation(GridVector2 point)
-            {
-                Point = new PointTuple(point, System.Threading.Interlocked.Increment(ref NextPointID));
-            }
 
             public override Property Post(QuadTreeWithUniqueValues<int> treeWithUniqueValues, QuadTreeModel model)
             {
@@ -188,12 +180,10 @@ namespace GeometryTests.FSCheck
                         .Trivial(model.Count == 0);
                         */
             }
-             
-            public override bool Pre(QuadTreeModel _arg1)
-            {
+
+            public override bool Pre(QuadTreeModel _arg1) =>
                 //Do not attempt to add duplicate points
-                return _arg1.Contains(Point.Point) == false;
-            }
+                _arg1.Contains(Point.Point) == false;
 
             public override QuadTreeWithUniqueValues<int> RunActual(QuadTreeWithUniqueValues<int> value)
             {
@@ -207,22 +197,13 @@ namespace GeometryTests.FSCheck
                 return value;
             }
 
-            public override string ToString()
-            {
-                return "Add " + Point.ToString();
-            }
+            public override string ToString() => "Add " + Point.ToString();
         }
 
-        private class NearestPointsOperation : Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>
+        private class NearestPointsOperation(GridVector2 point, int num_points) : Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>
         {
-            public readonly GridVector2 Point;
-            public readonly int nPoints;
-
-            public NearestPointsOperation(GridVector2 point, int num_points)
-            {
-                Point = point;
-                nPoints = num_points;
-            }
+            public readonly GridVector2 Point = point;
+            public readonly int nPoints = num_points;
 
             public override Property Post(QuadTreeWithUniqueValues<int> treeWithUniqueValues, QuadTreeModel model)
             {
@@ -235,53 +216,34 @@ namespace GeometryTests.FSCheck
                 return result;
             }
 
-            public override bool Pre(QuadTreeModel _arg1)
-            {
+            public override bool Pre(QuadTreeModel _arg1) =>
                 //Do not attempt to add duplicate points
-                return this.nPoints <= _arg1.Count;
-            }
+                this.nPoints <= _arg1.Count;
 
-            public override QuadTreeWithUniqueValues<int> RunActual(QuadTreeWithUniqueValues<int> value)
-            {
-                return value;
-            }
+            public override QuadTreeWithUniqueValues<int> RunActual(QuadTreeWithUniqueValues<int> value) => value;
 
-            public override QuadTreeModel RunModel(QuadTreeModel value)
-            {
-                return value;
-            }
+            public override QuadTreeModel RunModel(QuadTreeModel value) => value;
 
-            public override string ToString()
-            {
-                return string.Format("Find nearest {0} points to {1} ", this.nPoints, Point);
-            }
+            public override string ToString() => string.Format("Find nearest {0} points to {1} ", this.nPoints, Point);
         }
 
         /// <summary>
         /// Removes a random point from the quad treeWithUniqueValues
         /// </summary>
-        private class RemovePointOperation : Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>
+        private class RemovePointOperation(PointTuple value) : Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>
         {
             /// <summary>
             /// The point being removed
             /// </summary>
-            public PointTuple Point {get; private set;}
-             
+            public PointTuple Point { get; private set; } = value;
+
 
             /// <summary>
             /// The returned value when the point was removed from the quad treeWithUniqueValues
             /// </summary>
             public bool RemovedFromQuadTree { get; private set; } = false;
 
-            public RemovePointOperation(PointTuple value)
-            {
-                Point = value; 
-            }
-
-            public override bool Pre(QuadTreeModel _arg1)
-            { 
-                return true;
-            }
+            public override bool Pre(QuadTreeModel _arg1) => true;
 
             public override Property Post(QuadTreeWithUniqueValues<int> treeWithUniqueValues, QuadTreeModel model)
             {
@@ -291,11 +253,11 @@ namespace GeometryTests.FSCheck
                 //Does a brute force search of the model to ensure the correct points is returned from the treeWithUniqueValues                
                 Property result = (TreeRemovedPoint.Label($"treeWithUniqueValues contains removed point {Point}"))
                                   .And(TreeRemovedValue.Label($"treeWithUniqueValues contains removed value {Point}"))
-                                  .ClassifySize(model.Count); 
+                                  .ClassifySize(model.Count);
 
                 return result;
             }
-              
+
             public override QuadTreeWithUniqueValues<int> RunActual(QuadTreeWithUniqueValues<int> value)
             {
                 RemovedFromQuadTree = value.TryRemove(Point.Value, out int removed);
@@ -308,10 +270,7 @@ namespace GeometryTests.FSCheck
                 return value;
             }
 
-            public override string ToString()
-            {
-                return string.Format($"Remove {Point}");
-            }
+            public override string ToString() => string.Format($"Remove {Point}");
         }
     }
 }

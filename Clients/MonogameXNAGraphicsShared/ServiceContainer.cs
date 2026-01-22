@@ -21,16 +21,13 @@ namespace VikingXNA
     /// </summary>
     public class ServiceContainer : IServiceProvider
     {
-        readonly Dictionary<Type, object> services = new Dictionary<Type, object>();
+        readonly Dictionary<Type, object> services = [];
 
 
         /// <summary>
         /// Adds a new service to the collection.
         /// </summary>
-        public void AddService<T>(T service)
-        {
-            services.Add(typeof(T), service);
-        }
+        public void AddService<T>(T service) => services.Add(typeof(T), service);
 
 
         /// <summary>
@@ -38,9 +35,8 @@ namespace VikingXNA
         /// </summary>
         public object GetService(Type serviceType)
         {
-            object service;
 
-            services.TryGetValue(serviceType, out service);
+            services.TryGetValue(serviceType, out object service);
 
             return service;
         }

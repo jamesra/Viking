@@ -35,9 +35,9 @@ namespace WebAnnotation.UI.Actions
             return a.Execute;
         }
 
-        public IRenderable Passive { get; set; } = null;
+        public IRenderable? Passive { get; set; } = null;
 
-        public IRenderable Active { get; set; } = null;
+        public IRenderable? Active { get; set; } = null;
 
         public BuiltinTexture Icon { get; set; } = BuiltinTexture.Minus;
 
@@ -47,12 +47,10 @@ namespace WebAnnotation.UI.Actions
         /// <param name="location"></param>
         /// <param name="transform"></param>
         /// <param name="innerPoint">A point inside the interior hole in volume space</param>
-        public RemoveHoleAction(LocationObj location, int innerPoly, IVolumeToSectionTransform transform = null)
+        public RemoveHoleAction(LocationObj location, int innerPoly, IVolumeToSectionTransform? transform = null)
         {
             Location = location;
-            Transform = transform == null ?
-                WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform
-                : transform;
+            Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 
             GridPolygon volumePoly = location.VolumeShape.ToPolygon();
             VolumePolygonToRemove = volumePoly.InteriorPolygons[innerPoly];
@@ -82,7 +80,7 @@ namespace WebAnnotation.UI.Actions
 
         public void CreateDefaultVisuals()
         {
-            SolidPolygonView view = new SolidPolygonView(VolumePolygonToRemove.Smooth(Global.NumClosedCurveInterpolationPoints),
+            SolidPolygonView view = new(VolumePolygonToRemove.Smooth(Global.NumClosedCurveInterpolationPoints),
                                                          Color.Magenta.SetAlpha(0.5f));
             Passive = view;
         }
@@ -99,8 +97,7 @@ namespace WebAnnotation.UI.Actions
                 return false;
             }
 
-            RemoveHoleAction other_action = other as RemoveHoleAction;
-            if (other_action == null)
+            if (other is not RemoveHoleAction other_action)
             {
                 return false;
             }

@@ -1,4 +1,4 @@
-﻿using SIMeasurement;
+using SIMeasurement;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -17,11 +17,11 @@ namespace MeasurementExtension
     {
         internal static double _UnitsPerPixel = 1;
         public static double UnitsPerPixel => _UnitsPerPixel;
-        
+
         internal static SILengthUnits _UnitOfMeasure;
         public static SILengthUnits UnitOfMeasure => _UnitOfMeasure;
 
-        public static LengthMeasurement PixelWidth => new LengthMeasurement(Global.UnitOfMeasure, Global.UnitsPerPixel);
+        public static LengthMeasurement PixelWidth => new(Global.UnitOfMeasure, Global.UnitsPerPixel);
 
         #region IInitExtensions Members
 
@@ -45,7 +45,7 @@ namespace MeasurementExtension
             //See if we can load the about.xml file, this is for legacy support and can be removed after VikinkXML files have been regenerated with latest
             //CreateXML updates from 11/1/10
 
-            Uri MappingURI = new Uri(volume.Host + "/About.xml");
+            Uri MappingURI = new(volume.Host + "/About.xml");
             var xmlMapping = GetXMLFromUriAsync(MappingURI).GetAwaiter().GetResult();
 
             //See if we can locate a scale tag
@@ -60,15 +60,15 @@ namespace MeasurementExtension
         private static async Task<XDocument?> GetXMLFromUriAsync(Uri uri)
         {
             HttpClientHandler handler;
-            
+
             handler = uri.Scheme.ToLower() == "https" ? new HttpClientHandler { Credentials = Viking.UI.State.UserCredentials } : new HttpClientHandler { UseDefaultCredentials = true };
 
-            using var httpClient = new HttpClient(handler);
+            using HttpClient httpClient = new(handler);
             try
             {
                 var response = await httpClient.GetAsync(uri);
                 response.EnsureSuccessStatusCode();
-                    
+
                 var content = await response.Content.ReadAsStringAsync();
                 return XDocument.Parse(content);
             }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Viking.AnnotationServiceTypes.Interfaces
 {
@@ -8,7 +8,8 @@ namespace Viking.AnnotationServiceTypes.Interfaces
         ulong B { get; }
     }
 
-    public interface ILocationLink : IEquatable<ILocationLink>{
+    public interface ILocationLink : IEquatable<ILocationLink>
+    {
         ulong A { get; }
         ulong B { get; }
     }

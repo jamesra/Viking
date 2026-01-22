@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Geometry.Meshing;
 using MIConvexHull;
 using MIConvexHullExtensions;
@@ -21,7 +21,7 @@ namespace MonogameTestbed
         public GridPolygon[] Polygons = null;
         public double[] PolyZ = null;
 
-        public List<Mesh3D> meshes = new List<Mesh3D>();
+        public List<Mesh3D> meshes = [];
 
         public DelaunayTetrahedronView(GridPolygon[] polys, double[] Z)
         {
@@ -33,7 +33,7 @@ namespace MonogameTestbed
 
         public List<Mesh3D> UpdateTriangulation3D()
         {
-            List<MIVector3> listPoints = new List<MIVector3>();
+            List<MIVector3> listPoints = [];
             for (int iPoly = 0; iPoly < Polygons.Length; iPoly++)
             {
                 var map = Polygons[iPoly].CreatePointToPolyMap();
@@ -41,15 +41,15 @@ namespace MonogameTestbed
                 listPoints.AddRange(map.Keys.Select((Func<GridVector2, MIVector3>)(k => new MIVector3((GridVector3)k.ToGridVector3(Z), (PolygonIndex)new PolygonIndex((int)iPoly, (int?)map[(GridVector2)k].iInnerPoly, (int)map[(GridVector2)k].iVertex, (IReadOnlyList<GridPolygon>)Polygons)))));
             }
 
-            var tri = MIConvexHull.DelaunayTriangulation<MIConvexHullExtensions.MIVector3, DefaultTriangulationCell<MIVector3>>.Create(listPoints, 1e-10);
+            DelaunayTriangulation<MIVector3, DefaultTriangulationCell<MIVector3>> tri = MIConvexHull.DelaunayTriangulation<MIConvexHullExtensions.MIVector3, DefaultTriangulationCell<MIVector3>>.Create(listPoints, 1e-10);
 
-            List<DefaultTriangulationCell<MIVector3>> listCells = new List<DefaultTriangulationCell<MIVector3>>(tri.Cells.Count());
+            List<DefaultTriangulationCell<MIVector3>> listCells = new(tri.Cells.Count());
 
-            List<Mesh3D> listMesh = new List<Mesh3D>();
+            List<Mesh3D> listMesh = [];
 
-            Mesh3D mesh = new Mesh3D();
+            Mesh3D mesh = new();
 
-            Dictionary<GridVector3, int> vertexLookup = new Dictionary<GridVector3, int>();
+            Dictionary<GridVector3, int> vertexLookup = [];
 
             foreach (MIVector3 v in listPoints)
             {
@@ -61,14 +61,14 @@ namespace MonogameTestbed
 
             foreach (var cell in tri.Cells)
             {
-                Mesh3D faceMesh = new Mesh3D();
-                faceMesh.AddVerticies(cell.Vertices.Select(fv => new Vertex3D(fv.P)).ToArray());
+                Mesh3D faceMesh = new();
+                faceMesh.AddVerticies([.. cell.Vertices.Select(fv => new Vertex3D(fv.P))]);
 
                 //For each face, determine if any of the edges are invalid lines.  If all lines are valid then add the face to the output
                 bool SkipCell = false;
                 foreach (Combo<MIVector3> combo in cell.Vertices.CombinationPairs())
                 {
-                    GridLineSegment line = new GridLineSegment(combo.A.P, combo.B.P);
+                    GridLineSegment line = new(combo.A.P, combo.B.P);
 
                     PolygonIndex A = cell.Vertices[combo.iA].PolyIndex;
                     PolygonIndex B = cell.Vertices[combo.iB].PolyIndex;
@@ -82,47 +82,47 @@ namespace MonogameTestbed
 
                 if (SkipCell)
                 {
-                //    continue;
+                    //    continue;
                 }
 
-                int[][] faceIndicies = new int[][] { new int[] {0, 1, 2},
-                                             new int[] {0, 1, 3},
-                                             new int[] {0, 2, 3},
-                                             new int[] {1, 2, 3}};
-                 
+                int[][] faceIndicies = [ [0, 1, 2],
+                                             [0, 1, 3],
+                                             [0, 2, 3],
+                                             [1, 2, 3]];
+
 
                 foreach (int[] face in faceIndicies)
                 {
                     //All edges of the triangle must be on the surface or we ignore the face.
-                    GridVector3[] faceVerts = face.Select(i => cell.Vertices[i].P).ToArray();
-                    int[] faceMeshIndicies = faceVerts.Select(p => vertexLookup[p]).ToArray();
-                      
+                    GridVector3[] faceVerts = [.. face.Select(i => cell.Vertices[i].P)];
+                    int[] faceMeshIndicies = [.. faceVerts.Select(p => vertexLookup[p])];
+
                     bool FaceOnSurface = true;
                     int OnSurfaceCount = 0;
                     foreach (Combo<int> combo in face.CombinationPairs())
                     {
-                        var line = new GridLineSegment(cell.Vertices[combo.A].P, cell.Vertices[combo.B].P);
+                        GridLineSegment line = new(cell.Vertices[combo.A].P, cell.Vertices[combo.B].P);
                         PolygonIndex A = cell.Vertices[combo.A].PolyIndex;
                         PolygonIndex B = cell.Vertices[combo.B].PolyIndex;
 
                         bool EmptySpace = LineCrossesEmptySpace(A, B, Polygons, line.PointAlongLine(0.5), PolyZ);
-                        if(EmptySpace)
+                        if (EmptySpace)
                         {
-                             
+
                             OnSurfaceCount = 0;
-                            break; 
+                            break;
                         }
 
                         var EdgeType = EdgeTypeExtensions.GetEdgeType(A, B, Polygons, line.PointAlongLine(0.5));
                         FaceOnSurface &= EdgeType == EdgeType.SURFACE;
                         if (EdgeType == EdgeType.SURFACE)
-                            OnSurfaceCount += 1; 
+                            OnSurfaceCount += 1;
                     }
-                     
+
                     //if (FaceOnSurface)
-                    if(OnSurfaceCount >= 2)
+                    if (OnSurfaceCount >= 2)
                     {
-                        Face f = new Face(face);
+                        Face f = new(face);
                         faceMesh.AddFace(f);
 
                         listMesh.Add(faceMesh);
@@ -130,7 +130,7 @@ namespace MonogameTestbed
                         if (!mesh.Faces.Contains(f))
                             mesh.AddFace(f);
                     }
-                    
+
                     /*
                     if(!FaceOnSurface)
                     {
@@ -242,7 +242,7 @@ namespace MonogameTestbed
             return false;
         }
 
-        private Color GetColorForLine(PolygonIndex APoly, PolygonIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint)
+        private static Color GetColorForLine(PolygonIndex APoly, PolygonIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint)
         {
             GridPolygon A = Polygons[APoly.iPoly];
             GridPolygon B = Polygons[BPoly.iPoly];
@@ -259,18 +259,18 @@ namespace MonogameTestbed
                     if (!midInA && !midInB) //Midpoing not in either polygon.  Passes through empty space that cannot be on the surface
                     {
                         return Color.Black.SetAlpha(0.1f); //Exclude from port.  Line covers empty space.  If the triangle contains an intersection point we may need to adjust faces
-                                                           /*
-                                                           if (A.InteriorPolygonContains(midpoint) ^ B.InteriorPolygonContains(midpoint))
-                                                           {
-                                                               //Include in port.
-                                                               //Line runs from exterior ring to the far side of an overlapping interior hole
-                                                               lineViews[i].Color = Color.Black.SetAlpha(0.25f); //exclude from port, line covers empty space
-                                                           }
-                                                           else
-                                                           {
-                                                               lineViews[i].Color = Color.White.SetAlpha(0.25f); //Exclude from port.  Line covers empty space
-                                                           }
-                                                           */
+                        /*
+                        if (A.InteriorPolygonContains(midpoint) ^ B.InteriorPolygonContains(midpoint))
+                        {
+                            //Include in port.
+                            //Line runs from exterior ring to the far side of an overlapping interior hole
+                            lineViews[i].Color = Color.Black.SetAlpha(0.25f); //exclude from port, line covers empty space
+                        }
+                        else
+                        {
+                            lineViews[i].Color = Color.White.SetAlpha(0.25f); //Exclude from port.  Line covers empty space
+                        }
+                        */
                     }
                     else //Midpoing in both polygons.  The line passes through solid space
                     {
@@ -361,8 +361,8 @@ namespace MonogameTestbed
         }
 
 
-        public void Draw(MonoTestbed window, Scene scene)
-        { 
+        public static void Draw(MonoTestbed window, Scene scene)
+        {
         }
     }
 
@@ -370,24 +370,24 @@ namespace MonogameTestbed
     {
         public string Title => this.GetType().Name;
 
-        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
+        readonly GamePadStateTracker Gamepad = new();
 
         VikingXNAGraphics.MeshView<VertexPositionNormalColor> meshView;
-          
+
         Scene3D Scene;
 
         LabelView labelCamera;
-         
+
 
         bool _initialized = false;
         public bool Initialized => _initialized;
 
         //Polygons with internal polygon merging with external concavity
-        readonly ulong[] TroubleIDS = new ulong[] {
+        readonly ulong[] TroubleIDS = [
           1333661, //Z = 2
           1333662, //Z = 3
           1333665 //Z =2 
-        }; 
+        ];
 
         public Task Init(MonoTestbed window)
         {
@@ -402,15 +402,15 @@ namespace MonogameTestbed
 
             labelCamera = new LabelView("", new GridVector2(0, 100));
 
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(TroubleIDS.Select(id => (long)id).ToArray(), true, DataSource.EndpointMap[Endpoint.TEST]);
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData([.. TroubleIDS.Select(id => (long)id)], true, DataSource.EndpointMap[Endpoint.TEST]);
 
-            AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
+            AnnotationVizLib.MorphologyNode[] nodes = [.. graph.Nodes.Values];
 
-            GridPolygon[] polygons = nodes.Select(n => n.Geometry.ToPolygon()).ToArray();
-            double[] polyZ = nodes.Select(n => n.Z).ToArray();
+            GridPolygon[] polygons = [.. nodes.Select(n => n.Geometry.ToPolygon())];
+            double[] polyZ = [.. nodes.Select(n => n.Z)];
             polygons.AddPointsAtAllIntersections();
 
-            DelaunayTetrahedronView tetraView = new DelaunayTetrahedronView(polygons, polyZ);
+            DelaunayTetrahedronView tetraView = new(polygons, polyZ);
 
             GridBox bbox = tetraView.meshes.First().BoundingBox;
 
@@ -423,9 +423,9 @@ namespace MonogameTestbed
             //this.Scene.Camera.Position += new Vector3((float)bbox.Width, (float)bbox.Height, (float)bbox.Depth);
             //this.Scene.Camera.Rotation = new Vector3(4.986171f, 1.67181f, 0);
             //this.Scene.Camera.LookAt = meshes.First().BoundingBox.CenterPoint.ToXNAVector3();   
-            
-            
-            System.Random r = new Random();
+
+
+            System.Random r = new();
             foreach (Mesh3D mesh in tetraView.meshes)
             {
                 mesh.RecalculateNormals();
@@ -437,7 +437,7 @@ namespace MonogameTestbed
         public void UnloadContent(MonoTestbed window)
         {
         }
-        
+
         /*
         private ICollection<Mesh3D<IVertex3D<ulong>>> RecursivelyGenerateMeshes(AnnotationVizLib.MorphologyGraph graph)
         {
@@ -485,7 +485,7 @@ namespace MonogameTestbed
         {
             window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
 
-            DepthStencilState dstate = new DepthStencilState
+            DepthStencilState dstate = new()
             {
                 DepthBufferEnable = true,
                 StencilEnable = false,

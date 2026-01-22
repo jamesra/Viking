@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using System.Windows.Controls;
@@ -16,17 +16,17 @@ namespace Viking.Common
         /// The full VikingXML document defining the volume
         /// </summary>
         System.Xml.Linq.XDocument VikingXML { get; }
-        
+
         /// <summary>
         /// The Volume element from the VikingXML
         /// </summary>
         System.Xml.Linq.XElement VolumeElement { get; }
-        
+
         /// <summary>
         /// The volume name from the VikingXML
         /// </summary>
         string VolumeName { get; }
-        
+
         /// <summary>
         /// The volume host URL
         /// </summary>
@@ -158,7 +158,7 @@ namespace Viking.Common
         System.Windows.Forms.ContextMenuStrip ContextMenu { get; }
     }
 
-    public interface IUIObjectBasic 
+    public interface IUIObjectBasic
     {
         void ShowProperties();
 
@@ -181,7 +181,7 @@ namespace Viking.Common
         event System.EventHandler BeforeSave;
         event System.EventHandler AfterSave;
 
-        System.Drawing.Image SmallThumbnail {get;}
+        System.Drawing.Image SmallThumbnail { get; }
 
         #region DragDrop
 

@@ -1,4 +1,4 @@
-﻿using AnnotationVizLib;
+using AnnotationVizLib;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 
@@ -20,14 +20,14 @@ namespace AnnotationVizLibTests
         [TestMethod]
         public void GenerateWCFNeuronGraph()
         {
-            AnnotationVizLib.NeuronGraph graph = AnnotationVizLib.WCFClient.WCFNeuronFactory.BuildGraph(new long[] {476}, 2, WCFEndpoint, this.userCredentials);
+            AnnotationVizLib.NeuronGraph graph = AnnotationVizLib.WCFClient.WCFNeuronFactory.BuildGraph(new long[] { 476 }, 2, WCFEndpoint, this.userCredentials);
 
             System.Diagnostics.Debug.Assert(graph != null);
 
             string JSONPath = "C:\\Temp\\WCFNeuron476.json";
 
             NeuronJSONView JSONView = NeuronJSONView.ToJSON(graph);
-            string JSON = JSONView.ToString(); 
+            string JSON = JSONView.ToString();
             JSONView.SaveJSON(JSONPath);
 
             NeuronGMLView gmlGraph = AnnotationVizLib.NeuronGMLView.ToGML(graph, "", true);
@@ -71,7 +71,7 @@ namespace AnnotationVizLibTests
 
             string dotPath = "C:\\Temp\\NeuronWCF476_9Hops.dot";
             dotGraph.SaveDOT(dotPath);
-             
+
             string tlpPath = "C:\\Temp\\NeuronWCF476_9Hops.tlp";
 
             NeuronTLPView tlpGraph = AnnotationVizLib.NeuronTLPView.ToTLP(graph, ODataEndpoint, true);
@@ -101,7 +101,7 @@ namespace AnnotationVizLibTests
             string dotPath = "C:\\Temp\\NeuronOData476.dot";
             dotGraph.SaveDOT(dotPath);
 
-            string[] Types = new string[] { "svg" };
+            string[] Types = ["svg"];
 
             NeuronDOTView.Convert("dot", dotPath, Types);
 
@@ -123,7 +123,7 @@ namespace AnnotationVizLibTests
             NeuronJSONView JSONView = NeuronJSONView.ToJSON(graph);
             string JSON = JSONView.ToString();
             JSONView.SaveJSON(JSONPath);
-            
+
             string tlpPath = "C:\\Temp\\NeuronSimpleOData476.tlp";
 
             NeuronTLPView tlpGraph = AnnotationVizLib.NeuronTLPView.ToTLP(graph, ODataEndpoint, true);
@@ -139,7 +139,7 @@ namespace AnnotationVizLibTests
             string dotPath = "C:\\Temp\\NeuronSimpleOData476.dot";
             dotGraph.SaveDOT(dotPath);
 
-            string[] Types = new string[] { "svg" };
+            string[] Types = ["svg"];
 
             //NeuronDOTView.Convert("dot", dotPath, Types);
         }

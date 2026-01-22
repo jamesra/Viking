@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -69,10 +69,7 @@ namespace Viking.VolumeModel
 
         public override bool Initialized => true;
 
-        public override Task Initialize(CancellationToken token)
-        {
-            return Task.CompletedTask;
-        }
+        public override Task Initialize(CancellationToken token) => Task.CompletedTask;
 
         public static TileGridMapping CreateFromTilesetElement(XElement TilesetNode, Section section)
         {
@@ -105,13 +102,13 @@ namespace Viking.VolumeModel
             if (TilesetNode.Nodes().Any() == false)
                 return null;
 
-            TileGridMapping mapping = new TileGridMapping(section, Name, TilePrefix, TilePostfix,
+            TileGridMapping mapping = new(section, Name, TilePrefix, TilePostfix,
                                                           TileSizeX, TileSizeY, TileGridPath, GridTileFormat, XYScale);
 
 
             foreach (XNode node in TilesetNode.Nodes())
             {
-                if (!(node is XElement elem))
+                if (node is not XElement elem)
                     continue;
 
                 //Fetch the name if we know it
@@ -157,7 +154,7 @@ namespace Viking.VolumeModel
         {
             transformedP = new GridVector2[P.Length];
             P.CopyTo(transformedP, 0);
-            return P.Select(p => { return true; }).ToArray();
+            return [.. P.Select(p => true)];
         }
 
         /// <summary>
@@ -169,7 +166,7 @@ namespace Viking.VolumeModel
         {
             transformedP = new GridVector2[P.Length];
             P.CopyTo(transformedP, 0);
-            return P.Select(p => { return true; }).ToArray();
+            return [.. P.Select(p => true)];
         }
 
         public override GridVector2[] SectionToVolume(GridVector2[] P)

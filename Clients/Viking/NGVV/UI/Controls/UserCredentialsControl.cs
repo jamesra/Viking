@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -34,26 +34,26 @@ namespace Viking.UI.Controls
 
         public string authenticationURL;
         private string userName = UI.State.AnonymousCredentials.UserName;
-        private string password = UI.State.AnonymousCredentials.Password; 
+        private string password = UI.State.AnonymousCredentials.Password;
         public string folderPath;
         public string keyFile;
-        private string passkey;
-        private string readUserName;
-        private int counter = 0;
+        private readonly string passkey;
+        private readonly string readUserName;
+        private readonly int counter = 0;
 
-        public NetworkCredential Credentials = UI.State.AnonymousCredentials; 
+        public NetworkCredential Credentials = UI.State.AnonymousCredentials;
 
         public DialogResult Result = DialogResult.Cancel;
 
         public UserCredentialsControl(string AuthenticationURL)
         {
-           this.authenticationURL = AuthenticationURL;
-           folderPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\Viking";
+            this.authenticationURL = AuthenticationURL;
+            folderPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\Viking";
 
-           keyFile = "\\usrcrd.vkg";
+            keyFile = "\\usrcrd.vkg";
 
-           passkey = "marclab.connectome.utah";
-  
+            passkey = "marclab.connectome.utah";
+
             State.UserCredentials = new NetworkCredential(userName, password);
 
             State.userAccessLevel = "Exit";
@@ -80,10 +80,10 @@ namespace Viking.UI.Controls
                 {
                     File.Decrypt(folderPath + keyFile);
 
-                     FileStream fs = new FileStream(folderPath + keyFile, FileMode.Open, FileAccess.Read);
+                    FileStream fs = new(folderPath + keyFile, FileMode.Open, FileAccess.Read);
 
-                
-                    StreamReader sr = new StreamReader(fs);
+
+                    StreamReader sr = new(fs);
 
                     string[] data = DecryptString(sr.ReadToEnd(), passkey).Split(',');
 
@@ -104,13 +104,10 @@ namespace Viking.UI.Controls
 
             }
 
-            
+
         }
 
-        void linkLabel1_Click(object sender, System.EventArgs e)
-        {
-            System.Diagnostics.Process.Start("https://155.100.104.153/Viz/Account/Register");
-        }      
+        void linkLabel1_Click(object sender, System.EventArgs e) => System.Diagnostics.Process.Start("https://155.100.104.153/Viz/Account/Register");
 
         async void login_handle(object sender, System.EventArgs e)
         {
@@ -122,7 +119,7 @@ namespace Viking.UI.Controls
 
                 password = this.textPassword.Text;
 
-                
+
                 if (userName == "")
                 {
                     this.update_label.Text = "Enter Username";
@@ -135,7 +132,7 @@ namespace Viking.UI.Controls
                     return;
                 }
 
-                this.Credentials = new NetworkCredential(userName, password); 
+                this.Credentials = new NetworkCredential(userName, password);
 
                 string responseData = await createConnectionAsync().ConfigureAwait(true);
 
@@ -148,8 +145,8 @@ namespace Viking.UI.Controls
 
                 if (responseData == "Invalid")
                 {
-                    
-                    this.update_label.Text = "Sorry: Invalid credentials, try again " + counter + "/3" ;
+
+                    this.update_label.Text = "Sorry: Invalid credentials, try again " + counter + "/3";
                 }
                 else
                 {
@@ -162,7 +159,7 @@ namespace Viking.UI.Controls
                         {
                             FileStream fs = System.IO.File.Create(folderPath + keyFile);
 
-                            StreamWriter sw = new StreamWriter(fs);
+                            StreamWriter sw = new(fs);
 
                             string content = userName + "," + password;
 
@@ -173,7 +170,7 @@ namespace Viking.UI.Controls
                             sw.Flush();
 
                             sw.Close();
-                           
+
                             fs.Close();
 
                             File.Encrypt(folderPath + keyFile);
@@ -203,10 +200,7 @@ namespace Viking.UI.Controls
             }
         }
 
-        private string encryptString(string content, string passkey)
-        {
-            throw new NotImplementedException();
-        }
+        private string encryptString(string content, string passkey) => throw new NotImplementedException();
 
         async void Handle_Anonymmous(object sender, System.EventArgs e)
         {
@@ -227,7 +221,7 @@ namespace Viking.UI.Controls
                     State.userAccessLevel = responseData;
 
                     textUsername.Text = userName;
-                    textPassword.Text = ""; 
+                    textPassword.Text = "";
 
                     this.Result = DialogResult.OK;
                 }
@@ -241,7 +235,7 @@ namespace Viking.UI.Controls
                 this.update_label.Text = "Authentication failed: " + ex.Message;
             }
         }
-       
+
 
 
 
@@ -249,17 +243,17 @@ namespace Viking.UI.Controls
         {
             string postdata = $"userName={userName}&password={password}";
 
-            Uri AuthenticationURI = new Uri(authenticationURL + "?" + postdata);
+            Uri AuthenticationURI = new(authenticationURL + "?" + postdata);
 
             if (AuthenticationURI.Scheme.ToLower() != "https")
             {
-                throw new ArgumentException("Logon UI, createConnectionAsync(): Expected to authenticate to an https URI scheme"); 
+                throw new ArgumentException("Logon UI, createConnectionAsync(): Expected to authenticate to an https URI scheme");
             }
 
             try
             {
                 using var httpClient = CreateHttpClient();
-                using var content = new StringContent(postdata, Encoding.UTF8, "application/x-www-form-urlencoded");
+                using StringContent content = new(postdata, Encoding.UTF8, "application/x-www-form-urlencoded");
                 using var response = await httpClient.PostAsync(authenticationURL, content).ConfigureAwait(false);
 
                 if (response.StatusCode != HttpStatusCode.OK)
@@ -288,74 +282,40 @@ namespace Viking.UI.Controls
             }
         }
 
-        void username_KeyUp(object sender, System.Windows.Forms.KeyEventArgs e)
-        {
-            if (this.textUsername.Text.Length != 0 && this.textPassword.Text.Length != 0)
-            {
-                btnLogin.Enabled = true;
+        void username_KeyUp(object sender, System.Windows.Forms.KeyEventArgs e) => btnLogin.Enabled = this.textUsername.Text.Length != 0 && this.textPassword.Text.Length != 0;
 
-            }
-            else
-            {
-                btnLogin.Enabled = false;
-            }
-        }
-
-        void password_KeyUp(object sender, System.Windows.Forms.KeyEventArgs e)
-        {
-            if (this.textUsername.Text.Length != 0 && this.textPassword.Text.Length != 0)
-            {
-                btnLogin.Enabled = true;
-
-            }
-            else
-            {
-                btnLogin.Enabled = false;
-            }
-        }
+        void password_KeyUp(object sender, System.Windows.Forms.KeyEventArgs e) => btnLogin.Enabled = this.textUsername.Text.Length != 0 && this.textPassword.Text.Length != 0;
 
 
-        void linkLabel3_Click(object sender, System.EventArgs e)
-        {
-            System.Diagnostics.Process.Start("http://prometheus.med.utah.edu/~marclab/");
-        }
+        void linkLabel3_Click(object sender, System.EventArgs e) => System.Diagnostics.Process.Start("http://prometheus.med.utah.edu/~marclab/");
 
-     
+
 
         private void groupBox1_Enter(object sender, EventArgs e)
         {
 
         }
 
-        private void vikingLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
-        {
-            System.Diagnostics.Process.Start("http://connectomes.utah.edu");
-        }
+        private void vikingLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) => System.Diagnostics.Process.Start("http://connectomes.utah.edu");
 
-        private void annotationsLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
-        {
-            System.Diagnostics.Process.Start("http://155.100.104.153/Viz");
-        }
+        private void annotationsLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) => System.Diagnostics.Process.Start("http://155.100.104.153/Viz");
 
-        private void pictureBox1_Click(object sender, EventArgs e)
-        {
-            System.Diagnostics.Process.Start("http://prometheus.med.utah.edu/~marclab/");
-        }
-        
+        private void pictureBox1_Click(object sender, EventArgs e) => System.Diagnostics.Process.Start("http://prometheus.med.utah.edu/~marclab/");
+
         public string EncryptString(string Message, string Passphrase)
         {
             byte[] Results;
-            System.Text.UTF8Encoding UTF8 = new System.Text.UTF8Encoding();
+            System.Text.UTF8Encoding UTF8 = new();
 
             // Step 1. We hash the passphrase using MD5
             // We use the MD5 hash generator as the result is a 128 bit byte array
             // which is a valid length for the TripleDES encoder we use below
 
-            using var HashProvider = MD5.Create();
+            using MD5 HashProvider = MD5.Create();
             byte[] TDESKey = HashProvider.ComputeHash(UTF8.GetBytes(Passphrase));
 
             // Step 2. Create a new TripleDES object
-            using var TDESAlgorithm = TripleDES.Create();
+            using TripleDES TDESAlgorithm = TripleDES.Create();
 
             // Step 3. Setup the encoder
             TDESAlgorithm.Key = TDESKey;
@@ -383,17 +343,17 @@ namespace Viking.UI.Controls
         public string DecryptString(string Message, string Passphrase)
         {
             byte[] Results;
-            System.Text.UTF8Encoding UTF8 = new System.Text.UTF8Encoding();
+            System.Text.UTF8Encoding UTF8 = new();
 
             // Step 1. We hash the passphrase using MD5
             // We use the MD5 hash generator as the result is a 128 bit byte array
             // which is a valid length for the TripleDES encoder we use below
 
-            using var HashProvider = MD5.Create();
+            using MD5 HashProvider = MD5.Create();
             byte[] TDESKey = HashProvider.ComputeHash(UTF8.GetBytes(Passphrase));
 
             // Step 2. Create a new TripleDES object
-            using var TDESAlgorithm = TripleDES.Create();
+            using TripleDES TDESAlgorithm = TripleDES.Create();
 
             // Step 3. Setup the decoder
             TDESAlgorithm.Key = TDESKey;
@@ -415,7 +375,7 @@ namespace Viking.UI.Controls
             }
 
             // Step 6. Return the decrypted string in UTF8 format
-                return UTF8.GetString( Results );
+            return UTF8.GetString(Results);
         }
 
     }

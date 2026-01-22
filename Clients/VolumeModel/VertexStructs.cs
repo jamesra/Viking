@@ -15,17 +15,10 @@ namespace Viking.VolumeModel
         public readonly GridVector3 Color;
     }
 
-    public readonly struct PositionNormalTextureVertex
+    public readonly struct PositionNormalTextureVertex(GridVector3 pos, GridVector3 norm, GridVector2 tex)
     {
-        public readonly GridVector3 Position;
-        public readonly GridVector3 Normal;
-        public readonly GridVector2 Texture;
-
-        public PositionNormalTextureVertex(GridVector3 pos, GridVector3 norm, GridVector2 tex)
-        {
-            Position = pos;
-            Normal = norm;
-            Texture = tex;
-        }
+        public readonly GridVector3 Position = pos;
+        public readonly GridVector3 Normal = norm;
+        public readonly GridVector2 Texture = tex;
     }
 }

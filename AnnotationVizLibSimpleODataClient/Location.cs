@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Geometry;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
@@ -129,10 +129,7 @@ namespace AnnotationVizLib.SimpleOData
             }
         }
 
-        public override string ToString()
-        {
-            return ID.ToString();
-        }
+        public override string ToString() => ID.ToString();
 
         public bool Equals(ILocationReadOnly other)
         {
@@ -145,9 +142,6 @@ namespace AnnotationVizLib.SimpleOData
             return false;
         }
 
-        public bool Equals(Location other)
-        {
-            return this.Equals((ILocationReadOnly)other);
-        }
+        public bool Equals(Location other) => this.Equals((ILocationReadOnly)other);
     }
 }

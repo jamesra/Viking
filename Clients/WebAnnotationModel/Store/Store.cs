@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace WebAnnotationModel
 {
@@ -9,10 +9,7 @@ namespace WebAnnotationModel
     /// </summary>
     public class Store
     {
-        public static void Init()
-        {
-            Nested.Init();
-        }
+        public static void Init() => Nested.Init();
 
         public static LocationStore Locations => Nested.Locations;
 
@@ -29,7 +26,7 @@ namespace WebAnnotationModel
         public static RegionLoader<long, LocationObj> LocationsByRegion => Nested.RegionLocationsLoader;
 
         public static RegionLoader<long, StructureObj> StructuresByRegion => Nested.RegionStructuresLoader;
-         
+
         class Nested
         {
             private static bool Initialized = false;
@@ -69,12 +66,12 @@ namespace WebAnnotationModel
                 }
             }
 
-            internal static readonly StructureTypeStore StructureTypes = new StructureTypeStore();
-            internal static readonly StructureStore Structures = new StructureStore();
-            internal static readonly LocationStore Locations = new LocationStore();
-            internal static readonly StructureLinkStore StructureLinks = new StructureLinkStore();
-            internal static readonly LocationLinkStore LocationLinks = new LocationLinkStore();
-            internal static readonly PermittedStructureLinkStore PermittedStructureLinks = new PermittedStructureLinkStore();
+            internal static readonly StructureTypeStore StructureTypes = [];
+            internal static readonly StructureStore Structures = [];
+            internal static readonly LocationStore Locations = [];
+            internal static readonly StructureLinkStore StructureLinks = [];
+            internal static readonly LocationLinkStore LocationLinks = [];
+            internal static readonly PermittedStructureLinkStore PermittedStructureLinks = [];
 
             internal static readonly RegionLoader<long, LocationObj> RegionLocationsLoader;
             internal static readonly RegionLoader<long, StructureObj> RegionStructuresLoader;

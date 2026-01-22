@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Reflection;
 
@@ -26,13 +26,13 @@ namespace EntityFrameworkExtras
 
             return attr != null;
         }
-        
+
         private static T GetAttribute<T>(object[] attributes) where T : Attribute
         {
             if (!attributes.Any())
                 return null;
 
-            var attribute = (T)attributes.First();
+            T attribute = (T)attributes.First();
 
             return attribute;
         }

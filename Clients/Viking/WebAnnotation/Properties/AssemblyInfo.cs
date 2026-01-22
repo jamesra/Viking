@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Resources;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -16,7 +16,7 @@ using Viking.Common;
 [assembly: Guid("96bbfb7a-a082-4cbb-ad77-96240ebba2cf")]
 
 [assembly: VikingExtension("Web Annotation")]
- 
+
 
 [assembly: System.CLSCompliant(true)]
 [assembly: NeutralResourcesLanguageAttribute("en")]

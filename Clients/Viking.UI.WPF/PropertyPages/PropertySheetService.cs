@@ -32,7 +32,7 @@ namespace Viking.UI.WPF.PropertyPages
                 Trace.WriteLine($"PropertySheetService diagnostic error: {ex}", "Viking.UI.WPF");
             }
 
-            PropertySheetWindow window = new PropertySheetWindow
+            PropertySheetWindow window = new()
             {
                 Owner = owner
             };

@@ -13,7 +13,7 @@ namespace VikingTests
     [TestClass]
     public class LocalTextureCacheTest
     {
-        readonly LocalTextureCache cache = new LocalTextureCache();
+        readonly LocalTextureCache cache = new();
 
         public int NumTests = 100;
 
@@ -62,7 +62,7 @@ namespace VikingTests
         private IEnumerable<IAsyncResult> ReadEveryFile(List<string> FileList)
         {
 
-            List<IAsyncResult> results = new List<IAsyncResult>(FileList.Count);
+            List<IAsyncResult> results = new(FileList.Count);
 
             for (int iFile = 0; iFile < NumTests; iFile++)
             {
@@ -87,7 +87,7 @@ namespace VikingTests
             }
         }
 
-        private void ClearDirectoryFiles(string path)
+        private static void ClearDirectoryFiles(string path)
         {
             foreach (string filepath in System.IO.Directory.EnumerateFiles(path))
             {
@@ -103,7 +103,7 @@ namespace VikingTests
             {
                 System.IO.Directory.CreateDirectory(TestDir);
 
-                this.ClearDirectoryFiles(TestDir);
+                ClearDirectoryFiles(TestDir);
             }
 
             return TestDir;
@@ -112,9 +112,9 @@ namespace VikingTests
         [TestMethod]
         public void TestLocalTextureCache()
         {
-            Random r = new Random(1);
+            Random r = new(1);
 
-            List<String> TempFiles = new List<string>(NumTests);
+            List<String> TempFiles = new(NumTests);
 
             string TestDir = SetupOutputDir();
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace MonogameTestbed
@@ -16,11 +16,11 @@ namespace MonogameTestbed
         RPC3,
         CPED
     }
-     
+
 
     public static class EnumExtensions
-    { 
-        public static T ToEnum<T>(this string value) 
+    {
+        public static T ToEnum<T>(this string value)
             where T : struct, IConvertible
         {
             if (!typeof(T).IsEnum) throw new ArgumentException("T must be an enumerated type");
@@ -40,9 +40,10 @@ namespace MonogameTestbed
 
     public static class DataSource
     {
-        
 
-        public static Dictionary<Endpoint, Uri> EndpointMap = new Dictionary<Endpoint, Uri> { { Endpoint.TEST, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData") },
+
+        public static Dictionary<Endpoint, Uri> EndpointMap = new()
+        { { Endpoint.TEST, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData") },
                                                                                                { Endpoint.RC1, new Uri("http://websvc1.connectomes.utah.edu/RC1/OData") },
                                                                                                { Endpoint.RC2, new Uri("http://websvc1.connectomes.utah.edu/RC2/OData") },
                                                                                                { Endpoint.RC3, new Uri("http://websvc1.connectomes.utah.edu/RC3/OData") },

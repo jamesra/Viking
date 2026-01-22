@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -9,21 +9,21 @@ namespace AnnotationVizLib
     class JSONStructureMorphology
     {
         public ulong StructureID;
-        public List<object> Nodes = new List<object>();
-        public List<object> Edges = new List<object>();
-        public List<JSONStructureMorphology> Children = new List<JSONStructureMorphology>();
+        public List<object> Nodes = [];
+        public List<object> Edges = [];
+        public List<JSONStructureMorphology> Children = [];
     }
 
     public class MorphologyJSONView
     {
-        readonly List<JSONStructureMorphology> StructureMorphologies = new List<JSONStructureMorphology>();
-        
-        static JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
+        readonly List<JSONStructureMorphology> StructureMorphologies = [];
+
+        static readonly JsonSerializerOptions jsonOptions = new()
         {
             WriteIndented = true,
-            MaxDepth=64
+            MaxDepth = 64
         };
-        
+
 
         static MorphologyJSONView()
         {
@@ -32,7 +32,7 @@ namespace AnnotationVizLib
 
         public static MorphologyJSONView ToJSON(MorphologyGraph graph)
         {
-            MorphologyJSONView JSONView = new MorphologyJSONView();
+            MorphologyJSONView JSONView = new();
 
             foreach (MorphologyGraph g in graph.Subgraphs.Values)
             {
@@ -43,7 +43,7 @@ namespace AnnotationVizLib
         }
         private static JSONStructureMorphology MorphologyGraphToJSONStructureMorphology(MorphologyGraph graph)
         {
-            JSONStructureMorphology JSONView = new JSONStructureMorphology
+            JSONStructureMorphology JSONView = new()
             {
                 StructureID = graph.StructureID
             };
@@ -76,23 +76,19 @@ namespace AnnotationVizLib
             return JSONView;
         }
 
-        public override string ToString()
-        {
+        public override string ToString() =>
             // Serialize the object to JSON
-            return JsonSerializer.Serialize(new { Morphology = this.StructureMorphologies }, jsonOptions);
-        }
+            JsonSerializer.Serialize(new { Morphology = this.StructureMorphologies }, jsonOptions);
 
         public void SaveJSON(string JSONFileFullPath)
         {
-            using (FileStream fl = new FileStream(JSONFileFullPath, FileMode.Create, FileAccess.Write))
+            using FileStream fl = new(JSONFileFullPath, FileMode.Create, FileAccess.Write);
+            using (StreamWriter write = new(fl))
             {
-                using (StreamWriter write = new StreamWriter(fl))
-                {
-                    write.Write(this.ToString());
-                    write.Close();
-                }
-                fl.Close();
+                write.Write(this.ToString());
+                write.Close();
             }
+            fl.Close();
         }
     }
 }

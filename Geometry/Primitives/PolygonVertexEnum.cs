@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -61,7 +61,7 @@ namespace Geometry
             }
         }
 
-        public void Dispose() { GC.SuppressFinalize(this); }
+        public void Dispose() => GC.SuppressFinalize(this);
 
         /// <summary>
         /// Go to the next index, if the shape is closed we do not return the closed index twice. 
@@ -185,19 +185,10 @@ namespace Geometry
             }
         }
 
-        public void Reset()
-        {
-            curIndex = new PolygonIndex?();
-        }
+        public void Reset() => curIndex = new PolygonIndex?();
 
-        public IEnumerator GetEnumerator()
-        {
-            return (IEnumerator<PolygonIndex>)this;
-        }
+        public IEnumerator GetEnumerator() => (IEnumerator<PolygonIndex>)this;
 
-        IEnumerator<PolygonIndex> IEnumerable<PolygonIndex>.GetEnumerator()
-        {
-            return (IEnumerator<PolygonIndex>)this;
-        }
+        IEnumerator<PolygonIndex> IEnumerable<PolygonIndex>.GetEnumerator() => (IEnumerator<PolygonIndex>)this;
     }
 }

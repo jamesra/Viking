@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,12 +37,12 @@ namespace WebAnnotation.UI.Commands
         public PolygonIndex? PolyBeingCut;
 
         //Meshes of the individual cut pieces of the retrace and replace
-        private PositionColorMeshModel ClockwiseWalkMesh = null;
-        private PositionColorMeshModel CounterClockwiseWalkMesh = null;
+        private PositionColorMeshModel? ClockwiseWalkMesh = null;
+        private PositionColorMeshModel? CounterClockwiseWalkMesh = null;
         private RetraceCommandAction CutAction = RetraceCommandAction.NONE;
         //Each of the cut pieces in polygon forms
-        private GridPolygon CounterClockwiseCutPolygon = null;
-        private GridPolygon ClockwiseCutPolygon = null;
+        private GridPolygon? CounterClockwiseCutPolygon = null;
+        private GridPolygon? ClockwiseCutPolygon = null;
 
         //The output polygons we create
         public GridPolygon OutputMosaicPolygon;
@@ -56,25 +56,12 @@ namespace WebAnnotation.UI.Commands
         public bool IsCutComplete => PolyBeingCut.HasValue;
 
         //Is the command ready to finish if we try to?
-        private bool IsReadyToComplete
+        private bool IsReadyToComplete => CutAction switch
         {
-            get
-            {
-                switch (CutAction)
-                {
-                    case RetraceCommandAction.NONE:
-                        return false;
-                    case RetraceCommandAction.GROW_EXTERIOR_RING:
-                    case RetraceCommandAction.GROW_INTERNAL_RING:
-                    case RetraceCommandAction.SHRINK_EXTERIOR_RING:
-                    case RetraceCommandAction.SHRINK_INTERNAL_RING:
-                    case RetraceCommandAction.CREATE_INTERNAL_RING:
-                        return true;
-                    default:
-                        throw new ArgumentException("Unknown state, cannot determine if the command can complete.");
-                }
-            }
-        }
+            RetraceCommandAction.NONE => false,
+            RetraceCommandAction.GROW_EXTERIOR_RING or RetraceCommandAction.GROW_INTERNAL_RING or RetraceCommandAction.SHRINK_EXTERIOR_RING or RetraceCommandAction.SHRINK_INTERNAL_RING or RetraceCommandAction.CREATE_INTERNAL_RING => true,
+            _ => throw new ArgumentException("Unknown state, cannot determine if the command can complete."),
+        };
 
         //False draws the PrevWalkPolygon, true draws the NextWalkPolygon
         private readonly DrawWhichPoly DrawPoly;
@@ -111,7 +98,7 @@ namespace WebAnnotation.UI.Commands
         {
             mapping = parent.Section.ActiveSectionToVolumeTransform;
 
-            if (mosaic_polygon == null)
+            if (mosaic_polygon is null)
             {
                 throw new ArgumentException("mosaic_polygon passed to RetraceAndReplaceCommand was null");
             }
@@ -119,7 +106,7 @@ namespace WebAnnotation.UI.Commands
             OriginalMosaicPolygon = mosaic_polygon;
             OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
 
-            if (OriginalVolumePolygon == null)
+            if (OriginalVolumePolygon is null)
             {
                 throw new ArgumentException("mosaic_polygon could not be mapped to volume space");
             }
@@ -143,7 +130,7 @@ namespace WebAnnotation.UI.Commands
         protected override void OnPathLoop(object sender, bool HasLoop)
         {
             //TODO: Create an interior hole in the polygon
-            GridPolygon proposed_hole = new GridPolygon(PenInput.SimplifiedFirstLoop.ToArray().EnsureClosedRing());
+            GridPolygon proposed_hole = new(PenInput.SimplifiedFirstLoop.ToArray().EnsureClosedRing());
 
             GridPolygon original_copy = (GridPolygon)OriginalVolumePolygon.Clone();
             try
@@ -281,7 +268,7 @@ namespace WebAnnotation.UI.Commands
             }
 
             //Condition Check to make sure pen path exists and is valid
-            if (path == null || path.Count < 2 || OriginalVolumePolygon.TotalVerticies <= 3)
+            if (path is null || path.Count < 2 || OriginalVolumePolygon.TotalVerticies <= 3)
             {
                 return RetraceCommandAction.NONE;
             }
@@ -289,9 +276,9 @@ namespace WebAnnotation.UI.Commands
             try
             {
                 clockwise_poly = GridPolygon.WalkPolygonCut(PolyToCut, RotationDirection.CLOCKWISE, path);
-                clockwise_poly.ExteriorRing = CatmullRomControlPointSimplification.IdentifyControlPoints(clockwise_poly.ExteriorRing, 1.0, true).ToArray();
+                clockwise_poly.ExteriorRing = [.. CatmullRomControlPointSimplification.IdentifyControlPoints(clockwise_poly.ExteriorRing, 1.0, true)];
                 counter_clockwise_poly = GridPolygon.WalkPolygonCut(PolyToCut, RotationDirection.COUNTERCLOCKWISE, path);
-                counter_clockwise_poly.ExteriorRing = CatmullRomControlPointSimplification.IdentifyControlPoints(counter_clockwise_poly.ExteriorRing, 1.0, true).ToArray();
+                counter_clockwise_poly.ExteriorRing = [.. CatmullRomControlPointSimplification.IdentifyControlPoints(counter_clockwise_poly.ExteriorRing, 1.0, true)];
                 PolyBeingCut = FirstIntersection;
             }
             catch (ArgumentException)
@@ -310,7 +297,7 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        public GridPolygon GenerateOutputVolumePolygon()
+        public GridPolygon? GenerateOutputVolumePolygon()
         {
             GridPolygon output;
 
@@ -423,24 +410,22 @@ namespace WebAnnotation.UI.Commands
             return ShapeIsValid();
         }
 
-        protected override bool ShapeIsValid()
-        {
+        protected override bool ShapeIsValid() =>
             /*
-            if (this.Verticies.Length < 3 || curve_verticies == null || this.curve_verticies.ControlPoints.Length < 3)
-                return false;
+if (this.Verticies.Length < 3 || curve_verticies is null || this.curve_verticies.ControlPoints.Length < 3)
+return false;
 
-            try
-            {
-                return this.curve_verticies.ControlPoints.ToPolygon().STIsValid().IsTrue;
-            }
-            catch (ArgumentException e)
-            {
-                return false;
-            }
-            */
+try
+{
+return this.curve_verticies.ControlPoints.ToPolygon().STIsValid().IsTrue;
+}
+catch (ArgumentException e)
+{
+return false;
+}
+*/
 
-            return true;
-        }
+            true;
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
@@ -448,11 +433,11 @@ namespace WebAnnotation.UI.Commands
             {
                 float originalAlphaLuma = Parent.PolygonOverlayEffect.InputLumaAlphaValue;
                 Parent.PolygonOverlayEffect.InputLumaAlphaValue = 0.5f;
-                if (CounterClockwiseWalkMesh == null)
+                if (CounterClockwiseWalkMesh is null)
                 {
                     MeshView<Microsoft.Xna.Framework.Graphics.VertexPositionColor>.Draw(graphicsDevice, scene, Parent.PolygonOverlayEffect, meshmodels: new PositionColorMeshModel[] { ClockwiseWalkMesh });
                 }
-                else if (ClockwiseWalkMesh == null)
+                else if (ClockwiseWalkMesh is null)
                 {
                     MeshView<Microsoft.Xna.Framework.Graphics.VertexPositionColor>.Draw(graphicsDevice, scene, Parent.PolygonOverlayEffect, meshmodels: new PositionColorMeshModel[] { CounterClockwiseWalkMesh });
                 }

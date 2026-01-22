@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Web.Http;
 using Unity;
 using Unity.AspNet.WebApi;
@@ -17,21 +17,21 @@ namespace ConnectomeODataV4
         {
             //SqlServerTypes.Utilities.LoadNativeAssemblies(Server.MapPath("~/bin"));
             ConnectomeDataModel.Configuration.LoadNativeAssemblies(Server.MapPath("~/bin"));
-            
+
             // Configure Dependency Injection
             _container = new UnityContainer();
             ConfigureDependencyInjection(_container);
-            
+
             // Set up Web API configuration
             GlobalConfiguration.Configure(config =>
             {
                 // Set Unity as the dependency resolver
                 config.DependencyResolver = new UnityDependencyResolver(_container);
-                
+
                 // Register Web API routes and OData model
                 WebApiConfig.Register(config);
             });
-            
+
             GlobalConfiguration.DefaultServer.Configuration.EnsureInitialized();
         }
 
@@ -50,7 +50,7 @@ namespace ConnectomeODataV4
                 builder.AddConsole();
                 builder.SetMinimumLevel(LogLevel.Information);
             });
-            
+
             container.RegisterInstance<ILoggerFactory>(_loggerFactory);
             container.RegisterType(typeof(ILogger<>), typeof(Logger<>));
         }

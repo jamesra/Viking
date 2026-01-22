@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -23,10 +23,7 @@ namespace VikingXNA
         private float _MinDrawDistance = -1f;
         private float _MaxDrawDistance = 100f;
 
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            OnSceneChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        protected void OnPropertyChanged([CallerMemberName] string propertyName = null) => OnSceneChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
         public Matrix Projection => _Projection;
 
@@ -156,7 +153,7 @@ namespace VikingXNA
             OnPropertyChanged("Camera." + e.PropertyName);
         }
 
-        private readonly SemaphoreSlim initVisibleWorldBoundsSemaphore = new SemaphoreSlim(1);
+        private readonly SemaphoreSlim initVisibleWorldBoundsSemaphore = new(1);
         private Geometry.GridRectangle? _VisibleWorldBounds; //This should only be set by using ResetVisibleWorldBounds
 
         public Geometry.GridRectangle VisibleWorldBounds
@@ -175,16 +172,16 @@ namespace VikingXNA
                         return visibleBounds.Value;
 
                     double offset = 0;
-                    var projectedArea = new GridRectangle(new GridVector2(0, 0), ((double)_Viewport.Width * Camera.Downsample), (double)_Viewport.Height * Camera.Downsample); ;
+                    GridRectangle projectedArea = new(new GridVector2(0, 0), ((double)_Viewport.Width * Camera.Downsample), (double)_Viewport.Height * Camera.Downsample); ;
                     var BottomLeft = ScreenToWorld(offset, _Viewport.Height);
-                    var result = new GridRectangle(BottomLeft, projectedArea.Width, projectedArea.Height);
+                    GridRectangle result = new(BottomLeft, projectedArea.Width, projectedArea.Height);
                     _VisibleWorldBounds = result;
                     return result;
                 }
                 finally
                 {
                     initVisibleWorldBoundsSemaphore.Release();
-                } 
+                }
             }
             set
             {
@@ -231,10 +228,7 @@ namespace VikingXNA
 
         public double ScreenPixelSizeInVolume => Math.Min(this.DevicePixelHeight, this.DevicePixelWidth);
 
-        public Geometry.GridVector2 ScreenToWorld(GridVector2 pos)
-        {
-            return ScreenToWorld(pos.X, pos.Y);
-        }
+        public Geometry.GridVector2 ScreenToWorld(GridVector2 pos) => ScreenToWorld(pos.X, pos.Y);
 
         public Geometry.GridVector2 ScreenToWorld(double X, double Y)
         {
@@ -245,10 +239,7 @@ namespace VikingXNA
             return new GridVector2(XPos, YPos);
         }
 
-        public Geometry.GridVector2 WorldToScreen(GridVector2 pos)
-        {
-            return WorldToScreen(pos.X, pos.Y);
-        }
+        public Geometry.GridVector2 WorldToScreen(GridVector2 pos) => WorldToScreen(pos.X, pos.Y);
 
         public Geometry.GridVector2 WorldToScreen(double X, double Y)
         {

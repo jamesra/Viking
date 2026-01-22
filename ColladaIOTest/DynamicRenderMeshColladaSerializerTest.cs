@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 
@@ -17,7 +17,8 @@ namespace ColladaIOTest
     [TestClass]
     public class DynamicRenderMeshColladaSerializerTest
     {
-        private static readonly Dictionary<ENDPOINT, Uri> EndpointMap = new Dictionary<ENDPOINT, Uri> { { ENDPOINT.TEST, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData") },
+        private static readonly Dictionary<ENDPOINT, Uri> EndpointMap = new()
+        { { ENDPOINT.TEST, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData") },
                                                                                                { ENDPOINT.RC1, new Uri("http://websvc1.connectomes.utah.edu/RC1/OData") },
                                                                                                { ENDPOINT.RC2, new Uri("http://websvc1.connectomes.utah.edu/RC2/OData") },
                                                                                                { ENDPOINT.RPC1, new Uri("http://websvc1.connectomes.utah.edu/RPC1/OData") },
@@ -40,7 +41,7 @@ namespace ColladaIOTest
 
         [TestMethod]
         public void TestDAESerialization()
-        { 
+        {
             MorphologyMesh.MorphologyColladaView view = CreateView(new ulong[] { 180, 172 }, ENDPOINT.RC1);
             //MorphologyMesh.MorphologyColladaView view = CreateView(new long[] { 142, 180}, ENDPOINT.INFERIORMONKEY);
 
@@ -52,28 +53,28 @@ namespace ColladaIOTest
         /// <summary>
         /// Create a tube of circles offset slighty each section
         /// </summary>
-        public MorphologyMesh.MorphologyColladaView CreateView(ICollection<ulong> CellIDs, ENDPOINT endpoint)
+        public static MorphologyMesh.MorphologyColladaView CreateView(ICollection<ulong> CellIDs, ENDPOINT endpoint)
         {
             AnnotationVizLib.StructureMorphologyColorMap colorMap = TestUtils.LoadColorMap("Resources\\RC1ColorMapping");
 
             AnnotationVizLib.MorphologyGraph graph = null;
             if (CellIDs != null)
             {
-                var longIDs = new List<long>();
+                List<long> longIDs = [];
                 foreach (var id in CellIDs)
                     longIDs.Add((long)id);
                 graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(longIDs, true, EndpointMap[endpoint]);
             }
             else
             {
-                graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new List<long>(), true, EndpointMap[endpoint]);
+                graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData([], true, EndpointMap[endpoint]);
             }
 
             graph.ConnectIsolatedSubgraphs();
 
-            MorphologyMesh.MorphologyColladaView view = new MorphologyMesh.MorphologyColladaView(graph.scale, colorMap);
+            MorphologyMesh.MorphologyColladaView view = new(graph.scale, colorMap);
             view.Add(graph);
-             
+
             return view;
         }
 
@@ -85,6 +86,6 @@ namespace ColladaIOTest
 
             ColladaIO.DynamicRenderMeshColladaSerializer.SerializeToFile(view, "TestAllCellsDAESerialization.dae");
         }
-        
+
     }
 }

@@ -9,13 +9,13 @@ namespace GeometryTests
         [TestMethod]
         public void TestBarycentric()
         {
-            GridVector2[] v = new GridVector2[] {new GridVector2(5,5),
-                                                 new GridVector2(5,10),
-                                                 new GridVector2(10,5)};
+            GridVector2[] v = [new(5,5),
+                                                 new(5,10),
+                                                 new(10,5)];
 
-            GridTriangle tri = new GridTriangle(v);
+            GridTriangle tri = new(v);
 
-            GridVector2 center = new GridVector2(7.5, 7.5);
+            GridVector2 center = new(7.5, 7.5);
             GridVector2 bary = tri.Barycentric(center);
             Assert.AreEqual(bary.X, bary.Y);
             GridVector2 remapped = tri.BaryToVector(bary);

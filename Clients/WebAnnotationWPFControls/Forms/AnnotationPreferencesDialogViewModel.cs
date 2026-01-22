@@ -304,18 +304,12 @@ namespace WebAnnotation.WPF.Forms
         // Event to notify when polygon opacity changes for real-time preview
         public event Action<double, double> PolygonOpacityChanged;
 
-        private void OnPolygonOpacityChanged()
-        {
-            PolygonOpacityChanged?.Invoke(_polygonOpacityParentless, _polygonOpacityWithParent);
-        }
+        private void OnPolygonOpacityChanged() => PolygonOpacityChanged?.Invoke(_polygonOpacityParentless, _polygonOpacityWithParent);
 
         // Event to notify when circle opacity changes for real-time preview
         public event Action<double, double> CircleOpacityChanged;
 
-        private void OnCircleOpacityChanged()
-        {
-            CircleOpacityChanged?.Invoke(_circleOpacityParentless, _circleOpacityWithParent);
-        }
+        private void OnCircleOpacityChanged() => CircleOpacityChanged?.Invoke(_circleOpacityParentless, _circleOpacityWithParent);
 
         public void LoadCurrentSettings(
             int numSectionsInMemory,
@@ -350,7 +344,7 @@ namespace WebAnnotation.WPF.Forms
             _segmentationPointRadius = segmentationPointRadius;
             _polygonPointRadius = polygonPointRadius;
             _smallestRenderedSize = smallestRenderedSize;
-            
+
             // Store original values for Cancel revert BEFORE setting properties
             _originalNumSectionsInMemory = numSectionsInMemory;
             _originalNumSectionsLoading = numSectionsLoading;
@@ -460,25 +454,16 @@ namespace WebAnnotation.WPF.Forms
             OnPropertyChanged(string.Empty); // Notify all properties changed
         }
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
     /// <summary>
     /// Simple RelayCommand implementation for ICommand
     /// </summary>
-    public class RelayCommand : ICommand
+    public class RelayCommand(Action execute, Func<bool> canExecute = null) : ICommand
     {
-        private readonly Action _execute;
-        private readonly Func<bool> _canExecute;
-
-        public RelayCommand(Action execute, Func<bool> canExecute = null)
-        {
-            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
-            _canExecute = canExecute;
-        }
+        private readonly Action _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+        private readonly Func<bool> _canExecute = canExecute;
 
         public event EventHandler CanExecuteChanged
         {
@@ -486,15 +471,9 @@ namespace WebAnnotation.WPF.Forms
             remove { }
         }
 
-        public bool CanExecute(object parameter)
-        {
-            return _canExecute == null || _canExecute();
-        }
+        public bool CanExecute(object parameter) => _canExecute is null || _canExecute();
 
-        public void Execute(object parameter)
-        {
-            _execute();
-        }
+        public void Execute(object parameter) => _execute();
     }
 }
 

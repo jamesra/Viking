@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System;
 using VikingXNA;
@@ -22,11 +22,11 @@ namespace MonogameTestbed
 
                 double elapsed = (DateTime.UtcNow - RightThumbstickStartTime.Value).Seconds;
 
-                if(elapsed > 5.0)
+                if (elapsed > 5.0)
                 {
                     elapsed = 5.0;
                 }
-                else if(elapsed <= 1.0)
+                else if (elapsed <= 1.0)
                 {
                     elapsed = 1.0;
                 }
@@ -44,10 +44,10 @@ namespace MonogameTestbed
                 Gamepad = new MonogameTestbed.GamePadStateTracker();
                 Gamepad.Update(state);
             }
-            
+
             if (state.ThumbSticks.Right != Vector2.Zero)
             {
-                if(!RightThumbstickStartTime.HasValue)
+                if (!RightThumbstickStartTime.HasValue)
                 {
                     RightThumbstickStartTime = DateTime.UtcNow;
                 }
@@ -55,13 +55,13 @@ namespace MonogameTestbed
                 Vector2 RightStick = state.ThumbSticks.Right;
                 RightStick.X *= CameraTranslateSensitivity;
                 RightStick.Y *= CameraTranslateSensitivity;
-                Vector2 offset = new Vector2(RightStick.X * RightStick.X, RightStick.Y * RightStick.Y);
+                Vector2 offset = new(RightStick.X * RightStick.X, RightStick.Y * RightStick.Y);
 
                 offset.X = RightStick.X < 0 ? -offset.X : offset.X;
                 offset.Y = RightStick.Y < 0 ? -offset.Y : offset.Y;
-                
+
                 double scalar = RightThumbstickTimeScalar;
-                if(Camera.Downsample > 1.0)
+                if (Camera.Downsample > 1.0)
                     scalar *= Camera.Downsample;
 
                 offset = new Vector2((float)(offset.X * scalar), (float)(offset.Y * scalar));

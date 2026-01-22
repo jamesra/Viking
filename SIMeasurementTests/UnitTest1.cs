@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SIMeasurement;
 
 namespace SIMeasurementTests
@@ -9,102 +9,102 @@ namespace SIMeasurementTests
         [TestMethod]
         public void TestSimpleConversionToNearestUnit()
         {
-            LengthMeasurement meter = new LengthMeasurement(SILengthUnits.m, 1);
-            LengthMeasurement millimeter = new LengthMeasurement(SILengthUnits.m, 0.001);
-            LengthMeasurement kilometer = new LengthMeasurement(SILengthUnits.m, 1000);
-            LengthMeasurement micrometer = new LengthMeasurement(SILengthUnits.m, .000001);
+            LengthMeasurement meter = new(SILengthUnits.m, 1);
+            LengthMeasurement millimeter = new(SILengthUnits.m, 0.001);
+            LengthMeasurement kilometer = new(SILengthUnits.m, 1000);
+            LengthMeasurement micrometer = new(SILengthUnits.m, .000001);
 
             LengthMeasurement expectMeter = LengthMeasurement.ConvertToReadableUnits(meter);
-            Assert.AreEqual(expectMeter.Units, SILengthUnits.m);
-            Assert.AreEqual(expectMeter.Length, 1);
+            Assert.AreEqual(SILengthUnits.m, expectMeter.Units);
+            Assert.AreEqual(1, expectMeter.Length);
 
             LengthMeasurement expect_mm = LengthMeasurement.ConvertToReadableUnits(millimeter);
-            Assert.AreEqual(expect_mm.Units, SILengthUnits.mm);
-            Assert.AreEqual(expect_mm.Length, 1);
+            Assert.AreEqual(SILengthUnits.mm, expect_mm.Units);
+            Assert.AreEqual(1, expect_mm.Length);
 
             LengthMeasurement expect_km = LengthMeasurement.ConvertToReadableUnits(kilometer);
-            Assert.AreEqual(expect_km.Units, SILengthUnits.km);
-            Assert.AreEqual(expect_km.Length, 1);
+            Assert.AreEqual(SILengthUnits.km, expect_km.Units);
+            Assert.AreEqual(1, expect_km.Length);
 
             LengthMeasurement expect_um = LengthMeasurement.ConvertToReadableUnits(micrometer);
-            Assert.AreEqual(expect_um.Units, SILengthUnits.um);
-            Assert.AreEqual(expect_um.Length, 1);
+            Assert.AreEqual(SILengthUnits.um, expect_um.Units);
+            Assert.AreEqual(1, expect_um.Length);
         }
 
         [TestMethod]
         public void TestConversionToNearestUnit()
         {
-            LengthMeasurement meter = new LengthMeasurement(SILengthUnits.mm, 5000);
-            LengthMeasurement millimeter = new LengthMeasurement(SILengthUnits.mm, 5);
-            LengthMeasurement kilometer = new LengthMeasurement(SILengthUnits.mm, 5000000);
+            LengthMeasurement meter = new(SILengthUnits.mm, 5000);
+            LengthMeasurement millimeter = new(SILengthUnits.mm, 5);
+            LengthMeasurement kilometer = new(SILengthUnits.mm, 5000000);
 
             LengthMeasurement expectMeter = LengthMeasurement.ConvertToReadableUnits(meter);
-            Assert.AreEqual(expectMeter.Units, SILengthUnits.m);
-            Assert.AreEqual(expectMeter.Length, 5);
+            Assert.AreEqual(SILengthUnits.m, expectMeter.Units);
+            Assert.AreEqual(5, expectMeter.Length);
 
             LengthMeasurement expect_mm = LengthMeasurement.ConvertToReadableUnits(millimeter);
-            Assert.AreEqual(expect_mm.Units, SILengthUnits.mm);
-            Assert.AreEqual(expect_mm.Length, 5);
+            Assert.AreEqual(SILengthUnits.mm, expect_mm.Units);
+            Assert.AreEqual(5, expect_mm.Length);
 
             LengthMeasurement expect_km = LengthMeasurement.ConvertToReadableUnits(kilometer);
-            Assert.AreEqual(expect_km.Units, SILengthUnits.km);
-            Assert.AreEqual(expect_km.Length, 5);
+            Assert.AreEqual(SILengthUnits.km, expect_km.Units);
+            Assert.AreEqual(5, expect_km.Length);
 
             LengthMeasurement expect_nm = LengthMeasurement.ConvertToReadableUnits(SILengthUnits.nm, 303);
-            Assert.AreEqual(expect_nm.Units, SILengthUnits.nm);
-            Assert.AreEqual(expect_nm.Length, 303);
+            Assert.AreEqual(SILengthUnits.nm, expect_nm.Units);
+            Assert.AreEqual(303, expect_nm.Length);
         }
 
         [TestMethod]
         public void TestConversionToNearestUndefinedUnit()
         {
-            LengthMeasurement LessThanYoctometer = new LengthMeasurement(SILengthUnits.ym, 0.0002);
-            LengthMeasurement BiggerThanYottameter = new LengthMeasurement(SILengthUnits.Zm, 2000000);
+            LengthMeasurement LessThanYoctometer = new(SILengthUnits.ym, 0.0002);
+            LengthMeasurement BiggerThanYottameter = new(SILengthUnits.Zm, 2000000);
 
             LengthMeasurement expectYoctometer = LengthMeasurement.ConvertToReadableUnits(LessThanYoctometer);
-            Assert.AreEqual(expectYoctometer.Units, SILengthUnits.ym);
-            Assert.AreEqual(expectYoctometer.Length, 0.0002);
+            Assert.AreEqual(SILengthUnits.ym, expectYoctometer.Units);
+            Assert.AreEqual(0.0002, expectYoctometer.Length);
 
             LengthMeasurement expectYottameter = LengthMeasurement.ConvertToReadableUnits(BiggerThanYottameter);
-            Assert.AreEqual(expectYottameter.Units, SILengthUnits.Ym);
-            Assert.AreEqual(expectYottameter.Length, 2000);
+            Assert.AreEqual(SILengthUnits.Ym, expectYottameter.Units);
+            Assert.AreEqual(2000, expectYottameter.Length);
         }
 
         [TestMethod]
         public void TestConversionToUnit()
         {
-            LengthMeasurement meter = new LengthMeasurement(SILengthUnits.m, 1); 
+            LengthMeasurement meter = new(SILengthUnits.m, 1);
 
             LengthMeasurement expect_mm = meter.ConvertTo(SILengthUnits.mm);
-            Assert.AreEqual(expect_mm.Units, SILengthUnits.mm);
-            Assert.AreEqual(expect_mm.Length, 1000);
+            Assert.AreEqual(SILengthUnits.mm, expect_mm.Units);
+            Assert.AreEqual(1000, expect_mm.Length);
 
             LengthMeasurement expect_um = meter.ConvertTo(SILengthUnits.um);
-            Assert.AreEqual(expect_um.Units, SILengthUnits.um);
-            Assert.AreEqual(expect_um.Length, 1000000);
+            Assert.AreEqual(SILengthUnits.um, expect_um.Units);
+            Assert.AreEqual(1000000, expect_um.Length);
 
             LengthMeasurement expect_km = meter.ConvertTo(SILengthUnits.km);
-            Assert.AreEqual(expect_km.Units, SILengthUnits.km);
-            Assert.AreEqual(expect_km.Length, .001);
+            Assert.AreEqual(SILengthUnits.km, expect_km.Units);
+            Assert.AreEqual(.001, expect_km.Length);
 
             LengthMeasurement expect_Mm = meter.ConvertTo(SILengthUnits.Mm);
-            Assert.AreEqual(expect_Mm.Units, SILengthUnits.Mm);
-            Assert.AreEqual(expect_Mm.Length, .000001);
+            Assert.AreEqual(SILengthUnits.Mm, expect_Mm.Units);
+            Assert.AreEqual(.000001, expect_Mm.Length);
         }
 
         [TestMethod]
         public void TestAddSubtract()
         {
-            LengthMeasurement meter = new LengthMeasurement(SILengthUnits.m, 1);
-            LengthMeasurement quartermeter = new LengthMeasurement(SILengthUnits.mm, 250);
+            LengthMeasurement meter = new(SILengthUnits.m, 1);
+            LengthMeasurement quartermeter = new(SILengthUnits.mm, 250);
 
             LengthMeasurement A = meter + quartermeter;
-            Assert.AreEqual(A.Units, SILengthUnits.m);
-            Assert.AreEqual(A.Length, 1.25);
+            Assert.AreEqual(SILengthUnits.m, A.Units);
+            Assert.AreEqual(1.25, A.Length);
 
             LengthMeasurement B = meter - quartermeter;
-            Assert.AreEqual(A.Units, SILengthUnits.mm);
-            Assert.AreEqual(A.Length, 750);
+            Assert.AreEqual(SILengthUnits.mm, A.Units);
+            Assert.AreEqual(750, A.Length);
         }
     }
 }

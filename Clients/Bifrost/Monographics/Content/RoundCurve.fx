@@ -185,6 +185,7 @@ technique Textured
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
+		ZEnable = true; 
 		vertexShader = compile vs_4_0 CurveVertexShader();
 		pixelShader = compile ps_4_0 MyPSTextured();
 	}

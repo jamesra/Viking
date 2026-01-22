@@ -11,8 +11,8 @@ namespace AnnotationService.Types
         private string _Name;
         private string _Notes;
         private string _MarkupType;
-        private string[] _Tags = Array.Empty<string>();
-        private string[] _StructureTags = Array.Empty<string>();
+        private string[] _Tags = [];
+        private string[] _StructureTags = [];
         private bool _Abstract;
         private int _Color;
         private string _Code;

@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using System;
 using VikingXNAGraphics;
 using WebAnnotationModel;
@@ -22,9 +22,9 @@ namespace WebAnnotation.UI.Actions
             return a.Execute;
         }
 
-        public IRenderable Passive { get; set; } = null;
+        public IRenderable? Passive { get; set; } = null;
 
-        public IRenderable Active { get; set; } = null;
+        public IRenderable? Active { get; set; } = null;
 
         public BuiltinTexture Icon { get; set; } = BuiltinTexture.Connect;
 
@@ -41,13 +41,13 @@ namespace WebAnnotation.UI.Actions
 
         public void OnExecute()
         {
-            StructureLinkObj linkStruct = new StructureLinkObj(Source.ParentID.Value, Target.ParentID.Value, Bidirectional);
+            StructureLinkObj linkStruct = new(Source.ParentID.Value, Target.ParentID.Value, Bidirectional);
             linkStruct = Store.StructureLinks.Create(linkStruct);
         }
 
         public void CreateDefaultVisuals()
         {
-            LineView view = new LineView(Source.VolumePosition, Target.VolumePosition, Math.Min(Source.Radius, Target.Radius), Color.White.SetAlpha(0.5f), LineStyle.AnimatedLinear);
+            LineView view = new(Source.VolumePosition, Target.VolumePosition, Math.Min(Source.Radius, Target.Radius), Color.White.SetAlpha(0.5f), LineStyle.AnimatedLinear);
             Passive = view;
             Active = new LineView(Source.VolumePosition, Target.VolumePosition, Math.Min(Source.Radius, Target.Radius), Color.White.SetAlpha(1f), LineStyle.AnimatedLinear);
         }
@@ -65,8 +65,7 @@ namespace WebAnnotation.UI.Actions
                 return false;
             }
 
-            LinkStructureAction other_action = other as LinkStructureAction;
-            if (other_action == null)
+            if (other is not LinkStructureAction other_action)
             {
                 return false;
             }
@@ -74,9 +73,6 @@ namespace WebAnnotation.UI.Actions
             return Equals(other_action);
         }
 
-        public bool Equals(LinkStructureAction other)
-        {
-            return other.Link == Link;
-        }
+        public bool Equals(LinkStructureAction other) => other.Link == Link;
     }
 }

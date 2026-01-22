@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +16,7 @@ namespace Viking
 
     public class VikingApplicationContext : ApplicationContext
     {
-        public CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        public CancellationTokenSource cancellationTokenSource = new();
 
         private readonly ApplicationSettings _settings;
 
@@ -26,7 +26,7 @@ namespace Viking
             if (string.IsNullOrWhiteSpace(_settings.VolumeURL))
             {
                 throw new ArgumentException("VolumeURL must be provided", nameof(settings));
-            }            
+            }
 
             UI.State.MainThreadDispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
 
@@ -39,7 +39,7 @@ namespace Viking
                 throw new ArgumentNullException(nameof(_settings.VolumeURL));
             //var cancellationTokenSource = new CancellationTokenSource();
 
-            using SplashForm Splash = new SplashForm();
+            using SplashForm Splash = new();
             Splash.TrackedTask = System.Threading.Tasks.Task.Run(() => BackgroundLoading(_settings.VolumeURL, Splash.progressReporter, cancellationTokenSource.Token));
 
             //The splash dialog will run until the Volume is initialized 
@@ -89,7 +89,7 @@ namespace Viking
             //Start loading textures, this does not need to be done before launching the main app.
             DateTime TextureCacheLoadStart = DateTime.UtcNow;
             var textureCacheTask = Global.TextureCache.PopulateCache(UI.State.GetVolumeCachePath(Volume.Name), token);
-             
+
             DateTime stopVolume = DateTime.UtcNow;
             var elapsedTime = stopVolume - startVolume;
             Trace.WriteLine("Volume Load Time: " + elapsedTime.ToString());
@@ -104,7 +104,7 @@ namespace Viking
             var elapsedExtensionTime = stopExtensions - startExtensions;
             Trace.WriteLine("Extension Load Time: " + elapsedExtensionTime.ToString());
 
-            var services = new ServiceCollection();
+            ServiceCollection services = new();
             services.AddSingleton(_settings);
             services.AddSingleton(Volume);
             services.AddSingleton(UI.State.volume);

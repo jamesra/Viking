@@ -36,18 +36,16 @@ namespace WebAnnotation.UI.Actions
             return a.Execute;
         }
 
-        public IRenderable Passive { get; set; } = null;
+        public IRenderable? Passive { get; set; } = null;
 
-        public IRenderable Active { get; set; } = null;
+        public IRenderable? Active { get; set; } = null;
 
         public BuiltinTexture Icon { get; set; } = BuiltinTexture.Minus;
 
-        public CutHoleAction(LocationObj location, GridPolygon newVolumeInteriorPolygon, IVolumeToSectionTransform transform = null)
+        public CutHoleAction(LocationObj location, GridPolygon newVolumeInteriorPolygon, IVolumeToSectionTransform? transform = null)
         {
             Location = location;
-            Transform = transform == null ?
-                WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform
-                : transform;
+            Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
             NewVolumeInteriorPolygon = newVolumeInteriorPolygon;
             NewSmoothVolumeInteriorPolygon = NewVolumeInteriorPolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
 
@@ -75,7 +73,7 @@ namespace WebAnnotation.UI.Actions
 
         public void CreateDefaultVisuals()
         {
-            SolidPolygonView view = new SolidPolygonView(NewSmoothVolumeInteriorPolygon, Color.Black.SetAlpha(0.5f));
+            SolidPolygonView view = new(NewSmoothVolumeInteriorPolygon, Color.Black.SetAlpha(0.5f));
             Passive = view;
             Active = new SolidPolygonView(NewSmoothVolumeInteriorPolygon, Color.Black.SetAlpha(1f));
         }
@@ -92,8 +90,7 @@ namespace WebAnnotation.UI.Actions
                 return false;
             }
 
-            CutHoleAction other_action = other as CutHoleAction;
-            if (other_action == null)
+            if (other is not CutHoleAction other_action)
             {
                 return false;
             }

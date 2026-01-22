@@ -28,23 +28,15 @@ namespace RTree
      * @author aled@sourceforge.net
      * @version 1.0b2p1
      */
-    public class Node<T>
+    public class Node<T>(int nodeId, int level, int maxNodeEntries)
         where T : System.IEquatable<T>
     {
-        internal int nodeId = 0;
+        internal int nodeId = nodeId;
         internal Rectangle mbr = null;
-        internal Rectangle[] entries = null;
-        internal int[] ids = null;
-        internal int level;
+        internal Rectangle[] entries = new Rectangle[maxNodeEntries];
+        internal int[] ids = new int[maxNodeEntries];
+        internal int level = level;
         internal int entryCount;
-
-        public Node(int nodeId, int level, int maxNodeEntries)
-        {
-            this.nodeId = nodeId;
-            this.level = level;
-            entries = new Rectangle[maxNodeEntries];
-            ids = new int[maxNodeEntries];
-        }
 
         internal void addEntry(Rectangle r, int id)
         {
@@ -127,10 +119,7 @@ namespace RTree
             }
         }
 
-        public int getEntryCount()
-        {
-            return entryCount;
-        }
+        public int getEntryCount() => entryCount;
 
         public Rectangle getEntry(int index)
         {
@@ -162,20 +151,11 @@ namespace RTree
             }
         }
 
-        internal bool isLeaf()
-        {
-            return (level == 1);
-        }
+        internal bool isLeaf() => (level == 1);
 
-        public int getLevel()
-        {
-            return level;
-        }
+        public int getLevel() => level;
 
-        public Rectangle getMBR()
-        {
-            return mbr;
-        }
+        public Rectangle getMBR() => mbr;
     }
 
 }

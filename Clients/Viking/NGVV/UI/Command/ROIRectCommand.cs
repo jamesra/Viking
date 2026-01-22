@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using System.Windows.Forms;
 using VikingXNAWinForms;
@@ -6,14 +6,9 @@ using VikingXNAWinForms;
 
 namespace Viking.UI.Commands
 {
-    public class ROIRectCommand : Command
+    public class ROIRectCommand(Viking.UI.Controls.SectionViewerControl ctrl) : Command(ctrl)
     {
         GridRectangle rectangle;
-
-        public ROIRectCommand(Viking.UI.Controls.SectionViewerControl ctrl) : base(ctrl)
-        {
-
-        }
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
@@ -36,10 +31,7 @@ namespace Viking.UI.Commands
             }
         }
 
-        public override void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect)
-        {
-            base.OnDraw(graphicsDevice, scene, basicEffect);
-        }
+        public override void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect) => base.OnDraw(graphicsDevice, scene, basicEffect);
 
 
     }

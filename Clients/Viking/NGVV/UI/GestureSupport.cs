@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -52,10 +52,11 @@ namespace Viking.UI
         PanWithGutter = 0x08,
         PanWithInertia = 0x10
     }
-      
+
 
     [Flags]
-    public enum GestureState {
+    public enum GestureState
+    {
         /// <summary>
         /// A gesture is starting.
         /// </summary>
@@ -108,7 +109,7 @@ namespace Viking.UI
         /// </summary>
         Rollover = 7
     }
-     
+
     [StructLayout(LayoutKind.Sequential)]
     public struct GestureConfig
     {
@@ -145,7 +146,7 @@ namespace Viking.UI
         /// </summary>
         public UInt32 ID;
 
-        public Gesture Gesture => (Gesture)ID;
+        public readonly Gesture Gesture => (Gesture)ID;
 
         /// <summary>
         /// A handle to the window that is targeted by this gesture.
@@ -177,16 +178,13 @@ namespace Viking.UI
         /// </summary>
         public UInt32 ExtraArgs;
 
-        public override string ToString()
-        {
-            return $"{Gesture}: {Location} {State} {InstanceID} {SequenceID} {Arguments}";
-        }
+        public override readonly string ToString() => $"{Gesture}: {Location} {State} {InstanceID} {SequenceID} {Arguments}";
     }
 
 
     public static class GestureSupport
     {
-        public const UInt32 GC_ALLGESTURES  = 1;
+        public const UInt32 GC_ALLGESTURES = 1;
 
         /// <summary>
         /// Enable Pan and Zoom gestures
@@ -227,7 +225,7 @@ namespace Viking.UI
             }
             finally
             {
-                if(gotInfo)
+                if (gotInfo)
                 {
                     WinMsgInput.CloseGestureInfoHandle(msg.LParam);
                 }

@@ -136,9 +136,9 @@ namespace TriangleNet.Tools
             double[] ratiotable;
 
             aspecttable = new int[16];
-            ratiotable = new double[] {
+            ratiotable = [
                 1.5, 2.0, 2.5, 3.0, 4.0, 6.0, 10.0, 15.0, 25.0, 50.0,
-                100.0, 300.0, 1000.0, 10000.0, 100000.0, 0.0 };
+                100.0, 300.0, 1000.0, 10000.0, 100000.0, 0.0 ];
 
 
             Otri tri = default;
@@ -194,8 +194,8 @@ namespace TriangleNet.Tools
 
         #endregion
 
-        static readonly int[] plus1Mod3 = { 1, 2, 0 };
-        static readonly int[] minus1Mod3 = { 2, 0, 1 };
+        static readonly int[] plus1Mod3 = [1, 2, 0];
+        static readonly int[] minus1Mod3 = [2, 0, 1];
 
         /// <summary>
         /// Update statistics about the quality of the mesh.
@@ -417,14 +417,7 @@ namespace TriangleNet.Tools
             maxAspect = Math.Sqrt(maxAspect);
             minArea *= 0.5;
             maxArea *= 0.5;
-            if (minAngle >= 1.0)
-            {
-                minAngle = 0.0;
-            }
-            else
-            {
-                minAngle = degconst * Math.Acos(Math.Sqrt(minAngle));
-            }
+            minAngle = minAngle >= 1.0 ? 0.0 : degconst * Math.Acos(Math.Sqrt(minAngle));
 
             if (maxAngle >= 1.0)
             {
@@ -432,14 +425,7 @@ namespace TriangleNet.Tools
             }
             else
             {
-                if (acuteBiggest)
-                {
-                    maxAngle = degconst * Math.Acos(Math.Sqrt(maxAngle));
-                }
-                else
-                {
-                    maxAngle = 180.0 - degconst * Math.Acos(Math.Sqrt(maxAngle));
-                }
+                maxAngle = acuteBiggest ? degconst * Math.Acos(Math.Sqrt(maxAngle)) : 180.0 - degconst * Math.Acos(Math.Sqrt(maxAngle));
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -20,13 +20,13 @@ namespace Viking
         public static HttpClient HttpClient => Viking.Common.SharedResources.HttpClient;
 
 
-        public static Defaults Default = new Defaults();
+        public static Defaults Default = new();
 
-        public static LocalTextureCache TextureCache = new LocalTextureCache();
+        public static LocalTextureCache TextureCache = new();
 
-        public static TileViewModelCache TileViewModelCache = new TileViewModelCache();
+        public static TileViewModelCache TileViewModelCache = new();
 
-        private static readonly Dictionary<int, string> AllocatedTextures = new Dictionary<int, string>();
+        private static readonly Dictionary<int, string> AllocatedTextures = [];
 
         public static bool TracePenEvents = false;
 
@@ -64,7 +64,7 @@ namespace Viking
             List<string> values;
             lock (Global.AllocatedTextures)
             {
-                values = Global.AllocatedTextures.Values.ToList<string>();
+                values = [.. Global.AllocatedTextures.Values];
             }
 
             values.Sort();
@@ -75,7 +75,7 @@ namespace Viking
             }
         }
 
-        private static readonly Dictionary<int, string> AllocatedTextureReaders = new Dictionary<int, string>();
+        private static readonly Dictionary<int, string> AllocatedTextureReaders = [];
 
         public static void AddTextureReader(object tex, string msg)
         {
@@ -84,7 +84,7 @@ namespace Viking
             lock (Global.AllocatedTextureReaders)
             {
                 try
-                { 
+                {
                     Global.AllocatedTextureReaders.Add(tex.GetHashCode(), msg);
                 }
                 catch (ArgumentException) { } //Ignore duplicate key                
@@ -144,7 +144,7 @@ namespace Viking
             List<string> values;
             lock (Global.AllocatedTextureReaders)
             {
-                values = Global.AllocatedTextureReaders.Values.ToList<string>();
+                values = [.. Global.AllocatedTextureReaders.Values];
             }
 
             values.Sort();

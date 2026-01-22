@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +16,7 @@ namespace Geometry.JSON
 
             obj.ExteriorRing = poly.ExteriorRing.ToJArray();
 
-            obj.InteriorRings = poly.HasInteriorRings ? new JArray(poly.InteriorRings.Select(ir => ir.ToJArray())) : new JArray();
+            obj.InteriorRings = poly.HasInteriorRings ? new JArray(poly.InteriorRings.Select(ir => ir.ToJArray())) : [];
             return obj;
         }
 
@@ -28,13 +28,14 @@ namespace Geometry.JSON
 
         public static JArray ToJArray(this IEnumerable<IShape2D> input)
         {
-            JArray obj = new JArray(input.Select(p => p.ToJObject()));
+            JArray obj = new(input.Select(p => p.ToJObject()));
             return obj;
         }
 
         public static JObject ToJObject(this IShape2D input)
         {
-            if(input is GridPolygon poly) { 
+            if (input is GridPolygon poly)
+            {
                 return poly.ToJObject();
             }
             else if (input is GridLineSegment line)
@@ -58,7 +59,7 @@ namespace Geometry.JSON
 
         public static JArray ToJArray(this IEnumerable<GridPolygon> input)
         {
-            JArray obj = new JArray(input.Select(p => p.ToJObject()));
+            JArray obj = new(input.Select(p => p.ToJObject()));
             return obj;
         }
 
@@ -78,7 +79,7 @@ namespace Geometry.JSON
 
         public static JArray ToJArray(this IEnumerable<IPoint2D> input)
         {
-            JArray obj = new JArray(input.Select(p => p.ToJObject()));
+            JArray obj = new(input.Select(p => p.ToJObject()));
             return obj;
         }
 
@@ -96,10 +97,7 @@ namespace Geometry.JSON
             return jObj;
         }
 
-        public static JArray ToJArray(this IEnumerable<GridVector2> points)
-        {
-            return new JArray(points.Select(p => p.ToJObject()));
-        }
+        public static JArray ToJArray(this IEnumerable<GridVector2> points) => new JArray(points.Select(p => p.ToJObject()));
 
         public static JObject ToJObject(this GridLineSegment p)
         {
@@ -109,10 +107,7 @@ namespace Geometry.JSON
             return jObj;
         }
 
-        public static JArray ToJArray(this IEnumerable<GridLineSegment> lines)
-        {
-            return new JArray(lines.Select(p => p.ToJObject()));
-        }
+        public static JArray ToJArray(this IEnumerable<GridLineSegment> lines) => new JArray(lines.Select(p => p.ToJObject()));
 
         public static GridVector2[] PointsFromJSON(string json)
         {
@@ -126,7 +121,7 @@ namespace Geometry.JSON
 
         public static GridVector2[] PointsFromJSON(this JToken points)
         {
-            GridVector2[] output = points.Select(p => new GridVector2(System.Convert.ToDouble(p["X"]), System.Convert.ToDouble((p["Y"])))).ToArray();
+            GridVector2[] output = [.. points.Select(p => new GridVector2(System.Convert.ToDouble(p["X"]), System.Convert.ToDouble((p["Y"]))))];
             return output;
         }
 
@@ -142,9 +137,9 @@ namespace Geometry.JSON
             GridVector2[] ERing = ExteriorRing.PointsFromJSON();
 
             var InteriorRings = obj["InteriorRings"];
-            List<GridVector2[]> IRings = InteriorRings.Select(ir => ir.PointsFromJSON()).ToList();
+            List<GridVector2[]> IRings = [.. InteriorRings.Select(ir => ir.PointsFromJSON())];
 
-            GridPolygon output = new GridPolygon(ERing, IRings);
+            GridPolygon output = new(ERing, IRings);
 
             return output;
         }
@@ -159,9 +154,9 @@ namespace Geometry.JSON
             GridVector2[] ERing = ExteriorRing.PointsFromJSON();
 
             var InteriorRings = obj["InteriorRings"];
-            List<GridVector2[]> IRings = InteriorRings.Select(ir => ir.PointsFromJSON()).ToList();
+            List<GridVector2[]> IRings = [.. InteriorRings.Select(ir => ir.PointsFromJSON())];
 
-            GridPolygon output = new GridPolygon(ERing, IRings);
+            GridPolygon output = new(ERing, IRings);
 
             return output;
         }
@@ -173,7 +168,7 @@ namespace Geometry.JSON
 
             JArray array = JArray.Parse(json);
 
-            List<GridPolygon> polygonList = new List<GridPolygon>();
+            List<GridPolygon> polygonList = [];
 
             foreach (var token in array)
             {
@@ -181,7 +176,7 @@ namespace Geometry.JSON
                 polygonList.Add(p);
             }
 
-            return polygonList.ToArray();
+            return [.. polygonList];
         }
 
     }

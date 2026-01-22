@@ -12,15 +12,15 @@ namespace GeometryTests
         [TestMethod]
         public void TestMethod1()
         {
-            GridVector2[] ControlPoints = { new GridVector2(104.8445,  75.1144),
-                                                           new GridVector2(102.7622,   163.9576),
-                                                           new GridVector2(257.5437,  79.9730),
-                                                           new GridVector2(258.2378,  168.1221)};
+            GridVector2[] ControlPoints = [ new(104.8445,  75.1144),
+                                                           new(102.7622,   163.9576),
+                                                           new(257.5437,  79.9730),
+                                                           new(258.2378,  168.1221)];
 
-            GridVector2[] MappedPoints = { new GridVector2(68.7519, 127.1710),
-                                                           new GridVector2(87.4923,   199.3560),
-                                                           new GridVector2(263.7905, 77.8907),
-                                                           new GridVector2(281.1427, 149.3817)};
+            GridVector2[] MappedPoints = [ new(68.7519, 127.1710),
+                                                           new(87.4923,   199.3560),
+                                                           new(263.7905, 77.8907),
+                                                           new(281.1427, 149.3817)];
 
 
             Matrix<float> BetaMatrix = Geometry.Transforms.RBFTransform.CreateBetaMatrixWithLinear(ControlPoints,
@@ -37,7 +37,7 @@ namespace GeometryTests
                 Points[i] = new MappingGridVector2(ControlPoints[i], MappedPoints[i]);
             }
 
-            RBFTransform transform = new RBFTransform(Points, new TransformBasicInfo());
+            RBFTransform transform = new(Points, new TransformBasicInfo());
 
             for (int i = 0; i < ControlPoints.Length; i++)
             {

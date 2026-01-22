@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -13,7 +13,7 @@ namespace Geometry
         /// <returns></returns>
         public static GridPolygon ConvexHull(this GridPolygon[] Polygons)
         {
-            GridVector2[] AllPoints = Polygons.Where(poly => poly != null).SelectMany(poly => poly.ExteriorRing.EnsureOpenRing()).ToArray();
+            GridVector2[] AllPoints = [.. Polygons.Where(poly => poly != null).SelectMany(poly => poly.ExteriorRing.EnsureOpenRing())];
 
             if (AllPoints.Length < 3)
                 return null;
@@ -22,10 +22,7 @@ namespace Geometry
             return new GridPolygon(EntireSetConvexHull);
         }
 
-        public static GridVector2[] ConvexHull(this IReadOnlyList<GridVector2> points)
-        {
-            return ConvexHull(points, out var _);
-        }
+        public static GridVector2[] ConvexHull(this IReadOnlyList<GridVector2> points) => ConvexHull(points, out var _);
 
         /// <summary>
         /// Return the convex hull of a set of points
@@ -35,42 +32,39 @@ namespace Geometry
         /// <returns></returns>
         public static GridVector2[] ConvexHull(this IReadOnlyList<GridVector2> points, out int[] original_indicies)
         {
-            int[] ordered_idx = points.Select((p, i) => i).ToArray();
+            int[] ordered_idx = [.. points.Select((p, i) => i)];
 
             if (points.Count == 0)
             {
-                original_indicies = Array.Empty<int>();
-                return Array.Empty<GridVector2>();
+                original_indicies = [];
+                return [];
             }
 
             if (points.Count == 1)
             {
                 original_indicies = ordered_idx;
-                return points.ToArray();
+                return [.. points];
             }
 
             //If the points are a cycle, then make each point unique
-            if (points[0] == points[points.Count-1])
+            if (points[0] == points[points.Count - 1])
             {
                 if (points.Count <= 4)
                 {
                     original_indicies = ordered_idx;
-                    return points.ToArray(); //All points are on convex hull
+                    return [.. points]; //All points are on convex hull
                 }
 
                 GridVector2[] newArray = new GridVector2[points.Count - 1];
                 Array.Copy(points.ToArray(), newArray, newArray.Length);
                 points = newArray;
-                ordered_idx = points.Select((p, i) => i).ToArray();
+                ordered_idx = [.. points.Select((p, i) => i)];
             }
             else if (points.Count <= 3)
             {
                 GridVector2[] ring_points = points.ToArray().EnsureClosedRing();
-                List<int> list_original_indicies = new List<int>(ordered_idx)
-                {
-                    0
-                };
-                original_indicies = list_original_indicies.ToArray();
+                List<int> list_original_indicies = [.. ordered_idx, 0];
+                original_indicies = [.. list_original_indicies];
                 return ring_points;
             }
 
@@ -82,13 +76,13 @@ namespace Geometry
             //Sort and return the index of original points
             Array.Sort<int>(ordered_idx, (a, b) => points[a].CompareTo(points[b]));
 
-            GridVector2[] ordered_verts = ordered_idx.Select(i => points[i]).ToArray();
+            GridVector2[] ordered_verts = [.. ordered_idx.Select(i => points[i])];
 
-            List<GridVector2> upper_convex_hull = new List<Geometry.GridVector2>(points.Count);
-            List<int> upper_convex_hull_idx = new List<int>(points.Count);
+            List<GridVector2> upper_convex_hull = new(points.Count);
+            List<int> upper_convex_hull_idx = new(points.Count);
 
-            List<GridVector2> lower_convex_hull = new List<Geometry.GridVector2>(points.Count);
-            List<int> lower_convex_hull_idx = new List<int>(points.Count);
+            List<GridVector2> lower_convex_hull = new(points.Count);
+            List<int> lower_convex_hull_idx = new(points.Count);
 
             int iTestVert = 1;
             upper_convex_hull.Add(ordered_verts[0]);
@@ -107,7 +101,7 @@ namespace Geometry
                 if (iTestVert >= points.Count)
                 {
                     original_indicies = ordered_idx;
-                    return upper_convex_hull.ToArray();
+                    return [.. upper_convex_hull];
                 }
             }
 
@@ -148,8 +142,8 @@ namespace Geometry
             upper_convex_hull.AddRange(lower_convex_hull);
             upper_convex_hull_idx.AddRange(lower_convex_hull_idx);
 
-            original_indicies = upper_convex_hull_idx.ToArray();
-            return upper_convex_hull.ToArray();
+            original_indicies = [.. upper_convex_hull_idx];
+            return [.. upper_convex_hull];
         }
 
         /// <summary>
@@ -173,7 +167,7 @@ namespace Geometry
                 //GridTriangle tri = new Geometry.GridTriangle(v0, v1, v2);
 
                 //bool ConvexTriangleForUpperHull = tri.VectorProducts > 0;
-                var winding = GridVector2Extensions.Winding(new GridVector2[] { v0, v1, v2 });
+                var winding = GridVector2Extensions.Winding([v0, v1, v2]);
                 bool ConvexTriangleForUpperHull =
                     winding == RotationDirection.CLOCKWISE;
                 bool ConvexTriangle = (TestUpperHull ? ConvexTriangleForUpperHull : !ConvexTriangleForUpperHull) ||

@@ -1,4 +1,4 @@
-﻿using AnnotationService.Types;
+using AnnotationService.Types;
 using Geometry;
 using System;
 using System.Collections.Concurrent;
@@ -35,24 +35,18 @@ namespace WebAnnotationModel
         }
 
         #region Proxy
-         
-        protected override long[] ProxyUpdate(IAnnotateStructures proxy, Structure[] objects)
-        {
-            return proxy.UpdateStructures(objects);
-        }
 
-        protected override Structure ProxyGetByID(IAnnotateStructures proxy, long ID)
-        {
-            return proxy.GetStructureByID(ID, false);
-        }
+        protected override long[] ProxyUpdate(IAnnotateStructures proxy, Structure[] objects) => proxy.UpdateStructures(objects);
+
+        protected override Structure ProxyGetByID(IAnnotateStructures proxy, long ID) => proxy.GetStructureByID(ID, false);
 
         protected override Structure[] ProxyGetByIDs(IAnnotateStructures proxy, long[] IDs)
         {
             Structure[] structures = proxy.GetStructuresByIDs(IDs, false);
             if (structures != null)
-                return structures.ToArray<Structure>();
+                return [.. structures];
 
-            return new Structure[0];
+            return [];
         }
 
 
@@ -81,30 +75,15 @@ namespace WebAnnotationModel
             }
         }
 
-        public override ConcurrentDictionary<long, StructureObj> GetLocalObjectsForSection(long SectionNumber)
-        {
-            return new ConcurrentDictionary<long, StructureObj>();
-        }
+        public override ConcurrentDictionary<long, StructureObj> GetLocalObjectsForSection(long SectionNumber) => new ConcurrentDictionary<long, StructureObj>();
 
-        protected override Structure[] ProxyGetBySection(IAnnotateStructures proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out long[] DeletedLocations)
-        {
-            return proxy.GetStructuresForSection(out TicksAtQueryExecute, out DeletedLocations, SectionNumber, LastQuery.Ticks);
-        }
+        protected override Structure[] ProxyGetBySection(IAnnotateStructures proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out long[] DeletedLocations) => proxy.GetStructuresForSection(out TicksAtQueryExecute, out DeletedLocations, SectionNumber, LastQuery.Ticks);
 
-        protected override Structure[] ProxyGetBySectionRegion(IAnnotateStructures proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, out long TicksAtQueryExecute, out long[] DeletedLocations)
-        {
-            return proxy.GetStructuresForSectionInMosaicRegion(out TicksAtQueryExecute, out DeletedLocations, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
-        }
+        protected override Structure[] ProxyGetBySectionRegion(IAnnotateStructures proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, out long TicksAtQueryExecute, out long[] DeletedLocations) => proxy.GetStructuresForSectionInMosaicRegion(out TicksAtQueryExecute, out DeletedLocations, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
 
-        protected override IAsyncResult ProxyBeginGetBySectionRegion(IAnnotateStructures proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
-        {
-            return proxy.BeginGetStructuresForSectionInMosaicRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
-        }
+        protected override IAsyncResult ProxyBeginGetBySectionRegion(IAnnotateStructures proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState) => proxy.BeginGetStructuresForSectionInMosaicRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
 
-        protected override Structure[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedObjects, GetObjectBySectionCallbackState<IAnnotateStructures, StructureObj> state, IAsyncResult result)
-        {
-            return state.Proxy.EndGetStructuresForSectionInMosaicRegion(out TicksAtQueryExecute, out DeletedObjects, result);
-        }
+        protected override Structure[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedObjects, GetObjectBySectionCallbackState<IAnnotateStructures, StructureObj> state, IAsyncResult result) => state.Proxy.EndGetStructuresForSectionInMosaicRegion(out TicksAtQueryExecute, out DeletedObjects, result);
 
         /// <summary>
         /// This currently always returns the empty result because its main purpose is to populate the cache so locations can determine thier type
@@ -126,16 +105,11 @@ namespace WebAnnotationModel
             return proxy.BeginGetStructuresForSection(SectionNumber, LastQuery.Ticks, callback, asynchState);
         }
 
-        protected override Structure[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out long[] DeletedIDs, GetObjectBySectionCallbackState<IAnnotateStructures, StructureObj> state, IAsyncResult result)
-        {
-            return state.Proxy.EndGetStructuresForSection(out TicksAtQueryExecute, out DeletedIDs, result);
-        }
+        protected override Structure[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out long[] DeletedIDs, GetObjectBySectionCallbackState<IAnnotateStructures, StructureObj> state, IAsyncResult result) => state.Proxy.EndGetStructuresForSection(out TicksAtQueryExecute, out DeletedIDs, result);
 
-        public override bool RemoveSection(int SectionNumber)
-        {
+        public override bool RemoveSection(int SectionNumber) =>
             //Section store never deletes structures, but we return true so queries in flight can be aborted
-            return true;
-        }
+            true;
 
         #endregion
 
@@ -145,7 +119,7 @@ namespace WebAnnotationModel
 #if DEBUG
             //            GetAllStructures(); 
 #else
-//            GetAllStructures(); 
+            //            GetAllStructures(); 
 #endif
 
         }
@@ -154,12 +128,12 @@ namespace WebAnnotationModel
         {
             Trace.WriteLine("GetAllStructures, Begin", "WebAnnotation");
 
-            Structure[] structures = new Structure[0];
-             
+            Structure[] structures = [];
+
             try
             {
                 IClientChannel proxy = CreateProxy();
-                { 
+                {
                     //Cache all the structures at startup
                     structures = ((IAnnotateStructures)proxy).GetStructures();
                 }
@@ -170,7 +144,7 @@ namespace WebAnnotationModel
                 return;
             }
 
-            ChangeInventory<StructureObj> inventory = ParseQuery(structures, new long[0], null);
+            ChangeInventory<StructureObj> inventory = ParseQuery(structures, [], null);
             CallOnCollectionChanged(inventory);
 
             Trace.WriteLine("GetAllStructures, End", "WebAnnotation");
@@ -186,7 +160,7 @@ namespace WebAnnotationModel
             try
             {
                 IClientChannel proxy = CreateProxy();
-                { 
+                {
 
                     numLocs = ((IAnnotateStructures)proxy).NumberOfLocationsForStructure(ID);
                 }
@@ -232,26 +206,26 @@ namespace WebAnnotationModel
         }
 
         public StructureObj Create(StructureObj newStruct, LocationObj newLocation, out LocationObj created_loc)
-        { 
+        {
 
             created_loc = null;
             try
             {
                 var proxy = CreateProxy();
-                { 
-                
+                {
+
                     CreateStructureRetval retval = ((IAnnotateStructures)proxy).CreateStructure(newStruct.GetData(), newLocation.GetData());
 
                     //We should not insert created objects into the store before they are created on the server
                     Debug.Assert(this.GetObjectByID(newStruct.ID, false) is null);
 
-                    StructureObj created_struct = new StructureObj(retval.structure);
+                    StructureObj created_struct = new(retval.structure);
 
                     ChangeInventory<StructureObj> inventory = InternalAdd(created_struct);
                     created_loc = new LocationObj(retval.location);
 
                     CallOnCollectionChangedForAdd(new StructureObj[] { created_struct });
-                    Store.Locations.AddFromFriend(new LocationObj[] { created_loc });
+                    Store.Locations.AddFromFriend([created_loc]);
 
                     return created_struct;
                 }
@@ -264,7 +238,7 @@ namespace WebAnnotationModel
                     CallOnCollectionChangedForDelete(new StructureObj[] { deletedObj });
 
                 return null;
-            } 
+            }
         }
 
         public override bool Remove(StructureObj obj)
@@ -279,15 +253,15 @@ namespace WebAnnotationModel
             IClientChannel proxy = null;
             try
             {
-                proxy = CreateProxy(); 
+                proxy = CreateProxy();
 
                 Structure data = ((IAnnotateStructures)proxy).GetStructureByID(ID, true);
-                if (data != null)
+                if (data is not null && data.ChildIDs is not null)
                 {
-                    if (data.ChildIDs.Length > 0)
+                    if (data.ChildIDs?.Length > 0)
                     {
                         ICollection<StructureObj> list_structures = this.GetObjectsByIDs(data.ChildIDs, true);
-                        ChangeInventory<StructureObj> inventory = InternalAdd(list_structures.ToArray());
+                        ChangeInventory<StructureObj> inventory = InternalAdd([.. list_structures]);
                         CallOnCollectionChanged(inventory);
                         return inventory.ObjectsInStore;
                     }
@@ -296,7 +270,7 @@ namespace WebAnnotationModel
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
-            } 
+            }
 
             return new StructureObj[0];
         }
@@ -306,12 +280,12 @@ namespace WebAnnotationModel
             IClientChannel proxy = null;
             try
             {
-                proxy = CreateProxy(); 
+                proxy = CreateProxy();
 
                 KeepID = ((IAnnotateStructures)proxy).Merge(KeepID, MergeID);
 
                 LocationObj[] locations = Store.Locations.GetLocalObjectsForStructure(MergeID);
-                Store.Locations.Refresh(locations.Select(l => l.ID).ToArray());
+                Store.Locations.Refresh([.. locations.Select(l => l.ID)]);
 
                 this.ForgetLocally(MergeID);
 
@@ -329,16 +303,16 @@ namespace WebAnnotationModel
             IClientChannel proxy = null;
             try
             {
-                proxy = CreateProxy(); 
+                proxy = CreateProxy();
 
                 long SplitStructureID = ((IAnnotateStructures)proxy).SplitAtLocationLink(KeepLocID, SplitLocID);
 
                 LocationObj keepLoc = Store.Locations.GetObjectByID(KeepLocID);
                 LocationObj[] locations = Store.Locations.GetLocalObjectsForStructure(keepLoc.ParentID.Value);
-                Store.Locations.Refresh(locations.Select(l => l.ID).ToArray());
+                Store.Locations.Refresh([.. locations.Select(l => l.ID)]);
 
                 LocationObj[] SplitLocations = Store.Locations.GetLocalObjectsForStructure(SplitStructureID);
-                Store.Locations.Refresh(SplitLocations.Select(l => l.ID).ToArray());
+                Store.Locations.Refresh([.. SplitLocations.Select(l => l.ID)]);
 
                 Store.LocationLinks.ForgetLocally(new LocationLinkKey(KeepLocID, SplitLocID));
 
@@ -348,7 +322,7 @@ namespace WebAnnotationModel
             {
                 ShowStandardExceptionMessage(e);
                 throw;
-            } 
+            }
         }
 
 
@@ -358,7 +332,7 @@ namespace WebAnnotationModel
             IClientChannel proxy = null;
             try
             {
-                proxy = CreateProxy(); 
+                proxy = CreateProxy();
 
                 data = ((IAnnotateStructures)proxy).GetStructuresOfType(StructureTypeID);
             }
@@ -366,21 +340,21 @@ namespace WebAnnotationModel
             {
                 ShowStandardExceptionMessage(e);
                 data = null;
-            } 
+            }
 
             if (null == data)
                 return new StructureObj[0];
 
-            List<StructureObj> listStructures = new List<StructureObj>(data.Length);
+            List<StructureObj> listStructures = new(data.Length);
             foreach (Structure s in data)
             {
                 Debug.Assert(s != null);
 
-                StructureObj newObj = new StructureObj(s);
+                StructureObj newObj = new(s);
                 listStructures.Add(newObj);
             }
 
-            ChangeInventory<StructureObj> output = InternalAdd(listStructures.ToArray()); //Add might return an existing object, which we should use instead
+            ChangeInventory<StructureObj> output = InternalAdd([.. listStructures]); //Add might return an existing object, which we should use instead
             CallOnCollectionChanged(output);
             return output.ObjectsInStore;
         }
@@ -389,7 +363,7 @@ namespace WebAnnotationModel
         {
             ICollection<LocationObj> known_locations = Store.Locations.GetObjectsInRegion(SectionNumber, bounds, MinRadius, LastQueryUtc);
 
-            return known_locations.Select(l => l.Parent).Distinct().ToList();
+            return [.. known_locations.Select(l => l.Parent).Distinct()];
         }
 
         public MixedLocalAndRemoteQueryResults<long, StructureObj> GetObjectsInRegionAsync(long SectionNumber, GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc, Action<ICollection<StructureObj>> OnLoadedCallback)
@@ -398,17 +372,14 @@ namespace WebAnnotationModel
                                                                                                                     bounds,
                                                                                                                     MinRadius,
                                                                                                                     LastQueryUtc,
-                                                                                                                    (locs) => OnLoadedCallback(locs.Select(l => l.Parent).ToList()));
+                                                                                                                    (locs) => OnLoadedCallback([.. locs.Select(l => l.Parent)]));
             ICollection<LocationObj> known_locations = Store.Locations.GetObjectsInRegion(SectionNumber, bounds, MinRadius, LastQueryUtc);
 
-            ICollection<StructureObj> known_structs = known_locations.Select(l => l.Parent).ToList();
+            ICollection<StructureObj> known_structs = [.. known_locations.Select(l => l.Parent)];
 
             return new MixedLocalAndRemoteQueryResults<long, StructureObj>(locResults.ServerRequestResult, known_structs);
         }
 
-        public ICollection<StructureObj> GetLocalObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius)
-        {
-            return Store.Locations.GetLocalObjectsInRegion(SectionNumber, bounds, MinRadius).Select(l => l.Parent).Distinct().ToList();
-        }
+        public ICollection<StructureObj> GetLocalObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius) => [.. Store.Locations.GetLocalObjectsInRegion(SectionNumber, bounds, MinRadius).Select(l => l.Parent).Distinct()];
     }
 }

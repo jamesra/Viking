@@ -3,17 +3,11 @@ using Viking.Common;
 
 namespace Viking.UI.WPF.PropertyPages
 {
-    internal sealed class PropertyPageDescriptor
+    internal sealed class PropertyPageDescriptor(Type pageType, PropertyPageAttribute attribute)
     {
-        public PropertyPageDescriptor(Type pageType, PropertyPageAttribute attribute)
-        {
-            PageType = pageType ?? throw new ArgumentNullException(nameof(pageType));
-            Attribute = attribute ?? throw new ArgumentNullException(nameof(attribute));
-        }
+        public Type PageType { get; } = pageType ?? throw new ArgumentNullException(nameof(pageType));
 
-        public Type PageType { get; }
-
-        public PropertyPageAttribute Attribute { get; }
+        public PropertyPageAttribute Attribute { get; } = attribute ?? throw new ArgumentNullException(nameof(attribute));
 
         public int Priority => Attribute.Priority;
 

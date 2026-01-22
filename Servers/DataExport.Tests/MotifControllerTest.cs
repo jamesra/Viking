@@ -5,14 +5,14 @@ namespace DataExport.Tests;
 [TestClass]
 public class MotifControllerTest
 {
-    private Mock<IWebHostEnvironment> CreateMockEnvironment()
+    private static Mock<IWebHostEnvironment> CreateMockEnvironment()
     {
-        var mockEnv = new Mock<IWebHostEnvironment>();
+        Mock<IWebHostEnvironment> mockEnv = new();
         mockEnv.Setup(m => m.ContentRootPath).Returns(AppContext.BaseDirectory);
         return mockEnv;
     }
 
-    private IConfiguration CreateConfiguration()
+    private static IConfiguration CreateConfiguration()
     {
         return new ConfigurationBuilder()
             .SetBasePath(AppContext.BaseDirectory)
@@ -26,7 +26,7 @@ public class MotifControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        var controller = new MotifController(mockEnv.Object, config);
+        MotifController controller = new(mockEnv.Object, config);
 
         // Act & Assert - Should not throw for unit test
         // Note: This will fail without a live OData service, but verifies controller setup
@@ -38,9 +38,9 @@ public class MotifControllerTest
         catch (Exception ex)
         {
             // Expected without OData service - verify it's the right kind of error
-            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") || 
-                         ex.GetType().Name.Contains("Http") || 
-                         ex is TypeInitializationException, 
+            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") ||
+                         ex.GetType().Name.Contains("Http") ||
+                         ex is TypeInitializationException,
                          $"Unexpected exception type: {ex.GetType().Name}, Message: {ex.Message}");
         }
     }
@@ -51,7 +51,7 @@ public class MotifControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        var controller = new MotifController(mockEnv.Object, config);
+        MotifController controller = new(mockEnv.Object, config);
 
         // Act & Assert - Should not throw for unit test
         try
@@ -62,9 +62,9 @@ public class MotifControllerTest
         catch (Exception ex)
         {
             // Expected without OData service - verify it's the right kind of error
-            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") || 
-                         ex.GetType().Name.Contains("Http") || 
-                         ex is TypeInitializationException, 
+            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") ||
+                         ex.GetType().Name.Contains("Http") ||
+                         ex is TypeInitializationException,
                          $"Unexpected exception type: {ex.GetType().Name}, Message: {ex.Message}");
         }
     }
@@ -75,7 +75,7 @@ public class MotifControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        var controller = new MotifController(mockEnv.Object, config);
+        MotifController controller = new(mockEnv.Object, config);
 
         // Act & Assert - Should not throw for unit test
         try
@@ -86,9 +86,9 @@ public class MotifControllerTest
         catch (Exception ex)
         {
             // Expected without OData service - verify it's the right kind of error
-            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") || 
-                         ex.GetType().Name.Contains("Http") || 
-                         ex is TypeInitializationException, 
+            Assert.IsTrue(ex.Message.Contains("OData") || ex.Message.Contains("network") ||
+                         ex.GetType().Name.Contains("Http") ||
+                         ex is TypeInitializationException,
                          $"Unexpected exception type: {ex.GetType().Name}, Message: {ex.Message}");
         }
     }
@@ -100,7 +100,7 @@ public class MotifControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        
+
         // Skip test if OData URL is not configured or not accessible
         string? odataUrl = config["AppSettings:ODataURL"];
         if (string.IsNullOrEmpty(odataUrl) || !IsODataServiceConfigured(odataUrl))
@@ -109,7 +109,7 @@ public class MotifControllerTest
             return;
         }
 
-        var controller = new MotifController(mockEnv.Object, config);
+        MotifController controller = new(mockEnv.Object, config);
 
         // Act
         try
@@ -118,10 +118,10 @@ public class MotifControllerTest
 
             // Assert
             Assert.IsTrue(result is FileResult);
-            var fileResult = result as FileResult;
+            FileResult? fileResult = result as FileResult;
             Assert.IsNotNull(fileResult);
             Assert.AreEqual("text/plain", fileResult.ContentType);
-            
+
             // Save the output file for inspection
             string outputPath = TestOutputHelper.GetOutputPath("Motif", "GetDot", "dot", config);
             await TestOutputHelper.SaveFileResultAsync(fileResult, outputPath);
@@ -144,7 +144,7 @@ public class MotifControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        
+
         // Skip test if OData URL is not configured or not accessible
         string? odataUrl = config["AppSettings:ODataURL"];
         if (string.IsNullOrEmpty(odataUrl) || !IsODataServiceConfigured(odataUrl))
@@ -153,7 +153,7 @@ public class MotifControllerTest
             return;
         }
 
-        var controller = new MotifController(mockEnv.Object, config);
+        MotifController controller = new(mockEnv.Object, config);
 
         // Act
         try
@@ -162,10 +162,10 @@ public class MotifControllerTest
 
             // Assert
             Assert.IsTrue(result is FileResult);
-            var fileResult = result as FileResult;
+            FileResult? fileResult = result as FileResult;
             Assert.IsNotNull(fileResult);
             Assert.AreEqual("text/plain", fileResult.ContentType);
-            
+
             // Save the output file for inspection
             string outputPath = TestOutputHelper.GetOutputPath("Motif", "GetTlp", "tlp", config);
             await TestOutputHelper.SaveFileResultAsync(fileResult, outputPath);
@@ -188,7 +188,7 @@ public class MotifControllerTest
         // Arrange
         var mockEnv = CreateMockEnvironment();
         var config = CreateConfiguration();
-        
+
         // Skip test if OData URL is not configured or not accessible
         string? odataUrl = config["AppSettings:ODataURL"];
         if (string.IsNullOrEmpty(odataUrl) || !IsODataServiceConfigured(odataUrl))
@@ -197,7 +197,7 @@ public class MotifControllerTest
             return;
         }
 
-        var controller = new MotifController(mockEnv.Object, config);
+        MotifController controller = new(mockEnv.Object, config);
 
         // Act
         try
@@ -206,10 +206,10 @@ public class MotifControllerTest
 
             // Assert
             Assert.IsTrue(result is FileResult);
-            var fileResult = result as FileResult;
+            FileResult? fileResult = result as FileResult;
             Assert.IsNotNull(fileResult);
             Assert.AreEqual("text/plain", fileResult.ContentType);
-            
+
             // Save the output file for inspection
             string outputPath = TestOutputHelper.GetOutputPath("Motif", "GetJson", "json", config);
             await TestOutputHelper.SaveFileResultAsync(fileResult, outputPath);
@@ -231,11 +231,11 @@ public class MotifControllerTest
         // For now, just check if it's a valid URL and not a placeholder
         if (string.IsNullOrEmpty(odataUrl))
             return false;
-            
+
         // Check if it's a placeholder value
         if (odataUrl.Contains("example.com") || odataUrl.Contains("localhost") || odataUrl.Contains("CHANGEME"))
             return false;
-            
+
         return Uri.TryCreate(odataUrl, UriKind.Absolute, out _);
     }
 }

@@ -1,4 +1,4 @@
-﻿/******************************************************************************
+/******************************************************************************
  * Viking is Open Source under a Creative Commons License:
  * Attribution-NonCommercial-ShareAlike
  * http://creativecommons.org/licenses/by-nc-sa/3.0/legalcode
@@ -85,7 +85,7 @@ namespace Viking.Common
 
         public override bool Equals(object obj)
         {
-            if (!(obj is CacheEntry<KEY> entry))
+            if (obj is not CacheEntry<KEY> entry)
                 return false;
 
             return entry.Key.Equals(this.Key);
@@ -93,10 +93,7 @@ namespace Viking.Common
 
         #region IComparer<CacheEntry<KEY>> Members
 
-        int IComparer<CacheEntry<KEY>>.Compare(CacheEntry<KEY> x, CacheEntry<KEY> y)
-        {
-            return x.LastAccessed.CompareTo(y.LastAccessed);
-        }
+        int IComparer<CacheEntry<KEY>>.Compare(CacheEntry<KEY> x, CacheEntry<KEY> y) => x.LastAccessed.CompareTo(y.LastAccessed);
 
         #endregion
 

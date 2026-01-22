@@ -63,17 +63,17 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
         /// </summary>
         public IList<Value> Value {
             get {
-                if ((this.ValueField == null)) {
+                if ((this.ValueField is null)) {
                     this.ValueField = new XTypedList<Value>(this, LinqToXsdTypeManager.Instance, XName.Get("Value", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                 }
                 return this.ValueField;
             }
             set {
-                if ((value == null)) {
+                if ((value is null)) {
                     this.ValueField = null;
                 }
                 else {
-                    if ((this.ValueField == null)) {
+                    if ((this.ValueField is null)) {
                         this.ValueField = XTypedList<Value>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Value", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     else {
@@ -93,17 +93,17 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
         /// </summary>
         public IList<Action> Action {
             get {
-                if ((this.ActionField == null)) {
+                if ((this.ActionField is null)) {
                     this.ActionField = new XTypedList<Action>(this, LinqToXsdTypeManager.Instance, XName.Get("Action", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                 }
                 return this.ActionField;
             }
             set {
-                if ((value == null)) {
+                if ((value is null)) {
                     this.ActionField = null;
                 }
                 else {
-                    if ((this.ActionField == null)) {
+                    if ((this.ActionField is null)) {
                         this.ActionField = XTypedList<Action>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Action", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     else {
@@ -123,17 +123,17 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
         /// </summary>
         public IList<Variable> Variable {
             get {
-                if ((this.VariableField == null)) {
+                if ((this.VariableField is null)) {
                     this.VariableField = new XTypedList<Variable>(this, LinqToXsdTypeManager.Instance, XName.Get("Variable", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                 }
                 return this.VariableField;
             }
             set {
-                if ((value == null)) {
+                if ((value is null)) {
                     this.VariableField = null;
                 }
                 else {
-                    if ((this.VariableField == null)) {
+                    if ((this.VariableField is null)) {
                         this.VariableField = XTypedList<Variable>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Variable", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     else {
@@ -1051,7 +1051,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
         public System.Nullable<int> Index {
             get {
                 XAttribute x = this.Attribute(XName.Get("Index", ""));
-                if ((x == null)) {
+                if ((x is null)) {
                     return null;
                 }
                 return XTypedServices.ParseValue<int>(x, XmlSchemaType.GetBuiltInSimpleType(XmlTypeCode.Int).Datatype);
@@ -1480,17 +1480,17 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             /// </summary>
             public IList<Action> Action {
                 get {
-                    if ((this.ActionField == null)) {
+                    if ((this.ActionField is null)) {
                         this.ActionField = new XTypedList<Action>(this, LinqToXsdTypeManager.Instance, XName.Get("Action", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     return this.ActionField;
                 }
                 set {
-                    if ((value == null)) {
+                    if ((value is null)) {
                         this.ActionField = null;
                     }
                     else {
-                        if ((this.ActionField == null)) {
+                        if ((this.ActionField is null)) {
                             this.ActionField = XTypedList<Action>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Action", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                         }
                         else {
@@ -1510,17 +1510,17 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             /// </summary>
             public IList<CreateStructureCommandAction> CreateStructureCommandAction {
                 get {
-                    if ((this.CreateStructureCommandActionField == null)) {
+                    if ((this.CreateStructureCommandActionField is null)) {
                         this.CreateStructureCommandActionField = new XTypedList<CreateStructureCommandAction>(this, LinqToXsdTypeManager.Instance, XName.Get("CreateStructureCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     return this.CreateStructureCommandActionField;
                 }
                 set {
-                    if ((value == null)) {
+                    if ((value is null)) {
                         this.CreateStructureCommandActionField = null;
                     }
                     else {
-                        if ((this.CreateStructureCommandActionField == null)) {
+                        if ((this.CreateStructureCommandActionField is null)) {
                             this.CreateStructureCommandActionField = XTypedList<CreateStructureCommandAction>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("CreateStructureCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                         }
                         else {
@@ -1540,17 +1540,17 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             /// </summary>
             public IList<ToggleStructureTagCommandAction> ToggleStructureTagCommandAction {
                 get {
-                    if ((this.ToggleStructureTagCommandActionField == null)) {
+                    if ((this.ToggleStructureTagCommandActionField is null)) {
                         this.ToggleStructureTagCommandActionField = new XTypedList<ToggleStructureTagCommandAction>(this, LinqToXsdTypeManager.Instance, XName.Get("ToggleStructureTagCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     return this.ToggleStructureTagCommandActionField;
                 }
                 set {
-                    if ((value == null)) {
+                    if ((value is null)) {
                         this.ToggleStructureTagCommandActionField = null;
                     }
                     else {
-                        if ((this.ToggleStructureTagCommandActionField == null)) {
+                        if ((this.ToggleStructureTagCommandActionField is null)) {
                             this.ToggleStructureTagCommandActionField = XTypedList<ToggleStructureTagCommandAction>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("ToggleStructureTagCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                         }
                         else {
@@ -1570,17 +1570,17 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             /// </summary>
             public IList<ToggleLocationTagCommandAction> ToggleLocationTagCommandAction {
                 get {
-                    if ((this.ToggleLocationTagCommandActionField == null)) {
+                    if ((this.ToggleLocationTagCommandActionField is null)) {
                         this.ToggleLocationTagCommandActionField = new XTypedList<ToggleLocationTagCommandAction>(this, LinqToXsdTypeManager.Instance, XName.Get("ToggleLocationTagCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     return this.ToggleLocationTagCommandActionField;
                 }
                 set {
-                    if ((value == null)) {
+                    if ((value is null)) {
                         this.ToggleLocationTagCommandActionField = null;
                     }
                     else {
-                        if ((this.ToggleLocationTagCommandActionField == null)) {
+                        if ((this.ToggleLocationTagCommandActionField is null)) {
                             this.ToggleLocationTagCommandActionField = XTypedList<ToggleLocationTagCommandAction>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("ToggleLocationTagCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                         }
                         else {
@@ -1600,17 +1600,17 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             /// </summary>
             public IList<ToggleLocationTerminalCommandAction> ToggleLocationTerminalCommandAction {
                 get {
-                    if ((this.ToggleLocationTerminalCommandActionField == null)) {
+                    if ((this.ToggleLocationTerminalCommandActionField is null)) {
                         this.ToggleLocationTerminalCommandActionField = new XTypedList<ToggleLocationTerminalCommandAction>(this, LinqToXsdTypeManager.Instance, XName.Get("ToggleLocationTerminalCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     return this.ToggleLocationTerminalCommandActionField;
                 }
                 set {
-                    if ((value == null)) {
+                    if ((value is null)) {
                         this.ToggleLocationTerminalCommandActionField = null;
                     }
                     else {
-                        if ((this.ToggleLocationTerminalCommandActionField == null)) {
+                        if ((this.ToggleLocationTerminalCommandActionField is null)) {
                             this.ToggleLocationTerminalCommandActionField = XTypedList<ToggleLocationTerminalCommandAction>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("ToggleLocationTerminalCommandAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                         }
                         else {
@@ -1630,17 +1630,17 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             /// </summary>
             public IList<ChangeLocationAnnotationTypeAction> ChangeLocationAnnotationTypeAction {
                 get {
-                    if ((this.ChangeLocationAnnotationTypeActionField == null)) {
+                    if ((this.ChangeLocationAnnotationTypeActionField is null)) {
                         this.ChangeLocationAnnotationTypeActionField = new XTypedList<ChangeLocationAnnotationTypeAction>(this, LinqToXsdTypeManager.Instance, XName.Get("ChangeLocationAnnotationTypeAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     return this.ChangeLocationAnnotationTypeActionField;
                 }
                 set {
-                    if ((value == null)) {
+                    if ((value is null)) {
                         this.ChangeLocationAnnotationTypeActionField = null;
                     }
                     else {
-                        if ((this.ChangeLocationAnnotationTypeActionField == null)) {
+                        if ((this.ChangeLocationAnnotationTypeActionField is null)) {
                             this.ChangeLocationAnnotationTypeActionField = XTypedList<ChangeLocationAnnotationTypeAction>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("ChangeLocationAnnotationTypeAction", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                         }
                         else {
@@ -1737,17 +1737,17 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             /// </summary>
             public IList<Hotkey> Hotkey {
                 get {
-                    if ((this.HotkeyField == null)) {
+                    if ((this.HotkeyField is null)) {
                         this.HotkeyField = new XTypedList<Hotkey>(this, LinqToXsdTypeManager.Instance, XName.Get("Hotkey", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                     }
                     return this.HotkeyField;
                 }
                 set {
-                    if ((value == null)) {
+                    if ((value is null)) {
                         this.HotkeyField = null;
                     }
                     else {
-                        if ((this.HotkeyField == null)) {
+                        if ((this.HotkeyField is null)) {
                             this.HotkeyField = XTypedList<Hotkey>.Initialize(this, LinqToXsdTypeManager.Instance, value, XName.Get("Hotkey", "http://rouge1.codepharm.net/XSD/WebAnnotationUserSettings.xsd"));
                         }
                         else {
@@ -1831,7 +1831,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
         
         XmlSchemaSet ILinqToXsdTypeManager.Schemas {
             get {
-                if ((schemaSet == null)) {
+                if ((schemaSet is null)) {
                     XmlSchemaSet tempSet = new XmlSchemaSet();
                     System.Threading.Interlocked.CompareExchange(ref schemaSet, tempSet, null);
                 }
@@ -1988,7 +1988,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Load(xmlFile);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -1999,7 +1999,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Load(xmlFile, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2010,7 +2010,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Load(textReader);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2021,7 +2021,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Load(textReader, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2032,7 +2032,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Load(xmlReader);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2043,7 +2043,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Parse(text);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2054,7 +2054,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             XRootNamespace root = new XRootNamespace();
             root.doc = XDocument.Parse(text, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2181,7 +2181,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Load(xmlFile);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2192,7 +2192,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Load(xmlFile, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2203,7 +2203,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Load(textReader);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2214,7 +2214,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Load(textReader, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2225,7 +2225,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Load(xmlReader);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2236,7 +2236,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Parse(text);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;
@@ -2247,7 +2247,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd {
             XRoot root = new XRoot();
             root.doc = XDocument.Parse(text, options);
             XTypedElement typedRoot = XTypedServices.ToXTypedElement(root.doc.Root, LinqToXsdTypeManager.Instance);
-            if ((typedRoot == null)) {
+            if ((typedRoot is null)) {
                 throw new LinqToXsdException("Invalid root element in xml document.");
             }
             root.rootObject = typedRoot;

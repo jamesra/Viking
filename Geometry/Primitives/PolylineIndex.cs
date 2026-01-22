@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
@@ -38,7 +38,7 @@ namespace Geometry
         IShapeIndex IShapeIndex.Previous => iVertex - 1 >= 0 ? (IShapeIndex)(new PolylineIndex(iLine, iVertex - 1, NumUnique)) : null;
         public int? NextVertex => iVertex + 1 < NumUnique ? (int?)(iVertex + 1) : null;
 
-        public int? PreviousVertex => iVertex - 1 >= 0 ? (int?)(iVertex -1) : null;
+        public int? PreviousVertex => iVertex - 1 >= 0 ? (int?)(iVertex - 1) : null;
 
         IShapeIndex IShapeIndex.Reindex(int iShape) => Reindex(iLine);
 
@@ -198,10 +198,7 @@ namespace Geometry
             return A.NumUnique == B.NumUnique;
         }
 
-        public static bool operator !=(PolylineIndex A, IShapeIndex B)
-        {
-            return !(A == B);
-        }
+        public static bool operator !=(PolylineIndex A, IShapeIndex B) => !(A == B);
 
         public static bool operator ==(PolylineIndex A, IShapeIndex B)
         {
@@ -217,16 +214,10 @@ namespace Geometry
             return A.NumUnique == B.NumUnique;
         }
 
-        public static bool operator !=(PolylineIndex A, PolylineIndex B)
-        {
-            return !(A == B);
-        }
+        public static bool operator !=(PolylineIndex A, PolylineIndex B) => !(A == B);
 
         // override object.GetHashCode
-        public override int GetHashCode()
-        {
-            return this.iVertex + (this.iLine << 16);
-        }
+        public override int GetHashCode() => this.iVertex + (this.iLine << 16);
 
 
         /// <summary>
@@ -260,20 +251,14 @@ namespace Geometry
         /// </summary>
         /// <param name="Polygon"></param>
         /// <returns></returns>
-        public GridVector2 Point(in GridPolyline line)
-        {
-            return new GridVector2(line.Points[iVertex]);
-        }
+        public GridVector2 Point(in GridPolyline line) => new GridVector2(line.Points[iVertex]);
 
-        public GridVector2 Point(in IReadOnlyList<GridPolyline> lines)
-        {
-            return new GridVector2(lines[iLine].Points[iVertex]);
-        }
+        public GridVector2 Point(in IReadOnlyList<GridPolyline> lines) => new GridVector2(lines[iLine].Points[iVertex]);
 
 
         public GridVector2 Point(in IReadOnlyDictionary<int, GridPolyline> shapes)
-        { 
-            if(shapes.TryGetValue(iLine, out var line))
+        {
+            if (shapes.TryGetValue(iLine, out var line))
                 return line.Points[iVertex].ToGridVector2();
 
             throw new ArgumentException("Index of shape not in dictionary");
@@ -312,26 +297,20 @@ namespace Geometry
 
             throw new ArgumentException("Shape must be a GridPolygon to use this method");
         }
-         
+
         /// <summary>
         /// Return a copy of this PointIndex with iPoly value changed to point at a different polygon index
         /// </summary>
         /// <param name="old"></param>
         /// <returns></returns>
-        public PolygonIndex Reindex(int iLine)
-        {
-            return new PolygonIndex(iLine, this.iVertex, this.NumUnique);
-        }
+        public PolygonIndex Reindex(int iLine) => new PolygonIndex(iLine, this.iVertex, this.NumUnique);
 
         /// <summary>
         /// Return a copy of this PointIndex with a different size of ring
         /// </summary>
         /// <param name="old"></param>
         /// <returns></returns>
-        public PolylineIndex ReindexToSize(int numUnique)
-        {
-            return new PolylineIndex(this.iLine, this.iVertex, numUnique);
-        }
+        public PolylineIndex ReindexToSize(int numUnique) => new PolylineIndex(this.iLine, this.iVertex, numUnique);
 
         /// <summary>
         /// Return a copy of this PointIndex with a different size of ring
@@ -339,10 +318,7 @@ namespace Geometry
         /// </summary>
         /// <param name="old"></param>
         /// <returns></returns>
-        public PolylineIndex ReindexToSize(GridPolyline line)
-        {
-            return ReindexToSize(line.PointCount);
-        }
+        public PolylineIndex ReindexToSize(GridPolyline line) => ReindexToSize(line.PointCount);
 
         /// <summary>
         /// Return a copy of this PointIndex with a different size of ring
@@ -350,16 +326,13 @@ namespace Geometry
         /// </summary>
         /// <param name="old"></param>
         /// <returns></returns>
-        public PolylineIndex ReindexToSize(IReadOnlyList<GridPolyline> lines)
-        {
-            return new PolylineIndex(this.iLine, this.iVertex, lines[iLine].PointCount);
-        }
+        public PolylineIndex ReindexToSize(IReadOnlyList<GridPolyline> lines) => new PolylineIndex(this.iLine, this.iVertex, lines[iLine].PointCount);
 
         public override string ToString() => $"L:{this.iLine} iVert:{this.iVertex} of {this.NumUnique}";
-         
+
         public GridVector2 GetOrientation(in IReadOnlyList<IShape2D> Shapes)
         {
-            if(Shapes[iShape] is GridPolyline line)
+            if (Shapes[iShape] is GridPolyline line)
             {
                 return GetOrientation(line);
             }
@@ -373,25 +346,25 @@ namespace Geometry
             var prev = this.Previous;
             var next = this.Next;
 
-            if(prev.HasValue && next.HasValue)
-            { 
-                GridLineSegment ALine = new GridLineSegment(prev.Value.Point(polyline), p1);
-                GridLineSegment BLine = new GridLineSegment(p1, next.Value.Point(polyline));
+            if (prev.HasValue && next.HasValue)
+            {
+                GridLineSegment ALine = new(prev.Value.Point(polyline), p1);
+                GridLineSegment BLine = new(p1, next.Value.Point(polyline));
                 var normal = ALine.Normal + BLine.Normal;
                 normal.Normalize();
                 return normal;
             }
-            else if(prev is null && next.HasValue)
+            else if (prev is null && next.HasValue)
             {
-                GridLineSegment line = new GridLineSegment(p1, next.Value.Point(polyline));
+                GridLineSegment line = new(p1, next.Value.Point(polyline));
                 return line.Normal;
             }
             else if (next is null && prev.HasValue)
             {
-                GridLineSegment line = new GridLineSegment(prev.Value.Point(polyline), p1);
+                GridLineSegment line = new(prev.Value.Point(polyline), p1);
                 return line.Normal;
             }
-            
+
             throw new ArgumentException("Only one point on polyline.  Unhandled case.");
         }
     }

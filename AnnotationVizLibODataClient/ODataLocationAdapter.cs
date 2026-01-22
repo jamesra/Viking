@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Geometry;
 using Microsoft.SqlServer.Types;
 using ODataClient.ConnectomeDataModel;
@@ -9,16 +9,10 @@ using System.Collections.Generic;
 namespace AnnotationVizLib.OData
 {
 
-    public class ODataLocationAdapter : ILocationReadOnly
+    public class ODataLocationAdapter(Location l, UnitsAndScale.IScale scale) : ILocationReadOnly
     {
-        private readonly Location loc;
-        public readonly UnitsAndScale.IScale scale;
-
-        public ODataLocationAdapter(Location l, UnitsAndScale.IScale scale)
-        {
-            this.loc = l ?? throw new ArgumentNullException(nameof(l));
-            this.scale = scale ?? throw new ArgumentNullException(nameof(scale));
-        }
+        private readonly Location loc = l ?? throw new ArgumentNullException(nameof(l));
+        public readonly UnitsAndScale.IScale scale = scale ?? throw new ArgumentNullException(nameof(scale));
 
         public IDictionary<string, string> Attributes => null;
 
@@ -29,10 +23,9 @@ namespace AnnotationVizLib.OData
             {
                 if (_VolumeShape is null)
                 {
-                    if (loc.VolumeShape.Geometry.WellKnownBinary != null)
-                        _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromWKB(new System.Data.SqlTypes.SqlBytes(loc.VolumeShape.Geometry.WellKnownBinary), loc.VolumeShape.Geometry.CoordinateSystemId.Value);
-                    else
-                        _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(loc.VolumeShape.Geometry.WellKnownText), loc.VolumeShape.Geometry.CoordinateSystemId.Value);
+                    _VolumeShape = loc.VolumeShape.Geometry.WellKnownBinary != null
+                        ? Microsoft.SqlServer.Types.SqlGeometry.STGeomFromWKB(new System.Data.SqlTypes.SqlBytes(loc.VolumeShape.Geometry.WellKnownBinary), loc.VolumeShape.Geometry.CoordinateSystemId.Value)
+                        : Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(loc.VolumeShape.Geometry.WellKnownText), loc.VolumeShape.Geometry.CoordinateSystemId.Value);
 
                     _VolumeShape = _VolumeShape.Scale(scale);
                 }
@@ -89,9 +82,6 @@ namespace AnnotationVizLib.OData
             return false;
         }
 
-        public bool Equals(Location other)
-        {
-            return this.Equals((ILocationReadOnly)other);
-        }
+        public bool Equals(Location other) => this.Equals((ILocationReadOnly)other);
     }
 }

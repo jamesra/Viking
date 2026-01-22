@@ -355,32 +355,11 @@ namespace TriangleNet.Tools
                 }
                 else
                 {
-                    if (ca == 0.0 || ab == 0.0)
-                    {
-                        a_angle = Math.PI;
-                    }
-                    else
-                    {
-                        a_angle = acos((ca2 + ab2 - bc2) / (2.0 * ca * ab));
-                    }
+                    a_angle = ca == 0.0 || ab == 0.0 ? Math.PI : acos((ca2 + ab2 - bc2) / (2.0 * ca * ab));
 
-                    if (ab == 0.0 || bc == 0.0)
-                    {
-                        b_angle = Math.PI;
-                    }
-                    else
-                    {
-                        b_angle = acos((ab2 + bc2 - ca2) / (2.0 * ab * bc));
-                    }
+                    b_angle = ab == 0.0 || bc == 0.0 ? Math.PI : acos((ab2 + bc2 - ca2) / (2.0 * ab * bc));
 
-                    if (bc == 0.0 || ca == 0.0)
-                    {
-                        c_angle = Math.PI;
-                    }
-                    else
-                    {
-                        c_angle = acos((bc2 + ca2 - ab2) / (2.0 * bc * ca));
-                    }
+                    c_angle = bc == 0.0 || ca == 0.0 ? Math.PI : acos((bc2 + ca2 - ab2) / (2.0 * bc * ca));
                 }
 
                 alpha = Math.Min(alpha, a_angle);

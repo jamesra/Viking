@@ -13,7 +13,7 @@ namespace AnnotationVizLib
 
         public static MotifDOTView ToDOT(MotifGraph graph, bool IncludeUnlabeled = false)
         {
-            MotifDOTView DotGraph = new MotifDOTView();
+            MotifDOTView DotGraph = new();
 
             DotGraph.AddStandardizedAttributes(DOTAttributes.StandardGraphDOTAttributes);
 
@@ -88,7 +88,7 @@ namespace AnnotationVizLib
 
         public static GraphViewEdge<string> GraphVizEdgeFromMotifEdge(GraphViewEngine<string> DotEngine, MotifGraph graph, MotifEdge edge)
         {
-            GraphVizEdge<string> DotEdge = new GraphVizEdge<string>();
+            GraphVizEdge<string> DotEdge = new();
             float additionFactor = 1f;
             float mulFactor = 0.5f;
             float arrowsize = additionFactor;

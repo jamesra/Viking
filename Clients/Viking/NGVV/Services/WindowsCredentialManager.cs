@@ -31,7 +31,7 @@ namespace Viking.Services
             try
             {
                 // Create a credential object with the username and encrypted password
-                var credentialData = new CredentialData
+                CredentialData credentialData = new()
                 {
                     Username = username,
                     Password = password,
@@ -47,7 +47,7 @@ namespace Viking.Services
                     DataProtectionScope.CurrentUser);
 
                 // Save to Windows Credential Manager
-                var credential = new NativeMethods.CREDENTIAL
+                NativeMethods.CREDENTIAL credential = new()
                 {
                     Type = NativeMethods.CRED_TYPE_GENERIC,
                     TargetName = Marshal.StringToHGlobalUni(CREDENTIAL_TARGET_NAME),
@@ -109,7 +109,7 @@ namespace Viking.Services
                 try
                 {
                     var credential = Marshal.PtrToStructure<NativeMethods.CREDENTIAL>(credentialPtr);
-                    
+
                     if (credential.CredentialBlobSize == 0 || credential.CredentialBlob == IntPtr.Zero)
                         return null;
 
@@ -181,10 +181,7 @@ namespace Viking.Services
         /// <summary>
         /// Serializes credential data to JSON-like format.
         /// </summary>
-        private static string SerializeCredentialData(CredentialData data)
-        {
-            return $"{data.Username}|{data.Password}|{data.ServerUrl ?? ""}|{data.SavedAt:O}";
-        }
+        private static string SerializeCredentialData(CredentialData data) => $"{data.Username}|{data.Password}|{data.ServerUrl ?? ""}|{data.SavedAt:O}";
 
         /// <summary>
         /// Deserializes credential data from JSON-like format.

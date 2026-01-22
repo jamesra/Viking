@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,15 +11,15 @@ namespace VikingXNAGraphics
     public static class GpuSynchronizationManager
     {
         public static SynchronizationContext Context { get; private set; }
-        public static TaskScheduler Scheduler { get; private set;}
-        
+        public static TaskScheduler Scheduler { get; private set; }
+
         public static void Initialize()
         {
             // Capture the current SynchronizationContext
             Context = SynchronizationContext.Current ?? new SynchronizationContext();
             Scheduler = TaskScheduler.FromCurrentSynchronizationContext();
         }
-        
+
         public static void Post(Action action)
         {
             if (Context is null)
@@ -27,7 +27,7 @@ namespace VikingXNAGraphics
                 throw new InvalidOperationException("GameSynchronizationContext has not been initialized.  Initialization should occur on the game thread, ideally the line after the GraphicsDevice is created");
             }
             // Post the action to the captured SynchronizationContext
-            Context.Post(_ => action(), null); 
+            Context.Post(_ => action(), null);
         }
 
         public static Task RunTask(Action action) => RunTask(action, CancellationToken.None);
@@ -38,7 +38,7 @@ namespace VikingXNAGraphics
             {
                 throw new InvalidOperationException("GameSynchronizationContext has not been initialized.  Initialization should occur on the game thread, ideally the line after the GraphicsDevice is created");
             }
-            
+
             return Task.Factory.StartNew(action, token, TaskCreationOptions.None, Scheduler);
         }
     }
@@ -52,11 +52,9 @@ namespace VikingXNAGraphics
         public static SynchronizationContext Context => GpuSynchronizationManager.Context;
         public static TaskScheduler Scheduler => GpuSynchronizationManager.Scheduler;
 
-        public static void Initialize()
-        {
+        public static void Initialize() =>
             // Capture the current SynchronizationContext
             GpuSynchronizationManager.Initialize();
-        }
 
         public static void Post(Action action)
         {

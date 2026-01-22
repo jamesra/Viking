@@ -47,7 +47,7 @@ namespace Geometry
         /// <returns></returns>
         public static double[] LinSolve(double[,] A, double[] B)
         {
-            GridMatrix matrixA = new GridMatrix(A);
+            GridMatrix matrixA = new(A);
 
             System.DateTime StartTime = System.DateTime.UtcNow;
 
@@ -208,7 +208,7 @@ namespace Geometry
 
             System.DateTime EndTime = System.DateTime.UtcNow;
 
-            System.TimeSpan Elapsed = new TimeSpan(EndTime.Ticks - StartTime.Ticks);
+            System.TimeSpan Elapsed = new(EndTime.Ticks - StartTime.Ticks);
 
             Trace.WriteLine("Matrix solution completed, elapsed: " + Elapsed.TotalSeconds.ToString("G4"));
 

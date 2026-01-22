@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics;
 
 namespace GeometryTests
@@ -12,10 +12,7 @@ namespace GeometryTests
     {
         readonly double val = 0;
 
-        double IFoo.value()
-        {
-            return val;
-        }
+        double IFoo.value() => val;
     }
 
     /// <summary>
@@ -71,7 +68,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestMethod1()
         {
-            Foo f = new Foo();
+            Foo f = new();
             IFoo myInterface = f as IFoo;
 
             Foo fooReturns = myInterface as Foo;

@@ -1,10 +1,10 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;  
+using System.Threading.Tasks;
 using TriangleNet;
 using VikingXNAGraphics;
 
@@ -14,24 +14,24 @@ namespace MonogameTestbed
     {
         public string Title => this.GetType().Name;
 
-        readonly List<IShape2D> shapes = new List<IShape2D>();
+        readonly List<IShape2D> shapes = [];
         readonly LineView lineView;
         readonly CircleView circleView;
-        
-        List<IColorView> ShapeViews = new List<IColorView>();
-        List<IColorView> GroundTruth = new List<IColorView>();
+
+        List<IColorView> ShapeViews = [];
+        List<IColorView> GroundTruth = [];
 
         int iSelectedView = 0;
 
-        bool ShowGroundTruth = false; 
+        bool ShowGroundTruth = false;
 
         GamePadState LastGamepadState;
-         
+
         bool _initialized = false;
         public bool Initialized => _initialized;
 
         public void InitGeometry()
-        { 
+        {
             GridLineSegment lineSegment;
             GridTriangle triangle;
             GridCircle circle;
@@ -39,15 +39,15 @@ namespace MonogameTestbed
 
             lineSegment = new GridLineSegment(new GridVector2(0, 0), new GridVector2(5, 5));
             circle = new GridCircle(new GridVector2(-10, -10), 4);
-            
-            polygon = StandardGeometryModels.CreateTestPolygon(true); 
+
+            polygon = StandardGeometryModels.CreateTestPolygon(true);
 
             triangle = new GridTriangle(new GridVector2(-10, 10),
                                                 new GridVector2(-12, 20),
                                                  new GridVector2(-15, 10)
                                                 );
 
-            
+
 
             shapes.Add(lineSegment);
             shapes.Add(circle);
@@ -59,7 +59,7 @@ namespace MonogameTestbed
         {
             _initialized = true;
             InitGeometry();
-              
+
             ShapeViews = CreateViewsForGeometries(shapes);
             GroundTruth = CreateViewsForGeometries(shapes);
 
@@ -70,11 +70,11 @@ namespace MonogameTestbed
         {
         }
 
-        public List<IColorView> CreateViewsForGeometries(ICollection<IShape2D> shapes)
+        public static List<IColorView> CreateViewsForGeometries(ICollection<IShape2D> shapes)
         {
-            List<IColorView> Views = new List<IColorView>();
+            List<IColorView> Views = [];
 
-            foreach(IShape2D shape in shapes)
+            foreach (IShape2D shape in shapes)
             {
                 IColorView view = null;
                 if (shape is GridLineSegment lineSegment)
@@ -89,40 +89,38 @@ namespace MonogameTestbed
                 {
                     view = TriangleNetExtensions.CreateMeshForPolygon2D(triangle.Points, null, Color.Red);
                 }
-                else if (shape is GridPolygon polygon)
-                {
-                    view = TriangleNetExtensions.CreateMeshForPolygon2D(polygon, Color.Red);
-                }
                 else
                 {
-                    throw new ArgumentException("Unexpected shape type");
+                    view = shape is GridPolygon polygon
+                        ? (IColorView)TriangleNetExtensions.CreateMeshForPolygon2D(polygon, Color.Red)
+                        : throw new ArgumentException("Unexpected shape type");
                 }
 
                 Views.Add(view);
-            } 
+            }
 
             return Views;
         }
 
         public void Update()
         {
-            foreach(IColorView colorView in ShapeViews)
+            foreach (IColorView colorView in ShapeViews)
             {
                 colorView.Color = Color.Green;
             }
 
-            ShapeViews[iSelectedView].Color = Color.Blue; 
+            ShapeViews[iSelectedView].Color = Color.Blue;
 
-            for(int i = 0; i < shapes.Count; i++)
+            for (int i = 0; i < shapes.Count; i++)
             {
-                for(int j = i+1; j < shapes.Count; j++)
+                for (int j = i + 1; j < shapes.Count; j++)
                 {
                     if (shapes[i].Intersects(shapes[j]))
                     {
                         //Change the color of the intersecting shapes
                         ShapeViews[i].Color = Color.Red;
                         ShapeViews[j].Color = Color.Red;
-                    }                    
+                    }
                 }
             }
 
@@ -133,18 +131,18 @@ namespace MonogameTestbed
             {
                 colorView.Color = Color.Gray;
             }
-        } 
+        }
 
         private void ProcessGamePad()
         {
             GamePadState state = GamePad.GetState(PlayerIndex.One);
 
-            if(state.Buttons.A == ButtonState.Pressed && state.Buttons.A != LastGamepadState.Buttons.A)
+            if (state.Buttons.A == ButtonState.Pressed && state.Buttons.A != LastGamepadState.Buttons.A)
             {
                 ShowGroundTruth = !ShowGroundTruth;
             }
 
-            if(state.Buttons.LeftShoulder == ButtonState.Pressed &&
+            if (state.Buttons.LeftShoulder == ButtonState.Pressed &&
                 state.Buttons.LeftShoulder != LastGamepadState.Buttons.LeftShoulder)
             {
                 DecrementSelectedView();
@@ -156,7 +154,7 @@ namespace MonogameTestbed
                 IncrementSelectedView();
             }
 
-            if(state.ThumbSticks.Left.X != 0 || state.ThumbSticks.Left.Y != 0)
+            if (state.ThumbSticks.Left.X != 0 || state.ThumbSticks.Left.Y != 0)
             {
                 IColorView shapeView = ShapeViews[iSelectedView];
                 IShape2D shape = shapes[iSelectedView];
@@ -166,20 +164,20 @@ namespace MonogameTestbed
                     IViewPosition2D view = shapeView as IViewPosition2D;
                     view.Position += state.ThumbSticks.Left.ToGridVector2();
                 }
-                else if(shapeView is IViewPosition3D)
+                else if (shapeView is IViewPosition3D)
                 {
                     IViewPosition3D view = shapeView as IViewPosition3D;
                     view.Position += state.ThumbSticks.Left.ToGridVector3();
                 }
             }
 
-            LastGamepadState = state; 
+            LastGamepadState = state;
         }
 
         private void IncrementSelectedView()
         {
             iSelectedView++;
-            if(iSelectedView >= ShapeViews.Count)
+            if (iSelectedView >= ShapeViews.Count)
             {
                 iSelectedView = 0;
             }
@@ -190,7 +188,7 @@ namespace MonogameTestbed
             iSelectedView--;
             if (iSelectedView < 0)
             {
-                iSelectedView = ShapeViews.Count-1;
+                iSelectedView = ShapeViews.Count - 1;
             }
         }
 
@@ -201,11 +199,11 @@ namespace MonogameTestbed
             //Draw where we know the geometries are and where the views say the geometries are.  These should match or one
             //of the translation routines has a bug
 
-            if(ShowGroundTruth)
+            if (ShowGroundTruth)
                 DrawViews(window, GroundTruth);
             else
                 DrawViews(window, ShapeViews);
-            
+
 
 
             /*
@@ -233,22 +231,22 @@ namespace MonogameTestbed
         }
         */
 
-        public void DrawViews(MonoTestbed window, ICollection<IColorView> listViews)
+        public static void DrawViews(MonoTestbed window, ICollection<IColorView> listViews)
         {
             //DrawCentroidsAndIndicies(window);
 
-            MeshView<VertexPositionColor> meshView = new MeshView<VertexPositionColor>();
-            foreach(IColorView view in listViews)
+            MeshView<VertexPositionColor> meshView = new();
+            foreach (IColorView view in listViews)
             {
-                if(view is LineView)
+                if (view is LineView)
                 {
-                    LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, new LineView[] { view as LineView });
+                    LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, [view as LineView]);
                 }
-                else if(view is CircleView)
+                else if (view is CircleView)
                 {
                     CircleView.Draw(window.GraphicsDevice, window.Scene, OverlayStyle.Alpha, new CircleView[] { view as CircleView });
                 }
-                else if(view is PositionColorMeshModel)
+                else if (view is PositionColorMeshModel)
                 {
                     PositionColorMeshModel modelView = view as PositionColorMeshModel;
                     meshView.models.Add(modelView);

@@ -6,7 +6,7 @@ namespace Viking.UI.Forms
 {
     public partial class SectionChooserForm : Form
     {
-        public SectionViewModel SelectedSection = null;
+        public SectionViewModel? SelectedSection = null;
 
         public SectionChooserForm()
         {

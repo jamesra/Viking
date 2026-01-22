@@ -1,4 +1,4 @@
-﻿using AnnotationService.Types;
+using AnnotationService.Types;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -14,10 +14,7 @@ namespace WebAnnotationModel.Objects
     {
         protected T Data;
 
-        internal T GetData()
-        {
-            return Data;
-        }
+        internal T GetData() => Data;
 
         bool _SynchCalled = false;
         /// <summary>
@@ -73,27 +70,19 @@ namespace WebAnnotationModel.Objects
             }
         }
 
-        protected void SetDBActionForChange()
-        {
-            DBAction = DBACTION.UPDATE;
-        }
+        protected void SetDBActionForChange() => DBAction = DBACTION.UPDATE;
 
         /// <summary>
         /// Include this object in the next update to the database
         /// </summary>
-        public void SubmitOnNextUpdate()
-        {
-            DBAction = DBACTION.UPDATE;
-        }
+        public void SubmitOnNextUpdate() => DBAction = DBACTION.UPDATE;
 
         #region INotifyPropertyChanged Members
 
-        protected void OnPropertyChanging(string property)
-        {
+        protected void OnPropertyChanging(string property) =>
             //We need to ensure these events are invoked on the main thread since UI controls listen to them and they can only 
             //change state on the main thread 
             _PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(property));
-        }
 
         private event PropertyChangingEventHandler _PropertyChanging;
         private int PropertyChangingSubCount = 0;
@@ -119,12 +108,10 @@ namespace WebAnnotationModel.Objects
 
         #region INotifyPropertyChanged Members
 
-        protected void OnPropertyChanged(string property)
-        {
+        protected void OnPropertyChanged(string property) =>
             //We need to ensure these events are invoked on the main thread since UI controls listen to them and they can only 
             //change state on the main thread 
             _PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
-        }
 
         private event PropertyChangedEventHandler _PropertyChanged;
         private int PropertyChangedSubCount = 0;
@@ -150,7 +137,7 @@ namespace WebAnnotationModel.Objects
 
         public object Clone()
         {
-            WCFObjBase<T> objClone = Activator.CreateInstance(this.GetType(), new object[] { this.Data }) as WCFObjBase<T>;
+            WCFObjBase<T> objClone = Activator.CreateInstance(this.GetType(), [this.Data]) as WCFObjBase<T>;
             return objClone;
         }
 

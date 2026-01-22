@@ -1,16 +1,11 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using ODataClient.ConnectomeDataModel;
 
 namespace AnnotationVizLib.OData
 {
-    class ODataStructureLinkAdapter : IStructureLink
+    class ODataStructureLinkAdapter(StructureLink sl) : IStructureLink
     {
-        private readonly StructureLink structureLink;
-
-        public ODataStructureLinkAdapter(StructureLink sl)
-        {
-            this.structureLink = sl;
-        }
+        private readonly StructureLink structureLink = sl;
 
         public bool Directional => !structureLink.Bidirectional;
 
@@ -31,9 +26,6 @@ namespace AnnotationVizLib.OData
             return false;
         }
 
-        public bool Equals(StructureLink other)
-        {
-            return this.Equals((IStructureLink)other);
-        }
+        public bool Equals(StructureLink other) => this.Equals((IStructureLink)other);
     }
 }

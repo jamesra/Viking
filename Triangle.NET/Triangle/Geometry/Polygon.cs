@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="Polygon.cs" company="">
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
 // </copyright>
@@ -12,13 +12,18 @@ namespace TriangleNet.Geometry
     /// <summary>
     /// A polygon represented as a planar straight line graph.
     /// </summary>
-    public class Polygon : IPolygon
+    /// <remarks>
+    /// Initializes a new instance of the <see cref="Polygon" /> class.
+    /// </remarks>
+    /// <param name="capacity">The default capacity for the points list.</param>
+    /// <param name="markers">Use point and segment markers.</param>
+    public class Polygon(int capacity, bool markers) : IPolygon
     {
-        readonly List<Vertex> points;
-        readonly List<Point> holes;
-        readonly List<RegionPointer> regions;
+        readonly List<Vertex> points = new(capacity);
+        readonly List<Point> holes = [];
+        readonly List<RegionPointer> regions = [];
 
-        readonly List<ISegment> segments;
+        readonly List<ISegment> segments = [];
 
         /// <inheritdoc />
         public List<Vertex> Points => points;
@@ -33,10 +38,10 @@ namespace TriangleNet.Geometry
         public List<ISegment> Segments => segments;
 
         /// <inheritdoc />
-        public bool HasPointMarkers { get; set; }
+        public bool HasPointMarkers { get; set; } = markers;
 
         /// <inheritdoc />
-        public bool HasSegmentMarkers { get; set; }
+        public bool HasSegmentMarkers { get; set; } = markers;
 
         /// <inheritdoc />
         public int Count => points.Count;
@@ -58,40 +63,17 @@ namespace TriangleNet.Geometry
         {
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Polygon" /> class.
-        /// </summary>
-        /// <param name="capacity">The default capacity for the points list.</param>
-        /// <param name="markers">Use point and segment markers.</param>
-        public Polygon(int capacity, bool markers)
-        {
-            points = new List<Vertex>(capacity);
-            holes = new List<Point>();
-            regions = new List<RegionPointer>();
-
-            segments = new List<ISegment>();
-
-            HasPointMarkers = markers;
-            HasSegmentMarkers = markers;
-        }
-
         [Obsolete("Use polygon.Add(contour) method instead.")]
         public void AddContour(IEnumerable<Vertex> points, int marker = 0,
-            bool hole = false, bool convex = false)
-        {
-            this.Add(new Contour(points, marker, convex), hole);
-        }
+            bool hole = false, bool convex = false) => this.Add(new Contour(points, marker, convex), hole);
 
         [Obsolete("Use polygon.Add(contour) method instead.")]
-        public void AddContour(IEnumerable<Vertex> points, int marker, Point hole)
-        {
-            this.Add(new Contour(points, marker), hole);
-        }
+        public void AddContour(IEnumerable<Vertex> points, int marker, Point hole) => this.Add(new Contour(points, marker), hole);
 
         /// <inheritdoc />
         public Rectangle Bounds()
         {
-            var bounds = new Rectangle();
+            Rectangle bounds = new();
             bounds.Expand(this.points);
 
             return bounds;
@@ -101,10 +83,7 @@ namespace TriangleNet.Geometry
         /// Add a vertex to the polygon.
         /// </summary>
         /// <param name="vertex">The vertex to insert.</param>
-        public void Add(Vertex vertex)
-        {
-            this.points.Add(vertex);
-        }
+        public void Add(Vertex vertex) => this.points.Add(vertex);
 
         /// <summary>
         /// Add a segment to the polygon.

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="Mesh.cs">
 // Original Triangle code by Jonathan Richard Shewchuk, http://www.cs.cmu.edu/~quake/triangle.html
 // Triangle.NET code by Christian Woltering, http://triangle.codeplex.com/
@@ -110,7 +110,7 @@ namespace TriangleNet
         {
             get
             {
-                var e = new EdgeIterator(this);
+                EdgeIterator e = new(this);
                 while (e.MoveNext())
                 {
                     yield return e.Current;
@@ -215,15 +215,15 @@ namespace TriangleNet
 
             behavior = new Behavior();
 
-            vertices = new Dictionary<int, Vertex>();
-            subsegs = new Dictionary<int, SubSegment>();
+            vertices = [];
+            subsegs = [];
 
             triangles = config.TrianglePool();
 
             flipstack = new Stack<Otri>();
 
-            holes = new List<Point>();
-            regions = new List<RegionPointer>();
+            holes = [];
+            regions = [];
 
             steinerleft = -1;
 
@@ -243,10 +243,7 @@ namespace TriangleNet
 
             Reset();
 
-            if (qualityMesher is null)
-            {
-                qualityMesher = new QualityMesher(this, new Configuration());
-            }
+            qualityMesher ??= new QualityMesher(this, new Configuration());
 
             // Enforce angle and area constraints.
             qualityMesher.Apply(quality, delaunay);
@@ -255,10 +252,7 @@ namespace TriangleNet
         /// <summary>
         /// Renumber vertex and triangle id's.
         /// </summary>
-        public void Renumber()
-        {
-            this.Renumber(NodeNumbering.Linear);
-        }
+        public void Renumber() => this.Renumber(NodeNumbering.Linear);
 
         /// <summary>
         /// Renumber vertex and triangle id's.
@@ -283,7 +277,7 @@ namespace TriangleNet
             }
             else if (num == NodeNumbering.CuthillMcKee)
             {
-                var rcm = new CuthillMcKee();
+                CuthillMcKee rcm = new();
                 var iperm = rcm.Renumber(this);
 
                 // Permute the node indices.
@@ -310,10 +304,7 @@ namespace TriangleNet
         /// Set QualityMesher for mesh refinement.
         /// </summary>
         /// <param name="qmesher"></param>
-        internal void SetQualityMesher(QualityMesher qmesher)
-        {
-            qualityMesher = qmesher;
-        }
+        internal void SetQualityMesher(QualityMesher qmesher) => qualityMesher = qmesher;
 
         internal void CopyTo(Mesh target)
         {
@@ -486,7 +477,7 @@ namespace TriangleNet
         /// <param name="newsubseg">Reference to the new subseg.</param>
         internal void MakeSegment(ref Osub newsubseg)
         {
-            var seg = new SubSegment
+            SubSegment seg = new()
             {
                 hash = this.hash_seg++
             };

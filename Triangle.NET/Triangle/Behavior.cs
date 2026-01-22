@@ -80,14 +80,7 @@ namespace TriangleNet
             this.goodAngle = Math.Cos(this.MinAngle * Math.PI / 180.0);
             this.maxGoodAngle = Math.Cos(this.MaxAngle * Math.PI / 180.0);
 
-            if (this.goodAngle == 1.0)
-            {
-                this.offconstant = 0.0;
-            }
-            else
-            {
-                this.offconstant = 0.475 * Math.Sqrt((1.0 + this.goodAngle) / (1.0 - this.goodAngle));
-            }
+            this.offconstant = this.goodAngle == 1.0 ? 0.0 : 0.475 * Math.Sqrt((1.0 + this.goodAngle) / (1.0 - this.goodAngle));
 
             this.goodAngle *= this.goodAngle;
         }

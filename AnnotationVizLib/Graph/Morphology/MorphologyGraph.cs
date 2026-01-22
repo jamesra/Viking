@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Geometry;
 using GraphLib;
 using RTree;
@@ -25,20 +25,20 @@ namespace AnnotationVizLib
         public readonly IScale scale = null;
 
         public virtual double SectionThickness => scale.Z.Value;
-        
-        public IStructureTypeReadOnly structureType => structure.Type; 
+
+        public IStructureTypeReadOnly structureType => structure.Type;
 
         [field: NonSerialized()]
         private RTree<ulong> _RTree = null;
 
-        private RTree<ulong> RTree => _RTree ?? (_RTree = CreateRTree(this));
+        private RTree<ulong> RTree => _RTree ??= CreateRTree(this);
 
         /// <summary>
         /// Map the motif label to the arbitrary id used by TLP.  Do not add directly to this collection.  Use Add/Remove Subgraph instead.
         /// </summary>
-        public readonly ConcurrentDictionary<ulong, MorphologyGraph> Subgraphs = new ConcurrentDictionary<ulong, MorphologyGraph>();
+        public readonly ConcurrentDictionary<ulong, MorphologyGraph> Subgraphs = new();
 
-        internal readonly ConcurrentDictionary<ulong, ulong> NearestNodeToSubgraph = new ConcurrentDictionary<ulong, ulong>();
+        internal readonly ConcurrentDictionary<ulong, ulong> NearestNodeToSubgraph = new();
 
         public MorphologyGraph(ulong subgraph_id, IScale scale)
         {
@@ -55,10 +55,7 @@ namespace AnnotationVizLib
         }
 
         //Call this when the graph has changed any spatial qualities that should reset cached measurements
-        protected void ResetCachedMeasurements()
-        {
-            _BoundingBox = default;
-        }
+        protected void ResetCachedMeasurements() => _BoundingBox = default;
 
         public void AddSubgraph(MorphologyGraph subgraph)
         {
@@ -83,7 +80,7 @@ namespace AnnotationVizLib
 
         internal static RTree<ulong> CreateRTree(MorphologyGraph graph)
         {
-            RTree<ulong> rtree = new RTree<ulong>();
+            RTree<ulong> rtree = new();
             foreach (MorphologyNode node in graph.Nodes.Values)
             {
                 rtree.Add(node.BoundingBox.ToRTreeRect(), node.Key);
@@ -114,16 +111,16 @@ namespace AnnotationVizLib
         {
             //Move all of my edges to the nearest node
             MorphologyNode node_to_remove = Nodes[key];
-            SortedSet<ulong> other_nodes = new SortedSet<ulong>(node_to_remove.Edges.Keys);
+            SortedSet<ulong> other_nodes = [.. node_to_remove.Edges.Keys];
 
             ulong nearest_id = NearestNode(key, other_nodes, out double min_distance);
 
             other_nodes.Remove(nearest_id); //Do not link nearest_node to itself
 
-            SortedSet<MorphologyEdge> new_edges = new SortedSet<AnnotationVizLib.MorphologyEdge>();
+            SortedSet<MorphologyEdge> new_edges = [];
             foreach (ulong relink_id in other_nodes)
             {
-                MorphologyEdge new_edge = new AnnotationVizLib.MorphologyEdge(this, nearest_id, relink_id);
+                MorphologyEdge new_edge = new(this, nearest_id, relink_id);
                 new_edges.Add(new_edge);
             }
 
@@ -154,34 +151,20 @@ namespace AnnotationVizLib
                     if (this.Nodes.Count > 0)
                     {
                         //Don't bother using parrallelism for small graphs
-                        IEnumerable<GridBox> boxes;
-                        if (this.Nodes.Count > ParallelThreshold)
-                        {
-                            boxes = this.Nodes.Values.Select(n => n.BoundingBox).AsParallel();
-                        }
-                        else
-                        {
-                            boxes = this.Nodes.Values.Select(n => n.BoundingBox);
-                        }
-
+                        IEnumerable<GridBox> boxes = this.Nodes.Count > ParallelThreshold
+                            ? this.Nodes.Values.Select(n => n.BoundingBox).AsParallel()
+                            : this.Nodes.Values.Select(n => n.BoundingBox);
                         _BoundingBox = boxes.Aggregate((a, b) => GridBox.Union(a, b));
                     }
 
-                    if (this.Subgraphs.Count > 0)
+                    if (!Subgraphs.IsEmpty)
                     {
-                        IEnumerable<GridBox> subgraphBoxes;
-
-                        if (this.Subgraphs.Count > ParallelThreshold)
-                            subgraphBoxes = Subgraphs.Values.Select(sg => sg.BoundingBox).AsParallel();
-                        else
-                            subgraphBoxes = Subgraphs.Values.Select(sg => sg.BoundingBox);
-
+                        IEnumerable<GridBox> subgraphBoxes = this.Subgraphs.Count > ParallelThreshold
+                            ? Subgraphs.Values.Select(sg => sg.BoundingBox).AsParallel()
+                            : Subgraphs.Values.Select(sg => sg.BoundingBox);
                         GridBox subgraph_bbox = subgraphBoxes.Aggregate((a, b) => GridBox.Union(a, b));
 
-                        if (_BoundingBox != default)
-                            _BoundingBox = GridBox.Union(_BoundingBox, subgraph_bbox);
-                        else
-                            _BoundingBox = subgraph_bbox;
+                        _BoundingBox = _BoundingBox != default ? GridBox.Union(_BoundingBox, subgraph_bbox) : subgraph_bbox;
                     }
                 }
 
@@ -192,13 +175,13 @@ namespace AnnotationVizLib
 
         protected SortedDictionary<ulong, SortedSet<ulong>> BuildEdgeLookup()
         {
-            SortedDictionary<ulong, SortedSet<ulong>> Links = new SortedDictionary<ulong, SortedSet<ulong>>();
+            SortedDictionary<ulong, SortedSet<ulong>> Links = [];
 
             foreach (MorphologyEdge edge in Edges.Values)
             {
                 if (!Links.ContainsKey(edge.SourceNodeKey))
                 {
-                    Links[edge.SourceNodeKey] = new SortedSet<ulong>(new ulong[] { edge.TargetNodeKey });
+                    Links[edge.SourceNodeKey] = [edge.TargetNodeKey];
                 }
                 else
                 {
@@ -207,7 +190,7 @@ namespace AnnotationVizLib
 
                 if (!Links.ContainsKey(edge.TargetNodeKey))
                 {
-                    Links[edge.TargetNodeKey] = new SortedSet<ulong>(new ulong[] { edge.SourceNodeKey });
+                    Links[edge.TargetNodeKey] = [edge.SourceNodeKey];
                 }
                 else
                 {
@@ -222,39 +205,30 @@ namespace AnnotationVizLib
         /// Locations with 3 or more edges, branch points in a process
         /// </summary>
         /// <returns></returns>
-        public ulong[] GetBranchPointIDs()
-        {
-            return this.Nodes.Values.Where(n => n.Edges.Count > 2).Select(n => n.Key).ToArray();
-        }
+        public ulong[] GetBranchPointIDs() => [.. this.Nodes.Values.Where(n => n.Edges.Count > 2).Select(n => n.Key)];
 
         /// <summary>
         /// Locations with 1 or fewer links, the tip of a process
         /// </summary>
         /// <returns></returns>
-        public ulong[] GetTerminalIDs()
-        {
-            return this.Nodes.Values.Where(n => n.Edges.Count == 1 && !n.Location.IsVericosityCap).Select(n => n.Key).ToArray();
-        }
+        public ulong[] GetTerminalIDs() => [.. this.Nodes.Values.Where(n => n.Edges.Count == 1 && !n.Location.IsVericosityCap).Select(n => n.Key)];
 
         /// <summary>
         /// Locations with 2 links, the middle of a process
         /// </summary>
         /// <returns></returns>
-        public ulong[] GetProcessIDs()
-        {
-            return this.Nodes.Values.Where(n => n.Edges.Count == 2).Select(n => n.Key).ToArray();
-        }
+        public ulong[] GetProcessIDs() => [.. this.Nodes.Values.Where(n => n.Edges.Count == 2).Select(n => n.Key)];
 
         public List<ulong[]> Processes()
         {
-            SortedSet<ulong> allProcessIDs = new SortedSet<ulong>(this.GetProcessIDs());
+            SortedSet<ulong> allProcessIDs = [.. this.GetProcessIDs()];
 
             if (allProcessIDs.Count == 0)
             {
-                return new List<ulong[]>();
+                return [];
             }
 
-            SortedSet<ulong> DoNotTraverse = new SortedSet<ulong>();
+            SortedSet<ulong> DoNotTraverse = [];
 
             //Do not traverse branches or terminals
             DoNotTraverse.UnionWith(this.Nodes.Values.Where(n => n.Edges.Count != 2).Select(n => n.ID));
@@ -262,7 +236,7 @@ namespace AnnotationVizLib
             //Find a starting point
             MorphologyNode seed = this.Nodes[allProcessIDs.First()];
 
-            List<ulong[]> listOutput = new List<ulong[]>();
+            List<ulong[]> listOutput = [];
             while (true)
             {
                 ulong[] process = TraverseEntireProcess(seed);
@@ -285,12 +259,12 @@ namespace AnnotationVizLib
 
             MorphologyGraph graph = seed.Graph;
 
-            List<ulong> listOutput = new List<ulong>
-            {
+            List<ulong> listOutput =
+            [
                 seed.ID
-            };
+            ];
 
-            ulong[] linkedIDs = seed.Edges.Keys.ToArray();
+            ulong[] linkedIDs = [.. seed.Edges.Keys];
             MorphologyNode rightOfSeed = graph.Nodes[linkedIDs[0]];
             if (rightOfSeed.Edges.Count == 2)
             {
@@ -305,7 +279,7 @@ namespace AnnotationVizLib
                 TraverseProcessRecursively(ref listOutput, leftOfSeed, 0, true);
             }
 
-            return listOutput.ToArray();
+            return [.. listOutput];
         }
 
         private static void TraverseProcessRecursively(ref List<ulong> output, MorphologyNode seed, int iSeedIndex, bool InsertBefore)

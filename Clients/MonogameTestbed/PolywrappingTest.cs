@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Geometry.Meshing;
 using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
@@ -15,7 +15,7 @@ using TriangleNet.Meshing;
 using VikingXNA;
 
 namespace MonogameTestbed
-{ 
+{
     /*
     class MeshMergeIncrementalView
     {
