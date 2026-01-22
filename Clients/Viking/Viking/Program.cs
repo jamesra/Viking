@@ -85,12 +85,12 @@ namespace Viking
         /// </summary>
         [STAThread]
         static void Main(string[] args)
-        { 
+        {
             // Velopack must run first to handle setup/uninstall/update hooks
             // Note: Velopack version 0.0.1298 doesn't have OnFirstRun/OnAfterUpdate hooks
             // Version will be displayed in About dialog from Assembly.GetEntryAssembly().GetName().Version
             VelopackApp.Build().Run();
-            
+
             // Upgrade settings from previous versions (preserves user settings across updates)
             UpgradeSettingsIfNeeded();
 
@@ -261,12 +261,15 @@ namespace Viking
 
             //Make sure the volume URL includes a file, if it does not then include Volume.VikingXML by default
             appSettings.VolumeURL = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(appSettings.VolumeURL);
+            Trace.WriteLine($"Loading: {appSettings.VolumeURL}", "Viking");
 
-            PopulateAnnotationUrlFromVolume(appSettings);
+            // Populate annotation URL asynchronously (fire-and-forget, errors are logged)
+            var populateTask = Task.Run(async () =>
+                await PopulateAnnotationUrlFromVolumeAsync(appSettings).ConfigureAwait(false));
+            populateTask.GetAwaiter().GetResult();
 
             // --------------------------------------------------------------------------------------
 
-            Trace.WriteLine($"Loading: {appSettings.VolumeURL}", "Viking");
 
             /*
 
@@ -438,7 +441,7 @@ namespace Viking
             return appSettings;
         }
 
-        private static void PopulateAnnotationUrlFromVolume(ApplicationSettings appSettings)
+        private static async Task PopulateAnnotationUrlFromVolumeAsync(ApplicationSettings appSettings)
         {
             if (appSettings is null ||
                 !string.IsNullOrWhiteSpace(appSettings.AnnotationURL) ||
@@ -449,9 +452,7 @@ namespace Viking
 
             try
             {
-                var volumeDocument = Viking.VolumeModel.Volume.LoadXDocumentAsync(appSettings.VolumeURL, CancellationToken.None, UI.State.UserCredentials)
-                    .GetAwaiter()
-                    .GetResult();
+                var volumeDocument = await Viking.VolumeModel.Volume.LoadXDocumentAsync(appSettings.VolumeURL, CancellationToken.None, UI.State.UserCredentials).ConfigureAwait(false);
 
                 var volumeElement = Viking.VolumeModel.Volume.GetVolumeElement(volumeDocument);
                 if (volumeElement is null)
@@ -591,19 +592,19 @@ namespace Viking
             try
             {
                 var settings = Properties.Settings.Default;
-                
+
                 // Check if we have any meaningful settings already (if VolumeURLs is empty, likely first run or after update)
                 var hasExistingSettings = settings.VolumeURLs != null && settings.VolumeURLs.Count > 0;
-                
+
                 if (!hasExistingSettings)
                 {
                     Trace.WriteLine("[Viking] No existing settings found, attempting to upgrade from previous version...");
-                    
+
                     // Call the built-in Upgrade() method which migrates settings from previous versions
                     // This will look for settings in older version directories and copy them to current version
                     settings.Upgrade();
                     settings.Reload();
-                    
+
                     // Check if we now have settings after upgrade
                     var hasSettingsAfterUpgrade = settings.VolumeURLs != null && settings.VolumeURLs.Count > 0;
                     if (hasSettingsAfterUpgrade)
@@ -661,13 +662,13 @@ namespace Viking
                         forms.Add(form);
                     }
                 }
-                
+
                 // Close forms in reverse order (top-most first)
                 for (int i = forms.Count - 1; i >= 0; i--)
                 {
                     SafeDisposeForm(forms[i]);
                 }
-                
+
                 Application.DoEvents();
 
                 // Apply updates and restart the application
@@ -846,7 +847,7 @@ namespace Viking
 
                 // Check for updates and handle download if available
                 var (release, version) = CheckAndHandleUpdates(mgr);
-                
+
                 // Close the checking form
                 SafeDisposeForm(checkingForm);
                 checkingForm = null;
@@ -873,21 +874,21 @@ namespace Viking
         private static (VelopackAsset? release, NuGet.Versioning.SemanticVersion? version) CheckAndHandleUpdates(UpdateManager mgr)
         {
             try
-            { 
+            {
                 var updateInfo = mgr.CheckForUpdates();
-                
+
                 if (updateInfo == null)
                 {
                     Trace.WriteLine("[Velopack] No updates available - running latest version");
                     return (null, null);
                 }
-                
+
                 var currentVersion = mgr.CurrentVersion;
                 var newVersion = updateInfo.TargetFullRelease.Version;
                 var newVersionString = newVersion.ToString();
-                
+
                 Trace.WriteLine($"[Velopack] Update available: {currentVersion} -> {newVersionString}");
-                
+
                 // Notify user about available update and prompt to download
                 var result = MessageBox.Show(
                     $"A new version of Viking ({newVersionString}) is available.\n\n" +
@@ -898,14 +899,14 @@ namespace Viking
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Question
                 );
-                
+
                 if (result == DialogResult.Yes)
                 {
                     // Create download form on UI thread (we're already on UI thread at startup)
                     Form? downloadForm = null;
                     ProgressBar? progressBar = null;
                     Label? statusLabel = null;
-                    
+
                     try
                     {
                         // Create download progress dialog using helper
@@ -913,7 +914,7 @@ namespace Viking
                         downloadForm.Show();
                         downloadForm.Refresh();
                         Application.DoEvents(); // Ensure form is visible before starting download
-                        
+
                         // Download the update with progress callback
                         // Note: We're in a synchronous context, so we use DoEvents() loop to keep UI responsive
                         // The callback updates UI on the UI thread (we check InvokeRequired for safety)
@@ -940,18 +941,20 @@ namespace Viking
                                     Application.DoEvents();
                                 }
                             }
-                        }).ConfigureAwait(true); // Ensure continuation on UI thread
+                        });
 
                         // Keep UI responsive while downloading (necessary in synchronous context before Application.Run)
-                        while (!downloadTask.GetAwaiter().IsCompleted)
+                        // Properly await the task with UI message pumping
+                        while (!downloadTask.IsCompleted)
                         {
                             Application.DoEvents();
                             Thread.Sleep(50); // Small sleep to avoid 100% CPU
                         }
-                        
+
                         // Wait for task completion to catch any exceptions
+                        // Use GetAwaiter().GetResult() here since we're in a synchronous method and already pumping messages
                         downloadTask.GetAwaiter().GetResult();
-                        
+
                         // Update status to show download complete
                         if (downloadForm != null && !downloadForm.IsDisposed)
                         {
@@ -959,13 +962,13 @@ namespace Viking
                             progressBar!.Value = 100;
                             Application.DoEvents();
                         }
-                        
+
                         Trace.WriteLine($"[Velopack] Update downloaded successfully. Version {newVersionString} ready to install.");
-                        
+
                         // Close and dispose the download form
                         SafeDisposeForm(downloadForm);
                         downloadForm = null; // Clear reference
-                        
+
                         // Brief pause to ensure form is fully disposed before proceeding
                         Application.DoEvents();
                         Thread.Sleep(100);
@@ -975,13 +978,13 @@ namespace Viking
                     catch (Exception downloadEx)
                     {
                         SafeDisposeForm(downloadForm);
-                        
+
                         var errorMessage = $"Error downloading update:\n\n{downloadEx.Message}";
                         if (downloadEx.StackTrace != null)
                         {
                             errorMessage += $"\n\nStack trace:\n{downloadEx.StackTrace}";
                         }
-                        
+
                         MessageBox.Show(
                             errorMessage,
                             "Update Error",
@@ -994,7 +997,7 @@ namespace Viking
                             Trace.WriteLine($"[Velopack] Stack trace: {downloadEx.StackTrace}");
                         }
                     }
-                } 
+                }
             }
             catch (Exception ex)
             {

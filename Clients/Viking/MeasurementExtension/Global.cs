@@ -46,7 +46,8 @@ namespace MeasurementExtension
             //CreateXML updates from 11/1/10
 
             Uri MappingURI = new(volume.Host + "/About.xml");
-            var xmlMapping = GetXMLFromUriAsync(MappingURI).GetAwaiter().GetResult();
+            // Use Task.Run to avoid blocking the thread pool when called from synchronous context
+            var xmlMapping = Task.Run(async () => await GetXMLFromUriAsync(MappingURI).ConfigureAwait(false)).GetAwaiter().GetResult();
 
             //See if we can locate a scale tag
             GetScaleFromXML(Viking.VolumeModel.Volume.GetVolumeElement(xmlMapping));
@@ -66,10 +67,10 @@ namespace MeasurementExtension
             using HttpClient httpClient = new(handler);
             try
             {
-                var response = await httpClient.GetAsync(uri);
+                var response = await httpClient.GetAsync(uri).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
 
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return XDocument.Parse(content);
             }
             catch (HttpRequestException)

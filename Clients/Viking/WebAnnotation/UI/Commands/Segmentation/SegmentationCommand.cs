@@ -768,13 +768,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (!currentImageId.HasValue && !currentlyUploading)
             {
                 Debug.WriteLine("No cached image ID, uploading image first");
-                await UploadCurrentImage().ContinueWith(async task =>
+                var uploadResult = await UploadCurrentImage().ConfigureAwait(false);
+                if (uploadResult)
                 {
-                    if (!task.Result)
-                        return;
-
-                    await RequestSegmentation();
-                });
+                    await RequestSegmentation().ConfigureAwait(false);
+                }
 
                 return;
             }

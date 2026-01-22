@@ -708,7 +708,9 @@ namespace WebAnnotation
             {
                 try
                 {
-                    LoadUserPreferencesAsync().GetAwaiter().GetResult();
+                    // Use Task.Run to avoid blocking the thread pool, with proper synchronization
+                    var loadTask = Task.Run(async () => await LoadUserPreferencesAsync().ConfigureAwait(false));
+                    loadTask.GetAwaiter().GetResult();
                 }
                 catch (OperationCanceledException)
                 {
@@ -721,7 +723,11 @@ namespace WebAnnotation
             return false;
         }
 
-        private static XDocument GetAboutXML(Uri AboutURI) => GetAboutXMLAsync(AboutURI).GetAwaiter().GetResult();
+        private static XDocument GetAboutXML(Uri AboutURI)
+        {
+            // Use Task.Run to avoid blocking the thread pool when called from synchronous context
+            return Task.Run(async () => await GetAboutXMLAsync(AboutURI).ConfigureAwait(false)).GetAwaiter().GetResult();
+        }
 
         private static async Task<XDocument> GetAboutXMLAsync(Uri AboutURI)
         {
@@ -867,7 +873,7 @@ namespace WebAnnotation
 
                 if (LoadFromServer)
                 {
-                    bool success = await LoadServerUserSettingsAsync(cancellationToken);
+                    bool success = await LoadServerUserSettingsAsync(cancellationToken).ConfigureAwait(false);
                     if (!success)
                     {
                         return;
