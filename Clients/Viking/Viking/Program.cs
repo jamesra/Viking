@@ -131,77 +131,6 @@ namespace Viking
 
             var options = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
 
-            /*
-            if (args.Length > 0)
-            {
-                website = args[0];
-            }
-            else
-            { 
-                bool ShowUsage = true;
-                
-                if (AppDomain.CurrentDomain.SetupInformation.ActivationArguments != null)
-                {
-                    string[] ClickOnceArgs = AppDomain.CurrentDomain.SetupInformation.ActivationArguments.ActivationData;
-                    if (ClickOnceArgs != null && ClickOnceArgs.Length > 0)
-                    {
-                        Trace.WriteLine("ActivationArguments: ");
-                        foreach (string arg in ClickOnceArgs)
-                            Trace.WriteLine(arg, "Viking");
-
-                        string FirstArg = System.Web.HttpUtility.HtmlDecode(ClickOnceArgs[0]);
-                        string[] Args = FirstArg.Split('?');
-
-                        Program.AppWebsite = Args[0]; //The website we use to launch Viking
-                        Trace.WriteLine("Application Website: " + Program.AppWebsite, "Viking");
-
-                        if (Args.Length == 0)
-                        {
-                            //Sometimes the only argument passed is the application directory
-                            if (!Args[0].ToLower().EndsWith(".application"))
-                            {
-                                website = Args[1];
-                                ShowUsage = false;
-                            }
-                        }
-                        //Parse the arguments
-                        else if (Args.Length > 1)
-                        {
-                            System.Collections.Specialized.NameValueCollection QueryTable = System.Web.HttpUtility.ParseQueryString(Args[1]);
-
-                            if (QueryTable.HasKeys())
-                            {
-                                UI.State.StartupArguments = QueryTable;
-                                string VolumeValue = QueryTable["Volume"];
-                                if (VolumeValue != null)
-                                {
-                                    website = VolumeValue;
-                                    ShowUsage = false;
-                                }
-                            }
-                            else
-                            {
-                                website = Args[1];
-                                ShowUsage = false;
-                            }
-                        }
-                    }
-                }
-
-                if (ShowUsage)
-                {
-                    //Launch the viking home page and exit
-                    //System.Windows.Forms.MessageBox.Show("No volume definition file was specified.  Loading RC1 by default.  You can pass a website as the first argument to launch a different volume, or select a volume definition from the website: http://connectomes.utah.edu/", "Viking", MessageBoxButtons.OK);
-                    //System.Diagnostics.Process WebBrowser = new System.Diagnostics.Process();
-                    //WebBrowser.StartInfo.FileName = homepage;
-                    //WebBrowser.Start();
-                } 
-            }
-            */
-            // ----------------------------------------------------------------------------
-            //   Logon nag screen, I've only added this tiny code here, and made a logon form in 
-            //  Viking/UI/forms
-
             options.WithParsed(o => appSettings = TryBypassSplash(o)).WithNotParsed(errors =>
             {
                 // Create a new help text with error information
@@ -224,40 +153,6 @@ namespace Viking
             //Close the program if no settings were provided or the volume is missing
             if (appSettings is null || string.IsNullOrWhiteSpace(appSettings.VolumeURL))
                 return;
-            /*
-#if !USEASPMEMBERSHIP
-            using (Logon vikingLogon = new Logon(website))
-            {
-                vikingLogon.ShowDialog();
-
-                if (vikingLogon.Result == DialogResult.Cancel)
-                { 
-                    return;
-                }
-
-                website = vikingLogon.VolumeURL;
-
-                UI.State.UserBearerToken = vikingLogon.BearerToken;
-                UI.State.UserCredentials = vikingLogon.Credentials;
-
-                Viking.Tokens.TokenInjector.BearerToken = vikingLogon.BearerToken;
-                Viking.Tokens.TokenInjector.BearerTokenAuthority = "https://identity.connectomes.utah.edu";
-            }
-#else
-            using (LogonASPMembership vikingLogon = new LogonASPMembership(website))
-            {
-                vikingLogon.ShowDialog();
-
-                if (vikingLogon.Result == DialogResult.Cancel)
-                {
-                    return;
-                }
-
-                website = vikingLogon.VolumeURL;
-                UI.State.UserCredentials = vikingLogon.Credentials;
-            }
-#endif 
-            */
 
             //Make sure the volume URL includes a file, if it does not then include Volume.VikingXML by default
             appSettings.VolumeURL = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(appSettings.VolumeURL);
@@ -269,22 +164,6 @@ namespace Viking
             populateTask.GetAwaiter().GetResult();
 
             // --------------------------------------------------------------------------------------
-
-
-            /*
-
-            using (SplashForm Splash = new SplashForm(website))
-            {
-                UI.State.volume = new Viking.VolumeModel.Volume(this.VolumePath, UI.State.CachePath, progressReporter);
-                Splash.ShowDialog();
-                DialogResult splashResult = Splash.Result;
-
-                if (splashResult == DialogResult.Cancel)
-                {
-                    return;
-                }
-            }
-            */
 
             VikingApplicationContext context = new(appSettings);
             context.Initialize();
@@ -499,15 +378,8 @@ namespace Viking
 
             TextWriterTraceListener Listener = new(SynchronizedDebugWriter, "Viking Log Listener");
             Trace.Listeners.Add(Listener);
-            Trace.Listeners.Add(Listener);
-
-            /*ConsoleTraceListener DebugOutputListener = new ConsoleTraceListener(true);
-            Trace.Listeners.Add(DebugOutputListener);
-            Debug.Listeners.Add(DebugOutputListener);*/
 
             Trace.UseGlobalLock = true;
-            //CultureInfo[] cultures = { new CultureInfo("en-US") };
-            //CultureInfo provider = cultures[0];
             TestCultureNumberParsing();
         }
 
