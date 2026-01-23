@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 	<LangVersion>latest</LangVersion>
 		<OutputType>Library</OutputType>
@@ -27,9 +27,9 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 	<ItemGroup> 		
-		<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.5-develop.13" />
+		<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.5-preview.3" />
 		<PackageReference Include="System.Collections.Immutable" Version="9.0.8" />
-		<PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.5-develop.13" />
+		<PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.5-preview.3" />
 	</ItemGroup>
 	<ItemGroup>
 		<MonoGameContentReference Include="Content\Content.mgcb" />
@@ -58,7 +58,7 @@
 	<!-- Override MGCB command to use direct path to mgcb.dll from NuGet packages -->
 	<Target Name="OverrideMGCBCommand" BeforeTargets="RunContentBuilder">
 		<PropertyGroup>
-			<_MGCBDllPath>$(NuGetPackageRoot)dotnet-mgcb\3.8.5-develop.13\tools\net8.0\any\mgcb.dll</_MGCBDllPath>
+			<_MGCBDllPath>$(NuGetPackageRoot)dotnet-mgcb\v3.8.5-preview.3\tools\net8.0\any\mgcb.dll</_MGCBDllPath>
 			<_Command Condition="Exists('$(_MGCBDllPath)')">&quot;$(DotnetCommand)&quot; &quot;$(_MGCBDllPath)&quot;</_Command>
 		</PropertyGroup>
 	</Target>
