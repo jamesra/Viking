@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using Viking.Common;
 
 namespace WebAnnotation.WPF.Forms
 {
@@ -9,10 +10,7 @@ namespace WebAnnotation.WPF.Forms
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
-        // Helper methods for clamping values (Math.Clamp not available in .NET Framework 4.8)
-        private static int Clamp(int value, int min, int max) => value < min ? min : (value > max ? max : value);
-        private static double Clamp(double value, double min, double max) => value < min ? min : (value > max ? max : value);
-        private static float Clamp(float value, double min, double max) => (float)(value < min ? min : (value > max ? max : value));
+        // Use shared MathUtils.Clamp methods (Math.Clamp not available in .NET Framework 4.8)
 
         #region Original Values (for Cancel revert)
         private int _originalNumSectionsInMemory;
@@ -44,7 +42,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 if (_numSectionsInMemory != value)
                 {
-                    _numSectionsInMemory = Clamp(value, 1, 100);
+                    _numSectionsInMemory = MathUtils.Clamp(value, 1, 100);
                     OnPropertyChanged();
                 }
             }
@@ -58,7 +56,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 if (_numSectionsLoading != value)
                 {
-                    _numSectionsLoading = Clamp(value, 1, 50);
+                    _numSectionsLoading = MathUtils.Clamp(value, 1, 50);
                     OnPropertyChanged();
                 }
             }
@@ -72,7 +70,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 if (Math.Abs(_locationTextScaleFactor - value) > 0.01f)
                 {
-                    _locationTextScaleFactor = Clamp(value, 0.1, 50.0);
+                    _locationTextScaleFactor = MathUtils.Clamp(value, 0.1, 50.0);
                     OnPropertyChanged();
                 }
             }
@@ -86,7 +84,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 if (Math.Abs(_referenceLocationTextScaleFactor - value) > 0.01f)
                 {
-                    _referenceLocationTextScaleFactor = Clamp(value, 0.1, 50.0);
+                    _referenceLocationTextScaleFactor = MathUtils.Clamp(value, 0.1, 50.0);
                     OnPropertyChanged();
                 }
             }
@@ -100,7 +98,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 if (Math.Abs(_defaultClosedLineWidth - value) > 0.01)
                 {
-                    _defaultClosedLineWidth = Clamp(value, 1.0, 100.0);
+                    _defaultClosedLineWidth = MathUtils.Clamp(value, 1.0, 100.0);
                     OnPropertyChanged();
                 }
             }
@@ -118,7 +116,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 if (Math.Abs(_defaultLocationJumpDownsample - value) > 0.01)
                 {
-                    _defaultLocationJumpDownsample = Clamp(value, 1.0, 64.0);
+                    _defaultLocationJumpDownsample = MathUtils.Clamp(value, 1.0, 64.0);
                     OnPropertyChanged();
                 }
             }
@@ -132,7 +130,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 if (Math.Abs(_adjacentLocationRadiusScalar - value) > 0.01)
                 {
-                    _adjacentLocationRadiusScalar = Clamp(value, 0.1, 2.0);
+                    _adjacentLocationRadiusScalar = MathUtils.Clamp(value, 0.1, 2.0);
                     OnPropertyChanged();
                 }
             }
@@ -146,7 +144,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 if (_numClosedCurveInterpolationPointsForDisplay != value)
                 {
-                    _numClosedCurveInterpolationPointsForDisplay = (uint)Clamp((int)value, 2, 20);
+                    _numClosedCurveInterpolationPointsForDisplay = (uint)MathUtils.Clamp((int)value, 2, 20);
                     OnPropertyChanged();
                 }
             }
@@ -160,7 +158,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 if (_penSimplifyThreshold != value)
                 {
-                    _penSimplifyThreshold = Clamp(value, 1, 100);
+                    _penSimplifyThreshold = MathUtils.Clamp(value, 1, 100);
                     OnPropertyChanged();
                 }
             }
@@ -174,7 +172,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 if (Math.Abs(_minRadius - value) > 0.01)
                 {
-                    _minRadius = Clamp(value, 0.1, 10.0);
+                    _minRadius = MathUtils.Clamp(value, 0.1, 10.0);
                     OnPropertyChanged();
                 }
             }
@@ -186,7 +184,7 @@ namespace WebAnnotation.WPF.Forms
             get => _polygonOpacityParentless;
             set
             {
-                double clampedValue = Clamp(value, 0.0, 1.0);
+                double clampedValue = MathUtils.Clamp(value, 0.0, 1.0);
                 if (_polygonOpacityParentless != clampedValue)
                 {
                     _polygonOpacityParentless = clampedValue;
@@ -202,7 +200,7 @@ namespace WebAnnotation.WPF.Forms
             get => _polygonOpacityWithParent;
             set
             {
-                double clampedValue = Clamp(value, 0.0, 1.0);
+                double clampedValue = MathUtils.Clamp(value, 0.0, 1.0);
                 if (_polygonOpacityWithParent != clampedValue)
                 {
                     _polygonOpacityWithParent = clampedValue;
@@ -218,7 +216,7 @@ namespace WebAnnotation.WPF.Forms
             get => _circleOpacityParentless;
             set
             {
-                double clampedValue = Clamp(value, 0.0, 1.0);
+                double clampedValue = MathUtils.Clamp(value, 0.0, 1.0);
                 if (_circleOpacityParentless != clampedValue)
                 {
                     _circleOpacityParentless = clampedValue;
@@ -234,7 +232,7 @@ namespace WebAnnotation.WPF.Forms
             get => _circleOpacityWithParent;
             set
             {
-                double clampedValue = Clamp(value, 0.0, 1.0);
+                double clampedValue = MathUtils.Clamp(value, 0.0, 1.0);
                 if (_circleOpacityWithParent != clampedValue)
                 {
                     _circleOpacityWithParent = clampedValue;
@@ -252,7 +250,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 if (Math.Abs(_segmentationPointRadius - value) > 0.01)
                 {
-                    _segmentationPointRadius = Clamp(value, 1.0, 15.0);
+                    _segmentationPointRadius = MathUtils.Clamp(value, 1.0, 15.0);
                     OnPropertyChanged();
                 }
             }
@@ -266,7 +264,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 if (Math.Abs(_polygonPointRadius - value) > 0.01)
                 {
-                    _polygonPointRadius = Clamp(value, 1.0, 50.0);
+                    _polygonPointRadius = MathUtils.Clamp(value, 1.0, 50.0);
                     OnPropertyChanged();
                 }
             }
@@ -280,7 +278,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 if (Math.Abs(_smallestRenderedSize - value) > 0.01)
                 {
-                    _smallestRenderedSize = Clamp(value, 0.5, 10.0);
+                    _smallestRenderedSize = MathUtils.Clamp(value, 0.5, 10.0);
                     OnPropertyChanged();
                 }
             }

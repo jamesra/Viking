@@ -60,11 +60,7 @@ namespace MeasurementExtension
 
         private static async Task<XDocument?> GetXMLFromUriAsync(Uri uri)
         {
-            HttpClientHandler handler;
-
-            handler = uri.Scheme.ToLower() == "https" ? new HttpClientHandler { Credentials = Viking.UI.State.UserCredentials } : new HttpClientHandler { UseDefaultCredentials = true };
-
-            using HttpClient httpClient = new(handler);
+            using HttpClient httpClient = HttpClientFactory.CreateClient(uri, Viking.UI.State.UserCredentials);
             try
             {
                 var response = await httpClient.GetAsync(uri).ConfigureAwait(false);

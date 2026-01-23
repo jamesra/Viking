@@ -187,17 +187,14 @@ namespace WebAnnotation
             private const double MIN_SMALLEST_RENDERED_SIZE = 0.5;
             private const double MAX_SMALLEST_RENDERED_SIZE = 10.0;
 
-            // Helper methods for clamping values (Math.Clamp not available in .NET Framework 4.8)
-            private static int Clamp(int value, int min, int max) => value < min ? min : (value > max ? max : value);
-            private static double Clamp(double value, double min, double max) => value < min ? min : (value > max ? max : value);
-            private static float Clamp(float value, double min, double max) => (float)(value < min ? min : (value > max ? max : value));
+            // Use shared MathUtils.Clamp methods (Math.Clamp not available in .NET Framework 4.8)
 
             public static int NumSectionsInMemory
             {
-                get => Clamp(Properties.Settings.Default.NumSectionsInMemory, MIN_SECTIONS_IN_MEMORY, MAX_SECTIONS_IN_MEMORY);
+                get => MathUtils.Clamp(Properties.Settings.Default.NumSectionsInMemory, MIN_SECTIONS_IN_MEMORY, MAX_SECTIONS_IN_MEMORY);
                 set
                 {
-                    Properties.Settings.Default.NumSectionsInMemory = Clamp(value, MIN_SECTIONS_IN_MEMORY, MAX_SECTIONS_IN_MEMORY);
+                    Properties.Settings.Default.NumSectionsInMemory = MathUtils.Clamp(value, MIN_SECTIONS_IN_MEMORY, MAX_SECTIONS_IN_MEMORY);
                     Properties.Settings.Default.Save();
                     OnSettingsChanged();
                 }
@@ -205,130 +202,130 @@ namespace WebAnnotation
 
             public static int NumSectionsLoading
             {
-                get => Clamp(Properties.Settings.Default.NumSectionsLoading, MIN_SECTIONS_LOADING, MAX_SECTIONS_LOADING);
+                get => MathUtils.Clamp(Properties.Settings.Default.NumSectionsLoading, MIN_SECTIONS_LOADING, MAX_SECTIONS_LOADING);
                 set
                 {
-                    Properties.Settings.Default.NumSectionsLoading = Clamp(value, MIN_SECTIONS_LOADING, MAX_SECTIONS_LOADING);
+                    Properties.Settings.Default.NumSectionsLoading = MathUtils.Clamp(value, MIN_SECTIONS_LOADING, MAX_SECTIONS_LOADING);
                     Properties.Settings.Default.Save();
                 }
             }
 
             public static float LocationTextScaleFactor
             {
-                get => Clamp(Properties.Settings.Default.LocationTextScaleFactor, MIN_SCALE_FACTOR, MAX_SCALE_FACTOR);
+                get => MathUtils.Clamp(Properties.Settings.Default.LocationTextScaleFactor, MIN_SCALE_FACTOR, MAX_SCALE_FACTOR);
                 set
                 {
-                    Properties.Settings.Default.LocationTextScaleFactor = Clamp(value, MIN_SCALE_FACTOR, MAX_SCALE_FACTOR);
+                    Properties.Settings.Default.LocationTextScaleFactor = MathUtils.Clamp(value, MIN_SCALE_FACTOR, MAX_SCALE_FACTOR);
                     Properties.Settings.Default.Save();
                 }
             }
 
             public static float ReferenceLocationTextScaleFactor
             {
-                get => Clamp(Properties.Settings.Default.ReferenceLocationTextScaleFactor, MIN_SCALE_FACTOR, MAX_SCALE_FACTOR);
+                get => MathUtils.Clamp(Properties.Settings.Default.ReferenceLocationTextScaleFactor, MIN_SCALE_FACTOR, MAX_SCALE_FACTOR);
                 set
                 {
-                    Properties.Settings.Default.ReferenceLocationTextScaleFactor = Clamp(value, MIN_SCALE_FACTOR, MAX_SCALE_FACTOR);
+                    Properties.Settings.Default.ReferenceLocationTextScaleFactor = MathUtils.Clamp(value, MIN_SCALE_FACTOR, MAX_SCALE_FACTOR);
                     Properties.Settings.Default.Save();
                 }
             }
 
             public static double DefaultClosedLineWidth
             {
-                get => Clamp(Properties.Settings.Default.DefaultClosedLineWidth, MIN_LINE_WIDTH, MAX_LINE_WIDTH);
+                get => MathUtils.Clamp(Properties.Settings.Default.DefaultClosedLineWidth, MIN_LINE_WIDTH, MAX_LINE_WIDTH);
                 set
                 {
-                    Properties.Settings.Default.DefaultClosedLineWidth = Clamp(value, MIN_LINE_WIDTH, MAX_LINE_WIDTH);
+                    Properties.Settings.Default.DefaultClosedLineWidth = MathUtils.Clamp(value, MIN_LINE_WIDTH, MAX_LINE_WIDTH);
                     Properties.Settings.Default.Save();
                 }
             }
 
             public static double DefaultLocationJumpDownsample
             {
-                get => Clamp(Properties.Settings.Default.DefaultLocationJumpDownsample, MIN_DOWNSAMPLE, MAX_DOWNSAMPLE);
+                get => MathUtils.Clamp(Properties.Settings.Default.DefaultLocationJumpDownsample, MIN_DOWNSAMPLE, MAX_DOWNSAMPLE);
                 set
                 {
-                    Properties.Settings.Default.DefaultLocationJumpDownsample = Clamp(value, MIN_DOWNSAMPLE, MAX_DOWNSAMPLE);
+                    Properties.Settings.Default.DefaultLocationJumpDownsample = MathUtils.Clamp(value, MIN_DOWNSAMPLE, MAX_DOWNSAMPLE);
                     Properties.Settings.Default.Save();
                 }
             }
 
             public static double AdjacentLocationRadiusScalar
             {
-                get => Clamp(Properties.Settings.Default.AdjacentLocationRadiusScalar, MIN_RADIUS_SCALAR, MAX_RADIUS_SCALAR);
+                get => MathUtils.Clamp(Properties.Settings.Default.AdjacentLocationRadiusScalar, MIN_RADIUS_SCALAR, MAX_RADIUS_SCALAR);
                 set
                 {
-                    Properties.Settings.Default.AdjacentLocationRadiusScalar = Clamp(value, MIN_RADIUS_SCALAR, MAX_RADIUS_SCALAR);
+                    Properties.Settings.Default.AdjacentLocationRadiusScalar = MathUtils.Clamp(value, MIN_RADIUS_SCALAR, MAX_RADIUS_SCALAR);
                     Properties.Settings.Default.Save();
                 }
             }
 
             public static uint NumClosedCurveInterpolationPointsForDisplay
             {
-                get => (uint)Clamp((int)Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay, MIN_CURVE_POINTS, MAX_CURVE_POINTS);
+                get => (uint)MathUtils.Clamp((int)Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay, MIN_CURVE_POINTS, MAX_CURVE_POINTS);
                 set
                 {
-                    Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = (uint)Clamp((int)value, MIN_CURVE_POINTS, MAX_CURVE_POINTS);
+                    Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = (uint)MathUtils.Clamp((int)value, MIN_CURVE_POINTS, MAX_CURVE_POINTS);
                     Properties.Settings.Default.Save();
                 }
             }
 
             public static int PenSimplifyThreshold
             {
-                get => Clamp(Properties.Settings.Default.PenSimplifyThreshold, MIN_PEN_THRESHOLD, MAX_PEN_THRESHOLD);
+                get => MathUtils.Clamp(Properties.Settings.Default.PenSimplifyThreshold, MIN_PEN_THRESHOLD, MAX_PEN_THRESHOLD);
                 set
                 {
-                    Properties.Settings.Default.PenSimplifyThreshold = Clamp(value, MIN_PEN_THRESHOLD, MAX_PEN_THRESHOLD);
+                    Properties.Settings.Default.PenSimplifyThreshold = MathUtils.Clamp(value, MIN_PEN_THRESHOLD, MAX_PEN_THRESHOLD);
                     Properties.Settings.Default.Save();
                 }
             }
 
             public static double MinRadius
             {
-                get => Clamp(Properties.Settings.Default.MinRadius, MIN_RADIUS, MAX_RADIUS);
+                get => MathUtils.Clamp(Properties.Settings.Default.MinRadius, MIN_RADIUS, MAX_RADIUS);
                 set
                 {
-                    Properties.Settings.Default.MinRadius = Clamp(value, MIN_RADIUS, MAX_RADIUS);
+                    Properties.Settings.Default.MinRadius = MathUtils.Clamp(value, MIN_RADIUS, MAX_RADIUS);
                     Properties.Settings.Default.Save();
                 }
             }
 
             public static float PolygonOpacityParentless
             {
-                get => Clamp(Properties.Settings.Default.PolygonOpacityParentless, MIN_OPACITY, MAX_OPACITY);
+                get => MathUtils.Clamp(Properties.Settings.Default.PolygonOpacityParentless, MIN_OPACITY, MAX_OPACITY);
                 set
                 {
-                    Properties.Settings.Default.PolygonOpacityParentless = Clamp(value, MIN_OPACITY, MAX_OPACITY);
+                    Properties.Settings.Default.PolygonOpacityParentless = MathUtils.Clamp(value, MIN_OPACITY, MAX_OPACITY);
                     Properties.Settings.Default.Save();
                 }
             }
 
             public static float PolygonOpacityWithParent
             {
-                get => Clamp(Properties.Settings.Default.PolygonOpacityWithParent, MIN_OPACITY, MAX_OPACITY);
+                get => MathUtils.Clamp(Properties.Settings.Default.PolygonOpacityWithParent, MIN_OPACITY, MAX_OPACITY);
                 set
                 {
-                    Properties.Settings.Default.PolygonOpacityWithParent = Clamp(value, MIN_OPACITY, MAX_OPACITY);
+                    Properties.Settings.Default.PolygonOpacityWithParent = MathUtils.Clamp(value, MIN_OPACITY, MAX_OPACITY);
                     Properties.Settings.Default.Save();
                 }
             }
 
             public static float CircleOpacityParentless
             {
-                get => Clamp(Properties.Settings.Default.CircleOpacityParentless, MIN_OPACITY, MAX_OPACITY);
+                get => MathUtils.Clamp(Properties.Settings.Default.CircleOpacityParentless, MIN_OPACITY, MAX_OPACITY);
                 set
                 {
-                    Properties.Settings.Default.CircleOpacityParentless = Clamp(value, MIN_OPACITY, MAX_OPACITY);
+                    Properties.Settings.Default.CircleOpacityParentless = MathUtils.Clamp(value, MIN_OPACITY, MAX_OPACITY);
                     Properties.Settings.Default.Save();
                 }
             }
 
             public static float CircleOpacityWithParent
             {
-                get => Clamp(Properties.Settings.Default.CircleOpacityWithParent, MIN_OPACITY, MAX_OPACITY);
+                get => MathUtils.Clamp(Properties.Settings.Default.CircleOpacityWithParent, MIN_OPACITY, MAX_OPACITY);
                 set
                 {
-                    Properties.Settings.Default.CircleOpacityWithParent = Clamp(value, MIN_OPACITY, MAX_OPACITY);
+                    Properties.Settings.Default.CircleOpacityWithParent = MathUtils.Clamp(value, MIN_OPACITY, MAX_OPACITY);
                     Properties.Settings.Default.Save();
                 }
             }
@@ -352,30 +349,30 @@ namespace WebAnnotation
 
             public static double SegmentationPointRadius
             {
-                get => Clamp(Properties.Settings.Default.SegmentationPointRadius, MIN_SEGMENTATION_POINT_RADIUS, MAX_SEGMENTATION_POINT_RADIUS);
+                get => MathUtils.Clamp(Properties.Settings.Default.SegmentationPointRadius, MIN_SEGMENTATION_POINT_RADIUS, MAX_SEGMENTATION_POINT_RADIUS);
                 set
                 {
-                    Properties.Settings.Default.SegmentationPointRadius = Clamp(value, MIN_SEGMENTATION_POINT_RADIUS, MAX_SEGMENTATION_POINT_RADIUS);
+                    Properties.Settings.Default.SegmentationPointRadius = MathUtils.Clamp(value, MIN_SEGMENTATION_POINT_RADIUS, MAX_SEGMENTATION_POINT_RADIUS);
                     Properties.Settings.Default.Save();
                 }
             }
 
             public static double PolygonPointRadius
             {
-                get => Clamp(Properties.Settings.Default.PolygonPointRadius, MIN_POLYGON_POINT_RADIUS, MAX_POLYGON_POINT_RADIUS);
+                get => MathUtils.Clamp(Properties.Settings.Default.PolygonPointRadius, MIN_POLYGON_POINT_RADIUS, MAX_POLYGON_POINT_RADIUS);
                 set
                 {
-                    Properties.Settings.Default.PolygonPointRadius = Clamp(value, MIN_POLYGON_POINT_RADIUS, MAX_POLYGON_POINT_RADIUS);
+                    Properties.Settings.Default.PolygonPointRadius = MathUtils.Clamp(value, MIN_POLYGON_POINT_RADIUS, MAX_POLYGON_POINT_RADIUS);
                     Properties.Settings.Default.Save();
                 }
             }
 
             public static double SmallestRenderedSize
             {
-                get => Clamp(Properties.Settings.Default.SmallestRenderedSize, MIN_SMALLEST_RENDERED_SIZE, MAX_SMALLEST_RENDERED_SIZE);
+                get => MathUtils.Clamp(Properties.Settings.Default.SmallestRenderedSize, MIN_SMALLEST_RENDERED_SIZE, MAX_SMALLEST_RENDERED_SIZE);
                 set
                 {
-                    Properties.Settings.Default.SmallestRenderedSize = Clamp(value, MIN_SMALLEST_RENDERED_SIZE, MAX_SMALLEST_RENDERED_SIZE);
+                    Properties.Settings.Default.SmallestRenderedSize = MathUtils.Clamp(value, MIN_SMALLEST_RENDERED_SIZE, MAX_SMALLEST_RENDERED_SIZE);
                     Properties.Settings.Default.Save();
                 }
             }
@@ -731,16 +728,7 @@ namespace WebAnnotation
 
         private static async Task<XDocument> GetAboutXMLAsync(Uri AboutURI)
         {
-            HttpClientHandler handler = AboutURI.Scheme.ToLower() == "https"
-                ? new HttpClientHandler
-                {
-                    Credentials = Viking.UI.State.UserCredentials
-                }
-                : new HttpClientHandler()
-                {
-                    UseDefaultCredentials = true //Use the default credentials for HTTP requests
-                };
-            using HttpClient httpClient = new(handler);
+            using HttpClient httpClient = HttpClientFactory.CreateClient(AboutURI, Viking.UI.State.UserCredentials);
             try
             {
                 var response = await httpClient.GetAsync(AboutURI).ConfigureAwait(false);

@@ -499,71 +499,59 @@ namespace Viking.Common
             }
             catch (ReflectionTypeLoadException except)
             {
-                VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
-                DialogResult result = MessageBox.Show("OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nException:\n" + except.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
-
-                if (result == DialogResult.OK)
-                {
-                    return false;
-                }
-                else
-                {
-                    throw;
-                }
+                return HandleAssemblyInitializationError(A, except, null);
             }
             catch (System.TypeLoadException except)
             {
-                VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
-                DialogResult result = MessageBox.Show("OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nException:\n" + except.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
-
-                if (result == DialogResult.OK)
-                {
-                    return false;
-                }
-                else
-                {
-                    throw;
-                }
+                return HandleAssemblyInitializationError(A, except, null);
             }
             catch (System.AggregateException except)
             {
-                VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
-
                 // Check if this is a FileLoadException about strongly-named assemblies
                 bool isStrongNameIssue = except.InnerExceptions.OfType<System.IO.FileLoadException>()
                     .Any(e => e.Message.Contains("strongly-named assembly") || e.HResult == 0x80131044);
 
-                string message = isStrongNameIssue
-                    ? "OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nThis extension requires a strongly-named assembly that is not available.\n\nException:\n" + except.ToString()
-                    : "OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nException:\n" + except.ToString();
+                string? customMessage = isStrongNameIssue
+                    ? "This extension requires a strongly-named assembly that is not available."
+                    : null;
 
-                DialogResult result = MessageBox.Show(message, "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
-
-                if (result == DialogResult.OK)
-                {
-                    return false;
-                }
-                else
-                {
-                    throw;
-                }
+                return HandleAssemblyInitializationError(A, except, customMessage);
             }
             catch (System.IO.FileLoadException except)
             {
-                VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
-                DialogResult result = MessageBox.Show("OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nException:\n" + except.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
-
-                if (result == DialogResult.OK)
-                {
-                    return false;
-                }
-                else
-                {
-                    throw;
-                }
+                return HandleAssemblyInitializationError(A, except, null);
             }
+        }
 
-            return true;
+        /// <summary>
+        /// Handles assembly initialization errors with a consistent user dialog.
+        /// </summary>
+        /// <param name="assembly">The assembly that failed to initialize</param>
+        /// <param name="exception">The exception that occurred</param>
+        /// <param name="customMessage">Optional custom message to include in the error dialog</param>
+        /// <returns>True if user chose to continue without the extension, false if user chose to exit</returns>
+        private static bool HandleAssemblyInitializationError(Assembly assembly, Exception exception, string? customMessage)
+        {
+            VikingExtensionAttribute extension = GetAssemblyExtensionAttribute(assembly);
+            string extensionName = extension?.Name ?? assembly.GetName().Name ?? "Unknown";
+
+            string message = "OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.";
+            if (!string.IsNullOrWhiteSpace(customMessage))
+            {
+                message += $"\n\n{customMessage}";
+            }
+            message += $"\n\nException:\n{exception}";
+
+            DialogResult result = MessageBox.Show(message, $"Could not load module: {extensionName}", MessageBoxButtons.OKCancel);
+
+            if (result == DialogResult.OK)
+            {
+                return false;
+            }
+            else
+            {
+                throw;
+            }
         }
 
         private static VikingExtensionAttribute GetAssemblyExtensionAttribute(Assembly A)
