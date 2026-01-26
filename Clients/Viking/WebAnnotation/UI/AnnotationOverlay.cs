@@ -1019,7 +1019,8 @@ break;
                 case Keys.ShiftKey:
                 case Keys.ControlKey:
                     //TODO: Track if the last input was from pen or mouse and update accordingly
-                    UpdateMouseCursor();
+                    if(IsCommandDefault())
+                        UpdateMouseCursor();
                     break;
                 case Keys.F12:
                     OpenGotoLocationForm();
