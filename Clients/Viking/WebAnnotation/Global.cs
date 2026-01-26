@@ -330,6 +330,44 @@ namespace WebAnnotation
                 }
             }
 
+            /// <summary>
+            /// Gets the appropriate opacity value for an annotation based on its type and whether its structure has a parent.
+            /// </summary>
+            /// <param name="typeCode">The location type of the annotation</param>
+            /// <param name="hasParent">True if the annotation's structure has a parent structure, false otherwise</param>
+            /// <returns>The opacity value (0.0 to 1.0) based on the annotation type and parent status</returns>
+            public static float GetOpacityForAnnotationType(Viking.AnnotationServiceTypes.Interfaces.LocationType typeCode, bool hasParent)
+            {
+                // Determine which opacity settings to use based on annotation type
+                // Circles use circle opacity, polygons and curves use polygon opacity
+                switch (typeCode)
+                {
+                    case Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE:
+                        return hasParent ? CircleOpacityWithParent : CircleOpacityParentless;
+
+                    case Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON:
+                    case Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON:
+                    case Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE:
+                    case Viking.AnnotationServiceTypes.Interfaces.LocationType.CLOSEDCURVE:
+                        return hasParent ? PolygonOpacityWithParent : PolygonOpacityParentless;
+
+                    default:
+                        // Default to polygon opacity for unknown types
+                        return hasParent ? PolygonOpacityWithParent : PolygonOpacityParentless;
+                }
+            }
+
+            /// <summary>
+            /// Gets the appropriate opacity value for an annotation view based on its type and whether its structure has a parent.
+            /// </summary>
+            /// <param name="view">The location canvas view</param>
+            /// <returns>The opacity value (0.0 to 1.0) based on the annotation type and parent status</returns>
+            public static float GetOpacityForAnnotation(View.LocationCanvasView view)
+            {
+                bool hasParent = view.Parent?.ParentID.HasValue ?? false;
+                return GetOpacityForAnnotationType(view.TypeCode, hasParent);
+            }
+
             public static string SegmentationServiceUrl
             {
                 get => Properties.Settings.Default.SegmentationServiceUrl;

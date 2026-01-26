@@ -550,7 +550,8 @@ namespace Viking.Common
             }
             else
             {
-                throw;
+                //TODO: Exit the program
+                throw new Exception("User elected to cancel Viking Launch");
             }
         }
 

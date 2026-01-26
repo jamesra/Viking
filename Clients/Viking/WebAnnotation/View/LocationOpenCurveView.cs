@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -38,7 +38,9 @@ namespace WebAnnotation.View
             //RegisterForLocationEvents();
             //RegisterForStructureChangeEvents();
 
-            Color color = obj.Parent is null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
+            bool hasParent = obj.Parent?.ParentID.HasValue ?? false;
+            float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(obj.TypeCode, hasParent);
+            Color color = obj.Parent is null ? Color.Gray.SetAlpha(opacity) : obj.Parent.Type.Color.ToXNAColor(opacity);
             curveView = new CurveView(VolumeControlPoints, color, false, Global.NumOpenCurveInterpolationPoints,
                 lineWidth: lineWidth, lineStyle: LineStyle.Tubular, controlPointRadius: lineWidth / 2.0,
                 ShowControlPoints: !Global.PenMode);
@@ -50,7 +52,9 @@ namespace WebAnnotation.View
             //RegisterForLocationEvents();
             //RegisterForStructureChangeEvents();
 
-            Color color = obj.Parent is null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
+            bool hasParent = obj.Parent?.ParentID.HasValue ?? false;
+            float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(obj.TypeCode, hasParent);
+            Color color = obj.Parent is null ? Color.Gray.SetAlpha(opacity) : obj.Parent.Type.Color.ToXNAColor(opacity);
             curveView = new CurveView(VolumeControlPoints, color, false, Global.NumOpenCurveInterpolationPoints,
                 lineWidth: obj.Width.Value, lineStyle: LineStyle.Tubular, controlPointRadius: obj.Width.Value / 2.0,
                 ShowControlPoints: !Global.PenMode);

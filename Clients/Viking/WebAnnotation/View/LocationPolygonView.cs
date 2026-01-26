@@ -182,15 +182,17 @@ namespace WebAnnotation.View
             VolumePolygon = mapper.TryMapShapeSectionToVolume(obj.MosaicShape)?.ToPolygon();
             //_ControlPointRadius = GetRadiusFromPolygonArea(VolumePolygon, 0.01);
             SmoothedVolumePolygon = VolumePolygon;//VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
+            bool hasParent = obj.Parent?.ParentID.HasValue ?? false;
+            float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(obj.TypeCode, hasParent);
             if (obj.Parent is null)
             {
-                Color = Color.Gray.SetAlpha(Global.AnnotationSettings.PolygonOpacityParentless);
+                Color = Color.Gray.SetAlpha(opacity);
             }
             else
             {
                 Color = obj.Parent.TypeID == 1
-                    ? obj.Parent.Color.ToXNAColor(Global.AnnotationSettings.PolygonOpacityWithParent)
-                    : obj.Parent.Type.Color.ToXNAColor(Global.AnnotationSettings.PolygonOpacityWithParent);
+                    ? obj.Parent.Color.ToXNAColor(opacity)
+                    : obj.Parent.Type.Color.ToXNAColor(opacity);
             }
 
             ControlPointView = new PointSetView(GetControlPointColor(), Global.AnnotationSettings.PolygonPointRadius)
