@@ -207,6 +207,22 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 backgroundPoints.Clear();
             }
 
+            // Initialize point views to empty if they don't exist
+            if (foregroundPointsView == null)
+            {
+                foregroundPointsView = new PointSetView(Color.Green, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample)
+                {
+                    Points = []
+                };
+            }
+            if (backgroundPointsView == null)
+            {
+                backgroundPointsView = new PointSetView(Color.Red, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample)
+                {
+                    Points = []
+                };
+            }
+
             lastViewBounds = GetCurrentViewportBounds();
             UpdatePointViews();
 
@@ -383,6 +399,34 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             base.OnMouseMove(sender, e);
 
+            // Update cursor based on mouse position over points
+            GridVector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
+            bool shiftHeld = Control.ModifierKeys.HasFlag(Keys.Shift);
+            
+            // Check if mouse is over a foreground or background point
+            // Convert world-space radius to screen-space radius for detection
+            double pointRadiusInWorld = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius;
+            double pointRadiusInScreen = pointRadiusInWorld;
+            GridVector2? foregroundPoint = FindPointWithinRadius(foregroundPoints, worldPos, pointRadiusInScreen);
+            GridVector2? backgroundPoint = FindPointWithinRadius(backgroundPoints, worldPos, pointRadiusInScreen);
+            
+            // Update cursor based on detected state
+            if (shiftHeld && (foregroundPoint.HasValue || backgroundPoint.HasValue))
+            {
+                // Shift held over a point indicates deletion intent
+                Parent.Cursor = Cursors.No;
+            }
+            else if (foregroundPoint.HasValue || backgroundPoint.HasValue)
+            {
+                // Hovering over a point indicates adjustment intent
+                Parent.Cursor = Cursors.SizeAll;
+            }
+            else
+            {
+                // Default cursor for placing new points
+                Parent.Cursor = Cursors.Cross;
+            }
+
             // Check if viewport has changed (pan/zoom)
             CheckForViewportChange();
 
@@ -450,9 +494,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             // Only re-request segmentation if we have points and an uploaded image
             if (foregroundPoints.Count > 0 || backgroundPoints.Count > 0)
             {
-                backgroundPointsView?.PointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
-
-                foregroundPointsView?.PointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
+                double pointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
+                backgroundPointsView.PointRadius = pointRadius;
+                foregroundPointsView.PointRadius = pointRadius;
                 Debug.WriteLine("Viewport settled with existing points, re-requesting segmentation");
 
                 // Must invoke on UI thread
@@ -470,33 +514,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region Point Management
         private void UpdatePointViews()
         {
-            // Update foreground points view (green circles)
-            if (foregroundPoints.Count > 0)
-            {
-                foregroundPointsView = new PointSetView(Color.Green, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample)
-                {
-                    Points = [.. foregroundPoints]
-                };
-                foregroundPointsView.UpdateViews();
-            }
-            else
-            {
-                foregroundPointsView = null;
-            }
+            // Update foreground points view (always exists, never null)
+            double pointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
+            foregroundPointsView.PointRadius = pointRadius;
+            foregroundPointsView.Points = [.. foregroundPoints];
+            foregroundPointsView.UpdateViews();
 
-            // Update background points view (red circles)
-            if (backgroundPoints.Count > 0)
-            {
-                backgroundPointsView = new PointSetView(Color.Red, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample)
-                {
-                    Points = [.. backgroundPoints]
-                };
-                backgroundPointsView.UpdateViews();
-            }
-            else
-            {
-                backgroundPointsView = null;
-            }
+            // Update background points view (always exists, never null)
+            backgroundPointsView.PointRadius = pointRadius;
+            backgroundPointsView.Points = [.. backgroundPoints];
+            backgroundPointsView.UpdateViews();
 
             Parent.Invalidate(); // Trigger redraw
         }
@@ -571,7 +598,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         /// <param name="worldPos"></param>
         /// <returns></returns>
-        private bool ForegroundPointsContain(GridVector2 worldPos) => this.foregroundPointsView.Points.Any(p => GridCircle.Contains(p, foregroundPointsView.PointRadius, worldPos) == ShapeRelation.CONTAINED);
+        private bool ForegroundPointsContain(GridVector2 worldPos) => foregroundPointsView.Points.Any(p => GridCircle.Contains(p, foregroundPointsView.PointRadius, worldPos) == ShapeRelation.CONTAINED);
         #endregion
 
         #region Color Generation
@@ -1603,18 +1630,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double backgroundPulse = Math.Cos(phaseAngle);
 
             // Draw foreground points (green circles) with pulsing alpha
-            if (foregroundPointsView != null)
-            {
-                foregroundPointsView.Alpha = (float)(0.5 + foregroundPulse * 0.5); // Range: 0.0 to 1.0
-                foregroundPointsView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
-            }
+            foregroundPointsView.Alpha = (float)(0.5 + foregroundPulse * 0.5); // Range: 0.0 to 1.0
+            foregroundPointsView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
 
             // Draw background points (red circles) with pulsing alpha (opposite phase)
-            if (backgroundPointsView != null)
-            {
-                backgroundPointsView.Alpha = (float)(0.5 + backgroundPulse * 0.5); // Range: 0.0 to 1.0
-                backgroundPointsView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
-            }
+            backgroundPointsView.Alpha = (float)(0.5 + backgroundPulse * 0.5); // Range: 0.0 to 1.0
+            backgroundPointsView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
 
             // Restore previous depth buffer state
             graphicsDevice.DepthStencilState = previousDepthStencilState;
@@ -1821,8 +1842,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             foregroundPoints.Clear();
             backgroundPoints.Clear();
-            foregroundPointsView = null;
-            backgroundPointsView = null;
+            // Clear point views but keep them initialized (never null)
+            foregroundPointsView.Points = [];
+            backgroundPointsView.Points = [];
             currentMaskData = null;
             maskTexture?.Dispose();
             maskTexture = null;
