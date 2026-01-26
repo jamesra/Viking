@@ -535,12 +535,12 @@ namespace WebAnnotation
                                 (polygon, points) =>
                                 {
                                     var medial_axis = Geometry.MedialAxisFinder.ApproximateMedialAxisImproved(mosaic_shape_poly);
-                                    var medial_axis_points = medial_axis.Points;
-                                    var transformed = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(points, out var volume_points);
-                                    var transformed_medial_axis = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(points, out var transformed_medial_axis_points);
+                                    var mosaic_medial_axis_points = medial_axis.Points;
+                                    var transformed = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(points, out GridVector2[] volume_points);
+                                    var volume_medial_axis = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(mosaic_medial_axis_points, out GridVector2[] volume_medial_axis_points);
                                     var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
                                     Parent.CommandQueue.EnqueueCommand(typeof(SegmentationCommand),
-                                        [Parent, medial_axis_points, Array.Empty<GridVector2>(), new SegmentationCommand.OnCommandSuccess( (segmentedVolumePolygon) =>
+                                        [Parent, volume_medial_axis_points, Array.Empty<GridVector2>(), new SegmentationCommand.OnCommandSuccess( (segmentedVolumePolygon) =>
                                             {
                                                 LocationObj newLoc = new(loc.Parent,
                                                     Parent.Section.Number,

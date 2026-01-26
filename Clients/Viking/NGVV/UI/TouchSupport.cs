@@ -413,7 +413,7 @@ namespace Viking.UI
 
         public static bool IsPenEvent(out System.UInt32 pointerID)
         {
-            uint word = (uint)GetMessageExtraInfo();
+            uint word = unchecked((uint)GetMessageExtraInfo());
             const uint SignatureMask = 0xFFFFFF00;
             const uint PointerIDMask = 0x0000007F;
             const uint MI_WP_SIGNATURE = 0xFF515700;
@@ -425,7 +425,7 @@ namespace Viking.UI
 
         public static bool IsTouchEvent(out System.UInt32 pointerID)
         {
-            uint word = (uint)GetMessageExtraInfo();
+            uint word = unchecked((uint)GetMessageExtraInfo());
             const uint PointerIDMask = 0x0000007F;
             const uint TOUCH_SIGNATURE = 0x80;
             uint signature = word & TOUCH_SIGNATURE;

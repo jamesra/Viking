@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Viking.UI.WPF;
 using Viking.Services;
+using Velopack;
 
 
 namespace Viking

@@ -10,8 +10,9 @@
     1. Checks for Velopack CLI (vpk) and installs if needed
     2. Builds the application using dotnet build
     3. Publishes the application
-    4. Packages the application with Velopack
-    5. Signs Setup.exe and all .nupkg files with ECC HSM certificate
+    4. Preserves or downloads previous release packages for delta generation
+    5. Packages the application with Velopack (generates delta packages if previous release exists)
+    6. Signs Setup.exe and all .nupkg files with ECC HSM certificate
 
 .PARAMETER Configuration
     The build configuration to use (default: Release)
@@ -25,6 +26,9 @@
 .PARAMETER Version
     The version number to use for the package (default: reads from Viking.csproj)
 
+.PARAMETER ReleaseUrl
+    The base URL where releases are hosted for downloading previous versions (default: http://websvc.codepharm.net/Software/Viking)
+
 .EXAMPLE
     .\PublishVelopack.ps1 -Configuration Release
 .EXAMPLE
@@ -35,7 +39,8 @@ param(
     [string]$Configuration = "Release",
     [string]$CertificateThumbprint = "41403cbc59209b576efe575775abe8f4a42da6ba",
     [string]$TimestampUrl = "http://timestamp.digicert.com",
-    [string]$Version = ""
+    [string]$Version = "",
+    [string]$ReleaseUrl = "http://websvc.codepharm.net/Software/Viking"
 )
 
 $ErrorActionPreference = "Stop"
@@ -182,6 +187,86 @@ function Get-UnsignedFiles {
     
     Write-Progress -Activity "Checking signed files" -Completed
     return $unsignedFiles
+}
+
+# Helper function to find the most recent previous version's full package
+function Get-PreviousReleasePackage {
+    param(
+        [string]$ReleaseDir,
+        [string]$CurrentVersion,
+        [string]$PackId = "Viking"
+    )
+    
+    if (-not (Test-Path $ReleaseDir)) {
+        return $null
+    }
+    
+    # Look for previous full packages (Viking-{version}-full.nupkg)
+    $fullPackages = Get-ChildItem -Path $ReleaseDir -Filter "$PackId-*-full.nupkg" -File | 
+        Where-Object { 
+            # Extract version from filename and compare
+            if ($_.Name -match "$PackId-([\d\.]+)-full\.nupkg$") {
+                $packageVersion = $matches[1]
+                # Compare versions (simple string comparison works for SemVer)
+                return $packageVersion -lt $CurrentVersion
+            }
+            return $false
+        } | 
+        Sort-Object { 
+            # Sort by version (extract and compare)
+            if ($_.Name -match "$PackId-([\d\.]+)-full\.nupkg$") {
+                return $matches[1]
+            }
+            return "0.0.0"
+        } -Descending
+    
+    if ($fullPackages.Count -gt 0) {
+        return $fullPackages[0]
+    }
+    
+    return $null
+}
+
+# Helper function to download previous release using vpk download
+function Download-PreviousRelease {
+    param(
+        [string]$ReleaseDir,
+        [string]$ReleaseUrl,
+        [string]$PackId = "Viking"
+    )
+    
+    Write-Host "Attempting to download previous release from: $ReleaseUrl" -ForegroundColor Gray
+    
+    # Ensure release directory exists
+    if (-not (Test-Path $ReleaseDir)) {
+        New-Item -ItemType Directory -Path $ReleaseDir -Force | Out-Null
+    }
+    
+    # Use vpk download to fetch the latest release
+    # This will download the full package needed for delta generation
+    vpk download `
+        --url $ReleaseUrl `
+        --outputDir $ReleaseDir `
+        --packId $PackId
+    
+    if ($LASTEXITCODE -eq 0) {
+        # Check if we got a full package
+        $downloadedPackage = Get-ChildItem -Path $ReleaseDir -Filter "$PackId-*-full.nupkg" -File | 
+            Sort-Object LastWriteTime -Descending | 
+            Select-Object -First 1
+        
+        if ($downloadedPackage) {
+            Write-Host "Successfully downloaded previous release: $($downloadedPackage.Name)" -ForegroundColor Green
+            return $downloadedPackage
+        } else {
+            Write-Host "Warning: vpk download completed but no full package found" -ForegroundColor Yellow
+            return $null
+        }
+    } else {
+        Write-Host "Warning: Failed to download previous release (exit code $LASTEXITCODE)" -ForegroundColor Yellow
+        Write-Host "This is not an error - delta packages will not be generated for this release" -ForegroundColor Gray
+        return $null
+    }
 }
 
 # Helper function to sign files in a batch
@@ -484,11 +569,56 @@ Write-Host "Step 6: Packaging with Velopack (files already signed)..." -Foregrou
 # We skip signing during packaging to avoid multiple PIN prompts.
 
 # Ensure release directory exists
-if (Test-Path $releaseDir) {
-    Write-Host "Cleaning existing release directory..." -ForegroundColor Gray
-    Remove-Item -Path $releaseDir -Recurse -Force
+if (-not (Test-Path $releaseDir)) {
+    New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
 }
-New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
+
+# Check for previous release package (needed for delta generation)
+Write-Host "Checking for previous release package..." -ForegroundColor Gray
+$previousPackage = Get-PreviousReleasePackage -ReleaseDir $releaseDir -CurrentVersion $Version -PackId "Viking"
+
+if ($null -eq $previousPackage) {
+    Write-Host "Previous release package not found locally." -ForegroundColor Yellow
+    Write-Host "Attempting to download from server..." -ForegroundColor Gray
+    $previousPackage = Download-PreviousRelease -ReleaseDir $releaseDir -ReleaseUrl $ReleaseUrl -PackId "Viking"
+    
+    if ($null -eq $previousPackage) {
+        Write-Host "No previous release available. Delta packages will not be generated for this release." -ForegroundColor Yellow
+        Write-Host "This is normal for the first release or if the server is not accessible." -ForegroundColor Gray
+    }
+} else {
+    Write-Host "Found previous release package: $($previousPackage.Name)" -ForegroundColor Green
+    Write-Host "Delta packages will be generated automatically." -ForegroundColor Gray
+}
+
+# Preserve existing .nupkg files and RELEASES file for delta generation
+# Only clean up files that would conflict with the new build (Setup.exe, versioned directories)
+Write-Host "Preserving previous release packages for delta generation..." -ForegroundColor Gray
+
+# Remove only Setup.exe files (we'll create a new one)
+$setupFiles = Get-ChildItem -Path $releaseDir -Filter "*Setup.exe" -File
+if ($setupFiles.Count -gt 0) {
+    Write-Host "Removing old Setup.exe files..." -ForegroundColor Gray
+    $setupFiles | Remove-Item -Force
+}
+
+# Remove versioned subdirectories if they exist (Velopack may create these)
+$versionedDirs = Get-ChildItem -Path $releaseDir -Directory | Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' }
+if ($versionedDirs.Count -gt 0) {
+    Write-Host "Removing old versioned directories..." -ForegroundColor Gray
+    $versionedDirs | Remove-Item -Recurse -Force
+}
+
+# Keep all .nupkg files and RELEASES file - these are needed for delta generation
+$preservedNupkg = Get-ChildItem -Path $releaseDir -Filter "*.nupkg" -File
+$preservedReleases = Get-ChildItem -Path $releaseDir -Filter "RELEASES" -File
+
+if ($preservedNupkg.Count -gt 0) {
+    Write-Host "Preserving $($preservedNupkg.Count) existing .nupkg file(s) for delta generation" -ForegroundColor Green
+}
+if ($preservedReleases.Count -gt 0) {
+    Write-Host "Preserving RELEASES file" -ForegroundColor Green
+}
 
 Write-Host "Packaging application..." -ForegroundColor Gray
 Write-Host "Using version: $Version" -ForegroundColor Cyan

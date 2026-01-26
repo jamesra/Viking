@@ -328,9 +328,8 @@ namespace WebAnnotation.View
         private void CreateViewObjects(GridCircle MosaicCircle, IVolumeToSectionTransform mapper)
         {
             GridVector2 VolumePosition = mapper.SectionToVolume(MosaicCircle.Center);
-            float opacity = modelObj.Parent is null
-                ? Global.AnnotationSettings.CircleOpacityParentless
-                : Global.AnnotationSettings.CircleOpacityWithParent;
+            bool hasParent = modelObj.Parent?.ParentID.HasValue ?? false;
+            float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(modelObj.TypeCode, hasParent);
             Color color = modelObj.Parent is null
                 ? Color.Gray.SetAlpha(opacity)
                 : modelObj.Parent.Type.Color.ToXNAColor(opacity);
