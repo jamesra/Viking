@@ -1,4 +1,4 @@
-﻿namespace Viking.UI.Controls
+namespace Viking.UI.Controls
 {
     partial class SectionViewerControl
     {
@@ -61,6 +61,7 @@
             this.menuExportTiles = new System.Windows.Forms.ToolStripMenuItem();
             this.timerHelpTextChange = new System.Windows.Forms.Timer(this.components);
             this.menuShowCommandHelp = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuViewerPreferences = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -179,7 +180,8 @@
             this.menuCaptureScreen,
             this.menuExportFrames,
             this.menuExportTiles,
-            this.menuShowCommandHelp});
+            this.menuShowCommandHelp,
+            this.menuViewerPreferences});
             this.menuCommands.Name = "menuCommands";
             this.menuCommands.Size = new System.Drawing.Size(81, 20);
             this.menuCommands.Text = "Commands";
@@ -228,6 +230,13 @@
             this.menuShowCommandHelp.Text = "Show Command Help";
             this.menuShowCommandHelp.Click += new System.EventHandler(this.menuShowCommandHelp_Click);
             // 
+            // menuViewerPreferences
+            // 
+            this.menuViewerPreferences.Name = "menuViewerPreferences";
+            this.menuViewerPreferences.Size = new System.Drawing.Size(191, 22);
+            this.menuViewerPreferences.Text = "Viewer Preferences...";
+            this.menuViewerPreferences.Click += new System.EventHandler(this.menuViewerPreferences_Click);
+            // 
             // SectionViewerControl
             // 
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.SectionViewerControl_KeyDown);
@@ -261,5 +270,6 @@
         private System.Windows.Forms.ToolStripMenuItem menuClearCache;
         private System.Windows.Forms.Timer timerHelpTextChange;
         private System.Windows.Forms.ToolStripMenuItem menuShowCommandHelp;
+        private System.Windows.Forms.ToolStripMenuItem menuViewerPreferences;
     }
 }

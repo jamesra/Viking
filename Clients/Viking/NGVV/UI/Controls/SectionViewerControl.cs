@@ -72,6 +72,16 @@ namespace Viking.UI.Controls
 
         ISectionOverlayExtension[] listOverlays = [];
 
+        /// <summary>
+        /// Overlay that displays section numbers with smooth scrolling animation
+        /// </summary>
+        private SectionNumberOverlayView? sectionNumberOverlay;
+
+        /// <summary>
+        /// Stopwatch used to track elapsed time for section number overlay animation
+        /// </summary>
+        private readonly System.Diagnostics.Stopwatch sectionNumberOverlayStopwatch = new();
+
         public VertexDeclaration VertexPositionColorDeclaration;
 
         /// <summary>
@@ -289,6 +299,9 @@ namespace Viking.UI.Controls
                 }
 
                 this.Invalidate();
+
+                // Update the section number overlay with the new section
+                UpdateSectionNumberOverlay();
 
                 //Let listeners know if we changed sections
                 if (OnSectionChangedEventInvokeTask is not null && !(OnSectionChangedEventInvokeTask.IsCompleted || OnSectionChangedEventInvokeTask.IsFaulted))
@@ -529,6 +542,8 @@ namespace Viking.UI.Controls
 
                 this.listOverlays = ExtensionManager.CreateSectionOverlays(this);
 
+                // Initialize the section number overlay
+                InitializeSectionNumberOverlay();
             }
 
             base.Initialize();
@@ -1468,6 +1483,8 @@ namespace Viking.UI.Controls
                 //DrawXNAControls(scene);
             }
 
+            // Draw section number overlay (after overlays but before cleanup)
+            DrawSectionNumberOverlay(graphicsDevice, scene);
 
             graphicsDevice.Textures[0] = null;
             graphicsDevice.Textures[1] = null;
@@ -2748,5 +2765,239 @@ namespace Viking.UI.Controls
             Viking.Properties.Settings.Default.ShowCommandHelp = this.commandHelpTextScrollerHost.Visible;
             Viking.Properties.Settings.Default.Save();
         }
+
+        #region Section Number Overlay
+
+        /// <summary>
+        /// Initialize the section number overlay with settings and callbacks
+        /// </summary>
+        private void InitializeSectionNumberOverlay()
+        {
+            sectionNumberOverlay = new SectionNumberOverlayView
+            {
+                Enabled = Viking.Properties.Settings.Default.SectionNumberOverlayEnabled,
+                SectionsAboveBelow = Viking.Properties.Settings.Default.SectionNumberOverlayCount,
+                Edge = ParseOverlayEdge(Viking.Properties.Settings.Default.SectionNumberOverlayEdge),
+                Opacity = Viking.Properties.Settings.Default.SectionNumberOverlayOpacity,
+                SectionExistsFunc = SectionExistsInVolume,
+                HasTransformsFunc = VolumeHasTransforms,
+                // PID parameters
+                PidProportionalGain = Viking.Properties.Settings.Default.SectionNumberOverlayPidProportionalGain,
+                PidDerivativeGain = Viking.Properties.Settings.Default.SectionNumberOverlayPidDerivativeGain,
+                PidIntegralGain = Viking.Properties.Settings.Default.SectionNumberOverlayPidIntegralGain,
+                PidVelocityThresholdScreenHeights = Viking.Properties.Settings.Default.SectionNumberOverlayPidVelocityThreshold,
+                PidPositionThresholdScreenHeights = Viking.Properties.Settings.Default.SectionNumberOverlayPidPositionThreshold
+            };
+
+            // Configure the acceleration from settings (in screen-height units)
+            sectionNumberOverlay.AccelerationInScreenHeights = Viking.Properties.Settings.Default.SectionNumberOverlayAcceleration;
+
+            // Update min/max section numbers from volume if available
+            if (State.volume != null)
+            {
+                var sections = State.volume.SectionViewModels;
+                if (sections.Count > 0)
+                {
+                    sectionNumberOverlay.MinSectionNumber = sections.Keys.Min();
+                    sectionNumberOverlay.MaxSectionNumber = sections.Keys.Max();
+                }
+            }
+
+            // Initialize with current section if available
+            if (Section != null)
+            {
+                sectionNumberOverlay.Initialize(Section.Number);
+            }
+
+            // Start the stopwatch for animation timing
+            sectionNumberOverlayStopwatch.Start();
+        }
+
+        /// <summary>
+        /// Update the section number overlay when section changes
+        /// </summary>
+        private void UpdateSectionNumberOverlay()
+        {
+            if (sectionNumberOverlay == null || Section == null)
+                return;
+
+            // Update min/max section numbers from volume
+            if (State.volume != null)
+            {
+                var sections = State.volume.SectionViewModels;
+                if (sections.Count > 0)
+                {
+                    sectionNumberOverlay.MinSectionNumber = sections.Keys.Min();
+                    sectionNumberOverlay.MaxSectionNumber = sections.Keys.Max();
+                }
+            }
+
+            // Update the current section (triggers animation)
+            sectionNumberOverlay.SetCurrentSection(Section.Number);
+        }
+
+        /// <summary>
+        /// Draw the section number overlay
+        /// </summary>
+        private void DrawSectionNumberOverlay(GraphicsDevice graphicsDevice, Scene scene)
+        {
+            if (sectionNumberOverlay == null || spriteBatch == null || fontArial == null)
+                return;
+
+            if (!sectionNumberOverlay.Enabled)
+                return;
+
+            // Only show overlay when volume has multiple sections
+            if (State.volume == null || State.volume.SectionViewModels.Count <= 1)
+                return;
+
+            // Update animation based on elapsed time
+            double elapsedSeconds = sectionNumberOverlayStopwatch.Elapsed.TotalSeconds;
+            sectionNumberOverlayStopwatch.Restart();
+
+            sectionNumberOverlay.Update(elapsedSeconds);
+
+            // Draw the overlay using screen-space coordinates
+            sectionNumberOverlay.Draw(
+                spriteBatch,
+                fontArial,
+                graphicsDevice.Viewport.Width,
+                graphicsDevice.Viewport.Height
+            );
+        }
+
+        /// <summary>
+        /// Check if a section number exists in the volume
+        /// </summary>
+        private bool SectionExistsInVolume(int sectionNumber)
+        {
+            if (State.volume == null)
+                return true;
+
+            return State.volume.SectionViewModels.ContainsKey(sectionNumber);
+        }
+
+        /// <summary>
+        /// Check if the volume has slice-to-slice transforms
+        /// </summary>
+        private bool VolumeHasTransforms()
+        {
+            // If UseSectionSpecificTransform is enabled, transforms exist
+            if (State.UseSectionSpecificTransform)
+                return true;
+
+            // Check if any section has an active tile transform
+            if (State.volume == null)
+                return false;
+
+            foreach (var section in State.volume.SectionViewModels.Values)
+            {
+                if (!string.IsNullOrEmpty(section.ActiveTileTransform))
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Parse the overlay edge setting string to enum
+        /// </summary>
+        private static OverlayEdge ParseOverlayEdge(string edge)
+        {
+            if (string.Equals(edge, "Right", StringComparison.OrdinalIgnoreCase))
+                return OverlayEdge.Right;
+            return OverlayEdge.Left;
+        }
+
+        /// <summary>
+        /// Static reference to the viewer preferences dialog (modeless)
+        /// </summary>
+        private static Viking.UI.WPF.Forms.ViewerPreferencesDialog? _viewerPreferencesDialog;
+
+        /// <summary>
+        /// Open the Viewer Preferences dialog
+        /// </summary>
+        private void menuViewerPreferences_Click(object sender, EventArgs e)
+        {
+            // If dialog already exists and is open, just focus it
+            if (_viewerPreferencesDialog != null && !_viewerPreferencesDialog.IsClosed)
+            {
+                _viewerPreferencesDialog.Focus();
+                return;
+            }
+
+            // Create ViewModel and load current settings
+            var viewModel = new Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel();
+            viewModel.LoadCurrentSettings(
+                Viking.Properties.Settings.Default.SectionNumberOverlayEnabled,
+                Viking.Properties.Settings.Default.SectionNumberOverlayCount,
+                Viking.Properties.Settings.Default.SectionNumberOverlayAcceleration,
+                Viking.Properties.Settings.Default.SectionNumberOverlayEdge,
+                Viking.Properties.Settings.Default.SectionNumberOverlayOpacity,
+                Viking.Properties.Settings.Default.SectionNumberOverlayPidProportionalGain,
+                Viking.Properties.Settings.Default.SectionNumberOverlayPidDerivativeGain,
+                Viking.Properties.Settings.Default.SectionNumberOverlayPidIntegralGain,
+                Viking.Properties.Settings.Default.SectionNumberOverlayPidVelocityThreshold,
+                Viking.Properties.Settings.Default.SectionNumberOverlayPidPositionThreshold
+            );
+
+            // Wire up real-time preview for settings changes
+            viewModel.SectionNumberOverlaySettingsChanged += () =>
+            {
+                ApplySectionNumberOverlaySettings(viewModel);
+            };
+
+            _viewerPreferencesDialog = new Viking.UI.WPF.Forms.ViewerPreferencesDialog(viewModel);
+
+            // Wire up event handlers to save settings
+            _viewerPreferencesDialog.ApplyClicked += (s, args) => SaveViewerPreferencesFromViewModel(viewModel);
+            _viewerPreferencesDialog.OkClicked += (s, args) => SaveViewerPreferencesFromViewModel(viewModel);
+
+            _viewerPreferencesDialog.Show(); // Modeless dialog
+        }
+
+        /// <summary>
+        /// Apply section number overlay settings from viewmodel for real-time preview
+        /// </summary>
+        private void ApplySectionNumberOverlaySettings(Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel viewModel)
+        {
+            if (sectionNumberOverlay == null)
+                return;
+
+            sectionNumberOverlay.Enabled = viewModel.SectionNumberOverlayEnabled;
+            sectionNumberOverlay.SectionsAboveBelow = viewModel.SectionNumberOverlayCount;
+            sectionNumberOverlay.AccelerationInScreenHeights = viewModel.SectionNumberOverlayAcceleration;
+            sectionNumberOverlay.Edge = ParseOverlayEdge(viewModel.SectionNumberOverlayEdge);
+            sectionNumberOverlay.Opacity = viewModel.SectionNumberOverlayOpacity;
+            
+            // PID parameters
+            sectionNumberOverlay.PidProportionalGain = viewModel.PidProportionalGain;
+            sectionNumberOverlay.PidDerivativeGain = viewModel.PidDerivativeGain;
+            sectionNumberOverlay.PidIntegralGain = viewModel.PidIntegralGain;
+            sectionNumberOverlay.PidVelocityThresholdScreenHeights = viewModel.PidVelocityThreshold;
+            sectionNumberOverlay.PidPositionThresholdScreenHeights = viewModel.PidPositionThreshold;
+
+            this.Invalidate();
+        }
+
+        /// <summary>
+        /// Save viewer preferences from viewmodel to settings
+        /// </summary>
+        private static void SaveViewerPreferencesFromViewModel(Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel viewModel)
+        {
+            Viking.Properties.Settings.Default.SectionNumberOverlayEnabled = viewModel.SectionNumberOverlayEnabled;
+            Viking.Properties.Settings.Default.SectionNumberOverlayCount = viewModel.SectionNumberOverlayCount;
+            Viking.Properties.Settings.Default.SectionNumberOverlayAcceleration = viewModel.SectionNumberOverlayAcceleration;
+            Viking.Properties.Settings.Default.SectionNumberOverlayEdge = viewModel.SectionNumberOverlayEdge;
+            Viking.Properties.Settings.Default.SectionNumberOverlayOpacity = viewModel.SectionNumberOverlayOpacity;
+            Viking.Properties.Settings.Default.SectionNumberOverlayPidProportionalGain = viewModel.PidProportionalGain;
+            Viking.Properties.Settings.Default.SectionNumberOverlayPidDerivativeGain = viewModel.PidDerivativeGain;
+            Viking.Properties.Settings.Default.SectionNumberOverlayPidIntegralGain = viewModel.PidIntegralGain;
+            Viking.Properties.Settings.Default.SectionNumberOverlayPidVelocityThreshold = viewModel.PidVelocityThreshold;
+            Viking.Properties.Settings.Default.SectionNumberOverlayPidPositionThreshold = viewModel.PidPositionThreshold;
+            Viking.Properties.Settings.Default.Save();
+        }
+
+        #endregion
     }
 }
