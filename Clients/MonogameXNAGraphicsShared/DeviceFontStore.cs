@@ -53,8 +53,11 @@ namespace VikingXNAGraphics
 
         public static FontRenderData GetOrCreateForDevice(GraphicsDevice device, ContentManager content, string FontName = null)
         {
-            FontName ??= DefaultFont;
+            // Check if device is disposed
+            if (device == null || device.IsDisposed)
+                return null;
 
+            FontName ??= DefaultFont;
 
             if (ManagersForDevice.TryGetValue(device, out Dictionary<string, FontRenderData> fontDict))
             {
@@ -75,13 +78,15 @@ namespace VikingXNAGraphics
 
             fontDict.Add(FontName, fontData);
 
-            //device.DeviceLost += OnDeviceLostOrReset;
-            //device.DeviceResetting += OnDeviceLostOrReset;
             return fontData;
         }
 
         public static FontRenderData TryGet(GraphicsDevice device, string FontName = null)
         {
+            // Check if device is disposed
+            if (device == null || device.IsDisposed)
+                return null;
+
             FontName ??= DefaultFont;
 
             if (ManagersForDevice.TryGetValue(device, out Dictionary<string, FontRenderData> fontDict))
@@ -93,6 +98,39 @@ namespace VikingXNAGraphics
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Clear all cached entries for a specific device. Call this when the device is reset.
+        /// </summary>
+        /// <param name="device">The device to clear entries for, or null to clear all entries</param>
+        public static void ClearForDevice(GraphicsDevice device)
+        {
+            if (device == null)
+            {
+                ManagersForDevice.Clear();
+                return;
+            }
+
+            if (ManagersForDevice.ContainsKey(device))
+            {
+                ManagersForDevice.Remove(device);
+            }
+
+            // Also clear any entries for disposed devices
+            var disposedDevices = ManagersForDevice.Keys.Where(d => d.IsDisposed).ToList();
+            foreach (var disposedDevice in disposedDevices)
+            {
+                ManagersForDevice.Remove(disposedDevice);
+            }
+        }
+
+        /// <summary>
+        /// Clear all cached entries for all devices. Call this on device reset.
+        /// </summary>
+        public static void ClearAll()
+        {
+            ManagersForDevice.Clear();
         }
     }
 }

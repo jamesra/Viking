@@ -33,6 +33,23 @@ namespace Viking.UI.WPF.Forms
         /// </summary>
         public const double DefaultOpacity = 0.7;
 
+        /// <summary>
+        /// Default minimum opacity for non-center section numbers (0 to 0.8)
+        /// </summary>
+        public const double DefaultMinOpacityNonCenter = 0.5;
+        public const double MaxMinOpacityNonCenter = 0.8;
+
+        /// <summary>
+        /// Default center magnification for section number overlay
+        /// </summary>
+        public const double DefaultCenterMagnification = 3.0;
+
+        /// <summary>
+        /// Min/max center magnification (1 to 4)
+        /// </summary>
+        public const double MinCenterMagnification = 1.0;
+        public const double MaxCenterMagnification = 4.0;
+
         // PID Parameter Defaults
         public const double DefaultPidProportionalGain = 4.0;
         public const double DefaultPidDerivativeGain = 1.0;
@@ -47,6 +64,8 @@ namespace Viking.UI.WPF.Forms
         private double _originalSectionNumberOverlayAcceleration;
         private string _originalSectionNumberOverlayEdge;
         private double _originalSectionNumberOverlayOpacity;
+        private double _originalSectionNumberOverlayMinOpacityNonCenter;
+        private double _originalSectionNumberOverlayCenterMagnification;
         private double _originalPidProportionalGain;
         private double _originalPidDerivativeGain;
         private double _originalPidIntegralGain;
@@ -157,6 +176,38 @@ namespace Viking.UI.WPF.Forms
             }
         }
 
+        private double _sectionNumberOverlayMinOpacityNonCenter;
+        public double SectionNumberOverlayMinOpacityNonCenter
+        {
+            get => _sectionNumberOverlayMinOpacityNonCenter;
+            set
+            {
+                double clampedValue = Clamp(value, 0.0, MaxMinOpacityNonCenter);
+                if (Math.Abs(_sectionNumberOverlayMinOpacityNonCenter - clampedValue) > 0.001)
+                {
+                    _sectionNumberOverlayMinOpacityNonCenter = clampedValue;
+                    OnPropertyChanged();
+                    SectionNumberOverlaySettingsChanged?.Invoke();
+                }
+            }
+        }
+
+        private double _sectionNumberOverlayCenterMagnification;
+        public double SectionNumberOverlayCenterMagnification
+        {
+            get => _sectionNumberOverlayCenterMagnification;
+            set
+            {
+                double clampedValue = Clamp(value, MinCenterMagnification, MaxCenterMagnification);
+                if (Math.Abs(_sectionNumberOverlayCenterMagnification - clampedValue) > 0.001)
+                {
+                    _sectionNumberOverlayCenterMagnification = clampedValue;
+                    OnPropertyChanged();
+                    SectionNumberOverlaySettingsChanged?.Invoke();
+                }
+            }
+        }
+
         #endregion
 
         #region PID Parameters
@@ -215,7 +266,7 @@ namespace Viking.UI.WPF.Forms
             get => _pidVelocityThreshold;
             set
             {
-                double clampedValue = Clamp(value, 0.25, 2.0);
+                double clampedValue = Clamp(value, 0.01, 0.05);
                 if (Math.Abs(_pidVelocityThreshold - clampedValue) > 0.001)
                 {
                     _pidVelocityThreshold = clampedValue;
@@ -231,7 +282,7 @@ namespace Viking.UI.WPF.Forms
             get => _pidPositionThreshold;
             set
             {
-                double clampedValue = Clamp(value, 0.25, 2.0);
+                double clampedValue = Clamp(value, 0.01, 1.0);
                 if (Math.Abs(_pidPositionThreshold - clampedValue) > 0.001)
                 {
                     _pidPositionThreshold = clampedValue;
@@ -272,6 +323,8 @@ namespace Viking.UI.WPF.Forms
             double sectionNumberOverlayAcceleration,
             string sectionNumberOverlayEdge,
             double sectionNumberOverlayOpacity,
+            double sectionNumberOverlayMinOpacityNonCenter,
+            double sectionNumberOverlayCenterMagnification,
             double pidProportionalGain,
             double pidDerivativeGain,
             double pidIntegralGain,
@@ -281,6 +334,10 @@ namespace Viking.UI.WPF.Forms
             // Clamp values to valid ranges (in case saved value is from old settings)
             double clampedAcceleration = Clamp(sectionNumberOverlayAcceleration, MinAcceleration, MaxAcceleration);
             double clampedOpacity = Clamp(sectionNumberOverlayOpacity, 0.0, 1.0);
+            double clampedMinOpacityNonCenter = Clamp(sectionNumberOverlayMinOpacityNonCenter, 0.0, MaxMinOpacityNonCenter);
+            double clampedCenterMagnification = Clamp(sectionNumberOverlayCenterMagnification, MinCenterMagnification, MaxCenterMagnification);
+            double clampedVelocityThreshold = Clamp(pidVelocityThreshold, 0.01, 0.05);
+            double clampedPositionThreshold = Clamp(pidPositionThreshold, 0.01, 0.05);
 
             // Store original values for Cancel revert (use clamped values)
             _originalSectionNumberOverlayEnabled = sectionNumberOverlayEnabled;
@@ -288,11 +345,13 @@ namespace Viking.UI.WPF.Forms
             _originalSectionNumberOverlayAcceleration = clampedAcceleration;
             _originalSectionNumberOverlayEdge = sectionNumberOverlayEdge;
             _originalSectionNumberOverlayOpacity = clampedOpacity;
+            _originalSectionNumberOverlayMinOpacityNonCenter = clampedMinOpacityNonCenter;
+            _originalSectionNumberOverlayCenterMagnification = clampedCenterMagnification;
             _originalPidProportionalGain = pidProportionalGain;
             _originalPidDerivativeGain = pidDerivativeGain;
             _originalPidIntegralGain = pidIntegralGain;
-            _originalPidVelocityThreshold = pidVelocityThreshold;
-            _originalPidPositionThreshold = pidPositionThreshold;
+            _originalPidVelocityThreshold = clampedVelocityThreshold;
+            _originalPidPositionThreshold = clampedPositionThreshold;
 
             // Set current values (without triggering change events during load)
             var tempHandler = SectionNumberOverlaySettingsChanged;
@@ -303,11 +362,13 @@ namespace Viking.UI.WPF.Forms
             _sectionNumberOverlayAcceleration = clampedAcceleration;
             _sectionNumberOverlayEdge = sectionNumberOverlayEdge;
             _sectionNumberOverlayOpacity = clampedOpacity;
+            _sectionNumberOverlayMinOpacityNonCenter = clampedMinOpacityNonCenter;
+            _sectionNumberOverlayCenterMagnification = clampedCenterMagnification;
             _pidProportionalGain = pidProportionalGain;
             _pidDerivativeGain = pidDerivativeGain;
             _pidIntegralGain = pidIntegralGain;
-            _pidVelocityThreshold = pidVelocityThreshold;
-            _pidPositionThreshold = pidPositionThreshold;
+            _pidVelocityThreshold = clampedVelocityThreshold;
+            _pidPositionThreshold = clampedPositionThreshold;
 
             SectionNumberOverlaySettingsChanged = tempHandler;
 
@@ -324,6 +385,8 @@ namespace Viking.UI.WPF.Forms
             _originalSectionNumberOverlayAcceleration = _sectionNumberOverlayAcceleration;
             _originalSectionNumberOverlayEdge = _sectionNumberOverlayEdge;
             _originalSectionNumberOverlayOpacity = _sectionNumberOverlayOpacity;
+            _originalSectionNumberOverlayMinOpacityNonCenter = _sectionNumberOverlayMinOpacityNonCenter;
+            _originalSectionNumberOverlayCenterMagnification = _sectionNumberOverlayCenterMagnification;
             _originalPidProportionalGain = _pidProportionalGain;
             _originalPidDerivativeGain = _pidDerivativeGain;
             _originalPidIntegralGain = _pidIntegralGain;
@@ -360,6 +423,8 @@ namespace Viking.UI.WPF.Forms
             SectionNumberOverlayAcceleration = DefaultAcceleration;
             SectionNumberOverlayEdge = "Left";
             SectionNumberOverlayOpacity = DefaultOpacity;
+            SectionNumberOverlayMinOpacityNonCenter = DefaultMinOpacityNonCenter;
+            SectionNumberOverlayCenterMagnification = DefaultCenterMagnification;
             PidProportionalGain = DefaultPidProportionalGain;
             PidDerivativeGain = DefaultPidDerivativeGain;
             PidIntegralGain = DefaultPidIntegralGain;

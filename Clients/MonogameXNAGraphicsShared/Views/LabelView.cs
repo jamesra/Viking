@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using VikingXNA;
 
 namespace VikingXNAGraphics
@@ -107,6 +108,8 @@ namespace VikingXNAGraphics
             get => _MaxLineWidth;
             set
             {
+                if (_MaxLineWidth != value)
+                    InvalidateTexture();
                 _IsMeasured = _MaxLineWidth == value && _IsMeasured;
                 _MaxLineWidth = value;
             }
@@ -137,6 +140,8 @@ namespace VikingXNAGraphics
             get => _FontSize;
             set
             {
+                if (_FontSize != value)
+                    InvalidateTexture();
                 _IsMeasured = _IsMeasured && _FontSize == value;
                 _FontSize = value;
             }
@@ -152,6 +157,12 @@ namespace VikingXNAGraphics
         private bool _IsMeasured = false;
         private string[] _Rows = null; //The label text divided across rows
         private Vector2[] _RowMeasurements; // Measurements for each row
+
+        // Texture caching for async rendering
+        private RenderTarget2D _LabelTexture;
+        private bool _TextureGenerating = false;
+        private bool _TextureInvalidated = true;
+        private CancellationTokenSource _TextureGenerationCts;
 
         /// <summary>
         /// True if the label should change size as the user zooms in and out.  Used to keep the label proportional to other objects rendered in a scene.
@@ -205,6 +216,8 @@ namespace VikingXNAGraphics
             get => _Text;
             set
             {
+                if (_Text != value)
+                InvalidateTexture();
                 _IsMeasured = _IsMeasured && _Text == value;
                 _Text = value;
             }
@@ -587,6 +600,226 @@ namespace VikingXNAGraphics
             this._Rows = WrapText(this.Text, this.font, FontScaleForVolume, this.MaxLineWidth, out this._RowMeasurements);
             _IsMeasured = true;
         }
+
+        #region Texture Caching
+
+        /// <summary>
+        /// Begin async texture generation for this label.
+        /// Cancels any in-progress generation if label properties have changed.
+        /// </summary>
+        private void BeginInvokeGenerateTexture(GraphicsDevice device, SpriteBatch spriteBatch, SpriteFont font)
+        {
+            if (_TextureGenerating)
+                return;
+
+            // Cancel any previous generation
+            _TextureGenerationCts?.Cancel();
+            _TextureGenerationCts?.Dispose();
+            _TextureGenerationCts = new CancellationTokenSource();
+            var token = _TextureGenerationCts.Token;
+
+            _TextureGenerating = true;
+
+            GpuSynchronizationManager.RunTask(() =>
+            {
+                if (token.IsCancellationRequested)
+                {
+                    _TextureGenerating = false;
+                    return;
+                }
+
+                var texture = CreateTextureForLabel(device, spriteBatch, font);
+
+                // Only assign if not cancelled
+                if (!token.IsCancellationRequested)
+                {
+                    _LabelTexture?.Dispose();
+                    _LabelTexture = texture;
+                    _TextureInvalidated = false;
+                }
+                else
+                {
+                    texture?.Dispose();
+                }
+
+                _TextureGenerating = false;
+            }, token);
+        }
+
+        /// <summary>
+        /// Get the cached label texture, or trigger generation if needed.
+        /// Returns null if texture is not ready yet.
+        /// </summary>
+        protected Texture2D GetOrCreateLabelTexture(GraphicsDevice device, SpriteBatch spriteBatch, SpriteFont font)
+        {
+            if (_TextureInvalidated || _LabelTexture == null)
+            {
+                BeginInvokeGenerateTexture(device, spriteBatch, font);
+                return null; // Texture not ready yet
+            }
+
+            if (_LabelTexture.IsDisposed)
+            {
+                _LabelTexture = null;
+                _TextureInvalidated = true;
+                BeginInvokeGenerateTexture(device, spriteBatch, font);
+                return null; // Texture not ready yet
+            }
+
+            return _LabelTexture;
+        }
+
+        /// <summary>
+        /// Create a texture for this label, rendering text in white so color can be applied as tint at draw time.
+        /// Supports multi-line text using existing _Rows and _RowMeasurements.
+        /// </summary>
+        private RenderTarget2D CreateTextureForLabel(GraphicsDevice device, SpriteBatch spriteBatch, SpriteFont font)
+        {
+            if (string.IsNullOrEmpty(this.Text) || font == null)
+                return null;
+
+            // Ensure label is measured
+            if (!_IsMeasured)
+            {
+                MeasureLabel();
+            }
+
+            if (_Rows == null || _Rows.Length == 0)
+                return null;
+
+            // Calculate texture dimensions based on row measurements
+            double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
+            float fontScale = (float)FontScaleForVolume;
+
+            float maxWidth = _RowMeasurements.Max(r => r.X) * fontScale;
+            float totalHeight = _RowMeasurements.Sum(r => r.Y) * fontScale;
+
+            if (maxWidth <= 0 || totalHeight <= 0)
+                return null;
+
+            RenderTarget2D target = new(device, (int)Math.Ceiling(maxWidth), (int)Math.Ceiling(totalHeight), 
+                mipMap: true, preferredFormat: SurfaceFormat.Color, preferredDepthFormat: DepthFormat.None);
+
+            // Save current render targets
+            RenderTargetBinding[] oldRenderTargets = device.GetRenderTargets();
+            
+            device.SetRenderTarget(target);
+            device.Clear(Color.Transparent);
+
+            spriteBatch.Begin();
+
+            // Draw all rows in white (color will be applied as tint at draw time)
+            float yPos = 0;
+            for (int iRow = 0; iRow < _Rows.Length; iRow++)
+            {
+                spriteBatch.DrawString(font, _Rows[iRow], new Vector2(0, yPos), Color.White, 
+                    this.Rotation, Vector2.Zero, fontScale, SpriteEffects.None, 0);
+                yPos += _RowMeasurements[iRow].Y * fontScale;
+            }
+
+            spriteBatch.End();
+
+            // Restore render targets
+            device.SetRenderTargets(oldRenderTargets);
+
+            return target;
+        }
+
+        /// <summary>
+        /// Invalidate and dispose the cached texture.
+        /// Cancels any in-progress generation.
+        /// </summary>
+        private void InvalidateTexture()
+        {
+            // Cancel any in-progress generation
+            _TextureGenerationCts?.Cancel();
+            _TextureGenerationCts?.Dispose();
+            _TextureGenerationCts = null;
+
+            _TextureInvalidated = true;
+            _TextureGenerating = false;
+            _LabelTexture?.Dispose();
+            _LabelTexture = null;
+        }
+
+        /// <summary>
+        /// Draw the label using cached texture with color tinting (for screen-space rendering).
+        /// Falls back to direct DrawString if texture is not ready yet.
+        /// </summary>
+        /// <param name="spriteBatch">SpriteBatch for rendering</param>
+        /// <param name="font">Font to use (for fallback rendering)</param>
+        /// <param name="device">GraphicsDevice (for texture generation)</param>
+        /// <param name="screenPosition">Screen-space position to draw at</param>
+        /// <param name="drawScale">Scale factor at draw time (e.g. 1.0 to 2.0). Texture is drawn at base size * drawScale without regenerating.</param>
+        public void DrawWithTexture(SpriteBatch spriteBatch, SpriteFont font, GraphicsDevice device, Vector2 screenPosition, float drawScale = 1.0f)
+        {
+            if (string.IsNullOrEmpty(this.Text) || font == null)
+                return;
+
+            // Ensure font is set
+            this.font = font;
+
+            // Ensure label is measured
+            if (!_IsMeasured)
+            {
+                MeasureLabel();
+            }
+
+            if (_Rows == null || _Rows.Length == 0)
+                return;
+
+            // Try to get cached texture
+            Texture2D texture = GetOrCreateLabelTexture(device, spriteBatch, font);
+
+            if (texture == null)
+            {
+                // Texture not ready yet - fall back to direct DrawString
+                double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
+                float fontScale = (float)FontScaleForVolume * drawScale;
+
+                // Calculate total height for centering
+                float totalHeight = _RowMeasurements.Sum(r => r.Y) * fontScale;
+                float maxWidth = _RowMeasurements.Max(r => r.X) * fontScale;
+
+                // Draw all rows, centered vertically
+                float yPos = screenPosition.Y - totalHeight / 2.0f;
+                for (int iRow = 0; iRow < _Rows.Length; iRow++)
+                {
+                    Vector2 rowMeasurement = _RowMeasurements[iRow] * fontScale;
+                    Vector2 drawPos = new Vector2(
+                        screenPosition.X - maxWidth / 2.0f,
+                        yPos
+                    );
+                    spriteBatch.DrawString(font, _Rows[iRow], drawPos, this._Color, 
+                        this.Rotation, Vector2.Zero, fontScale, SpriteEffects.None, 0);
+                    yPos += rowMeasurement.Y;
+                }
+            }
+            else
+            {
+                // Draw texture with color tint at draw-time scale (no texture regeneration)
+                // SpriteBatch uses premultiplied alpha blend, so tint must be premultiplied for opacity to work
+                float textureWidth = texture.Width * drawScale;
+                float textureHeight = texture.Height * drawScale;
+
+                // Center the texture at the screen position
+                Vector2 drawPos = new Vector2(
+                    screenPosition.X - textureWidth / 2.0f,
+                    screenPosition.Y - textureHeight / 2.0f
+                );
+
+                var destRect = new Rectangle((int)drawPos.X, (int)drawPos.Y, (int)textureWidth, (int)textureHeight);
+                byte a = this._Color.A;
+                Color premultiplied = new Color(
+                    (byte)(this._Color.R * a / 255),
+                    (byte)(this._Color.G * a / 255),
+                    (byte)(this._Color.B * a / 255),
+                    a);
+                spriteBatch.Draw(texture, destRect, null, premultiplied);
+            }
+        }
+
+        #endregion
 
         /// <summary>
         /// Draw a single label. 

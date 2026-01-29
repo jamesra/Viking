@@ -3,6 +3,9 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using VikingXNA;
 
 namespace VikingXNAGraphics
@@ -93,7 +96,7 @@ namespace VikingXNAGraphics
         /// <summary>
         /// Velocity threshold in screen-height units (for completion check)
         /// </summary>
-        private double _pidVelocityThresholdScreenHeights = 0.5;
+        private double _pidVelocityThresholdScreenHeights = 0.001;
         public double PidVelocityThresholdScreenHeights
         {
             get => _pidVelocityThresholdScreenHeights;
@@ -107,7 +110,7 @@ namespace VikingXNAGraphics
         /// <summary>
         /// Position threshold in screen-height units (for completion check)
         /// </summary>
-        private double _pidPositionThresholdScreenHeights = 0.5;
+        private double _pidPositionThresholdScreenHeights = 0.01;
         public double PidPositionThresholdScreenHeights
         {
             get => _pidPositionThresholdScreenHeights;
@@ -138,6 +141,14 @@ namespace VikingXNAGraphics
             {
                 _sectionsAboveBelow = value;
                 UpdateAccelerationLimit();
+                // PID target is in pixels; recompute when totalSlots changes
+                if (_lastScreenHeight > 0)
+                {
+                    int totalSlots = 2 * _sectionsAboveBelow + 1;
+                    double positionInScreenHeights = (double)CurrentSectionNumber / totalSlots;
+                    double positionInPixels = positionInScreenHeights * _lastScreenHeight;
+                    AnimationController.SetTarget(positionInPixels);
+                }
             }
         }
 
@@ -155,7 +166,7 @@ namespace VikingXNAGraphics
         /// Maximum section number in the volume
         /// </summary>
         public int MaxSectionNumber { get; set; } = 100;
-
+            
         /// <summary>
         /// Which edge to display the overlay on
         /// </summary>
@@ -193,9 +204,12 @@ namespace VikingXNAGraphics
             get => _accelerationInScreenHeights;
             set
             {
-                _accelerationInScreenHeights = value;
-                _accelerationNeedsUpdate = true;
-                UpdateAccelerationLimit();
+                if(_accelerationInScreenHeights != value)
+                { 
+                    _accelerationInScreenHeights = value;
+                    _accelerationNeedsUpdate = true;
+                    UpdateAccelerationLimit();
+                }
             }
         }
 
@@ -210,6 +224,17 @@ namespace VikingXNAGraphics
         public Color MissingColor { get; set; } = Color.Red;
 
         /// <summary>
+        /// Magnification factor for the section number at the center of the view (default: 3).
+        /// Numbers at the edge use 1x; the center number is drawn at this scale.
+        /// </summary>
+        private double _centerMagnification = 3.0;
+        public double CenterMagnification
+        {
+            get => _centerMagnification;
+            set => _centerMagnification = value < 1.0 ? 1.0 : (value > 4.0 ? 4.0 : value);
+        }
+
+        /// <summary>
         /// Opacity for all section numbers (0.0 = invisible, 1.0 = fully opaque)
         /// </summary>
         private double _opacity = 0.7;
@@ -217,6 +242,17 @@ namespace VikingXNAGraphics
         {
             get => _opacity;
             set => _opacity = Clamp(value, 0.0, 1.0);
+        }
+
+        /// <summary>
+        /// Minimum opacity for non-center section numbers (0.0 to 0.8). Default 0.5.
+        /// Edge numbers never go below this so they remain readable.
+        /// </summary>
+        private double _minOpacityForNonCenterSections = 0.5;
+        public double MinOpacityForNonCenterSections
+        {
+            get => _minOpacityForNonCenterSections;
+            set => _minOpacityForNonCenterSections = Clamp(value, 0.0, 0.8);
         }
 
         #endregion
@@ -239,6 +275,11 @@ namespace VikingXNAGraphics
         /// Flag to track if acceleration limit needs to be applied once screen height is known
         /// </summary>
         private bool _accelerationNeedsUpdate = true;
+
+        /// <summary>
+        /// Cancellation for the current animation task. Cancelled when a new target is set or on Initialize.
+        /// </summary>
+        private CancellationTokenSource _animationCts;
 
         #endregion
 
@@ -279,8 +320,18 @@ namespace VikingXNAGraphics
             double positionInPixels = _lastScreenHeight > 0 
                 ? positionInScreenHeights * _lastScreenHeight 
                 : positionInScreenHeights;
+
+            // Cancel previous animation task so only one runs at a time
+            _animationCts?.Cancel();
+            _animationCts?.Dispose();
+            _animationCts = new CancellationTokenSource();
+            CancellationToken token = _animationCts.Token;
+
             AnimationController.SetTarget(positionInPixels);
             UpdateLabelCache();
+
+            // Start background task that updates PID at 20 Hz until at target
+            Task.Run(() => RunAnimationLoopAsync(token));
         }
 
         /// <summary>
@@ -299,6 +350,12 @@ namespace VikingXNAGraphics
             double positionInPixels = _lastScreenHeight > 0 
                 ? positionInScreenHeights * _lastScreenHeight 
                 : positionInScreenHeights;
+
+            // Cancel any running animation task; no new task for snap
+            _animationCts?.Cancel();
+            _animationCts?.Dispose();
+            _animationCts = null;
+
             AnimationController.SnapTo(positionInPixels);
             _labelCache.Clear();
             _lastCacheCenterSection = int.MinValue;
@@ -306,15 +363,55 @@ namespace VikingXNAGraphics
         }
 
         /// <summary>
-        /// Update the animation state. Call this each frame.
+        /// No-op. Animation is driven by an internal background task at 20 Hz until the PID reaches target.
+        /// Kept for API compatibility; callers (e.g. draw) should not call this.
         /// </summary>
-        /// <param name="elapsedSeconds">Time elapsed since last update in seconds</param>
+        /// <param name="elapsedSeconds">Ignored.</param>
         public void Update(double elapsedSeconds)
         {
-            if (!Enabled)
-                return;
+            // Animation runs on background task; do not update PID on draw thread.
+        }
 
-            AnimationController.Update(elapsedSeconds);
+        /// <summary>
+        /// Background loop: update PID at ~20 Hz (50 ms target period) until at target or cancelled.
+        /// Uses actual elapsed time per iteration for accurate animation. Sleep time is adjusted
+        /// so that if the last loop took longer than 50 ms we sleep less (catch up), and if it
+        /// took shorter we sleep longer, keeping the average period at 50 ms.
+        /// </summary>
+        private async Task RunAnimationLoopAsync(CancellationToken token)
+        {
+            const int targetPeriodMs = 50;
+            long lastTicks = Stopwatch.GetTimestamp();
+
+            while (true)
+            {
+                long nowTicks = Stopwatch.GetTimestamp();
+                double elapsedSeconds = (double)(nowTicks - lastTicks) / Stopwatch.Frequency;
+                lastTicks = nowTicks;
+
+                // First iteration or negligible elapsed: use nominal step so Update runs
+                if (elapsedSeconds <= 0)
+                    elapsedSeconds = 0.05;
+
+                AnimationController.Update(elapsedSeconds);
+                if (AnimationController.IsComplete())
+                    break;
+
+                // Adjust delay: if last loop took longer than target, sleep less; if shorter, sleep more
+                double lastLoopMs = elapsedSeconds * 1000.0;
+                int delayMs = (int)(targetPeriodMs * 2 - lastLoopMs);
+                if (delayMs < 0)
+                    delayMs = 0;
+
+                try
+                {
+                    await Task.Delay(delayMs, token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+            }
         }
 
         /// <summary>
@@ -574,7 +671,19 @@ namespace VikingXNAGraphics
 
             // Section doesn't exist - only show red if transforms exist
             bool hasTransforms = HasTransformsFunc?.Invoke() ?? false;
-            return hasTransforms ? NormalColor : MissingColor;
+            return hasTransforms ? MissingColor : NormalColor;
+        }
+
+        /// <summary>
+        /// Get the width in pixels of the largest section number label (at current font size, with 2x center scaling).
+        /// Used to size the bar so the widest number fits and for fade calculation.
+        /// </summary>
+        private double GetMaxLabelWidthPixels(SpriteFont font)
+        {
+            string sampleText = MaxSectionNumber.ToString();
+            Vector2 measurement = font.MeasureString(sampleText);
+            double fontScale = _currentFontSize / font.LineSpacing;
+            return measurement.X * fontScale * CenterMagnification; // center section scaling
         }
 
         /// <summary>
@@ -582,12 +691,7 @@ namespace VikingXNAGraphics
         /// </summary>
         private float CalculateFadeAlpha(SpriteFont font, int screenWidth)
         {
-            // Estimate label width using a representative section number
-            string sampleText = MaxSectionNumber.ToString();
-            Vector2 measurement = font.MeasureString(sampleText);
-            double fontScale = _currentFontSize / font.LineSpacing;
-            double labelWidth = measurement.X * fontScale * 2.0; // 2x for center section scaling
-
+            double labelWidth = GetMaxLabelWidthPixels(font);
             double widthRatio = labelWidth / screenWidth;
 
             if (widthRatio <= FadeBeginPercent)
@@ -618,8 +722,9 @@ namespace VikingXNAGraphics
             double animatedSectionPosition = AnimationController.CurrentPosition / slotHeight;
             double centerY = screenHeight / 2.0;
 
-            // Calculate X position based on edge setting
-            double barWidth = screenWidth * BarWidthPercent;
+            // Bar width: at least minimum percent, or wide enough for the largest section number
+            double maxLabelWidth = GetMaxLabelWidthPixels(font);
+            double barWidth = Math.Max(screenWidth * BarWidthPercent, maxLabelWidth);
             double xPos = Edge == OverlayEdge.Left ? barWidth / 2.0 : screenWidth - barWidth / 2.0;
 
             // Combine fade alpha with user-set opacity
@@ -627,8 +732,8 @@ namespace VikingXNAGraphics
             if (combinedAlpha <= 0)
                 return;
 
-            // Collect labels to draw
-            List<LabelView> labelsToDraw = new();
+            // Collect (label, drawScale) to draw; FontSize is not changed per-frame (texture stays valid)
+            List<(LabelView label, float drawScale)> labelsToDraw = new();
 
             // Draw sections from bottom to top (higher Z at top)
             for (int offset = -SectionsAboveBelow - 1; offset <= SectionsAboveBelow + 1; offset++)
@@ -645,7 +750,7 @@ namespace VikingXNAGraphics
                 if (yPos < -slotHeight || yPos > screenHeight + slotHeight)
                     continue;
 
-                // Get or create label
+                // Get or create label (base FontSize set at creation/UpdateAllLabelFontSizes only)
                 if (!_labelCache.TryGetValue(sectionNumber, out LabelView label))
                 {
                     label = CreateLabelForSection(sectionNumber);
@@ -655,22 +760,25 @@ namespace VikingXNAGraphics
                 if (label == null || string.IsNullOrEmpty(label.Text))
                     continue;
 
-                // Calculate scale based on distance from center (1x to 2x)
+                // Scale at draw time (1x to 2x) - no FontSize change, so texture stays valid
                 double distanceFromCenter = Math.Abs(fractionalOffset);
-                double scale = CalculateScale(distanceFromCenter);
+                float drawScale = (float)CalculateScale(distanceFromCenter);
 
-                // Update label properties
+                // Opacity: fully opaque at center; at edges use at least MinOpacityForNonCenterSections
+                double t = Clamp(distanceFromCenter, 0.0, 1.0);
+                double smoothT = t * t * (3.0 - 2.0 * t);
+                double effectiveEdgeAlpha = Math.Max(combinedAlpha, _minOpacityForNonCenterSections);
+                float labelAlpha = (float)(1.0 - smoothT * (1.0 - effectiveEdgeAlpha));
+
+                // Update position and color only (not FontSize)
                 label.Position = new GridVector2(xPos, yPos);
-                label.FontSize = _currentFontSize * scale;
-
-                // Update color with combined alpha (fade + opacity)
                 Color baseColor = GetColorForSection(sectionNumber);
-                label.Color = new Color(baseColor.R, baseColor.G, baseColor.B, (byte)(baseColor.A * combinedAlpha));
+                label.Color = new Color(baseColor.R, baseColor.G, baseColor.B, (byte)(baseColor.A * labelAlpha));
 
-                labelsToDraw.Add(label);
+                labelsToDraw.Add((label, drawScale));
             }
 
-            // Draw all labels using LabelView's batch drawing
+            // Draw all labels using texture-based drawing with draw-time scale
             if (labelsToDraw.Count > 0)
             {
                 // Save graphics state
@@ -683,9 +791,9 @@ namespace VikingXNAGraphics
                 {
                     spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
 
-                    foreach (var label in labelsToDraw)
+                    foreach (var (label, drawScale) in labelsToDraw)
                     {
-                        DrawLabelDirect(spriteBatch, font, label);
+                        DrawLabelDirect(spriteBatch, font, label, drawScale);
                     }
 
                     spriteBatch.End();
@@ -706,42 +814,25 @@ namespace VikingXNAGraphics
         }
 
         /// <summary>
-        /// Draw a label directly using SpriteBatch (screen-space coordinates)
+        /// Draw a label using texture-based rendering (screen-space coordinates)
+        /// Uses cached texture if available with draw-time scale; falls back to direct rendering if not ready
         /// </summary>
-        private void DrawLabelDirect(SpriteBatch spriteBatch, SpriteFont font, LabelView label)
+        private void DrawLabelDirect(SpriteBatch spriteBatch, SpriteFont font, LabelView label, float drawScale = 1.0f)
         {
             if (string.IsNullOrEmpty(label.Text))
                 return;
 
-            Vector2 measurement = font.MeasureString(label.Text);
-            double fontScale = label.FontSize / font.LineSpacing;
-
-            // Calculate position with centering
-            Vector2 drawPos = new Vector2(
-                (float)(label.Position.X - measurement.X * fontScale / 2.0),
-                (float)(label.Position.Y - measurement.Y * fontScale / 2.0)
-            );
-
-            spriteBatch.DrawString(
-                font,
-                label.Text,
-                drawPos,
-                label.Color,
-                0f,
-                Vector2.Zero,
-                (float)fontScale,
-                SpriteEffects.None,
-                0f
-            );
+            Vector2 screenPosition = new Vector2((float)label.Position.X, (float)label.Position.Y);
+            label.DrawWithTexture(spriteBatch, font, spriteBatch.GraphicsDevice, screenPosition, drawScale);
         }
 
         /// <summary>
         /// Calculate the scale factor based on distance from center
-        /// Uses smooth ease-in-out interpolation from 1x to 2x
+        /// Uses smooth ease-in-out interpolation from CenterMagnification at center to 1x at edge
         /// </summary>
         private double CalculateScale(double distanceFromCenter)
         {
-            // At center (distance 0): scale = 2x
+            // At center (distance 0): scale = CenterMagnification
             // At edge (distance >= 1): scale = 1x
             // Use smooth step for nice easing
 
@@ -750,8 +841,8 @@ namespace VikingXNAGraphics
             // Smooth step interpolation: 3t^2 - 2t^3
             double smoothT = t * t * (3.0 - 2.0 * t);
             
-            // Interpolate from 2.0 to 1.0
-            return 2.0 - smoothT;
+            // Interpolate from CenterMagnification to 1.0
+            return _centerMagnification - smoothT * (_centerMagnification - 1.0);
         }
 
         /// <summary>

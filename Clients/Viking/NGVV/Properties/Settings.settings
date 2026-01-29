@@ -114,6 +114,12 @@
     <Setting Name="SectionNumberOverlayOpacity" Type="System.Double" Scope="User">
       <Value Profile="(Default)">0.7</Value>
     </Setting>
+    <Setting Name="SectionNumberOverlayMinOpacityNonCenter" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.5</Value>
+    </Setting>
+    <Setting Name="SectionNumberOverlayCenterMagnification" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">3</Value>
+    </Setting>
     <Setting Name="SectionNumberOverlayPidProportionalGain" Type="System.Double" Scope="User">
       <Value Profile="(Default)">4.0</Value>
     </Setting>

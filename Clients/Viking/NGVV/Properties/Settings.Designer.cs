@@ -401,6 +401,30 @@ namespace Viking.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.5")]
+        public double SectionNumberOverlayMinOpacityNonCenter {
+            get {
+                return ((double)(this["SectionNumberOverlayMinOpacityNonCenter"]));
+            }
+            set {
+                this["SectionNumberOverlayMinOpacityNonCenter"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("3")]
+        public double SectionNumberOverlayCenterMagnification {
+            get {
+                return ((double)(this["SectionNumberOverlayCenterMagnification"]));
+            }
+            set {
+                this["SectionNumberOverlayCenterMagnification"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("4.0")]
         public double SectionNumberOverlayPidProportionalGain {
             get {

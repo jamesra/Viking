@@ -150,6 +150,74 @@
                                      Text="Transparency of the section numbers (0 = invisible, 1 = fully opaque)."/>
                         </Grid>
 
+                        <!-- Min opacity for non-center sections -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="200"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Min opacity (non-center):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SectionNumberOverlayMinOpacityNonCenter, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="0.8"
+                                    TickFrequency="0.1"
+                                    IsSnapToTickEnabled="False"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="2"
+                                     Text="{Binding SectionNumberOverlayMinOpacityNonCenter, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Minimum opacity for section numbers away from center (0 to 0.8). Default: 0.5."/>
+                        </Grid>
+
+                        <!-- Center Magnification -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="200"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Center Magnification:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SectionNumberOverlayCenterMagnification, Mode=TwoWay}"
+                                    Minimum="1"
+                                    Maximum="4"
+                                    TickFrequency="0.25"
+                                    IsSnapToTickEnabled="False"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="2"
+                                     Text="{Binding SectionNumberOverlayCenterMagnification, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F1'}"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Scale factor for the section number at the center (1 to 4). Default: 3."/>
+                        </Grid>
+
                         <!-- Edge Position -->
                         <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
@@ -248,7 +316,7 @@
                             <Label Grid.Column="0" Content="Velocity Threshold:"/>
                             <Slider Grid.Column="1"
                                     Value="{Binding PidVelocityThreshold, Mode=TwoWay}"
-                                    Minimum="0.25" Maximum="2" TickFrequency="0.05"
+                                    Minimum="0.01" Maximum="1" TickFrequency="0.01"
                                     IsSnapToTickEnabled="False" Margin="5"/>
                             <TextBox Grid.Column="2"
                                      Text="{Binding PidVelocityThreshold, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"
@@ -265,7 +333,7 @@
                             <Label Grid.Column="0" Content="Position Threshold:"/>
                             <Slider Grid.Column="1"
                                     Value="{Binding PidPositionThreshold, Mode=TwoWay}"
-                                    Minimum="0.25" Maximum="2" TickFrequency="0.05"
+                                    Minimum="0.01" Maximum="0.05" TickFrequency="0.005"
                                     IsSnapToTickEnabled="False" Margin="5"/>
                             <TextBox Grid.Column="2"
                                      Text="{Binding PidPositionThreshold, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"

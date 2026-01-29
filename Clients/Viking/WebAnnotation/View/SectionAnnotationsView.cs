@@ -305,7 +305,14 @@ namespace WebAnnotation.ViewModel
         {
             List<long> loc_IDs = LocationsSearch.Intersects(worldRect.ToRTreeRect(SectionNumber));
 
-            ICollection<LocationCanvasView> locations = [.. loc_IDs.Select(id => LocationViews[id])];
+            List<LocationCanvasView> locations = [];
+            foreach (long id in loc_IDs)
+            {
+                if (LocationViews.TryGetValue(id, out LocationCanvasView view))
+                {
+                    locations.Add(view);
+                }
+            }
             return locations;
         }
 

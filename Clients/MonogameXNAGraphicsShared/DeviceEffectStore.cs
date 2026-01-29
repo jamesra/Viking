@@ -18,6 +18,10 @@ namespace VikingXNAGraphics
 
         public static T GetOrCreateForDevice(GraphicsDevice device, ContentManager content)
         {
+            // Check if device is disposed and clear stale entries
+            if (device == null || device.IsDisposed)
+                return null;
+
             if (ManagersForDevice.TryGetValue(device, out var entry))
             {
                 return entry;
@@ -28,26 +32,48 @@ namespace VikingXNAGraphics
 
             ManagersForDevice[device] = manager;
 
-            //device.DeviceLost += OnDeviceLostOrReset;
-            //device.DeviceResetting += OnDeviceLostOrReset;
             return manager;
         }
 
-        public static T TryGet(GraphicsDevice device) => ManagersForDevice.TryGetValue(device, out var entry) ? entry : null;
-
-        /*
-        private static void OnDeviceLostOrReset(object sender, EventArgs e)
+        public static T TryGet(GraphicsDevice device)
         {
-            GraphicsDevice device = sender as GraphicsDevice;
-            if (device != null)
+            if (device == null || device.IsDisposed)
+                return null;
+
+            return ManagersForDevice.TryGetValue(device, out var entry) ? entry : null;
+        }
+
+        /// <summary>
+        /// Clear all cached entries for a specific device. Call this when the device is reset.
+        /// </summary>
+        /// <param name="device">The device to clear entries for, or null to clear all entries</param>
+        public static void ClearForDevice(GraphicsDevice device)
+        {
+            if (device == null)
             {
-                if (ManagersForDevice.ContainsKey(device))
-                {
-                    ManagersForDevice.Remove(device);
-                    device.DeviceReset -= OnDeviceLostOrReset;
-                    device.DeviceLost -= OnDeviceLostOrReset;
-                }
+                ManagersForDevice.Clear();
+                return;
             }
-        }*/
+
+            if (ManagersForDevice.ContainsKey(device))
+            {
+                ManagersForDevice.Remove(device);
+            }
+
+            // Also clear any entries for disposed devices
+            var disposedDevices = ManagersForDevice.Keys.Where(d => d.IsDisposed).ToList();
+            foreach (var disposedDevice in disposedDevices)
+            {
+                ManagersForDevice.Remove(disposedDevice);
+            }
+        }
+
+        /// <summary>
+        /// Clear all cached entries for all devices. Call this on device reset.
+        /// </summary>
+        public static void ClearAll()
+        {
+            ManagersForDevice.Clear();
+        }
     }
 }

@@ -347,18 +347,28 @@ namespace Viking.ViewModels
                 if (currentTexture.IsDisposed)
                     return;
 
-                //Create the verticies if they don't exist
-                if (this.VertBuffer is null)
+                //Create the verticies if they don't exist or if they've been disposed (device reset)
+                if (this.VertBuffer is null || this.VertBuffer.IsDisposed)
                 {
+                    // Dispose old buffer if it exists but is disposed (to be safe)
+                    if (this.VertBuffer is not null && this.VertBuffer.IsDisposed)
+                    {
+                        this.VertBuffer = null;
+                    }
                     VertBuffer = CreateVertexBuffer(graphicsDevice, _tileViewModel.Verticies);
                 }
 
                 if (VertBuffer is null || VertBuffer.VertexCount == 0)
                     return;
 
-                //Create Index buffer if it doesn't exist
-                if (IndBuffer is null)
+                //Create Index buffer if it doesn't exist or if it's been disposed (device reset)
+                if (IndBuffer is null || IndBuffer.IsDisposed)
                 {
+                    // Dispose old buffer if it exists but is disposed (to be safe)
+                    if (IndBuffer is not null && IndBuffer.IsDisposed)
+                    {
+                        IndBuffer = null;
+                    }
                     IndBuffer = new IndexBuffer(graphicsDevice, IndexElementSize.SixteenBits, _tileViewModel.TriangleIndicies.Length, BufferUsage.None);
                     IndBuffer.SetData<ushort>(Array.ConvertAll<int, ushort>(TriangleIndicies, new Converter<int, ushort>(IntToShort)));
                 }
@@ -462,15 +472,20 @@ namespace Viking.ViewModels
 
         public void DrawMesh(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
         {
-            if (vbMesh is null)
+            // Check if mesh buffers need to be created or recreated (after device reset)
+            if (vbMesh is null || vbMesh.IsDisposed || ibMesh is null || ibMesh.IsDisposed)
             {
+                // Dispose any existing disposed buffers
+                if (vbMesh is not null && vbMesh.IsDisposed)
+                    vbMesh = null;
+                if (ibMesh is not null && ibMesh.IsDisposed)
+                    ibMesh = null;
+
                 CreateMesh(graphicsDevice);
                 //If this tile has no verticies vbMesh can be null even after a call to CreateMesh
                 if (vbMesh is null)
                     return;
             }
-
-
 
             if (vbMesh.VertexCount == 0)
                 return;
@@ -490,29 +505,29 @@ namespace Viking.ViewModels
                 DepthBufferEnable = false,
                 StencilEnable = false
             };
-            graphicsDevice.DepthStencilState = newDepthState;
 
-            graphicsDevice.SetVertexBuffer(vbMesh);
-            graphicsDevice.Indices = ibMesh;
-            //PORT XNA 4
-            //basicEffect.CommitChanges();
-
-            //PORT XNA 4
-            //basicEffect.Begin();
-
-            foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+            try
             {
-                //PORT XNA 4
-                //pass.Begin();
-                pass.Apply();
+                graphicsDevice.DepthStencilState = newDepthState;
 
-                graphicsDevice.DrawIndexedPrimitives(PrimitiveType.LineList, 0, 0, ibMesh.IndexCount / 2);
+                graphicsDevice.SetVertexBuffer(vbMesh);
+                graphicsDevice.Indices = ibMesh;
 
+                foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+                {
+                    pass.Apply();
+                    graphicsDevice.DrawIndexedPrimitives(PrimitiveType.LineList, 0, 0, ibMesh.IndexCount / 2);
+                }
             }
+            finally
+            {
+                // Restore original depth state if it's still valid
+                if (originalDepthState != null && !originalDepthState.IsDisposed)
+                    graphicsDevice.DepthStencilState = originalDepthState;
 
-            if (originalDepthState != null)
-                graphicsDevice.DepthStencilState = originalDepthState;
-
+                // Dispose the temporary depth state we created
+                newDepthState.Dispose();
+            }
         }
 
         private VikingXNAGraphics.LabelView? _TileLabel = null;

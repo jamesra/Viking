@@ -9,6 +9,8 @@
 
 #region Using Statements
 using Microsoft.Xna.Framework.Graphics;
+using RoundCurve;
+using RoundLineCode;
 using System;
 using System.Threading;
 using VikingXNAGraphics;
@@ -86,13 +88,21 @@ namespace VikingXNAWinForms
                 throw new System.InvalidOperationException("Default graphics adapter does not support XNA");
             }
 
-            // AnnotationCache.parent = parent;
-            GlobalPrimitives.CircleTexture = Content.LoadTextureWithAlpha("Circle", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
-            GlobalPrimitives.MinusTexture = Content.LoadTextureWithAlpha("CircleMinus", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
-            GlobalPrimitives.PlusTexture = Content.LoadTextureWithAlpha("CirclePlus", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
+            LoadGlobalPrimitivesTextures();
+        }
+
+        /// <summary>
+        /// Loads or reloads all GlobalPrimitives textures. 
+        /// Called on device creation and after device reset.
+        /// </summary>
+        private void LoadGlobalPrimitivesTextures()
+        {
+            GlobalPrimitives.CircleTexture = Content.LoadTextureWithAlpha("Circle", "CircleMask");
+            GlobalPrimitives.MinusTexture = Content.LoadTextureWithAlpha("CircleMinus", "CircleMask");
+            GlobalPrimitives.PlusTexture = Content.LoadTextureWithAlpha("CirclePlus", "CircleMask");
             GlobalPrimitives.ChainTexture = Content.LoadTextureWithAlpha("CircleChain", "CircleChain");
-            GlobalPrimitives.UpArrowTexture = Content.LoadTextureWithAlpha("UpArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
-            GlobalPrimitives.DownArrowTexture = Content.LoadTextureWithAlpha("DownArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
+            GlobalPrimitives.UpArrowTexture = Content.LoadTextureWithAlpha("UpArrowV2", "UpArrowMask");
+            GlobalPrimitives.DownArrowTexture = Content.LoadTextureWithAlpha("DownArrowV2", "UpArrowMask");
             GlobalPrimitives.ConnectTexture = Content.LoadTextureWithAlpha("CircleConnect", "CircleConnect");
             GlobalPrimitives.CircleXTexture = Content.LoadTextureWithAlpha("CircleX", "CircleX");
         }
@@ -155,6 +165,10 @@ namespace VikingXNAWinForms
                 System.Diagnostics.Trace.WriteLine("Resetting disposed graphics device, why?");
                 return;
             }
+
+            // Clear cached device-dependent resources before reset
+            ClearDeviceDependentCaches();
+
             DeviceResetting?.Invoke(this, EventArgs.Empty);
 
             parameters.BackBufferWidth = Math.Max(width, 1);
@@ -165,9 +179,28 @@ namespace VikingXNAWinForms
 
             graphicsDevice.Reset(parameters);
 
+            // Reload global textures after reset
+            LoadGlobalPrimitivesTextures();
+
             DeviceReset?.Invoke(this, EventArgs.Empty);
+        }
 
+        /// <summary>
+        /// Clears all cached device-dependent resources.
+        /// Called before device reset to ensure stale resources are not used.
+        /// </summary>
+        private void ClearDeviceDependentCaches()
+        {
+            // Clear effect stores for all effect types used in the application
+            DeviceEffectsStore<RoundLineCode.RoundLineManager>.ClearAll();
+            DeviceEffectsStore<RoundLineCode.LumaOverlayRoundLineManager>.ClearAll();
+            DeviceEffectsStore<RoundCurve.CurveManager>.ClearAll();
+            DeviceEffectsStore<RoundCurve.CurveManagerHSV>.ClearAll();
+            DeviceEffectsStore<PolygonOverlayEffect>.ClearAll();
+            DeviceEffectsStore<OverlayShaderEffect>.ClearAll();
 
+            // Clear font store
+            DeviceFontStore.ClearAll();
         }
 
 

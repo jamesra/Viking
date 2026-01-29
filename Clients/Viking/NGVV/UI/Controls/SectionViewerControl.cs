@@ -77,11 +77,6 @@ namespace Viking.UI.Controls
         /// </summary>
         private SectionNumberOverlayView? sectionNumberOverlay;
 
-        /// <summary>
-        /// Stopwatch used to track elapsed time for section number overlay animation
-        /// </summary>
-        private readonly System.Diagnostics.Stopwatch sectionNumberOverlayStopwatch = new();
-
         public VertexDeclaration VertexPositionColorDeclaration;
 
         /// <summary>
@@ -2779,6 +2774,8 @@ namespace Viking.UI.Controls
                 SectionsAboveBelow = Viking.Properties.Settings.Default.SectionNumberOverlayCount,
                 Edge = ParseOverlayEdge(Viking.Properties.Settings.Default.SectionNumberOverlayEdge),
                 Opacity = Viking.Properties.Settings.Default.SectionNumberOverlayOpacity,
+                MinOpacityForNonCenterSections = Viking.Properties.Settings.Default.SectionNumberOverlayMinOpacityNonCenter,
+                CenterMagnification = Viking.Properties.Settings.Default.SectionNumberOverlayCenterMagnification,
                 SectionExistsFunc = SectionExistsInVolume,
                 HasTransformsFunc = VolumeHasTransforms,
                 // PID parameters
@@ -2808,9 +2805,6 @@ namespace Viking.UI.Controls
             {
                 sectionNumberOverlay.Initialize(Section.Number);
             }
-
-            // Start the stopwatch for animation timing
-            sectionNumberOverlayStopwatch.Start();
         }
 
         /// <summary>
@@ -2851,13 +2845,7 @@ namespace Viking.UI.Controls
             if (State.volume == null || State.volume.SectionViewModels.Count <= 1)
                 return;
 
-            // Update animation based on elapsed time
-            double elapsedSeconds = sectionNumberOverlayStopwatch.Elapsed.TotalSeconds;
-            sectionNumberOverlayStopwatch.Restart();
-
-            sectionNumberOverlay.Update(elapsedSeconds);
-
-            // Draw the overlay using screen-space coordinates
+            // Draw the overlay (animation is driven by overlay's internal 20 Hz background task)
             sectionNumberOverlay.Draw(
                 spriteBatch,
                 fontArial,
@@ -2881,21 +2869,18 @@ namespace Viking.UI.Controls
         /// Check if the volume has slice-to-slice transforms
         /// </summary>
         private bool VolumeHasTransforms()
-        {
-            // If UseSectionSpecificTransform is enabled, transforms exist
-            if (State.UseSectionSpecificTransform)
-                return true;
-
+        { 
             // Check if any section has an active tile transform
             if (State.volume == null)
                 return false;
 
-            foreach (var section in State.volume.SectionViewModels.Values)
-            {
-                if (!string.IsNullOrEmpty(section.ActiveTileTransform))
-                    return true;
-            }
+            if(!string.IsNullOrEmpty(State.volume.DefaultVolumeTransform))
+                return true; 
 
+            // If UseSectionSpecificTransform is enabled, transforms exist
+            if (!string.IsNullOrEmpty(State.volume.ActiveVolumeTransform))
+                return true;
+             
             return false;
         }
 
@@ -2934,6 +2919,8 @@ namespace Viking.UI.Controls
                 Viking.Properties.Settings.Default.SectionNumberOverlayAcceleration,
                 Viking.Properties.Settings.Default.SectionNumberOverlayEdge,
                 Viking.Properties.Settings.Default.SectionNumberOverlayOpacity,
+                Viking.Properties.Settings.Default.SectionNumberOverlayMinOpacityNonCenter,
+                Viking.Properties.Settings.Default.SectionNumberOverlayCenterMagnification,
                 Viking.Properties.Settings.Default.SectionNumberOverlayPidProportionalGain,
                 Viking.Properties.Settings.Default.SectionNumberOverlayPidDerivativeGain,
                 Viking.Properties.Settings.Default.SectionNumberOverlayPidIntegralGain,
@@ -2969,6 +2956,8 @@ namespace Viking.UI.Controls
             sectionNumberOverlay.AccelerationInScreenHeights = viewModel.SectionNumberOverlayAcceleration;
             sectionNumberOverlay.Edge = ParseOverlayEdge(viewModel.SectionNumberOverlayEdge);
             sectionNumberOverlay.Opacity = viewModel.SectionNumberOverlayOpacity;
+            sectionNumberOverlay.MinOpacityForNonCenterSections = viewModel.SectionNumberOverlayMinOpacityNonCenter;
+            sectionNumberOverlay.CenterMagnification = viewModel.SectionNumberOverlayCenterMagnification;
             
             // PID parameters
             sectionNumberOverlay.PidProportionalGain = viewModel.PidProportionalGain;
@@ -2990,6 +2979,8 @@ namespace Viking.UI.Controls
             Viking.Properties.Settings.Default.SectionNumberOverlayAcceleration = viewModel.SectionNumberOverlayAcceleration;
             Viking.Properties.Settings.Default.SectionNumberOverlayEdge = viewModel.SectionNumberOverlayEdge;
             Viking.Properties.Settings.Default.SectionNumberOverlayOpacity = viewModel.SectionNumberOverlayOpacity;
+            Viking.Properties.Settings.Default.SectionNumberOverlayMinOpacityNonCenter = viewModel.SectionNumberOverlayMinOpacityNonCenter;
+            Viking.Properties.Settings.Default.SectionNumberOverlayCenterMagnification = viewModel.SectionNumberOverlayCenterMagnification;
             Viking.Properties.Settings.Default.SectionNumberOverlayPidProportionalGain = viewModel.PidProportionalGain;
             Viking.Properties.Settings.Default.SectionNumberOverlayPidDerivativeGain = viewModel.PidDerivativeGain;
             Viking.Properties.Settings.Default.SectionNumberOverlayPidIntegralGain = viewModel.PidIntegralGain;

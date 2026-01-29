@@ -166,6 +166,46 @@ public class ViewerControl : GraphicsDeviceControl
         Downsample = 1.0;
         InitializeComponent();
     }
+
+    /// <summary>
+    /// Disposes the control and unsubscribes from device events.
+    /// </summary>
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            // Unsubscribe from device events
+            if (graphicsDeviceService != null)
+            {
+                graphicsDeviceService.DeviceResetting -= OnDeviceResetting;
+                graphicsDeviceService.DeviceReset -= OnDeviceReset;
+            }
+
+            // Dispose effects
+            basicEffect?.Dispose();
+            basicEffect = null;
+            tileLayoutEffect = null;
+            mergeHSVImagesEffect = null;
+            channelOverlayEffect = null;
+
+            // Dispose sprite batch
+            spriteBatch?.Dispose();
+            spriteBatch = null;
+
+            // Dispose states
+            DefaultDepthState?.Dispose();
+            DefaultDepthState = null;
+            DefaultBlendState?.Dispose();
+            DefaultBlendState = null;
+
+            // Dispose screenshot render target
+            ScreenshotRenderTarget?.Dispose();
+            ScreenshotRenderTarget = null;
+        }
+
+        base.Dispose(disposing);
+    }
+
     /// <summary>
     /// Objects used to render screenshots
     /// </summary>
@@ -175,6 +215,12 @@ public class ViewerControl : GraphicsDeviceControl
     {
         if (!DesignMode)
         {
+            // Subscribe to device reset events
+            if (graphicsDeviceService != null)
+            {
+                graphicsDeviceService.DeviceResetting += OnDeviceResetting;
+                graphicsDeviceService.DeviceReset += OnDeviceReset;
+            }
 
             //vertexDeclaration = VertexPositionNormalTexture.VertexDeclaration;
 
@@ -187,6 +233,56 @@ public class ViewerControl : GraphicsDeviceControl
             DeviceEffectsStore<RoundCurve.CurveManager>.GetOrCreateForDevice(this.Device, this.Content);
             DeviceEffectsStore<RoundCurve.CurveManagerHSV>.GetOrCreateForDevice(this.Device, this.Content);
         }
+    }
+
+    /// <summary>
+    /// Called when the graphics device is about to be reset.
+    /// Dispose of device-dependent resources that need to be recreated.
+    /// </summary>
+    protected virtual void OnDeviceResetting(object sender, EventArgs e)
+    {
+        // Dispose effects that will be invalid after reset
+        basicEffect?.Dispose();
+        basicEffect = null;
+
+        // Note: tileLayoutEffect, mergeHSVImagesEffect, channelOverlayEffect
+        // wrap Effect objects loaded from content, which are managed by ContentManager.
+        // We just null our references; they'll be recreated in OnDeviceReset.
+        tileLayoutEffect = null;
+        mergeHSVImagesEffect = null;
+        channelOverlayEffect = null;
+
+        // Dispose sprite batch
+        spriteBatch?.Dispose();
+        spriteBatch = null;
+        fontArial = null;
+
+        // Dispose depth/blend states
+        DefaultDepthState?.Dispose();
+        DefaultDepthState = null;
+        DefaultBlendState?.Dispose();
+        DefaultBlendState = null;
+    }
+
+    /// <summary>
+    /// Called after the graphics device has been reset.
+    /// Recreate device-dependent resources.
+    /// </summary>
+    protected virtual void OnDeviceReset(object sender, EventArgs e)
+    {
+        // Reinitialize effects
+        InitializeEffect();
+
+        // Reinitialize effect stores (they were cleared in GraphicsDeviceService.ResetDevice)
+        DeviceEffectsStore<RoundLineCode.RoundLineManager>.GetOrCreateForDevice(this.Device, this.Content);
+        DeviceEffectsStore<RoundLineCode.LumaOverlayRoundLineManager>.GetOrCreateForDevice(this.Device, this.Content);
+        DeviceEffectsStore<RoundCurve.CurveManager>.GetOrCreateForDevice(this.Device, this.Content);
+        DeviceEffectsStore<RoundCurve.CurveManagerHSV>.GetOrCreateForDevice(this.Device, this.Content);
+        DeviceEffectsStore<PolygonOverlayEffect>.GetOrCreateForDevice(this.Device, this.Content);
+        DeviceEffectsStore<OverlayShaderEffect>.GetOrCreateForDevice(this.Device, this.Content);
+
+        // Font store will be recreated on demand
+        DeviceFontStore.GetOrCreateForDevice(this.Device, this.Content);
     }
 
     /// <summary>
