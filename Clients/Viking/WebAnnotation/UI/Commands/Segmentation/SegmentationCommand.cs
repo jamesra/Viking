@@ -419,7 +419,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             else if (foregroundPoint.HasValue || backgroundPoint.HasValue)
             {
                 // Hovering over a point indicates adjustment intent
-                Parent.Cursor = Cursors.SizeAll;
+                Parent.Cursor = Cursors.Default;
             }
             else
             {
