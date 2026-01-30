@@ -53,5 +53,34 @@ namespace Viking.UI.WPF.Converters
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
     }
+
+    /// <summary>
+    /// Converts between int and string for two-way binding to TextBox.Text (e.g. SectionNumberOverlayCount).
+    /// On parse failure, returns Binding.DoNothing so the previous value is preserved.
+    /// </summary>
+    public class Int32Converter : IValueConverter
+    {
+        public int Minimum { get; set; } = int.MinValue;
+        public int Maximum { get; set; } = int.MaxValue;
+
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is int i)
+            {
+                return i.ToString(culture ?? CultureInfo.CurrentCulture);
+            }
+            return string.Empty;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is string s && int.TryParse(s, NumberStyles.Integer, culture ?? CultureInfo.InvariantCulture, out int result))
+            {
+                int clamped = Math.Max(Minimum, Math.Min(Maximum, result));
+                return clamped;
+            }
+            return Binding.DoNothing;
+        }
+    }
 }
 
