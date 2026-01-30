@@ -118,7 +118,13 @@ namespace Viking
             if (tileView != null)
                 return tileView;
 
-            return ConstructTile(tileViewModel, textureFileName, cachedTextureFileName, TransformName, MipMapLevels, tileViewModel.TextureSize);
+            tileView = ConstructTile(tileViewModel, textureFileName, cachedTextureFileName, TransformName, MipMapLevels, tileViewModel.TextureSize);
+            if (tileView != null)
+                return tileView;
+
+            // Race condition: another thread added the key between our Fetch and ConstructTile.
+            // ConstructTile returned null because Add failed. Retry the fetch.
+            return Fetch(key);
         }
 
         protected override TileViewModelCacheEntry CreateEntry(string key, TileView value)
