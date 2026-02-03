@@ -5,7 +5,7 @@ namespace VikingXNAGraphics
     /// <summary>
     /// A PID-like animation controller that smoothly animates a value toward a target position.
     /// Supports acceleration limits and velocity preservation when the target changes.
-    /// Thread-safe: Update may be called from a background thread while CurrentPosition and other state are read from another (e.g. draw) thread.
+    /// Not thread-safe; use from a single thread (e.g. UI/game thread).
     /// This controller operates in pixel units. For resolution-independent behavior,
     /// convert screen-height units to pixels before passing values to this controller.
     /// </summary>
@@ -19,8 +19,8 @@ namespace VikingXNAGraphics
         /// </summary>
         public double TargetPosition
         {
-            get { lock (_sync) { return _targetPosition; } }
-            private set { lock (_sync) { _targetPosition = value; } }
+            get { return _targetPosition; }
+            private set { _targetPosition = value; }
         }
 
         private double _currentPosition;
@@ -29,8 +29,8 @@ namespace VikingXNAGraphics
         /// </summary>
         public double CurrentPosition
         {
-            get { lock (_sync) { return _currentPosition; } }
-            private set { lock (_sync) { _currentPosition = value; } }
+            get { return _currentPosition; }
+            private set { _currentPosition = value; }
         }
 
         private double _velocity;
@@ -39,8 +39,8 @@ namespace VikingXNAGraphics
         /// </summary>
         public double Velocity
         {
-            get { lock (_sync) { return _velocity; } }
-            private set { lock (_sync) { _velocity = value; } }
+            get { return _velocity; }
+            private set { _velocity = value; }
         }
 
         private double _accelerationLimit = 0.1;
@@ -49,8 +49,8 @@ namespace VikingXNAGraphics
         /// </summary>
         public double AccelerationLimit
         {
-            get { lock (_sync) { return _accelerationLimit; } }
-            set { lock (_sync) { _accelerationLimit = value; } }
+            get { return _accelerationLimit; }
+            set { _accelerationLimit = value; }
         }
 
         private double _proportionalGain = 5.0;
@@ -59,8 +59,8 @@ namespace VikingXNAGraphics
         /// </summary>
         public double ProportionalGain
         {
-            get { lock (_sync) { return _proportionalGain; } }
-            set { lock (_sync) { _proportionalGain = value; } }
+            get { return _proportionalGain; }
+            set { _proportionalGain = value; }
         }
 
         private double _integralGain = 0.01;
@@ -69,8 +69,8 @@ namespace VikingXNAGraphics
         /// </summary>
         public double IntegralGain
         {
-            get { lock (_sync) { return _integralGain; } }
-            set { lock (_sync) { _integralGain = value; } }
+            get { return _integralGain; }
+            set { _integralGain = value; }
         }
 
         private double _derivativeGain = 2.0;
@@ -79,8 +79,8 @@ namespace VikingXNAGraphics
         /// </summary>
         public double DerivativeGain
         {
-            get { lock (_sync) { return _derivativeGain; } }
-            set { lock (_sync) { _derivativeGain = value; } }
+            get { return _derivativeGain; }
+            set { _derivativeGain = value; }
         }
 
         private double _velocityThreshold = 1;
@@ -89,8 +89,8 @@ namespace VikingXNAGraphics
         /// </summary>
         public double VelocityThreshold
         {
-            get { lock (_sync) { return _velocityThreshold; } }
-            set { lock (_sync) { _velocityThreshold = value; } }
+            get { return _velocityThreshold; }
+            set { _velocityThreshold = value; }
         }
 
         private double _positionThreshold = 0.5;
@@ -99,15 +99,14 @@ namespace VikingXNAGraphics
         /// </summary>
         public double PositionThreshold
         {
-            get { lock (_sync) { return _positionThreshold; } }
-            set { lock (_sync) { _positionThreshold = value; } }
+            get { return _positionThreshold; }
+            set { _positionThreshold = value; }
         }
 
         #endregion
 
         #region Private Fields
 
-        private readonly object _sync = new object();
         private double _integralError = 0.0;
         private double _previousError = 0.0;
         private bool _firstUpdate = true;
@@ -140,66 +139,53 @@ namespace VikingXNAGraphics
             if (elapsedSeconds <= 0)
                 return;
 
-            lock (_sync)
+            // Calculate error (difference between target and current position)
+            double error = _targetPosition - _currentPosition;
+
+            // Calculate derivative of error
+            double derivativeError = 0.0;
+            if (!_firstUpdate)
             {
-                // Calculate error (difference between target and current position)
-                double error = _targetPosition - _currentPosition;
-
-                // Calculate derivative of error
-                double derivativeError = 0.0;
-                if (!_firstUpdate)
-                {
-                    derivativeError = (error - _previousError) / elapsedSeconds;
-                }
-                _firstUpdate = false;
-
-                // Accumulate integral error (with anti-windup)
-                // Limit is in pixel-seconds
-                _integralError += error * elapsedSeconds;
-                _integralError = Clamp(_integralError, -100.0, 100.0); // Prevent integral windup
-
-                // Calculate desired velocity using PID formula
-                double desiredVelocity = _proportionalGain * error +
-                                         _integralGain * _integralError +
-                                         _derivativeGain * derivativeError;
-
-                // Apply acceleration limit
-                double velocityChange = desiredVelocity - _velocity;
-                double maxVelocityChange = _accelerationLimit * elapsedSeconds;
-
-                if (Math.Abs(velocityChange) > maxVelocityChange)
-                {
-                    velocityChange = Math.Sign(velocityChange) * maxVelocityChange;
-                }
-
-                _velocity += velocityChange;
-
-                // Update position based on velocity
-                _currentPosition += _velocity * elapsedSeconds;
-
-                // Store error for next iteration
-                _previousError = error;
-
-                // If we're very close to target and moving slowly, snap to target
-                if (IsCompleteLocked())
-                {
-                    _currentPosition = _targetPosition;
-                    _velocity = 0.0;
-                    _integralError = 0.0;
-                    _previousError = 0.0;
-                    _firstUpdate = true;
-                }
+                derivativeError = (error - _previousError) / elapsedSeconds;
             }
-        }
+            _firstUpdate = false;
 
-        /// <summary>
-        /// Check if the animation is complete (velocity near zero AND at target position).
-        /// Call only while holding _sync, or use public IsComplete() which takes the lock.
-        /// </summary>
-        private bool IsCompleteLocked()
-        {
-            double error = Math.Abs(_targetPosition - _currentPosition);
-            return error <= _positionThreshold && Math.Abs(_velocity) <= _velocityThreshold;
+            // Accumulate integral error (with anti-windup)
+            // Limit is in pixel-seconds
+            _integralError += error * elapsedSeconds;
+            _integralError = Clamp(_integralError, -100.0, 100.0); // Prevent integral windup
+
+            // Calculate desired velocity using PID formula
+            double desiredVelocity = _proportionalGain * error +
+                                     _integralGain * _integralError +
+                                     _derivativeGain * derivativeError;
+
+            // Apply acceleration limit
+            double velocityChange = desiredVelocity - _velocity;
+            double maxVelocityChange = _accelerationLimit * elapsedSeconds;
+
+            if (Math.Abs(velocityChange) > maxVelocityChange)
+            {
+                velocityChange = Math.Sign(velocityChange) * maxVelocityChange;
+            }
+
+            _velocity += velocityChange;
+
+            // Update position based on velocity
+            _currentPosition += _velocity * elapsedSeconds;
+
+            // Store error for next iteration
+            _previousError = error;
+
+            // If we're very close to target and moving slowly, snap to target
+            if (IsComplete())
+            {
+                _currentPosition = _targetPosition;
+                _velocity = 0.0;
+                _integralError = 0.0;
+                _previousError = 0.0;
+                _firstUpdate = true;
+            }
         }
 
         /// <summary>
@@ -208,10 +194,8 @@ namespace VikingXNAGraphics
         /// <returns>True if animation is complete</returns>
         public bool IsComplete()
         {
-            lock (_sync)
-            {
-                return IsCompleteLocked();
-            }
+            double error = Math.Abs(_targetPosition - _currentPosition);
+            return error <= _positionThreshold && Math.Abs(_velocity) <= _velocityThreshold;
         }
 
         /// <summary>
@@ -221,17 +205,14 @@ namespace VikingXNAGraphics
         /// <param name="target">The new target position</param>
         public void SetTarget(double target)
         {
-            lock (_sync)
-            {
-                _targetPosition = target;
-                // Reset integral error to prevent overshoot with new target
-                _integralError = 0.0;
-                // Update _previousError so derivative term doesn't spike on next Update()
-                _previousError = _targetPosition - _currentPosition;
-                // Damp velocity on target change so repeated section changes in one direction
-                // don't accumulate speed and overshoot by a lot (e.g. 5→6→7→8...)
-                _velocity *= 0.5;
-            }
+            _targetPosition = target;
+            // Reset integral error to prevent overshoot with new target
+            _integralError = 0.0;
+            // Update _previousError so derivative term doesn't spike on next Update()
+            _previousError = _targetPosition - _currentPosition;
+            // Damp velocity on target change so repeated section changes in one direction
+            // don't accumulate speed and overshoot by a lot (e.g. 5→6→7→8...)
+            _velocity *= 0.5;
         }
 
         /// <summary>
@@ -240,11 +221,20 @@ namespace VikingXNAGraphics
         /// <param name="position">The new current position</param>
         public void SetPosition(double position)
         {
-            lock (_sync)
-            {
-                _currentPosition = position;
-                _previousError = _targetPosition - _currentPosition;
-            }
+            _currentPosition = position;
+            _previousError = _targetPosition - _currentPosition;
+        }
+
+        /// <summary>
+        /// Set both position and velocity without changing target. Used when cloning state for simulation (e.g. trajectory precompute).
+        /// </summary>
+        /// <param name="position">The current position</param>
+        /// <param name="velocity">The current velocity (units per second)</param>
+        public void SetState(double position, double velocity)
+        {
+            _currentPosition = position;
+            _velocity = velocity;
+            _previousError = _targetPosition - _currentPosition;
         }
 
         /// <summary>
@@ -253,15 +243,12 @@ namespace VikingXNAGraphics
         /// <param name="position">The position to reset to (defaults to 0)</param>
         public void Reset(double position = 0.0)
         {
-            lock (_sync)
-            {
-                _currentPosition = position;
-                _targetPosition = position;
-                _velocity = 0.0;
-                _integralError = 0.0;
-                _previousError = 0.0;
-                _firstUpdate = true;
-            }
+            _currentPosition = position;
+            _targetPosition = position;
+            _velocity = 0.0;
+            _integralError = 0.0;
+            _previousError = 0.0;
+            _firstUpdate = true;
         }
 
         /// <summary>
@@ -270,14 +257,11 @@ namespace VikingXNAGraphics
         /// <param name="position">The position to snap to</param>
         public void SnapTo(double position)
         {
-            lock (_sync)
-            {
-                _currentPosition = position;
-                _targetPosition = position;
-                _velocity = 0.0;
-                _integralError = 0.0;
-                _previousError = 0.0;
-            }
+            _currentPosition = position;
+            _targetPosition = position;
+            _velocity = 0.0;
+            _integralError = 0.0;
+            _previousError = 0.0;
         }
 
         /// <summary>
@@ -287,15 +271,12 @@ namespace VikingXNAGraphics
         /// <param name="scaleFactor">The factor to multiply positions and velocity by</param>
         public void ScalePositions(double scaleFactor)
         {
-            lock (_sync)
-            {
-                _currentPosition *= scaleFactor;
-                _targetPosition *= scaleFactor;
-                _velocity *= scaleFactor;
-                _previousError *= scaleFactor;
-                // Integral error is in position-seconds, so it also needs scaling
-                _integralError *= scaleFactor;
-            }
+            _currentPosition *= scaleFactor;
+            _targetPosition *= scaleFactor;
+            _velocity *= scaleFactor;
+            _previousError *= scaleFactor;
+            // Integral error is in position-seconds, so it also needs scaling
+            _integralError *= scaleFactor;
         }
 
         #endregion

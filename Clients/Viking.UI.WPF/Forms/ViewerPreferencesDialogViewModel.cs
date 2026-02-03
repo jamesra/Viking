@@ -26,7 +26,7 @@ namespace Viking.UI.WPF.Forms
         /// <summary>
         /// Default acceleration value
         /// </summary>
-        public const double DefaultAcceleration = 0.1;
+        public const double DefaultAcceleration = 1.0;
 
         /// <summary>
         /// Default opacity value
@@ -51,13 +51,21 @@ namespace Viking.UI.WPF.Forms
         public const double MaxCenterMagnification = 4.0;
 
         // PID Parameter Defaults and Ranges
-        public const double DefaultPidProportionalGain = 4.0;
-        public const double DefaultPidDerivativeGain = 1.0;
+        public const double DefaultPidProportionalGain = 500.0;
+        public const double MinProportionalGain = 0.1;
+        public const double MaxProportionalGain = 1800.0;
+        public const double DefaultPidDerivativeGain = 300.0;
         public const double MinDerivativeGain = 1.0;
-        public const double MaxDerivativeGain = 200.0;
-        public const double DefaultPidIntegralGain = 0.01;
-        public const double DefaultPidVelocityThreshold = 0.5;
-        public const double DefaultPidPositionThreshold = 0.5;
+        public const double MaxDerivativeGain = 2400.0;
+        public const double DefaultPidIntegralGain = 0.005;
+        public const double MinIntegralGain = 0.0;
+        public const double MaxIntegralGain = 1.0;
+        public const double DefaultPidVelocityThreshold = 0.01;
+        public const double MinVelocityThreshold = 0.001;
+        public const double MaxVelocityThreshold = 0.1;
+        public const double DefaultPidPositionThreshold = 0.01;
+        public const double MinPositionThreshold = 0.001;
+        public const double MaxPositionThreshold = 0.1;
         #endregion
 
         #region Original Values (for Cancel revert)
@@ -100,7 +108,7 @@ namespace Viking.UI.WPF.Forms
             {
                 if (_sectionNumberOverlayCount != value)
                 {
-                    _sectionNumberOverlayCount = Clamp(value, 1, 20);
+                    _sectionNumberOverlayCount = Clamp(value, 1, 50);
                     OnPropertyChanged();
                     SectionNumberOverlaySettingsChanged?.Invoke();
                 }
@@ -220,7 +228,7 @@ namespace Viking.UI.WPF.Forms
             get => _pidProportionalGain;
             set
             {
-                double clampedValue = Clamp(value, 0.1, 50.0);
+                double clampedValue = Clamp(value, MinProportionalGain, MaxProportionalGain);
                 if (Math.Abs(_pidProportionalGain - clampedValue) > 0.001)
                 {
                     _pidProportionalGain = clampedValue;
@@ -252,7 +260,7 @@ namespace Viking.UI.WPF.Forms
             get => _pidIntegralGain;
             set
             {
-                double clampedValue = Clamp(value, 0.0, 1.0);
+                double clampedValue = Clamp(value, MinIntegralGain, MaxIntegralGain);
                 if (Math.Abs(_pidIntegralGain - clampedValue) > 0.0001)
                 {
                     _pidIntegralGain = clampedValue;
@@ -268,7 +276,7 @@ namespace Viking.UI.WPF.Forms
             get => _pidVelocityThreshold;
             set
             {
-                double clampedValue = Clamp(value, 0.01, 0.05);
+                double clampedValue = Clamp(value, MinVelocityThreshold, MaxVelocityThreshold);
                 if (Math.Abs(_pidVelocityThreshold - clampedValue) > 0.001)
                 {
                     _pidVelocityThreshold = clampedValue;
@@ -284,7 +292,7 @@ namespace Viking.UI.WPF.Forms
             get => _pidPositionThreshold;
             set
             {
-                double clampedValue = Clamp(value, 0.01, 1.0);
+                double clampedValue = Clamp(value, MinPositionThreshold, MaxPositionThreshold);
                 if (Math.Abs(_pidPositionThreshold - clampedValue) > 0.001)
                 {
                     _pidPositionThreshold = clampedValue;
@@ -293,6 +301,27 @@ namespace Viking.UI.WPF.Forms
                 }
             }
         }
+
+        /// <summary>Exposes MinProportionalGain for XAML binding (slider range).</summary>
+        public double PidProportionalGainMinimum => MinProportionalGain;
+        /// <summary>Exposes MaxProportionalGain for XAML binding (slider range).</summary>
+        public double PidProportionalGainMaximum => MaxProportionalGain;
+        /// <summary>Exposes MinIntegralGain for XAML binding (slider range).</summary>
+        public double PidIntegralGainMinimum => MinIntegralGain;
+        /// <summary>Exposes MaxIntegralGain for XAML binding (slider range).</summary>
+        public double PidIntegralGainMaximum => MaxIntegralGain;
+        /// <summary>Exposes MinDerivativeGain for XAML binding (slider range).</summary>
+        public double PidDerivativeGainMinimum => MinDerivativeGain;
+        /// <summary>Exposes MaxDerivativeGain for XAML binding (slider range).</summary>
+        public double PidDerivativeGainMaximum => MaxDerivativeGain;
+        /// <summary>Exposes MinVelocityThreshold for XAML binding (slider range).</summary>
+        public double PidVelocityThresholdMinimum => MinVelocityThreshold;
+        /// <summary>Exposes MaxVelocityThreshold for XAML binding (slider range).</summary>
+        public double PidVelocityThresholdMaximum => MaxVelocityThreshold;
+        /// <summary>Exposes MinPositionThreshold for XAML binding (slider range).</summary>
+        public double PidPositionThresholdMinimum => MinPositionThreshold;
+        /// <summary>Exposes MaxPositionThreshold for XAML binding (slider range).</summary>
+        public double PidPositionThresholdMaximum => MaxPositionThreshold;
 
         #endregion
 
@@ -338,8 +367,9 @@ namespace Viking.UI.WPF.Forms
             double clampedOpacity = Clamp(sectionNumberOverlayOpacity, 0.0, 1.0);
             double clampedMinOpacityNonCenter = Clamp(sectionNumberOverlayMinOpacityNonCenter, 0.0, MaxMinOpacityNonCenter);
             double clampedCenterMagnification = Clamp(sectionNumberOverlayCenterMagnification, MinCenterMagnification, MaxCenterMagnification);
-            double clampedVelocityThreshold = Clamp(pidVelocityThreshold, 0.01, 0.05);
-            double clampedPositionThreshold = Clamp(pidPositionThreshold, 0.01, 0.05);
+            double clampedVelocityThreshold = Clamp(pidVelocityThreshold, MinVelocityThreshold, MaxVelocityThreshold);
+            double clampedPositionThreshold = Clamp(pidPositionThreshold, MinPositionThreshold, MaxPositionThreshold);
+            double clampedProportionalGain = Clamp(pidProportionalGain, MinProportionalGain, MaxProportionalGain);
             double clampedDerivativeGain = Clamp(pidDerivativeGain, MinDerivativeGain, MaxDerivativeGain);
 
             // Store original values for Cancel revert (use clamped values)
@@ -350,7 +380,7 @@ namespace Viking.UI.WPF.Forms
             _originalSectionNumberOverlayOpacity = clampedOpacity;
             _originalSectionNumberOverlayMinOpacityNonCenter = clampedMinOpacityNonCenter;
             _originalSectionNumberOverlayCenterMagnification = clampedCenterMagnification;
-            _originalPidProportionalGain = pidProportionalGain;
+            _originalPidProportionalGain = clampedProportionalGain;
             _originalPidDerivativeGain = clampedDerivativeGain;
             _originalPidIntegralGain = pidIntegralGain;
             _originalPidVelocityThreshold = clampedVelocityThreshold;
@@ -367,7 +397,7 @@ namespace Viking.UI.WPF.Forms
             _sectionNumberOverlayOpacity = clampedOpacity;
             _sectionNumberOverlayMinOpacityNonCenter = clampedMinOpacityNonCenter;
             _sectionNumberOverlayCenterMagnification = clampedCenterMagnification;
-            _pidProportionalGain = pidProportionalGain;
+            _pidProportionalGain = clampedProportionalGain;
             _pidDerivativeGain = clampedDerivativeGain;
             _pidIntegralGain = pidIntegralGain;
             _pidVelocityThreshold = clampedVelocityThreshold;
@@ -422,7 +452,7 @@ namespace Viking.UI.WPF.Forms
         public void ResetToDefaults()
         {
             SectionNumberOverlayEnabled = true;
-            SectionNumberOverlayCount = 4;
+            SectionNumberOverlayCount = 25;
             SectionNumberOverlayAcceleration = DefaultAcceleration;
             SectionNumberOverlayEdge = "Left";
             SectionNumberOverlayOpacity = DefaultOpacity;

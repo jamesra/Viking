@@ -365,7 +365,7 @@ namespace Viking.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0.1")]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
         public double SectionNumberOverlayAcceleration {
             get {
                 return ((double)(this["SectionNumberOverlayAcceleration"]));
@@ -389,7 +389,7 @@ namespace Viking.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0.7")]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
         public double SectionNumberOverlayOpacity {
             get {
                 return ((double)(this["SectionNumberOverlayOpacity"]));
@@ -401,7 +401,7 @@ namespace Viking.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0.5")]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.3")]
         public double SectionNumberOverlayMinOpacityNonCenter {
             get {
                 return ((double)(this["SectionNumberOverlayMinOpacityNonCenter"]));
@@ -425,7 +425,7 @@ namespace Viking.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("4.0")]
+        [global::System.Configuration.DefaultSettingValueAttribute("500")]
         public double SectionNumberOverlayPidProportionalGain {
             get {
                 return ((double)(this["SectionNumberOverlayPidProportionalGain"]));
@@ -437,7 +437,7 @@ namespace Viking.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1.0")]
+        [global::System.Configuration.DefaultSettingValueAttribute("300.0")]
         public double SectionNumberOverlayPidDerivativeGain {
             get {
                 return ((double)(this["SectionNumberOverlayPidDerivativeGain"]));
@@ -461,7 +461,7 @@ namespace Viking.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0.5")]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.01")]
         public double SectionNumberOverlayPidVelocityThreshold {
             get {
                 return ((double)(this["SectionNumberOverlayPidVelocityThreshold"]));
@@ -473,7 +473,7 @@ namespace Viking.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0.5")]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.01")]
         public double SectionNumberOverlayPidPositionThreshold {
             get {
                 return ((double)(this["SectionNumberOverlayPidPositionThreshold"]));

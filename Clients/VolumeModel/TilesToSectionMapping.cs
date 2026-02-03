@@ -201,24 +201,22 @@ namespace Viking.VolumeModel
 
         private static async Task<DateTime> ServerSideLastModifed(Uri uri, CancellationToken token)
         {
-            //HttpWebRequest headerRequest = CreateRequest(uri);
-            using var headerRequest = CreateRequest();
-            //headerRequest.Method = "HEAD";
+            // Do NOT use 'using' on the shared HttpClient - it must never be disposed by consumers.
+            var headerRequest = CreateRequest();
 
-            var headerResponse =
+            using var headerResponse =
                 await headerRequest.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, token);
+
+            if (false == headerResponse.IsSuccessStatusCode)
+                return DateTime.MinValue;
+
+            var lastModified = headerResponse.Content.Headers.LastModified;
+            if (lastModified.HasValue)
             {
-                if (false == headerResponse.IsSuccessStatusCode)
-                    return DateTime.MinValue;
-
-                var lastModified = headerResponse.Content.Headers.LastModified;
-                if (lastModified.HasValue)
-                {
-                    return lastModified.Value.UtcDateTime;
-                }
-
-                return DateTime.MaxValue;
+                return lastModified.Value.UtcDateTime;
             }
+
+            return DateTime.MaxValue;
             /*
             using (HttpWebResponse headerResponse = await headerRequest.GetResponseAsync() as HttpWebResponse)
             {

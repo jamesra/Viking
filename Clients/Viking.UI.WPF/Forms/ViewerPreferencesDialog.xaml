@@ -80,7 +80,7 @@
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="Number of section numbers to display above and below the current section. Range: 1 to 20."/>
+                                     Text="Number of section numbers to display above and below the current section. Range: 1 to 50."/>
                         </Grid>
 
                         <!-- Animation Acceleration -->
@@ -266,7 +266,7 @@
                             <Label Grid.Column="0" Content="Proportional Gain (P):"/>
                             <Slider Grid.Column="1"
                                     Value="{Binding PidProportionalGain, Mode=TwoWay}"
-                                    Minimum="0.1" Maximum="50" TickFrequency="0.5"
+                                    Minimum="{Binding PidProportionalGainMinimum}" Maximum="{Binding PidProportionalGainMaximum}" TickFrequency="0.5"
                                     IsSnapToTickEnabled="False" Margin="5"/>
                             <TextBox Grid.Column="2"
                                      Text="{Binding PidProportionalGain, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"
@@ -283,7 +283,7 @@
                             <Label Grid.Column="0" Content="Integral Gain (I):"/>
                             <Slider Grid.Column="1"
                                     Value="{Binding PidIntegralGain, Mode=TwoWay}"
-                                    Minimum="0" Maximum="1" TickFrequency="0.01"
+                                    Minimum="{Binding PidIntegralGainMinimum}" Maximum="{Binding PidIntegralGainMaximum}" TickFrequency="0.01"
                                     IsSnapToTickEnabled="False" Margin="5"/>
                             <TextBox Grid.Column="2"
                                      Text="{Binding PidIntegralGain, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F3'}"
@@ -300,7 +300,7 @@
                             <Label Grid.Column="0" Content="Derivative Gain (D):"/>
                             <Slider Grid.Column="1"
                                     Value="{Binding PidDerivativeGain, Mode=TwoWay}"
-                                    Minimum="1" Maximum="200" TickFrequency="1"
+                                    Minimum="{Binding PidDerivativeGainMinimum}" Maximum="{Binding PidDerivativeGainMaximum}" TickFrequency="1"
                                     IsSnapToTickEnabled="False" Margin="5"/>
                             <TextBox Grid.Column="2"
                                      Text="{Binding PidDerivativeGain, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F0'}"
@@ -317,7 +317,7 @@
                             <Label Grid.Column="0" Content="Velocity Threshold:"/>
                             <Slider Grid.Column="1"
                                     Value="{Binding PidVelocityThreshold, Mode=TwoWay}"
-                                    Minimum="0.01" Maximum="1" TickFrequency="0.01"
+                                    Minimum="{Binding PidVelocityThresholdMinimum}" Maximum="{Binding PidVelocityThresholdMaximum}" TickFrequency="0.01"
                                     IsSnapToTickEnabled="False" Margin="5"/>
                             <TextBox Grid.Column="2"
                                      Text="{Binding PidVelocityThreshold, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"
@@ -334,7 +334,7 @@
                             <Label Grid.Column="0" Content="Position Threshold:"/>
                             <Slider Grid.Column="1"
                                     Value="{Binding PidPositionThreshold, Mode=TwoWay}"
-                                    Minimum="0.01" Maximum="0.05" TickFrequency="0.005"
+                                    Minimum="{Binding PidPositionThresholdMinimum}" Maximum="{Binding PidPositionThresholdMaximum}" TickFrequency="0.005"
                                     IsSnapToTickEnabled="False" Margin="5"/>
                             <TextBox Grid.Column="2"
                                      Text="{Binding PidPositionThreshold, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"

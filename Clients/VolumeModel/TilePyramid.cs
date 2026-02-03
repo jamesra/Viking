@@ -19,8 +19,7 @@ namespace Viking.VolumeModel
         private readonly SortedDictionary<int, SortedDictionary<string, TileViewModel>> TilesAtLevel = [];
 
         public void AddTile(int downsample, TileViewModel tileViewModel)
-        {
-
+        { 
             if (TilesAtLevel.TryGetValue(downsample, out SortedDictionary<string, TileViewModel> tiles))
             {
                 Debug.Assert(false == tiles.ContainsKey(tileViewModel.ToString()));

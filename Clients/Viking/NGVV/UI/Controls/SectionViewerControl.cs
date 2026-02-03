@@ -2779,15 +2779,17 @@ namespace Viking.UI.Controls
                 SectionExistsFunc = SectionExistsInVolume,
                 HasTransformsFunc = VolumeHasTransforms,
                 // PID parameters
+                /*
                 PidProportionalGain = Viking.Properties.Settings.Default.SectionNumberOverlayPidProportionalGain,
                 PidDerivativeGain = Viking.Properties.Settings.Default.SectionNumberOverlayPidDerivativeGain,
                 PidIntegralGain = Viking.Properties.Settings.Default.SectionNumberOverlayPidIntegralGain,
                 PidVelocityThresholdScreenHeights = Viking.Properties.Settings.Default.SectionNumberOverlayPidVelocityThreshold,
                 PidPositionThresholdScreenHeights = Viking.Properties.Settings.Default.SectionNumberOverlayPidPositionThreshold
+                */
             };
 
             // Configure the acceleration from settings (in screen-height units)
-            sectionNumberOverlay.AccelerationInScreenHeights = Viking.Properties.Settings.Default.SectionNumberOverlayAcceleration;
+            //sectionNumberOverlay.AccelerationInScreenHeights = Viking.Properties.Settings.Default.SectionNumberOverlayAcceleration;
 
             // Update min/max section numbers from volume if available
             if (State.volume != null)
@@ -2845,7 +2847,7 @@ namespace Viking.UI.Controls
             if (State.volume == null || State.volume.SectionViewModels.Count <= 1)
                 return;
 
-            // Draw the overlay (animation is driven by overlay's internal 20 Hz background task)
+            // Draw the overlay (animation uses precomputed trajectory sampled in Draw)
             sectionNumberOverlay.Draw(
                 spriteBatch,
                 fontArial,
