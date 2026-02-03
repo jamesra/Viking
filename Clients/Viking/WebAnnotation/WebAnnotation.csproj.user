@@ -17,9 +17,6 @@
     <Compile Update="UI\Controls\ListStructures.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="UI\FindStructureNumberForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
     <Compile Update="UI\Forms\PenAnnotationViewForm.cs">
       <SubType>Form</SubType>
     </Compile>

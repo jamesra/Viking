@@ -95,7 +95,7 @@ namespace Viking
             // Upgrade settings from previous versions (preserves user settings across updates)
             SettingsManager.UpgradeSettingsIfNeeded();
 
-            //ConfigureHighDpiMode();
+            ConfigureHighDpiMode();
             Application.EnableVisualStyles();
 
             Assembly execAssembly = System.Reflection.Assembly.GetExecutingAssembly();

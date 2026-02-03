@@ -79,7 +79,6 @@
 	<!-- Include Windows Forms resource files -->
 	<ItemGroup>
 		<EmbeddedResource Include="Properties\Resources.resx" />
-		<EmbeddedResource Include="UI\FindStructureNumberForm.resx" />
 		<EmbeddedResource Include="UI\MergeStructuresForm.resx" />
 		<EmbeddedResource Include="UI\SplitStructuresForm.resx" />
 		<EmbeddedResource Include="UI\StructureChildStructuresPage.resx" />

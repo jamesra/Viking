@@ -18,7 +18,6 @@ namespace WebAnnotation
     [MenuAttribute("Annotation")]
     internal class AnnotationMenu : Viking.Common.IMenuFactory
     {
-        private static FindStructureNumberForm? _FindStructureNumberForm = null;
         private static MergeStructuresForm? _MergeStructuresForm = null;
         private static WebAnnotation.WPF.Forms.AnnotationPreferencesDialog? _preferencesDialog = null;
         private static ToolStripMenuItem menuPenMode;
@@ -543,18 +542,7 @@ namespace WebAnnotation
         public static void ShowStructure(object sender, EventArgs e)
         {
             Debug.Print("Show Structure");
-
-            if (_FindStructureNumberForm is null)
-            {
-                _FindStructureNumberForm = new FindStructureNumberForm();
-            }
-            else if (_FindStructureNumberForm.IsDisposed)
-            {
-                _FindStructureNumberForm = new FindStructureNumberForm();
-            }
-
-            _FindStructureNumberForm.Show();
-            _FindStructureNumberForm.Focus();
+            WebAnnotation.AnnotationOverlay.CurrentOverlay.OpenFindStructureForm();
         }
 
         [MenuItem("Goto Structure")]

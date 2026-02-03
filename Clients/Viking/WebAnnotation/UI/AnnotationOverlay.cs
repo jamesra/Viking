@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
+using System.Windows.Interop;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.Common;
 using Viking.UI.Commands;
@@ -53,6 +54,7 @@ namespace WebAnnotation
 
         protected static WebAnnotation.UI.Forms.GoToActionForm GoToLocationForm;
         protected static WebAnnotation.UI.Forms.GoToActionForm GoToStructureForm;
+        protected static WebAnnotation.UI.Forms.FindStructureNumberForm FindStructureNumberForm;
         private GridVector2 LastMouseDownCoords;
         private GridVector2 LastMouseMoveVolumeCoords;
 
@@ -919,6 +921,16 @@ break;
         }
 
 
+        private void SetFormOwner(System.Windows.Window wpfWindow)
+        {
+            var form = _Parent.FindForm();
+            if (form != null)
+            {
+                var helper = new WindowInteropHelper(wpfWindow);
+                helper.Owner = form.Handle;
+            }
+        }
+
         public void OpenGotoStructureForm()
         {
             if (GoToStructureForm == null)
@@ -929,6 +941,7 @@ break;
                     IsValidInput = (ID) => Store.Structures.GetObjectByID(ID, true) != null,
                     OnGo = GoToStructure
                 };
+                SetFormOwner(GoToStructureForm);
                 GoToStructureForm.Closed += GoToStructureForm_Closed;
                 System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(GoToStructureForm);
                 GoToStructureForm.Show();
@@ -938,6 +951,38 @@ break;
                 GoToStructureForm.Activate();
             }
         }
+
+        public void OpenFindStructureForm()
+        {
+            if (FindStructureNumberForm == null)
+            {
+                FindStructureNumberForm = new UI.Forms.FindStructureNumberForm
+                {
+                    OnFindStructure = (structureId) =>
+                    {
+                        var structure = Store.Structures.GetObjectByID(structureId);
+                        if (structure is null)
+                        {
+                            System.Windows.MessageBox.Show("No structure found with that ID", "Error", System.Windows.MessageBoxButton.OK);
+                            return false;
+                        }
+                        var structView = new WebAnnotation.ViewModel.Structure(structure);
+                        structView.ShowProperties();
+                        return true;
+                    }
+                };
+                FindStructureNumberForm.Closed += FindStructureNumberForm_Closed;
+                SetFormOwner(FindStructureNumberForm);
+                System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(FindStructureNumberForm);
+                FindStructureNumberForm.Show();
+            }
+            else
+            {
+                FindStructureNumberForm.Activate();
+            }
+        }
+
+        private void FindStructureNumberForm_Closed(object sender, EventArgs e) => FindStructureNumberForm = null;
 
         public void OpenGotoLocationForm()
         {
@@ -949,6 +994,7 @@ break;
                     IsValidInput = (ID) => Store.Locations.GetObjectByID(ID, true) != null,
                     OnGo = GoToLocation
                 };
+                SetFormOwner(GoToLocationForm);
                 GoToLocationForm.Closed += GoToLocationForm_Closed;
                 System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(GoToLocationForm);
                 GoToLocationForm.Show();

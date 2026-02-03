@@ -5,15 +5,16 @@
     <RootNamespace>Viking</RootNamespace>
     <AssemblyName>Viking</AssemblyName>
     <ApplicationIcon>Viking.ico</ApplicationIcon>
+    <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <SignAssembly>False</SignAssembly>
     <ManifestTimestampUrl>http://timestamp.digicert.com</ManifestTimestampUrl>
     <ProductName>Viking</ProductName>
     <PublisherName>Marc Lab</PublisherName>
-    <ApplicationVersion>1.2.43.0</ApplicationVersion>
-    <FileVersion>1.2.43.0</FileVersion>
-    <AssemblyVersion>1.2.43.0</AssemblyVersion>
+    <ApplicationVersion>1.2.44.0</ApplicationVersion>
+    <FileVersion>1.2.44.0</FileVersion>
+    <AssemblyVersion>1.2.44.0</AssemblyVersion>
     <Deterministic>True</Deterministic>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <NoWarn>$(NoWarn);CS0436;CA1014;CS3009</NoWarn>
