@@ -83,8 +83,8 @@ namespace Viking.UI.WPF
             _savedPassword = e.Password;
             _isAnonymous = e.IsAnonymous;
 
-            // Show volume selection stage with appropriate bearer token (null for anonymous)
-            ShowVolumeStage(e.IsAnonymous ? null : BearerToken);
+            // Show volume selection stage with bearer token (from login for both normal and anonymous)
+            ShowVolumeStage(BearerToken);
         }
 
         private void InitializeVolumeSelectionViewModel(TokenResponse bearerToken)

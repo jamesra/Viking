@@ -232,29 +232,6 @@ namespace Annotation
             return [.. queryResults.ToArray().Select(psl => psl.Create())];
         }
 
-        /*
-        public StructureTemplate[] GetStructureTemplates()
-        {
-            try
-            {
-                IQueryable<ConnectomeDataModel.StructureTemplates> queryResults = from t in db.StructureTemplates select t;
-                List<StructureType> retList = new List<StructureType>(queryResults.Count());
-                foreach (ConnectomeDataModel.StructureType dbt in queryResults)
-                {
-                    StructureType newType = new StructureType(dbt);
-                    retList.Add(newType);
-                }
-                return retList.ToArray();
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e.ToString());
-            }
-
-            return null;
-        }
-         */
-
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.StructureType GetStructureTypeByID(long ID)
         {
@@ -440,6 +417,27 @@ namespace Annotation
 
             using (var db = GetOrCreateDatabaseContext())
             {
+                // Batch-load structure types for UPDATE and DELETE to avoid N round-trips
+                long[] updateAndDeleteIds = structTypes
+                    .Where(t => t.DBAction == DBACTION.UPDATE || t.DBAction == DBACTION.DELETE)
+                    .Select(t => t.ID)
+                    .Distinct()
+                    .ToArray();
+                Dictionary<long, ConnectomeDataModel.StructureType> dictStructureTypes = new(updateAndDeleteIds.Length);
+                if (updateAndDeleteIds.Length > 0)
+                {
+                    const int QueryChunkSize = 2000;
+                    var chunks = updateAndDeleteIds.Length <= QueryChunkSize
+                        ? new List<long[]> { updateAndDeleteIds }
+                        : ((ICollection<long>)updateAndDeleteIds).SortAndChunk((uint)QueryChunkSize);
+                    foreach (long[] chunk in chunks)
+                    {
+                        var batch = db.StructureTypes.Where(st => chunk.Contains(st.ID)).ToList();
+                        foreach (var st in batch)
+                            dictStructureTypes[st.ID] = st;
+                    }
+                }
+
                 try
                 {
 
@@ -456,17 +454,7 @@ namespace Annotation
                                 mapNewTypeToIndex.Add(newType, iObj);
                                 break;
                             case DBACTION.UPDATE:
-                                ConnectomeDataModel.StructureType updateType;
-                                try
-                                {
-                                    updateType = db.StructureTypes.Find(t.ID);
-                                }
-                                catch (System.ArgumentNullException)
-                                {
-                                    Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
-                                    break;
-                                }
-                                catch (System.InvalidOperationException)
+                                if (!dictStructureTypes.TryGetValue(t.ID, out ConnectomeDataModel.StructureType updateType))
                                 {
                                     Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
                                     break;
@@ -474,25 +462,14 @@ namespace Annotation
 
                                 t.Sync(updateType);
                                 listID[iObj] = updateType.ID;
-                                //  db.ConnectomeDataModel.StructureTypes.(updateType);
                                 break;
                             case DBACTION.DELETE:
 
                                 DemandAdminPermissions();
 
-                                ConnectomeDataModel.StructureType deleteType;
-                                try
-                                {
-                                    deleteType = db.StructureTypes.Find(t.ID);
-                                }
-                                catch (System.ArgumentNullException)
+                                if (!dictStructureTypes.TryGetValue(t.ID, out ConnectomeDataModel.StructureType deleteType))
                                 {
                                     Debug.WriteLine("Could not find structuretype to delete: " + t.ID.ToString());
-                                    break;
-                                }
-                                catch (System.InvalidOperationException)
-                                {
-                                    Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
                                     break;
                                 }
 
@@ -818,6 +795,7 @@ namespace Annotation
                 tasks[iChunk] = Task.Run(() => GetStructureByIDsChunk(chunk, IncludeChildren));
             }
 
+            // Chunk 0 run synchronously to avoid an extra task when there is only one chunk.
             ListStructures = GetStructureByIDsChunk(chunks[0], IncludeChildren);
 
             for (int iChunk = 1; iChunk < chunks.Count; iChunk++)
@@ -916,11 +894,9 @@ namespace Annotation
 
                             break;
                     }
-
-                    db.SaveChanges();
                 }
 
-
+                db.SaveChanges();
             }
             catch (Exception e)
             {
@@ -1013,11 +989,9 @@ namespace Annotation
 
                             break;
                     }
-
-                    db.SaveChanges();
                 }
 
-
+                db.SaveChanges();
             }
             catch (Exception e)
             {
@@ -1186,6 +1160,31 @@ namespace Annotation
             using ConnectomeEntities db = GetOrCreateDatabaseContext();
             Dictionary<ConnectomeDataModel.Structure, int> mapNewObjToIndex = new(structures.Length);
 
+            // Batch-load structures for UPDATE and DELETE to avoid N round-trips (SQL param limit 2100)
+            long[] updateAndDeleteIds = structures
+                .Where(t => t.DBAction == DBACTION.UPDATE || t.DBAction == DBACTION.DELETE)
+                .Select(t => t.ID)
+                .Distinct()
+                .ToArray();
+            Dictionary<long, ConnectomeDataModel.Structure> dictStructures = new(updateAndDeleteIds.Length);
+            if (updateAndDeleteIds.Length > 0)
+            {
+                const int QueryChunkSize = 2000;
+                var chunks = updateAndDeleteIds.Length <= QueryChunkSize
+                    ? new List<long[]> { updateAndDeleteIds }
+                    : ((ICollection<long>)updateAndDeleteIds).SortAndChunk((uint)QueryChunkSize);
+                foreach (long[] chunk in chunks)
+                {
+                    var batch = db.Structures
+                        .Include("SourceOfLinks")
+                        .Include("TargetOfLinks")
+                        .Where(s => chunk.Contains(s.ID))
+                        .ToList();
+                    foreach (var s in batch)
+                        dictStructures[s.ID] = s;
+                }
+            }
+
             //Stores the ID of each object manipulated for the return value
             long[] listID = new long[structures.Length];
             try
@@ -1205,53 +1204,30 @@ namespace Annotation
                             break;
                         case DBACTION.UPDATE:
 
-                            ConnectomeDataModel.Structure updateRow;
-                            try
+                            if (!dictStructures.TryGetValue(t.ID, out ConnectomeDataModel.Structure updateRow))
                             {
-                                updateRow = db.Structures.Find(t.ID);
-                            }
-                            catch (System.ArgumentNullException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
-                                break;
-                            }
-                            catch (System.InvalidOperationException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+                                Debug.WriteLine("Could not find structure to update: " + t.ID.ToString());
                                 break;
                             }
 
                             t.Sync(updateRow);
                             listID[iObj] = updateRow.ID;
-                            //  db.ConnectomeDataModel.StructureTypes.(updateType);
                             break;
                         case DBACTION.DELETE:
-                            ConnectomeDataModel.Structure deleteRow = new();
-                            try
-                            {
-                                deleteRow = db.Structures.Find(t.ID);
-                            }
-                            catch (System.ArgumentNullException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
-                                break;
-                            }
-                            catch (System.InvalidOperationException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
-                                break;
-                            }
 
+                            if (!dictStructures.TryGetValue(t.ID, out ConnectomeDataModel.Structure deleteRow))
+                            {
+                                Debug.WriteLine("Could not find structure to delete: " + t.ID.ToString());
+                                break;
+                            }
 
                             t.Sync(deleteRow);
                             deleteRow.ID = t.ID;
                             listID[iObj] = deleteRow.ID;
 
-
                             //Remove any links that exist before calling delete
                             db.StructureLinks.RemoveRange([.. deleteRow.SourceOfLinks]);
                             db.StructureLinks.RemoveRange([.. deleteRow.TargetOfLinks]);
-
 
                             db.Structures.Remove(deleteRow);
                             break;
@@ -1381,18 +1357,7 @@ namespace Annotation
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Structure[] GetStructureChangeLog(long? structure_id, DateTime? begin_time, DateTime? end_time) =>
-            /*
-SelectStructureChangeLog_Result result = db.SelectStructureChangeLog(structure_id, begin_time, end_time);
-List<SelectStructureChangeLog_Result> listChanges = new List<SelectStructureChangeLog_Result>(result);
-List<StructureHistory> structures = new List<StructureHistory>(listChanges.Count);
-foreach (SelectStructureChangeLog_Result row in listChanges)
-{
-structures.Add(new StructureHistory(row));
-}
-
-return structures.ToArray();
-*/
-            [];
+            []; // Stub: was implemented via SelectStructureChangeLog; re-enable when needed.
 
 
 
@@ -1467,7 +1432,7 @@ return structures.ToArray();
                     if (locObjs is null)
                         return null;
 
-                    ListLocations.AddRange(locObjs.Select(l => l.Create(IncludeLinks)));
+                    ListLocations.AddRange(locObjs.ToList().Select(l => l.Create(IncludeLinks)));
                 }
                 catch (System.ArgumentNullException)
                 {
@@ -1578,6 +1543,7 @@ return structures.ToArray();
                 tasks[iChunk] = Task.Run(() => _GetReadOnlyLocationsByIDChunked(chunk, true));
             }
 
+            // Chunk 0 run synchronously to avoid an extra task when there is only one chunk.
             listObjs = _GetReadOnlyLocationsByIDChunked(chunks[0], true);
 
             for (int iChunk = 1; iChunk < chunks.Count; iChunk++)
@@ -1586,17 +1552,6 @@ return structures.ToArray();
             }
 
             return [.. listObjs];
-            /*
-
-            List<ConnectomeDataModel.Location> listObjs;
-
-            using (var db = GetOrCreateReadOnlyContext())
-            {
-                listObjs = _GetLocationsByID(db, IDs, true);
-            }
-
-            return listObjs.Select(obj => obj.Create(true)).ToArray();
-            */
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
@@ -1836,11 +1791,13 @@ return structures.ToArray();
                 elapsed = new TimeSpan(DateTime.UtcNow.Ticks - start.Ticks);
                 Debug.WriteLine(section.ToString() + ": Query Section Annotations: " + elapsed.TotalMilliseconds);
 
+                Task<long[]> deletedTask = Task.Run(() => GetDeletedLocations(ModifiedAfterThisTime));
                 Task<AnnotationService.Types.Structure[]> structConvTask = Task<AnnotationService.Types.Structure[]>.Run(() => dbAnnotations.Structures.Values.Select(s => s.Create(false)).ToArray());
                 Task<AnnotationService.Types.Location[]> locConvTask = Task<AnnotationService.Types.Location[]>.Run(() => dbAnnotations.Locations.Values.Select(l => l.Create(true)).ToArray());
 
-                Task.WaitAll(structConvTask, locConvTask);
+                Task.WaitAll(deletedTask, structConvTask, locConvTask);
 
+                DeletedIDs = deletedTask.Result;
                 AnnotationService.Types.Structure[] structs = structConvTask.Result;
                 AnnotationService.Types.Location[] locs = locConvTask.Result;
 
@@ -1853,9 +1810,6 @@ return structures.ToArray();
                 //Debug.WriteLine(section.ToString() + ": Add Links: " + elapsed.TotalMilliseconds);
 
             }
-
-            //TODO: Optimize this function to only return locations from the region we specify.  It currently returns all sections
-            DeletedIDs = GetDeletedLocations(ModifiedAfterThisTime);
 
             return results;
         }
@@ -2114,6 +2068,16 @@ return structures.ToArray();
                 List<ConnectomeDataModel.Location> dbLocations = _GetLocationsByID(db, [.. locations.Where(l => l.DBAction == DBACTION.UPDATE).Select(l => l.ID)], false);
                 Dictionary<long, ConnectomeDataModel.Location> dictObjs = dbLocations.ToDictionary(obj => obj.ID);
 
+                // Batch-load locations to DELETE with their links to avoid N round-trips
+                long[] deleteIds = locations.Where(l => l.DBAction == DBACTION.DELETE).Select(l => l.ID).ToArray();
+                Dictionary<long, ConnectomeDataModel.Location> dictDeleteObjs = new(deleteIds.Length);
+                if (deleteIds.Length > 0)
+                {
+                    List<ConnectomeDataModel.Location> dbLocationsToDelete = _GetLocationsByID(db, deleteIds, true);
+                    foreach (var loc in dbLocationsToDelete)
+                        dictDeleteObjs[loc.ID] = loc;
+                }
+
                 try
                 {
 
@@ -2147,37 +2111,10 @@ return structures.ToArray();
                                 }
 
                                 break;
-                            /*
-                             * 
-                             * 
-                             * Remove the try/catch block for speed
-                            try
-                            {
-
-                            }
-                            catch (System.ArgumentNullException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
-                                break;
-                            }
-                            catch (System.InvalidOperationException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
-                                break;
-                            }
-
-                            t.Sync(updateRow);
-                            listID[iObj] = updateRow.ID;
-                            //  db.ConnectomeDataModel.StructureTypes.(updateType);
-                            break;
-                            */
                             case DBACTION.DELETE:
 
-                                ConnectomeDataModel.Location deleteRow;
-                                /*
-                                if (dictObjs.TryGetValue(t.ID, out deleteRow))
+                                if (dictDeleteObjs.TryGetValue(t.ID, out ConnectomeDataModel.Location deleteRow))
                                 {
-                                    //Remove any links that exist before calling delete
                                     db.LocationLinks.RemoveRange(deleteRow.LocationLinksA);
                                     db.LocationLinks.RemoveRange(deleteRow.LocationLinksB);
                                     t.Sync(deleteRow);
@@ -2185,37 +2122,10 @@ return structures.ToArray();
                                     listID[iObj] = deleteRow.ID;
                                     db.Locations.Remove(deleteRow);
                                 }
-                                */
-                                try
+                                else
                                 {
-                                    deleteRow = db.Locations.Find(t.ID);
-                                    if (deleteRow != null)
-                                    {
-                                        db.Entry(deleteRow).Collection(l => l.LocationLinksA).Load();
-                                        db.Entry(deleteRow).Collection(l => l.LocationLinksB).Load();
-                                        db.LocationLinks.RemoveRange(deleteRow.LocationLinksA);
-                                        db.LocationLinks.RemoveRange(deleteRow.LocationLinksB);
-                                        t.Sync(deleteRow);
-                                        deleteRow.ID = t.ID;
-                                        listID[iObj] = deleteRow.ID;
-                                        db.Locations.Remove(deleteRow);
-                                    }
-                                    else
-                                    {
-                                        throw new KeyNotFoundException($"Could not find location to delete: {t.ID}");
-                                    }
+                                    Debug.WriteLine("Could not find location to delete: " + t.ID.ToString());
                                 }
-                                catch (System.ArgumentNullException)
-                                {
-                                    Debug.WriteLine("Could not find location to update: " + t.ID.ToString());
-                                    break;
-                                }
-                                catch (System.InvalidOperationException)
-                                {
-                                    Debug.WriteLine("Could not find location to update: " + t.ID.ToString());
-                                    break;
-                                }
-
 
                                 break;
                         }
