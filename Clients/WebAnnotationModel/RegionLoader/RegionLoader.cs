@@ -229,19 +229,19 @@ namespace WebAnnotationModel
                         //Add our callback to the list, and return any known local objects
                         if (cell.OutstandingQuery)
                         {
-                            if (OnServerObjectsLoadedCallback != null)
+                            if (OnServerObjectsLoadedCallback is not null)
                                 cell.AddCallback(OnServerObjectsLoadedCallback);
                         }
 
-                        if (FoundCachedLocalObjectsCallback != null)
+                        if (FoundCachedLocalObjectsCallback is not null)
                         {
                             //Use the callback for the known local objects
                             Task.Run(() =>
                             {
                                 GridRectangle cellBounds = level.CellBounds(iCell.X, iCell.Y);
                                 ICollection<OBJECT> local_objects_in_region = this.objectStore.GetLocalObjectsInRegion(SectionNumber, cellBounds, level.MinRadius);
-                                FoundCachedLocalObjectsCallback?.Invoke(local_objects_in_region);
-                            });
+                                FoundCachedLocalObjectsCallback.Invoke(local_objects_in_region);
+                            }, token); //Stop the task for local objects if the load is cancelled.
                         }
                     }
                 }
