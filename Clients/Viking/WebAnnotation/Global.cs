@@ -44,7 +44,6 @@ namespace WebAnnotation
         internal static Export? Export = null;
 
         private static bool? _isSegmentationServiceAvailable;
-        private static readonly string _segmentationServiceUrlFromVolume;
 
         /// <summary>
         /// Static method called by ExtensionManager to determine if this extension should be loaded.
@@ -121,7 +120,7 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Gets the SegmentationServiceUrl from configuration or volume metadata.
+        /// Gets the SegmentationServiceUrl from configuration (set at login from the web service).
         /// </summary>
         public static string GetSegmentationServiceUrl() => AnnotationSettings.SegmentationServiceUrl;
 
@@ -727,15 +726,6 @@ namespace WebAnnotation
             {
                 AnnotationSettings.SegmentationServiceUrl = applicationSettings.SegmentationURL;
             }
-
-            /*
-            string segmentationUrlFromVolume = GetSegmentationServiceUrlFromVolume();
-            if (!string.IsNullOrWhiteSpace(segmentationUrlFromVolume) &&
-                !string.Equals(AnnotationSettings.SegmentationServiceUrl, segmentationUrlFromVolume, StringComparison.OrdinalIgnoreCase))
-            {
-                AnnotationSettings.SegmentationServiceUrl = segmentationUrlFromVolume;
-            }
-            */
 
             serviceProvider?.GetService<IGrpcChannelManager>();
 
