@@ -552,7 +552,7 @@ namespace VikingXNAGraphics
                 }
             }
 
-            CircleView.RestoreGraphicsDevice(device, overlayEffect);
+            //CircleView.RestoreGraphicsDevice(device, overlayEffect);
         }
 
 
