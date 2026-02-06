@@ -58,6 +58,12 @@ namespace WebAnnotationModel
                 {
                     throw new Exception("It is possible the user password is incorrect", securityException);
                 }
+                catch (System.ServiceModel.Security.SecurityAccessDeniedException accessDeniedException)
+                {
+                    throw new Exception(
+                        "Access to the Annotation Service was denied. For anonymous users, ensure you are logged in and that the Bearer token is set (Viking.Tokens.TokenInjector.BearerToken). For named users, ensure your account has the required permissions.",
+                        accessDeniedException);
+                }
                 catch (System.ServiceModel.FaultException faultException)
                 {
                     throw new Exception(
