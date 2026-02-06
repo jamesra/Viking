@@ -11,7 +11,6 @@ using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -27,6 +26,8 @@ using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 using Viking.DependencyInjection;
 using Viking.Services.Grpc;
 using Viking.gRPC.SegmentationServiceTypes.V1;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace WebAnnotation.UI.Commands.Segmentation
 {
@@ -143,7 +144,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             this.success_callback = success_callback;
             //structureType = type?.modelObj ?? (Viking.UI.State.SelectedObject as StructureType)?.modelObj;
 
-            // Load configuration - fallback to VolumeXML if not in AppSettings 
+            // Load configuration from AppSettings
             debounceMs = int.TryParse(ConfigurationManager.AppSettings["SegmentationDebounceMs"], out var ms) ? ms : DEFAULT_DEBOUNCE_MS;
 
             Parent.Cursor = Cursors.Cross;
@@ -688,7 +689,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 uploadCancellationTokenSource = new CancellationTokenSource();
 
                 // Capture current viewport image
-                var (imageData, width, height) = await CaptureViewportImage(uploadCancellationTokenSource.Token);
+                var (imageData, width, height) = await CaptureViewportImage(uploadCancellationTokenSource.Token).ConfigureAwait(false);
                 if (imageData is null || imageData.Length == 0)
                 {
                     Debug.WriteLine("Failed to capture viewport image for upload");
@@ -710,7 +711,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     deadline: DateTime.UtcNow.AddSeconds(30),
                     cancellationToken: uploadCancellationTokenSource.Token);
 
-                var uploadResponse = await grpcClient.UploadImageAsync(uploadRequest, callOptions);
+                var uploadResponse = await grpcClient.UploadImageAsync(uploadRequest, callOptions).ResponseAsync.ConfigureAwait(false);
 
                 // Store the image ID, bounds, and dimensions
                 currentImageId = uploadResponse.ImageId;
@@ -730,14 +731,21 @@ namespace WebAnnotation.UI.Commands.Segmentation
             catch (RpcException rpcEx)
             {
                 Debug.WriteLine($"gRPC error during upload: {rpcEx.Status.Detail}");
-                MessageBox.Show($"Failed to upload image to segmentation service: {rpcEx.Status.Detail}",
-                    "Upload Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+#if DEBUG
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
+                    MessageBox.Show($"Failed to upload image to segmentation service: {rpcEx.Status.Detail}",
+                        "Upload Error", MessageBoxButtons.OK, MessageBoxIcon.Error)));
+#endif
                 currentImageId = null;
                 uploadedImageBounds = null;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error uploading image: {ex.Message}");
+#if DEBUG
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
+                    MessageBox.Show($"Error uploading image: {ex.Message}", "Upload Error", MessageBoxButtons.OK, MessageBoxIcon.Error)));
+#endif
                 currentImageId = null;
                 uploadedImageBounds = null;
             }
@@ -769,7 +777,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
                 // Call gRPC service with timeout (fire and forget, don't block UI)
                 CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(5));
-                var deleteResponse = await grpcClient.DeleteImageAsync(deleteRequest, callOptions);
+                var deleteResponse = await grpcClient.DeleteImageAsync(deleteRequest, callOptions).ResponseAsync.ConfigureAwait(false);
 
                 Debug.WriteLine($"Image deleted from cache: ID={imageIdToDelete}, success={deleteResponse.Success}");
             }
@@ -820,7 +828,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
                 // Call gRPC service with timeout
                 CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(30));
-                var response = await grpcClient.SegmentImageAsync(request, callOptions);
+                var response = await grpcClient.SegmentImageAsync(request, callOptions).ResponseAsync.ConfigureAwait(false);
 
                 // Process response on UI thread
                 await Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() => ProcessSegmentationResponse(response)));
@@ -896,11 +904,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 uploadedImageBounds = null;
 
                 // Re-upload the image and retry segmentation
-                if (await UploadCurrentImage())
+                if (await UploadCurrentImage().ConfigureAwait(false))
                 {
                     var request = BuildSegmentationRequest();
                     CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(30));
-                    var response = await grpcClient.SegmentImageAsync(request, callOptions);
+                    var response = await grpcClient.SegmentImageAsync(request, callOptions).ResponseAsync.ConfigureAwait(false);
 
                     // Process response on UI thread
                     await Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() => ProcessSegmentationResponse(response)));
@@ -909,8 +917,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             else
             {
                 Debug.WriteLine($"gRPC error: {rpcEx.Status.Detail}");
-                MessageBox.Show($"Segmentation service error: {rpcEx.Status.Detail}",
-                    "Service Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+#if DEBUG
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
+                    MessageBox.Show($"Segmentation service error: {rpcEx.Status.Detail}",
+                        "Service Error", MessageBoxButtons.OK, MessageBoxIcon.Error)));
+#endif
             }
         }
 
@@ -1056,7 +1067,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     return (null, 0, 0);
                 }
 
-                RenderTarget2D renderTarget = await RenderViewportToTexture(scene, width, height, renderToken);
+                var (renderTarget, isGrayscale) = await RenderViewportToTexture(scene, width, height, renderToken).ConfigureAwait(false);
                 if (renderTarget is null)
                 {
                     return (null, 0, 0);
@@ -1064,10 +1075,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
                 try
                 {
-                    Color[] pixels = new Color[width * height];
-                    renderTarget.GetData(pixels);
+                    // GetData must run on the UI/Graphics thread (GraphicsDevice affinity)
+                    Color[] pixels = await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
+                    {
+                        Color[] p = new Color[width * height];
+                        renderTarget.GetData(p);
+                        return p;
+                    }).Task.ConfigureAwait(false);
 
-                    byte[] pngData = EncodeToPng(renderTarget, pixels, width, height);
+                    byte[] pngData = EncodeToPng(renderTarget, pixels, width, height, isGrayscale);
 
                     // Validate the captured image
                     var (isValid, errorMessage) = ValidateCapturedImage(pngData, width, height);
@@ -1088,7 +1104,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
                 finally
                 {
-                    renderTarget?.Dispose();
+                    Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() => renderTarget?.Dispose()));
                 }
             }
             catch (OperationCanceledException)
@@ -1104,7 +1120,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Validates that captured PNG image data is valid and can be decoded
+        /// Validates that captured PNG image data is valid and can be fully decoded.
+        /// Uses ImageSharp so validation can run on any thread without requiring the graphics device.
         /// </summary>
         /// <param name="pngData">The PNG image data to validate</param>
         /// <param name="expectedWidth">Expected width in pixels</param>
@@ -1131,78 +1148,51 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return (false, $"Image validation failed: invalid dimensions {expectedWidth}x{expectedHeight}");
             }
 
-            // Try to decode the PNG to verify it's valid
             try
             {
-                var graphicsDevice = Parent.Device;
-                if (graphicsDevice is null)
+                using MemoryStream stream = new(pngData);
+                using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(stream);
+
+                int decodedWidth = image.Width;
+                int decodedHeight = image.Height;
+
+                // Verify dimensions match expectations
+                if (decodedWidth != expectedWidth || decodedHeight != expectedHeight)
                 {
-                    return (false, "Image validation failed: GraphicsDevice is null");
+                    return (false, $"Image validation failed: dimension mismatch. Expected {expectedWidth}x{expectedHeight}, got {decodedWidth}x{decodedHeight}");
                 }
 
-                Microsoft.Xna.Framework.Color[] pixelData = null;
-                using (MemoryStream stream = new(pngData))
+                // Check pixel content for suspicious patterns (warnings only)
+                bool isAllBlack = true;
+                bool isAllSame = true;
+                Rgba32 firstPixel = image[0, 0];
+                int nonTransparentPixels = 0;
+                int pixelCount = decodedWidth * decodedHeight;
+
+                image.ProcessPixelRows(accessor =>
                 {
-                    using Texture2D pngTexture = Texture2D.FromStream(graphicsDevice, stream);
-                    int decodedWidth = pngTexture.Width;
-                    int decodedHeight = pngTexture.Height;
-
-                    // Verify dimensions match expectations
-                    if (decodedWidth != expectedWidth || decodedHeight != expectedHeight)
+                    for (int y = 0; y < accessor.Height; y++)
                     {
-                        return (false, $"Image validation failed: dimension mismatch. Expected {expectedWidth}x{expectedHeight}, got {decodedWidth}x{decodedHeight}");
-                    }
-
-                    // Extract pixel data for content validation
-                    pixelData = new Microsoft.Xna.Framework.Color[decodedWidth * decodedHeight];
-                    pngTexture.GetData(pixelData);
-                }
-
-                // Optional: Check pixel content for suspicious patterns
-                if (pixelData != null && pixelData.Length > 0)
-                {
-                    // Check if image is completely empty (all black or transparent)
-                    bool isAllBlack = true;
-                    bool isAllSame = true;
-                    Microsoft.Xna.Framework.Color firstPixel = pixelData[0];
-                    int nonTransparentPixels = 0;
-
-                    for (int i = 0; i < pixelData.Length; i++)
-                    {
-                        Microsoft.Xna.Framework.Color pixel = pixelData[i];
-
-                        // Check for non-black pixels
-                        if (pixel.R > 0 || pixel.G > 0 || pixel.B > 0)
+                        Span<Rgba32> row = accessor.GetRowSpan(y);
+                        for (int x = 0; x < row.Length; x++)
                         {
-                            isAllBlack = false;
-                        }
+                            Rgba32 pixel = row[x];
 
-                        // Check for non-transparent pixels
-                        if (pixel.A > 0)
-                        {
-                            nonTransparentPixels++;
-                        }
-
-                        // Check if all pixels are the same
-                        if (pixel.R != firstPixel.R || pixel.G != firstPixel.G ||
-                            pixel.B != firstPixel.B || pixel.A != firstPixel.A)
-                        {
-                            isAllSame = false;
-                            // Early exit if we've determined it's not all same
-                            if (!isAllBlack) break;
+                            if (pixel.R > 0 || pixel.G > 0 || pixel.B > 0)
+                                isAllBlack = false;
+                            if (pixel.A > 0)
+                                nonTransparentPixels++;
+                            if (pixel.R != firstPixel.R || pixel.G != firstPixel.G ||
+                                pixel.B != firstPixel.B || pixel.A != firstPixel.A)
+                                isAllSame = false;
                         }
                     }
+                });
 
-                    // Warn if image appears suspicious (but don't fail validation)
-                    if (isAllBlack && nonTransparentPixels > 0)
-                    {
-                        Debug.WriteLine($"Warning: Captured image appears to be completely black ({nonTransparentPixels} non-transparent pixels)");
-                    }
-                    else if (isAllSame && pixelData.Length > 0)
-                    {
-                        Debug.WriteLine($"Warning: Captured image appears to be a solid color (R:{firstPixel.R}, G:{firstPixel.G}, B:{firstPixel.B}, A:{firstPixel.A})");
-                    }
-                }
+                if (isAllBlack && nonTransparentPixels > 0)
+                    Debug.WriteLine($"Warning: Captured image appears to be completely black ({nonTransparentPixels} non-transparent pixels)");
+                else if (isAllSame && pixelCount > 0)
+                    Debug.WriteLine($"Warning: Captured image appears to be a solid color (R:{firstPixel.R}, G:{firstPixel.G}, B:{firstPixel.B}, A:{firstPixel.A})");
 
                 Debug.WriteLine($"Image validation passed: {expectedWidth}x{expectedHeight}, {pngData.Length} bytes");
                 return (true, string.Empty);
@@ -1302,7 +1292,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return (graphicsDevice, scene, width, height);
         }
 
-        private async Task<RenderTarget2D> RenderViewportToTexture(VikingXNA.Scene scene, int width, int height, CancellationToken cancellationToken)
+        private async Task<(RenderTarget2D? renderTarget, bool isGrayscale)> RenderViewportToTexture(VikingXNA.Scene scene, int width, int height, CancellationToken cancellationToken)
         {
             float centerX = scene.Camera.LookAt.X;
             float centerY = scene.Camera.LookAt.Y;
@@ -1312,6 +1302,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             try
             {
+                bool isGrayscale = Parent.CurrentChannelset.Length == 1;
                 RenderTarget2D renderTarget = await Parent.RenderSceneToTexture(
                     scene,
                     centerX,
@@ -1319,31 +1310,29 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     sectionZ,
                     showOverlays: false,
                     asyncTextureLoad: false,
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
 
                 if (renderTarget is null)
                 {
                     Debug.WriteLine("RenderSceneToTexture returned null");
                 }
 
-                return renderTarget;
+                return (renderTarget, isGrayscale);
             }
             catch (OperationCanceledException)
             {
                 Debug.WriteLine("RenderSceneToTexture was cancelled");
-                return null;
+                return (null, false);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"RenderSceneToTexture failed: {ex.Message}");
-                return null;
+                return (null, false);
             }
         }
 
-        private byte[] EncodeToPng(RenderTarget2D renderTarget, Color[] pixels, int width, int height)
+        private byte[] EncodeToPng(RenderTarget2D renderTarget, Color[] pixels, int width, int height, bool isGrayscale)
         {
-            bool isGrayscale = IsImageGrayscale(pixels);
-
             using MemoryStream pngStream = new();
             if (isGrayscale)
             {
@@ -1351,7 +1340,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
             else
             {
-                EncodeColorPng(renderTarget, pngStream, width, height);
+                EncodeColorPng(pngStream, pixels, width, height);
             }
 
             return pngStream.ToArray();
@@ -1359,68 +1348,38 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         private void EncodeGrayscalePng(MemoryStream pngStream, Color[] pixels, int width, int height)
         {
-            using System.Drawing.Bitmap grayscaleBitmap = new(width, height, System.Drawing.Imaging.PixelFormat.Format8bppIndexed);
-            // Set grayscale palette
-            System.Drawing.Imaging.ColorPalette palette = grayscaleBitmap.Palette;
-            for (int i = 0; i < 256; i++)
+            // Build Rgba32 buffer: grayscale R=G=B from pixels[i].R, A from pixels[i].A
+            byte[] buffer = new byte[width * height * 4];
+            for (int i = 0; i < pixels.Length; i++)
             {
-                palette.Entries[i] = System.Drawing.Color.FromArgb(i, i, i);
+                byte g = pixels[i].R;
+                int off = i * 4;
+                buffer[off] = g;
+                buffer[off + 1] = g;
+                buffer[off + 2] = g;
+                buffer[off + 3] = pixels[i].A;
             }
-            grayscaleBitmap.Palette = palette;
-
-            // Lock bitmap data
-            System.Drawing.Imaging.BitmapData bitmapData = grayscaleBitmap.LockBits(
-                new System.Drawing.Rectangle(0, 0, width, height),
-                System.Drawing.Imaging.ImageLockMode.WriteOnly,
-                System.Drawing.Imaging.PixelFormat.Format8bppIndexed);
-
-            try
-            {
-                // Copy grayscale pixel data (single channel)
-                int stride = bitmapData.Stride;
-                byte[] pixelBytes = new byte[pixels.Length];
-                for (int i = 0; i < pixels.Length; i++)
-                {
-                    pixelBytes[i] = pixels[i].R; // Use R channel as grayscale value
-                }
-
-                // Copy row by row (handles stride padding if any)
-                for (int y = 0; y < height; y++)
-                {
-                    Marshal.Copy(
-                        pixelBytes,
-                        y * width,
-                        bitmapData.Scan0 + (y * stride),
-                        width);
-                }
-            }
-            finally
-            {
-                grayscaleBitmap.UnlockBits(bitmapData);
-            }
-
-            // Save as PNG (will be single-channel grayscale)
-            grayscaleBitmap.Save(pngStream, System.Drawing.Imaging.ImageFormat.Png);
+            using var image = SixLabors.ImageSharp.Image.LoadPixelData<Rgba32>(buffer, width, height);
+            image.Save(pngStream, new PngEncoder());
             Debug.WriteLine("Image detected as grayscale, encoded as single-channel PNG");
         }
 
-        private void EncodeColorPng(RenderTarget2D renderTarget, MemoryStream pngStream, int width, int height)
+        private void EncodeColorPng(MemoryStream pngStream, Color[] pixels, int width, int height)
         {
-            renderTarget.SaveAsPng(pngStream, width, height);
+            byte[] buffer = new byte[width * height * 4];
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                int off = i * 4;
+                buffer[off] = pixels[i].R;
+                buffer[off + 1] = pixels[i].G;
+                buffer[off + 2] = pixels[i].B;
+                buffer[off + 3] = pixels[i].A;
+            }
+            using var image = SixLabors.ImageSharp.Image.LoadPixelData<Rgba32>(buffer, width, height);
+            image.Save(pngStream, new PngEncoder());
             Debug.WriteLine("Image detected as color, encoded as full-color PNG");
         }
 
-        private bool IsImageGrayscale(Color[] pixels)
-        {
-            for (int i = 0; i < pixels.Length; i++)
-            {
-                if (pixels[i].R != pixels[i].G || pixels[i].R != pixels[i].B)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
         #endregion
 
         #region Mask Processing
@@ -1602,6 +1561,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region Rendering
         public override void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect)
         {
+            if(foregroundPoints is null || backgroundPoints is null)
+                return;
+
             // Save current depth buffer state
             var previousDepthStencilState = graphicsDevice.DepthStencilState;
 
@@ -1629,13 +1591,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double foregroundPulse = Math.Sin(phaseAngle);
             double backgroundPulse = Math.Cos(phaseAngle);
 
-            // Draw foreground points (green circles) with pulsing alpha
-            foregroundPointsView.Alpha = (float)(0.5 + foregroundPulse * 0.5); // Range: 0.0 to 1.0
-            foregroundPointsView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
-
             // Draw background points (red circles) with pulsing alpha (opposite phase)
-            backgroundPointsView.Alpha = (float)(0.5 + backgroundPulse * 0.5); // Range: 0.0 to 1.0
-            backgroundPointsView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+            backgroundPointsView?.Alpha = (float)(0.64 + backgroundPulse * 0.33); // Range: 0.0 to 1.0
+            backgroundPointsView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+
+            // Draw foreground points (green circles) with pulsing alpha
+            foregroundPointsView?.Alpha = (float)(0.64 + foregroundPulse * 0.33); // Range: 0.0 to 1.0
+            foregroundPointsView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+
+            
 
             // Restore previous depth buffer state
             graphicsDevice.DepthStencilState = previousDepthStencilState;
