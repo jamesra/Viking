@@ -72,9 +72,24 @@ namespace WebAnnotation
         private readonly MouseOverLocationCanvasViewEffect mouseOverEffect = new();
 
         /// <summary>
-        /// Used to cancel loading section annotations when the desired annotations have changed
+        /// Per-section cancellation for annotation loads. When section changes we only cancel loads for sections outside the keep set (current ± radius from Global.NumSectionsInMemory).
         /// </summary>
-        private CancellationTokenSource loadSectionAnnotationsCancellationTokenSource;
+        private readonly Dictionary<int, CancellationTokenSource> _sectionAnnotationLoadBySection = new();
+        /// <summary>
+        /// Sections that need loading; worker picks by min distance from current Z.
+        /// </summary>
+        private readonly HashSet<int> _requestedSectionNumbers = new();
+        /// <summary>
+        /// Current section number (Z); worker uses this to prioritize by distance.
+        /// </summary>
+        private int _currentSectionNumber;
+        private readonly object _sectionAnnotationLoadLock = new();
+        /// <summary>
+        /// Signals the worker when requested set is non-empty.
+        /// </summary>
+        private readonly SemaphoreSlim _annotationLoadWorkerSignal = new(0);
+        private Task _annotationLoadWorkerTask;
+        private readonly CancellationTokenSource _annotationLoadWorkerCts = new();
 
         static AnnotationOverlay()
         {
@@ -217,10 +232,9 @@ namespace WebAnnotation
 
         private static readonly SemaphoreSlim GetOrCreateAnnotationsForSectionSemaphore = new(1);
         /// <summary>
-        /// Returns annotations for section if they exist or creates new SectionLocationsViewModel if they do not
+        /// Returns annotations for section if they exist or creates new SectionLocationsViewModel if they do not (async; does not block the calling thread).
         /// </summary>
-        /// <param name="SectionNumber"></param>
-        public static SectionAnnotationsView GetOrCreateAnnotationsForSection(int SectionNumber)
+        public static async Task<SectionAnnotationsView> GetOrCreateAnnotationsForSectionAsync(int SectionNumber)
         {
             SectionAnnotationsView SectionAnnotations = cacheSectionAnnotations.Fetch(SectionNumber);
             if (SectionAnnotations != null)
@@ -230,21 +244,21 @@ namespace WebAnnotation
 
             if (Viking.UI.State.volume.SectionViewModels.ContainsKey(SectionNumber))
             {
+                await GetOrCreateAnnotationsForSectionSemaphore.WaitAsync().ConfigureAwait(false);
                 try
                 {
-                    GetOrCreateAnnotationsForSectionSemaphore.Wait();
+                    // Double-check: another thread may have added after our initial Fetch.
+                    SectionAnnotations = cacheSectionAnnotations.Fetch(SectionNumber);
+                    if (SectionAnnotations != null)
+                    {
+                        return SectionAnnotations;
+                    }
 
                     SectionAnnotationsView retVal = cacheSectionAnnotations.GetOrAdd(SectionNumber, (k) => new SectionAnnotationsView(Viking.UI.State.volume.SectionViewModels[SectionNumber]));
 
-                    //If we did add a new view model to the cache, then subscribe to events and reduce cache footprint if needed
-                    if (object.ReferenceEquals(retVal, SectionAnnotations))
+                    if (object.ReferenceEquals(retVal, cacheSectionAnnotations.Fetch(SectionNumber)))
                     {
                         cacheSectionAnnotations.ReduceCacheFootprint(null);
-                    }
-                    else
-                    {
-                        //Otherwise make the duplicate SectionLocationsViewModel go away 
-                        SectionAnnotations = null;
                     }
 
                     return retVal;
@@ -256,6 +270,15 @@ namespace WebAnnotation
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Returns annotations for section if they exist or creates new SectionLocationsViewModel if they do not (synchronous; can block the calling thread).
+        /// Prefer GetOrCreateAnnotationsForSectionAsync when calling from UI or async code.
+        /// </summary>
+        public static SectionAnnotationsView GetOrCreateAnnotationsForSection(int SectionNumber)
+        {
+            return GetOrCreateAnnotationsForSectionAsync(SectionNumber).GetAwaiter().GetResult();
         }
 
         public string[] HelpStrings
@@ -448,14 +471,17 @@ namespace WebAnnotation
             _Parent.Camera.PropertyChanged += new System.ComponentModel.PropertyChangedEventHandler(OnCameraPropertyChanged);
             //linksView = new LocationLinksViewModel(parent); 
 
-            _ = LoadSectionAnnotations(CancellationToken.None);
+            _currentSectionNumber = _Parent.Section?.Number ?? 0;
+            if (_annotationLoadWorkerTask is null || _annotationLoadWorkerTask.IsCompleted)
+                _annotationLoadWorkerTask = Task.Run(() => RunAnnotationLoadWorkerAsync(), _annotationLoadWorkerCts.Token);
+            RequestSectionAnnotationsLoad(_currentSectionNumber);
         }
 
         private void OnCameraPropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            loadSectionAnnotationsCancellationTokenSource?.Cancel();
-            loadSectionAnnotationsCancellationTokenSource = new CancellationTokenSource();
-            System.Threading.Tasks.Task.Run(() => LoadSectionAnnotations(loadSectionAnnotationsCancellationTokenSource.Token), loadSectionAnnotationsCancellationTokenSource.Token);
+            if (!ShouldLoadAnnotationsForCameraChange())
+                return;
+            RequestCurrentSectionAnnotationsLoad();
         }
 
         protected void UpdateMouseCursor()
@@ -1015,12 +1041,19 @@ break;
                     if (_Parent.CurrentCommand is null || _Parent.CurrentCommand is DefaultCommand)
                     {
                         var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
+                        long structureTypeId = (Viking.UI.State.SelectedObject is WebAnnotation.ViewModel.StructureType st)
+                            ? st.modelObj.ID
+                            : Store.StructureTypes[1].ID;
                         _Parent.CurrentCommand = new SegmentationCommand(this.Parent,
-                            new SegmentationCommand.OnCommandSuccess((outputPolygon) => SegmentationCommand.CreateAnnotationFromPolygon(this.Parent, null, outputPolygon)), channelManager);
+                            null,
+                            null,
+                            new SegmentationCommand.OnCommandSuccess((outputPolygon) => SegmentationCommand.CreateAnnotationFromPolygon(this.Parent, null, outputPolygon)),
+                            channelManager,
+                            structureTypeId);
                     }
                     return;
                 case Keys.F5:
-                    ResetAnnotationsAsync(CancellationToken.None);
+                    ResetAnnotations();
                     return;
                 case Keys.F3:
                     OnContinueLastTrace();
@@ -1187,9 +1220,7 @@ break;
             switch (e.KeyCode)
             {
                 case Keys.Space:
-
-                    //Only load the annotations for any section once so we can't fire multiple requests by pounding the spacebar
-                    _ = LoadSectionAnnotations(CancellationToken.None);
+                    RequestCurrentSectionAnnotationsLoad();
                     InvalidateParent();
 
                     break;
@@ -1540,28 +1571,47 @@ break;
         protected async Task OnSectionChanged(object sender, SectionChangedEventArgs e, CancellationToken token)
         {
             if (token.IsCancellationRequested)
-            {
                 return;
-            }
 
             e.OldSection.TransformChanged -= OnSectionTransformChanged;
             e.NewSection.TransformChanged += OnSectionTransformChanged;
 
-            //Don't load annotations when flipping sections if the user is holding down space bar to hide them
-            if (_Parent.ShowOverlays)
+            int B = e.NewSection?.Number ?? 0;
+            _currentSectionNumber = B;
+
+            if (!_Parent.ShowOverlays || B <= 0)
+                return;
+
+            int radius = (Global.NumSectionsInMemory - 1) / 2;
+            List<int> keepSet = new();
+            for (int i = B - radius; i <= B + radius; i++)
+                keepSet.Add(i);
+
+            lock (_sectionAnnotationLoadLock)
             {
-                loadSectionAnnotationsCancellationTokenSource?.Cancel();
-
-                loadSectionAnnotationsCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
-                await LoadSectionAnnotations(loadSectionAnnotationsCancellationTokenSource.Token);
-
-                if (loadSectionAnnotationsCancellationTokenSource.IsCancellationRequested)
+                List<int> toRemove = new();
+                foreach (int s in _sectionAnnotationLoadBySection.Keys)
                 {
-                    return;
+                    if (!keepSet.Contains(s))
+                        toRemove.Add(s);
                 }
-
-                Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, Global.NumSectionsLoading), loadSectionAnnotationsCancellationTokenSource.Token);
+                foreach (int s in toRemove)
+                {
+                    _requestedSectionNumbers.Remove(s);
+                    if (_sectionAnnotationLoadBySection.TryGetValue(s, out var cts))
+                    {
+                        cts.Cancel();
+                        cts.Dispose();
+                        _sectionAnnotationLoadBySection.Remove(s);
+                    }
+                }
             }
+            foreach (int s in keepSet)
+            {
+                if (s > 0)
+                    RequestSectionAnnotationsLoad(s);
+            }
+            await Task.CompletedTask;
         }
 
         protected void OnAnnotationChanged(object sender, EventArgs e) =>
@@ -1746,11 +1796,7 @@ break;
             cacheSectionAnnotations.RemoveEntry(e.ChangedSection.Number);
 
             if (e.ChangedSection.Number == CurrentSectionNumber)
-            {
-                loadSectionAnnotationsCancellationTokenSource?.Cancel();
-                loadSectionAnnotationsCancellationTokenSource = new CancellationTokenSource();
-                _ = LoadSectionAnnotations(loadSectionAnnotationsCancellationTokenSource.Token);
-            }
+                RequestCurrentSectionAnnotationsLoad();
         }
 
         /// <summary>
@@ -1760,9 +1806,7 @@ break;
         /// <param name="e"></param>
         public void OnSectionTransformChanged(object sender, TransformChangedEventArgs e)
         {
-            loadSectionAnnotationsCancellationTokenSource?.Cancel();
-            loadSectionAnnotationsCancellationTokenSource = new CancellationTokenSource();
-            _ = ResetAnnotationsAsync(loadSectionAnnotationsCancellationTokenSource.Token);
+            ResetAnnotations();
         }
 
         /// <summary>
@@ -1772,19 +1816,24 @@ break;
         /// <param name="e"></param>
         public void OnVolumeTransformChanged(object sender, TransformChangedEventArgs e)
         {
-            loadSectionAnnotationsCancellationTokenSource?.Cancel();
-            loadSectionAnnotationsCancellationTokenSource = new CancellationTokenSource();
-            ResetAnnotationsAsync(loadSectionAnnotationsCancellationTokenSource.Token);
+            ResetAnnotations();
         }
 
-        private async Task ResetAnnotationsAsync(CancellationToken token)
+        private void ResetAnnotations()
         {
             cacheSectionAnnotations.Clear();
-            await LoadSectionAnnotations(token);
+            RequestCurrentSectionAnnotationsLoad();
         }
 
         private GridRectangle LastVisibleWorldBounds;
         private double LastCameraDownsample;
+
+        /// <summary>
+        /// Visible world bounds and downsample the last time annotations were loaded.
+        /// Used to avoid reloading on every zoom/pan; we only reload when visible area changes or magnification changes by a factor of 2.
+        /// </summary>
+        private GridRectangle? LastLoadVisibleWorldBounds;
+        private double LastLoadDownsample;
 
         /// <summary>
         /// Return true if we should reload our annotations for a scene movement
@@ -1792,6 +1841,24 @@ break;
         /// <param name="scene"></param>
         /// <returns></returns>
         private bool ShouldLoadAnnotationsForSceneMovement(VikingXNA.Scene scene) => (LastVisibleWorldBounds != scene.VisibleWorldBounds);// &&//(LastCameraDownsample == scene.Camera.Downsample);
+
+        /// <summary>
+        /// Return true if annotations should be loaded: never loaded yet, visible area changed, or magnification changed by a factor of 2 or more.
+        /// </summary>
+        private bool ShouldLoadAnnotationsForCameraChange()
+        {
+            if (Parent.Scene is null)
+                return false;
+            if (LastLoadDownsample == 0)
+                return true;
+            GridRectangle bounds = Parent.Scene.VisibleWorldBounds;
+            double downsample = Parent.Camera.Downsample;
+            if (bounds != LastLoadVisibleWorldBounds)
+                return true;
+            if (downsample >= 2 * LastLoadDownsample || downsample <= LastLoadDownsample / 2)
+                return true;
+            return false;
+        }
 
         /// <summary>
         /// Record the last scene we rendered so we know if we've moved the camera and need to load new annotations
@@ -1802,34 +1869,133 @@ break;
             LastVisibleWorldBounds = scene.VisibleWorldBounds;
         }
 
-        private readonly SemaphoreSlim LoadSectionAnnotationsSemaphore = new(1);
-        protected async Task LoadSectionAnnotations(CancellationToken token)
+        /// <summary>
+        /// Load annotations for a single section (primary + SectionAbove + SectionBelow). Only update last-load state when sectionNumber is the current section.
+        /// </summary>
+        protected Task LoadSectionAnnotationsForSection(int sectionNumber, CancellationToken token)
         {
-            if (Parent.Scene is null)
-            {
-                return;
-            }
-
+            if (Parent?.Scene is null)
+                return Task.CompletedTask;
+            SectionAnnotationsView sectionAnnotations = GetOrCreateAnnotationsForSection(sectionNumber);
+            if (sectionAnnotations is null)
+                return Task.CompletedTask;
             try
             {
-                await LoadSectionAnnotationsSemaphore.WaitAsync(token);
-                if (token.IsCancellationRequested)
+                sectionAnnotations.LoadAnnotationsInRegion(Parent.Scene, token);
+            }
+            catch (OperationCanceledException)
+            {
+                return Task.CompletedTask;
+            }
+
+            // Update last-load state only when the loaded section is the current section
+            if (!token.IsCancellationRequested && sectionNumber == _currentSectionNumber && Parent?.Scene != null)
+            {
+                Parent.BeginInvoke(new System.Action(() =>
                 {
-                    return;
+                    if (Parent?.Scene != null && sectionNumber == _currentSectionNumber)
+                    {
+                        LastLoadVisibleWorldBounds = Parent.Scene.VisibleWorldBounds;
+                        LastLoadDownsample = Parent.Camera.Downsample;
+                    }
+                }));
+            }
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Add a section to the requested set and signal the worker. Worker picks by min distance from current Z.
+        /// </summary>
+        private void RequestSectionAnnotationsLoad(int sectionNumber)
+        {
+            if (Parent?.Scene is null || sectionNumber <= 0)
+                return;
+            lock (_sectionAnnotationLoadLock)
+            {
+                if (!_sectionAnnotationLoadBySection.TryGetValue(sectionNumber, out var cts) || cts.IsCancellationRequested)
+                {
+                    cts?.Dispose();
+                    cts = new CancellationTokenSource();
+                    _sectionAnnotationLoadBySection[sectionNumber] = cts;
+                }
+                if (_requestedSectionNumbers.Add(sectionNumber))
+                    _annotationLoadWorkerSignal.Release();
+            }
+        }
+
+        /// <summary>
+        /// Single worker: pick next section by min distance from Z, run LoadSectionAnnotationsForSection, then loop.
+        /// </summary>
+        private async Task RunAnnotationLoadWorkerAsync()
+        {
+            var token = _annotationLoadWorkerCts.Token;
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    await _annotationLoadWorkerSignal.WaitAsync(token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
                 }
 
-                SectionAnnotationsView sectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number);
-                sectionAnnotations?.LoadAnnotationsInRegion(Parent.Scene, token);
+                int sectionToLoad;
+                CancellationToken sectionToken;
+                lock (_sectionAnnotationLoadLock)
+                {
+                    int z = _currentSectionNumber;
+                    int best = -1;
+                    int bestDist = int.MaxValue;
+                    foreach (int s in _requestedSectionNumbers)
+                    {
+                        if (!_sectionAnnotationLoadBySection.TryGetValue(s, out var cts) || cts.IsCancellationRequested)
+                            continue;
+                        int dist = Math.Abs(s - z);
+                        if (dist < bestDist)
+                        {
+                            bestDist = dist;
+                            best = s;
+                        }
+                    }
+                    if (best < 0)
+                        continue;
+                    _requestedSectionNumbers.Remove(best);
+                    sectionToken = _sectionAnnotationLoadBySection[best].Token;
+                    sectionToLoad = best;
+                }
+
+                try
+                {
+                    await LoadSectionAnnotationsForSection(sectionToLoad, sectionToken);
+
+                    if (sectionToLoad == _currentSectionNumber && !sectionToken.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            _ = Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, Global.NumSectionsLoading), sectionToken);
+                        }
+                        catch (OperationCanceledException) { }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // Section load was cancelled (e.g. section left keep set); continue to next requested section.
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"{nameof(AnnotationOverlay)}.{nameof(RunAnnotationLoadWorkerAsync)}: unexpected exception loading section {sectionToLoad}: {ex.Message}");
+                }
             }
-            catch (TaskCanceledException)
-            {
-                return;
-            }
-            finally
-            {
-                LoadSectionAnnotationsSemaphore.Release();
-            }
-            //SectionAnnotationsView.LoadSectionAnnotations(SectionAnnotations, false);
+        }
+
+        /// <summary>
+        /// Request load for the current section only (used by camera/transform/reference events). Adds current section to requested and signals worker.
+        /// </summary>
+        protected void RequestCurrentSectionAnnotationsLoad()
+        {
+            if (_Parent?.Section?.Number is int current)
+                RequestSectionAnnotationsLoad(current);
         }
 
         /*

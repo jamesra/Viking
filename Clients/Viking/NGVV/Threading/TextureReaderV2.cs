@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Windows.Documents.Serialization;
 using Microsoft.Xna.Framework.Graphics;
 using Viking.VolumeModel;
+using Viking.ViewModels;
 
 namespace Viking;
 
@@ -108,8 +109,13 @@ class TextureReaderV2 : IDisposable
 
     private readonly CancellationTokenSource CancelToken;
 
-    public TextureReaderV2(GraphicsDevice graphicsDevice, Uri textureUri, string cacheFilename, int mipMapLevels, Action? OnCompletion, CancellationTokenSource token)
-        : this(graphicsDevice, textureUri, mipMapLevels, OnCompletion, token)
+    /// <summary>
+    /// When non-null, ProcessQueue will call SetTextureFromQueue on this tile after creating the texture.
+    /// </summary>
+    private readonly TileView? TileViewOwner;
+
+    public TextureReaderV2(GraphicsDevice graphicsDevice, Uri textureUri, string cacheFilename, int mipMapLevels, Action? OnCompletion, CancellationTokenSource token, TileView? tileViewOwner = null)
+        : this(graphicsDevice, textureUri, mipMapLevels, OnCompletion, token, tileViewOwner)
     {
         CacheFilename = cacheFilename;
     }
@@ -120,10 +126,12 @@ class TextureReaderV2 : IDisposable
     /// <param name="graphicsDevice"></param>
     /// <param name="filename"></param>
     /// <param name="downsample"></param>
-    public TextureReaderV2(GraphicsDevice graphicsDevice, Uri textureURI, int mipMapLevels, Action? OnCompletion, CancellationTokenSource token)
+    /// <param name="tileViewOwner">When provided, the created texture is assigned to this tile via PendingTextureQueue.</param>
+    public TextureReaderV2(GraphicsDevice graphicsDevice, Uri textureURI, int mipMapLevels, Action? OnCompletion, CancellationTokenSource token, TileView? tileViewOwner = null)
     {
         CancelToken = token;
         this.OnCompletionCallback = OnCompletion;
+        this.TileViewOwner = tileViewOwner;
         this.ID = TextureReaderV2.nextid++;
         this.graphicsDevice = graphicsDevice ?? throw new ArgumentNullException(nameof(graphicsDevice));
         this.Filename = textureURI;
@@ -843,31 +851,10 @@ class TextureReaderV2 : IDisposable
 
     protected async Task<Texture2D> GetTextureFromTextureDataAsync(GraphicsDevice device, TextureData data)
     {
-        Func<Texture2D> a = new(() =>
-        {
-            try
-            {
-                return TextureReaderV2.TextureFromData(device, in data, this.UseMipMaps);
-                //this.SetTexture(texture);
-            }
-            catch (Exception e)
-            {
-                Trace.WriteLine($"Exception loading texture: {this.Filename}");
-                throw;
-            }
-        });
-
-        //Ensure we create the texture on the main thread
-        if (Viking.UI.State.Appwindow.InvokeRequired)
-        {
-            return await Viking.UI.State.MainThreadDispatcher.InvokeAsync(a);
-        }
-        else
-        {
-            return a();
-        }
-
-        //return _Result;
+        var tcs = new TaskCompletionSource<Texture2D>();
+        PendingTextureQueue.Enqueue(data, UseMipMaps, tcs, tileView: TileViewOwner, fileKey: Filename?.ToString());
+        PendingTextureQueue.PostPump();
+        return await tcs.Task.ConfigureAwait(false);
     }
 
 
@@ -958,12 +945,17 @@ class TextureReaderV2 : IDisposable
         return default;
     }
 
+    // Prefer GetTextureFromTextureDataAsync (via TextureReaderV2) which routes through PendingTextureQueue.
+    /*
     public static Texture2D TextureFromStream(GraphicsDevice graphicsDevice, Stream texStream, bool mipmap)
     {
         TextureData texData = TextureDataFromStream(texStream);
         return TextureFromData(graphicsDevice, texData, mipmap);
-    }
+    }*/
 
+    /// <summary>
+    /// Creates a Texture2D from decoded pixel data. All creation from decoded data is intended to go through PendingTextureQueue (via GetTextureFromTextureDataAsync); this method is called from the queue pump on the main thread.
+    /// </summary>
     public static Texture2D TextureFromData(GraphicsDevice graphicsDevice, in TextureData texdata, bool mipmap)
     {
         if (graphicsDevice is null)

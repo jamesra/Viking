@@ -113,6 +113,8 @@ namespace Viking
         /// <param name="e"></param>
         private void VikingMain_Load(object sender, EventArgs e)
         {
+            PendingTextureQueue.PostPump(500); //Start the queue to load textures
+
             if (UI.State.volume is null)
             {
                 return;

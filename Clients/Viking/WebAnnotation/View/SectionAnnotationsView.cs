@@ -277,27 +277,42 @@ namespace WebAnnotation.ViewModel
         public override List<HitTestResult> GetAnnotations(GridVector2 WorldPosition)
         {
             IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(WorldPosition.ToRTreeRect(SectionNumber));
-            IEnumerable<LocationCanvasView> intersecting_locations = intersecting_IDs.Select(id => LocationViews[id]).Where(l => l.Contains(WorldPosition));
-
-            List<HitTestResult> listHitResults = [.. intersecting_locations.Select(l => new HitTestResult(l, (int)l.Z, l.VisualHeight, l.DistanceFromCenterNormalized(WorldPosition)))];
+            List<HitTestResult> listHitResults = [];
+            foreach (long id in intersecting_IDs)
+            {
+                if (LocationViews.TryGetValue(id, out LocationCanvasView view) && view.Contains(WorldPosition))
+                {
+                    listHitResults.Add(new HitTestResult(view, (int)view.Z, view.VisualHeight, view.DistanceFromCenterNormalized(WorldPosition)));
+                }
+            }
             return listHitResults;
         }
 
         public override List<HitTestResult> GetAnnotations(GridLineSegment world_line)
         {
             IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(world_line.BoundingBox.ToRTreeRect(SectionNumber));
-            IEnumerable<LocationCanvasView> intersecting_locations = intersecting_IDs.Select(id => LocationViews[id]).Where(l => l.Intersects(world_line));
-
-            List<HitTestResult> listHitResults = [.. intersecting_locations.Select(l => new HitTestResult(l, (int)l.Z, l.VisualHeight, l.DistanceFromCenterNormalized(world_line.A)))];
+            List<HitTestResult> listHitResults = [];
+            foreach (long id in intersecting_IDs)
+            {
+                if (LocationViews.TryGetValue(id, out LocationCanvasView view) && view.Intersects(world_line))
+                {
+                    listHitResults.Add(new HitTestResult(view, (int)view.Z, view.VisualHeight, view.DistanceFromCenterNormalized(world_line.A)));
+                }
+            }
             return listHitResults;
         }
 
         public override List<HitTestResult> GetAnnotations(GridRectangle world_rect)
         {
             IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(world_rect.ToRTreeRect(SectionNumber));
-            IEnumerable<LocationCanvasView> intersecting_locations = intersecting_IDs.Select(id => LocationViews[id]);
-
-            List<HitTestResult> listHitResults = [.. intersecting_locations.Select(l => new HitTestResult(l, (int)l.Z, l.VisualHeight, 0))];
+            List<HitTestResult> listHitResults = [];
+            foreach (long id in intersecting_IDs)
+            {
+                if (LocationViews.TryGetValue(id, out LocationCanvasView view))
+                {
+                    listHitResults.Add(new HitTestResult(view, (int)view.Z, view.VisualHeight, 0));
+                }
+            }
             return listHitResults;
         }
 
@@ -320,7 +335,14 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<LocationCanvasView> LocationViewsForIds(ICollection<long> loc_IDs)
         {
-            ICollection<LocationCanvasView> locations = [.. loc_IDs.Select(id => LocationViews[id])];
+            List<LocationCanvasView> locations = [];
+            foreach (long id in loc_IDs)
+            {
+                if (LocationViews.TryGetValue(id, out LocationCanvasView view))
+                {
+                    locations.Add(view);
+                }
+            }
             return locations;
         }
 
@@ -520,8 +542,9 @@ namespace WebAnnotation.ViewModel
             //Update if a position or everything has changed
             if (LocationObj.IsGeometryProperty(e.PropertyName))
             {
-                SectionAbove?.RemoveLocations(Store.Locations.GetObjectsByIDs(loc.LinksCopy, false).Where(l => l.Z == SectionAbove.SectionNumber));
-                SectionBelow?.RemoveLocations(Store.Locations.GetObjectsByIDs(loc.LinksCopy, false).Where(l => l.Z == SectionBelow.SectionNumber));
+                IEnumerable<LocationObj> linkedLocs = Store.Locations.GetObjectsByIDs(loc.LinksCopy, false).Where(l => l != null);
+                SectionAbove?.RemoveLocations(linkedLocs.Where(l => l.Z == SectionAbove.SectionNumber));
+                SectionBelow?.RemoveLocations(linkedLocs.Where(l => l.Z == SectionBelow.SectionNumber));
                 //                Location locView = new Location(loc);
                 LocationObj[] locs = [loc];
                 RemoveOverlappedLocations(locs);
@@ -555,8 +578,9 @@ namespace WebAnnotation.ViewModel
                 LocationObj[] locs = [loc];
                 AddLocationBatch(locs);
 
-                SectionAbove?.AddLocations(Store.Locations.GetObjectsByIDs(loc.LinksCopy, false).Where(l => l.Z == SectionAbove.SectionNumber));
-                SectionBelow?.AddLocations(Store.Locations.GetObjectsByIDs(loc.LinksCopy, false).Where(l => l.Z == SectionBelow.SectionNumber));
+                IEnumerable<LocationObj> linkedLocs = Store.Locations.GetObjectsByIDs(loc.LinksCopy, false).Where(l => l != null);
+                SectionAbove?.AddLocations(linkedLocs.Where(l => l.Z == SectionAbove.SectionNumber));
+                SectionBelow?.AddLocations(linkedLocs.Where(l => l.Z == SectionBelow.SectionNumber));
             }
             else
             {
@@ -987,19 +1011,43 @@ namespace WebAnnotation.ViewModel
         public ICollection<LocationCanvasView> GetLocations(GridRectangle bounds)
         {
             List<long> intersectingIDs = LocationViewSearch.Intersects(bounds.ToRTreeRect((float)Section.Number));
-            return [.. intersectingIDs.Select(id => LocationViews[id])];
+            List<LocationCanvasView> locations = [];
+            foreach (long id in intersectingIDs)
+            {
+                if (LocationViews.TryGetValue(id, out LocationCanvasView view))
+                {
+                    locations.Add(view);
+                }
+            }
+            return locations;
         }
 
         public ICollection<LocationCanvasView> GetLocations(GridVector2 point)
         {
             List<long> intersectingIDs = LocationViewSearch.Intersects(point.ToRTreeRect((float)Section.Number));
-            return [.. intersectingIDs.Select(id => LocationViews[id]).Where(l => l.Contains(point))];
+            List<LocationCanvasView> locations = [];
+            foreach (long id in intersectingIDs)
+            {
+                if (LocationViews.TryGetValue(id, out LocationCanvasView view) && view.Contains(point))
+                {
+                    locations.Add(view);
+                }
+            }
+            return locations;
         }
 
         public ICollection<LocationCanvasView> GetLocations(GridLineSegment line)
         {
             List<long> intersectingIDs = LocationViewSearch.Intersects(line.BoundingBox.ToRTreeRect((float)Section.Number));
-            return [.. intersectingIDs.Select(id => LocationViews[id]).Where(l => l.Intersects(line))];
+            List<LocationCanvasView> locations = [];
+            foreach (long id in intersectingIDs)
+            {
+                if (LocationViews.TryGetValue(id, out LocationCanvasView view) && view.Intersects(line))
+                {
+                    locations.Add(view);
+                }
+            }
+            return locations;
         }
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks() => SectionStructureLinks.GetStructureLinks();

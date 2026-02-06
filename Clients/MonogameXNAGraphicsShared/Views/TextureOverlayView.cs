@@ -50,7 +50,7 @@ namespace VikingXNAGraphics
         public TextureOverlayView(Texture2D texture, GridVector2 Center, Color color) : base(color)
         {
             this.Texture = texture;
-            if (Texture is null)
+            if (Texture is not null)
             {
                 GridVector2 offset = new(Texture.Width / 2.0, Texture.Height / 2.0);
                 this.BoundingRect = new GridRectangle(Center - offset, Center + offset);
@@ -102,6 +102,7 @@ namespace VikingXNAGraphics
             BlendState originalState = device.BlendState;
             device.BlendState = BlendState.NonPremultiplied;
 
+            Matrix worldViewProj = scene.World * scene.ViewProj;
             var textureGroups = listToDraw.GroupBy(l => l.Texture);
             foreach (var textureGroup in textureGroups)
             {
@@ -110,10 +111,10 @@ namespace VikingXNAGraphics
                 //overlayEffect.AnnotateWithTexture(textureGroup.Key);
                 overlayEffect.AnnotationTexture = textureGroup.Key;
 
-                foreach (TextureOverlayView rv in listToDraw)
+                foreach (TextureOverlayView rv in views)
                 {
                     overlayEffect.AnnotationColorHSL = rv.HSLColor;
-                    overlayEffect.WorldViewProjMatrix = (rv.ModelMatrix * scene.World) * scene.ViewProj;
+                    overlayEffect.WorldViewProjMatrix = rv.ModelMatrix * worldViewProj;
                     //TODO: Use GlobalPrimitives and model matricies instead of verticies
 
                     foreach (EffectPass pass in overlayEffect.CurrentTechnique.Passes)

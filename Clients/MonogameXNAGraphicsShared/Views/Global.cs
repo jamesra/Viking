@@ -298,37 +298,26 @@ namespace VikingXNAGraphics
                 double Radius,
                 Microsoft.Xna.Framework.Color color)
         {
-            //A better way to implement this is to just render a circle texture and add color using lighting, but 
-            //this will work for now
-            VertexPositionColorTexture[] verts;
-
-            //Can't populate until we've referenced CircleVerts
-            int[] indicies;
             float radius = (float)Radius;
-
-            //Figure out if we should draw triangles instead
-            verts = CircleVerticies(Pos, (float)Radius, color);
-            indicies = GlobalPrimitives.SquareIndicies;
 
             BlendState originalState = graphicsDevice.BlendState;
             graphicsDevice.BlendState = BlendState.NonPremultiplied;
 
             basicEffect.Texture = GlobalPrimitives.CircleTexture;
             basicEffect.TextureEnabled = true;
-            basicEffect.VertexColorEnabled = true;
+            basicEffect.VertexColorEnabled = false;
             basicEffect.LightingEnabled = false;
+            basicEffect.DiffuseColor = color.ToVector3();
+            basicEffect.World = Matrix.CreateScale(radius) * Matrix.CreateTranslation((float)Pos.X, (float)Pos.Y, 0);
+
+            graphicsDevice.SetVertexBuffer(GlobalPrimitives.GetUnitSquareVertexBuffer(graphicsDevice));
+            graphicsDevice.Indices = GlobalPrimitives.GetUnitCircleIndexBuffer(graphicsDevice);
 
             foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
             {
                 pass.Apply();
 
-                graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColorTexture>(PrimitiveType.TriangleList,
-                                                                              verts,
-                                                                              0,
-                                                                              verts.Length,
-                                                                              indicies,
-                                                                              0,
-                                                                              2);
+                graphicsDevice.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, 2);
             }
 
             basicEffect.TextureEnabled = false;

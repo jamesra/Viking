@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Viking.Common;
+using Viking.UI;
 using Viking.ViewModels;
 using Viking.VolumeModel;
 
@@ -74,7 +75,8 @@ namespace Viking
                     textureFileName,
                     cachedTextureFileName,
                     MipMapLevels,
-                    TextureSize);
+                    TextureSize,
+                    TransformName);
 
                 added = Add(key, tileView);
                 if (!added)
@@ -138,14 +140,28 @@ namespace Viking
         protected override Task<TileViewModelCacheEntry> CreateEntryAsync(string key, TileView value) => Task.FromResult(CreateEntry(key, value));
 
         /// <summary>
-        /// Cleanup the memory allocated for this cache entry. 
-        /// RemoveEntry() calls this function
+        /// Cleanup the memory allocated for this cache entry.
+        /// RemoveEntry() calls this function. TileView owns GraphicsResources (VB/IB/texture)
+        /// that must be disposed on the UI thread; we marshal disposal there when possible.
         /// </summary>
-        /// <param name="tile"></param>
         protected override bool OnRemoveEntry(TileViewModelCacheEntry entry)
         {
-            entry.TileView.FreeTexture();
-            entry.TileView.Dispose();
+            TileView tileView = entry.TileView;
+            System.Windows.Threading.Dispatcher dispatcher = State.MainThreadDispatcher;
+
+            if (dispatcher != null && !dispatcher.CheckAccess())
+            {
+                dispatcher.BeginInvoke(new Action(() =>
+                {
+                    tileView.FreeTexture();
+                    tileView.Dispose();
+                }));
+            }
+            else
+            {
+                tileView.FreeTexture();
+                tileView.Dispose();
+            }
 
             return true;
         }

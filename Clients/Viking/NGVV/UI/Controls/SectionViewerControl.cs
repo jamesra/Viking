@@ -7,6 +7,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -298,6 +299,42 @@ namespace Viking.UI.Controls
                 // Update the section number overlay with the new section
                 UpdateSectionNumberOverlay();
 
+                // Cancel in-flight mapping initializations only for sections that are not the current section or adjacent to it (so adjacent sections keep loading)
+                int currentSectionNumber = _Section.Number;
+                int[] adjacentSectionNumbers = [currentSectionNumber - 1, currentSectionNumber, currentSectionNumber + 1];
+                lock (_sectionMappingInitLock)
+                {
+                    List<int> toRemove = new();
+                    foreach (var kv in _sectionMappingInitBySection)
+                    {
+                        if (Array.IndexOf(adjacentSectionNumbers, kv.Key) < 0)
+                        {
+                            kv.Value.Cancel();
+                            kv.Value.Dispose();
+                            toRemove.Add(kv.Key);
+                        }
+                    }
+                    foreach (int key in toRemove)
+                        _sectionMappingInitBySection.Remove(key);
+
+                    // Start initializing the new section's tile mapping immediately so the first draw has a chance to show content instead of staying black
+                    if (State.volume != null)
+                    {
+                        MappingBase mapping = State.volume.GetTileMapping(_Section.Number, this.CurrentChannel, this.CurrentTransform);
+                        if (mapping != null && !mapping.Initialized)
+                        {
+                            if (!_sectionMappingInitBySection.TryGetValue(currentSectionNumber, out var existingCts) || existingCts.IsCancellationRequested)
+                            {
+                                existingCts?.Dispose();
+                                var cts = new CancellationTokenSource();
+                                _sectionMappingInitBySection[currentSectionNumber] = cts;
+                                var token = cts.Token;
+                                _ = Task.Run(() => mapping.Initialize(token), token);
+                            }
+                        }
+                    }
+                }
+
                 //Let listeners know if we changed sections
                 if (OnSectionChangedEventInvokeTask is not null && !(OnSectionChangedEventInvokeTask.IsCompleted || OnSectionChangedEventInvokeTask.IsFaulted))
                 {
@@ -563,6 +600,28 @@ namespace Viking.UI.Controls
         private CancellationTokenSource? OnSectionChangedEventCancellationTokenSource = null;
 
         private Task? OnSectionChangedEventInvokeTask = null;
+
+        /// <summary>
+        /// Per-section cancellation for tile mapping initialization. When Section changes we cancel only initializations for sections that are not the current section or adjacent to it.
+        /// </summary>
+        private readonly Dictionary<int, CancellationTokenSource> _sectionMappingInitBySection = new();
+        private readonly object _sectionMappingInitLock = new();
+
+        /// <summary>
+        /// Gets or creates a cancellation token for the given section's mapping initialization. Used from draw path when starting init; only non-adjacent in-flight inits are cancelled when Section changes.
+        /// </summary>
+        private CancellationToken GetOrCreateSectionMappingInitToken(int sectionNumber)
+        {
+            lock (_sectionMappingInitLock)
+            {
+                if (_sectionMappingInitBySection.TryGetValue(sectionNumber, out var cts) && !cts.IsCancellationRequested)
+                    return cts.Token;
+                cts?.Dispose();
+                var newCts = new CancellationTokenSource();
+                _sectionMappingInitBySection[sectionNumber] = newCts;
+                return newCts.Token;
+            }
+        }
 
 
 
@@ -1515,6 +1574,29 @@ namespace Viking.UI.Controls
 
         public static string TileCacheFullPath(Section section, string TextureFileName) => System.IO.Path.Combine([State.TextureCachePath, section.SectionSubPath, TextureFileName]);
 
+        /// <summary>
+        /// Resolves the full path for a tile texture (local path or HTTP(S) URL).
+        /// </summary>
+        private static string ResolveTileFullPath(TileViewModel t, Section section)
+        {
+            if (t.TextureFullPath.StartsWith(System.Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
+                t.TextureFullPath.StartsWith(System.Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase))
+            {
+                return t.TextureFullPath;
+            }
+            return $"{section.Path}{System.IO.Path.DirectorySeparatorChar}{t.TextureFullPath}";
+        }
+
+        /// <summary>
+        /// Fetches or constructs a TileView for the given tile model and section.
+        /// </summary>
+        private static TileView FetchOrConstructTileForSection(TileViewModel t, Section section, string mappingName)
+        {
+            string tileFileName = ResolveTileFullPath(t, section);
+            return Global.TileViewModelCache.FetchOrConstructTile(t, tileFileName,
+                TileCacheFullPath(section, t.TextureCacheFilePath), mappingName, 0);
+        }
+
         /*
         protected override void OnSceneChanged(object sender, PropertyChangedEventArgs e)
         {
@@ -1621,21 +1703,7 @@ namespace Viking.UI.Controls
 
                     foreach (TileViewModel t in tileList.Values)
                     {
-                        //Don't bother with huge tiles
-                        string tileFileName = t.TextureFullPath;
-                        //Calculate the path of the tile
-                        if (!(t.TextureFullPath.StartsWith(System.Uri.UriSchemeHttps) ||
-                            t.TextureFullPath.StartsWith(System.Uri.UriSchemeHttp)))
-                        {
-                            tileFileName = section.Path + System.IO.Path.DirectorySeparatorChar + tileFileName;
-                        }
-                        //Create a TileViewModel if it doesn't exist and draw it
-
-                        TileView tileView = Global.TileViewModelCache.FetchOrConstructTile(t,
-                                                                                                        tileFileName,
-                                                                                                        SectionViewerControl.TileCacheFullPath(section, t.TextureCacheFilePath),
-                                                                                                        Mapping.Name,
-                                                                                                        0);
+                        TileView tileView = FetchOrConstructTileForSection(t, section, Mapping.Name);
                         if (tileView is null)
                             continue;
 
@@ -1644,9 +1712,9 @@ namespace Viking.UI.Controls
                             continue;
 
                         if (tileView.TextureNeedsLoading)
-                            listGetTextureTasks.Add(Task.Run(() => tileView.GetOrLoadTextureAsync(this.graphicsDeviceService.GraphicsDevice, token)));
-                        //listGetTextureTasks.Add(Task<Texture2D>.Run(() => { return tileViewModel.GetOrRequestTexture(this.graphicsDeviceService.GraphicsDevice); }));
-
+                        {
+                            listGetTextureTasks.Add(tileView.GetOrLoadTextureAsync(this.graphicsDeviceService.GraphicsDevice, token));
+                        }
                         listTileViewModels.Add(tileView);
                     }
                 }
@@ -1654,8 +1722,12 @@ namespace Viking.UI.Controls
 
             while (listGetTextureTasks.Count > 0)
             {
-                var completedTask = await Task.WhenAny(listGetTextureTasks);
+                var completedTask = await Task.WhenAny(listGetTextureTasks).ConfigureAwait(false);
                 listGetTextureTasks.Remove(completedTask);
+                if (completedTask.IsFaulted && completedTask.Exception is AggregateException ex)
+                {
+                    Trace.WriteLine($"PreloadSceneTextures texture load failed: {ex.GetBaseException().Message}");
+                }
             }
         }
 
@@ -1691,7 +1763,9 @@ namespace Viking.UI.Controls
 
             if (mapping.Initialized == false)
             {
-                Task.Run(() => mapping.Initialize(CancellationToken.None));
+                // Use per-section token; only non-adjacent section inits are cancelled when Section changes
+                var token = GetOrCreateSectionMappingInitToken(section.Number);
+                Task.Run(() => mapping.Initialize(token), token);
                 return null;
             }
 
@@ -1732,28 +1806,11 @@ namespace Viking.UI.Controls
 
                 List<TileView> tileViewsToDraw = [];
 
-                List<Task<Texture2D>> listGetTextureTasks = [];
-                //Trace.WriteLine(tileList.Count.ToString() + " tiles found for level " + level.ToString());
                 int iColor = 0;
-                //     bool AllTilesDrawn = true; //The first time all tiles draw successfully we can skip the remaining levels
+                CancellationToken drawSectionToken = GetOrCreateSectionMappingInitToken(section.Number);
                 foreach (TileViewModel t in tileList.Values)
                 {
-                    //Don't bother with huge tiles
-                    string tileFileName = t.TextureFullPath;
-                    //Calculate the path of the tile
-                    if (!(t.TextureFullPath.StartsWith(System.Uri.UriSchemeHttps) ||
-                        t.TextureFullPath.StartsWith(System.Uri.UriSchemeHttp)))
-                    {
-                        tileFileName = $"{section.Path}{System.IO.Path.DirectorySeparatorChar}{tileFileName}";
-                    }
-                    //Create a TileViewModel if it doesn't exist and draw it
-
-                    TileView tileView = Global.TileViewModelCache.FetchOrConstructTile(t,
-                                                                                                    tileFileName,
-                                                                                                    SectionViewerControl.TileCacheFullPath(section, t.TextureCacheFilePath),
-                                                                                                    mapping.Name,
-                                                                                                    0);
-
+                    TileView tileView = FetchOrConstructTileForSection(t, section, mapping.Name);
                     if (tileView is null)
                         continue;
 
@@ -1761,12 +1818,15 @@ namespace Viking.UI.Controls
                     if (tileView.HasTexture == false && tileView.Downsample > Downsample * 8 && iLevel < DownsamplesToRender.Length - 1)
                         continue;
 
-                    //Request a texture if we need one
                     if (tileView.TextureNeedsLoading && !tileView.TextureIsLoading)
-                        //listGetTextureTasks.Add(Task<Texture2D>.Run(() => tileViewModel.GetOrRequestTexture(graphicsDevice)));
-                        Task.Run(() => tileView.GetOrLoadTextureAsync(graphicsDevice, CancellationToken.None));
+                    {
+                        _ = tileView.GetOrLoadTextureAsync(graphicsDevice, drawSectionToken)
+                            .ContinueWith(tt => { if (tt.IsFaulted && tt.Exception != null) Trace.WriteLine($"DrawSection texture load failed: {tt.Exception.GetBaseException().Message}"); }, TaskContinuationOptions.OnlyOnFaulted);
+                    }
                     else if (tileView.TextureReadComplete)
+                    {
                         tileViewsToDraw.Add(tileView);
+                    }
                 }
 
                 foreach (TileView tileViewModel in tileViewsToDraw)
@@ -1982,7 +2042,9 @@ namespace Viking.UI.Controls
 
                     if (mapping.Initialized == false)
                     {
-                        Task.Run(() => mapping.Initialize(CancellationToken.None));
+                        // Use per-section token; only non-adjacent section inits are cancelled when Section changes
+                        var token = GetOrCreateSectionMappingInitToken(sectionToDraw.Number);
+                        Task.Run(() => mapping.Initialize(token), token);
                         continue;
                     }
 
@@ -2220,9 +2282,16 @@ namespace Viking.UI.Controls
         }
 
 
-        private void timer_Tick(object sender, EventArgs e) =>
-            //   if (Global.TexturesLoadedNeedRefresh) //TEMP: REMOVE FOR ANIMATIONS
-            this.Invalidate();
+        [DllImport("user32.dll")]
+        private static extern uint GetQueueStatus(uint flags);
+
+        private const uint QS_PAINT = 0x0020;
+
+        private void timer_Tick(object sender, EventArgs e)
+        {
+            if ((GetQueueStatus(QS_PAINT) & QS_PAINT) == 0)
+                this.Invalidate();
+        }
 
         protected void SetOverlayVisiblity(bool ControlDown, bool SpaceDown)
         {

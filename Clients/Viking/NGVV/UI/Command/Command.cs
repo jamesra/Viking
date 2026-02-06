@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Windows;
 using System.Windows.Forms;
 using Viking.Common;
@@ -273,8 +274,7 @@ namespace Viking.UI.Commands
 
         private void AssignID()
         {
-            this.ID = _NextID;
-            _NextID++;
+            this.ID = Interlocked.Increment(ref _NextID) - 1;
         }
 
         public Command(Viking.UI.Controls.SectionViewerControl parent)
@@ -529,8 +529,6 @@ namespace Viking.UI.Commands
                 Parent.Downsample *= 0.86956521739130434782608695652174f;
             else
                 Parent.Downsample *= 1.15f;
-
-            this.Parent.Invalidate();
         }
 
         protected virtual void OnMouseMove(object sender, MouseEventArgs e)
@@ -728,9 +726,11 @@ namespace Viking.UI.Commands
             {
                 case Keys.PageUp:
                     StepCameraDistance(1);
+                    this.Parent.Invalidate();
                     break;
                 case Keys.PageDown:
                     StepCameraDistance(-1);
+                    this.Parent.Invalidate();
                     break;
                 case Keys.Left:
                     GridVector2 Left = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Top);

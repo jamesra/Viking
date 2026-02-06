@@ -25,15 +25,34 @@ namespace VikingXNAGraphics
             get => _modelMatrix;
             set => _modelMatrix = value;
         }
+
+        private VERTEXTYPE[] _verticies;
         public VERTEXTYPE[] Verticies
         {
-            get; set;
+            get => _verticies;
+            set { _verticies = value; _bufferDirty = true; }
         }
 
+        private int[] _edges;
         public int[] Edges
         {
-            get; set;
+            get => _edges;
+            set { _edges = value; _bufferDirty = true; }
         }
+
+        private VertexBuffer _vertexBuffer;
+        private IndexBuffer _indexBuffer;
+        private bool _bufferDirty = true;
+
+        /// <summary>
+        /// Vertex buffer for drawing. Valid after EnsureBuffers(device) returns true.
+        /// </summary>
+        public VertexBuffer VertexBuffer => _vertexBuffer;
+
+        /// <summary>
+        /// Index buffer for drawing. Valid after EnsureBuffers(device) returns true.
+        /// </summary>
+        public IndexBuffer IndexBuffer => _indexBuffer;
 
         /// <summary>
         /// Specify the expected renderer behavior for this model
@@ -64,6 +83,40 @@ namespace VikingXNAGraphics
 
         private static readonly bool _HasColor;
         public bool HasColor => _HasColor;
+
+        /// <summary>
+        /// Marks the cached vertex/index buffers as invalid (e.g. after in-place vertex changes). Subclasses may call this.
+        /// </summary>
+        protected void InvalidateBuffers()
+        {
+            _bufferDirty = true;
+        }
+
+        /// <summary>
+        /// Ensures vertex and index buffers are created and up to date for the given device. Call before drawing.
+        /// </summary>
+        /// <returns>True if buffers are valid and can be used for DrawIndexedPrimitives; false if geometry is empty or invalid.</returns>
+        public bool EnsureBuffers(GraphicsDevice device)
+        {
+            if (device == null || _verticies == null || _verticies.Length == 0 || _edges == null || _edges.Length == 0)
+                return false;
+
+            if (!_bufferDirty && _vertexBuffer != null && !_vertexBuffer.IsDisposed && _indexBuffer != null && !_indexBuffer.IsDisposed)
+                return true;
+
+            _vertexBuffer?.Dispose();
+            _indexBuffer?.Dispose();
+
+            VERTEXTYPE v = _verticies[0];
+            _vertexBuffer = new VertexBuffer(device, v.VertexDeclaration, _verticies.Length, BufferUsage.None);
+            _vertexBuffer.SetData(_verticies, 0, _verticies.Length);
+
+            _indexBuffer = new IndexBuffer(device, IndexElementSize.ThirtyTwoBits, _edges.Length, BufferUsage.None);
+            _indexBuffer.SetData(_edges, 0, _edges.Length);
+
+            _bufferDirty = false;
+            return true;
+        }
 
         /// <summary>
         /// Adds the passed verticies to the model, returns index at which first vertex was added
@@ -140,6 +193,7 @@ namespace VikingXNAGraphics
                     {
                         Verticies[i].Color = newColor;
                     }
+                    InvalidateBuffers();
                 }
             }
         }
@@ -156,6 +210,7 @@ namespace VikingXNAGraphics
                     {
                         Verticies[i].Color = value;
                     }
+                    InvalidateBuffers();
                 }
             }
         }
@@ -184,6 +239,7 @@ namespace VikingXNAGraphics
                     {
                         Verticies[i].Color = newColor;
                     }
+                    InvalidateBuffers();
                 }
             }
         }
@@ -200,6 +256,7 @@ namespace VikingXNAGraphics
                     {
                         Verticies[i].Color = value;
                     }
+                    InvalidateBuffers();
                 }
             }
         }

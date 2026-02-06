@@ -66,23 +66,25 @@ namespace Viking.ViewModels
             vbMappedMesh.SetData<VertexPositionColor>(MappedMeshVerticies);
             vbControlMesh = new VertexBuffer(graphicsDevice, typeof(VertexPositionColor), ControlMeshVerticies.Length, BufferUsage.None);
             vbControlMesh.SetData<VertexPositionColor>(ControlMeshVerticies);
-            ibMesh = new IndexBuffer(graphicsDevice, typeof(int), TrianglesAsLines.Count, BufferUsage.None);
+            ibMesh = new IndexBuffer(graphicsDevice, IndexElementSize.ThirtyTwoBits, TrianglesAsLines.Count, BufferUsage.None);
             ibMesh.SetData<int>([.. TrianglesAsLines]);
         }
 
         public void DrawMesh(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
         {
-
-            if (vbMappedMesh is null)
+            if (vbMappedMesh is null || vbMappedMesh.IsDisposed || vbControlMesh is null || vbControlMesh.IsDisposed || ibMesh is null || ibMesh.IsDisposed)
             {
+                vbMappedMesh?.Dispose();
+                vbMappedMesh = null;
+                vbControlMesh?.Dispose();
+                vbControlMesh = null;
+                ibMesh?.Dispose();
+                ibMesh = null;
                 CreateMesh(graphicsDevice);
             }
 
-            if (vbMappedMesh.VertexCount == 0)
+            if (vbMappedMesh == null || vbMappedMesh.VertexCount == 0)
                 return;
-
-            //PORT XNA 4
-            //graphicsDevice.VertexDeclaration = TileViewModel.VertexPositionColorDeclaration;
 
             basicEffect.Texture = null;
             basicEffect.TextureEnabled = false;
@@ -90,45 +92,39 @@ namespace Viking.ViewModels
             basicEffect.LightingEnabled = false;
 
             DepthStencilState originalDepthState = graphicsDevice.DepthStencilState;
-
             DepthStencilState newDepthState = new()
             {
                 DepthBufferEnable = false,
                 StencilEnable = false
             };
-            graphicsDevice.DepthStencilState = newDepthState;
 
-            graphicsDevice.SetVertexBuffer(vbMappedMesh);
-            graphicsDevice.Indices = ibMesh;
-            //PORT XNA 4
-            //basicEffect.CommitChanges();
-
-            //PORT XNA 4
-            //basicEffect.Begin();
-
-            foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+            try
             {
-                //PORT XNA 4
-                //pass.Begin();
-                pass.Apply();
+                graphicsDevice.DepthStencilState = newDepthState;
 
-                graphicsDevice.DrawIndexedPrimitives(PrimitiveType.LineList, 0, 0, ibMesh.IndexCount / 2);
+                graphicsDevice.SetVertexBuffer(vbMappedMesh);
+                graphicsDevice.Indices = ibMesh;
 
+                foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+                {
+                    pass.Apply();
+                    graphicsDevice.DrawIndexedPrimitives(PrimitiveType.LineList, 0, 0, ibMesh.IndexCount / 2);
+                }
+
+                graphicsDevice.SetVertexBuffer(vbControlMesh);
+
+                foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+                {
+                    pass.Apply();
+                    graphicsDevice.DrawIndexedPrimitives(PrimitiveType.LineList, 0, 0, ibMesh.IndexCount / 2);
+                }
             }
-
-            graphicsDevice.SetVertexBuffer(vbControlMesh);
-
-            foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+            finally
             {
-                //PORT XNA 4
-                //pass.Begin();
-                pass.Apply();
-
-                graphicsDevice.DrawIndexedPrimitives(PrimitiveType.LineList, 0, 0, ibMesh.IndexCount / 2);
+                if (originalDepthState != null && !originalDepthState.IsDisposed)
+                    graphicsDevice.DepthStencilState = originalDepthState;
+                newDepthState?.Dispose();
             }
-
-            graphicsDevice.DepthStencilState = originalDepthState;
-
         }
 
         LabelView[]? _Labels = null;

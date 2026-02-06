@@ -80,18 +80,14 @@ namespace Viking
         public static void AddTextureReader(object tex, string msg)
         {
             //            Trace.WriteLine("Adding Texture Reader: " + tex.GetHashCode().ToString(), "TextureUse");
-
+            // Skip add if key exists (two readers can share the same GetHashCode(); avoid ArgumentException).
             lock (Global.AllocatedTextureReaders)
             {
-                try
-                {
-                    Global.AllocatedTextureReaders.Add(tex.GetHashCode(), msg);
-                }
-                catch (ArgumentException) { } //Ignore duplicate key                
+                int key = tex.GetHashCode();
+                if (!Global.AllocatedTextureReaders.ContainsKey(key))
+                    Global.AllocatedTextureReaders.Add(key, msg);
+                _TexturesLoading = true;
             }
-
-            _TexturesLoading = true;
-
         }
 
         public static void RemoveTextureReader(object tex)
@@ -116,7 +112,7 @@ namespace Viking
             {
                 lock (Global.AllocatedTextureReaders)
                 {
-                    if (Global.AllocatedTextureReaders.Keys.Count > 0)
+                    if (Global.AllocatedTextureReaders.Count > 0)
                     {
                         _TexturesLoading = true;
                         return true;

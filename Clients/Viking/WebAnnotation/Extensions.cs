@@ -1,8 +1,12 @@
 using Geometry;
+using Microsoft.SqlServer.Types;
+using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
+using Viking.AnnotationServiceTypes.Interfaces;
+using WebAnnotationModel;
 
 namespace WebAnnotation
 {
@@ -250,7 +254,77 @@ namespace WebAnnotation
 
     }
 
+    /// <summary>
+    /// Extensions for generating representative points from annotations for segmentation background prompts.
+    /// </summary>
+    public static class AnnotationPointExtensions
+    {
+        /// <summary>
+        /// Returns representative points for a collection of annotations.
+        /// For polygons: centroid if inside polygon, else skipped. For lines/points: vertices. For circles/ellipses: center.
+        /// </summary>
+        /// <param name="annotations">Annotations to extract points from</param>
+        /// <returns>List of points in section/mosaic coordinates</returns>
+        public static IReadOnlyList<GridVector2> GetAnnotationRepresentativePoints(IEnumerable<LocationObj> annotations)
+        {
+            if (annotations is null)
+                return [];
 
+            List<GridVector2> result = [];
+            foreach (LocationObj loc in annotations)
+            {
+                if (loc?.MosaicShape is null)
+                    continue;
+
+                SqlGeometry shape = loc.MosaicShape;
+                LocationType typeCode = loc.TypeCode;
+
+                switch (typeCode)
+                {
+                    case LocationType.POLYGON:
+                    case LocationType.CURVEPOLYGON:
+                    case LocationType.CLOSEDCURVE:
+                        GridVector2? polygonPoint = TryGetPolygonRepresentativePoint(shape);
+                        if (polygonPoint.HasValue)
+                            result.Add(polygonPoint.Value);
+                        break;
+                    case LocationType.POLYLINE:
+                    case LocationType.OPENCURVE:
+                        GridVector2[] linePoints = shape.ToPoints();
+                        if (linePoints?.Length > 0)
+                            result.AddRange(linePoints);
+                        break;
+                    case LocationType.POINT:
+                        result.Add(loc.Position);
+                        break;
+                    case LocationType.CIRCLE:
+                    case LocationType.ELLIPSE:
+                        result.Add(shape.BoundingBox().Center);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            return result;
+        }
+
+        private static GridVector2? TryGetPolygonRepresentativePoint(SqlGeometry shape)
+        {
+            try
+            {
+                if (shape.GeometryType() != SupportedGeometryType.POLYGON && shape.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
+                    return null;
+
+                GridPolygon polygon = shape.ToPolygon();
+                GridVector2 centroid = polygon.Centroid;
+                return polygon.Contains(centroid) ? centroid : null;
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+        }
+    }
 
     public static class LINQLikeExtensions
     {

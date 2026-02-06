@@ -108,19 +108,25 @@ namespace VikingXNAGraphics
                 basicEffect.Texture = textureGroup.Key;
                 basicEffect.TextureEnabled = true;
 
-                VertexPositionColorTexture[] VertArray = AggregatePrimitives(views, out int[] indicies);
+                VertexPositionColorTexture[] VertArray = AggregatePrimitives(views, out int[] indicies, out int vertexCount, out int indexCount);
 
-                foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+                if (vertexCount > 0 && indexCount > 0)
                 {
-                    pass.Apply();
+                    using (VertexBuffer vb = new VertexBuffer(device, typeof(VertexPositionColorTexture), vertexCount, BufferUsage.None))
+                    using (IndexBuffer ib = new IndexBuffer(device, IndexElementSize.ThirtyTwoBits, indexCount, BufferUsage.None))
+                    {
+                        vb.SetData(VertArray, 0, vertexCount);
+                        ib.SetData(indicies, 0, indexCount);
 
-                    device.DrawUserIndexedPrimitives<VertexPositionColorTexture>(PrimitiveType.TriangleList,
-                                                                                         VertArray,
-                                                                                         0,
-                                                                                         VertArray.Length,
-                                                                                         indicies,
-                                                                                         0,
-                                                                                         indicies.Length / 3);
+                        foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+                        {
+                            pass.Apply();
+
+                            device.SetVertexBuffer(vb);
+                            device.Indices = ib;
+                            device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, indexCount / 3);
+                        }
+                    }
                 }
             }
 
@@ -190,13 +196,14 @@ namespace VikingXNAGraphics
             switch (Overlay)
             {
                 case OverlayStyle.Alpha:
-                    BasicEffect effect = new(device)
+                    BasicEffect effect = CircleView.GetOrCreateBasicEffect(device);
+                    if (effect != null)
                     {
-                        World = scene.World,
-                        View = scene.View,
-                        Projection = scene.Projection
-                    };
-                    TextureCircleView.Draw(device, scene, effect, new CircleView[] { this });
+                        effect.World = scene.World;
+                        effect.View = scene.View;
+                        effect.Projection = scene.Projection;
+                        TextureCircleView.Draw(device, scene, effect, new CircleView[] { this });
+                    }
                     break;
                 case OverlayStyle.Luma:
                     OverlayShaderEffect overlayEffect = VikingXNAGraphics.DeviceEffectsStore<OverlayShaderEffect>.TryGet(device);
@@ -210,6 +217,50 @@ namespace VikingXNAGraphics
     public class CircleView : IColorView, IViewPosition2D, IRenderable
     {
         #region static
+
+        private static readonly object BasicEffectCacheLock = new();
+        private static readonly Dictionary<GraphicsDevice, BasicEffect> BasicEffectCache = [];
+        private static readonly object BufferCacheLock = new();
+        private static readonly Dictionary<GraphicsDevice, (VertexBuffer vb, IndexBuffer ib, int vertexCapacity, int indexCapacity)> BufferCache = [];
+
+        internal static BasicEffect GetOrCreateBasicEffect(GraphicsDevice device)
+        {
+            if (device == null || device.IsDisposed)
+                return null;
+            lock (BasicEffectCacheLock)
+            {
+                if (BasicEffectCache.TryGetValue(device, out var effect) && effect != null && !effect.IsDisposed)
+                    return effect;
+                BasicEffectCache.Remove(device);
+                var newEffect = new BasicEffect(device);
+                BasicEffectCache[device] = newEffect;
+                return newEffect;
+            }
+        }
+
+        private static void GetOrCreateCircleBuffers(GraphicsDevice device, int vertexCount, int indexCount,
+            out VertexBuffer vb, out IndexBuffer ib)
+        {
+            vb = null;
+            ib = null;
+            if (device == null || device.IsDisposed || vertexCount <= 0 || indexCount <= 0)
+                return;
+            lock (BufferCacheLock)
+            {
+                if (BufferCache.TryGetValue(device, out var cached) && cached.vb != null && !cached.vb.IsDisposed
+                    && cached.vertexCapacity >= vertexCount && cached.indexCapacity >= indexCount)
+                {
+                    vb = cached.vb;
+                    ib = cached.ib;
+                    return;
+                }
+                cached.vb?.Dispose();
+                cached.ib?.Dispose();
+                vb = new VertexBuffer(device, typeof(VertexPositionColorTexture), Math.Max(vertexCount, 256), BufferUsage.None);
+                ib = new IndexBuffer(device, IndexElementSize.ThirtyTwoBits, Math.Max(indexCount, 384), BufferUsage.None);
+                BufferCache[device] = (vb, ib, vb.VertexCount, ib.IndexCount);
+            }
+        }
 
         //static double BeginFadeCutoff = 0.1;
         static readonly double InvisibleCutoff = 1.5f;
@@ -427,7 +478,7 @@ namespace VikingXNAGraphics
 
         public static void RestoreGraphicsDevice(GraphicsDevice graphicsDevice, OverlayShaderEffect overlayEffect) => DeviceStateManager.RestoreDeviceState(graphicsDevice);
 
-        protected static VertexPositionColorTexture[] AggregatePrimitives(CircleView[] listToDraw, out int[] indicies)
+        protected static VertexPositionColorTexture[] AggregatePrimitives(CircleView[] listToDraw, out int[] indicies, out int vertexCount, out int indexCount)
         {
             VertexPositionColorTexture[] VertArray = new VertexPositionColorTexture[listToDraw.Length * 4];
             indicies = new int[listToDraw.Length * 6];
@@ -457,6 +508,8 @@ namespace VikingXNAGraphics
                 iNextVertIndex += locIndicies.Length;
             }
 
+            vertexCount = iNextVert;
+            indexCount = iNextVertIndex;
             return VertArray;
         }
 
@@ -479,19 +532,25 @@ namespace VikingXNAGraphics
                 return;
 
             CircleView.SetupGraphicsDevice(device, basicEffect);
-            VertexPositionColorTexture[] VertArray = AggregatePrimitives(listToDraw, out int[] indicies);
+            VertexPositionColorTexture[] VertArray = AggregatePrimitives(listToDraw, out int[] indicies, out int vertexCount, out int indexCount);
 
-            foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+            if (vertexCount > 0 && indexCount > 0)
             {
-                pass.Apply();
+                GetOrCreateCircleBuffers(device, vertexCount, indexCount, out VertexBuffer vb, out IndexBuffer ib);
+                if (vb != null && ib != null)
+                {
+                    vb.SetData(VertArray, 0, vertexCount);
+                    ib.SetData(indicies, 0, indexCount);
 
-                device.DrawUserIndexedPrimitives<VertexPositionColorTexture>(PrimitiveType.TriangleList,
-                                                                                     VertArray,
-                                                                                     0,
-                                                                                     VertArray.Length,
-                                                                                     indicies,
-                                                                                     0,
-                                                                                     indicies.Length / 3);
+                    foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+                    {
+                        pass.Apply();
+
+                        device.SetVertexBuffer(vb);
+                        device.Indices = ib;
+                        device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, vertexCount, 0, indexCount / 3);
+                    }
+                }
             }
 
             CircleView.RestoreGraphicsDevice(device, basicEffect);
@@ -522,11 +581,12 @@ namespace VikingXNAGraphics
             //CircleView.SetupGraphicsDevice(device, overlayEffect);
             //overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleSingleColorAlphaOverlayEffect;
 
+            Matrix worldViewProj = scene.World * scene.ViewProj;
             foreach (CircleView cv in arraySolidCircles)
             {
                 //overlayEffect.AnnotationColorHSL = cv.HSLColor.SetAlpha(0.5f);
                 overlayEffect.AnnotationColorHSL = cv.HSLColor;
-                overlayEffect.WorldViewProjMatrix = (cv.ModelMatrix * scene.World) * scene.ViewProj;
+                overlayEffect.WorldViewProjMatrix = cv.ModelMatrix * worldViewProj;
                 overlayEffect.InputLumaAlphaValue = 0f;
 
                 //int[] indicies;

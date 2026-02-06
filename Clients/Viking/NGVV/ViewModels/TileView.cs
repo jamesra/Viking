@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Viking;
 using Viking.UI;
 using Viking.VolumeModel;
 
@@ -17,7 +18,7 @@ namespace Viking.ViewModels
     ///     A texture, which may or may not be loaded
     ///     A set of verticies to position the tile in space
     /// </summary>
-    public class TileView : IDisposable
+    public class TileView : IDisposable, IEquatable<TileView>
     {
         readonly TileViewModel _tileViewModel;
 
@@ -80,13 +81,22 @@ namespace Viking.ViewModels
             }
             set
             {
-                var originalTexture = Interlocked.CompareExchange(ref _texture, value, null);
-
+                var originalTexture = Interlocked.Exchange(ref _texture, value);
                 originalTexture?.Dispose();
                 //DisposeTextureThreadingObj disposeObj = new DisposeTextureThreadingObj(_texture);
                 //ThreadPool.QueueUserWorkItem(disposeObj.ThreadPoolCallback);
                 //Global.RemoveTexture(_texture);  //Texture removed from global records within the thread
             }
+        }
+
+        /// <summary>
+        /// Called from the main-thread texture queue pump to assign a newly created texture. Internal for use by PendingTextureQueue.
+        /// </summary>
+        internal void SetTextureFromQueue(Texture2D tex)
+        {
+            texture = tex;
+            var previousCts = Interlocked.Exchange(ref TextureLoadCancellationTokenSource, null);
+            previousCts?.Dispose();
         }
 
         internal bool HasTexture => _texture != null;
@@ -102,6 +112,16 @@ namespace Viking.ViewModels
         public readonly string TextureFileName;
         public readonly string TextureCachedFileName;
 
+        /// <summary>
+        /// Transform/mapping name used in the cache key (same as TileViewModelCache.TileKey second component).
+        /// </summary>
+        public readonly string TransformName;
+
+        /// <summary>
+        /// Logical identity for equality: same format as TileViewModelCache.TileKey(textureFileName, TransformName).
+        /// </summary>
+        private readonly string _cacheKey;
+
         private readonly int MipMapLevels = 1;
 
         private readonly Color TileColor;
@@ -116,13 +136,16 @@ namespace Viking.ViewModels
                              string textureFileName,
                              string cachedTextureFileName,
                              int mipMapLevels,
-                             int size)
+                             int size,
+                             string transformName)
         {
             this._tileViewModel = tileViewModel;
             this.Size = size;
             this.TileID = textureFileName.GetHashCode();
             this.TextureFileName = textureFileName;
             this.TextureCachedFileName = cachedTextureFileName;
+            this.TransformName = transformName ?? string.Empty;
+            this._cacheKey = $"{textureFileName} {this.TransformName}";
             this.MipMapLevels = mipMapLevels;
 
             Random r = new(TileID);
@@ -131,6 +154,24 @@ namespace Viking.ViewModels
 
             //TryCreateCacheDirectory(System.IO.Path.GetDirectoryName(cachedTextureFileName));
         }
+
+        /// <summary>
+        /// Logical identity matches TileViewModelCache.TileKey so pending set and other collections deduplicate by tile.
+        /// </summary>
+        public override int GetHashCode() =>
+            StringComparer.Ordinal.GetHashCode(_cacheKey ?? string.Empty);
+
+        /// <summary>
+        /// Logical identity matches TileViewModelCache.TileKey so pending set and other collections deduplicate by tile.
+        /// </summary>
+        public override bool Equals(object obj) => Equals(obj as TileView);
+
+        /// <summary>
+        /// Logical identity matches TileViewModelCache.TileKey so pending set and other collections deduplicate by tile.
+        /// </summary>
+        public bool Equals(TileView? other) =>
+            other is not null && string.Equals(_cacheKey, other._cacheKey, StringComparison.Ordinal);
+
         /*
         private static void TryCreateCacheDirectory(string path)
         {
@@ -219,14 +260,13 @@ namespace Viking.ViewModels
 
         public void AbortRequest()
         {
-            var tokenSource = Interlocked.CompareExchange(ref TextureLoadCancellationTokenSource, TextureLoadCancellationTokenSource,
-                TextureLoadCancellationTokenSource);
-
-            if (tokenSource != null && false == tokenSource.IsCancellationRequested)
+            var tokenSource = Interlocked.Exchange(ref TextureLoadCancellationTokenSource, null);
+            if (tokenSource != null && !tokenSource.IsCancellationRequested)
             {
                 Trace.WriteLine($"Aborting {this.TextureFileName}");
                 tokenSource.Cancel();
             }
+            tokenSource?.Dispose();
         }
 
         /// <summary>
@@ -256,28 +296,45 @@ namespace Viking.ViewModels
             if (currentTexture != null)
                 return currentTexture;
 
-
+            // Already in the queue (or dequeued but not yet completed); don't start another load.
+            if (PendingTextureQueue.IsTileViewPending(this))
+                return null;
 
             //In this path we either have no texture, or a low-res texture.  Ask for a new one if we haven't already
             if (ServerTextureNotFound == false && Interlocked.CompareExchange(ref this.TextureLoadCancellationTokenSource,
                     new CancellationTokenSource(), null) is null)
             {
+                // At most one TextureReaderV2 per file at a time.
+                if (!PendingTextureQueue.TryBeginLoadingFile(this.TextureFileName))
+                {
+                    Interlocked.Exchange(ref TextureLoadCancellationTokenSource, null);
+                    return null;
+                }
+
                 TextureReaderV2 texReader = State.volume.IsLocal == false
                     ? new TextureReaderV2(graphicsDevice,
-                                                        new Uri(this.TextureFileName),
-                                                        this.TextureCachedFileName,
-                                                        this.MipMapLevels,
-                                                        null,
-                                                        TextureLoadCancellationTokenSource)
+                                          new Uri(this.TextureFileName),
+                                          this.TextureCachedFileName,
+                                          this.MipMapLevels,
+                                          null,
+                                          TextureLoadCancellationTokenSource,
+                                          tileViewOwner: this)
                     : new TextureReaderV2(graphicsDevice,
-                                                        new Uri(this.TextureFileName),
-                                                        this.MipMapLevels,
-                                                        null,
-                                                        TextureLoadCancellationTokenSource);
+                                          new Uri(this.TextureFileName),
+                                          this.MipMapLevels,
+                                          null,
+                                          TextureLoadCancellationTokenSource,
+                                          tileViewOwner: this);
 
-                //If the section is read over a network provide a cache path too
-
-                return await texReader.LoadTexture().ContinueWith(task => CompleteTextureReadTask(texReader, task), TextureLoadCancellationTokenSource.Token).ConfigureAwait(false);
+                try
+                {
+                    return await texReader.LoadTexture().ConfigureAwait(false);
+                }
+                finally
+                {
+                    ServerTextureNotFound = texReader.TextureNotFound;
+                    Interlocked.Exchange(ref TextureLoadCancellationTokenSource, null);
+                }
             }
 
             return null;
@@ -521,12 +578,9 @@ namespace Viking.ViewModels
             }
             finally
             {
-                // Restore original depth state if it's still valid
                 if (originalDepthState != null && !originalDepthState.IsDisposed)
                     graphicsDevice.DepthStencilState = originalDepthState;
-
-                // Dispose the temporary depth state we created
-                newDepthState.Dispose();
+                newDepthState?.Dispose();
             }
         }
 
