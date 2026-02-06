@@ -1555,6 +1555,9 @@ namespace Viking.UI.Controls
 
             graphicsDevice.BlendState = OriginalBlendState;
             DrawCallSinceTileCacheCheckpoint = true;
+
+            // Give the main thread more time to load textures when the queue has work
+            timer.Interval = Viking.PendingTextureQueue.IsEmpty ? 16 : 40;
         }
 
         private void UpdateLumaTextureForOverlayEffects(Texture BackgroundLuma)

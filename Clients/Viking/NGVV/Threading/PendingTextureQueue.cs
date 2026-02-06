@@ -82,6 +82,11 @@ namespace Viking
         }
 
         /// <summary>
+        /// True if the queue has no pending texture items. Used to tune screen refresh interval (e.g. 16ms when empty, 40ms when busy).
+        /// </summary>
+        public static bool IsEmpty => Queue.IsEmpty;
+
+        /// <summary>
         /// True if this TileView has a pending item in the pipeline (enqueued or dequeued but not yet completed).
         /// Used by TileView to avoid starting a duplicate load.
         /// </summary>

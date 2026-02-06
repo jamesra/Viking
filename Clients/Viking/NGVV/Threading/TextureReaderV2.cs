@@ -956,7 +956,7 @@ class TextureReaderV2 : IDisposable
     /// <summary>
     /// Creates a Texture2D from decoded pixel data. All creation from decoded data is intended to go through PendingTextureQueue (via GetTextureFromTextureDataAsync); this method is called from the queue pump on the main thread.
     /// </summary>
-    public static Texture2D TextureFromData(GraphicsDevice graphicsDevice, in TextureData texdata, bool mipmap)
+    public static Texture2D? TextureFromData(GraphicsDevice graphicsDevice, in TextureData texdata, bool mipmap)
     {
         if (graphicsDevice is null)
             return null;
