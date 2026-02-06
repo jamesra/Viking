@@ -110,7 +110,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             "Middle-click: Remove nearest point",
             "Right-click: Add background point (red)",
             "Shift + Left-click: Delete foreground point",
-            "Shift + Right-click: Delete background point"
+            "Shift + Right-click: Delete background point",
+            "Shift + drag Left: Delete foreground points under cursor",
+            "Shift + drag Right: Delete background points under cursor"
         ];
 
         public string[] HelpStrings
@@ -320,6 +322,27 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
+        /// <summary>
+        /// Removes all points in the list that are within the given radius of worldPos (same screen-space logic as FindPointWithinRadius).
+        /// Returns true if any points were removed.
+        /// </summary>
+        private bool RemovePointsWithinRadius(List<GridVector2> pointList, GridVector2 worldPos, double radiusInScreenUnits)
+        {
+            GridVector2 screenPos = WorldToScreen(worldPos);
+            double radiusSquared = radiusInScreenUnits * radiusInScreenUnits;
+            bool anyRemoved = false;
+            for (int i = pointList.Count - 1; i >= 0; i--)
+            {
+                GridVector2 ptScreen = WorldToScreen(pointList[i]);
+                if (GridVector2.DistanceSquared(ptScreen, screenPos) <= radiusSquared)
+                {
+                    pointList.RemoveAt(i);
+                    anyRemoved = true;
+                }
+            }
+            return anyRemoved;
+        }
+
         private void HandleForegroundPointAddition(GridVector2 worldPos)
         {
             //Check if we are clicking inside a foreground point
@@ -398,11 +421,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            base.OnMouseMove(sender, e);
+            bool shiftHeld = Control.ModifierKeys.HasFlag(Keys.Shift);
+            // When shift+RMB is held we delete background points; do not let base command pan the scene
+            if (!(shiftHeld && e.Button.Right()))
+                base.OnMouseMove(sender, e);
 
             // Update cursor based on mouse position over points
             GridVector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
-            bool shiftHeld = Control.ModifierKeys.HasFlag(Keys.Shift);
             
             // Check if mouse is over a foreground or background point
             // Convert world-space radius to screen-space radius for detection
@@ -411,6 +436,22 @@ namespace WebAnnotation.UI.Commands.Segmentation
             GridVector2? foregroundPoint = FindPointWithinRadius(foregroundPoints, worldPos, pointRadiusInScreen);
             GridVector2? backgroundPoint = FindPointWithinRadius(backgroundPoints, worldPos, pointRadiusInScreen);
             
+            // Shift + button held: delete points under cursor (left = foreground, right = background)
+            if (shiftHeld)
+            {
+                double radius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius;
+                bool anyRemoved = false;
+                if (e.Button.Left())
+                    anyRemoved = RemovePointsWithinRadius(foregroundPoints, worldPos, radius);
+                else if (e.Button.Right())
+                    anyRemoved = RemovePointsWithinRadius(backgroundPoints, worldPos, radius);
+                if (anyRemoved)
+                {
+                    UpdatePointViews();
+                    RequestSegmentationOrClear();
+                }
+            }
+
             // Update cursor based on detected state
             if (shiftHeld && (foregroundPoint.HasValue || backgroundPoint.HasValue))
             {
