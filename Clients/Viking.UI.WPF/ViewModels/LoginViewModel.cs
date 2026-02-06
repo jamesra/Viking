@@ -29,7 +29,7 @@ namespace Viking.UI.WPF.ViewModels
             _isLoading = false;
 
             LoginCommand = new RelayCommand(async () => await LoginAsync(), () => CanLogin);
-            AnonymousCommand = new RelayCommand(LoginAnonymous, () => !IsLoading);
+            AnonymousCommand = new RelayCommand(async () => await LoginAnonymousAsync(), () => !IsLoading);
 
             // Try to load saved credentials
             LoadSavedCredentials();
@@ -359,20 +359,57 @@ namespace Viking.UI.WPF.ViewModels
             }
         }
 
-        private void LoginAnonymous()
+        private async Task LoginAnonymousAsync()
         {
+            IsLoading = true;
             IsAnonymous = true;
-            Credentials = new NetworkCredential("anonymous", "connectome");
-            StatusMessage = "Proceeding as anonymous";
+            StatusMessage = "Authenticating as anonymous...";
 
-            LoginSuccess?.Invoke(this, new LoginSuccessEventArgs
+            try
             {
-                BearerToken = null,
-                Credentials = Credentials,
-                IsAnonymous = true,
-                Username = "anonymous",
-                Password = "connectome"
-            });
+                if (!Uri.TryCreate(IdentityServerUrl, UriKind.Absolute, out Uri identityUri))
+                {
+                    StatusMessage = "Invalid Identity Server URL";
+                    return;
+                }
+
+                var anonymousPassword = Properties.Settings.Default.AnonymousPassword ?? "connectome";
+                BearerTokenHelper tokenHelper = new()
+                {
+                    IdentityServerURL = identityUri,
+                    ClientId = "api",
+                    ClientSecret = "Correct Horse Battery Staple"
+                };
+
+                var tokenResponse = await tokenHelper.RetrieveBearerToken("anonymous", anonymousPassword);
+
+                if (tokenResponse is null || tokenResponse.IsError)
+                {
+                    StatusMessage = tokenResponse != null ? $"Anonymous login failed: {tokenResponse.Error}" : "Anonymous login failed.";
+                    return;
+                }
+
+                BearerToken = tokenResponse as TokenResponse;
+                Credentials = new NetworkCredential("anonymous", anonymousPassword);
+                StatusMessage = "Proceeding as anonymous";
+                LoginSuccess?.Invoke(this, new LoginSuccessEventArgs
+                {
+                    BearerToken = BearerToken,
+                    Credentials = Credentials,
+                    IsAnonymous = true,
+                    Username = "anonymous",
+                    Password = anonymousPassword
+                });
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error: {ex.Message}";
+                System.Diagnostics.Trace.WriteLine($"Anonymous login error: {ex}");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
         }
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

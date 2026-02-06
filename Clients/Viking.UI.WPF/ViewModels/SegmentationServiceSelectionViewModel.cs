@@ -27,8 +27,9 @@ namespace Viking.UI.WPF.ViewModels
         private string _manualServiceEndpoint;
         private bool _showManualEntry;
         private readonly bool _isSelectionMade = false;
+        private readonly TaskCompletionSource<bool> _loadCompletedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public SegmentationServiceSelectionViewModel(TokenResponse bearerToken, string identityServerUrl, string preselectedEndpoint = null)
+        public SegmentationServiceSelectionViewModel(TokenResponse bearerToken, string identityServerUrl, string preselectedEndpoint = null, Dictionary<long, object> preloadedServices = null)
         {
             _bearerToken = bearerToken;
             _identityServerUrl = identityServerUrl;
@@ -43,7 +44,18 @@ namespace Viking.UI.WPF.ViewModels
             LoadServicesCommand = new RelayCommand(async () => await LoadServicesAsync());
             CopyEndpointCommand = new RelayCommand(CopyEndpointToClipboard, () => !string.IsNullOrWhiteSpace(SelectedServiceEndpoint));
 
-            if (_bearerToken != null)
+            if (preloadedServices != null && preloadedServices.Count > 0)
+            {
+                PopulateServiceNodesFromDict(preloadedServices);
+                IsLoading = false;
+                StatusMessage = $"Loaded {preloadedServices.Count} segmentation service(s)";
+                if (!string.IsNullOrWhiteSpace(_preselectedEndpoint))
+                {
+                    PreselectService(_preselectedEndpoint);
+                }
+                _loadCompletedTcs.TrySetResult(true);
+            }
+            else if (_bearerToken != null)
             {
                 _ = LoadServicesAsync();
             }
@@ -51,6 +63,7 @@ namespace Viking.UI.WPF.ViewModels
             {
                 StatusMessage = "No authentication token available. Use manual entry or recent services.";
                 ShowManualEntry = true;
+                _loadCompletedTcs.TrySetResult(true);
             }
 
             if (!string.IsNullOrWhiteSpace(_preselectedEndpoint))
@@ -58,6 +71,11 @@ namespace Viking.UI.WPF.ViewModels
                 ManualServiceEndpoint = _preselectedEndpoint;
             }
         }
+
+        /// <summary>
+        /// Returns a task that completes when the initial load of segmentation services (from web service or preloaded data) has finished.
+        /// </summary>
+        public Task WhenServicesLoadedAsync() => _loadCompletedTcs.Task;
 
         public ObservableCollection<SegmentationServiceTreeNode> ServiceNodes { get; }
         public ObservableCollection<SegmentationServiceInfo> RecentServices { get; }
@@ -280,34 +298,7 @@ namespace Viking.UI.WPF.ViewModels
                 }
 
                 ServiceNodes.Clear();
-
-                foreach (var kvp in servicesDict.OrderBy(kvp => kvp.Value, new SegmentationServiceComparer()))
-                {
-                    try
-                    {
-                        var serviceInfo = ParseServiceData(kvp.Key, kvp.Value);
-
-                        // Log warning if endpoint is missing
-                        if (string.IsNullOrWhiteSpace(serviceInfo.Endpoint))
-                        {
-                            Trace.WriteLine($"[SegmentationSelection] WARNING: Service {kvp.Key} ({serviceInfo.Name}) has no endpoint!");
-                        }
-
-                        SegmentationServiceTreeNode node = new()
-                        {
-                            Name = serviceInfo.Name,
-                            Service = serviceInfo,
-                            IsCategory = false
-                        };
-
-                        ServiceNodes.Add(node);
-                    }
-                    catch (Exception ex)
-                    {
-                        Trace.WriteLine($"Error parsing segmentation service {kvp.Key}: {ex.Message}");
-                    }
-                }
-
+                PopulateServiceNodesFromDict(servicesDict);
                 StatusMessage = $"Loaded {servicesDict.Count} segmentation service(s)";
 
                 if (!string.IsNullOrWhiteSpace(_preselectedEndpoint))
@@ -330,6 +321,36 @@ namespace Viking.UI.WPF.ViewModels
             finally
             {
                 IsLoading = false;
+                _loadCompletedTcs.TrySetResult(true);
+            }
+        }
+
+        private void PopulateServiceNodesFromDict(Dictionary<long, object> servicesDict)
+        {
+            foreach (var kvp in servicesDict.OrderBy(kvp => kvp.Value, new SegmentationServiceComparer()))
+            {
+                try
+                {
+                    var serviceInfo = ParseServiceData(kvp.Key, kvp.Value);
+
+                    if (string.IsNullOrWhiteSpace(serviceInfo.Endpoint))
+                    {
+                        Trace.WriteLine($"[SegmentationSelection] WARNING: Service {kvp.Key} ({serviceInfo.Name}) has no endpoint!");
+                    }
+
+                    SegmentationServiceTreeNode node = new()
+                    {
+                        Name = serviceInfo.Name,
+                        Service = serviceInfo,
+                        IsCategory = false
+                    };
+
+                    ServiceNodes.Add(node);
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"Error parsing segmentation service {kvp.Key}: {ex.Message}");
+                }
             }
         }
 

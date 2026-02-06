@@ -37,15 +37,11 @@ namespace Viking.UI.WPF.ViewModels
             LoadVolumesCommand = new RelayCommand(async () => await LoadVolumesAsync());
             CopyUrlCommand = new RelayCommand(CopyUrlToClipboard, () => !string.IsNullOrWhiteSpace(SelectedVolumeUrl));
 
-            // Auto-load volumes on creation if we have a bearer token
-            if (_bearerToken != null)
+            // Auto-load volumes on creation (authenticated or anonymous; anonymous uses unauthenticated API)
+            _ = LoadVolumesAsync();
+            if (_bearerToken == null)
             {
-                _ = LoadVolumesAsync();
-            }
-            else
-            {
-                StatusMessage = "Anonymous mode: Please use manual entry or recent volumes.";
-                ShowManualEntry = true; // Auto-expand for anonymous users
+                ShowManualEntry = true; // Auto-expand manual entry for anonymous users as fallback
             }
         }
 
@@ -229,12 +225,6 @@ namespace Viking.UI.WPF.ViewModels
 
         private async Task LoadVolumesAsync()
         {
-            if (_bearerToken is null)
-            {
-                StatusMessage = "No authentication token available";
-                return;
-            }
-
             IsLoading = true;
             StatusMessage = "Loading volumes...";
 
@@ -262,6 +252,7 @@ namespace Viking.UI.WPF.ViewModels
                     IdentityApiURL = identityApiUri
                 };
 
+                // Pass null for anonymous (unauthenticated GET returns Anonymous-accessible volumes)
                 var apiTreeNodes = await helper.RetrieveUserAccessibleVolumeTree(_bearerToken);
 
                 if (apiTreeNodes is null || apiTreeNodes.Count == 0)

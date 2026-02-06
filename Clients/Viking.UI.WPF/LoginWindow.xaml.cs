@@ -64,6 +64,8 @@ namespace Viking.UI.WPF
         public string SegmentationServiceUrl { get; private set; }
         public NetworkCredential Credentials { get; private set; }
         public TokenResponse BearerToken { get; private set; }
+        /// <summary>Identity server URL used for login (needed so WCF TokenInjector can send Bearer token to AnnotationService).</summary>
+        public string IdentityServerUrl => _loginViewModel?.IdentityServerUrl;
         public TokenResponse ApiToken { get; private set; }
 
         public string InitialSegmentationServiceUrl { get; set; }
@@ -166,13 +168,10 @@ namespace Viking.UI.WPF
                 return;
             }
 
-            await PerformVolumeAuthenticationAsync(e.Name, VolumeURL);
+            await PrepareSegmentationStageAsync(e.Name, VolumeURL);
 
             // Update the recent volumes list in the UI (remove duplicates and add to top)
             _volumeSelectionViewModel?.AddRecentVolume(VolumeURL, VolumeName);
-
-            // Validation successful - proceed to segmentation selection
-            ShowSegmentationSelectionStage();
         }
 
 
@@ -205,31 +204,144 @@ namespace Viking.UI.WPF
             _segmentationServiceSelectionViewModel?.StatusMessage = message;
         }
 
-        private async Task PerformVolumeAuthenticationAsync(string volumeName, string volumeUrl)
+        private async Task PrepareSegmentationStageAsync(string volumeName, string volumeUrl)
         {
             try
             {
-                // Show loading state if volume selection view model is available
                 UpdateViewModelStatus(true, "Requesting volume permissions...");
 
-                // Load and parse volume XML to get volume name and API URL
                 var (parsedVolumeName, identityApiUrl) = await LoadAndParseVolumeXml(volumeUrl);
-
                 volumeName ??= parsedVolumeName;
 
-                // Get identity server URL
                 if (!Uri.TryCreate(_loginViewModel?.IdentityServerUrl, UriKind.Absolute, out Uri identityServerUrl))
                 {
                     throw new Exception("Invalid Identity Server URL");
                 }
 
+                var (_, _, apiToken) = await RequestApiToken(identityApiUrl, identityServerUrl);
+                ApiToken = apiToken;
 
+                Task<Dictionary<long, object>> segmentationTask = FetchSegmentationServicesAsync(apiToken, identityApiUrl);
                 SetViewModelStatusMessage($"Authenticating to volume '{volumeName}'...");
 
-                // Request both API token and volume-specific permissions token
-                var (apiToken, volumeToken) = await RequestVolumePermissionsToken(volumeName, identityApiUrl, identityServerUrl);
+                TokenResponse volumeToken = await RequestVolumePermissionsWithApiToken(volumeName, identityApiUrl, identityServerUrl, apiToken);
+                BearerToken = volumeToken;
+                // Set TokenInjector immediately so WCF AnnotationService calls use the volume-scoped token (critical for non-anonymous users after pre-load segmentation flow).
+                TokenInjector.BearerToken = volumeToken;
+                TokenInjector.BearerTokenAuthority = identityServerUrl?.ToString() ?? _loginViewModel?.IdentityServerUrl;
 
-                // Store both tokens - ApiToken for Identity API queries, BearerToken for volume operations
+                UpdateViewModelStatus(false, "Authentication successful!");
+
+                Dictionary<long, object> servicesDict = await segmentationTask;
+
+                CleanupSegmentationServiceViewModel();
+                var preselectedEndpoint = SegmentationServiceUrl ?? InitialSegmentationServiceUrl;
+                _segmentationServiceSelectionViewModel = new SegmentationServiceSelectionViewModel(apiToken, _loginViewModel.IdentityServerUrl, preselectedEndpoint, servicesDict);
+                _segmentationServiceSelectionViewModel.SegmentationServiceSelected += OnSegmentationServiceSelected;
+                _segmentationServiceSelectionViewModel.SegmentationSelectionSkipped += OnSegmentationSelectionSkipped;
+                _segmentationServiceSelectionViewModel.SelectionCancelled += OnSegmentationSelectionCancelled;
+
+                ShowSegmentationStageWithViewModel(_segmentationServiceSelectionViewModel, preselectedEndpoint);
+            }
+            catch (Exception ex)
+            {
+                UpdateViewModelStatus(false, $"Error: {ex.Message}");
+                System.Diagnostics.Trace.WriteLine($"Volume authentication error: {ex}");
+                System.Windows.MessageBox.Show(
+                    $"Failed to authenticate to volume:\n\n{ex.Message}",
+                    "Authentication Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        private async Task<Dictionary<long, object>> FetchSegmentationServicesAsync(TokenResponse apiToken, Uri identityApiUrl)
+        {
+            try
+            {
+                var helper = new IdentityApiHelper { IdentityApiURL = identityApiUrl };
+                return await helper.RetrieveUserAccessibleSegmentationServices(apiToken);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine($"Error fetching segmentation services: {ex}");
+                return null;
+            }
+        }
+
+        private void ShowSegmentationStageWithViewModel(SegmentationServiceSelectionViewModel vm, string preselectedEndpoint)
+        {
+            segmentationSelectionControl.DataContext = vm;
+            CurrentStage = LoginStage.SegmentationServiceSelection;
+            Title = "Viking - Select Segmentation Service";
+            PopulateRecentSegmentationServices();
+            // Prefer last selected segmentation service if it exists
+            if (!string.IsNullOrWhiteSpace(preselectedEndpoint))
+            {
+                vm.PreselectService(preselectedEndpoint);
+            }
+            // If no selection yet and exactly one available service, select it by default
+            if (vm.SelectedService == null && string.IsNullOrWhiteSpace(vm.ManualServiceEndpoint) && vm.ServiceNodes.Count == 1 && !string.IsNullOrWhiteSpace(vm.ServiceNodes[0].Service?.Endpoint))
+            {
+                vm.PreselectService(vm.ServiceNodes[0].Service.Endpoint);
+            }
+        }
+
+        private async Task<TokenResponse> RequestVolumePermissionsWithApiToken(string volumeName, Uri identityApiUrl, Uri identityServerUrl, TokenResponse apiToken)
+        {
+            var identityApiHelper = new IdentityApiHelper { IdentityApiURL = identityApiUrl };
+
+            var vikingTokenHelper = new BearerTokenHelper
+            {
+                IdentityServerURL = identityServerUrl,
+                ClientId = "Viking",
+                ClientSecret = "Correct Horse Battery Staple"
+            };
+
+            string[] volumePermissions = await identityApiHelper.RetrieveUserVolumePermissions(apiToken, volumeName);
+            if (volumePermissions is null || volumePermissions.Length == 0)
+            {
+                throw new Exception("User does not have permissions in volume");
+            }
+
+            List<string> permissionsList =
+            [
+                "openid",
+                "Viking.Annotation",
+                .. volumePermissions.Select(p => $"{volumeName}.{p}"),
+            ];
+
+            var bearerTokenResponse = await vikingTokenHelper.RetrieveBearerToken(_savedUsername, _savedPassword, [.. permissionsList]);
+            if (bearerTokenResponse is null || bearerTokenResponse.IsError)
+            {
+                throw new Exception($"Failed to get bearer token: {bearerTokenResponse?.Error}");
+            }
+
+            return bearerTokenResponse as TokenResponse;
+        }
+
+        private async Task PerformVolumeAuthenticationAsync(string volumeName, string volumeUrl)
+        {
+            try
+            {
+                if (_isAnonymous)
+                {
+                    // Anonymous user already has a bearer token from login; reuse it.
+                    UpdateViewModelStatus(false, "Authentication successful!");
+                    return;
+                }
+
+                UpdateViewModelStatus(true, "Requesting volume permissions...");
+
+                var (parsedVolumeName, identityApiUrl) = await LoadAndParseVolumeXml(volumeUrl);
+                volumeName ??= parsedVolumeName;
+
+                if (!Uri.TryCreate(_loginViewModel?.IdentityServerUrl, UriKind.Absolute, out Uri identityServerUrl))
+                {
+                    throw new Exception("Invalid Identity Server URL");
+                }
+
+                var (apiToken, volumeToken) = await RequestVolumePermissionsToken(volumeName, identityApiUrl, identityServerUrl);
                 ApiToken = apiToken;
                 BearerToken = volumeToken;
 
@@ -237,12 +349,8 @@ namespace Viking.UI.WPF
             }
             catch (Exception ex)
             {
-                // Handle errors gracefully
                 UpdateViewModelStatus(false, $"Error: {ex.Message}");
-
                 System.Diagnostics.Trace.WriteLine($"Volume authentication error: {ex}");
-
-                // Show error to user
                 System.Windows.MessageBox.Show(
                     $"Failed to authenticate to volume:\n\n{ex.Message}",
                     "Authentication Error",
@@ -366,20 +474,12 @@ namespace Viking.UI.WPF
 
         private void InitializeSegmentationServiceViewModel(string preselectedEndpoint)
         {
-            // Use ApiToken for segmentation service queries (has permissions to query Identity API)
-            _segmentationServiceSelectionViewModel = new SegmentationServiceSelectionViewModel(ApiToken, _loginViewModel.IdentityServerUrl, preselectedEndpoint);
+            _segmentationServiceSelectionViewModel = new SegmentationServiceSelectionViewModel(ApiToken, _loginViewModel.IdentityServerUrl, preselectedEndpoint, preloadedServices: null);
             _segmentationServiceSelectionViewModel.SegmentationServiceSelected += OnSegmentationServiceSelected;
             _segmentationServiceSelectionViewModel.SegmentationSelectionSkipped += OnSegmentationSelectionSkipped;
             _segmentationServiceSelectionViewModel.SelectionCancelled += OnSegmentationSelectionCancelled;
 
-            segmentationSelectionControl.DataContext = _segmentationServiceSelectionViewModel;
-
-            PopulateRecentSegmentationServices();
-
-            if (!string.IsNullOrWhiteSpace(preselectedEndpoint))
-            {
-                _segmentationServiceSelectionViewModel.PreselectService(preselectedEndpoint);
-            }
+            ShowSegmentationStageWithViewModel(_segmentationServiceSelectionViewModel, preselectedEndpoint);
         }
 
         private void ShowSegmentationSelectionStage()
@@ -388,9 +488,6 @@ namespace Viking.UI.WPF
 
             var preselectedEndpoint = SegmentationServiceUrl ?? InitialSegmentationServiceUrl;
             InitializeSegmentationServiceViewModel(preselectedEndpoint);
-
-            CurrentStage = LoginStage.SegmentationServiceSelection;
-            Title = "Viking - Select Segmentation Service";
         }
 
         private void PopulateRecentSegmentationServices()
