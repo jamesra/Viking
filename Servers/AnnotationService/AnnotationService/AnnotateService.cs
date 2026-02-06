@@ -781,7 +781,7 @@ namespace Annotation
             //multiple queries.  Since we are stuck doing this I run the query in parallel
             uint QueryChunkSize = 1024;
 
-            var chunks = IDs.SortAndChunk(QueryChunkSize);
+            var chunks = IDs.SortAndChunk(QueryChunkSize, CanSortIDsInPlace: true);
 
             if (chunks.Count > 1)
                 Trace.WriteLine(string.Format("Dividing GetStructuresByIDs for {0} keys in {1} chunks", IDs.Length, chunks.Count));
@@ -828,74 +828,68 @@ namespace Annotation
             return newLink;
         }
 
+        private static void ApplyOnePermittedStructureLink(ConnectomeEntities db, AnnotationService.Types.PermittedStructureLink obj)
+        {
+            switch (obj.DBAction)
+            {
+                case DBACTION.INSERT:
+                    var newRow = new ConnectomeDataModel.PermittedStructureLink();
+                    obj.Sync(newRow);
+                    db.PermittedStructureLink.Add(newRow);
+                    break;
+                case DBACTION.UPDATE:
+                    ConnectomeDataModel.PermittedStructureLink updateRow;
+                    try
+                    {
+                        updateRow = (from u in db.PermittedStructureLink
+                                    where u.SourceTypeID == obj.SourceTypeID &&
+                                          u.TargetTypeID == obj.TargetTypeID
+                                    select u).Single();
+                    }
+                    catch (System.ArgumentNullException)
+                    {
+                        Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
+                        return;
+                    }
+                    catch (System.InvalidOperationException)
+                    {
+                        Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
+                        return;
+                    }
+                    obj.Sync(updateRow);
+                    break;
+                case DBACTION.DELETE:
+                    ConnectomeDataModel.PermittedStructureLink deleteRow;
+                    try
+                    {
+                        deleteRow = (from u in db.PermittedStructureLink
+                                    where u.SourceTypeID == obj.SourceTypeID &&
+                                          u.TargetTypeID == obj.TargetTypeID
+                                    select u).Single();
+                    }
+                    catch (System.ArgumentNullException)
+                    {
+                        Debug.WriteLine("Could not find structuretype to delete: " + obj.ToString());
+                        return;
+                    }
+                    catch (System.InvalidOperationException)
+                    {
+                        Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
+                        return;
+                    }
+                    db.PermittedStructureLink.Remove(deleteRow);
+                    break;
+            }
+        }
+
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Review))]
         public void UpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] links)
         {
-            //Stores the ID of each object manipulated for the return value
             using ConnectomeEntities db = GetOrCreateDatabaseContext();
             try
             {
-                for (int iObj = 0; iObj < links.Length; iObj++)
-                {
-                    AnnotationService.Types.PermittedStructureLink obj = links[iObj];
-                    ConnectomeDataModel.PermittedStructureLink DBObj = null;
-
-                    switch (obj.DBAction)
-                    {
-                        case DBACTION.INSERT:
-
-                            DBObj = new ConnectomeDataModel.PermittedStructureLink();
-                            obj.Sync(DBObj);
-                            db.PermittedStructureLink.Add(DBObj);
-                            break;
-                        case DBACTION.UPDATE:
-
-                            try
-                            {
-                                DBObj = (from u in db.PermittedStructureLink
-                                         where u.SourceTypeID == obj.SourceTypeID &&
-                                               u.TargetTypeID == obj.TargetTypeID
-                                         select u).Single();
-                            }
-                            catch (System.ArgumentNullException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
-                                break;
-                            }
-                            catch (System.InvalidOperationException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
-                                break;
-                            }
-
-                            obj.Sync(DBObj);
-                            //  db.ConnectomeDataModel.StructureTypes.(updateType);
-                            break;
-                        case DBACTION.DELETE:
-                            try
-                            {
-                                DBObj = (from u in db.PermittedStructureLink
-                                         where u.SourceTypeID == obj.SourceTypeID &&
-                                               u.TargetTypeID == obj.TargetTypeID
-                                         select u).Single();
-                            }
-                            catch (System.ArgumentNullException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to delete: " + obj.ToString());
-                                break;
-                            }
-                            catch (System.InvalidOperationException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
-                                break;
-                            }
-
-                            db.PermittedStructureLink.Remove(DBObj);
-
-                            break;
-                    }
-                }
-
+                for (int i = 0; i < links.Length; i++)
+                    ApplyOnePermittedStructureLink(db, links[i]);
                 db.SaveChanges();
             }
             catch (Exception e)
@@ -903,9 +897,6 @@ namespace Annotation
                 Debug.WriteLine(e.ToString());
                 throw;
             }
-
-            //Recover the ID's for new objects
-            return;
         }
 
         public AnnotationService.Types.StructureLink CreateStructureLink(AnnotationService.Types.StructureLink link)
@@ -923,74 +914,68 @@ namespace Annotation
             return newLink;
         }
 
+        private static void ApplyOneStructureLink(ConnectomeEntities db, AnnotationService.Types.StructureLink obj)
+        {
+            switch (obj.DBAction)
+            {
+                case DBACTION.INSERT:
+                    var newRow = new ConnectomeDataModel.StructureLink();
+                    obj.Sync(newRow);
+                    db.StructureLinks.Add(newRow);
+                    break;
+                case DBACTION.UPDATE:
+                    ConnectomeDataModel.StructureLink updateRow;
+                    try
+                    {
+                        updateRow = (from u in db.StructureLinks
+                                    where u.SourceID == obj.SourceID &&
+                                          u.TargetID == obj.TargetID
+                                    select u).Single();
+                    }
+                    catch (System.ArgumentNullException)
+                    {
+                        Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
+                        return;
+                    }
+                    catch (System.InvalidOperationException)
+                    {
+                        Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
+                        return;
+                    }
+                    obj.Sync(updateRow);
+                    break;
+                case DBACTION.DELETE:
+                    ConnectomeDataModel.StructureLink deleteRow;
+                    try
+                    {
+                        deleteRow = (from u in db.StructureLinks
+                                    where u.SourceID == obj.SourceID &&
+                                          u.TargetID == obj.TargetID
+                                    select u).Single();
+                    }
+                    catch (System.ArgumentNullException)
+                    {
+                        Debug.WriteLine("Could not find structuretype to delete: " + obj.ToString());
+                        return;
+                    }
+                    catch (System.InvalidOperationException)
+                    {
+                        Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
+                        return;
+                    }
+                    db.StructureLinks.Remove(deleteRow);
+                    break;
+            }
+        }
+
         public void UpdateStructureLinks(AnnotationService.Types.StructureLink[] links)
         {
             DemandWritePermissions();
-            //Stores the ID of each object manipulated for the return value
             using ConnectomeEntities db = GetOrCreateDatabaseContext();
             try
             {
-                for (int iObj = 0; iObj < links.Length; iObj++)
-                {
-                    AnnotationService.Types.StructureLink obj = links[iObj];
-                    ConnectomeDataModel.StructureLink DBObj = null;
-
-                    switch (obj.DBAction)
-                    {
-                        case DBACTION.INSERT:
-
-                            DBObj = new ConnectomeDataModel.StructureLink();
-                            obj.Sync(DBObj);
-                            db.StructureLinks.Add(DBObj);
-                            break;
-                        case DBACTION.UPDATE:
-
-                            try
-                            {
-                                DBObj = (from u in db.StructureLinks
-                                         where u.SourceID == obj.SourceID &&
-                                               u.TargetID == obj.TargetID
-                                         select u).Single();
-                            }
-                            catch (System.ArgumentNullException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
-                                break;
-                            }
-                            catch (System.InvalidOperationException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
-                                break;
-                            }
-
-                            obj.Sync(DBObj);
-                            //  db.ConnectomeDataModel.StructureTypes.(updateType);
-                            break;
-                        case DBACTION.DELETE:
-                            try
-                            {
-                                DBObj = (from u in db.StructureLinks
-                                         where u.SourceID == obj.SourceID &&
-                                               u.TargetID == obj.TargetID
-                                         select u).Single();
-                            }
-                            catch (System.ArgumentNullException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to delete: " + obj.ToString());
-                                break;
-                            }
-                            catch (System.InvalidOperationException)
-                            {
-                                Debug.WriteLine("Could not find structuretype to update: " + obj.ToString());
-                                break;
-                            }
-
-                            db.StructureLinks.Remove(DBObj);
-
-                            break;
-                    }
-                }
-
+                for (int i = 0; i < links.Length; i++)
+                    ApplyOneStructureLink(db, links[i]);
                 db.SaveChanges();
             }
             catch (Exception e)
@@ -998,9 +983,6 @@ namespace Annotation
                 Debug.WriteLine(e.ToString());
                 throw;
             }
-
-            //Recover the ID's for new objects
-            return;
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
@@ -1529,7 +1511,7 @@ namespace Annotation
             //multiple queries.  Since we are stuck doing this I run the query in parallel
             uint QueryChunkSize = 2000;
 
-            var chunks = IDs.SortAndChunk(QueryChunkSize);
+            var chunks = IDs.SortAndChunk(QueryChunkSize, CanSortIDsInPlace: true);
 
             if (chunks.Count > 1)
                 Trace.WriteLine(string.Format("Dividing GetLocationsByID for {0} keys in {1} chunks", IDs.Length, chunks.Count));
