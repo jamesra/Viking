@@ -284,7 +284,7 @@ namespace Viking.VolumeModel
             if (path is null)
                 throw new ArgumentNullException(nameof(path));
 
-            var document = await LoadXDocumentAsync(path, token, null, workerThread);
+            var document = await LoadXDocumentAsync(path, token, null, workerThread).ConfigureAwait(false);
             Volume output = new(path, localCachePath, document);
 
             if (token.IsCancellationRequested)
@@ -464,13 +464,13 @@ namespace Viking.VolumeModel
             httpClient.Timeout = TimeSpan.FromSeconds(15); // Set a timeout for the request 
             try
             {
-                var response = await httpClient.GetAsync(pathURI, token);
+                var response = await httpClient.GetAsync(pathURI, token).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
 
                 if (token.IsCancellationRequested)
                     throw new TaskCanceledException("LoadHttpAsync cancelled by token");
 
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 if (token.IsCancellationRequested)
                     throw new TaskCanceledException("LoadHttpAsync cancelled by token");
 
@@ -497,7 +497,7 @@ namespace Viking.VolumeModel
             XDocument reader = null;
             using FileStream f = File.OpenRead(path);
             using StreamReader XMLStreamReader = new(f);
-            string text = await XMLStreamReader.ReadToEndAsync();
+            string text = await XMLStreamReader.ReadToEndAsync().ConfigureAwait(false);
             if (token.IsCancellationRequested)
                 throw new TaskCanceledException("LoadLocalAsync cancelled by token");
             return XDocument.Parse(text);
@@ -519,7 +519,7 @@ namespace Viking.VolumeModel
 
             try
             {
-                using Stream responseStream = await request.GetStreamAsync(StosZipPath);
+                using Stream responseStream = await request.GetStreamAsync(StosZipPath).ConfigureAwait(false);
                 /*
                     Byte[] buffer = responseStream.ReadToBuffer(responseStream.Length);
                     using (MemoryStream memStream = new MemoryStream(buffer))
@@ -698,7 +698,7 @@ namespace Viking.VolumeModel
 
             try
             {
-                await InitializeLock.WaitAsync(token);
+                await InitializeLock.WaitAsync(token).ConfigureAwait(false);
                 if (IsInitialized || token.IsCancellationRequested)
                     return;
 
@@ -717,7 +717,7 @@ namespace Viking.VolumeModel
                     {
                         string StosZipFileName = VolumeElement.GetAttributeCaseInsensitive("StosZip").Value;
                         workerThread?.Report(new ProgressInfo($"Loading compressed transform file {StosZipFileName}", 0));
-                        HaveStosZip = await FetchStosZip(new Uri($"{Host}/{StosZipFileName}"), this.UserCredentials, this.Paths.ServerStosCachePath);
+                        HaveStosZip = await FetchStosZip(new Uri($"{Host}/{StosZipFileName}"), this.UserCredentials, this.Paths.ServerStosCachePath).ConfigureAwait(false);
                     }
                 }
                 catch (XMLMissingDataException e)
@@ -784,9 +784,9 @@ namespace Viking.VolumeModel
                     }
                 }
 
-                await WaitForCreateSectionThreads(ListSectionLoadingTasks, workerThread, token);
+                await WaitForCreateSectionThreads(ListSectionLoadingTasks, workerThread, token).ConfigureAwait(false);
 
-                await WaitForLoadStosTransformThreads(ListStosLoadingTasks, workerThread, token);
+                await WaitForLoadStosTransformThreads(ListStosLoadingTasks, workerThread, token).ConfigureAwait(false);
 
                 CreateVolumeTransforms(workerThread);
 
@@ -816,7 +816,7 @@ namespace Viking.VolumeModel
                     {
                         try
                         {
-                            result = await LoadStosResult.LoadAsync(stosFileCacheFullPath, elem);
+                            result = await LoadStosResult.LoadAsync(stosFileCacheFullPath, elem).ConfigureAwait(false);
                         }
                         catch (Exception e)
                         {
@@ -866,7 +866,7 @@ namespace Viking.VolumeModel
         {
             try
             {
-                await StosTransformLoadSemaphore.WaitAsync();
+                await StosTransformLoadSemaphore.WaitAsync().ConfigureAwait(false);
                 int pixelSpacing =
                     System.Convert.ToInt32(element.GetAttributeCaseInsensitive("pixelSpacing").Value);
                 string type = element.GetAttributeCaseInsensitive("type").Value;
@@ -950,7 +950,7 @@ namespace Viking.VolumeModel
             {
                 Task<LoadStosResult>[] stosTasks = [.. ListStosTransformTasks];
 
-                var completedTask = await System.Threading.Tasks.Task.WhenAny(stosTasks);
+                var completedTask = await System.Threading.Tasks.Task.WhenAny(stosTasks).ConfigureAwait(false);
 
                 if (token.IsCancellationRequested)
                     throw new TaskCanceledException("WaitForLoadStosTransformThreads cancelled by token");
@@ -1100,7 +1100,7 @@ namespace Viking.VolumeModel
                     using Stream stostext = System.IO.File.OpenRead(CacheStosPath) as Stream;
                     var cachedTransform = await TransformFactory.ParseStos(stostext,
                         stosInfo,
-                        1);
+                        1).ConfigureAwait(false);
 
                     if (cachedTransform is IContinuousTransform transform)
                         return transform;

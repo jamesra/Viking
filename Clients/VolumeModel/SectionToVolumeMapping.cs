@@ -44,7 +44,7 @@ namespace Viking.VolumeModel
 
             if (Interlocked.CompareExchange(ref _TileTransforms, _TileTransforms, null) is null)
             {
-                await Initialize(token);
+                await Initialize(token).ConfigureAwait(false);
             }
 
             var _transforms = Interlocked.CompareExchange(ref _TileTransforms, _TileTransforms, null) ?? [];
@@ -96,7 +96,7 @@ namespace Viking.VolumeModel
 
             try
             {
-                await _InitializeSemaphore.WaitAsync(token);
+                await _InitializeSemaphore.WaitAsync(token).ConfigureAwait(false);
                 if (Interlocked.Read(ref _Initialized) > 0)
                     return;
 
@@ -139,11 +139,11 @@ namespace Viking.VolumeModel
         {
             try
             {
-                await _InitializeSemaphore.WaitAsync();
+                await _InitializeSemaphore.WaitAsync().ConfigureAwait(false);
                 if (Interlocked.CompareExchange(ref _Initialized, 0, 1) > 0)
                 {
                     _TileTransforms = null;
-                    await SourceMapping.FreeMemory();
+                    await SourceMapping.FreeMemory().ConfigureAwait(false);
                 }
             }
             finally
@@ -166,7 +166,7 @@ namespace Viking.VolumeModel
             Debug.Assert(this.VolumeTransform != null);
 
             if (SourceMapping.Initialized == false)
-                await SourceMapping.Initialize(token);
+                await SourceMapping.Initialize(token).ConfigureAwait(false);
 
             var VolumeTransformInfo = ((ITransformInfo)VolumeTransform).Info;
 
@@ -212,7 +212,7 @@ namespace Viking.VolumeModel
             }
 
             // Get the transform tiles from the source mapping, which loads the .mosaic if it hasn't alredy been loaded
-            ITransform[] volTransforms = await SourceMapping.GetOrCreateTransforms(token);
+            ITransform[] volTransforms = await SourceMapping.GetOrCreateTransforms(token).ConfigureAwait(false);
             if (token.IsCancellationRequested)
                 return null;
 

@@ -138,13 +138,13 @@ namespace Viking.VolumeModel
         {
             try
             {
-                await _PrepareTransformSemaphore.WaitAsync();
+                await _PrepareTransformSemaphore.WaitAsync().ConfigureAwait(false);
                 if (WarpedTo.TryGetValue(transform, out var mapBase) == false)
                     return;
 
                 if (mapBase is SectionToVolumeMapping map)
                 {
-                    await map.Initialize(CancellationToken.None);
+                    await map.Initialize(CancellationToken.None).ConfigureAwait(false);
                 }
             }
             finally

@@ -51,7 +51,7 @@ namespace Viking.VolumeModel
 
             try
             {
-                await _InitializeSemaphore.WaitAsync(token);
+                await _InitializeSemaphore.WaitAsync(token).ConfigureAwait(false);
                 if (Initialized)
                     return;
 
@@ -84,7 +84,7 @@ namespace Viking.VolumeModel
         {
             if (Initialized == false)
             {
-                await Initialize(token);
+                await Initialize(token).ConfigureAwait(false);
             }
 
             try
@@ -173,7 +173,7 @@ namespace Viking.VolumeModel
         {
             try
             {
-                await LoadTransformSemaphore.WaitAsync();
+                await LoadTransformSemaphore.WaitAsync().ConfigureAwait(false);
 
                 Interlocked.CompareExchange(ref _TileTransforms, null, _TileTransforms);
             }
@@ -205,7 +205,7 @@ namespace Viking.VolumeModel
             var headerRequest = CreateRequest();
 
             using var headerResponse =
-                await headerRequest.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, token);
+                await headerRequest.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
 
             if (false == headerResponse.IsSuccessStatusCode)
                 return DateTime.MinValue;
@@ -232,7 +232,7 @@ namespace Viking.VolumeModel
         {
             Uri mosaicURI = new(this.RootPath + '/' + MosaicPath);
             DateTime serverlastModified = DateTime.MaxValue;
-            serverlastModified = await TilesToSectionMapping.ServerSideLastModifed(mosaicURI, token);
+            serverlastModified = await TilesToSectionMapping.ServerSideLastModifed(mosaicURI, token).ConfigureAwait(false);
             if (token.IsCancellationRequested)
                 return null;
 
@@ -270,7 +270,7 @@ namespace Viking.VolumeModel
             }
 
             //Not in the local cache
-            var transforms = await LoadTransforms(mosaicURI, RootPath, serverlastModified, token);
+            var transforms = await LoadTransforms(mosaicURI, RootPath, serverlastModified, token).ConfigureAwait(false);
             bool loadedFromServer = transforms != null;
             if (loadedFromServer)
             {
@@ -287,8 +287,8 @@ namespace Viking.VolumeModel
             try
             {
                 var request = CreateRequest();
-                using var MosaicDataStream = await request.GetStreamAsync(mosaicURI);
-                string[] MosaicLines = await MosaicDataStream.ToLinesAsync();
+                using var MosaicDataStream = await request.GetStreamAsync(mosaicURI).ConfigureAwait(false);
+                string[] MosaicLines = await MosaicDataStream.ToLinesAsync().ConfigureAwait(false);
                 return TransformFactory.LoadMosaic(RootPath, MosaicLines, serverlastModified);
                 /*
                 HttpWebRequest request = CreateRequest(mosaicURI);
