@@ -2285,9 +2285,9 @@ namespace Geometry
                 GridPolygon smoother_inner_poly = GridPolygon.Smooth(inner_poly, NumInterpolationPoints);
                 smoothed_poly.AddInteriorRing(smoother_inner_poly);
             }
-
-            Trace.WriteLine($"Smooth Polygon {poly} into {smoothed_poly}");
-
+             
+            //Trace.WriteLine($"Smooth Polygon {poly} into {smoothed_poly}");
+       
             return smoothed_poly;
         }
 

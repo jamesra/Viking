@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.ServiceModel;
+using System.Threading;
 using Viking.AnnotationServiceTypes;
 using WebAnnotationModel.Service;
 
@@ -366,13 +367,14 @@ namespace WebAnnotationModel
             return [.. known_locations.Select(l => l.Parent).Distinct()];
         }
 
-        public MixedLocalAndRemoteQueryResults<long, StructureObj> GetObjectsInRegionAsync(long SectionNumber, GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc, Action<ICollection<StructureObj>> OnLoadedCallback)
+        public MixedLocalAndRemoteQueryResults<long, StructureObj> GetObjectsInRegionAsync(long SectionNumber, GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc, Action<ICollection<StructureObj>> OnLoadedCallback, CancellationToken token = default)
         {
             MixedLocalAndRemoteQueryResults<long, LocationObj> locResults = Store.Locations.GetObjectsInRegionAsync(SectionNumber,
                                                                                                                     bounds,
                                                                                                                     MinRadius,
                                                                                                                     LastQueryUtc,
-                                                                                                                    (locs) => OnLoadedCallback([.. locs.Select(l => l.Parent)]));
+                                                                                                                    (locs) => OnLoadedCallback([.. locs.Select(l => l.Parent)]),
+                                                                                                                    token);
             ICollection<LocationObj> known_locations = Store.Locations.GetObjectsInRegion(SectionNumber, bounds, MinRadius, LastQueryUtc);
 
             ICollection<StructureObj> known_structs = [.. known_locations.Select(l => l.Parent)];

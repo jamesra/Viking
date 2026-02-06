@@ -110,12 +110,19 @@ class TextureReaderV2 : IDisposable
     private readonly CancellationTokenSource CancelToken;
 
     /// <summary>
+    /// When provided, used only for semaphore waits so section change cancels waiters; in-flight loads use CancelToken only.
+    /// </summary>
+    private readonly CancellationToken? _sectionToken;
+
+    public bool SectionLoadCancelled => _sectionToken?.IsCancellationRequested ?? false;
+
+    /// <summary>
     /// When non-null, ProcessQueue will call SetTextureFromQueue on this tile after creating the texture.
     /// </summary>
     private readonly TileView? TileViewOwner;
 
-    public TextureReaderV2(GraphicsDevice graphicsDevice, Uri textureUri, string cacheFilename, int mipMapLevels, Action? OnCompletion, CancellationTokenSource token, TileView? tileViewOwner = null)
-        : this(graphicsDevice, textureUri, mipMapLevels, OnCompletion, token, tileViewOwner)
+    public TextureReaderV2(GraphicsDevice graphicsDevice, Uri textureUri, string cacheFilename, int mipMapLevels, Action? OnCompletion, CancellationTokenSource token, TileView? tileViewOwner = null, CancellationToken? sectionToken = null)
+        : this(graphicsDevice, textureUri, mipMapLevels, OnCompletion, token, tileViewOwner, sectionToken)
     {
         CacheFilename = cacheFilename;
     }
@@ -127,9 +134,11 @@ class TextureReaderV2 : IDisposable
     /// <param name="filename"></param>
     /// <param name="downsample"></param>
     /// <param name="tileViewOwner">When provided, the created texture is assigned to this tile via PendingTextureQueue.</param>
-    public TextureReaderV2(GraphicsDevice graphicsDevice, Uri textureURI, int mipMapLevels, Action? OnCompletion, CancellationTokenSource token, TileView? tileViewOwner = null)
+    /// <param name="sectionToken">When provided, used only for semaphore waits; section change cancels waiters while in-flight loads continue.</param>
+    public TextureReaderV2(GraphicsDevice graphicsDevice, Uri textureURI, int mipMapLevels, Action? OnCompletion, CancellationTokenSource token, TileView? tileViewOwner = null, CancellationToken? sectionToken = null)
     {
         CancelToken = token;
+        _sectionToken = sectionToken;
         this.OnCompletionCallback = OnCompletion;
         this.TileViewOwner = tileViewOwner;
         this.ID = TextureReaderV2.nextid++;
@@ -631,15 +640,33 @@ class TextureReaderV2 : IDisposable
     /// Only allow loading a single texture at a time
     /// </summary>
     readonly SemaphoreSlim LoadTextureSemaphore = new(1, 1);
+
+    private static SemaphoreSlim HttpRequestThrottle = new(DefaultMaxConcurrentHttpRequests, DefaultMaxConcurrentHttpRequests);
+    private const int DefaultMaxConcurrentHttpRequests = 32;
+
+    /// <summary>
+    /// Set the max concurrent HTTP texture requests based on tile pixel width.
+    /// Formula: (4096 / tileWidth) * 2, minimum 1.
+    /// </summary>
+    public static void SetMaxConcurrentRequests(int tileWidth)
+    {
+        int max = Math.Max(1, (4096 / tileWidth) * 2);
+        HttpRequestThrottle = new SemaphoreSlim(max, max);
+        Trace.WriteLine($"TextureReaderV2: Max concurrent HTTP requests set to {max} (tile width {tileWidth})");
+    }
     public async Task<Texture2D> LoadTexture()
     {
         CancellationToken token = this.CancelToken.Token;
         if (token.IsCancellationRequested)
             return null;
+        if (_sectionToken?.IsCancellationRequested == true)
+            return null;
+
+        CancellationToken semaphoreToken = _sectionToken ?? token;
 
         try
         {
-            await LoadTextureSemaphore.WaitAsync(token).ConfigureAwait(false);
+            await LoadTextureSemaphore.WaitAsync(semaphoreToken).ConfigureAwait(false);
 
             //Trace.WriteLine("ThreadPoolCallback for " + ID.ToString() + " " + this.Filename.ToString());
             /*Nothing to do if we were aborted already*/
@@ -651,6 +678,21 @@ class TextureReaderV2 : IDisposable
 
             if (Filename.Scheme.ToLower() == "http" || Filename.Scheme.ToLower() == "https")
             {
+                try
+                {
+                    await HttpRequestThrottle.WaitAsync(semaphoreToken).ConfigureAwait(false);
+                }
+                catch (System.Threading.Tasks.TaskCanceledException)
+                {
+                    //Trace.WriteLine($"Aborted loading {Filename}");
+                    return null;
+                }
+                catch (System.OperationCanceledException)
+                {
+                    //Trace.WriteLine($"Aborted loading {Filename}");
+                    return null;
+                }
+
                 try
                 {
                     var texture = await TryLoadingFromCacheOrServer(Filename, CacheFilename, token) ?? await TryLoadingFromServer(this.Filename, token);
@@ -673,11 +715,20 @@ class TextureReaderV2 : IDisposable
                     //Trace.WriteLine($"Aborted loading {Filename}");
                     return null;
                 }
+                catch (System.OperationCanceledException)
+                {
+                    //Trace.WriteLine($"Aborted loading {Filename}");
+                    return null;
+                }
                 catch (Exception e)
                 {
                     Trace.WriteLine($"Problem loading cached tile {CacheFilename}, deleting and loading from server.\n{e}");
                     TryDeleteFile(CacheFilename);
                     //Continue and try to load from server
+                }
+                finally
+                {
+                    HttpRequestThrottle.Release();
                 }
             }
             else
@@ -851,9 +902,11 @@ class TextureReaderV2 : IDisposable
 
     protected async Task<Texture2D> GetTextureFromTextureDataAsync(GraphicsDevice device, TextureData data)
     {
+        if(SectionLoadCancelled)
+            return null;
+
         var tcs = new TaskCompletionSource<Texture2D>();
-        PendingTextureQueue.Enqueue(data, UseMipMaps, tcs, tileView: TileViewOwner, fileKey: Filename?.ToString());
-        PendingTextureQueue.PostPump();
+        PendingTextureQueue.Enqueue(data, UseMipMaps, tcs, tileView: TileViewOwner, fileKey: Filename?.ToString()); 
         return await tcs.Task.ConfigureAwait(false);
     }
 

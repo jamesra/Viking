@@ -428,39 +428,18 @@ namespace SqlGeometryUtils
             if (Radius == 0)
                 throw new ArgumentException("Cannot create circle with a radius of zero");
 
-
-            GridVector2[] points = ScaleAndTranslateCircleCardinalPoints(X, Y, Radius);
-
             SqlGeometryBuilder builder = new();
             builder.SetSrid(0);
             builder.BeginGeometry(OpenGisGeometryType.CurvePolygon);
-            builder.BeginFigure(points[0].X, points[0].Y, Z, null);
-
-            for (int i = 1; i < points.Length; i += 2)
-            {
-                //builder.AddLine(points[i].X, points[i].Y, Z, null);
-                builder.AddCircularArc(points[i].X, points[i].Y, Z, null,
-                                       points[i + 1].X, points[i + 1].Y, Z, null);
-            }
-
+            builder.BeginFigure(X + Radius, Y, Z, null);            // East
+            builder.AddCircularArc(X, Y + Radius, Z, null,          // North (arc midpoint)
+                                   X - Radius, Y, Z, null);          // West (arc endpoint)
+            builder.AddCircularArc(X, Y - Radius, Z, null,          // South (arc midpoint)
+                                   X + Radius, Y, Z, null);          // East (arc endpoint, closing)
             builder.EndFigure();
             builder.EndGeometry();
 
-            //GridVector2 radius_test = points[0] - points[2];
-
-            SqlGeometry output = builder.ConstructedGeometry;
-            /*
-            
-            string circle_template = "CURVEPOLYGON(CIRCULARSTRING ({1:F2} {3:F2} {6:D}, " +
-                                                                  "{0:F2} {5:F2} {6:D}, " +
-                                                                  "{2:F2} {3:F2} {6:D}, " +
-                                                                  "{0:F2} {4:F2} {6:D}, " +
-                                                                  "{1:F2} {3:F2} {6:D}))";
-            string circle_shape_string = string.Format(circle_template, new object[] { X, X - Radius, X + Radius, Y, Y - Radius, Y + Radius, (int)Z });
-            */
-            return output;
-            //return SqlGeometry.STGeomFromText(circle_shape_string.ToSqlChars(), 0);
-
+            return builder.ConstructedGeometry;
         }
 
 

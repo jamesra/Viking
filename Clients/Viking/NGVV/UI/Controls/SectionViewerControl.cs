@@ -314,8 +314,31 @@ namespace Viking.UI.Controls
                             toRemove.Add(kv.Key);
                         }
                     }
+                    int cachedSection = Interlocked.CompareExchange(ref _lastInitSectionNumber, -1, -1);
                     foreach (int key in toRemove)
+                    {
                         _sectionMappingInitBySection.Remove(key);
+                        _sectionMappingInitTasks.Remove(key);
+                        if (key == cachedSection)
+                        {
+                            Interlocked.Exchange(ref _lastInitSectionNumber, -1);
+                            Interlocked.Exchange(ref _lastInitTask, null);
+                        }
+                    }
+
+                    // Cancel texture-load tokens for sections not current or adjacent (semaphore waiters will be cancelled; in-flight loads continue)
+                    List<int> textureLoadToRemove = new();
+                    foreach (var kv in _sectionTextureLoadCts)
+                    {
+                        if (Array.IndexOf(adjacentSectionNumbers, kv.Key) < 0)
+                        {
+                            kv.Value.Cancel();
+                            kv.Value.Dispose();
+                            textureLoadToRemove.Add(kv.Key);
+                        }
+                    }
+                    foreach (int key in textureLoadToRemove)
+                        _sectionTextureLoadCts.Remove(key);
 
                     // Start initializing the new section's tile mapping immediately so the first draw has a chance to show content instead of staying black
                     if (State.volume != null)
@@ -323,14 +346,7 @@ namespace Viking.UI.Controls
                         MappingBase mapping = State.volume.GetTileMapping(_Section.Number, this.CurrentChannel, this.CurrentTransform);
                         if (mapping != null && !mapping.Initialized)
                         {
-                            if (!_sectionMappingInitBySection.TryGetValue(currentSectionNumber, out var existingCts) || existingCts.IsCancellationRequested)
-                            {
-                                existingCts?.Dispose();
-                                var cts = new CancellationTokenSource();
-                                _sectionMappingInitBySection[currentSectionNumber] = cts;
-                                var token = cts.Token;
-                                _ = Task.Run(() => mapping.Initialize(token), token);
-                            }
+                            StartMappingInitIfNeeded(currentSectionNumber, mapping);
                         }
                     }
                 }
@@ -418,6 +434,7 @@ namespace Viking.UI.Controls
             ExtensionManager.AddMenuItems(this.menuStrip);
             CommandQueue.OnCommandInjected += this.OnCommandInjected;
             CommandQueue.OnQueueChanged += this.OnCommandQueueChanged;
+            PendingTextureQueue.QueueBecameEmpty += this.OnPendingTextureQueueBecameEmpty;
         }
 
         private void CreateWPFControls()
@@ -606,6 +623,30 @@ namespace Viking.UI.Controls
         /// </summary>
         private readonly Dictionary<int, CancellationTokenSource> _sectionMappingInitBySection = new();
         private readonly object _sectionMappingInitLock = new();
+        private readonly Dictionary<int, Task> _sectionMappingInitTasks = new();
+        private int _lastInitSectionNumber = -1;
+        private Task? _lastInitTask;
+
+        /// <summary>
+        /// Per-section cancellation for texture loading. When Section changes we cancel only texture-load tokens for sections that are not the current section or adjacent to it. Semaphore waiters are cancelled; in-flight loads continue.
+        /// </summary>
+        private readonly Dictionary<int, CancellationTokenSource> _sectionTextureLoadCts = new();
+
+        /// <summary>
+        /// Gets or creates a cancellation token for the given section's texture loading. Used from draw path; only non-adjacent section tokens are cancelled when Section changes.
+        /// </summary>
+        private CancellationToken GetOrCreateSectionTextureLoadToken(int sectionNumber)
+        {
+            lock (_sectionMappingInitLock)
+            {
+                if (_sectionTextureLoadCts.TryGetValue(sectionNumber, out var cts) && !cts.IsCancellationRequested)
+                    return cts.Token;
+                cts?.Dispose();
+                var newCts = new CancellationTokenSource();
+                _sectionTextureLoadCts[sectionNumber] = newCts;
+                return newCts.Token;
+            }
+        }
 
         /// <summary>
         /// Gets or creates a cancellation token for the given section's mapping initialization. Used from draw path when starting init; only non-adjacent in-flight inits are cancelled when Section changes.
@@ -623,7 +664,31 @@ namespace Viking.UI.Controls
             }
         }
 
+        /// <summary>
+        /// Starts mapping initialization for the given section if one is not already running.
+        /// Uses the existing per-section CTS for cancellation.
+        /// </summary>
+        private void StartMappingInitIfNeeded(int sectionNumber, MappingBase mapping)
+        {
+            // Lock-free fast path: if init already in flight for this section, skip the lock.
+            int cachedSection = Interlocked.CompareExchange(ref _lastInitSectionNumber, -1, -1);
+            Task? cachedTask = Interlocked.CompareExchange(ref _lastInitTask, null, null);
+            if (sectionNumber == cachedSection && cachedTask != null && !cachedTask.IsCompleted)
+                return;
 
+            lock (_sectionMappingInitLock)
+            {
+                if (_sectionMappingInitTasks.TryGetValue(sectionNumber, out var existing)
+                    && !existing.IsCompleted)
+                    return; // Already in flight
+
+                var token = GetOrCreateSectionMappingInitToken(sectionNumber);
+                Task task = Task.Run(() => mapping.Initialize(token), token);
+                _sectionMappingInitTasks[sectionNumber] = task;
+                Interlocked.Exchange(ref _lastInitSectionNumber, sectionNumber);
+                Interlocked.Exchange(ref _lastInitTask, task);
+            }
+        }
 
         /// <summary>
         /// Fires when one of the reference sections has changed
@@ -739,6 +804,11 @@ namespace Viking.UI.Controls
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
+        private void OnPendingTextureQueueBecameEmpty()
+        {
+            this.Invalidate();
+        }
+
         private void OnCommandQueueChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
@@ -1451,7 +1521,8 @@ namespace Viking.UI.Controls
                 backgroundSectionTexture = DrawSectionsWithChannels(graphicsDevice, Channelset, scene, out ChannelOverlay);
             }
 
-            //Save the rendering of the background texture only in case an overlay like auto-segmentation needs it.
+            //Save the rendering of the background texture  in case an overlay like auto-segmentation needs it OR we get a draw call with no change in scene and no textures were loaded in between since the last Draw call
+
 
 
             //Enable stencil buffer.  
@@ -1681,6 +1752,7 @@ namespace Viking.UI.Controls
                 if (token.IsCancellationRequested)
                     return;
 
+                CancellationToken sectionTextureLoadToken = GetOrCreateSectionTextureLoadToken(section.Number);
                 int[] DownsamplesToRender = CalculateDownsamplesToRender(Mapping, scene.Camera.Downsample);
 
                 //If we aren't loading asynchronously only load the hi-res textures since we are waiting for completion
@@ -1716,7 +1788,7 @@ namespace Viking.UI.Controls
 
                         if (tileView.TextureNeedsLoading)
                         {
-                            listGetTextureTasks.Add(tileView.GetOrLoadTextureAsync(this.graphicsDeviceService.GraphicsDevice, token));
+                            listGetTextureTasks.Add(tileView.GetOrLoadTextureAsync(this.graphicsDeviceService.GraphicsDevice, sectionTextureLoadToken));
                         }
                         listTileViewModels.Add(tileView);
                     }
@@ -1766,9 +1838,7 @@ namespace Viking.UI.Controls
 
             if (mapping.Initialized == false)
             {
-                // Use per-section token; only non-adjacent section inits are cancelled when Section changes
-                var token = GetOrCreateSectionMappingInitToken(section.Number);
-                Task.Run(() => mapping.Initialize(token), token);
+                StartMappingInitIfNeeded(section.Number, mapping);
                 return null;
             }
 
@@ -1810,7 +1880,7 @@ namespace Viking.UI.Controls
                 List<TileView> tileViewsToDraw = [];
 
                 int iColor = 0;
-                CancellationToken drawSectionToken = GetOrCreateSectionMappingInitToken(section.Number);
+                CancellationToken sectionTextureLoadToken = GetOrCreateSectionTextureLoadToken(section.Number);
                 foreach (TileViewModel t in tileList.Values)
                 {
                     TileView tileView = FetchOrConstructTileForSection(t, section, mapping.Name);
@@ -1823,7 +1893,9 @@ namespace Viking.UI.Controls
 
                     if (tileView.TextureNeedsLoading && !tileView.TextureIsLoading)
                     {
-                        _ = tileView.GetOrLoadTextureAsync(graphicsDevice, drawSectionToken)
+                        var tile = tileView;
+                        tile.MarkLoadQueued();
+                        _ = Task.Run(async () => await tile.GetOrLoadTextureAsync(graphicsDevice, sectionTextureLoadToken).ConfigureAwait(false))
                             .ContinueWith(tt => { if (tt.IsFaulted && tt.Exception != null) Trace.WriteLine($"DrawSection texture load failed: {tt.Exception.GetBaseException().Message}"); }, TaskContinuationOptions.OnlyOnFaulted);
                     }
                     else if (tileView.TextureReadComplete)
@@ -2045,9 +2117,7 @@ namespace Viking.UI.Controls
 
                     if (mapping.Initialized == false)
                     {
-                        // Use per-section token; only non-adjacent section inits are cancelled when Section changes
-                        var token = GetOrCreateSectionMappingInitToken(sectionToDraw.Number);
-                        Task.Run(() => mapping.Initialize(token), token);
+                        StartMappingInitIfNeeded(sectionToDraw.Number, mapping);
                         continue;
                     }
 

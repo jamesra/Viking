@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
+using System.Threading;
 using WebAnnotationModel.Service;
 
 namespace WebAnnotationModel
@@ -49,6 +50,12 @@ namespace WebAnnotationModel
         readonly System.Collections.Concurrent.ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>> SectionToLocations = new();
 
         internal LocationRTree SpatialSearch;
+
+        /// <summary>
+        /// Limits the number of concurrent WCF region requests to prevent connection pool
+        /// saturation when rapidly changing sections. Released in GetObjectsBySectionRegionCallback.
+        /// </summary>
+        private readonly SemaphoreSlim _wcfRequestThrottle = new(8, 8);
 
 
         #region Proxy 
@@ -499,14 +506,37 @@ namespace WebAnnotationModel
                                                                                            Geometry.GridRectangle bounds,
                                                                                            double MinRadius,
                                                                                            DateTime? LastQueryUtc,
-                                                                                           Action<ICollection<LocationObj>> OnLoadCompletedCallBack)
+                                                                                           Action<ICollection<LocationObj>> OnLoadCompletedCallBack,
+                                                                                           CancellationToken token = default)
         {
+            // If the section load was already cancelled, skip creating a proxy and WCF request entirely
+            if (token.IsCancellationRequested)
+                return new MixedLocalAndRemoteQueryResults<long, LocationObj>(null, SpatialSearch.Intersects(bounds, SectionNumber));
 
+            // Block until a throttle slot is available. Throws OperationCanceledException if
+            // the section token fires while waiting, which is caught higher up the call stack.
+            _wcfRequestThrottle.Wait(token);
+
+            bool requestStarted = false;
             IAsyncResult result = null;
             IClientChannel proxy = null;
             try
             {
                 proxy = CreateProxy();
+
+                // Register a cancellation callback that aborts the WCF proxy, freeing the connection
+                // for use by requests for the current section. The existing IsProxyBroken check in
+                // GetObjectsBySectionRegionCallback will cause the stale callback to exit immediately.
+                if (token.CanBeCanceled)
+                {
+                    var proxyToAbort = proxy;
+                    token.Register(() =>
+                    {
+                        try { proxyToAbort.Abort(); }
+                        catch { /* Proxy may already be closed/faulted */ }
+                    });
+                }
+
                 IAnnotateLocations client = (IAnnotateLocations)proxy;
 
                 //                WCFOBJECT[] locations = new WCFOBJECT[0];
@@ -520,6 +550,7 @@ namespace WebAnnotationModel
                                         new AsyncCallback(GetObjectsBySectionRegionCallback),
                                         newState);
 
+                requestStarted = true;
             }
 
             catch (EndpointNotFoundException e)
@@ -532,61 +563,75 @@ namespace WebAnnotationModel
                 proxy?.Close();
                 proxy = null;
             }
+            finally
+            {
+                // If the request didn't start successfully, release the throttle immediately.
+                // Otherwise it will be released in GetObjectsBySectionRegionCallback.
+                if (!requestStarted)
+                    _wcfRequestThrottle.Release();
+            }
 
             return new MixedLocalAndRemoteQueryResults<long, LocationObj>(result, SpatialSearch.Intersects(bounds, SectionNumber));
         }
 
         protected void GetObjectsBySectionRegionCallback(IAsyncResult result)
         {
-            //Remove the entry from outstanding queries so we can query again.  It also prevents the proxy from being aborted if too many 
-            //queries are in-flight
-            GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj> state = result.AsyncState as GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj>;
-
-            IClientChannel proxy = (IClientChannel)state.Proxy;
-
-            //This happens if we called abort
-            if (IsProxyBroken(proxy))
-                return;
-
-            Debug.Assert(proxy != null);
-
-            long[] DeletedLocations = [];
-            long TicksAtQueryExecute = 0;
-
-            AnnotationSet serverAnnotations = null;
             try
             {
-                serverAnnotations = ((IAnnotateLocations)proxy).EndGetAnnotationsInMosaicRegion(out TicksAtQueryExecute, out DeletedLocations, result);
-            }
-            catch (TimeoutException)
-            {
-                Debug.Write("Timeout waiting for server results");
-                return;
-            }
-            catch (EndpointNotFoundException)
-            {
-                Debug.Write("GetLocationChangesCallback - Endpoint not found exception");
-                return;
-            }
-            catch (Exception e)
-            {
-                ShowStandardExceptionMessage(e);
-                return;
-            }
+                //Remove the entry from outstanding queries so we can query again.  It also prevents the proxy from being aborted if too many 
+                //queries are in-flight
+                GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj> state = result.AsyncState as GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj>;
 
-            ChangeInventory<LocationObj> location_inventory = ProcessAnnotationSet(serverAnnotations, DeletedLocations, state.StartTime, state.SectionNumber);
+                IClientChannel proxy = (IClientChannel)state.Proxy;
 
-            if (state.OnLoadCompletedCallBack != null)
+                //This happens if we called abort
+                if (IsProxyBroken(proxy))
+                    return;
+
+                Debug.Assert(proxy != null);
+
+                long[] DeletedLocations = [];
+                long TicksAtQueryExecute = 0;
+
+                AnnotationSet serverAnnotations = null;
+                try
+                {
+                    serverAnnotations = ((IAnnotateLocations)proxy).EndGetAnnotationsInMosaicRegion(out TicksAtQueryExecute, out DeletedLocations, result);
+                }
+                catch (TimeoutException)
+                {
+                    Debug.Write("Timeout waiting for server results");
+                    return;
+                }
+                catch (EndpointNotFoundException)
+                {
+                    Debug.Write("GetLocationChangesCallback - Endpoint not found exception");
+                    return;
+                }
+                catch (Exception e)
+                {
+                    ShowStandardExceptionMessage(e);
+                    return;
+                }
+
+                ChangeInventory<LocationObj> location_inventory = ProcessAnnotationSet(serverAnnotations, DeletedLocations, state.StartTime, state.SectionNumber);
+
+                if (state.OnLoadCompletedCallBack != null)
+                {
+                    if (State.UseAsynchEvents)
+                    {
+                        System.Threading.Tasks.Task.Run(() => state.OnLoadCompletedCallBack(location_inventory.ObjectsInStore));
+                        //state.OnLoadCompletedCallBack.BeginInvoke(inventory.ObjectsInStore, null, null);
+                    }
+                    else
+                    {
+                        state.OnLoadCompletedCallBack.Invoke(location_inventory.ObjectsInStore);
+                    }
+                }
+            }
+            finally
             {
-                if (State.UseAsynchEvents)
-                {
-                    System.Threading.Tasks.Task.Run(() => state.OnLoadCompletedCallBack(location_inventory.ObjectsInStore));
-                    //state.OnLoadCompletedCallBack.BeginInvoke(inventory.ObjectsInStore, null, null);
-                }
-                else
-                {
-                    state.OnLoadCompletedCallBack.Invoke(location_inventory.ObjectsInStore);
-                }
+                _wcfRequestThrottle.Release();
             }
         }
 

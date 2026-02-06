@@ -246,16 +246,19 @@ namespace Viking.VolumeModel
                 }
             }
 
-            Task[] tileTaskArray = [.. tileTasks.Cast<Task>()];
-            Task.WaitAll(tileTaskArray);
-
-            List<TileViewModel> tiles = [.. tileTasks.Select(t => t.Result)];
-#if DEBUG
-            TilesToDraw.AddRange(tiles);
-#endif 
-            foreach (var tile in tiles)
+            // Only include tiles already completed (cached hits via Task.FromResult).
+            // Background CreateTile tasks continue asynchronously; they will populate
+            // Global.TileCache and appear on the next draw cycle.
+            foreach (var task in tileTasks)
             {
-                VisibleTiles.AddTile(tile.Downsample, tile);
+                if (task.Status == System.Threading.Tasks.TaskStatus.RanToCompletion)
+                {
+                    var tile = task.Result;
+#if DEBUG
+                    TilesToDraw.Add(tile);
+#endif
+                    VisibleTiles.AddTile(tile.Downsample, tile);
+                }
             }
 
             return VisibleTiles;

@@ -64,6 +64,8 @@ namespace Viking.UI.Forms
 
                 // Run volume loading on background thread
                 var volume = await Volume.CreateAsync(volumeUrl, UI.State.CachePath, progressReporter, token);
+                if (volume.DefaultTileWidth.HasValue)
+                    TextureReaderV2.SetMaxConcurrentRequests(4096 / volume.DefaultTileWidth.Value );
 
                 // Create view model on UI thread
                 await Task.Factory.StartNew(() =>

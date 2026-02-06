@@ -99,6 +99,10 @@ namespace Viking
             Application.EnableVisualStyles();
 
             Assembly execAssembly = System.Reflection.Assembly.GetExecutingAssembly();
+
+            // Remove the DefaultTraceListener so nothing writes to OutputDebugString.
+            // In Debug builds CreateDebugListener() re-adds a file-based listener.
+            Trace.Listeners.Clear();
             CreateDebugListener();
 
             Trace.WriteLine("Arguments: " + args.ToString(), "Viking");

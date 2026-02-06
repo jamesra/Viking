@@ -6,4 +6,9 @@
   <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
     <NoWarn>$(NoWarn);NU1603;NU1605</NoWarn>
   </PropertyGroup>
-</Project> 
+
+  <!-- Strip TRACE from Release builds so the compiler eliminates all Trace.* calls -->
+  <PropertyGroup Condition="'$(Configuration)' != 'Debug'">
+    <DefineTrace>false</DefineTrace>
+  </PropertyGroup>
+</Project>

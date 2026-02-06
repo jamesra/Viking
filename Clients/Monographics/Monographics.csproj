@@ -20,7 +20,7 @@
 		<UseVSHostingProcess>true</UseVSHostingProcess>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-		<DefineConstants>TRACE</DefineConstants>
+		<DefineConstants></DefineConstants>
 		<Optimize>true</Optimize>
 		<OutputPath>bin\MonoGame\Release\</OutputPath>
 		<DebugType>pdbonly</DebugType>

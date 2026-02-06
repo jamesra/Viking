@@ -266,6 +266,12 @@ namespace Viking.VolumeModel
 
         private readonly List<TileServerInfo> TileServerList = [];
 
+        /// <summary>
+        /// Tile pixel width from the first tile server, or null if no tile servers are configured.
+        /// Used to compute the max concurrent texture request limit.
+        /// </summary>
+        public int? DefaultTileWidth => TileServerList.Count > 0 ? TileServerList[0].TileXDim : null;
+
         private XDocument VolumeXML;
 
         /// <summary>

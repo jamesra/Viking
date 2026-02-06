@@ -95,6 +95,8 @@ namespace Viking
             Trace.WriteLine("Volume Load Time: " + elapsedTime.ToString());
 
             await Volume.Initialize(token, progressReporter);
+            if (Volume.DefaultTileWidth.HasValue)
+                TextureReaderV2.SetMaxConcurrentRequests(4096 / Volume.DefaultTileWidth.Value);
 
             UI.State.volume = new Viking.ViewModels.VolumeViewModel(Volume);
 

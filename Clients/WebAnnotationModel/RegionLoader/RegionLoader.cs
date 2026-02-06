@@ -16,6 +16,12 @@ namespace WebAnnotationModel
     {
         public DateTime? LastQuery = new DateTime?();
 
+        /// <summary>
+        /// Cancellation token for the section load that created this request.
+        /// Checked in OnLoadCompleted to skip callback invocation for cancelled sections.
+        /// </summary>
+        public CancellationToken Token;
+
 #if DEBUG
         private static int NumOutstandingQueries = 0;
 
@@ -88,11 +94,20 @@ namespace WebAnnotationModel
             lock (this)
             {
 
-
 #if DEBUG
                 System.Threading.Interlocked.Decrement(ref RegionRequestData<OBJECT>.NumOutstandingQueries);
                 active_requests.TryRemove(debug_message, out string removed_message);
+#endif
 
+                // If the section load was cancelled, skip callback invocation to avoid processing stale results
+                if (Token.IsCancellationRequested)
+                {
+                    this.OnCompletionCallbacks.Clear();
+                    AsyncResult = null;
+                    return;
+                }
+
+#if DEBUG
                 if (this.OnCompletionCallbacks.Count > 1)
                 {
                     Trace.WriteLine(string.Format("{0} callbacks registered in region", this.OnCompletionCallbacks.Count));
@@ -222,7 +237,7 @@ namespace WebAnnotationModel
                     if (RegionIsDueForRefresh(cell))
                     {
                         //Trace.WriteLine(string.Format("Grid Region Loading Z:{0} L:{1} X:{2} Y:{3}", SectionNumber, level.Level, iX, iY));
-                        AttachRequestForRegion(cell, level, iCell, SectionNumber, OnServerObjectsLoadedCallback);
+                        AttachRequestForRegion(cell, level, iCell, SectionNumber, OnServerObjectsLoadedCallback, token);
                     }
                     else
                     {
@@ -251,20 +266,27 @@ namespace WebAnnotationModel
         private RegionPyramid<OBJECT> GetOrAddRegionPyramidForSection(int SectionNumber) => this.sectionPyramids.GetOrAdd(SectionNumber, (Number) => new RegionPyramid<OBJECT>(CellDimensions, PowerScale));
 
 
-        private RegionRequestData<OBJECT> CreateRegionRequest(IRegionPyramidLevel<RegionRequestData<OBJECT>> level, GridIndex iCell, int SectionNumber, Action<ICollection<OBJECT>> OnLoadCompletedCallback)
+        private RegionRequestData<OBJECT> CreateRegionRequest(IRegionPyramidLevel<RegionRequestData<OBJECT>> level, GridIndex iCell, int SectionNumber, Action<ICollection<OBJECT>> OnLoadCompletedCallback, CancellationToken token = default)
         {
             //Create a new cell and hand it the callback
             RegionRequestData<OBJECT> newCell = new();
 
-            AttachRequestForRegion(newCell, level, iCell, SectionNumber, OnLoadCompletedCallback);
+            AttachRequestForRegion(newCell, level, iCell, SectionNumber, OnLoadCompletedCallback, token);
 
             return newCell;
         }
 
-        private void AttachRequestForRegion(RegionRequestData<OBJECT> cell, IRegionPyramidLevel<RegionRequestData<OBJECT>> level, GridIndex iCell, int SectionNumber, Action<ICollection<OBJECT>> OnLoadCompletedCallback)
+        private void AttachRequestForRegion(RegionRequestData<OBJECT> cell, IRegionPyramidLevel<RegionRequestData<OBJECT>> level, GridIndex iCell, int SectionNumber, Action<ICollection<OBJECT>> OnLoadCompletedCallback, CancellationToken token = default)
         {
+            // Check cancellation before starting a WCF request to avoid saturating the connection pool with stale requests
+            if (token.IsCancellationRequested)
+                return;
+
             GridRectangle cellBounds = level.CellBounds(iCell.X, iCell.Y);
             DateTime? LastQueryUtc = cell.LastQuery;
+
+            // Store the section cancellation token so OnLoadCompleted can skip callbacks for cancelled sections
+            cell.Token = token;
 
 #if DEBUG
             cell.debug_message = string.Format("S:{0} L:{1} {2}", SectionNumber, level.Level, iCell);
@@ -275,7 +297,7 @@ namespace WebAnnotationModel
 
             Debug.Assert(!cell.OutstandingQuery, "Starting a query for a region we already have an outstanding request for");
 
-            MixedLocalAndRemoteQueryResults<KEY, OBJECT> localObjects = objectStore.GetObjectsInRegionAsync(SectionNumber, cellBounds, level.MinRadius, LastQueryUtc, cell.OnLoadCompleted);
+            MixedLocalAndRemoteQueryResults<KEY, OBJECT> localObjects = objectStore.GetObjectsInRegionAsync(SectionNumber, cellBounds, level.MinRadius, LastQueryUtc, cell.OnLoadCompleted, token);
             cell.SetQuery(localObjects.ServerRequestResult);
 
             /*if (localObjects.KnownObjects.Count > 0 && OnLoadCompletedCallback != null)

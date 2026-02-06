@@ -55,6 +55,16 @@ namespace Viking.ViewModels
         private CancellationTokenSource? TextureLoadCancellationTokenSource = null;
 
         /// <summary>
+        /// Set to true when DrawSection has queued a fire-and-forget load task but
+        /// GetOrLoadTextureAsync has not yet begun executing.  Prevents redundant
+        /// Task.Run launches on subsequent draw frames.
+        /// </summary>
+        private volatile bool _loadQueued;
+
+        private CancellationToken? _SectionLoadingToken;
+        public bool SectionLoadingCancelled => _SectionLoadingToken?.IsCancellationRequested ?? false;
+
+        /// <summary>
         /// This should only be written via the texture member 
         /// </summary>
         private Microsoft.Xna.Framework.Graphics.Texture2D? _texture;
@@ -97,15 +107,41 @@ namespace Viking.ViewModels
             texture = tex;
             var previousCts = Interlocked.Exchange(ref TextureLoadCancellationTokenSource, null);
             previousCts?.Dispose();
+            _SectionLoadingToken = null;
         }
 
-        internal bool HasTexture => _texture != null;
+        /// <summary>
+        /// True if _texture is non-null and neither the texture nor its device are disposed.
+        /// Thread-safe: captures the field once to avoid TOCTOU races.
+        /// </summary>
+        private bool IsTextureUsable
+        {
+            get
+            {
+                var tex = _texture;
+                return tex != null && !tex.IsDisposed && !tex.GraphicsDevice.IsDisposed;
+            }
+        }
 
-        internal bool TextureReadComplete => (this._texture != null || this.ServerTextureNotFound) && this.TextureLoadCancellationTokenSource is null;
+        internal bool HasTexture => IsTextureUsable;
 
-        internal bool TextureNeedsLoading => this.ServerTextureNotFound == false && this.texture is null && this.TextureLoadCancellationTokenSource is null;
+        internal bool TextureReadComplete =>
+            (IsTextureUsable || this.ServerTextureNotFound)
+            && this.TextureLoadCancellationTokenSource is null;
+
+        internal bool TextureNeedsLoading =>
+            !ServerTextureNotFound
+            && !IsTextureUsable
+            && !_loadQueued
+            && TextureLoadCancellationTokenSource is null;
 
         internal bool TextureIsLoading => TextureLoadCancellationTokenSource != null;
+
+        /// <summary>
+        /// Marks this tile as having a queued load so that TextureNeedsLoading
+        /// returns false until GetOrLoadTextureAsync begins executing.
+        /// </summary>
+        internal void MarkLoadQueued() => _loadQueued = true;
 
         public int TileID;
 
@@ -267,6 +303,8 @@ namespace Viking.ViewModels
                 tokenSource.Cancel();
             }
             tokenSource?.Dispose();
+
+            _SectionLoadingToken = null;
         }
 
         /// <summary>
@@ -276,6 +314,12 @@ namespace Viking.ViewModels
         /// <returns></returns>
         public async Task<Texture2D> GetOrLoadTextureAsync(GraphicsDevice graphicsDevice, CancellationToken token)
         {
+            _loadQueued = false;
+            _SectionLoadingToken = token;
+
+            if (token.IsCancellationRequested)
+                return null;
+
             //Check if the texture's graphics device has been disposed, in which case load a new texture
 
             //Don't bother asking if we've already tried
@@ -318,13 +362,15 @@ namespace Viking.ViewModels
                                           this.MipMapLevels,
                                           null,
                                           TextureLoadCancellationTokenSource,
-                                          tileViewOwner: this)
+                                          tileViewOwner: this,
+                                          sectionToken: token)
                     : new TextureReaderV2(graphicsDevice,
                                           new Uri(this.TextureFileName),
                                           this.MipMapLevels,
                                           null,
                                           TextureLoadCancellationTokenSource,
-                                          tileViewOwner: this);
+                                          tileViewOwner: this,
+                                          sectionToken: token);
 
                 try
                 {

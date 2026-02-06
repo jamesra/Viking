@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using Microsoft.Xna.Framework.Graphics;
+using SharpDX.Direct3D9;
 using Viking.UI;
 using Viking.ViewModels;
 using VikingXNAWinForms;
@@ -87,6 +89,11 @@ namespace Viking
         public static bool IsEmpty => Queue.IsEmpty;
 
         /// <summary>
+        /// Fired when the queue has just become empty (after processing the last item). Viewer can invalidate to re-request loads for visible tiles.
+        /// </summary>
+        public static event Action? QueueBecameEmpty;
+
+        /// <summary>
         /// True if this TileView has a pending item in the pipeline (enqueued or dequeued but not yet completed).
         /// Used by TileView to avoid starting a duplicate load.
         /// </summary>
@@ -113,12 +120,16 @@ namespace Viking
         {
             if (tcs is null)
                 return;
+
             if (tileView != null)
             {
                 _pendingLock.EnterWriteLock();
                 try
                 {
                     PendingTileViews.Add(tileView);
+ /*                   #if DEBUG
+                    Trace.WriteLine($"Enqueue DS {tileView?.Downsample} - {Queue.Count} in PendingTextureQueue");
+                    #endif */
                 }
                 finally
                 {
@@ -142,61 +153,81 @@ namespace Viking
         }
 
         /// <summary>
-        /// Runs on the main thread. Dequeue one item, create texture via TextureFromData, assign to TileView when present, complete TCS, then post pump again.
-        /// If queue is empty, re-post pump after 16ms; if not empty, after 40ms.
+        /// Runs on the main thread. Dequeues and creates textures for up to 50ms of
+        /// elapsed time, then re-posts the pump.  If the queue is empty on entry the
+        /// pump is re-posted after a 50ms delay.
         /// </summary>
         private static void ProcessQueue()
         {
-            if (!Queue.TryDequeue(out PendingItem item))
+            const int msSliceTime = 50;
+            if (Queue.IsEmpty)
             {
-                PostPump(50);
+                PostPump(msSliceTime);
                 return;
             }
 
-            try
-            {
-                GraphicsDevice device = null;
-                var viewer = State.ViewerControl;
-                if (viewer is GraphicsDeviceControl gdc)
-                    device = gdc.Device;
+            var sw = Stopwatch.StartNew();
 
-                if (device is null || device.IsDisposed)
+            while (sw.ElapsedMilliseconds < msSliceTime / 2 && Queue.TryDequeue(out PendingItem item))
+            {
+                /*#if DEBUG
+                Trace.WriteLine($"Dequeue - {Queue.Count} in PendingTextureQueue");
+                #endif*/
+
+                if (item?.TileView?.SectionLoadingCancelled ?? false)
                 {
                     item.Tcs.TrySetResult(null);
-                    return;
+                    continue;
                 }
 
-                Texture2D texture = null;
                 try
                 {
-                     texture = TextureReaderV2.TextureFromData(device, item.Data, item.UseMipMaps);
-                }
-                catch (Exception)
-                {
-                    item.Tcs.TrySetResult(null);
-                    return;
-                }
+                    GraphicsDevice device = null;
+                    var viewer = State.ViewerControl;
+                    if (viewer is GraphicsDeviceControl gdc)
+                        device = gdc.Device;
 
-                if (texture != null && item.TileView != null)
-                    item.TileView.SetTextureFromQueue(texture);
-                item.Tcs.TrySetResult(texture);
-            }
-            finally
-            {
-                _pendingLock.EnterWriteLock();
-                try
-                {
-                    if (item.TileView != null)
-                        PendingTileViews.Remove(item.TileView);
+                    if (device is null || device.IsDisposed)
+                    {
+                        item.Tcs.TrySetResult(null);
+                        break;
+                    }
+
+                    Texture2D texture = null;
+                    try
+                    {
+                        texture = TextureReaderV2.TextureFromData(device, item.Data, item.UseMipMaps);
+                    }
+                    catch (Exception)
+                    {
+                        item.Tcs.TrySetResult(null);
+                        continue;
+                    }
+
+                    if (texture != null && item.TileView != null)
+                        item.TileView.SetTextureFromQueue(texture);
+                    item.Tcs.TrySetResult(texture);
                 }
                 finally
                 {
-                    _pendingLock.ExitWriteLock();
+                    _pendingLock.EnterWriteLock();
+                    try
+                    {
+                        if (item.TileView != null)
+                            PendingTileViews.Remove(item.TileView);
+                    }
+                    finally
+                    {
+                        _pendingLock.ExitWriteLock();
+                    }
+                    if (item.FileKey != null)
+                        EndLoadingFile(item.FileKey);
                 }
-                if (item.FileKey != null)
-                    EndLoadingFile(item.FileKey); 
-                PostPump();
             }
+
+            if (Queue.IsEmpty)
+                QueueBecameEmpty?.Invoke();
+            PostPump();
         }
          
     }

@@ -25,13 +25,13 @@
 		<RunCodeAnalysis>false</RunCodeAnalysis>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-		<DefineConstants>TRACE</DefineConstants>
+		<DefineConstants></DefineConstants>
 		<Optimize>true</Optimize>
 		<OutputPath>bin\Release\</OutputPath>
 		<DebugType>pdbonly</DebugType>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseWithSymbols|AnyCPU'">
-		<DefineConstants>TRACE</DefineConstants>
+		<DefineConstants></DefineConstants>
 		<Optimize>true</Optimize>
 		<OutputPath>bin\ReleaseWithSymbols\</OutputPath>
 		<DebugType>full</DebugType>

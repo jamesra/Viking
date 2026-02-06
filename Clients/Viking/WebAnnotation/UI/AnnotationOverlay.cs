@@ -1944,13 +1944,15 @@ break;
                 CancellationToken sectionToken;
                 lock (_sectionAnnotationLoadLock)
                 {
+                    // Drain cancelled sections upfront so we don't waste cycles iterating over them
+                    _requestedSectionNumbers.RemoveWhere(s =>
+                        !_sectionAnnotationLoadBySection.TryGetValue(s, out var cts) || cts.IsCancellationRequested);
+
                     int z = _currentSectionNumber;
                     int best = -1;
                     int bestDist = int.MaxValue;
                     foreach (int s in _requestedSectionNumbers)
                     {
-                        if (!_sectionAnnotationLoadBySection.TryGetValue(s, out var cts) || cts.IsCancellationRequested)
-                            continue;
                         int dist = Math.Abs(s - z);
                         if (dist < bestDist)
                         {
