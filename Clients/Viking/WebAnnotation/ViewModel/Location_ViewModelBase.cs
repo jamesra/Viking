@@ -574,10 +574,10 @@ namespace WebAnnotation.ViewModel
                 SegmentationCommand segmentCommand = new(
                     parent,
                     volume_points,
-                    Array.Empty<GridVector2>(), // no background points initially 
-callback,
-                    channelManager
-                );
+                    Array.Empty<GridVector2>(), // no background points initially
+                    callback,
+                    channelManager,
+                    modelObj.Parent.TypeID);
 
                 parent.CurrentCommand = segmentCommand;
             }
@@ -618,10 +618,10 @@ callback,
                 SegmentationCommand segmentCommand = new(
                     parent,
                     medial_axis_points,
-                    Array.Empty<GridVector2>(), // no background points initially 
-callback,
-                    channelManager
-                );
+                    Array.Empty<GridVector2>(), // no background points initially
+                    callback,
+                    channelManager,
+                    modelObj.Parent.TypeID);
 
                 parent.CurrentCommand = segmentCommand;
             }

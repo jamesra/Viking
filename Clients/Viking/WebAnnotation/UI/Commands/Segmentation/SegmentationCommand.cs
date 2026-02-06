@@ -20,6 +20,7 @@ using Viking.VolumeModel;
 using VikingXNA;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
+using WebAnnotation;
 using WebAnnotationModel;
 using WebAnnotation.ViewModel;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
@@ -93,6 +94,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
         //private readonly StructureTypeObj structureType;
 
         /// <summary>
+        /// When set, background points are computed from visible same-type annotations in OnActivate and on pan/zoom.
+        /// </summary>
+        private readonly long? structureTypeIdForBackgroundPoints;
+
+        /// <summary>
         /// Set to the segmented polygon if the command completes successfully
         /// </summary>
         public GridPolygon Output
@@ -109,10 +115,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             "Left-click inside polygon: Finalize and create annotation",
             "Middle-click: Remove nearest point",
             "Right-click: Add background point (red)",
-            "Shift + Left-click: Delete foreground point",
-            "Shift + Right-click: Delete background point",
-            "Shift + drag Left: Delete foreground points under cursor",
-            "Shift + drag Right: Delete background points under cursor"
+            "Ctrl + Left-click: Delete foreground point",
+            "Ctrl + Right-click: Delete background point",
+            "Ctrl + drag Left: Delete foreground points under cursor",
+            "Ctrl + drag Right: Delete background points under cursor"
         ];
 
         public string[] HelpStrings
@@ -139,12 +145,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         #region Constructor
         public SegmentationCommand(SectionViewerControl parent,
-            //StructureType type = null,
             OnCommandSuccess? success_callback = null,
-            IGrpcChannelManager? grpcChannelManager = null) : base(parent)
+            IGrpcChannelManager? grpcChannelManager = null,
+            long? structureTypeId = null) : base(parent)
         {
             this.success_callback = success_callback;
-            //structureType = type?.modelObj ?? (Viking.UI.State.SelectedObject as StructureType)?.modelObj;
 
             // Load configuration from AppSettings
             debounceMs = int.TryParse(ConfigurationManager.AppSettings["SegmentationDebounceMs"], out var ms) ? ms : DEFAULT_DEBOUNCE_MS;
@@ -153,6 +158,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             // Initialize viewport bounds
             viewportBounds = GetCurrentViewportBounds();
+
+            structureTypeIdForBackgroundPoints = structureTypeId;
         }
 
         /// <summary>
@@ -161,9 +168,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public SegmentationCommand(SectionViewerControl parent,
             IEnumerable<GridVector2> initialForegroundPoints,
             IEnumerable<GridVector2> initialBackgroundPoints,
-            //StructureType type = null,
             OnCommandSuccess? success_callback = null,
-            IGrpcChannelManager? grpcChannelManager = null) : this(parent, success_callback, grpcChannelManager)
+            IGrpcChannelManager? grpcChannelManager = null,
+            long? structureTypeId = null) : this(parent, success_callback, grpcChannelManager, structureTypeId)
         {
             // Populate initial points
             if (initialForegroundPoints != null)
@@ -175,12 +182,42 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 backgroundPoints.AddRange(initialBackgroundPoints);
             }
         }
+
+        private void AddBackgroundPointsFromStructureType(long structureTypeId, VikingXNA.Scene scene)
+        {
+            var sectionAnnotations = AnnotationOverlay.GetOrCreateAnnotationsForSection(Parent.Section.Number);
+            if (sectionAnnotations is null)
+                return;
+
+            var locationsInView = sectionAnnotations.GetLocations(scene.VisibleWorldBounds);
+            var visibleSameType = locationsInView
+                .Where(loc => loc != null && loc.Parent != null && loc.Parent.Type != null
+                    && loc.Parent.Type.modelObj.ID == structureTypeId
+                    && loc.IsVisible(scene));
+
+            var locationObjs = visibleSameType
+                .Select(loc => Store.Locations.GetObjectByID(loc.ID, false))
+                .OfType<LocationObj>();
+
+            var mosaicPoints = AnnotationPointExtensions.GetAnnotationRepresentativePoints(locationObjs);
+            if (mosaicPoints.Count == 0)
+                return;
+
+            var success = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume([.. mosaicPoints], out var volumePoints);
+            var validVolumePoints = volumePoints.Where((p, i) => i < success.Length && success[i]).ToList();
+            backgroundPoints.AddRange(validVolumePoints);
+        }
         #endregion
 
         #region Lifecycle Methods
         public override void OnActivate()
         {
             base.OnActivate();
+
+            if (structureTypeIdForBackgroundPoints.HasValue && Parent.Scene != null)
+            {
+                AddBackgroundPointsFromStructureType(structureTypeIdForBackgroundPoints.Value, Parent.Scene);
+            }
 
             try
             {
@@ -281,11 +318,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
         protected override void OnMouseDown(object sender, MouseEventArgs e)
         {
             GridVector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
-            bool shiftHeld = Control.ModifierKeys.HasFlag(Keys.Shift);
+            bool ctrlHeld = Control.ModifierKeys.HasFlag(Keys.Control);
 
             if (e.Button.Left())
             {
-                if (shiftHeld)
+                if (ctrlHeld)
                 {
                     HandlePointDeletion(foregroundPoints, worldPos);
                 }
@@ -296,7 +333,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
             else if (e.Button.Right())
             {
-                if (shiftHeld)
+                if (ctrlHeld)
                     HandlePointDeletion(backgroundPoints, worldPos);
                 else
                     HandleBackgroundPointAddition(worldPos);
@@ -421,9 +458,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            bool shiftHeld = Control.ModifierKeys.HasFlag(Keys.Shift);
-            // When shift+RMB is held we delete background points; do not let base command pan the scene
-            if (!(shiftHeld && e.Button.Right()))
+            bool ctrlHeld = Control.ModifierKeys.HasFlag(Keys.Control);
+            // When Ctrl+RMB is held we delete background points; do not let base command pan the scene
+            if (!(ctrlHeld && e.Button.Right()))
                 base.OnMouseMove(sender, e);
 
             // Update cursor based on mouse position over points
@@ -436,8 +473,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             GridVector2? foregroundPoint = FindPointWithinRadius(foregroundPoints, worldPos, pointRadiusInScreen);
             GridVector2? backgroundPoint = FindPointWithinRadius(backgroundPoints, worldPos, pointRadiusInScreen);
             
-            // Shift + button held: delete points under cursor (left = foreground, right = background)
-            if (shiftHeld)
+            // Ctrl + button held: delete points under cursor (left = foreground, right = background)
+            if (ctrlHeld)
             {
                 double radius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius;
                 bool anyRemoved = false;
@@ -453,9 +490,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             // Update cursor based on detected state
-            if (shiftHeld && (foregroundPoint.HasValue || backgroundPoint.HasValue))
+            if (ctrlHeld && (foregroundPoint.HasValue || backgroundPoint.HasValue))
             {
-                // Shift held over a point indicates deletion intent
+                // Ctrl held over a point indicates deletion intent
                 Parent.Cursor = Cursors.No;
             }
             else if (foregroundPoint.HasValue || backgroundPoint.HasValue)
@@ -533,6 +570,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private void OnPanZoomDebounceElapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             // User has stopped panning/zooming
+            // Recompute structure-type background points when visible set changes (replaces any previously derived points)
+            if (structureTypeIdForBackgroundPoints.HasValue && Parent.Scene != null)
+            {
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
+                {
+                    backgroundPoints.Clear();
+                    AddBackgroundPointsFromStructureType(structureTypeIdForBackgroundPoints.Value, Parent.Scene);
+                    UpdatePointViews();
+                }));
+            }
+
             // Only re-request segmentation if we have points and an uploaded image
             if (foregroundPoints.Count > 0 || backgroundPoints.Count > 0)
             {

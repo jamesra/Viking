@@ -554,7 +554,7 @@ namespace WebAnnotation
                                                 {
                                                     MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                                 }
-                                            }), channelManager]);
+                                            }), channelManager, loc.Parent.TypeID]);
 
                                 }
                             );
