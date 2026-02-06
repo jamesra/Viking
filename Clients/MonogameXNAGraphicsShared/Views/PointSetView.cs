@@ -103,8 +103,14 @@ namespace VikingXNAGraphics
             PointViews = [.. Points.Select(p => new CircleView(new GridCircle(p, PointRadius), Color))];
             GridVector2[] point_array = [.. Points];
 
-            //Figure out if we have duplicate points and offset labels as needed
-            QuadTree<int> DuplicatePointsAddedCount = new(); //Track the number of times we've hit a specific duplicate point and move the label accordingly
+            if (!LabelIndex && !LabelPosition)
+            {
+                //No need to adjust labels if there are no labels
+                LabelViews = null;
+                return;
+            }
+                //Figure out if we have duplicate points and offset labels as needed
+                QuadTree<int> DuplicatePointsAddedCount = new(); //Track the number of times we've hit a specific duplicate point and move the label accordingly
             List<GridVector2> KnownPoints = [];
             foreach (GridVector2 p in point_array)
             {
@@ -124,19 +130,19 @@ namespace VikingXNAGraphics
                 }
             }
 
-            if (!LabelIndex && !LabelPosition)
-            {
-                LabelViews = null;
-            }
-            else if (LabelIndex && !LabelPosition)
+            if (LabelIndex && !LabelPosition)
             {
                 LabelViews = [.. point_array.Select((p, i) => new LabelView(i.ToString(), p, fontSize: this.PointRadius * 2))];
             }
-            else
+            else if(LabelPosition)
             {
                 LabelViews = !LabelIndex && LabelPosition
                     ? [.. point_array.Select(p => new LabelView(p.ToLabel(), p, fontSize: this.PointRadius * 2))]
                     : [.. point_array.Select((p, i) => new LabelView(i.ToString() + "\n" + p.ToLabel(), p, fontSize: this.PointRadius * 2))];
+            }
+            else
+            {
+                throw new ArgumentException("Cannot label index and position");
             }
 
             if (LabelViews != null)
