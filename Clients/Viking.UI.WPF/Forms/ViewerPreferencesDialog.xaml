@@ -98,8 +98,8 @@
                             <Label Grid.Row="0" Grid.Column="0" Content="Animation Acceleration:"/>
                             <Slider Grid.Row="0" Grid.Column="1"
                                     Value="{Binding SectionNumberOverlayAcceleration, Mode=TwoWay}"
-                                    Minimum="0.01"
-                                    Maximum="1.0"
+                                    Minimum="{Binding SectionNumberOverlayAccelerationMinimum}"
+                                    Maximum="{Binding SectionNumberOverlayAccelerationMaximum}"
                                     TickFrequency="0.01"
                                     IsSnapToTickEnabled="False"
                                     Margin="5"/>
@@ -114,7 +114,7 @@
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="Acceleration in screen-heights per second² (0.01 - 1.0). Higher values make the animation snappier."/>
+                                     Text="Acceleration in screen-heights per second². Higher values make the animation snappier."/>
                         </Grid>
 
                         <!-- Opacity -->
@@ -132,8 +132,8 @@
                             <Label Grid.Row="0" Grid.Column="0" Content="Opacity:"/>
                             <Slider Grid.Row="0" Grid.Column="1"
                                     Value="{Binding SectionNumberOverlayOpacity, Mode=TwoWay}"
-                                    Minimum="0"
-                                    Maximum="1"
+                                    Minimum="{Binding SectionNumberOverlayOpacityMinimum}"
+                                    Maximum="{Binding SectionNumberOverlayOpacityMaximum}"
                                     TickFrequency="0.05"
                                     IsSnapToTickEnabled="False"
                                     Margin="5"/>
@@ -166,8 +166,8 @@
                             <Label Grid.Row="0" Grid.Column="0" Content="Min opacity (non-center):"/>
                             <Slider Grid.Row="0" Grid.Column="1"
                                     Value="{Binding SectionNumberOverlayMinOpacityNonCenter, Mode=TwoWay}"
-                                    Minimum="0"
-                                    Maximum="0.8"
+                                    Minimum="{Binding SectionNumberOverlayMinOpacityNonCenterMinimum}"
+                                    Maximum="{Binding SectionNumberOverlayMinOpacityNonCenterMaximum}"
                                     TickFrequency="0.1"
                                     IsSnapToTickEnabled="False"
                                     Margin="5"/>
@@ -200,8 +200,8 @@
                             <Label Grid.Row="0" Grid.Column="0" Content="Center Magnification:"/>
                             <Slider Grid.Row="0" Grid.Column="1"
                                     Value="{Binding SectionNumberOverlayCenterMagnification, Mode=TwoWay}"
-                                    Minimum="1"
-                                    Maximum="4"
+                                    Minimum="{Binding SectionNumberOverlayCenterMagnificationMinimum}"
+                                    Maximum="{Binding SectionNumberOverlayCenterMagnificationMaximum}"
                                     TickFrequency="0.25"
                                     IsSnapToTickEnabled="False"
                                     Margin="5"/>

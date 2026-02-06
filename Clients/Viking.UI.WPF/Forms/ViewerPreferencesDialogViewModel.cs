@@ -16,17 +16,17 @@ namespace Viking.UI.WPF.Forms
         /// <summary>
         /// Minimum allowed acceleration (in screen-height units)
         /// </summary>
-        public const double MinAcceleration = 0.01;
+        public const double MinAcceleration = 0.1;
 
         /// <summary>
         /// Maximum allowed acceleration (in screen-height units)
         /// </summary>
-        public const double MaxAcceleration = 1.0;
+        public const double MaxAcceleration = 100.0;
 
         /// <summary>
         /// Default acceleration value
         /// </summary>
-        public const double DefaultAcceleration = 1.0;
+        public const double DefaultAcceleration = 50;
 
         /// <summary>
         /// Default opacity value
@@ -51,19 +51,19 @@ namespace Viking.UI.WPF.Forms
         public const double MaxCenterMagnification = 4.0;
 
         // PID Parameter Defaults and Ranges
-        public const double DefaultPidProportionalGain = 500.0;
+        public const double DefaultPidProportionalGain = 2500.0;
         public const double MinProportionalGain = 0.1;
-        public const double MaxProportionalGain = 1800.0;
-        public const double DefaultPidDerivativeGain = 300.0;
+        public const double MaxProportionalGain = 3000;
+        public const double DefaultPidDerivativeGain = 4500;
         public const double MinDerivativeGain = 1.0;
-        public const double MaxDerivativeGain = 2400.0;
-        public const double DefaultPidIntegralGain = 0.005;
+        public const double MaxDerivativeGain = 10000;
+        public const double DefaultPidIntegralGain = 40;
         public const double MinIntegralGain = 0.0;
-        public const double MaxIntegralGain = 1.0;
+        public const double MaxIntegralGain = 100;
         public const double DefaultPidVelocityThreshold = 0.01;
         public const double MinVelocityThreshold = 0.001;
         public const double MaxVelocityThreshold = 0.1;
-        public const double DefaultPidPositionThreshold = 0.01;
+        public const double DefaultPidPositionThreshold = 0.02;
         public const double MinPositionThreshold = 0.001;
         public const double MaxPositionThreshold = 0.1;
         #endregion
@@ -301,6 +301,16 @@ namespace Viking.UI.WPF.Forms
                 }
             }
         }
+
+        // Section overlay slider ranges (for XAML binding)
+        public double SectionNumberOverlayAccelerationMinimum => MinAcceleration;
+        public double SectionNumberOverlayAccelerationMaximum => MaxAcceleration;
+        public double SectionNumberOverlayOpacityMinimum => 0.0;
+        public double SectionNumberOverlayOpacityMaximum => 1.0;
+        public double SectionNumberOverlayMinOpacityNonCenterMinimum => 0.0;
+        public double SectionNumberOverlayMinOpacityNonCenterMaximum => MaxMinOpacityNonCenter;
+        public double SectionNumberOverlayCenterMagnificationMinimum => MinCenterMagnification;
+        public double SectionNumberOverlayCenterMagnificationMaximum => MaxCenterMagnification;
 
         /// <summary>Exposes MinProportionalGain for XAML binding (slider range).</summary>
         public double PidProportionalGainMinimum => MinProportionalGain;
