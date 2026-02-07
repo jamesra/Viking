@@ -21,6 +21,11 @@
         <Style TargetType="Expander">
             <Setter Property="Margin" Value="10"/>
         </Style>
+        <converters:Int32Converter x:Key="SectionCountConverter" Minimum="1" Maximum="50"/>
+        <converters:Int32Converter x:Key="TextureLoadingWindowConverter" Minimum="5" Maximum="200"/>
+        <converters:Int32Converter x:Key="MinTexturesToLoadConverter" Minimum="1" Maximum="100"/>
+        <converters:Int32Converter x:Key="VisibleTileSortIntervalConverter" Minimum="200" Maximum="10000"/>
+        <converters:Int32Converter x:Key="MaxConcurrentTextureRequestsConverter" Minimum="0" Maximum="256"/>
     </Window.Resources>
     
     <Grid>
@@ -32,7 +37,7 @@
         <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
             <StackPanel>
                 <!-- Section Number Overlay Settings -->
-                <Expander Header="Section Number Overlay" IsExpanded="True" Margin="10">
+                <Expander Header="Section Number Overlay" IsExpanded="False" Margin="10">
                     <StackPanel Margin="10">
                         <!-- Enabled -->
                         <Grid Margin="0,0,0,10">
@@ -71,7 +76,7 @@
                             
                             <Label Grid.Row="0" Grid.Column="0" Content="Sections Above/Below:"/>
                             <TextBox Grid.Row="0" Grid.Column="1" 
-                                     Text="{Binding SectionNumberOverlayCount, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     Text="{Binding SectionNumberOverlayCount, Mode=TwoWay, UpdateSourceTrigger=LostFocus, Converter={StaticResource SectionCountConverter}}"
                                      VerticalAlignment="Center"
                                      Margin="5"
                                      Height="25"/>
@@ -251,76 +256,87 @@
                 </Expander>
 
                 <!-- Texture Loading (Performance) -->
-                <Expander Header="Texture Loading (Performance)" IsExpanded="False" Margin="10">
+                <Expander Header="Image Loading (Performance)" IsExpanded="True" Margin="10">
                     <StackPanel Margin="10">
-                        <TextBlock Margin="0,0,0,10" TextWrapping="Wrap" Foreground="Gray" FontSize="11"
-                                   Text="Controls how many textures are loaded into the GPU per pump cycle. The loading window stays open until BOTH thresholds are met, so the larger of the two is the effective limit."/>
+                        <TextBlock Margin="0,0,0,10" TextWrapping="Wrap" Foreground="Gray" FontSize="10"
+                                   Text="These settings fine-tune loading images. Systems behave differently depending on CPU speed, number of cores, memory, GPU memory, and bandwidth.  Generally, more cores and good bandwidth allow loading more textures concurrently. More GPU memory will allow you to have more textures in memory.  The defaults are typically adequate."/>
                         
-                        <!-- Texture Loading Window (ms) -->
+                        <!-- Load adjacent section textures -->
                         <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="150"/>
-                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <Label Grid.Row="0" Grid.Column="0" Content="Texture Loading Window (ms):"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding TextureLoadingWindow, Mode=TwoWay}"
-                                    Minimum="{Binding TextureLoadingWindowMinimum}"
-                                    Maximum="{Binding TextureLoadingWindowMaximum}"
-                                    TickFrequency="5"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="2"
-                                     Text="{Binding TextureLoadingWindow, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
-                                     Margin="10,0,10,10"
-                                     FontSize="10"
-                                     Foreground="Gray"
-                                     TextWrapping="Wrap"
-                                     Text="Minimum amount of time to allow for textures to load into GPU after download. Higher values load textures faster but slow UI responsiveness."/>
+                            <Label Grid.Row="0" Grid.Column="0" Content="Load textures for adjacent sections when changing section:"/>
+                            <CheckBox Grid.Row="0" Grid.Column="1"
+                                      IsChecked="{Binding LoadAdjacentSectionTextures}"
+                                      VerticalAlignment="Center"
+                                      Margin="5"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                       Margin="10,0,10,10"
+                                       FontSize="10"
+                                       Foreground="Gray"
+                                       TextWrapping="Wrap"
+                                       Text="Checked: images on adjacent sections are pre loaded when idle.  Annotations on adjacent sections are unaffected.  Systems with slower CPUs or less GPU memory may benefit by leaving this unchecked."/>
                         </Grid>
 
-                        <!-- Min Textures Per Batch -->
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="150"/>
-                                <ColumnDefinition Width="60"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <Label Grid.Row="0" Grid.Column="0" Content="Min Textures Per Batch:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding MinTexturesToLoadFromQueue, Mode=TwoWay}"
-                                    Minimum="{Binding MinTexturesToLoadFromQueueMinimum}"
-                                    Maximum="{Binding MinTexturesToLoadFromQueueMaximum}"
-                                    TickFrequency="1"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="2"
-                                     Text="{Binding MinTexturesToLoadFromQueue, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
-                                     Margin="10,0,10,10"
-                                     FontSize="10"
-                                     Foreground="Gray"
-                                     TextWrapping="Wrap"
-                                     Text="Minimum number of textures to load into GPU in a batch. Higher numbers load textures faster but slow UI responsiveness."/>
-                        </Grid>
+                        <!-- Loading window and min per window group -->
+                        <Border Margin="0,0,0,10" Padding="10" Background="#F5F5F5" CornerRadius="4" BorderThickness="1" BorderBrush="#E0E0E0">
+                            <StackPanel>
+                                <TextBlock Margin="0,0,0,10" FontSize="10" Foreground="Gray" TextWrapping="Wrap"
+                                           Text="Higher values for these options load images faster but slow UI responsiveness during loading. Low values may increase the amount of time for images to fully load."/>
+                                <Grid Margin="0,0,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="60"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Label Grid.Column="0" Content="Image Loading Window (ms):"/>
+                                    <Slider Grid.Column="1"
+                                            Value="{Binding TextureLoadingWindow, Mode=TwoWay}"
+                                            Minimum="{Binding TextureLoadingWindowMinimum}"
+                                            Maximum="{Binding TextureLoadingWindowMaximum}"
+                                            TickFrequency="5"
+                                            IsSnapToTickEnabled="True"
+                                            Margin="5"/>
+                                    <TextBox Grid.Column="2"
+                                             Text="{Binding TextureLoadingWindow, Mode=TwoWay, UpdateSourceTrigger=LostFocus, Converter={StaticResource TextureLoadingWindowConverter}}"
+                                             Margin="5,0,0,0"
+                                             VerticalAlignment="Center"
+                                             Width="50"
+                                             HorizontalAlignment="Left"/>
+                                </Grid>
+                                <TextBlock Margin="10,2,10,10" FontSize="10" Foreground="Gray" TextWrapping="Wrap"
+                                           Text="A shorter window makes the UI more responsive. A longer window loads the entire scene faster."/>
+                                <Grid Margin="0,0,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="60"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Label Grid.Column="0" Content="Min images loaded per window:"/>
+                                    <Slider Grid.Column="1"
+                                            Value="{Binding MinTexturesToLoadFromQueue, Mode=TwoWay}"
+                                            Minimum="{Binding MinTexturesToLoadFromQueueMinimum}"
+                                            Maximum="{Binding MinTexturesToLoadFromQueueMaximum}"
+                                            TickFrequency="1"
+                                            IsSnapToTickEnabled="True"
+                                            Margin="5"/>
+                                    <TextBox Grid.Column="2"
+                                             Text="{Binding MinTexturesToLoadFromQueue, Mode=TwoWay, UpdateSourceTrigger=LostFocus, Converter={StaticResource MinTexturesToLoadConverter}}"
+                                             Margin="5,0,0,0"
+                                             VerticalAlignment="Center"
+                                             Width="50"
+                                             HorizontalAlignment="Left"/>
+                                </Grid>
+                                <TextBlock Margin="10,2,10,0" FontSize="10" Foreground="Gray" TextWrapping="Wrap"
+                                           Text="Slow CPUs may benefit from loading more textures at each opportunity."/>
+                            </StackPanel>
+                        </Border>
 
                         <!-- Update Visible Tiles in Loading Queue Interval -->
                         <Grid Margin="0,0,0,10">
@@ -333,7 +349,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <Label Grid.Row="0" Grid.Column="0" Content="Update Visible Tiles in Loading Queue Interval (ms):"/>
+                            <Label Grid.Row="0" Grid.Column="0" Content="Update loading priorities (ms):"/>
                             <Slider Grid.Row="0" Grid.Column="1"
                                     Value="{Binding VisibleTileSortIntervalMs, Mode=TwoWay}"
                                     Minimum="{Binding VisibleTileSortIntervalMsMinimum}"
@@ -342,7 +358,7 @@
                                     IsSnapToTickEnabled="True"
                                     Margin="5"/>
                             <TextBox Grid.Row="0" Grid.Column="2"
-                                     Text="{Binding VisibleTileSortIntervalMs, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     Text="{Binding VisibleTileSortIntervalMs, Mode=TwoWay, UpdateSourceTrigger=LostFocus, Converter={StaticResource VisibleTileSortIntervalConverter}}"
                                      Margin="5,0,0,0"
                                      VerticalAlignment="Center"
                                      Width="50"
@@ -352,7 +368,7 @@
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="How often to re-sort the texture loading queue so visible tiles are loaded first. Lower values prioritize visible tiles more frequently (200-10000 ms)."/>
+                                     Text="How often to re-sort the image loading queue to prioritize visible tiles.  Too often can slow the UI.  Too little can delay loading of the visible images when the view has changed.  (200-10000 ms)."/>
                         </Grid>
 
                         <!-- Max Concurrent Texture Requests -->
@@ -361,6 +377,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="150"/>
                                 <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
@@ -375,17 +392,25 @@
                                     IsSnapToTickEnabled="True"
                                     Margin="5"/>
                             <TextBox Grid.Row="0" Grid.Column="2"
-                                     Text="{Binding MaxConcurrentTextureRequests, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     Text="{Binding MaxConcurrentTextureRequests, Mode=TwoWay, UpdateSourceTrigger=LostFocus, Converter={StaticResource MaxConcurrentTextureRequestsConverter}}"
                                      Margin="5,0,0,0"
                                      VerticalAlignment="Center"
                                      Width="50"
                                      HorizontalAlignment="Left"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                            <Button Grid.Row="0" Grid.Column="3"
+                                    Content="Default"
+                                    Command="{Binding SetMaxConcurrentTextureRequestsToDefaultCommand}"
+                                    VerticalAlignment="Center"
+                                    Margin="5,0,0,0"
+                                    Padding="10,4"
+                                    MinWidth="60"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="Maximum simultaneous HTTP texture downloads. 0 = Auto (based on tile size). 1-256 to override. Higher values can speed loading but may stress the server."/>
+                                     VerticalAlignment="Center"
+                                     Text="Maximum simultaneous HTTP texture downloads. 0 = Auto (based on tile size). 1-256 to override. Higher values can speed loading to a point, but too high slows all loading as each request competes for resources.  The number of cores * 2 is the default."/>
                         </Grid>
                     </StackPanel>
                 </Expander>

@@ -147,5 +147,8 @@
     <Setting Name="MaxConcurrentTextureRequests" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
     </Setting>
+    <Setting Name="LoadAdjacentSectionTextures" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

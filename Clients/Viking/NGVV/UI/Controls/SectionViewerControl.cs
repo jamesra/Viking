@@ -275,25 +275,30 @@ namespace Viking.UI.Controls
                         CurrentChannel = _Section.DefaultChannel;
                 }
 
-                ///Find the adjacent sections and request them to warp into volume space if they haven't already    
-                if (State.UseSectionSpecificTransform == false && oldtransform != null)
-                {
+                ///Find the adjacent sections and request them to warp into volume space if they haven't already
+                { 
                     SortedList<int, SectionViewModel> sections = UI.State.volume.SectionViewModels;
                     int iSection = sections.IndexOfKey(this._Section.Number);
                     int iSectionAbove = iSection + 1;
                     int iSectionBelow = iSection - 1;
-
-                    if (iSectionAbove < sections.Count)
+                    if (State.UseSectionSpecificTransform == false && oldtransform != null)
                     {
-                        _ = sections.Values[iSectionAbove].PrepareTransform(oldtransform);
+                   
+
+                        if (iSectionAbove < sections.Count)
+                        {
+                            _ = sections.Values[iSectionAbove].PrepareTransform(oldtransform);
+                        }
+
+                        if (iSectionBelow >= 0)
+                        {
+                            _ = sections.Values[iSectionBelow].PrepareTransform(oldtransform);
+                        }
+
                     }
 
-                    if (iSectionBelow >= 0)
-                    {
-                        _ = sections.Values[iSectionBelow].PrepareTransform(oldtransform);
-                    }
-
-                    if (this.Scene != null && this.graphicsDeviceService?.GraphicsDevice != null && State.volume != null)
+                    if (Viking.Properties.Settings.Default.LoadAdjacentSectionTextures &&
+                        this.Scene != null && this.graphicsDeviceService?.GraphicsDevice != null && State.volume != null)
                     {
                         var scene = this.Scene;
                         var token = CancellationToken.None;
@@ -313,14 +318,15 @@ namespace Viking.UI.Controls
                     }
                 }
 
-                this.Invalidate();
+                if(!HavePaintInQueue())
+                    this.Invalidate();
 
                 // Update the section number overlay with the new section
                 UpdateSectionNumberOverlay();
 
                 // Cancel in-flight mapping initializations only for sections that are not the current section or adjacent to it (so adjacent sections keep loading)
                 int currentSectionNumber = _Section.Number;
-                int[] adjacentSectionNumbers = [currentSectionNumber - 2, currentSectionNumber - 1, currentSectionNumber, currentSectionNumber + 1, currentSectionNumber + 2];
+                int[] adjacentSectionNumbers = GetAdjacentSectionNumbers(currentSectionNumber);
                 lock (_sectionMappingInitLock)
                 {
                     List<int> toRemove = new();
@@ -650,6 +656,29 @@ namespace Viking.UI.Controls
         /// Per-section cancellation for texture loading. When Section changes we cancel only texture-load tokens for sections that are not the current section or adjacent to it. Semaphore waiters are cancelled; in-flight loads continue.
         /// </summary>
         private readonly Dictionary<int, CancellationTokenSource> _sectionTextureLoadCts = new();
+
+        /// <summary>
+        /// Returns the section numbers for the current section and up to two sections above and below in list order.
+        /// Uses the volume's section list so adjacent sections are correct when section numbers have gaps.
+        /// </summary>
+        private int[] GetAdjacentSectionNumbers(int currentSectionNumber)
+        {
+            if (State.volume == null)
+                return [currentSectionNumber];
+
+            SortedList<int, SectionViewModel> sections = State.volume.SectionViewModels;
+            int iSection = sections.IndexOfKey(currentSectionNumber);
+            if (iSection < 0)
+                return [currentSectionNumber];
+
+            int iMin = Math.Max(0, iSection - 2);
+            int iMax = Math.Min(sections.Count - 1, iSection + 2);
+            int count = iMax - iMin + 1;
+            int[] result = new int[count];
+            for (int i = 0; i < count; i++)
+                result[i] = sections.Keys[iMin + i];
+            return result;
+        }
 
         /// <summary>
         /// Gets or creates a cancellation token for the given section's texture loading. Used from draw path; only non-adjacent section tokens are cancelled when Section changes.
@@ -2379,9 +2408,11 @@ namespace Viking.UI.Controls
 
         private void timer_Tick(object sender, EventArgs e)
         {
-            if ((GetQueueStatus(QS_PAINT) & QS_PAINT) == 0)
+            if (!HavePaintInQueue())
                 this.Invalidate();
         }
+
+        private bool HavePaintInQueue() => (GetQueueStatus(QS_PAINT) & QS_PAINT) != 0;
 
         protected void SetOverlayVisiblity(bool ControlDown, bool SpaceDown)
         {
@@ -3090,7 +3121,8 @@ namespace Viking.UI.Controls
                 Viking.Properties.Settings.Default.TextureLoadingWindow,
                 Viking.Properties.Settings.Default.MinTexturesToLoadFromQueue,
                 Viking.Properties.Settings.Default.VisibleTileSortIntervalMs,
-                Viking.Properties.Settings.Default.MaxConcurrentTextureRequests
+                Viking.Properties.Settings.Default.MaxConcurrentTextureRequests,
+                Viking.Properties.Settings.Default.LoadAdjacentSectionTextures
             );
 
             // Wire up real-time preview for settings changes
@@ -3155,6 +3187,7 @@ namespace Viking.UI.Controls
             Viking.Properties.Settings.Default.MinTexturesToLoadFromQueue = viewModel.MinTexturesToLoadFromQueue;
             Viking.Properties.Settings.Default.VisibleTileSortIntervalMs = viewModel.VisibleTileSortIntervalMs;
             Viking.Properties.Settings.Default.MaxConcurrentTextureRequests = viewModel.MaxConcurrentTextureRequests;
+            Viking.Properties.Settings.Default.LoadAdjacentSectionTextures = viewModel.LoadAdjacentSectionTextures;
             Viking.Properties.Settings.Default.Save();
             Viking.PendingTextureQueue.UpdateSortInterval(viewModel.VisibleTileSortIntervalMs);
             int effectiveLimit = viewModel.MaxConcurrentTextureRequests > 0

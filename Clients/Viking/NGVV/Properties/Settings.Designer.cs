@@ -530,5 +530,17 @@ namespace Viking.Properties {
                 this["MaxConcurrentTextureRequests"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool LoadAdjacentSectionTextures {
+            get {
+                return ((bool)(this["LoadAdjacentSectionTextures"]));
+            }
+            set {
+                this["LoadAdjacentSectionTextures"] = value;
+            }
+        }
     }
 }

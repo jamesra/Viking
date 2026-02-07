@@ -102,6 +102,7 @@ namespace Viking.UI.WPF.Forms
         private int _originalMinTexturesToLoadFromQueue;
         private int _originalVisibleTileSortIntervalMs;
         private int _originalMaxConcurrentTextureRequests;
+        private bool _originalLoadAdjacentSectionTextures;
         #endregion
 
         #region Section Number Overlay Properties
@@ -418,6 +419,20 @@ namespace Viking.UI.WPF.Forms
             }
         }
 
+        private bool _loadAdjacentSectionTextures;
+        public bool LoadAdjacentSectionTextures
+        {
+            get => _loadAdjacentSectionTextures;
+            set
+            {
+                if (_loadAdjacentSectionTextures != value)
+                {
+                    _loadAdjacentSectionTextures = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public int TextureLoadingWindowMinimum => MinTextureLoadingWindow;
         public int TextureLoadingWindowMaximum => MaxTextureLoadingWindow;
         public int MinTexturesToLoadFromQueueMinimum => MinMinTexturesToLoadFromQueue;
@@ -441,12 +456,19 @@ namespace Viking.UI.WPF.Forms
         #region Commands
 
         public ICommand ResetToDefaultsCommand { get; }
+        public ICommand SetMaxConcurrentTextureRequestsToDefaultCommand { get; }
 
         #endregion
 
         public ViewerPreferencesDialogViewModel()
         {
             ResetToDefaultsCommand = new RelayCommand(ResetToDefaults);
+            SetMaxConcurrentTextureRequestsToDefaultCommand = new RelayCommand(SetMaxConcurrentTextureRequestsToDefault);
+        }
+
+        private void SetMaxConcurrentTextureRequestsToDefault()
+        {
+            MaxConcurrentTextureRequests = DefaultMaxConcurrentTextureRequests;
         }
 
         /// <summary>
@@ -468,7 +490,8 @@ namespace Viking.UI.WPF.Forms
             int textureLoadingWindow,
             int minTexturesToLoadFromQueue,
             int visibleTileSortIntervalMs,
-            int maxConcurrentTextureRequests)
+            int maxConcurrentTextureRequests,
+            bool loadAdjacentSectionTextures)
         {
             // Clamp values to valid ranges (in case saved value is from old settings)
             double clampedAcceleration = Clamp(sectionNumberOverlayAcceleration, MinAcceleration, MaxAcceleration);
@@ -503,6 +526,7 @@ namespace Viking.UI.WPF.Forms
             _originalMinTexturesToLoadFromQueue = clampedMinTexturesToLoadFromQueue;
             _originalVisibleTileSortIntervalMs = clampedVisibleTileSortIntervalMs;
             _originalMaxConcurrentTextureRequests = clampedMaxConcurrentTextureRequests;
+            _originalLoadAdjacentSectionTextures = loadAdjacentSectionTextures;
 
             // Set current values (without triggering change events during load)
             var tempHandler = SectionNumberOverlaySettingsChanged;
@@ -524,6 +548,7 @@ namespace Viking.UI.WPF.Forms
             _minTexturesToLoadFromQueue = clampedMinTexturesToLoadFromQueue;
             _visibleTileSortIntervalMs = clampedVisibleTileSortIntervalMs;
             _maxConcurrentTextureRequests = clampedMaxConcurrentTextureRequests;
+            _loadAdjacentSectionTextures = loadAdjacentSectionTextures;
 
             SectionNumberOverlaySettingsChanged = tempHandler;
 
@@ -551,6 +576,7 @@ namespace Viking.UI.WPF.Forms
             _originalMinTexturesToLoadFromQueue = _minTexturesToLoadFromQueue;
             _originalVisibleTileSortIntervalMs = _visibleTileSortIntervalMs;
             _originalMaxConcurrentTextureRequests = _maxConcurrentTextureRequests;
+            _originalLoadAdjacentSectionTextures = _loadAdjacentSectionTextures;
         }
 
         /// <summary>
@@ -572,6 +598,7 @@ namespace Viking.UI.WPF.Forms
             _minTexturesToLoadFromQueue = _originalMinTexturesToLoadFromQueue;
             _visibleTileSortIntervalMs = _originalVisibleTileSortIntervalMs;
             _maxConcurrentTextureRequests = _originalMaxConcurrentTextureRequests;
+            _loadAdjacentSectionTextures = _originalLoadAdjacentSectionTextures;
 
             OnPropertyChanged(string.Empty);
         }
@@ -597,6 +624,7 @@ namespace Viking.UI.WPF.Forms
             MinTexturesToLoadFromQueue = DefaultMinTexturesToLoadFromQueue;
             VisibleTileSortIntervalMs = DefaultVisibleTileSortIntervalMs;
             MaxConcurrentTextureRequests = DefaultMaxConcurrentTextureRequests;
+            LoadAdjacentSectionTextures = true;
         }
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
