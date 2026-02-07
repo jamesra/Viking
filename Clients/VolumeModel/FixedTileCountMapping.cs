@@ -273,7 +273,7 @@ namespace Viking.VolumeModel
             List<Task<TileViewModel>> tileTasks = [];
             while (level >= roundedDownsample)
             {
-                string uniqueID = TileViewModel.CreateUniqueKey(Section.Number, Name, CurrentPyramid.Name,
+                var uniqueID = TileUniqueKey.Create(Section.Number, Name, CurrentPyramid.Name,
                     level, info.TileFileName);
 
                 if (Global.TileCache.TryGetValue(uniqueID, out TileViewModel tileViewModel))
@@ -309,13 +309,13 @@ namespace Viking.VolumeModel
             return tileTasks;
         }
 
-        private TileViewModel CreateTile(string uniqueID, int roundedScaledDownsample, in IContinuousTransform cTransform, in TileTransformInfo info)
+        private TileViewModel CreateTile(TileUniqueKey uniqueID, int roundedScaledDownsample, in IContinuousTransform cTransform, in TileTransformInfo info)
         {
             PositionNormalTextureVertex[] verticies = TileViewModel.CalculateVerticies(cTransform, info, out int[] triangulation);
             return CreateTile(uniqueID, roundedScaledDownsample, verticies, triangulation, info);
         }
 
-        private TileViewModel CreateTile(string uniqueID, int roundedScaledDownsample, in IControlPointTriangulation ctrlTriangulation, in TileTransformInfo info)
+        private TileViewModel CreateTile(TileUniqueKey uniqueID, int roundedScaledDownsample, in IControlPointTriangulation ctrlTriangulation, in TileTransformInfo info)
         {
             //First create a new tile
             //PORT: string TextureCacheFileName = TileCacheName(iX, iY, roundedDownsample);
@@ -323,7 +323,7 @@ namespace Viking.VolumeModel
             return CreateTile(uniqueID, roundedScaledDownsample, verticies, ctrlTriangulation.TriangleIndicies, info);
         }
 
-        private TileViewModel CreateTile(string uniqueID,
+        private TileViewModel CreateTile(TileUniqueKey uniqueID,
             int roundedScaledDownsample,
             in PositionNormalTextureVertex[] verticies,
             in int[] triangulation,

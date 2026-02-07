@@ -1,14 +1,15 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Viking.Common;
+using Viking.VolumeModel;
 
 namespace Viking.VolumeViewModel
 {
-    class TileViewModelCacheEntry : CacheEntry<string>
+    class TileViewModelCacheEntry : CacheEntry<TileUniqueKey>
     {
         public readonly TileViewModel Tile;
 
-        public TileViewModelCacheEntry(string key, TileViewModel t)
+        public TileViewModelCacheEntry(TileUniqueKey key, TileViewModel t)
             : base(key)
         {
             this.Tile = t;
@@ -21,7 +22,7 @@ namespace Viking.VolumeViewModel
 
     }
 
-    class TileViewModelCache : TimeQueueCache<string, TileViewModelCacheEntry, TileViewModel, TileViewModel>
+    class TileViewModelCache : TimeQueueCache<TileUniqueKey, TileViewModelCacheEntry, TileViewModel, TileViewModel>
     {
         protected override TileViewModel Fetch(TileViewModelCacheEntry key)
         {
@@ -29,20 +30,20 @@ namespace Viking.VolumeViewModel
             return key.Tile;
         }
 
-        protected override TileViewModelCacheEntry CreateEntry(string key, TileViewModel value)
+        protected override TileViewModelCacheEntry CreateEntry(TileUniqueKey key, TileViewModel value)
         {
             TileViewModelCacheEntry cacheEntry = new TileViewModelCacheEntry(key, value);
             return cacheEntry;
         }
 
-        protected override TileViewModelCacheEntry CreateEntry(string key, Func<string, TileViewModel> valueFactory)
+        protected override TileViewModelCacheEntry CreateEntry(TileUniqueKey key, Func<TileUniqueKey, TileViewModel> valueFactory)
         {
             TileViewModel value = valueFactory(key);
             TileViewModelCacheEntry cacheEntry = new TileViewModelCacheEntry(key, value);
             return cacheEntry;
         }
 
-        protected override Task<TileViewModelCacheEntry> CreateEntryAsync(string key, TileViewModel value)
+        protected override Task<TileViewModelCacheEntry> CreateEntryAsync(TileUniqueKey key, TileViewModel value)
         {
             TileViewModelCacheEntry cacheEntry = new TileViewModelCacheEntry(key, value);
             return Task.FromResult(cacheEntry);

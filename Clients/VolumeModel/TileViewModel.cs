@@ -15,27 +15,14 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Currently a combination of section number, transform, downsample, and texturename
         /// </summary>
-        public readonly string UniqueKey;
+        public readonly TileUniqueKey UniqueKey;
 
-        public static string CreateUniqueKey(int Section, string Transform, string Channel, int Downsample, string TextureName) =>
-            //return "S: " + Section.ToString("D4") + " T: " + Transform + " C: " + Channel + " DS: " + Downsample.ToString("D3") + " T: " + TextureName;
-            $"S: {Section:D04} T: {Transform} C: {Channel} DS: {Downsample:D03} T: {TextureName}";
-
-        /// <summary>
-        /// Cache this because we'll use it a lot
-        /// </summary>
-        private readonly int _UniqueKeyHashcode;
-        public override int GetHashCode() => _UniqueKeyHashcode;
+        public override int GetHashCode() => UniqueKey.GetHashCode();
 
         public override bool Equals(object obj)
         {
             if (obj is not TileViewModel t)
                 return false;
-
-            //This is faster than a full string test
-            if (t.GetHashCode() != this.GetHashCode())
-                return false;
-
             return t.UniqueKey == this.UniqueKey;
         }
 
@@ -73,7 +60,7 @@ namespace Viking.VolumeModel
         //PORT: This is a viewModel concept
         //private int MipMapLevels = 1;
 
-        public TileViewModel(in string UniqueKey,
+        public TileViewModel(in TileUniqueKey UniqueKey,
                                 in PositionNormalTextureVertex[] verticies,
                                 in int[] TriangleIndicies,
                                 in string TextureFullPath,
@@ -81,9 +68,8 @@ namespace Viking.VolumeModel
                                 in int downsample)
         {
             this.UniqueKey = UniqueKey;
-            this._UniqueKeyHashcode = UniqueKey.GetHashCode();
 
-            this.Size = (verticies.Length * 8 * 8) + (TriangleIndicies.Length * 4) + TextureFullPath.Length + UniqueKey.Length;
+            this.Size = (verticies.Length * 8 * 8) + (TriangleIndicies.Length * 4) + TextureFullPath.Length + UniqueKey.ToString().Length;
 
             this.Downsample = downsample;
             this.TextureFullPath = TextureFullPath.Replace('\\', '/');
@@ -140,6 +126,6 @@ namespace Viking.VolumeModel
         }
 
 
-        public override string ToString() => UniqueKey;
+        public override string ToString() => UniqueKey.ToString();
     }
 }

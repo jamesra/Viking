@@ -1,14 +1,18 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using SharpDX.Direct3D9;
+using Viking.Properties;
 using Viking.UI;
+using Viking.UI.Controls;
 using Viking.ViewModels;
+using VikingXNA;
 using VikingXNAWinForms;
 
 namespace Viking
@@ -35,14 +39,17 @@ namespace Viking
                 Tcs = tcs;
                 FileKey = fileKey;
             }
+
+            public override string ToString() => $"{TileView?.ToString()}";
         }
 
-        private static readonly ConcurrentQueue<PendingItem> Queue = new();
+        private static readonly List<PendingItem> _items = new();
         private static readonly HashSet<TileView> PendingTileViews = new();
         private static readonly HashSet<string> _loadingFiles = new();
         private static readonly ReaderWriterLockSlim _pendingLock = new();
-        private static DispatcherTimer _emptyQueueTimer;
+        private static DispatcherTimer? _emptyQueueTimer;
         private static readonly object TimerLock = new();
+        private static DispatcherTimer? _sortTimer;
 
         /// <summary>
         /// Claims the file for loading. Returns true if this call claimed it (caller may create TextureReaderV2); false if already loading (do not create another reader).
@@ -86,7 +93,21 @@ namespace Viking
         /// <summary>
         /// True if the queue has no pending texture items. Used to tune screen refresh interval (e.g. 16ms when empty, 40ms when busy).
         /// </summary>
-        public static bool IsEmpty => Queue.IsEmpty;
+        public static bool IsEmpty
+        {
+            get
+            {
+                _pendingLock.EnterReadLock();
+                try
+                {
+                    return _items.Count == 0;
+                }
+                finally
+                {
+                    _pendingLock.ExitReadLock();
+                }
+            }
+        }
 
         /// <summary>
         /// Fired when the queue has just become empty (after processing the last item). Viewer can invalidate to re-request loads for visible tiles.
@@ -121,22 +142,17 @@ namespace Viking
             if (tcs is null)
                 return;
 
-            if (tileView != null)
+            _pendingLock.EnterWriteLock();
+            try
             {
-                _pendingLock.EnterWriteLock();
-                try
-                {
+                if (tileView != null)
                     PendingTileViews.Add(tileView);
- /*                   #if DEBUG
-                    Trace.WriteLine($"Enqueue DS {tileView?.Downsample} - {Queue.Count} in PendingTextureQueue");
-                    #endif */
-                }
-                finally
-                {
-                    _pendingLock.ExitWriteLock();
-                }
+                _items.Add(new PendingItem(data, useMipMaps, tcs, tileView, fileKey));
             }
-            Queue.Enqueue(new PendingItem(data, useMipMaps, tcs, tileView, fileKey));
+            finally
+            {
+                _pendingLock.ExitWriteLock();
+            }
         }
 
         /// <summary>
@@ -153,26 +169,69 @@ namespace Viking
         }
 
         /// <summary>
-        /// Runs on the main thread. Dequeues and creates textures for up to 50ms of
-        /// elapsed time, then re-posts the pump.  If the queue is empty on entry the
-        /// pump is re-posted after a 50ms delay.
+        /// Returns true when both the elapsed time and texture count thresholds
+        /// have been met.  Because both conditions use AND, the larger of the
+        /// two requirements is the effective limit.
+        /// </summary>
+        private static bool LoadingWindowClosed(int texturesLoaded, long elapsedMs)
+        {
+            return texturesLoaded >= Settings.Default.MinTexturesToLoadFromQueue
+                && elapsedMs >= Settings.Default.TextureLoadingWindow;
+        }
+
+        /// <summary>
+        /// Removes and returns the next item from the queue. Returns false if the queue is empty.
+        /// Uses an upgradable read lock to check empty, then upgrades to write lock only when dequeuing.
+        /// </summary>
+        private static bool TryDequeue(out PendingItem? item)
+        {
+            item = null;
+            _pendingLock.EnterUpgradeableReadLock();
+            try
+            {
+                if (_items.Count == 0)
+                    return false;
+                _pendingLock.EnterWriteLock();
+                try
+                {
+                    if (_items.Count == 0)
+                        return false;
+                    item = _items[0];
+                    _items.RemoveAt(0);
+                    return true;
+                }
+                finally
+                {
+                    _pendingLock.ExitWriteLock();
+                }
+            }
+            finally
+            {
+                _pendingLock.ExitUpgradeableReadLock();
+            }
+        }
+
+        /// <summary>
+        /// Runs on the main thread. Dequeues and creates textures until both the
+        /// configured time and minimum texture count are met, then re-posts the pump.
+        /// If the queue is empty on entry the pump is re-posted after a 50ms delay.
         /// </summary>
         private static void ProcessQueue()
         {
             const int msSliceTime = 50;
-            if (Queue.IsEmpty)
+            if (PendingTextureQueue.IsEmpty)
             {
                 PostPump(msSliceTime);
                 return;
             }
 
             var sw = Stopwatch.StartNew();
+            int texturesLoaded = 0;
 
-            while (sw.ElapsedMilliseconds < msSliceTime / 2 && Queue.TryDequeue(out PendingItem item))
+            while (!LoadingWindowClosed(texturesLoaded, sw.ElapsedMilliseconds))
             {
-                /*#if DEBUG
-                Trace.WriteLine($"Dequeue - {Queue.Count} in PendingTextureQueue");
-                #endif*/
+                if (!TryDequeue(out PendingItem? item) || item is null)
+                    break;
 
                 if (item?.TileView?.SectionLoadingCancelled ?? false)
                 {
@@ -207,6 +266,7 @@ namespace Viking
                     if (texture != null && item.TileView != null)
                         item.TileView.SetTextureFromQueue(texture);
                     item.Tcs.TrySetResult(texture);
+                    texturesLoaded++;
                 }
                 finally
                 {
@@ -225,9 +285,75 @@ namespace Viking
                 }
             }
 
-            if (Queue.IsEmpty)
-                QueueBecameEmpty?.Invoke();
+            _pendingLock.EnterReadLock();
+            try
+            {
+                if (_items.Count == 0)
+                    QueueBecameEmpty?.Invoke();
+            }
+            finally
+            {
+                _pendingLock.ExitReadLock();
+            }
             PostPump();
+        }
+
+        /// <summary>
+        /// Stable-sort the queue so items whose TileView is visible in the given
+        /// bounds appear before non-visible items; then by Downsample (highest first);
+        /// then by Z distance to current section. Called on main thread by the sort timer.
+        /// </summary>
+        public static void SortByVisibility(GridRectangle visibleBounds, int currentSectionZ)
+        {
+            _pendingLock.EnterWriteLock();
+            try
+            {
+                if (_items.Count < 2)
+                    return;
+
+                var sorted = _items
+                    .OrderBy(item => item.TileView != null && item.TileView.Bounds.Intersects(visibleBounds) ? 0 : 1)
+                    .ThenBy(item => Math.Abs((item.TileView?.Section ?? currentSectionZ) - currentSectionZ))
+                    .ThenByDescending(item => item.TileView?.Downsample ?? 0)
+                    .ToList();
+
+                _items.Clear();
+                _items.AddRange(sorted);
+            }
+            finally
+            {
+                _pendingLock.ExitWriteLock();
+            }
+        }
+
+        /// <summary>
+        /// Start the periodic visibility sort timer. Call once from main thread startup.
+        /// </summary>
+        public static void StartSortTimer()
+        {
+            if (_sortTimer != null) return;
+            _sortTimer = new DispatcherTimer(DispatcherPriority.Background)
+            {
+                Interval = TimeSpan.FromMilliseconds(Settings.Default.VisibleTileSortIntervalMs)
+            };
+            _sortTimer.Tick += (_, _) =>
+            {
+                var viewer = State.ViewerControl;
+                if (viewer?.Scene is null) return;
+                int currentZ = (viewer as SectionViewerControl)?.Section?.Number ?? 0;
+                SortByVisibility(viewer.Scene.VisibleWorldBounds, currentZ);
+            };
+            TextureRequestQueue.RegisterSortCallback(_sortTimer);
+            _sortTimer.Start();
+        }
+
+        /// <summary>
+        /// Update the sort timer interval (e.g. when the user changes the preference).
+        /// </summary>
+        public static void UpdateSortInterval(int intervalMs)
+        {
+            if (_sortTimer != null)
+                _sortTimer.Interval = TimeSpan.FromMilliseconds(intervalMs);
         }
          
     }

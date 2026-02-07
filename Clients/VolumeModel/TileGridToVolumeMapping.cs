@@ -199,7 +199,7 @@ namespace Viking.VolumeModel
                             continue;
                     }
 
-                    string UniqueID = TileViewModel.CreateUniqueKey(Section.Number, "Grid to Volume", Name, roundedDownsample, this.TileTextureFileName(iX, iY));
+                    var UniqueID = TileUniqueKey.Create(Section.Number, "Grid to Volume", Name, roundedDownsample, this.TileTextureFileName(iX, iY));
 
                     //                   Trace.WriteLine(TextureFileName, "VolumeModel"); 
                     ;
@@ -230,7 +230,7 @@ namespace Viking.VolumeModel
         /// <param name="name"></param>
         /// <param name="MipMapLevels">Ignored, lowest res texture gets mipmaps.  No others do (They are covered by lower-res textures)</param>
         /// <returns></returns>
-        private async Task<CreateTileTaskResult> CreateTile(string uniqueID, TileKey tileKey, string name)
+        private async Task<CreateTileTaskResult> CreateTile(TileUniqueKey uniqueID, TileKey tileKey, string name)
         {
             int mipMapLevels;
             //First create a new tile 

@@ -392,7 +392,7 @@ namespace Viking.VolumeModel
                     if (TileTasks.ContainsKey(tilekey))
                         continue; //We are already getting this tile, so continue
 
-                    string UniqueID = TileViewModel.CreateUniqueKey(Section.Number, Name, Name, roundedDownsample, this.TileTextureFileName(iX, iY));
+                    var UniqueID = TileUniqueKey.Create(Section.Number, Name, Name, roundedDownsample, this.TileTextureFileName(iX, iY));
                     string TextureFileName = TileFullPath(iX, iY, roundedDownsample);
 
                     if (Global.TileCache.TryGetValue(UniqueID, out TileViewModel tileViewModel) && tileViewModel != null)
@@ -424,7 +424,7 @@ namespace Viking.VolumeModel
             return TilesToDraw;
         }
 
-        private async Task<CreateTileTaskResult> CreateTile(string uniqueID, TileKey tileKey, string textureFilename, string name, int? MipMapLevels = null)
+        private async Task<CreateTileTaskResult> CreateTile(TileUniqueKey uniqueID, TileKey tileKey, string textureFilename, string name, int? MipMapLevels = null)
         {
             //TODO: Make this a task
             int iX = tileKey.X;

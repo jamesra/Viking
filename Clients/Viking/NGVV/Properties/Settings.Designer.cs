@@ -482,5 +482,53 @@ namespace Viking.Properties {
                 this["SectionNumberOverlayPidPositionThreshold"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("30")]
+        public int TextureLoadingWindow {
+            get {
+                return ((int)(this["TextureLoadingWindow"]));
+            }
+            set {
+                this["TextureLoadingWindow"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("3")]
+        public int MinTexturesToLoadFromQueue {
+            get {
+                return ((int)(this["MinTexturesToLoadFromQueue"]));
+            }
+            set {
+                this["MinTexturesToLoadFromQueue"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("500")]
+        public int VisibleTileSortIntervalMs {
+            get {
+                return ((int)(this["VisibleTileSortIntervalMs"]));
+            }
+            set {
+                this["VisibleTileSortIntervalMs"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int MaxConcurrentTextureRequests {
+            get {
+                return ((int)(this["MaxConcurrentTextureRequests"]));
+            }
+            set {
+                this["MaxConcurrentTextureRequests"] = value;
+            }
+        }
     }
 }

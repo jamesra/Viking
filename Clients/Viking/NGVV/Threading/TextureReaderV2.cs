@@ -641,18 +641,13 @@ class TextureReaderV2 : IDisposable
     /// </summary>
     readonly SemaphoreSlim LoadTextureSemaphore = new(1, 1);
 
-    private static SemaphoreSlim HttpRequestThrottle = new(DefaultMaxConcurrentHttpRequests, DefaultMaxConcurrentHttpRequests);
-    private const int DefaultMaxConcurrentHttpRequests = 32;
-
     /// <summary>
-    /// Set the max concurrent HTTP texture requests based on tile pixel width.
-    /// Formula: (4096 / tileWidth) * 2, minimum 1.
+    /// Set the max concurrent texture load workers to a direct limit (1-256).
+    /// Delegates to TextureRequestQueue.
     /// </summary>
-    public static void SetMaxConcurrentRequests(int tileWidth)
+    public static void SetMaxConcurrentRequestLimit(int max)
     {
-        int max = Math.Max(1, (4096 / tileWidth) * 2);
-        HttpRequestThrottle = new SemaphoreSlim(max, max);
-        Trace.WriteLine($"TextureReaderV2: Max concurrent HTTP requests set to {max} (tile width {tileWidth})");
+        TextureRequestQueue.SetMaxWorkers(max);
     }
     public async Task<Texture2D> LoadTexture()
     {
@@ -678,21 +673,6 @@ class TextureReaderV2 : IDisposable
 
             if (Filename.Scheme.ToLower() == "http" || Filename.Scheme.ToLower() == "https")
             {
-                try
-                {
-                    await HttpRequestThrottle.WaitAsync(semaphoreToken).ConfigureAwait(false);
-                }
-                catch (System.Threading.Tasks.TaskCanceledException)
-                {
-                    //Trace.WriteLine($"Aborted loading {Filename}");
-                    return null;
-                }
-                catch (System.OperationCanceledException)
-                {
-                    //Trace.WriteLine($"Aborted loading {Filename}");
-                    return null;
-                }
-
                 try
                 {
                     var texture = await TryLoadingFromCacheOrServer(Filename, CacheFilename, token) ?? await TryLoadingFromServer(this.Filename, token);
@@ -725,10 +705,6 @@ class TextureReaderV2 : IDisposable
                     Trace.WriteLine($"Problem loading cached tile {CacheFilename}, deleting and loading from server.\n{e}");
                     TryDeleteFile(CacheFilename);
                     //Continue and try to load from server
-                }
-                finally
-                {
-                    HttpRequestThrottle.Release();
                 }
             }
             else

@@ -7,11 +7,11 @@ using Viking.VolumeModel;
 
 namespace Viking
 {
-    internal class TileViewModelCacheEntry : CacheEntry<string>
+    internal class TileViewModelCacheEntry : CacheEntry<TileUniqueKey>
     {
         public TileView TileView;
 
-        public TileViewModelCacheEntry(string Key, TileView T)
+        public TileViewModelCacheEntry(TileUniqueKey Key, TileView T)
             : base(Key)
         {
             TileView = T;
@@ -29,7 +29,7 @@ namespace Viking
     /// This object manages construction of tile objects. 
     /// It first checks a cache for a tile matching the request.  If not found it creates a new tile object.
     /// </summary>
-    internal class TileViewModelCache : TimeQueueCache<string, TileViewModelCacheEntry, TileView, TileView>
+    internal class TileViewModelCache : TimeQueueCache<TileUniqueKey, TileViewModelCacheEntry, TileView, TileView>
     {
 
         public TileViewModelCache() : base()
@@ -37,9 +37,7 @@ namespace Viking
             this.MaxCacheSize = 1 << 28;
         }
 
-        protected static string TileKey(string textureFileName, string TransformName) => $"{textureFileName} {TransformName}";
-
-        public TileView GetTile(string textureFileName, string TransformName) => this.Fetch(TileKey(textureFileName, TransformName));
+        public TileView GetTile(TileUniqueKey key) => this.Fetch(key);
 
         protected override TileView Fetch(TileViewModelCacheEntry key)
         {
@@ -64,8 +62,7 @@ namespace Viking
                                 int MipMapLevels, //Should be one, unless it is the minimum downsample level
                                 int TextureSize)
         {
-            //Check to see if this tile is already loaded
-            string key = TileKey(textureFileName, TransformName);
+            TileUniqueKey key = tileViewModel.UniqueKey;
 
             TileView tileView = null;
             bool added = false;
@@ -114,7 +111,7 @@ namespace Viking
                                 int MipMapLevels //Should be one, unless it is the minimum downsample level
                                 )
         {
-            string key = TileKey(textureFileName, TransformName);
+            TileUniqueKey key = tileViewModel.UniqueKey;
 
             TileView tileView = Fetch(key);
             if (tileView != null)
@@ -129,15 +126,15 @@ namespace Viking
             return Fetch(key);
         }
 
-        protected override TileViewModelCacheEntry CreateEntry(string key, TileView value)
+        protected override TileViewModelCacheEntry CreateEntry(TileUniqueKey key, TileView value)
         {
             TileViewModelCacheEntry entry = new(key, value);
             return entry;
         }
 
-        protected override TileViewModelCacheEntry CreateEntry(string key, Func<string, TileView> valueFactory) => new TileViewModelCacheEntry(key, valueFactory(key));
+        protected override TileViewModelCacheEntry CreateEntry(TileUniqueKey key, Func<TileUniqueKey, TileView> valueFactory) => new TileViewModelCacheEntry(key, valueFactory(key));
 
-        protected override Task<TileViewModelCacheEntry> CreateEntryAsync(string key, TileView value) => Task.FromResult(CreateEntry(key, value));
+        protected override Task<TileViewModelCacheEntry> CreateEntryAsync(TileUniqueKey key, TileView value) => Task.FromResult(CreateEntry(key, value));
 
         /// <summary>
         /// Cleanup the memory allocated for this cache entry.

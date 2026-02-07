@@ -95,8 +95,11 @@ namespace Viking
             Trace.WriteLine("Volume Load Time: " + elapsedTime.ToString());
 
             await Volume.Initialize(token, progressReporter);
-            if (Volume.DefaultTileWidth.HasValue)
-                TextureReaderV2.SetMaxConcurrentRequests(4096 / Volume.DefaultTileWidth.Value);
+            int pref = Viking.Properties.Settings.Default.MaxConcurrentTextureRequests;
+            if (pref > 0)
+                TextureReaderV2.SetMaxConcurrentRequestLimit(pref);
+            else
+                TextureReaderV2.SetMaxConcurrentRequestLimit(Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel.DefaultMaxConcurrentTextureRequests);
 
             UI.State.volume = new Viking.ViewModels.VolumeViewModel(Volume);
 

@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Threading;
 using System.Windows;
@@ -19,14 +19,14 @@ namespace Viking.VolumeViewModel
     {
         protected readonly Viking.VolumeModel.TileViewModel Tile; 
        
-        public string UniqueKey
+        public TileUniqueKey UniqueKey
         {
             get { return Tile.UniqueKey; }
         }
 
         public override string ToString()
         {
-            return Tile.UniqueKey; 
+            return Tile.UniqueKey.ToString();
         }
         
         public int Downsample

@@ -292,6 +292,25 @@ namespace Viking.UI.Controls
                     {
                         _ = sections.Values[iSectionBelow].PrepareTransform(oldtransform);
                     }
+
+                    if (this.Scene != null && this.graphicsDeviceService?.GraphicsDevice != null && State.volume != null)
+                    {
+                        var scene = this.Scene;
+                        var token = CancellationToken.None;
+                        _ = Task.Run(async () =>
+                        {
+                            if (iSectionAbove < sections.Count)
+                            {
+                                var secAbove = sections.Values[iSectionAbove];
+                                await QueueTextureLoadsForSectionAsync(scene, secAbove.Number, highestResolutionOnly: true, token);
+                            }
+                            if (iSectionBelow >= 0)
+                            {
+                                var secBelow = sections.Values[iSectionBelow];
+                                await QueueTextureLoadsForSectionAsync(scene, secBelow.Number, highestResolutionOnly: true, token);
+                            }
+                        });
+                    }
                 }
 
                 this.Invalidate();
@@ -301,7 +320,7 @@ namespace Viking.UI.Controls
 
                 // Cancel in-flight mapping initializations only for sections that are not the current section or adjacent to it (so adjacent sections keep loading)
                 int currentSectionNumber = _Section.Number;
-                int[] adjacentSectionNumbers = [currentSectionNumber - 1, currentSectionNumber, currentSectionNumber + 1];
+                int[] adjacentSectionNumbers = [currentSectionNumber - 2, currentSectionNumber - 1, currentSectionNumber, currentSectionNumber + 1, currentSectionNumber + 2];
                 lock (_sectionMappingInitLock)
                 {
                     List<int> toRemove = new();
@@ -1711,7 +1730,7 @@ namespace Viking.UI.Controls
                 for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
                 {
                     int level = Mapping.AvailableLevels[DownsamplesToRender[iLevel]];
-                    SortedDictionary<string, TileViewModel> tileList = visibleTiles.GetTilesForLevel(level);
+                    SortedDictionary<TileUniqueKey, TileViewModel> tileList = visibleTiles.GetTilesForLevel(level);
                     if (tileList.Count > 0)
                         return true;
                 }
@@ -1721,22 +1740,17 @@ namespace Viking.UI.Controls
         }
 
         /// <summary>
-        /// 
+        /// Queues texture loads for a single section and returns the list of load tasks.
+        /// Used by PreloadSceneTexturesAsync and for adjacent-section preloading on section change.
         /// </summary>
-        /// <param name="scene"></param>
-        /// <param name="Z"></param>
-        /// <param name="HighestResolutionOnly">If this is true we only load the high resolution textures.  This is used when the scene should not be drawn until all textures are loaded and there is no reason to load intermediate textures.
-        /// <param name="token"></param>
-        /// <returns></returns>
-        protected async Task PreloadSceneTexturesAsync(Scene scene, int Z, bool HighestResolutionOnly, CancellationToken token)
+        private async Task<List<Task<Texture2D>>> QueueTextureLoadsForSectionAsync(Scene scene, int sectionZ, bool highestResolutionOnly, CancellationToken token)
         {
             List<Task<Texture2D>> listGetTextureTasks = [];
-            List<TileView> listTileViewModels = [];
 
-            if (false == Volume.SectionViewModels.ContainsKey(Z))
-                return;
+            if (false == Volume.SectionViewModels.ContainsKey(sectionZ))
+                return listGetTextureTasks;
 
-            SectionViewModel visibleSection = Volume.SectionViewModels[Z];
+            SectionViewModel visibleSection = Volume.SectionViewModels[sectionZ];
             ChannelInfo[] channels = visibleSection.ChannelInfoArray;
             if (channels.Length == 0)
                 channels = visibleSection.VolumeViewModel.DefaultChannels;
@@ -1750,31 +1764,21 @@ namespace Viking.UI.Controls
 
                 await Mapping.Initialize(token);
                 if (token.IsCancellationRequested)
-                    return;
+                    return listGetTextureTasks;
 
                 CancellationToken sectionTextureLoadToken = GetOrCreateSectionTextureLoadToken(section.Number);
                 int[] DownsamplesToRender = CalculateDownsamplesToRender(Mapping, scene.Camera.Downsample);
 
-                //If we aren't loading asynchronously only load the hi-res textures since we are waiting for completion
-                if (HighestResolutionOnly)
+                if (highestResolutionOnly)
                     DownsamplesToRender = [DownsamplesToRender.Last()];
 
-                //Get all of the visible tiles
-                //var tilePyramidTask = await Mapping.VisibleTilesAsync(scene.VisibleWorldBounds, scene.Camera.Downsample);
-                /*while ((tilePyramidTask.IsCompleted || tilePyramidTask.IsFaulted || tilePyramidTask.IsCanceled) == false)
-                {
-                    Application.DoEvents();
-                 //   TilePyramid visibleTiles = await Mapping.VisibleTilesAsync(scene.VisibleWorldBounds, scene.Camera.Downsample);
-                }*/
-
-                //var visibleTiles = tilePyramidTask.Result;
                 var visibleTiles = await Mapping.VisibleTilesAsync(scene.VisibleWorldBounds, scene.Camera.Downsample);
 
                 for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
                 {
                     int level = Mapping.AvailableLevels[DownsamplesToRender[iLevel]];
 
-                    SortedDictionary<string, TileViewModel> tileList = visibleTiles.GetTilesForLevel(level);
+                    SortedDictionary<TileUniqueKey, TileViewModel> tileList = visibleTiles.GetTilesForLevel(level);
 
                     foreach (TileViewModel t in tileList.Values)
                     {
@@ -1790,11 +1794,24 @@ namespace Viking.UI.Controls
                         {
                             listGetTextureTasks.Add(tileView.GetOrLoadTextureAsync(this.graphicsDeviceService.GraphicsDevice, sectionTextureLoadToken));
                         }
-                        listTileViewModels.Add(tileView);
                     }
                 }
             }
 
+            return listGetTextureTasks;
+        }
+
+        /// <summary>
+        /// Preloads texture for the visible tiles in the given section, awaiting completion.
+        /// </summary>
+        /// <param name="scene"></param>
+        /// <param name="Z"></param>
+        /// <param name="HighestResolutionOnly">If this is true we only load the high resolution textures.  This is used when the scene should not be drawn until all textures are loaded and there is no reason to load intermediate textures.</param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        protected async Task PreloadSceneTexturesAsync(Scene scene, int Z, bool HighestResolutionOnly, CancellationToken token)
+        {
+            var listGetTextureTasks = await QueueTextureLoadsForSectionAsync(scene, Z, HighestResolutionOnly, token);
             while (listGetTextureTasks.Count > 0)
             {
                 var completedTask = await Task.WhenAny(listGetTextureTasks).ConfigureAwait(false);
@@ -1875,7 +1892,7 @@ namespace Viking.UI.Controls
                 VikingXNAGraphics.DeviceStateManager.SetDepthStencilValue(graphicsDevice, iLevel);
                 graphicsDevice.DepthStencilState = CreateDepthStateForDownsampleLevel(iLevel);
 
-                SortedDictionary<string, TileViewModel> tileList = visibleTiles.GetTilesForLevel(level);
+                SortedDictionary<TileUniqueKey, TileViewModel> tileList = visibleTiles.GetTilesForLevel(level);
 
                 List<TileView> tileViewsToDraw = [];
 
@@ -3069,7 +3086,11 @@ namespace Viking.UI.Controls
                 Viking.Properties.Settings.Default.SectionNumberOverlayPidDerivativeGain,
                 Viking.Properties.Settings.Default.SectionNumberOverlayPidIntegralGain,
                 Viking.Properties.Settings.Default.SectionNumberOverlayPidVelocityThreshold,
-                Viking.Properties.Settings.Default.SectionNumberOverlayPidPositionThreshold
+                Viking.Properties.Settings.Default.SectionNumberOverlayPidPositionThreshold,
+                Viking.Properties.Settings.Default.TextureLoadingWindow,
+                Viking.Properties.Settings.Default.MinTexturesToLoadFromQueue,
+                Viking.Properties.Settings.Default.VisibleTileSortIntervalMs,
+                Viking.Properties.Settings.Default.MaxConcurrentTextureRequests
             );
 
             // Wire up real-time preview for settings changes
@@ -3130,7 +3151,16 @@ namespace Viking.UI.Controls
             Viking.Properties.Settings.Default.SectionNumberOverlayPidIntegralGain = viewModel.PidIntegralGain;
             Viking.Properties.Settings.Default.SectionNumberOverlayPidVelocityThreshold = viewModel.PidVelocityThreshold;
             Viking.Properties.Settings.Default.SectionNumberOverlayPidPositionThreshold = viewModel.PidPositionThreshold;
+            Viking.Properties.Settings.Default.TextureLoadingWindow = viewModel.TextureLoadingWindow;
+            Viking.Properties.Settings.Default.MinTexturesToLoadFromQueue = viewModel.MinTexturesToLoadFromQueue;
+            Viking.Properties.Settings.Default.VisibleTileSortIntervalMs = viewModel.VisibleTileSortIntervalMs;
+            Viking.Properties.Settings.Default.MaxConcurrentTextureRequests = viewModel.MaxConcurrentTextureRequests;
             Viking.Properties.Settings.Default.Save();
+            Viking.PendingTextureQueue.UpdateSortInterval(viewModel.VisibleTileSortIntervalMs);
+            int effectiveLimit = viewModel.MaxConcurrentTextureRequests > 0
+                ? viewModel.MaxConcurrentTextureRequests
+                : Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel.DefaultMaxConcurrentTextureRequests;
+            Viking.TextureReaderV2.SetMaxConcurrentRequestLimit(effectiveLimit);
         }
 
         #endregion

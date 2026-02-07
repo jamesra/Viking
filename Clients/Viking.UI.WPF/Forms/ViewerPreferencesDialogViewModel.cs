@@ -66,6 +66,23 @@ namespace Viking.UI.WPF.Forms
         public const double DefaultPidPositionThreshold = 0.02;
         public const double MinPositionThreshold = 0.001;
         public const double MaxPositionThreshold = 0.1;
+
+        // Texture loading (performance)
+        public const int DefaultTextureLoadingWindow = 30;
+        public const int MinTextureLoadingWindow = 5;
+        public const int MaxTextureLoadingWindow = 200;
+        public const int DefaultMinTexturesToLoadFromQueue = 3;
+        public const int MinMinTexturesToLoadFromQueue = 1;
+        public const int MaxMinTexturesToLoadFromQueue = 100;
+        public const int DefaultVisibleTileSortIntervalMs = 1000;
+        public const int MinVisibleTileSortIntervalMs = 200;
+        public const int MaxVisibleTileSortIntervalMs = 10000;
+        /// <summary>
+        /// Default number of concurrent texture loads: cores * 2, minimum 1.
+        /// </summary>
+        public static int DefaultMaxConcurrentTextureRequests => Math.Max(1, Environment.ProcessorCount * 2);
+        public const int MinMaxConcurrentTextureRequests = 0;
+        public const int MaxMaxConcurrentTextureRequests = 256;
         #endregion
 
         #region Original Values (for Cancel revert)
@@ -81,6 +98,10 @@ namespace Viking.UI.WPF.Forms
         private double _originalPidIntegralGain;
         private double _originalPidVelocityThreshold;
         private double _originalPidPositionThreshold;
+        private int _originalTextureLoadingWindow;
+        private int _originalMinTexturesToLoadFromQueue;
+        private int _originalVisibleTileSortIntervalMs;
+        private int _originalMaxConcurrentTextureRequests;
         #endregion
 
         #region Section Number Overlay Properties
@@ -335,6 +356,79 @@ namespace Viking.UI.WPF.Forms
 
         #endregion
 
+        #region Texture Loading (Performance)
+
+        private int _textureLoadingWindow;
+        public int TextureLoadingWindow
+        {
+            get => _textureLoadingWindow;
+            set
+            {
+                int clampedValue = Clamp(value, MinTextureLoadingWindow, MaxTextureLoadingWindow);
+                if (_textureLoadingWindow != clampedValue)
+                {
+                    _textureLoadingWindow = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private int _minTexturesToLoadFromQueue;
+        public int MinTexturesToLoadFromQueue
+        {
+            get => _minTexturesToLoadFromQueue;
+            set
+            {
+                int clampedValue = Clamp(value, MinMinTexturesToLoadFromQueue, MaxMinTexturesToLoadFromQueue);
+                if (_minTexturesToLoadFromQueue != clampedValue)
+                {
+                    _minTexturesToLoadFromQueue = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private int _visibleTileSortIntervalMs;
+        public int VisibleTileSortIntervalMs
+        {
+            get => _visibleTileSortIntervalMs;
+            set
+            {
+                int clampedValue = Clamp(value, MinVisibleTileSortIntervalMs, MaxVisibleTileSortIntervalMs);
+                if (_visibleTileSortIntervalMs != clampedValue)
+                {
+                    _visibleTileSortIntervalMs = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private int _maxConcurrentTextureRequests;
+        public int MaxConcurrentTextureRequests
+        {
+            get => _maxConcurrentTextureRequests;
+            set
+            {
+                int clampedValue = Clamp(value, MinMaxConcurrentTextureRequests, MaxMaxConcurrentTextureRequests);
+                if (_maxConcurrentTextureRequests != clampedValue)
+                {
+                    _maxConcurrentTextureRequests = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public int TextureLoadingWindowMinimum => MinTextureLoadingWindow;
+        public int TextureLoadingWindowMaximum => MaxTextureLoadingWindow;
+        public int MinTexturesToLoadFromQueueMinimum => MinMinTexturesToLoadFromQueue;
+        public int MinTexturesToLoadFromQueueMaximum => MaxMinTexturesToLoadFromQueue;
+        public int VisibleTileSortIntervalMsMinimum => MinVisibleTileSortIntervalMs;
+        public int VisibleTileSortIntervalMsMaximum => MaxVisibleTileSortIntervalMs;
+        public int MaxConcurrentTextureRequestsMinimum => MinMaxConcurrentTextureRequests;
+        public int MaxConcurrentTextureRequestsMaximum => MaxMaxConcurrentTextureRequests;
+
+        #endregion
+
         #region Events
 
         /// <summary>
@@ -370,7 +464,11 @@ namespace Viking.UI.WPF.Forms
             double pidDerivativeGain,
             double pidIntegralGain,
             double pidVelocityThreshold,
-            double pidPositionThreshold)
+            double pidPositionThreshold,
+            int textureLoadingWindow,
+            int minTexturesToLoadFromQueue,
+            int visibleTileSortIntervalMs,
+            int maxConcurrentTextureRequests)
         {
             // Clamp values to valid ranges (in case saved value is from old settings)
             double clampedAcceleration = Clamp(sectionNumberOverlayAcceleration, MinAcceleration, MaxAcceleration);
@@ -381,6 +479,12 @@ namespace Viking.UI.WPF.Forms
             double clampedPositionThreshold = Clamp(pidPositionThreshold, MinPositionThreshold, MaxPositionThreshold);
             double clampedProportionalGain = Clamp(pidProportionalGain, MinProportionalGain, MaxProportionalGain);
             double clampedDerivativeGain = Clamp(pidDerivativeGain, MinDerivativeGain, MaxDerivativeGain);
+            int clampedTextureLoadingWindow = Clamp(textureLoadingWindow, MinTextureLoadingWindow, MaxTextureLoadingWindow);
+            int clampedMinTexturesToLoadFromQueue = Clamp(minTexturesToLoadFromQueue, MinMinTexturesToLoadFromQueue, MaxMinTexturesToLoadFromQueue);
+            int clampedVisibleTileSortIntervalMs = Clamp(visibleTileSortIntervalMs, MinVisibleTileSortIntervalMs, MaxVisibleTileSortIntervalMs);
+            // When stored value is 0 (unset), use cores*2 as the effective default for display
+            int effectiveMaxConcurrent = maxConcurrentTextureRequests > 0 ? maxConcurrentTextureRequests : DefaultMaxConcurrentTextureRequests;
+            int clampedMaxConcurrentTextureRequests = Clamp(effectiveMaxConcurrent, MinMaxConcurrentTextureRequests, MaxMaxConcurrentTextureRequests);
 
             // Store original values for Cancel revert (use clamped values)
             _originalSectionNumberOverlayEnabled = sectionNumberOverlayEnabled;
@@ -395,6 +499,10 @@ namespace Viking.UI.WPF.Forms
             _originalPidIntegralGain = pidIntegralGain;
             _originalPidVelocityThreshold = clampedVelocityThreshold;
             _originalPidPositionThreshold = clampedPositionThreshold;
+            _originalTextureLoadingWindow = clampedTextureLoadingWindow;
+            _originalMinTexturesToLoadFromQueue = clampedMinTexturesToLoadFromQueue;
+            _originalVisibleTileSortIntervalMs = clampedVisibleTileSortIntervalMs;
+            _originalMaxConcurrentTextureRequests = clampedMaxConcurrentTextureRequests;
 
             // Set current values (without triggering change events during load)
             var tempHandler = SectionNumberOverlaySettingsChanged;
@@ -412,6 +520,10 @@ namespace Viking.UI.WPF.Forms
             _pidIntegralGain = pidIntegralGain;
             _pidVelocityThreshold = clampedVelocityThreshold;
             _pidPositionThreshold = clampedPositionThreshold;
+            _textureLoadingWindow = clampedTextureLoadingWindow;
+            _minTexturesToLoadFromQueue = clampedMinTexturesToLoadFromQueue;
+            _visibleTileSortIntervalMs = clampedVisibleTileSortIntervalMs;
+            _maxConcurrentTextureRequests = clampedMaxConcurrentTextureRequests;
 
             SectionNumberOverlaySettingsChanged = tempHandler;
 
@@ -435,6 +547,10 @@ namespace Viking.UI.WPF.Forms
             _originalPidIntegralGain = _pidIntegralGain;
             _originalPidVelocityThreshold = _pidVelocityThreshold;
             _originalPidPositionThreshold = _pidPositionThreshold;
+            _originalTextureLoadingWindow = _textureLoadingWindow;
+            _originalMinTexturesToLoadFromQueue = _minTexturesToLoadFromQueue;
+            _originalVisibleTileSortIntervalMs = _visibleTileSortIntervalMs;
+            _originalMaxConcurrentTextureRequests = _maxConcurrentTextureRequests;
         }
 
         /// <summary>
@@ -452,6 +568,10 @@ namespace Viking.UI.WPF.Forms
             _pidIntegralGain = _originalPidIntegralGain;
             _pidVelocityThreshold = _originalPidVelocityThreshold;
             _pidPositionThreshold = _originalPidPositionThreshold;
+            _textureLoadingWindow = _originalTextureLoadingWindow;
+            _minTexturesToLoadFromQueue = _originalMinTexturesToLoadFromQueue;
+            _visibleTileSortIntervalMs = _originalVisibleTileSortIntervalMs;
+            _maxConcurrentTextureRequests = _originalMaxConcurrentTextureRequests;
 
             OnPropertyChanged(string.Empty);
         }
@@ -473,6 +593,10 @@ namespace Viking.UI.WPF.Forms
             PidIntegralGain = DefaultPidIntegralGain;
             PidVelocityThreshold = DefaultPidVelocityThreshold;
             PidPositionThreshold = DefaultPidPositionThreshold;
+            TextureLoadingWindow = DefaultTextureLoadingWindow;
+            MinTexturesToLoadFromQueue = DefaultMinTexturesToLoadFromQueue;
+            VisibleTileSortIntervalMs = DefaultVisibleTileSortIntervalMs;
+            MaxConcurrentTextureRequests = DefaultMaxConcurrentTextureRequests;
         }
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)

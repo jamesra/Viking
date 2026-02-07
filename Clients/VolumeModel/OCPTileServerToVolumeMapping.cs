@@ -134,7 +134,7 @@ namespace Viking.VolumeModel
                         if (VisibleQuad.Value.Contains(tileBorder) == false)
                             continue;
                     }
-                    string UniqueID = TileViewModel.CreateUniqueKey(Section.Number, "Grid to Volume", Name, roundedDownsample, this.TileTextureFileName(iX, iY));
+                    var UniqueID = TileUniqueKey.Create(Section.Number, "Grid to Volume", Name, roundedDownsample, this.TileTextureFileName(iX, iY));
 
                     //                   Trace.WriteLine(TextureFileName, "VolumeModel"); 
                     if (false == Global.TileCache.TryGetValue(UniqueID, out TileViewModel tileViewModel))

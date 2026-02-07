@@ -1,181 +1,292 @@
-﻿namespace Viking.Threading
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Threading;
+using Geometry;
+using Microsoft.Xna.Framework.Graphics;
+using Viking.UI;
+using Viking.UI.Controls;
+using Viking.ViewModels;
+using VikingXNA;
+
+namespace Viking
 {
-    /*
-    class TextureEntry : CacheEntry<Texture2D>
-    {
-
-
-    }
-
-    class TextureCache : TimeQueueCache<Uri, TextureEntry, Texture2D, Texture2D>
-    {
-
-    }
-
-
     /// <summary>
-    /// Data required to perform a texture request
+    /// Priority-sorted queue of texture load requests. Workers pull highest-priority requests
+    /// (visibility, Downsample, Z distance) so visible tiles acquire HTTP slots before others.
+    /// Replaces the semaphore-based FIFO for HTTP texture requests.
     /// </summary>
-    public class TextureRequestData : IEqualityComparer<TextureRequestData>
+    internal static class TextureRequestQueue
     {
-        /// <summary>
-        /// Name of texture on server
-        /// </summary>
-        public readonly Uri TextureUri;
-
-        /// <summary>
-        /// Name of texture in local cache
-        /// </summary>
-        public readonly string CacheFilename = null; 
-
-        /// <summary>
-        /// Indicates # of mipmap levels texture should be created with
-        /// </summary>
-        public int MipMapLevels = 1; 
-
-        public TextureRequestData(Uri textureUri, string cacheFilename, int mipMapLevels)
-            : this(textureUri, mipMapLevels)
-        { 
-            this.CacheFilename = cacheFilename; 
-        }
-
-        public override string ToString()
+        private sealed class RequestItem
         {
-            return TextureUri.ToString();
-        }
+            internal TileView TileView { get; }
+            internal GraphicsDevice GraphicsDevice { get; }
+            internal CancellationToken SectionToken { get; }
+            internal TaskCompletionSource<Texture2D> Tcs { get; }
 
-        public override bool Equals(object obj)
-        {
-            return base.Equals(obj);
-        }
-
-        /// <summary>
-        /// This texture reader is used when we don't have a cachepath to check before making the request
-        /// </summary>
-        /// <param name="graphicsDevice"></param>
-        /// <param name="filename"></param>
-        /// <param name="downsample"></param>
-        public TextureRequestData(Uri textureURI, int mipMapLevels)
-        {
-            this.TextureUri = textureURI;
-            this.MipMapLevels = mipMapLevels; 
-        }
-
-        public bool Equals(TextureRequestData x, TextureRequestData y)
-        {
-            return x.TextureUri == y.TextureUri;
-        }
-
-        public int GetHashCode(TextureRequestData obj)
-        {
-            return obj.TextureUri.GetHashCode();
-        }
-    }
-
-
-    class TextureRequests
-    {
-        //ConcurrentStack<TextureRequestData> Requests = new ConcurrentStack<TextureRequestData>();
-        Stack<TextureRequestData> Requests = new Stack<TextureRequestData>();
-        List<TextureRequestData> InFlightRequests = new List<TextureRequestData>();
-
-        TextureCache textureCache = new TextureCache<TextureData, TextureCacheEntry, Texture2D, Texture2D>();
-
-        System.Threading.AutoResetEvent ItemQueuedEvent = new AutoResetEvent(false);
-        System.Threading.ReaderWriterLockSlim RWLock = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
-
-
-        public bool GetOrRequestTexture(TextureRequestData textureData)
-        { 
-            
-        }
-
-        /// <summary>
-        /// Adds a texture to request, returns false if the texture is already requested
-        /// </summary>
-        /// <param name="textureData"></param>
-        /// <returns></returns>
-        public bool TryAddTextureRequest(TextureRequestData textureData)
-        {
-            try
+            internal RequestItem(TileView tileView, GraphicsDevice graphicsDevice, CancellationToken sectionToken, TaskCompletionSource<Texture2D> tcs)
             {
-                RWLock.EnterUpgradeableReadLock();
-
-                if (Requests.Contains(textureData))
-                {
-                    return false;
-                }
-                else
-                {
-                    try
-                    {
-                        RWLock.EnterWriteLock();
-                        Requests.Push(textureData);
-                        ItemQueuedEvent.Set();
-                        return true;
-                    }
-                    finally
-                    {
-                        RWLock.ExitWriteLock();
-                    }
-                    
-                }
+                TileView = tileView;
+                GraphicsDevice = graphicsDevice;
+                SectionToken = sectionToken;
+                Tcs = tcs;
             }
-            finally
+
+            public override string ToString() => TileView.ToString();
+        }
+
+        private static readonly List<RequestItem> _requests = new();
+        private static readonly HashSet<TileView> _pendingTileViews = new();
+        private static readonly object _lock = new();
+        private static readonly SemaphoreSlim _gate = new(0, int.MaxValue);
+        private static volatile SemaphoreSlim _throttle = new(DefaultMaxWorkers, DefaultMaxWorkers);
+        private const int DefaultMaxWorkers = 32;
+        private static readonly List<Task> _workers = new();
+        private static CancellationTokenSource? _workerCts;
+        private static volatile bool _started;
+
+        /// <summary>
+        /// True if this TileView has a pending request in the queue (or being processed).
+        /// Used by TileView to avoid duplicate loads and by callers of PendingTextureQueue.IsTileViewPending.
+        /// </summary>
+        public static bool IsTileViewPending(TileView tileView)
+        {
+            if (tileView is null)
+                return false;
+            lock (_lock)
             {
-                RWLock.ExitUpgradeableReadLock();
+                return _pendingTileViews.Contains(tileView);
             }
         }
 
-
-        public TextureRequests()
+        /// <summary>
+        /// Enqueue a texture load request. Returns the Task to await. Both HTTP and local paths go through the queue.
+        /// </summary>
+        public static Task<Texture2D> EnqueueRequest(TileView tileView, GraphicsDevice graphicsDevice, CancellationToken sectionToken)
         {
-
-
+            EnsureWorkersStarted();
+            var tcs = new TaskCompletionSource<Texture2D>();
+            lock (_lock)
+            {
+                if (_pendingTileViews.Contains(tileView))
+                {
+                    tcs.TrySetResult(null);
+                    return tcs.Task;
+                }
+                _pendingTileViews.Add(tileView);
+                _requests.Add(new RequestItem(tileView, graphicsDevice, sectionToken, tcs));
+                _gate.Release(1);
+            }
+            return tcs.Task;
         }
 
+        /// <summary>
+        /// Dequeue the highest-priority request. Called by workers. Returns null if queue is empty.
+        /// </summary>
+        private static RequestItem? TryDequeueNext()
+        {
+            lock (_lock)
+            {
+                RequestItem? item = null;
+                while(item is null)
+                { 
+                    if (_requests.Count == 0)
+                        return null;
+                    item = _requests[0];
+                    _requests.RemoveAt(0);
+
+                    if(item.TileView.SectionLoadingCancelled)
+                    {
+                        Trace.WriteLine($"{item.TileView} cancelled and dropped from Queue");
+                        item = null;
+                        continue; 
+                    } 
+                }
+                return item;
+            }
+        }
 
         /// <summary>
-        /// Removes Uri's from the request list.  If the list is empty wait on an event until a Uri is queued.
+        /// Stable-sort the queue by visibility, then Downsample (highest first), then Z distance.
+        /// Same keys as PendingTextureQueue.SortByVisibility. Called from the sort timer.
         /// </summary>
-        public void DequeueThread()
+        public static void SortByPriority(GridRectangle visibleBounds, int currentSectionZ)
         {
-            while(true)
+            lock (_lock)
+            {
+                if (_requests.Count < 2)
+                    return;
+                var sorted = _requests
+                    .OrderBy(r => r.TileView.Bounds.Intersects(visibleBounds) ? 0 : 1)
+                    .ThenBy(r => Math.Abs(r.TileView.Section - currentSectionZ))
+                    .ThenByDescending(r => r.TileView.Downsample)
+                    .ToList();
+                _requests.Clear();
+                _requests.AddRange(sorted);
+            }
+        }
+
+        /// <summary>
+        /// Set the max concurrent texture load workers (1-256). Replaces HttpRequestThrottle sizing.
+        /// </summary>
+        public static void SetMaxWorkers(int max)
+        {
+            int clamped = Math.Max(1, Math.Min(max, 256));
+            var prev = _throttle;
+            _throttle = new SemaphoreSlim(clamped, clamped);
+            Trace.WriteLine($"TextureRequestQueue: Max workers set to {clamped}");
+        }
+
+        /// <summary>
+        /// Start the worker pool. Call once from main thread startup, or lazily on first enqueue.
+        /// </summary>
+        public static void StartWorkers()
+        {
+            EnsureWorkersStarted();
+        }
+
+        private static void EnsureWorkersStarted()
+        {
+            if (_started)
+                return;
+            lock (_lock)
+            {
+                if (_started)
+                    return;
+                _started = true;
+                _workerCts = new CancellationTokenSource();
+                for (int i = 0; i < DefaultMaxWorkers; i++)
+                {
+                    _workers.Add(Task.Run(() => WorkerLoop(_workerCts.Token)));
+                }
+            }
+        }
+
+        private static async Task WorkerLoop(CancellationToken ct)
+        {
+            while (!ct.IsCancellationRequested)
             {
                 try
                 {
-                    RWLock.EnterWriteLock();
-                    ItemQueuedEvent.Reset();
+                    await _gate.WaitAsync(ct).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
 
-                    while(Requests.Count > 0)
-                    {
-                        TextureRequestData textureData = Requests.Pop();
+                var item = TryDequeueNext();
+                if (item is null)
+                    continue;
 
-                        InFlightRequests.Add(textureData);
+                var throttle = _throttle;
+                try
+                {
+                    await throttle.WaitAsync(item.SectionToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    CompleteRequest(item, null);
+                    continue;
+                }
 
-                        LoadTexture(textureData);
-                    }
-                    
-                    ItemQueuedEvent.WaitOne();
+                try
+                {
+                    await ProcessRequest(item).ConfigureAwait(false);
                 }
                 finally
                 {
-                    RWLock.ExitWriteLock();
+                    throttle.Release();
                 }
             }
         }
 
-
-        /// <summary>
-        /// Kicks off a request to read a texture
-        /// </summary>
-        /// <param name="textureData"></param>
-        void LoadTexture(TextureRequestData textureData)
+        private static void CompleteRequest(RequestItem item, Texture2D? texture)
         {
-            
+            lock (_lock)
+            {
+                _pendingTileViews.Remove(item.TileView);
+            }
+            item.Tcs.TrySetResult(texture);
         }
 
+        private static async Task ProcessRequest(RequestItem item)
+        {
+            if (item.SectionToken.IsCancellationRequested)
+            {
+                CompleteRequest(item, null);
+                return;
+            }
+
+            if (!PendingTextureQueue.TryBeginLoadingFile(item.TileView.TextureFileName))
+            {
+                CompleteRequest(item, null);
+                return;
+            }
+
+            var volume = UI.State.volume;
+            if (volume is null)
+            {
+                PendingTextureQueue.EndLoadingFile(item.TileView.TextureFileName);
+                CompleteRequest(item, null);
+                return;
+            }
+
+            using var cts = item.SectionToken.CanBeCanceled
+                ? CancellationTokenSource.CreateLinkedTokenSource(item.SectionToken)
+                : new CancellationTokenSource();
+            try
+            {
+                TextureReaderV2 texReader = volume.IsLocal == false
+                    ? new TextureReaderV2(item.GraphicsDevice,
+                                          new Uri(item.TileView.TextureFileName),
+                                          item.TileView.TextureCachedFileName,
+                                          item.TileView.MipMapLevelsForLoad,
+                                          null,
+                                          cts,
+                                          tileViewOwner: item.TileView,
+                                          sectionToken: item.SectionToken)
+                    : new TextureReaderV2(item.GraphicsDevice,
+                                          new Uri(item.TileView.TextureFileName),
+                                          item.TileView.MipMapLevelsForLoad,
+                                          null,
+                                          cts,
+                                          tileViewOwner: item.TileView,
+                                          sectionToken: item.SectionToken);
+
+                var texture = await texReader.LoadTexture().ConfigureAwait(false);
+                item.TileView.ServerTextureNotFound = texReader.TextureNotFound;
+                CompleteRequest(item, texture);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"TextureRequestQueue load failed for {item.TileView.TextureFileName}: {ex.Message}");
+                CompleteRequest(item, null);
+            }
+            finally
+            {
+                PendingTextureQueue.EndLoadingFile(item.TileView.TextureFileName);
+            }
+        }
+
+        /// <summary>
+        /// Extend the sort timer to also call SortByPriority. Called from PendingTextureQueue.StartSortTimer.
+        /// </summary>
+        public static void RegisterSortCallback(DispatcherTimer sortTimer)
+        {
+            if (sortTimer == null)
+                return;
+            sortTimer.Tick += (_, _) =>
+            {
+                var viewer = UI.State.ViewerControl;
+                if (viewer?.Scene is null) return;
+                int currentZ = (viewer as SectionViewerControl)?.Section?.Number ?? 0;
+                SortByPriority(viewer.Scene.VisibleWorldBounds, currentZ);
+            };
+        }
     }
-     * 
-     */
 }

@@ -45,9 +45,19 @@ namespace Viking.ViewModels
         public int Downsample => _tileViewModel.Downsample;
 
         /// <summary>
+        /// World-space bounds of the tile (from the underlying TileViewModel).
+        /// </summary>
+        public GridRectangle Bounds => _tileViewModel.Bounds;
+
+        /// <summary>
+        /// Section number (Z) of the tile (from the underlying TileViewModel.UniqueKey).
+        /// </summary>
+        public int Section => _tileViewModel.UniqueKey.Section;
+
+        /// <summary>
         /// Setting this to true indicates we've already asked the server for this texture and it was not found.  We should stop asking.
         /// </summary>
-        public bool ServerTextureNotFound { get; private set; }
+        public bool ServerTextureNotFound { get; internal set; }
 
         /// <summary>
         /// This is not null if we have a thread loading our texture.  It can be cancelled to abort the loading.
@@ -153,12 +163,12 @@ namespace Viking.ViewModels
         /// </summary>
         public readonly string TransformName;
 
-        /// <summary>
-        /// Logical identity for equality: same format as TileViewModelCache.TileKey(textureFileName, TransformName).
-        /// </summary>
-        private readonly string _cacheKey;
-
         private readonly int MipMapLevels = 1;
+
+        /// <summary>
+        /// Mipmap levels for texture loading. Internal for use by TextureRequestQueue.
+        /// </summary>
+        internal int MipMapLevelsForLoad => MipMapLevels;
 
         private readonly Color TileColor;
 
@@ -181,7 +191,6 @@ namespace Viking.ViewModels
             this.TextureFileName = textureFileName;
             this.TextureCachedFileName = cachedTextureFileName;
             this.TransformName = transformName ?? string.Empty;
-            this._cacheKey = $"{textureFileName} {this.TransformName}";
             this.MipMapLevels = mipMapLevels;
 
             Random r = new(TileID);
@@ -192,21 +201,20 @@ namespace Viking.ViewModels
         }
 
         /// <summary>
-        /// Logical identity matches TileViewModelCache.TileKey so pending set and other collections deduplicate by tile.
+        /// Logical identity matches TileViewModel.UniqueKey so pending set and other collections deduplicate by tile.
         /// </summary>
-        public override int GetHashCode() =>
-            StringComparer.Ordinal.GetHashCode(_cacheKey ?? string.Empty);
+        public override int GetHashCode() => _tileViewModel.UniqueKey.GetHashCode();
 
         /// <summary>
-        /// Logical identity matches TileViewModelCache.TileKey so pending set and other collections deduplicate by tile.
+        /// Logical identity matches TileViewModel.UniqueKey so pending set and other collections deduplicate by tile.
         /// </summary>
         public override bool Equals(object obj) => Equals(obj as TileView);
 
         /// <summary>
-        /// Logical identity matches TileViewModelCache.TileKey so pending set and other collections deduplicate by tile.
+        /// Logical identity matches TileViewModel.UniqueKey so pending set and other collections deduplicate by tile.
         /// </summary>
         public bool Equals(TileView? other) =>
-            other is not null && string.Equals(_cacheKey, other._cacheKey, StringComparison.Ordinal);
+            other is not null && _tileViewModel.UniqueKey == other._tileViewModel.UniqueKey;
 
         /*
         private static void TryCreateCacheDirectory(string path)
@@ -341,49 +349,11 @@ namespace Viking.ViewModels
                 return currentTexture;
 
             // Already in the queue (or dequeued but not yet completed); don't start another load.
-            if (PendingTextureQueue.IsTileViewPending(this))
+            if (PendingTextureQueue.IsTileViewPending(this) || TextureRequestQueue.IsTileViewPending(this))
                 return null;
 
-            //In this path we either have no texture, or a low-res texture.  Ask for a new one if we haven't already
-            if (ServerTextureNotFound == false && Interlocked.CompareExchange(ref this.TextureLoadCancellationTokenSource,
-                    new CancellationTokenSource(), null) is null)
-            {
-                // At most one TextureReaderV2 per file at a time.
-                if (!PendingTextureQueue.TryBeginLoadingFile(this.TextureFileName))
-                {
-                    Interlocked.Exchange(ref TextureLoadCancellationTokenSource, null);
-                    return null;
-                }
-
-                TextureReaderV2 texReader = State.volume.IsLocal == false
-                    ? new TextureReaderV2(graphicsDevice,
-                                          new Uri(this.TextureFileName),
-                                          this.TextureCachedFileName,
-                                          this.MipMapLevels,
-                                          null,
-                                          TextureLoadCancellationTokenSource,
-                                          tileViewOwner: this,
-                                          sectionToken: token)
-                    : new TextureReaderV2(graphicsDevice,
-                                          new Uri(this.TextureFileName),
-                                          this.MipMapLevels,
-                                          null,
-                                          TextureLoadCancellationTokenSource,
-                                          tileViewOwner: this,
-                                          sectionToken: token);
-
-                try
-                {
-                    return await texReader.LoadTexture().ConfigureAwait(false);
-                }
-                finally
-                {
-                    ServerTextureNotFound = texReader.TextureNotFound;
-                    Interlocked.Exchange(ref TextureLoadCancellationTokenSource, null);
-                }
-            }
-
-            return null;
+            // Enqueue to priority-sorted request queue (both HTTP and local paths)
+            return await TextureRequestQueue.EnqueueRequest(this, graphicsDevice, token).ConfigureAwait(false);
         }
 
         private Texture2D CompleteTextureReadTask(TextureReaderV2 texReader, Task<Texture2D> texTask)
