@@ -32,7 +32,7 @@ namespace WebAnnotation.UI.Controls
             if (true)
             {
                 // Load design-time books.
-                WebAnnotationModel.State.Endpoint = new Uri("https://websvc1.connectomes.utah.edu/RABBIT/Annotation/Service.svc");
+                WebAnnotationModel.State.Endpoint = new Uri("https://rouge1.codepharm.net/RABBIT/Annotation/Service.svc");
                 WebAnnotationModel.State.UserCredentials = new System.Net.NetworkCredential("jamesan", "4%w%o06");
                 RootStructureTypes = new System.Collections.ObjectModel.ObservableCollection<IStructureTypeReadOnly>(Store.StructureTypes.GetObjectsByIDs(Store.StructureTypes.RootObjects, true));
                 tree_view.ItemsSource = RootStructureTypes;
