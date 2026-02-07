@@ -102,7 +102,9 @@ namespace Viking
 
             // Remove the DefaultTraceListener so nothing writes to OutputDebugString.
             // In Debug builds CreateDebugListener() re-adds a file-based listener.
+#if !DEBUG
             Trace.Listeners.Clear();
+#endif
             CreateDebugListener();
 
             Trace.WriteLine("Arguments: " + args.ToString(), "Viking");
