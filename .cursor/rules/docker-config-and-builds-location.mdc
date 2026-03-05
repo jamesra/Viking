@@ -1,0 +1,27 @@
+---
+description: Where Docker mounted config and build data are stored (D:\Docker) for containers in this repo
+globs: "**/docker-compose*.yml,**/*.dockerfile,**/Dockerfile*,**/config-template/**"
+alwaysApply: false
+---
+
+# Docker mounted-config and builds location
+
+For Docker containers in this project, **do not store real secrets or filled-in config in the repo**. Use a single local root for all such data:
+
+**Root:** `D:\Docker`
+
+- **Mounted config (runtime, mapped into container):** `D:\Docker\mounted-configs\<ServiceName>\`  
+  - Certs, keys, secrets, and other runtime data mounted into the container.  
+  - User copies from the repo’s config-template (e.g. `config-template/mounted-config/`) to this path and replaces templates with real values.
+
+- **Builds (build/run-time env):** `D:\Docker\Builds\<ServiceName>\`  
+  - `.env` files and other env used by `docker-compose` and restart scripts.  
+  - User copies from the repo’s build templates (e.g. `config-template/build/`) to this path and fills in values.
+
+**Conventions for new containers:**
+
+- Put template files in the repo under something like `config-template/mounted-config/` and `config-template/build/` (or the service’s equivalent).
+- Document in a README that the user copies those to `D:\Docker\mounted-configs\<ServiceName>` and `D:\Docker\Builds\<ServiceName>` and does not commit the copies.
+- Point compose and scripts at the Builds path for `env_file` and .env mounts (e.g. via `IDENTITY_BUILD_ENV_PATH` or a similar variable for the service). Use a variable like `IDENTITY_MOUNTED_CONFIG_PATH` for the mounted-config path.
+
+Example for Identity Server: mounted-config = `D:\Docker\mounted-configs\IdentityServer`, Builds = `D:\Docker\Builds\IdentityServer`.
