@@ -45,3 +45,6 @@ TestResults
 .env.*
 *.env
 *.env.*
+
+# Optional local mirror of another Viking checkout (not part of this tree)
+/Viking/

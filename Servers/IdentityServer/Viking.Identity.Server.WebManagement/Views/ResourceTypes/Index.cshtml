@@ -1,0 +1,44 @@
+﻿@model IEnumerable<Viking.Identity.Models.ResourceType>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h2>Index</h2>
+
+@if (this.User.IsInRole(Special.Roles.Admin))
+{
+    <p>
+        <a asp-action="Create">Create New</a>
+    </p>
+}
+<table class="table">
+    <thead>
+        <tr>
+            <th>@Html.DisplayNameFor(m => m.Id)</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Id)
+                </td>
+                <td>
+                    @if (this.User.IsInRole(Special.Roles.Admin))
+                    {
+                        <a asp-action="Edit" asp-route-id="@item.Id">Edit</a><text> | </text>
+                        <a asp-action="Details" asp-route-id="@item.Id">Details</a><text> | </text>
+                        <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                    }
+                    else
+                    {
+                        <a asp-action="Details" asp-route-id="@item.Id">Details</a>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

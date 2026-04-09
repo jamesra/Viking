@@ -1,0 +1,93 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <UserSecretsId>aspnet-IdentityServer-5FE82F6F-0884-4871-829E-BCFE700497A2</UserSecretsId>
+    <OutputType>Exe</OutputType>
+    <SignAssembly>false</SignAssembly>
+    <StartupObject></StartupObject>
+    <RootNamespace>Viking.Identity.Server.WebManagement</RootNamespace>
+    <AssemblyName>Viking.Identity.Server.WebManagement</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Remove="Views\Shared\UserSelected.cshtml" />
+  </ItemGroup>
+ 
+  <ItemGroup>
+	<PackageReference Include="ConfigurationSubstitutor" Version="1.5.1" />
+	<PackageReference Include="DotNetEnv" Version="3.1.1" />
+	<PackageReference Include="Duende.AspNetCore.Authentication.OAuth2Introspection" Version="6.3.0" />
+	<PackageReference Include="Duende.IdentityServer" Version="7.3.2" />
+    <PackageReference Include="Duende.IdentityServer.AspNetIdentity" Version="7.3.2" />
+    <PackageReference Include="Duende.IdentityServer.EntityFramework" Version="7.3.2" />
+    <PackageReference Include="log4net" Version="3.2.0" /> 
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" /> 
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="9.0.9" /> 
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.9" /> 
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration" Version="9.0.0" /> 
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Core" Version="9.0.0" /> 
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />  
+    <PackageReference Include="Serilog" Version="4.3.0" />  
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.2" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <DotNetCliToolReference Include="Microsoft.EntityFrameworkCore.Tools.DotNet" Version="2.0.1" />
+    <DotNetCliToolReference Include="Microsoft.Extensions.SecretManager.Tools" Version="2.0.1" />
+    <DotNetCliToolReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Tools" Version="2.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Views\Permission\" />
+    <Folder Include="Views\Shared\EditorTemplates\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Identity.DataContext\Identity.DataContext.csproj" />
+    <ProjectReference Include="..\..\Identity.Models\Identity.Models.csproj" />
+    <ProjectReference Include="..\Identity.Configuration\Identity.Configuration.csproj" />
+    <ProjectReference Include="..\Viking.Identity.Server.Extensions\Viking.Identity.Server.Extensions.csproj" />
+  </ItemGroup>
+
+
+	<!-- Debug configuration -->
+	<ItemGroup>
+		<Content Include="../.env" Condition="Exists('../.env')">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<!-- Debug configuration -->
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<Content Include="../.env.Development" Condition="Exists('../.env.Development')">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<!-- Release configuration -->
+	<ItemGroup Condition="'$(Configuration)' == 'Release'">
+		<Content Include="../.env.Production" Condition="Exists('../.env.Production')">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+	<ItemGroup>
+		<Folder Include="Properties\" />
+	</ItemGroup>
+
+	<Target Name="CheckEnvFile" BeforeTargets="Build">
+		<Warning Text="WARNING: .env file not found at ../.env.&#xA;This file is optional for Docker Deployments.&#xA;If you need environment-specific configuration, create this file." Condition="!Exists('../.env')" />
+	</Target>
+
+	<Target Name="CheckDevelopmentEnvFile" BeforeTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+		<Warning Text="WARNING: .env.Development file not found at ../.env.Development.&#xA;This file is optional for Docker Deployments.&#xA;If you need environment-specific configuration, create this file." Condition="!Exists('../.env.Development')" />
+	</Target>
+
+	<Target Name="CheckProductionEnvFile" BeforeTargets="Build" Condition="'$(Configuration)' == 'Release'">
+		<Warning Text="WARNING: .env.Production file not found at ../.env.Production.&#xA;This file is optional for Docker Deployments.&#xA;If you need environment-specific configuration, create this file." Condition="!Exists('../.env.Production')" />
+	</Target>
+
+</Project>

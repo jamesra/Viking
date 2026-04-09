@@ -1,0 +1,5 @@
+---
+description: Project Structure & Naming
+alwaysApply: false
+---
+Keep projects separated by concern: Models, DataContext, Tests, Server applications, Extensions, and Configuration should be in separate projects. This separation is already established.

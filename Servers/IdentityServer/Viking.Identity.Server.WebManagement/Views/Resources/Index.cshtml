@@ -1,0 +1,18 @@
+﻿@model IEnumerable<Viking.Identity.Models.Resource>
+
+@{
+    ViewData["Title"] = "Index";
+    ViewData["ShowEdit"] = true; //Show edit for each index item in the partial view
+    ViewData["ShowDelete"] = true; //Show delete for each index item in the partial view
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Index</h2>
+@if (this.User.IsInRole(Special.Roles.Admin))
+{
+    <p>
+        <a asp-action="Create">Create New</a>
+    </p>
+}
+ 
+<partial name="~/Views/Shared/_ResourceDetailsGroupedListPartialView.cshtml" for="@Model" />

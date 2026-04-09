@@ -160,8 +160,8 @@ class SegmentationServicer(SegmentationServiceServicer):
                 index=segment['index'],
                 score=segment['score'],
                 mask=mask_bytes,
-                X=x,
-                Y=y
+                x=x,
+                y=y
             )
             
             # Add polygons to the segment result

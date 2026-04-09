@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "secrets1": {
+      "type": "secrets"
+    },
+    "mssql2": {
+      "type": "mssql",
+      "connectionId": "IdentityConnection"
+    },
+    "mssql1": {
+      "type": "mssql",
+      "connectionId": "PersistedGrantConnection"
+    }
+  }
+}

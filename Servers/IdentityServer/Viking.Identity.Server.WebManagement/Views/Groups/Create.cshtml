@@ -1,0 +1,60 @@
+﻿@model Viking.Identity.Server.WebManagement.Models.UserViewModels.CreateGroupViewModel
+
+@{
+    ViewData["Title"] = "Create Group";
+    ViewData["Breadcrumbs"] = new List<(string Text, string Url)>
+    {
+        ("Dashboard", Url.Action("Index", "Home")),
+        ("Groups", Url.Action("Index", "Groups")),
+        ("Create Group", null)
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-people-fill"></i> Create Group</h2>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to List
+    </a>
+</div>
+
+<div class="card card-modern">
+    <div class="card-header bg-group text-white">
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Group Details</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="Create" id="createGroupForm">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+            <partial name="~/Views/Shared/_CreateResourceBasicsPartialForm.cshtml" for="@Model" />
+            @Html.HiddenFor(x => Model.ResourceTypeId)
+            
+            @if (Model.Members != null)
+            {
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Add users and groups to new group:</label>
+                    <partial name="~/Views/Shared/_MembershipEditTablePartialView.cshtml" for="@Model.Members" />
+                </div>
+            }
+            
+            <div class="form-group mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-plus-circle"></i> Create Group
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-lg ms-2">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        $(document).ready(function() {
+            $('#createGroupForm').on('submit', function() {
+                var $submitBtn = $(this).find('button[type="submit"]');
+                $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Creating...');
+            });
+        });
+    </script>
+}

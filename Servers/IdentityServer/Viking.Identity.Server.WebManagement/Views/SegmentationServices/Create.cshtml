@@ -1,0 +1,64 @@
+@model Viking.Identity.Server.WebManagement.Models.UserViewModels.CreateSegmentationServiceViewModel
+
+@{
+    ViewData["Title"] = "Create Segmentation Service";
+    ViewData["Breadcrumbs"] = new List<(string Text, string Url)>
+    {
+        ("Dashboard", Url.Action("Index", "Home")),
+        ("Segmentation Services", Url.Action("Index", "SegmentationServices")),
+        ("Create Segmentation Service", null)
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-diagram-3"></i> Create Segmentation Service</h2>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to List
+    </a>
+</div>
+
+<div class="card card-modern">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Segmentation Service Details</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="Create" id="createSegmentationServiceForm">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+            <partial name="~/Views/Shared/_CreateResourceBasicsPartialForm.cshtml" for="@Model" />
+
+            @Html.HiddenFor(x => Model.ResourceTypeId)
+
+            <div class="mb-3">
+                <label asp-for="Endpoint" class="form-label"></label>
+                <input asp-for="Endpoint" class="form-control" placeholder="https://example.com/segmentation" />
+                <span asp-validation-for="Endpoint" class="text-danger"></span>
+                <small class="form-text text-muted">Enter the endpoint URL for this segmentation service</small>
+            </div>
+
+            <div class="form-group mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-plus-circle"></i> Create Segmentation Service
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-lg ms-2">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        $(document).ready(function() {
+            $('#createSegmentationServiceForm').on('submit', function() {
+                var $submitBtn = $(this).find('button[type="submit"]');
+                $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Creating...');
+            });
+        });
+    </script>
+}
+
+
+
+

@@ -1,0 +1,84 @@
+﻿@using Viking.Identity.Server.Authorization
+@model IEnumerable<Viking.Identity.Models.OrganizationalUnit>
+
+@{
+    ViewData["Title"] = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-building"></i> Organizations</h2>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Create New
+    </a>
+</div>
+
+<table class="table table-modern" id="orgsTable">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Name)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Description)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Parent)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Children)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    <a asp-action="Details" asp-route-id="@item.Id">@Html.DisplayFor(modelItem => item.Name)</a>
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Description)
+                </td>
+                <td>
+                    @if (item.Parent != null)
+                    {
+                        <a asp-action="Details" asp-route-id="@item.ParentID.Value">@Html.DisplayFor(modelItem => item.Parent.Name)</a>
+                    }
+                </td>
+                <td>
+                    <ul class="no-bullets">
+                        @for (int i = 0; i < item.Children.Count(); i++)
+                        {
+                            <a asp-action="Details" asp-route-id="@item.Children[i].Id">@Html.DisplayFor(modelItem => item.Children[i].Name)</a>
+                        } 
+                    </ul>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info">
+                            <i class="bi bi-info-circle"></i> Details
+                        </a>
+                        @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.GroupAccessManager)).Succeeded)
+                        {
+                            <a asp-action="CreateChild" asp-controller="Resources" asp-route-ParentId="@item.Id" class="btn btn-outline-success">
+                                <i class="bi bi-plus"></i> Create Child
+                            </a>
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-primary">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger">
+                                <i class="bi bi-trash"></i> Delete
+                            </a>
+                        }
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_DataTable", "orgsTable");}
+}

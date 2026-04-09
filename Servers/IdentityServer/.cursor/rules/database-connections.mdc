@@ -1,0 +1,5 @@
+---
+description: Configuration & Environment
+alwaysApply: false
+---
+Never hardcode database connection strings - always use the ConnectionStrings section in appsettings.json with environment variable substitution.

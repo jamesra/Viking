@@ -1,0 +1,19 @@
+﻿@model Viking.Identity.Server.WebManagement.Models.UserViewModels.CreateResourceViewModel
+  
+<div class="mb-3">
+    <label asp-for="Name" class="form-label"></label>
+    <input asp-for="Name" class="form-control" />
+    <span asp-validation-for="Name" class="text-danger"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="Description" class="form-label"></label>
+    <input asp-for="Description" class="form-control" />
+    <span asp-validation-for="Description" class="text-danger"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="ParentId" class="form-label"></label>
+    <select asp-for="ParentId" asp-items="@ViewBag.AvailableParents" class="form-select">
+        <option value="">None</option>
+    </select>
+    <span asp-validation-for="ParentId" class="text-danger"></span>
+</div> 

@@ -5,6 +5,7 @@ IF OBJECT_ID('tempdb..#UnlocatedStructures') IS NOT NULL DROP TABLE #UnlocatedSt
 delete from StructureLink where TargetID = SourceID
 go
 
+
 select ID as ID into #UnlocatedStructures FROM Structure where 
 	ID not in (select distinct ParentID from Location)
 

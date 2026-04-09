@@ -1,0 +1,94 @@
+﻿@model Viking.Identity.Server.WebManagement.Models.UserViewModels.GroupEditViewModel
+
+@{
+    ViewData["Title"] = "Edit Group";
+    ViewData["Breadcrumbs"] = new List<(string Text, string Url)>
+    {
+        ("Dashboard", Url.Action("Index", "Home")),
+        ("Groups", Url.Action("Index", "Groups")),
+        (Model.Group.Name, Url.Action("Details", "Groups", new { id = Model.Group.Id })),
+        ("Edit", null)
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-people-fill"></i> Edit Group: @Model.Group.Name</h2>
+    <a asp-action="Details" asp-route-id="@Model.Group.Id" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Details
+    </a>
+</div>
+
+<div class="card card-modern">
+    <div class="card-header bg-group text-white">
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Group Information</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="Edit" id="editGroupForm">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+            <input type="hidden" asp-for="Group" />
+            <input type="hidden" asp-for="Group.Id" />
+            
+            <div class="mb-3">
+                <label asp-for="Group.Name" class="form-label"></label>
+                <input asp-for="Group.Name" class="form-control" />
+                <span asp-validation-for="Group.Name" class="text-danger"></span>
+            </div>
+            
+            <div class="mb-3">
+                <label asp-for="Group.Description" class="form-label"></label>
+                <input asp-for="Group.Description" class="form-control" />
+                <span asp-validation-for="Group.Description" class="text-danger"></span>
+            </div>
+            
+            <div class="mb-3">
+                <label asp-for="Group.Parent" class="form-label"></label>
+                <select asp-for="Group.ParentID" asp-items="@ViewBag.AvailableParents" class="form-select">
+                    <option value="">None</option>
+                </select>
+                <span asp-validation-for="Group.ParentID" class="text-danger"></span>
+            </div>
+            
+            @if (Model.AlreadyMemberOf != null && Model.AlreadyMemberOf.Any())
+            {
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Already Member Of:</label>
+                    <div class="alert alert-info">
+                        <ul class="mb-0">
+                            @for (int i = 0; i < Model.AlreadyMemberOf.Count; i++)
+                            {
+                                <li>@Model.AlreadyMemberOf[i]</li>
+                            }
+                        </ul>
+                    </div>
+                    <small class="form-text text-muted">This group is already a member of the listed groups above, and cannot be added as a member to those groups.</small>
+                </div>
+            }
+            
+            <div class="mb-3">
+                <label class="form-label fw-bold">Members:</label>
+                <partial name="~/Views/Shared/_MembershipEditTablePartialView.cshtml" for="@Model.Members" />
+            </div>
+            
+            <div class="form-group mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-save"></i> Save Changes
+                </button>
+                <a asp-action="Details" asp-route-id="@Model.Group.Id" class="btn btn-outline-secondary btn-lg ms-2">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        $(document).ready(function() {
+            $('#editGroupForm').on('submit', function() {
+                var $submitBtn = $(this).find('button[type="submit"]');
+                $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...');
+            });
+        });
+    </script>
+}

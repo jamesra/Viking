@@ -1,0 +1,25 @@
+@* Reusable DataTable partial view *@
+@model string
+
+@{
+    var tableId = Model ?? "dataTable";
+}
+
+<script>
+    $(document).ready(function() {
+        $('#@tableId').DataTable({
+            responsive: true,
+            pageLength: 25,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+            order: [],
+            language: {
+                search: "_INPUT_",
+                searchPlaceholder: "Search..."
+            },
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+                 '<"row"<"col-sm-12"tr>>' +
+                 '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+        });
+    });
+</script>
+

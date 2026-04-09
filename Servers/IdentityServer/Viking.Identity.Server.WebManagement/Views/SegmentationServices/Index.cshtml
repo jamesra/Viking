@@ -1,0 +1,318 @@
+@using Viking.Identity.Server.Authorization
+@model IEnumerable<Viking.Identity.Models.SegmentationService>
+
+@{
+    ViewData["Title"] = "Segmentation Services";
+    var servicesByOrg = Model.GroupBy(s => s.Parent?.Name ?? "No Organization").OrderBy(g => g.Key);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-diagram-3"></i> Segmentation Services</h2>
+    <div class="btn-group" role="group">
+        @if (this.User.IsInRole(Special.Roles.Admin))
+        {
+            <button type="button" class="btn btn-warning" id="bulkPermissionsSegBtn" style="display: none;">
+                <i class="bi bi-shield-check"></i> Bulk Edit Permissions (<span id="selectedSegCount">0</span>)
+            </button>
+        }
+    </div>
+</div>
+
+<div class="btn-group mb-3" role="group" aria-label="View toggle">
+    <input type="radio" class="btn-check" name="segViewMode" id="segCardView" autocomplete="off" checked>
+    <label class="btn btn-outline-primary" for="segCardView">
+        <i class="bi bi-grid-3x3-gap"></i> Card View
+    </label>
+    <input type="radio" class="btn-check" name="segViewMode" id="segTableView" autocomplete="off">
+    <label class="btn btn-outline-primary" for="segTableView">
+        <i class="bi bi-table"></i> Table View
+    </label>
+</div>
+
+<div id="segCardViewContainer">
+    @foreach (var orgGroup in servicesByOrg)
+    {
+        <div class="card card-modern mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-building"></i> @orgGroup.Key
+                    <span class="badge bg-light text-dark ms-2">@orgGroup.Count() service(s)</span>
+                </h5>
+                @if (this.User.IsInRole(Special.Roles.Admin) && orgGroup.First().Parent != null)
+                {
+                    <a asp-action="Create" asp-route-parentOrgId="@orgGroup.First().Parent.Id" class="btn btn-light btn-sm">
+                        <i class="bi bi-plus-circle"></i> Create Segmentation Service
+                    </a>
+                }
+                else if (this.User.IsInRole(Special.Roles.Admin) && orgGroup.Key == "No Organization")
+                {
+                    <a asp-action="Create" class="btn btn-light btn-sm">
+                        <i class="bi bi-plus-circle"></i> Create Segmentation Service
+                    </a>
+                }
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    @foreach (var service in orgGroup.OrderBy(s => s.Name))
+                    {
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card card-modern card-segmentation h-100">
+                                <div class="card-body">
+                                    @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, service)))
+                                    {
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input seg-checkbox" type="checkbox" value="@service.Id" id="seg_@service.Id">
+                                            <label class="form-check-label" for="seg_@service.Id" style="cursor: pointer;">
+                                                <strong>Select for bulk operation</strong>
+                                            </label>
+                                        </div>
+                                    }
+                                    <h6 class="card-title">
+                                        <i class="bi bi-diagram-3"></i> @service.Name
+                                    </h6>
+                                    <p class="card-text text-muted small">
+                                        @(string.IsNullOrEmpty(service.Description) ? "No description" : service.Description)
+                                    </p>
+
+                                    @{
+                                        var uniqueUserCount = service.UsersWithPermissions?.Select(p => p.UserId).Distinct().Count() ?? 0;
+                                    }
+                                    @if (uniqueUserCount > 0)
+                                    {
+                                        <div class="mb-2">
+                                            <span class="badge bg-info">
+                                                <i class="bi bi-person"></i> @uniqueUserCount unique user(s)
+                                            </span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="mb-2">
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-exclamation-triangle"></i> No users with permissions
+                                            </span>
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(service.Endpoint?.ToString()))
+                                    {
+                                        <div class="card-text mb-2">
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                <input type="text" class="form-control form-control-sm" id="segEndpoint_@service.Id" value="@service.Endpoint" readonly style="font-size: 0.875rem;">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary copy-seg-endpoint-btn" data-url="@service.Endpoint" title="Copy to clipboard">
+                                                    <i class="bi bi-clipboard"></i>
+                                                </button>
+                                            </div>
+                                            <a href="@service.Endpoint" target="_blank" class="btn btn-sm btn-success">
+                                                <i class="bi bi-box-arrow-up-right"></i> Access Service
+                                            </a>
+                                        </div>
+                                    }
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a asp-action="Details" asp-route-id="@service.Id" class="btn btn-outline-info">
+                                            <i class="bi bi-info-circle"></i> Details
+                                        </a>
+                                        @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, service)))
+                                        {
+                                            <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@service.Id" class="btn btn-outline-primary">
+                                                <i class="bi bi-shield-check"></i> Permissions
+                                            </a>
+                                            <a asp-action="Edit" asp-route-id="@service.Id" class="btn btn-outline-secondary">
+                                                <i class="bi bi-pencil"></i> Edit
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<div id="segTableViewContainer" style="display: none;">
+    <table class="table table-modern" id="segmentationServicesTable">
+        <thead>
+            <tr>
+                <th style="width: 40px;">
+                    @if (this.User.IsInRole(Special.Roles.Admin))
+                    {
+                        <input type="checkbox" id="selectAllSegTable" title="Select All">
+                    }
+                </th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Organization</th>
+                <th>Endpoint</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.OrderBy(s => s.Parent?.Name ?? "").ThenBy(s => s.Name))
+            {
+                <tr>
+                    <td>
+                        @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, item)))
+                        {
+                            <input class="form-check-input seg-checkbox" type="checkbox" value="@item.Id" id="seg_table_@item.Id">
+                        }
+                    </td>
+                    <td>
+                        <i class="bi bi-diagram-3"></i>
+                        <a asp-action="Details" asp-route-id="@item.Id">@item.Name</a>
+                    </td>
+                    <td>@(string.IsNullOrEmpty(item.Description) ? "-" : item.Description)</td>
+                    <td>
+                        @if (item.Parent != null)
+                        {
+                            <i class="bi bi-building text-org"></i>
+                            <a asp-controller="OrganizationalUnits" asp-action="Details" asp-route-id="@item.Parent.Id">@item.Parent.Name</a>
+                        }
+                        else
+                        {
+                            <span class="text-muted">-</span>
+                        }
+                    </td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(item.Endpoint?.ToString()))
+                        {
+                            <a href="@item.Endpoint" target="_blank" class="btn btn-sm btn-success">
+                                <i class="bi bi-box-arrow-up-right"></i> Open
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="text-muted">-</span>
+                        }
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info">
+                                <i class="bi bi-info-circle"></i>
+                            </a>
+                            @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, item)))
+                            {
+                                <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@item.Id" class="btn btn-outline-primary">
+                                    <i class="bi bi-shield-check"></i>
+                                </a>
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            var $bulkBtn = $('#bulkPermissionsSegBtn');
+            var $selectedCount = $('#selectedSegCount');
+            var $selectAllTable = $('#selectAllSegTable');
+
+            function updateBulkButton() {
+                var selected = $('.seg-checkbox:checked').length;
+                $selectedCount.text(selected);
+                if (selected > 0) {
+                    $bulkBtn.show();
+                } else {
+                    $bulkBtn.hide();
+                }
+            }
+
+            $(document).on('change', '.seg-checkbox', function () {
+                updateBulkButton();
+            });
+
+            $selectAllTable.on('change', function () {
+                var isChecked = $(this).is(':checked');
+                $('.seg-checkbox').prop('checked', isChecked);
+                updateBulkButton();
+            });
+
+            $bulkBtn.on('click', function () {
+                var selectedIds = $('.seg-checkbox:checked').map(function () {
+                    return $(this).val();
+                }).get();
+
+                if (selectedIds.length === 0) {
+                    alert('Please select at least one segmentation service.');
+                    return;
+                }
+
+                window.location.href = '@Url.Action("BulkEditSegmentation", "GrantedPermissions")?segmentationServiceIds=' + selectedIds.join(',');
+            });
+
+            $('input[name=\"segViewMode\"]').change(function () {
+                if ($(this).attr('id') === 'segCardView') {
+                    $('#segCardViewContainer').show();
+                    $('#segTableViewContainer').hide();
+                } else {
+                    $('#segCardViewContainer').hide();
+                    $('#segTableViewContainer').show();
+                    if (!$.fn.DataTable.isDataTable('#segmentationServicesTable')) {
+                        $('#segmentationServicesTable').DataTable({
+                            responsive: true,
+                            pageLength: 25,
+                            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, \"All\"]],
+                            order: [],
+                            columnDefs: [
+                                { orderable: false, targets: 0 }
+                            ],
+                            language: {
+                                search: \"_INPUT_\",
+                                searchPlaceholder: \"Search...\"
+                            }
+                        });
+                    }
+                }
+                updateBulkButton();
+            });
+
+            updateBulkButton();
+
+            $('.copy-seg-endpoint-btn').on('click', function () {
+                var url = $(this).data('url');
+                var $input = $(this).siblings('input');
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(url).then(function () {
+                        var $btn = $(this);
+                        var originalHtml = $btn.html();
+                        $btn.html('<i class=\"bi bi-check\"></i>').removeClass('btn-outline-secondary').addClass('btn-success');
+                        setTimeout(function () {
+                            $btn.html(originalHtml).removeClass('btn-success').addClass('btn-outline-secondary');
+                        }, 2000);
+                    }.bind(this)).catch(function (err) {
+                        console.error('Failed to copy:', err);
+                        $input.select();
+                        document.execCommand('copy');
+                        alert('Endpoint copied to clipboard');
+                    });
+                } else {
+                    $input.select();
+                    document.execCommand('copy');
+                    var $btn = $(this);
+                    var originalHtml = $btn.html();
+                    $btn.html('<i class=\"bi bi-check\"></i>').removeClass('btn-outline-secondary').addClass('btn-success');
+                    setTimeout(function () {
+                        $btn.html(originalHtml).removeClass('btn-success').addClass('btn-outline-secondary');
+                    }, 2000);
+                }
+            });
+        });
+    </script>
+}
+
+
+
+

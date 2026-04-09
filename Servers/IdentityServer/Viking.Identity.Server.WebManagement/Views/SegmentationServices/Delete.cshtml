@@ -1,0 +1,75 @@
+@model Viking.Identity.Models.SegmentationService
+
+@{
+    ViewData["Title"] = "Delete Segmentation Service";
+    ViewData["Breadcrumbs"] = new List<(string Text, string Url)>
+    {
+        ("Dashboard", Url.Action("Index", "Home")),
+        ("Segmentation Services", Url.Action("Index", "SegmentationServices")),
+        (Model.Name, Url.Action("Details", "SegmentationServices", new { id = Model.Id })),
+        ("Delete", null)
+    };
+}
+
+<div class="alert alert-danger d-flex align-items-center justify-content-between">
+    <div>
+        <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Confirm Deletion</h4>
+        <p>You are about to permanently delete the segmentation service <strong>@Model.Name</strong>. This action cannot be undone.</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-light">
+        <i class="bi bi-arrow-left"></i> Back to List
+    </a>
+</div>
+
+<div class="card card-modern">
+    <div class="card-header bg-danger text-white">
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Segmentation Service Details</h5>
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">Name</dt>
+            <dd class="col-sm-9">@Model.Name</dd>
+
+            <dt class="col-sm-3">Description</dt>
+            <dd class="col-sm-9">
+                @if (string.IsNullOrEmpty(Model.Description))
+                {
+                    <em class="text-muted">No description provided</em>
+                }
+                else
+                {
+                    @Model.Description
+                }
+            </dd>
+
+            @if (Model.Parent != null)
+            {
+                <dt class="col-sm-3">Organization</dt>
+                <dd class="col-sm-9">
+                    <i class="bi bi-building text-org"></i>
+                    <a asp-controller="OrganizationalUnits" asp-action="Details" asp-route-id="@Model.Parent.Id">@Model.Parent.Name</a>
+                </dd>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.Endpoint?.ToString()))
+            {
+                <dt class="col-sm-3">Endpoint</dt>
+                <dd class="col-sm-9">@Model.Endpoint</dd>
+            }
+        </dl>
+
+        <form asp-action="Delete">
+            <input type="hidden" asp-for="Id" />
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash"></i> Confirm Delete
+            </button>
+            <a asp-action="Index" class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-x-circle"></i> Cancel
+            </a>
+        </form>
+    </div>
+</div>
+
+
+
+

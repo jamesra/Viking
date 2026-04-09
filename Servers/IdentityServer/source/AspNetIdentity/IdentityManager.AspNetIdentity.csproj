@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net451</TargetFramework>
+    <OutputType>Library</OutputType>
+    <RootNamespace>IdentityManager.AspNetIdentity</RootNamespace>
+    <AssemblyName>IdentityManager.AspNetIdentity</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="IdentityManager" Version="1.0.0-build-10050" />
+    <PackageReference Include="Microsoft.AspNet.Identity.Core" Version="2.2.1" />
+    <PackageReference Include="Owin" Version="1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\default.licenseheader">
+      <Link>default.licenseheader</Link>
+    </None>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+    <None Include="IdentityManager.AspNetIdentity.nuspec" />
+  </ItemGroup>
+
+</Project>

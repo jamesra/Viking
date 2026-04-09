@@ -1,0 +1,15 @@
+﻿@model Viking.Identity.Server.WebManagement.Models.UserViewModels.ItemSelectedViewModel<string>
+
+@Html.HiddenFor(x => Model.Id)
+@{
+    var checkboxId = $"cb_{Model.Id.ToString().Replace(".", "_").Replace(" ", "_").Replace("/", "_")}_{Math.Abs(ViewContext.ViewData.TemplateInfo.HtmlFieldPrefix.GetHashCode())}";
+}
+<div class="form-check form-switch permission-switch-container">
+    @Html.CheckBoxFor(x => Model.Selected, new { 
+        @class = "form-check-input permission-checkbox", 
+        id = checkboxId, 
+        role = "switch",
+        data_permission_id = Model.Id
+    })
+    <label class="form-check-label visually-hidden" for="@checkboxId">@Model.Id</label>
+</div>

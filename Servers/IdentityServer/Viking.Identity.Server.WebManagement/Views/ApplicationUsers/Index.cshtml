@@ -1,0 +1,111 @@
+﻿@model IEnumerable<Viking.Identity.Models.ApplicationUser>
+
+@{
+    ViewData["Title"] = "Users";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-people"></i> Users</h2>
+    @if (this.User.IsInRole(Special.Roles.Admin))
+    {
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Create New
+        </a>
+    }
+</div>
+
+<table class="table table-modern" id="usersTable">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Email Confirmed</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    <i class="bi bi-person entity-icon-user"></i>
+                    <strong>@item.GivenName @item.FamilyName</strong>
+                </td>
+                <td>
+                    <code>@item.UserName</code>
+                </td>
+                <td>
+                    @if (!string.IsNullOrEmpty(item.Email))
+                    {
+                        <a href="mailto:@item.Email">@item.Email</a>
+                    }
+                    else
+                    {
+                        <span class="text-muted">-</span>
+                    }
+                </td>
+                <td>
+                    @if (item.EmailConfirmed)
+                    {
+                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Confirmed</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-warning text-dark"><i class="bi bi-x-circle"></i> Pending</span>
+                    }
+                </td>
+                <td>
+                    @if (!string.IsNullOrEmpty(item.PhoneNumber))
+                    {
+                        @item.PhoneNumber
+                    }
+                    else
+                    {
+                        <span class="text-muted">-</span>
+                    }
+                </td>
+                <td>
+                    @if (item.LockoutEnabled && item.LockoutEnd.HasValue && item.LockoutEnd.Value > DateTimeOffset.UtcNow)
+                    {
+                        <span class="badge bg-danger"><i class="bi bi-lock"></i> Locked</span>
+                    }
+                    else if (item.TwoFactorEnabled)
+                    {
+                        <span class="badge bg-info"><i class="bi bi-shield-check"></i> 2FA</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Active</span>
+                    }
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info" title="View Details">
+                            <i class="bi bi-info-circle"></i>
+                        </a>
+                        @if (this.User.IsInRole(Special.Roles.Admin) || this.User.Identity.Name == item.UserName)
+                        {
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-primary" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            @if (this.User.IsInRole(Special.Roles.Admin))
+                            {
+                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            }
+                        }
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_DataTable", "usersTable");}
+}

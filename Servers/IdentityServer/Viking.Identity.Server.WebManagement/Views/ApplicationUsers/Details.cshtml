@@ -1,0 +1,312 @@
+﻿@model Viking.Identity.Models.ApplicationUser
+
+@{
+    ViewData["Title"] = $"{Model.GivenName} {Model.FamilyName}";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var canEdit = this.User.IsInRole(Special.Roles.Admin) || this.User.Identity.Name == Model.UserName;
+    var recursiveGroups = ViewBag.RecursiveGroups as IEnumerable<Viking.Identity.Models.Group> ?? new List<Viking.Identity.Models.Group>();
+    var userGroups = ViewBag.UserGroups as IEnumerable<Viking.Identity.Models.Group> ?? new List<Viking.Identity.Models.Group>();
+    var volumes = ViewBag.Volumes as List<Viking.Identity.Models.Volume> ?? new List<Viking.Identity.Models.Volume>();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>
+        <i class="bi bi-person entity-icon-user"></i> @Model.GivenName @Model.FamilyName
+        <small class="text-muted">(@Model.UserName)</small>
+    </h2>
+    <div class="btn-group" role="group">
+        @if (canEdit)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
+</div>
+
+<!-- Tab Navigation -->
+<ul class="nav nav-tabs mb-4" id="userTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab" aria-controls="profile" aria-selected="true">
+            <i class="bi bi-person"></i> Profile
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="organizations-tab" data-bs-toggle="tab" data-bs-target="#organizations" type="button" role="tab" aria-controls="organizations" aria-selected="false">
+            <i class="bi bi-building"></i> Organizations
+            @if (recursiveGroups.Any())
+            {
+                <span class="badge bg-primary ms-1">@recursiveGroups.Count()</span>
+            }
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="groups-tab" data-bs-toggle="tab" data-bs-target="#groups" type="button" role="tab" aria-controls="groups" aria-selected="false">
+            <i class="bi bi-people-fill"></i> Groups
+            @if (userGroups.Any())
+            {
+                <span class="badge bg-group ms-1">@userGroups.Count()</span>
+            }
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="permissions-tab" data-bs-toggle="tab" data-bs-target="#permissions" type="button" role="tab" aria-controls="permissions" aria-selected="false">
+            <i class="bi bi-shield-check"></i> Permissions
+            @if (volumes.Any())
+            {
+                <span class="badge bg-success ms-1">@volumes.Count</span>
+            }
+        </button>
+    </li>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content" id="userTabContent">
+    <!-- Profile Tab -->
+    <div class="tab-pane fade show active" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+        <div class="card card-modern">
+            <div class="card-header bg-user text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Profile Information</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">Name</dt>
+                    <dd class="col-sm-9">@Model.GivenName @Model.FamilyName</dd>
+                    
+                    <dt class="col-sm-3">Username</dt>
+                    <dd class="col-sm-9"><code>@Model.UserName</code></dd>
+                    
+                    <dt class="col-sm-3">Email</dt>
+                    <dd class="col-sm-9">
+                        @if (!string.IsNullOrEmpty(Model.Email))
+                        {
+                            <a href="mailto:@Model.Email">@Model.Email</a>
+                            @if (Model.EmailConfirmed)
+                            {
+                                <span class="badge bg-success ms-2"><i class="bi bi-check-circle"></i> Confirmed</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark ms-2"><i class="bi bi-x-circle"></i> Pending</span>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-muted">No email</span>
+                        }
+                    </dd>
+                    
+                    <dt class="col-sm-3">Phone</dt>
+                    <dd class="col-sm-9">
+                        @if (!string.IsNullOrEmpty(Model.PhoneNumber))
+                        {
+                            @Model.PhoneNumber
+                            @if (Model.PhoneNumberConfirmed)
+                            {
+                                <span class="badge bg-success ms-2"><i class="bi bi-check-circle"></i> Confirmed</span>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-muted">No phone number</span>
+                        }
+                    </dd>
+                    
+                    <dt class="col-sm-3">Account Status</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.LockoutEnabled && Model.LockoutEnd.HasValue && Model.LockoutEnd.Value > System.DateTimeOffset.UtcNow)
+                        {
+                            <span class="badge bg-danger"><i class="bi bi-lock"></i> Locked</span>
+                        }
+                        else if (Model.TwoFactorEnabled)
+                        {
+                            <span class="badge bg-info"><i class="bi bi-shield-check"></i> 2FA Enabled</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Active</span>
+                        }
+                    </dd>
+                    
+                    @if (this.User.IsInRole(Special.Roles.Admin))
+                    {
+                        <dt class="col-sm-3">Registration Date</dt>
+                        <dd class="col-sm-9">@Model.RegistrationDate.ToString("yyyy-MM-dd")</dd>
+                        
+                        @if (Model.LockoutEnabled)
+                        {
+                            <dt class="col-sm-3">Lockout End</dt>
+                            <dd class="col-sm-9">@(Model.LockoutEnd?.ToString("yyyy-MM-dd HH:mm") ?? "Not locked")</dd>
+                        }
+                        
+                        <dt class="col-sm-3">Access Failed Count</dt>
+                        <dd class="col-sm-9">@Model.AccessFailedCount</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- Organizations Tab -->
+    <div class="tab-pane fade" id="organizations" role="tabpanel" aria-labelledby="organizations-tab">
+        @if (recursiveGroups.Any())
+        {
+            <div class="card card-modern">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-building"></i> Organizational Memberships
+                        @if (canEdit)
+                        {
+                            <a asp-action="EditOrganizations" asp-route-id="@Model.Id" class="btn btn-sm btn-light float-end">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                        }
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        @foreach (var group in recursiveGroups.OrderBy(g => g.Name))
+                        {
+                            <a asp-controller="Groups" asp-action="Details" asp-route-id="@group.Id" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">
+                                        <i class="bi bi-building text-org"></i> @group.Name
+                                    </h6>
+                                </div>
+                                @if (!string.IsNullOrEmpty(group.Description))
+                                {
+                                    <p class="mb-1 text-muted small">@group.Description</p>
+                                }
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> This user is not a member of any organizations.
+                @if (canEdit)
+                {
+                    <a asp-action="EditOrganizations" asp-route-id="@Model.Id" class="alert-link">Assign to organizations</a>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Groups Tab -->
+    <div class="tab-pane fade" id="groups" role="tabpanel" aria-labelledby="groups-tab">
+        @if (userGroups.Any())
+        {
+            <div class="card card-modern">
+                <div class="card-header bg-group text-white">
+                    <h5 class="mb-0"><i class="bi bi-people-fill"></i> Group Memberships</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var group in userGroups.OrderBy(g => g.Name))
+                        {
+                            <div class="col-md-6 mb-3">
+                                <div class="card card-modern card-group">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="bi bi-people-fill entity-icon-group"></i> @group.Name
+                                        </h6>
+                                        @if (!string.IsNullOrEmpty(group.Description))
+                                        {
+                                            <p class="card-text text-muted small">@group.Description</p>
+                                        }
+                                        <a asp-controller="Groups" asp-action="Details" asp-route-id="@group.Id" class="btn btn-sm btn-outline-info">
+                                            <i class="bi bi-info-circle"></i> View Details
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> This user is not a member of any groups.
+            </div>
+        }
+    </div>
+
+    <!-- Permissions Tab -->
+    <div class="tab-pane fade" id="permissions" role="tabpanel" aria-labelledby="permissions-tab">
+        @if (volumes.Any())
+        {
+            <div class="card card-modern">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-shield-check"></i> Accessible Volumes</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Volumes this user has been granted direct access to.</p>
+                    <div class="row">
+                        @foreach (var volume in volumes.OrderBy(v => v.Name))
+                        {
+                            var userPermissions = volume.UsersWithPermissions?.Where(gup => gup.UserId == Model.Id).ToList() ?? new List<Viking.Identity.Models.GrantedUserPermission>();
+                            
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="card card-modern card-volume h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="bi bi-hdd entity-icon-volume"></i> @volume.Name
+                                        </h6>
+                                        @if (!string.IsNullOrEmpty(volume.Description))
+                                        {
+                                            <p class="card-text text-muted small">@volume.Description</p>
+                                        }
+                                        
+                                        @if (volume.Parent != null)
+                                        {
+                                            <p class="card-text small mb-2">
+                                                <i class="bi bi-building text-org"></i>
+                                                <a asp-controller="OrganizationalUnits" asp-action="Details" asp-route-id="@volume.Parent.Id">@volume.Parent.Name</a>
+                                            </p>
+                                        }
+                                        
+                                        @if (userPermissions.Any())
+                                        {
+                                            <div class="mb-2">
+                                                @foreach (var perm in userPermissions.Select(p => p.PermissionId).Distinct())
+                                                {
+                                                    <span class="badge bg-permission mb-1">@perm</span>
+                                                }
+                                            </div>
+                                        }
+                                        
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a asp-controller="Volumes" asp-action="Details" asp-route-id="@volume.Id" class="btn btn-outline-info">
+                                                <i class="bi bi-info-circle"></i> Details
+                                            </a>
+                                            @if (!string.IsNullOrEmpty(volume.Endpoint?.ToString()))
+                                            {
+                                                <a href="@volume.Endpoint" target="_blank" class="btn btn-outline-success">
+                                                    <i class="bi bi-box-arrow-up-right"></i> Open
+                                                </a>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> This user doesn't have direct access to any volumes. They may have access through group memberships.
+            </div>
+        }
+    </div>
+</div>

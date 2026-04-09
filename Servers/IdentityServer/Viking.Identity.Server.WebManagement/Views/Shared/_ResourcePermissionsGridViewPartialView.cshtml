@@ -1,0 +1,149 @@
+﻿@model Viking.Identity.Server.WebManagement.Models.UserViewModels.ResourcePermissionsEditGridViewModel
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+@if (Model.AvailablePermissions == null || !Model.AvailablePermissions.Any())
+{
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i> <strong>No permissions available:</strong> This resource type does not have any permissions defined. Please configure permissions for this resource type.
+    </div>
+    <div class="alert alert-info">
+        <strong>Debug Info:</strong><br/>
+        AvailablePermissions: @(Model.AvailablePermissions?.Count() ?? 0)<br/>
+        UserPermissions: @(Model.UserPermissions?.Count() ?? 0)<br/>
+        GroupPermissions: @(Model.GroupPermissions?.Count() ?? 0)
+    </div>
+}
+
+@if (Model.GroupPermissions != null && Model.GroupPermissions.Any())
+{
+<div class="card card-modern mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-people-fill"></i> Group Permissions</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-modern permission-grid">
+        <thead>
+            <tr>
+                <th>
+                    @Html.DisplayNameFor(x => Model.GroupPermissions[0].Name)
+                </th>
+
+                @for (int i = 0; i < Model.AvailablePermissions.Count(); i++)
+                {
+                    <th>
+                        @Html.DisplayFor(x => Model.AvailablePermissions[i])
+                    </th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < Model.GroupPermissions.Count(); i++)
+            {
+                <tr>
+                    <td>
+                        @Html.DisplayFor(x => Model.GroupPermissions[i].Name)
+                        @Html.HiddenFor(x => Model.GroupPermissions[i].Name)
+                        @Html.HiddenFor(x => Model.GroupPermissions[i].GranteeId)
+                    </td>
+
+                @if (Model.AvailablePermissions != null && Model.AvailablePermissions.Any())
+                {
+                    @for (int iPermission = 0; iPermission < Model.AvailablePermissions.Count(); iPermission++)
+                    {
+                        <td class="text-center">
+                            @if (iPermission < Model.GroupPermissions[i].Permissions.Count())
+                            {
+                                <partial name="~/Views/Shared/_Checkbox_StringKey.cshtml" for="@Model.GroupPermissions[i].Permissions[iPermission]" />
+                            }
+                            else
+                            {
+                                <div class="alert alert-danger">Permission index mismatch: @iPermission</div>
+                            }
+                        </td>
+                    }
+                }
+                else
+                {
+                    <td colspan="@(Model.AvailablePermissions?.Count() ?? 0)" class="text-center text-muted">
+                        No permissions defined
+                    </td>
+                }
+                </tr>
+            }
+        </tbody>
+    </table>
+        </div>
+    </div>
+</div>
+}
+@if (Model.UserPermissions != null && Model.UserPermissions.Any())
+{
+<div class="card card-modern mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-person"></i> User Permissions</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-modern permission-grid">
+        <thead>
+            <tr>
+                <th>
+                    @Html.DisplayNameFor(x => Model.UserPermissions[0].Name)
+                </th>
+
+                @for (int i = 0; i < Model.AvailablePermissions.Count(); i++)
+                {
+                    <th>
+                        @Html.DisplayFor(x => Model.AvailablePermissions[i])
+                    </th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < Model.UserPermissions.Count(); i++)
+            {
+                <tr>
+                    <td>
+                        @Html.DisplayFor(x => Model.UserPermissions[i].Name)
+                        @Html.HiddenFor(x => Model.UserPermissions[i].Name)
+                        @Html.HiddenFor(x => Model.UserPermissions[i].GranteeId)
+                    </td>
+
+                    @if (Model.AvailablePermissions != null && Model.AvailablePermissions.Any())
+                    {
+                        @for (int iPermission = 0; iPermission < Model.AvailablePermissions.Count(); iPermission++)
+                        {
+                            <td class="text-center">
+                                @if (iPermission < Model.UserPermissions[i].Permissions.Count())
+                                {
+                                    <partial name="~/Views/Shared/_Checkbox_StringKey.cshtml" for="@Model.UserPermissions[i].Permissions[iPermission]" />
+                                }
+                                else
+                                {
+                                    <div class="alert alert-danger">Permission index mismatch: @iPermission</div>
+                                }
+                            </td>
+                        }
+                    }
+                    else
+                    {
+                        <td colspan="@(Model.AvailablePermissions?.Count() ?? 0)" class="text-center text-muted">
+                            No permissions defined
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+        </div>
+    </div>
+</div>
+}
+@if ((Model.GroupPermissions == null || !Model.GroupPermissions.Any()) && (Model.UserPermissions == null || !Model.UserPermissions.Any()))
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No users or groups have been granted permissions yet.
+    </div>
+}

@@ -1,0 +1,85 @@
+services:
+  identity-standalone:
+    env_file:
+        - .env
+        - .env.Docker
+    build:
+      context: ..
+      dockerfile: IdentityServer/IdentityServerStandalone/Dockerfile
+      args:
+        IMAGE_VERSION: ${IMAGE_VERSION:-latest}
+      
+    ports:
+       - "${IDENTITY_STANDALONE_HTTP_PORT}:80"
+       - "${IDENTITY_STANDALONE_HTTPS_PORT}:443"
+    image: ${IMAGE_REGISTRY:-}identity-standalone:${IMAGE_VERSION:-latest}
+    secrets:
+      - ssl_cert
+      - ssl_cert_pfx 
+      - ssl_key
+    environment:
+      - ASPNETCORE_URLS=http://+:80;https://+:443
+      - SSL_CERT_PATH=/run/secrets/ssl_cert
+      - SSL_KEY_PATH=/run/secrets/ssl_key
+      - SSL_KEY_CERT_PATH=/run/secrets/ssl_cert_pfx
+      - ASPNETCORE_ENVIRONMENT=Docker   
+      - ConnectionStrings__IdentityConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=${SQL_SERVER_IDENTITY_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
+      - ConnectionStrings__ConfigConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=${SQL_SERVER_CONFIG_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
+      - ConnectionStrings__PersistedGrantConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=${SQL_SERVER_GRANTS_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
+    volumes:
+      - ./IdentityServerStandalone/appsettings.json:/app/appsettings.json:ro
+      - ./IdentityServerStandalone/appsettings.Docker.json:/app/appsettings.Docker.json:ro
+      - ./.env:/app/.env:ro
+      - ./.env.Docker:/app/.env.Docker:ro
+      - ./IdentityServerStandalone/IdentityServerApiLogs.json:/app/IdentityServerApiLogs.json:rw
+      - ${DUENDE_KEY_PATH:-/dev/null}:/app/Duende_License.key:ro
+    networks:
+      - identity-network
+
+  identity-webapi:
+    env_file:
+      - .env
+      - .env.docker    
+    build:
+      context: ..
+      dockerfile: IdentityServer/Viking.Identity.Server.WebApi/Dockerfile
+      args:
+        IMAGE_VERSION: ${IMAGE_VERSION:-latest}
+    ports:
+       - "${IDENTITY_WEBAPI_HTTP_PORT}:80"
+       - "${IDENTITY_WEBAPI_HTTPS_PORT}:443"
+    depends_on:
+      - identity-standalone
+    image: ${IMAGE_REGISTRY:-}identity-webapi:${IMAGE_VERSION:-latest}
+    secrets:
+      - ssl_cert 
+      - ssl_key
+    environment:
+      - ASPNETCORE_URLS=http://+:80;https://+:443
+      - SSL_CERT_PATH=/run/secrets/ssl_cert
+      - SSL_KEY_PATH=/run/secrets/ssl_key
+      - SSL_KEY_CERT_PATH=/run/secrets/ssl_cert_pfx
+      - ASPNETCORE_ENVIRONMENT=Docker 
+      - ConnectionStrings__IdentityConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=${SQL_SERVER_IDENTITY_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
+    volumes:
+      - ./Viking.Identity.Server.WebApi/appsettings.json:/app/appsettings.json:ro
+      - ./Viking.Identity.Server.WebApi/appsettings.Docker.json:/app/appsettings.Docker.json:ro
+      - ./.env:/app/.env:ro
+      - ./.env.Docker:/app/.env.Docker:ro
+      - ./Viking.Identity.Server.WebApi/Viking.Identity.Server.WebApi.json:/app/Viking.Identity.Server.WebApi.json:rw
+    networks:
+      - identity-network
+
+secrets:
+  ssl_cert:
+    file: ${SSL_CERT_PATH}
+  ssl_key:
+    file: ${SSL_KEY_PATH}
+  ssl_cert_pfx:
+    file: ${SSL_CERT_PFX_PATH}
+  duende_key:
+    file: ${DUENDE_KEY_PATH}
+
+networks:
+  identity-network:
+    driver: bridge

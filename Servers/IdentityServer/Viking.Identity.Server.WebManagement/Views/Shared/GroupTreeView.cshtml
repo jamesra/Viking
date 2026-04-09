@@ -1,0 +1,16 @@
+﻿@model IList<Viking.Identity.Server.WebManagement.Models.UserViewModels.GroupTreeViewModel>
+
+<table>
+    @for(int i = 0; i < Model.Count(); i++)
+    {
+        <tr>
+            <td>
+                @Html.HiddenFor(x => Model[i].Id)
+                @Html.HiddenFor(x => Model[i].Name)
+                @Html.CheckBoxFor(x => Model[i].Selected, Model[i].Name)
+                @Html.DisplayFor(x => Model[i].Name) 
+                @await Html.PartialAsync("~/Views/Shared/GroupSelectedChecklist", Model[i].Children)  
+            </td>
+        </tr>            
+    }
+</table>

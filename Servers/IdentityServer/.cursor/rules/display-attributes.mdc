@@ -1,0 +1,5 @@
+---
+description: Code Style
+alwaysApply: false
+---
+Use Display attributes on model properties with Name and Description for all user-facing properties, as the solution uses these for UI generation.

@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net451</TargetFramework>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Thinktecture.IdentityServer.AspNetIdentity</RootNamespace>
+    <AssemblyName>Thinktecture.IdentityServer3.AspNetIdentity</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNet.Identity.Core" Version="2.2.1" />
+    <PackageReference Include="Owin" Version="1.0" />
+    <PackageReference Include="Thinktecture.IdentityModel.Core" Version="1.4.0" />
+    <PackageReference Include="Thinktecture.IdentityServer3" Version="1.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\default.licenseheader">
+      <Link>default.licenseheader</Link>
+    </None>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+    <None Include="Thinktecture.IdentityServer3.AspNetIdentity.nuspec" />
+  </ItemGroup>
+
+</Project>

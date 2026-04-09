@@ -1,0 +1,220 @@
+﻿@using Viking.Identity.Server.Authorization
+@model IEnumerable<Viking.Identity.Models.Group>
+
+@{
+    ViewData["Title"] = "Groups";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var groupsByParent = Model.GroupBy(g => g.Parent?.Name ?? "No Parent").OrderBy(g => g.Key);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2><i class="bi bi-people-fill entity-icon-group"></i> Groups</h2>
+        <p class="text-muted mb-0">Users can be associated with any number of the groups listed below. Groups can be organized hierarchically under parent organizations.</p>
+    </div>
+    @if (this.User.IsInRole(Special.Roles.Admin))
+    {
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Create New
+        </a>
+    }
+</div>
+
+<!-- View Toggle -->
+<div class="btn-group mb-3" role="group" aria-label="View toggle">
+    <input type="radio" class="btn-check" name="groupViewMode" id="treeView" autocomplete="off" checked>
+    <label class="btn btn-outline-primary" for="treeView">
+        <i class="bi bi-diagram-3"></i> Tree View
+    </label>
+    <input type="radio" class="btn-check" name="groupViewMode" id="flatView" autocomplete="off">
+    <label class="btn btn-outline-primary" for="flatView">
+        <i class="bi bi-table"></i> Table View
+    </label>
+</div>
+
+<!-- Tree View -->
+<div id="treeViewContainer">
+    @foreach (var parentGroup in groupsByParent)
+    {
+        <div class="card card-modern mb-4">
+            <div class="card-header bg-group text-white">
+                <h5 class="mb-0">
+                    @if (parentGroup.Key != "No Parent")
+                    {
+                        <i class="bi bi-building"></i> @parentGroup.Key
+                    }
+                    else
+                    {
+                        <i class="bi bi-folder"></i> <text>Root Groups</text>
+                    }
+                    <span class="badge bg-light text-dark ms-2">@parentGroup.Count() group(s)</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    @foreach (var group in parentGroup.OrderBy(g => g.Name))
+                    {
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card card-modern h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="bi bi-people-fill entity-icon-group"></i> @group.Name
+                                    </h6>
+                                    <p class="card-text text-muted small">
+                                        @(string.IsNullOrEmpty(group.Description) ? "No description" : group.Description)
+                                    </p>
+                                    <div class="mb-2">
+                                        <span class="badge bg-primary me-1">
+                                            <i class="bi bi-person"></i> @group.NumMemberUsers user(s)
+                                        </span>
+                                        @if (group.NumMemberGroups > 0)
+                                        {
+                                            <span class="badge bg-info">
+                                                <i class="bi bi-people"></i> @group.NumMemberGroups subgroup(s)
+                                            </span>
+                                        }
+                                    </div>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a asp-action="Details" asp-route-id="@group.Id" class="btn btn-outline-info">
+                                            <i class="bi bi-info-circle"></i> Details
+                                        </a>
+                                        @if ((await AuthorizationService.AuthorizeAsync(User, group, Operations.GroupAccessManager)).Succeeded)
+                                        {
+                                            <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@group.Id" class="btn btn-outline-primary">
+                                                <i class="bi bi-shield-check"></i> Permissions
+                                            </a>
+                                            @if (group.Id != Special.Groups.Everyone.Id)
+                                            {
+                                                <a asp-action="Edit" asp-route-id="@group.Id" class="btn btn-outline-secondary">
+                                                    <i class="bi bi-pencil"></i> Edit
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Table View -->
+<div id="flatViewContainer" style="display: none;">
+    <table class="table table-modern" id="groupsTable">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Parent</th>
+                <th>Members</th>
+                <th>Description</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.OrderBy(g => g.Parent?.Name ?? "").ThenBy(g => g.Name))
+            {
+                <tr>
+                    <td>
+                        <i class="bi bi-people-fill entity-icon-group"></i>
+                        <a asp-action="Details" asp-route-id="@item.Id">
+                            <strong>@item.Name</strong>
+                        </a>
+                    </td>
+                    <td>
+                        @if (item.Parent != null)
+                        {
+                            <i class="bi bi-building text-org"></i>
+                            <a asp-controller="OrganizationalUnits" asp-action="Details" asp-route-id="@item.Parent.Id">@item.Parent.Name</a>
+                        }
+                        else
+                        {
+                            <span class="text-muted">-</span>
+                        }
+                    </td>
+                    <td>
+                        <span class="badge bg-primary me-1">
+                            <i class="bi bi-person"></i> @item.NumMemberUsers
+                        </span>
+                        @if (item.NumMemberGroups > 0)
+                        {
+                            <span class="badge bg-info">
+                                <i class="bi bi-people"></i> @item.NumMemberGroups
+                            </span>
+                        }
+                    </td>
+                    <td>
+                        @if (string.IsNullOrEmpty(item.Description))
+                        {
+                            <em class="text-muted">No description</em>
+                        }
+                        else
+                        {
+                            @item.Description
+                        }
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info" title="View Details">
+                                <i class="bi bi-info-circle"></i>
+                            </a>
+                            @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.GroupAccessManager)).Succeeded)
+                            {
+                                <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@item.Id" class="btn btn-outline-primary" title="Manage Permissions">
+                                    <i class="bi bi-shield-check"></i>
+                                </a>
+                                @if (item.Id != Special.Groups.Everyone.Id)
+                                {
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-secondary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                }
+                            }
+                            @if (item.Id == Special.Groups.Everyone.Id)
+                            {
+                                <span class="badge bg-warning text-dark ms-1" title="Special system group - cannot be edited">
+                                    <i class="bi bi-shield-lock"></i> System
+                                </span>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // View toggle functionality
+            $('input[name="groupViewMode"]').change(function() {
+                if ($(this).attr('id') === 'treeView') {
+                    $('#treeViewContainer').show();
+                    $('#flatViewContainer').hide();
+                } else {
+                    $('#treeViewContainer').hide();
+                    $('#flatViewContainer').show();
+                    // Initialize DataTable if not already initialized
+                    if (!$.fn.DataTable.isDataTable('#groupsTable')) {
+                        $('#groupsTable').DataTable({
+                            responsive: true,
+                            pageLength: 25,
+                            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+                            order: [],
+                            language: {
+                                search: "_INPUT_",
+                                searchPlaceholder: "Search..."
+                            }
+                        });
+                    }
+                }
+            });
+        });
+    </script>
+}

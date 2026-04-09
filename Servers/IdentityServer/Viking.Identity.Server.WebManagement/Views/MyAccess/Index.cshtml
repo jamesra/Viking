@@ -1,0 +1,375 @@
+@model Viking.Identity.Server.WebManagement.Models.UserViewModels.MyAccessViewModel
+
+@{
+    ViewData["Title"] = "My Access";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-shield-check"></i> My Access</h2>
+    @if (Model.AccessibleVolumes.Any() || Model.AccessibleSegmentationServices.Any())
+    {
+        <div class="d-flex gap-2">
+            @if (Model.AccessibleVolumes.Any())
+            {
+                <span class="badge bg-success">
+                    <i class="bi bi-hdd-stack"></i> @Model.AccessibleVolumes.Count volume(s)
+                </span>
+            }
+            @if (Model.AccessibleSegmentationServices.Any())
+            {
+                <span class="badge bg-primary">
+                    <i class="bi bi-diagram-3"></i> @Model.AccessibleSegmentationServices.Count segmentation service(s)
+                </span>
+            }
+        </div>
+    }
+</div>
+
+@if (Model.IsAuthenticated)
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Welcome, <strong>@Model.Username</strong>! Below are the volumes and segmentation services you have access to and your permissions for each.
+    </div>
+}
+else
+{
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i> Welcome, <strong>Guest</strong>! You are viewing this page without authentication. No resource access is available.
+            <a asp-controller="Account" asp-action="Login" class="alert-link">Log in</a> to see your access.
+        </div>
+}
+
+@if (Model.AccessibleVolumes.Any())
+{
+    <!-- Search/Filter -->
+    <div class="card card-modern mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="volumeSearch" class="form-control" placeholder="Search volumes...">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <select id="permissionFilter" class="form-select">
+                        <option value="">All Permissions</option>
+                        @foreach (var perm in Model.AccessibleVolumes.SelectMany(v => v.Permissions).Distinct().OrderBy(p => p))
+                        {
+                            <option value="@perm">@perm</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Volumes grouped by organization (if we had org info, for now just show all) -->
+    <div id="volumesContainer">
+        <div class="row">
+            @foreach (var volume in Model.AccessibleVolumes.OrderBy(v => v.Name))
+            {
+                <div class="col-md-6 col-lg-4 mb-3 volume-item" data-volume-name="@volume.Name.ToLower()" data-permissions="@string.Join(" ", volume.Permissions).ToLower()">
+                    <div class="card card-modern card-volume h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="bi bi-hdd entity-icon-volume"></i> @volume.Name
+                            </h6>
+                            <p class="card-text text-muted small">
+                                @(string.IsNullOrEmpty(volume.Description) ? "No description available" : volume.Description)
+                            </p>
+                            
+                            @if (volume.Permissions.Any())
+                            {
+                                <div class="mb-2">
+                                    @foreach (var permission in volume.Permissions.OrderBy(p => p))
+                                    {
+                                        <span class="badge bg-permission mb-1" title="Permission: @permission">
+                                            <i class="bi bi-shield-check"></i> @permission
+                                        </span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="mb-2">
+                                    <span class="badge bg-secondary">No specific permissions</span>
+                                </div>
+                            }
+                            
+                            @if (!string.IsNullOrEmpty(volume.Endpoint))
+                            {
+                                <div class="mt-auto">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <input type="text" class="form-control form-control-sm" id="volumeUrl_@volume.Id" value="@volume.Endpoint" readonly style="font-size: 0.875rem;">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary copy-url-btn" data-url="@volume.Endpoint" title="Copy to clipboard">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </div>
+                                    <a href="@volume.Endpoint" target="_blank" class="btn btn-sm btn-success w-100">
+                                        <i class="bi bi-box-arrow-up-right"></i> Access Volume
+                                    </a>
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted small mb-0">
+                                    <i class="bi bi-info-circle"></i> No endpoint available
+                                </p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        
+        <div id="noResults" class="alert alert-info" style="display: none;">
+            <i class="bi bi-info-circle"></i> No volumes match your search criteria.
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        <h4><i class="bi bi-info-circle"></i> No Accessible Volumes</h4>
+        @if (Model.IsAuthenticated)
+        {
+            <p>You don't currently have access to any volumes, or there may be an issue retrieving your permissions. Please contact your administrator if you believe this is an error.</p>
+        }
+        else
+        {
+            <p>As a guest user, you don't have access to any volumes. Please <a asp-controller="Account" asp-action="Login">log in</a> to see your volume access.</p>
+        }
+    </div>
+}
+
+@if (Model.AccessibleSegmentationServices.Any())
+{
+    <div class="card card-modern mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="segmentationSearch" class="form-control" placeholder="Search segmentation services...">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <select id="segmentationPermissionFilter" class="form-select">
+                        <option value="">All Permissions</option>
+                        @foreach (var perm in Model.AccessibleSegmentationServices.SelectMany(v => v.Permissions).Distinct().OrderBy(p => p))
+                        {
+                            <option value="@perm">@perm</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="segmentationContainer">
+        <div class="row">
+            @foreach (var service in Model.AccessibleSegmentationServices.OrderBy(s => s.Name))
+            {
+                <div class="col-md-6 col-lg-4 mb-3 segmentation-item" data-service-name="@service.Name.ToLower()" data-permissions="@string.Join(" ", service.Permissions).ToLower()">
+                    <div class="card card-modern card-segmentation h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="bi bi-diagram-3"></i> @service.Name
+                            </h6>
+                            <p class="card-text text-muted small">
+                                @(string.IsNullOrEmpty(service.Description) ? "No description available" : service.Description)
+                            </p>
+
+                            @if (service.Permissions.Any())
+                            {
+                                <div class="mb-2">
+                                    @foreach (var permission in service.Permissions.OrderBy(p => p))
+                                    {
+                                        <span class="badge bg-permission mb-1" title="Permission: @permission">
+                                            <i class="bi bi-shield-check"></i> @permission
+                                        </span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="mb-2">
+                                    <span class="badge bg-secondary">No specific permissions</span>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(service.Endpoint))
+                            {
+                                <div class="mt-auto">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <input type="text" class="form-control form-control-sm" id="segmentationUrl_@service.Id" value="@service.Endpoint" readonly style="font-size: 0.875rem;">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary copy-url-btn" data-url="@service.Endpoint" title="Copy to clipboard">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </div>
+                                    <a href="@service.Endpoint" target="_blank" class="btn btn-sm btn-success w-100">
+                                        <i class="bi bi-box-arrow-up-right"></i> Access Service
+                                    </a>
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted small mb-0">
+                                    <i class="bi bi-info-circle"></i> No endpoint available
+                                </p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div id="noSegmentationResults" class="alert alert-info" style="display: none;">
+            <i class="bi bi-info-circle"></i> No segmentation services match your search criteria.
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        <h4><i class="bi bi-info-circle"></i> No Accessible Segmentation Services</h4>
+        @if (Model.IsAuthenticated)
+        {
+            <p>You don't currently have access to any segmentation services, or there may be an issue retrieving your permissions.</p>
+        }
+        else
+        {
+            <p>As a guest user, you don't have access to any segmentation services. Please <a asp-controller="Account" asp-action="Login">log in</a> to see your access.</p>
+        }
+    </div>
+}
+
+@if (Model.IsAuthenticated && (Model.AccessibleVolumes.Any() || Model.AccessibleSegmentationServices.Any()))
+{
+    <div class="card card-modern mt-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="bi bi-info-circle"></i> About Your Access</h5>
+        </div>
+        <div class="card-body">
+            <p>This page shows the resources you have been granted access to and the specific permissions you have for each volume or segmentation service. If you need additional access or have questions about your permissions, please contact your administrator.</p>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Search functionality
+            $('#volumeSearch').on('keyup', function() {
+                filterVolumes();
+            });
+
+            // Permission filter
+            $('#permissionFilter').on('change', function() {
+                filterVolumes();
+            });
+
+            $('#segmentationSearch').on('keyup', function () {
+                filterSegmentation();
+            });
+
+            $('#segmentationPermissionFilter').on('change', function () {
+                filterSegmentation();
+            });
+
+            function filterVolumes() {
+                if (!$('#volumeSearch').length) {
+                    return;
+                }
+                var searchTerm = $('#volumeSearch').val().toLowerCase();
+                var permissionFilter = $('#permissionFilter').val().toLowerCase();
+                var visibleCount = 0;
+
+                $('.volume-item').each(function() {
+                    var volumeName = $(this).data('volume-name');
+                    var permissions = $(this).data('permissions');
+                    var matchesSearch = volumeName.includes(searchTerm);
+                    var matchesPermission = !permissionFilter || permissions.includes(permissionFilter);
+
+                    if (matchesSearch && matchesPermission) {
+                        $(this).show();
+                        visibleCount++;
+                    } else {
+                        $(this).hide();
+                    }
+                });
+
+                if (visibleCount === 0) {
+                    $('#noResults').show();
+                } else {
+                    $('#noResults').hide();
+                }
+            }
+
+            function filterSegmentation() {
+                if (!$('#segmentationSearch').length) {
+                    return;
+                }
+                var searchTerm = $('#segmentationSearch').val().toLowerCase();
+                var permissionFilter = $('#segmentationPermissionFilter').val().toLowerCase();
+                var visibleCount = 0;
+
+                $('.segmentation-item').each(function () {
+                    var serviceName = $(this).data('service-name');
+                    var permissions = $(this).data('permissions');
+                    var matchesSearch = serviceName.includes(searchTerm);
+                    var matchesPermission = !permissionFilter || permissions.includes(permissionFilter);
+
+                    if (matchesSearch && matchesPermission) {
+                        $(this).show();
+                        visibleCount++;
+                    } else {
+                        $(this).hide();
+                    }
+                });
+
+                if (visibleCount === 0) {
+                    $('#noSegmentationResults').show();
+                } else {
+                    $('#noSegmentationResults').hide();
+                }
+            }
+            
+            // Copy URL to clipboard functionality
+            $('.copy-url-btn').on('click', function() {
+                var url = $(this).data('url');
+                var $input = $(this).siblings('input');
+                
+                // Use the Clipboard API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(url).then(function() {
+                        var $btn = $(this);
+                        var originalHtml = $btn.html();
+                        $btn.html('<i class="bi bi-check"></i>').removeClass('btn-outline-secondary').addClass('btn-success');
+                        setTimeout(function() {
+                            $btn.html(originalHtml).removeClass('btn-success').addClass('btn-outline-secondary');
+                        }, 2000);
+                    }.bind(this)).catch(function(err) {
+                        console.error('Failed to copy:', err);
+                        // Fallback: select and copy
+                        $input.select();
+                        document.execCommand('copy');
+                        alert('URL copied to clipboard');
+                    });
+                } else {
+                    // Fallback for older browsers
+                    $input.select();
+                    document.execCommand('copy');
+                    var $btn = $(this);
+                    var originalHtml = $btn.html();
+                    $btn.html('<i class="bi bi-check"></i>').removeClass('btn-outline-secondary').addClass('btn-success');
+                    setTimeout(function() {
+                        $btn.html(originalHtml).removeClass('btn-success').addClass('btn-outline-secondary');
+                    }, 2000);
+                }
+            });
+        });
+    </script>
+}
+

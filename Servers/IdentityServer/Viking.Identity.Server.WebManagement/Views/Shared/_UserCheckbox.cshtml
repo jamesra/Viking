@@ -1,0 +1,11 @@
+﻿@model Viking.Identity.Server.WebManagement.Models.UserViewModels.UserSelectedViewModel
+
+@Html.HiddenFor(x => Model.Id)
+@Html.HiddenFor(x => Model.Name)
+<div class="form-check">
+    @Html.CheckBoxFor(x => Model.Selected, new { @class = "form-check-input", id = $"user_{Model.Id}" })
+    <label class="form-check-label" for="user_@Model.Id">
+        <i class="bi bi-person entity-icon-user me-1"></i>
+        @Html.DisplayFor(x => Model.Name)
+    </label>
+</div>

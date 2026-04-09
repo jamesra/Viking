@@ -1,0 +1,38 @@
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Viking.Identity.Server.WebManagement.Models.AccountViewModels
+{
+    public class RegisterViewModel
+    {
+        [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [Display(Name = "Username")]
+        public string Username { get; set; }
+
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Email")]
+        public string Email { get; set; }
+
+        [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        [Display(Name = "Password")]
+        public string Password { get; set; }
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm password")]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; }
+
+        [DataType(DataType.Text)]
+        [Required(AllowEmptyStrings = false)]
+        [Display(Name = "First Name", Description = "Given Name")]
+        public string GivenName { get; set; }
+
+        [DataType(DataType.Text)]
+        [Required(AllowEmptyStrings = false)]
+        [Display(Name = "Last Name", Description = "Family Name")]
+        public string FamilyName { get; set; }
+    }
+}

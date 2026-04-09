@@ -1,0 +1,129 @@
+﻿@using System.Collections.Generic
+@using System.Linq
+@using Microsoft.AspNetCore.Http 
+@model Viking.Identity.Server.WebManagement.Models.AccountViewModels.LoginViewModel
+@inject SignInManager<ApplicationUser> SignInManager
+
+@{
+    ViewData["Title"] = "Log in";
+}
+
+<h2>@ViewData["Title"]</h2>
+<div class="row">
+    <div class="col-md-4">
+        <section>
+            <form asp-route-returnurl="@ViewData["ReturnUrl"]" method="post">
+                <h4>Use a local account to log in.</h4>
+                <hr />
+                <div asp-validation-summary="All" class="text-danger"></div>
+                <div class="form-group">
+                    <label asp-for="Username"></label>
+                    <input asp-for="Username" class="form-control" />
+                    <span asp-validation-for="Username" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <label asp-for="Password"></label>
+                    <input asp-for="Password" class="form-control" />
+                    <span asp-validation-for="Password" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox">
+                        <label asp-for="RememberMe">
+                            <input asp-for="RememberMe" />
+                            @Html.DisplayNameFor(m => m.RememberMe)
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-default">Log in</button>
+                </div>
+                <div class="form-group">
+                    <p>
+                        <a asp-action="ForgotPassword">Forgot your password?</a>
+                    </p>
+                    <p>
+                        <a asp-action="Register" asp-route-returnurl="@ViewData["ReturnUrl"]">Register as a new user?</a>
+                    </p>
+                </div>
+            </form>
+        </section>
+    </div>
+    <div class="col-md-6 col-md-offset-2">
+        <section>
+            <h4>Use another service to log in.</h4>
+            <hr />
+            @{
+                var loginProviders = (await SignInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+                if (loginProviders.Count == 0)
+                {
+                    <div>
+                        <p>
+                            There are no external authentication services configured. See <a href="https://go.microsoft.com/fwlink/?LinkID=532715">this article</a>
+                            for details on setting up this ASP.NET application to support logging in via external services.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <form asp-action="ExternalLogin" asp-route-returnurl="@ViewData["ReturnUrl"]" method="post" class="form-horizontal">
+                        <div>
+                            <p>
+                                @foreach (var provider in loginProviders)
+                                {
+                                    <button type="submit" class="btn btn-default" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.Name</button>
+                                }
+                            </p>
+                        </div>
+                    </form>
+                }
+            }
+        </section>
+    </div>
+</div>
+
+<!-- Rotating Banner Section -->
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12">
+            <img id="rotatingBanner" src="" class="img-fluid w-100" style="height: auto; display: block;" alt="Banner" />
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+    <script>
+        $(document).ready(function() {
+            // List of banner images - add more files here as you add banners to the images/banners folder
+            var banners = [
+                '/images/banners/NetworkBanner.png',
+                '/images/banners/VikingBanner1.jpg'
+            ];
+
+            if (banners.length === 0) {
+                // Hide banner container if no banners available
+                $('#rotatingBanner').closest('.container').hide();
+                return;
+            }
+
+            var currentIndex = Math.floor(Math.random() * banners.length);
+            var bannerImg = $('#rotatingBanner');
+
+            // Function to load and display a banner
+            function showBanner(index) {
+                var bannerUrl = banners[index];
+                bannerImg.attr('src', bannerUrl);
+                bannerImg.attr('alt', 'Banner ' + (index + 1));
+            }
+
+            // Show initial random banner
+            showBanner(currentIndex);
+
+            // Rotate banners every 10 seconds (10000 milliseconds)
+            setInterval(function() {
+                currentIndex = (currentIndex + 1) % banners.length;
+                showBanner(currentIndex);
+            }, 10000);
+        });
+    </script>
+}

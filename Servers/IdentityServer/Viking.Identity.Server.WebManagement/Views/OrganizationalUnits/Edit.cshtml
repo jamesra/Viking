@@ -1,0 +1,73 @@
+﻿@model Viking.Identity.Models.OrganizationalUnit
+
+@{
+    ViewData["Title"] = "Edit Organization";
+    ViewData["Breadcrumbs"] = new List<(string Text, string Url)>
+    {
+        ("Dashboard", Url.Action("Index", "Home")),
+        ("Organizations", Url.Action("Index", "OrganizationalUnits")),
+        (Model.Name, Url.Action("Details", "OrganizationalUnits", new { id = Model.Id })),
+        ("Edit", null)
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-building"></i> Edit Organization: @Model.Name</h2>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Details
+    </a>
+</div>
+
+<div class="card card-modern">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Organization Information</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="Edit" id="editOrgForm">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+            <input type="hidden" asp-for="Id" />
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label"></label>
+                <input asp-for="Description" class="form-control" />
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="@Model.Parent" class="form-label"></label>
+                <select asp-for="@Model.ParentID" asp-items="@ViewBag.AvailableParents" class="form-select">
+                    <option value="">None</option>
+                </select>
+                <span asp-validation-for="@Model.ParentID" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="ResourceTypeId" class="form-label"></label>
+                <div class="form-control-plaintext">@Html.DisplayFor(x => x.ResourceTypeId)</div>
+                <input type="hidden" asp-for="ResourceTypeId" />
+            </div>
+            <div class="form-group mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-save"></i> Save Changes
+                </button>
+                <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-lg ms-2">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        $(document).ready(function() {
+            $('#editOrgForm').on('submit', function() {
+                var $submitBtn = $(this).find('button[type="submit"]');
+                $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...');
+            });
+        });
+    </script>
+}

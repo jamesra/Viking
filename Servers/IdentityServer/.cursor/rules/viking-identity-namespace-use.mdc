@@ -1,0 +1,5 @@
+---
+description: Code Style
+alwaysApply: false
+---
+Use the namespace prefix Viking.Identity for all custom identity-related code (e.g., Viking.Identity.Models, Viking.Identity.Data, Viking.Identity.Server). 

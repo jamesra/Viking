@@ -1,0 +1,252 @@
+{
+    "version": "0.2.0",
+    "inputs": [
+        {
+            "id": "buildConfiguration",
+            "description": "Select build configuration",
+            "type": "pickString",
+            "options": [
+                "Debug",
+                "Release"
+            ],
+            "default": "Debug"
+        }
+    ],
+    "configurations": [
+        {
+            "name": "Identity Management Site (Debug)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-solution-debug",
+            "program": "${workspaceFolder}/IdentityServer/bin/Debug/net9.0/Viking.Identity.Server.WebManagement.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/IdentityServer",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "%s"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "https://localhost:4001"
+            }
+        },
+        {
+            "name": "Identity Management Site (Release)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-solution-release",
+            "program": "${workspaceFolder}/IdentityServer/bin/Release/net9.0/Viking.Identity.Server.WebManagement.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/IdentityServer",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "%s"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Production",
+                "ASPNETCORE_URLS": "https://localhost:4001"
+            }
+        },
+        {
+            "name": "Identity Management Site (Smart)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-identityserver-${input:buildConfiguration}",
+            "program": "${workspaceFolder}/IdentityServer/bin/${input:buildConfiguration}/net9.0/Viking.Identity.Server.WebManagement.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/IdentityServer",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "%s"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "${input:buildConfiguration}",
+                "ASPNETCORE_URLS": "https://localhost:4001"
+            }
+        },
+        {
+            "name": "IdentityServerStandalone (Debug)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-solution-debug",
+            "program": "${workspaceFolder}/IdentityServerStandalone/bin/Debug/net9.0/Viking.Identity.Server.Standalone.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/IdentityServerStandalone",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "https://localhost:5001/.well-known/openid-configuration"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "https://localhost:5001"
+            }
+        },
+        {
+            "name": "IdentityServerStandalone (Release)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-solution-release",
+            "program": "${workspaceFolder}/IdentityServerStandalone/bin/Release/net9.0/Viking.Identity.Server.Standalone.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/IdentityServerStandalone",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "https://localhost:5001/.well-known/openid-configuration"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Production",
+                "ASPNETCORE_URLS": "https://localhost:5001"
+            }
+        },
+        {
+            "name": "IdentityServerStandalone (Smart)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-identityserverstandalone-${input:buildConfiguration}",
+            "program": "${workspaceFolder}/IdentityServerStandalone/bin/${input:buildConfiguration}/net9.0/Viking.Identity.Server.Standalone.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/IdentityServerStandalone",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "https://localhost:5001/.well-known/openid-configuration"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "${input:buildConfiguration}",
+                "ASPNETCORE_URLS": "https://localhost:5001"
+            }
+        },
+        {
+            "name": "SMTP Test (Debug)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-solution-debug",
+            "program": "${workspaceFolder}/SmtpTest/bin/Debug/net9.0/SmtpTest.dll",
+            "args": ["jander42@hotmail.com"],
+            "cwd": "${workspaceFolder}/SmtpTest",
+            "console": "integratedTerminal",
+            "stopAtEntry": false
+        },
+        {
+            "name": "Identity.WebApi (Debug)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-solution-debug",
+            "program": "${workspaceFolder}/Viking.Identity.Server.WebApi/bin/Debug/net9.0/Viking.Identity.Server.WebApi.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Viking.Identity.Server.WebApi",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "%s"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "https://localhost:6001;http://localhost:6000"
+            }
+        },
+        {
+            "name": "Identity.WebApi (Release)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-solution-release",
+            "program": "${workspaceFolder}/Viking.Identity.Server.WebApi/bin/Release/net9.0/Viking.Identity.Server.WebApi.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Viking.Identity.Server.WebApi",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "%s"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Production",
+                "ASPNETCORE_URLS": "https://localhost:6001;http://localhost:6000"
+            }
+        },
+        {
+            "name": "Identity.WebApi (Smart)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-webapi-${input:buildConfiguration}",
+            "program": "${workspaceFolder}/Viking.Identity.Server.WebApi/bin/${input:buildConfiguration}/net9.0/Viking.Identity.Server.WebApi.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Viking.Identity.Server.WebApi",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "%s"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "${input:buildConfiguration}",
+                "ASPNETCORE_URLS": "https://localhost:6001;http://localhost:6000"
+            }
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Launch All Identity Services (Debug)",
+            "configurations": [
+                "IdentityServerStandalone (Debug)",
+                "Identity Management Site (Debug)",
+                "Identity.WebApi (Debug)"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "Identity Services",
+                "order": 1
+            }
+        },
+        {
+            "name": "Launch All Identity Services (Release)",
+            "configurations": [
+                "IdentityServerStandalone (Release)",
+                "Identity Management Site (Release)",
+                "Identity.WebApi (Release)"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "Identity Services",
+                "order": 2
+            }
+        },
+        {
+            "name": "Launch All Identity Services (Smart)",
+            "configurations": [
+                "IdentityServerStandalone (Smart)",
+                "Identity Management Site (Smart)",
+                "Identity.WebApi (Smart)"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "Identity Services",
+                "order": 3
+            }
+        }
+    ]
+}

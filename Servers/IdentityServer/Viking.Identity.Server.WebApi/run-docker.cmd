@@ -1,0 +1,1 @@
+docker run -d --name identityserver-webapi -p 5000:5000 -p 5001:5001 -v ./appsettings.json:/app/appsettings.json -v appsettings.Production.json:/app/appsettings.Production.json identitywebapi:latest

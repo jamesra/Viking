@@ -1,0 +1,143 @@
+﻿body {
+    padding-top: 0; /* Handled by site-modern.css */
+    padding-bottom: 20px;
+}
+
+/* Wrapping element */
+/* Set some basic padding to keep content from hitting the edges */
+.body-content {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+/* Carousel */
+.carousel-caption p {
+    font-size: 20px;
+    line-height: 1.4;
+}
+
+/* Make .svg files in the carousel display properly in older browsers */
+.carousel-inner .item img[src$=".svg"] {
+    width: 100%;
+}
+
+.no-bullets {
+    list-style-type: none; 
+}
+
+dl.dl-traditional {
+    display:block;
+    margin-bottom: 0;
+    margin-top: 0;
+}
+
+.dl-traditional dd {
+    margin-left: 1em;
+    margin-bottom: 1em;
+    margin-top: 0;
+    margin-bottom: 0;
+    
+}
+
+table.grid-settings {
+    /* border: 1px solid black; */
+    text-align: left;
+    padding-left: 0px;
+    padding-right: 5%;
+    width: 100%;
+}
+
+
+.grid-settings th {
+    text-align: left;
+    padding-left: 0px;
+}
+
+.grid-settings td {
+    /*border-block: 1px solid red;*/
+    text-align: left;
+    vertical-align: top;
+}
+
+.grid-settings ul {
+    list-style-type: none;
+    margin-left: 0px;
+    padding-left: 0px;
+}
+
+.grid-settings li {
+    margin-left: 0px;
+    padding-left: 2px;
+    text-align: left;
+}
+ 
+.grid-settings tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+ 
+table.edit-settings {
+   /* border: 1px solid black; */
+    text-align: left;
+    padding-left: 2px;
+    padding-right: 5%;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.edit-settings th:first-child {
+    text-align: left; 
+    padding-left: 2px; 
+    padding-right: 2px;
+    width: 75px;
+    white-space: nowrap;
+}
+
+.edit-settings th:not(:first-child) {
+    text-align: center; 
+    padding-left: 2px; 
+    padding-right: 2px;
+    width: 40px;
+    white-space: nowrap;
+}
+
+.edit-settings td:first-child {
+    text-align: left;
+    vertical-align: top;
+    padding-left: 2px;
+    padding-right: 2px;
+    width: 75px;
+}
+
+.edit-settings td:not(:first-child) {
+    text-align: center;
+    vertical-align: top;
+    padding-left: 2px;
+    padding-right: 2px;
+    width: 40px;
+}
+
+.edit-settings ul {
+    list-style-type: none;
+    margin-left: 0px;
+    padding-left: 0px;
+}
+
+.edit-settings li {
+    margin-left: 0px;
+    padding-left: 2px;
+    text-align: left;
+}
+
+/* QR code generator */
+#qrCode {
+    margin: 15px;
+}
+
+
+/* Hide/rearrange for smaller screens */
+@media screen and (max-width: 767px) {
+    /* Hide captions */
+    .carousel-caption {
+        display: none;
+    }
+}

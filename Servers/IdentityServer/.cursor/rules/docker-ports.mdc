@@ -1,0 +1,5 @@
+---
+description: Docker & Deployment
+alwaysApply: false
+---
+Never hardcode ports - use environment variables like ${IDENTITY_STANDALONE_HTTP_PORT} and configure them in .env files.
