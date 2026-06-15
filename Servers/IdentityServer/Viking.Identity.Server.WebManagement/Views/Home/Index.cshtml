@@ -25,79 +25,89 @@
     <!-- Quick Stats Cards -->
     <div class="row mb-4">
         <div class="col-md-3 col-sm-6 mb-3">
-            <div class="card stats-card bg-primary">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stats-card-label">Users</div>
-                            <div class="stats-card-value">@Model.TotalUsers</div>
-                        </div>
-                        <div class="stats-card-icon">
-                            <i class="bi bi-people-fill"></i>
+            <a asp-controller="ApplicationUsers" asp-action="Index" class="text-decoration-none d-block stats-card-link">
+                <div class="card stats-card bg-primary">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="stats-card-label">Users</div>
+                                <div class="stats-card-value">@Model.TotalUsers</div>
+                            </div>
+                            <div class="stats-card-icon">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
         <div class="col-md-3 col-sm-6 mb-3">
-            <div class="card stats-card" style="background: linear-gradient(135deg, var(--color-org) 0%, #0056b3 100%);">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stats-card-label">Organizations</div>
-                            <div class="stats-card-value">@Model.TotalOrganizations</div>
-                        </div>
-                        <div class="stats-card-icon">
-                            <i class="bi bi-building"></i>
+            <a asp-controller="OrganizationalUnits" asp-action="Index" class="text-decoration-none d-block stats-card-link">
+                <div class="card stats-card" style="background: linear-gradient(135deg, var(--color-org) 0%, #0056b3 100%);">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="stats-card-label">Organizations</div>
+                                <div class="stats-card-value">@Model.TotalOrganizations</div>
+                            </div>
+                            <div class="stats-card-icon">
+                                <i class="bi bi-building"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
         <div class="col-md-3 col-sm-6 mb-3">
-            <div class="card stats-card" style="background: linear-gradient(135deg, var(--color-volume) 0%, #0d5f3f 100%);">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stats-card-label">Volumes</div>
-                            <div class="stats-card-value">@Model.TotalVolumes</div>
-                        </div>
-                        <div class="stats-card-icon">
-                            <i class="bi bi-hdd-stack"></i>
+            <a asp-controller="Volumes" asp-action="Index" class="text-decoration-none d-block stats-card-link">
+                <div class="card stats-card" style="background: linear-gradient(135deg, var(--color-volume) 0%, #0d5f3f 100%);">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="stats-card-label">Volumes</div>
+                                <div class="stats-card-value">@Model.TotalVolumes</div>
+                            </div>
+                            <div class="stats-card-icon">
+                                <i class="bi bi-hdd-stack"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
         <div class="col-md-3 col-sm-6 mb-3">
-            <div class="card stats-card" style="background: linear-gradient(135deg, var(--color-segmentation) 0%, #0f4c75 100%);">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stats-card-label">Segmentation Services</div>
-                            <div class="stats-card-value">@Model.TotalSegmentationServices</div>
-                        </div>
-                        <div class="stats-card-icon">
-                            <i class="bi bi-diagram-3"></i>
+            <a asp-controller="SegmentationServices" asp-action="Index" class="text-decoration-none d-block stats-card-link">
+                <div class="card stats-card" style="background: linear-gradient(135deg, var(--color-segmentation) 0%, #0f4c75 100%);">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="stats-card-label">Segmentation Services</div>
+                                <div class="stats-card-value">@Model.TotalSegmentationServices</div>
+                            </div>
+                            <div class="stats-card-icon">
+                                <i class="bi bi-diagram-3"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
         <div class="col-md-3 col-sm-6 mb-3">
-            <div class="card stats-card" style="background: linear-gradient(135deg, var(--color-group) 0%, #c8620a 100%);">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stats-card-label">Groups</div>
-                            <div class="stats-card-value">@Model.TotalGroups</div>
-                        </div>
-                        <div class="stats-card-icon">
-                            <i class="bi bi-person-badge"></i>
+            <a asp-controller="Groups" asp-action="Index" class="text-decoration-none d-block stats-card-link">
+                <div class="card stats-card" style="background: linear-gradient(135deg, var(--color-group) 0%, #c8620a 100%);">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="stats-card-label">Groups</div>
+                                <div class="stats-card-value">@Model.TotalGroups</div>
+                            </div>
+                            <div class="stats-card-icon">
+                                <i class="bi bi-person-badge"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
     </div>
 

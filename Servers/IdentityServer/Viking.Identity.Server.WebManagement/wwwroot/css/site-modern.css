@@ -172,6 +172,26 @@
     letter-spacing: 0.5px;
 }
 
+.stats-card-link {
+    cursor: pointer;
+    color: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.stats-card-link:hover {
+    transform: translateY(-2px);
+}
+
+.stats-card-link:hover .stats-card {
+    box-shadow: var(--shadow-lg);
+}
+
+.stats-card-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: var(--border-radius-lg);
+}
+
 /* Permission Grid Enhancements */
 .permission-grid {
     border-collapse: separate;
