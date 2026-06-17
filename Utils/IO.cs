@@ -10,7 +10,7 @@ using System.Xml.Linq;
 
 namespace Utils
 {
-    public static class LinqXMLExtensions
+    public static class IO
     {
         public static XAttribute GetAttributeCaseInsensitive(this XElement element, string attribName)
         {
