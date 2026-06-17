@@ -40,6 +40,7 @@ mkdir C:\Temp\.X11-unix
 REM Run the container with volume mounts for configuration
 docker run -it ^
   -v C:/Temp/.X11-unix:/tmp/.X11-unix ^
+  --restart unless-stopped ^
   -e DISPLAY ^
   -p 8080:80 ^
   -p 50051:50051 ^
