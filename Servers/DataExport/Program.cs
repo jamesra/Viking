@@ -5,7 +5,11 @@ using Microsoft.Extensions.Hosting;
 using System.ComponentModel;
 using System.Text.RegularExpressions;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    WebRootPath = "Content"
+});
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -18,6 +22,11 @@ builder.Services.Configure<RouteOptions>(options =>
 });
 
 var app = builder.Build();
+
+app.UseDefaultFiles(new DefaultFilesOptions
+{
+    DefaultFileNames = new List<string> { "index.html" }
+});
 
 // Ensure required directories exist at startup
 var contentRoot = app.Environment.ContentRootPath;
