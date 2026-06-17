@@ -81,7 +81,7 @@ namespace Viking.Tokens
     public class BearerTokenHelper
     {
         public string ClientId { get; set; } = "ro.viking";
-        public string ClientSecret { get; set; } = "CorrectHorseBatteryStaple";
+        public string ClientSecret { get; set; } = "Correct Horse Battery Staple";
 
         /// <summary>
         /// Uri of service that provides tokens
