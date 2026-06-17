@@ -1,3 +1,4 @@
-docker-compose down
-docker-compose -f docker-compose-all.yml --env-file .env.All --env-file .env.All.Production --env-file .env.All.Docker  config
-docker-compose -f docker-compose-all.yml --env-file .env.All --env-file .env.All.Production --env-file .env.All.Docker  up --build 
+set "IDENTITY_BUILD_ENV_PATH=D:\Docker\Builds\IdentityServer"
+docker-compose -f docker-compose-all.yml down
+docker-compose -f docker-compose-all.yml --env-file "%IDENTITY_BUILD_ENV_PATH%\.env.All" --env-file "%IDENTITY_BUILD_ENV_PATH%\.env.All.Production" --env-file "%IDENTITY_BUILD_ENV_PATH%\.env.All.Docker" config
+docker-compose -f docker-compose-all.yml --env-file "%IDENTITY_BUILD_ENV_PATH%\.env.All" --env-file "%IDENTITY_BUILD_ENV_PATH%\.env.All.Production" --env-file "%IDENTITY_BUILD_ENV_PATH%\.env.All.Docker" up --build

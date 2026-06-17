@@ -1,9 +1,11 @@
 services:
   identity-all-services:
+    container_name: identity-all-services
     platform: linux/amd64
+    restart: unless-stopped
     env_file:
-      - .env.All
-      - .env.All.Docker
+      - ${IDENTITY_BUILD_ENV_PATH:-D:/Docker/Builds/IdentityServer}/.env.All
+      - ${IDENTITY_BUILD_ENV_PATH:-D:/Docker/Builds/IdentityServer}/.env.All.Docker
     build:
       context: ..
       dockerfile: IdentityServer\Dockerfile
@@ -22,30 +24,25 @@ services:
         IMAGE_VERSION: ${IMAGE_VERSION:-latest}
     image: ${IMAGE_REGISTRY:-}identity-all-services:${IMAGE_VERSION:-latest}
     ports:
-      # IdentityServerStandalone ports
       - "${IDENTITY_STANDALONE_HTTP_PORT:-5000}:${IDENTITY_STANDALONE_CONTAINER_HTTP_PORT:-5000}"
       - "${IDENTITY_STANDALONE_HTTPS_PORT:-5001}:${IDENTITY_STANDALONE_CONTAINER_HTTPS_PORT:-5001}"
-      # WebApi ports  
       - "${IDENTITY_WEBAPI_HTTP_PORT:-6000}:${IDENTITY_WEBAPI_CONTAINER_HTTP_PORT:-6000}"
       - "${IDENTITY_WEBAPI_HTTPS_PORT:-6001}:${IDENTITY_WEBAPI_CONTAINER_HTTPS_PORT:-6001}"
-      # IdentityServer (Management) ports
       - "${IDENTITY_MANAGEMENT_HTTP_PORT:-4000}:${IDENTITY_MANAGEMENT_CONTAINER_HTTP_PORT:-4000}"
       - "${IDENTITY_MANAGEMENT_HTTPS_PORT:-4001}:${IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT:-4001}"
-      # Remote debugging port (single port for all services)
       - "${REMOTE_DEBUG_PORT:-4024}:${REMOTE_DEBUG_CONTAINER_PORT:-4024}"
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
       - HOSTING_ENVIRONMENT=${HOSTING_ENVIRONMENT:-Docker}
       - ASPNETCORE_URLS=https://+:4001;https://+:5001;https://+:6001;http://+:4000;http://+:5000;http://+:6000;
-      # Database connections
       - ConnectionStrings__IdentityConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=${SQL_SERVER_IDENTITY_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
       - ConnectionStrings__ConfigConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=${SQL_SERVER_CONFIG_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
       - ConnectionStrings__PersistedGrantConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=${SQL_SERVER_GRANTS_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
-      # SSL Configuration
-      - SSL_CERT_PATH=/run/secrets/ssl_cert
-      - SSL_KEY_PATH=/run/secrets/ssl_key
-      - SSL_KEY_CERT_PATH=/run/secrets/ssl_cert_pfx
-      # Explicit environment variables for configuration substitution
+      - SSL_CERT_PATH=${IDENTITY_SSL_CERT_CONTAINER_PATH:-/etc/letsencrypt/live/identity.codepharm.net/fullchain.pem}
+      - SSL_KEY_PATH=${IDENTITY_SSL_KEY_CONTAINER_PATH:-/etc/letsencrypt/live/identity.codepharm.net/privkey.pem}
+      - SSL__CertificatePath=${IDENTITY_SSL_CERT_CONTAINER_PATH:-/etc/letsencrypt/live/identity.codepharm.net/fullchain.pem}
+      - SSL__KeyPath=${IDENTITY_SSL_KEY_CONTAINER_PATH:-/etc/letsencrypt/live/identity.codepharm.net/privkey.pem}
+      - SSL__Password=
       - SQL_SERVER_HOST=${SQL_SERVER_HOST}
       - SQL_SERVER_PORT=${SQL_SERVER_PORT}
       - SQL_SERVER_USER=${SQL_SERVER_USER}
@@ -54,18 +51,17 @@ services:
       - SQL_SERVER_CONFIG_DB=${SQL_SERVER_CONFIG_DB}
       - SQL_SERVER_GRANTS_DB=${SQL_SERVER_GRANTS_DB}
       - AUTHORITY=${AUTHORITY}
-      # Port configuration for applications
       - IDENTITY_WEBAPI_HTTP_PORT=${IDENTITY_WEBAPI_HTTP_PORT:-6000}
       - IDENTITY_WEBAPI_HTTPS_PORT=${IDENTITY_WEBAPI_HTTPS_PORT:-6001}
       - IDENTITY_MANAGEMENT_HTTP_PORT=${IDENTITY_MANAGEMENT_HTTP_PORT:-4000}
       - IDENTITY_MANAGEMENT_HTTPS_PORT=${IDENTITY_MANAGEMENT_HTTPS_PORT:-4001}
+      - IDENTITY_MANAGEMENT_CONTAINER_HTTP_PORT=${IDENTITY_MANAGEMENT_CONTAINER_HTTP_PORT:-4000}
+      - IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT=${IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT:-4001}
       - IDENTITY_SERVER_HTTP_PORT=${IDENTITY_SERVER_HTTP_PORT:-5000}
       - IDENTITY_SERVER_HTTPS_PORT=${IDENTITY_SERVER_HTTPS_PORT:-5001}
-      # Remote debugging configuration
       - IDENTITY_ENABLE_REMOTE_DEBUG=${IDENTITY_ENABLE_REMOTE_DEBUG:-false}
-      - REMOTE_DEBUG_PORT=${REMOTE_DEBUG_PORT:-4024} 
+      - REMOTE_DEBUG_PORT=${REMOTE_DEBUG_PORT:-4024}
     volumes:
-      # Configuration files
       - ./IdentityServerStandalone/appsettings.json:/app/identity-standalone/appsettings.json:ro
       - ./IdentityServerStandalone/appsettings.${ASPNETCORE_ENVIRONMENT:-Production}.json:/app/identity-standalone/appsettings.${ASPNETCORE_ENVIRONMENT:-Production}.json:ro
       - ./IdentityServerStandalone/appsettings.${HOSTING_ENVIRONMENT:-Docker}.json:/app/identity-standalone/appsettings.${HOSTING_ENVIRONMENT:-Docker}.json:ro
@@ -75,22 +71,17 @@ services:
       - ./Viking.Identity.Server.WebManagement/appsettings.json:/app/identity-server/appsettings.json:ro
       - ./Viking.Identity.Server.WebManagement/appsettings.${ASPNETCORE_ENVIRONMENT:-Production}.json:/app/identity-server/appsettings.${ASPNETCORE_ENVIRONMENT:-Production}.json:ro
       - ./Viking.Identity.Server.WebManagement/appsettings.${HOSTING_ENVIRONMENT:-Docker}.json:/app/identity-server/appsettings.${HOSTING_ENVIRONMENT:-Docker}.json:ro
-      # Environment files
-      - ./.env.All:/app/.env:ro
-      - ./.env.All.${ASPNETCORE_ENVIRONMENT:-Production}:/app/.env.${ASPNETCORE_ENVIRONMENT:-Production}:ro
-      - ./.env.All.${HOSTING_ENVIRONMENT:-Docker}:/app/.env.${HOSTING_ENVIRONMENT:-Docker}:ro
-      # Log files
+      - ${IDENTITY_CONFIG_PATH:-D:/Docker/mounted-configs/IdentityServer}/secrets.json:/app/identity-server/secrets.json:ro
+      - ${IDENTITY_BUILD_ENV_PATH:-D:/Docker/Builds/IdentityServer}/.env.All:/app/.env:ro
+      - ${IDENTITY_BUILD_ENV_PATH:-D:/Docker/Builds/IdentityServer}/.env.All.${ASPNETCORE_ENVIRONMENT:-Production}:/app/.env.${ASPNETCORE_ENVIRONMENT:-Production}:ro
+      - ${IDENTITY_BUILD_ENV_PATH:-D:/Docker/Builds/IdentityServer}/.env.All.${HOSTING_ENVIRONMENT:-Docker}:/app/.env.${HOSTING_ENVIRONMENT:-Docker}:ro
       - ./logs/identity-standalone:/var/log/supervisor/identity-standalone
       - ./logs/identity-webapi:/var/log/supervisor/identity-webapi
       - ./logs/identity-server:/var/log/supervisor/identity-server
-      # Data Protection Keys
       - ./DataProtectionKeys:/app/DataProtectionKeys:rw
-      # Duende License (if available)
       - ${DUENDE_KEY_PATH:-/dev/null}:/app/Duende_License.key:ro
-    secrets:
-      - ssl_cert
-      - ssl_key
-      - ssl_cert_pfx
+      - identity-letsencrypt:/etc/letsencrypt:ro
+      - identity-acme-webroot:/app/identity-server/wwwroot/.well-known/acme-challenge:ro
     networks:
       - identity-network
     healthcheck:
@@ -100,17 +91,42 @@ services:
       retries: 3
       start_period: 60s
 
-secrets:
-  ssl_cert:
-    file: ${SSL_CERT_PATH}
-  ssl_key:
-    file: ${SSL_KEY_PATH}
-  ssl_cert_pfx:
-    file: ${SSL_CERT_PFX_PATH}
-  duende_key:
-    file: ${DUENDE_KEY_PATH}
+  identity-certbot-renewer:
+    container_name: identity-certbot-renewer
+    build:
+      context: ../certbot
+      dockerfile: Dockerfile
+    image: ${IMAGE_REGISTRY:-}identity-certbot-renewer:${IMAGE_VERSION:-latest}
+    restart: unless-stopped
+    env_file:
+      - ${IDENTITY_BUILD_ENV_PATH:-D:/Docker/Builds/IdentityServer}/.env.All
+      - ${IDENTITY_BUILD_ENV_PATH:-D:/Docker/Builds/IdentityServer}/.env.All.Docker
+    environment:
+      - CERTBOT_AUTH_METHOD=${CERTBOT_AUTH_METHOD:-dns-cloudflare}
+      - CF_DNS_API_CREDENTIALS_FILE=${CF_DNS_API_CREDENTIALS_FILE:-/run/secrets/cloudflare.ini}
+      - CF_DNS_PROPAGATION_SECONDS=${CF_DNS_PROPAGATION_SECONDS:-60}
+    volumes:
+      - identity-letsencrypt:/etc/letsencrypt
+      - identity-certbot-lib:/var/lib/letsencrypt
+      - identity-certbot-logs:/var/log/letsencrypt
+      - identity-acme-webroot:/var/www/certbot
+      - ./certs:/seed-certs:ro
+      - type: bind
+        source: ${CF_DNS_API_CREDENTIALS_HOST_PATH:-D:/Docker/Builds/IdentityServer/cloudflare.ini}
+        target: /run/secrets/cloudflare.ini
+        read_only: true
+      - type: bind
+        source: ${DOCKER_SOCKET_PATH:-//var/run/docker.sock}
+        target: /var/run/docker.sock
+    entrypoint: ["/opt/identity-certbot/renew-loop.sh"]
 
 networks:
   identity-network:
     driver: bridge
+
+volumes:
+  identity-letsencrypt:
+  identity-certbot-lib:
+  identity-certbot-logs:
+  identity-acme-webroot:
 

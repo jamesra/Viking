@@ -1,0 +1,4 @@
+# Copy to D:/Docker/Builds/IdentityServer/cloudflare.ini
+# and replace with a Cloudflare API token that has Zone:DNS Edit permission
+# for the target zone.
+dns_cloudflare_api_token=REPLACE_WITH_CLOUDFLARE_API_TOKEN
