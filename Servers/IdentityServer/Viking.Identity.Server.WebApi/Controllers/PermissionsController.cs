@@ -516,5 +516,91 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             return resourceMap.ToDictionary(r => r.Id, r => (object)r);
             */
         }
+
+        /// <summary>
+        /// Compatibility endpoint consumed by WPF clients.
+        /// Returns a simple tree with one root node and user-accessible volumes as leaves.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("UserAccessibleVolumeTree")]
+        public async Task<List<ApiVolumeTreeNodeDto>> UserAccessibleVolumeTree()
+        {
+            var appUser = await GetApplicationUser();
+            if (appUser == null)
+            {
+                return new List<ApiVolumeTreeNodeDto>();
+            }
+
+            var userPermittedResources = await _context.UserResourcePermissionsByType(appUser.Id, new[] { nameof(Volume) });
+            if (userPermittedResources.Count == 0)
+            {
+                return new List<ApiVolumeTreeNodeDto>();
+            }
+
+            var volumeIds = userPermittedResources.Keys.ToArray();
+            var volumes = await _context.Volume
+                .Where(v => volumeIds.Contains(v.Id))
+                .Select(v => new
+                {
+                    v.Id,
+                    v.Name,
+                    v.Description,
+                    Endpoint = v.Endpoint != null ? v.Endpoint.ToString() : null
+                })
+                .ToListAsync();
+
+            var volumeLeaves = volumes
+                .Select(v =>
+                {
+                    userPermittedResources.TryGetValue(v.Id, out var permissions);
+                    return new ApiUserResourcePermissionsDto
+                    {
+                        Id = v.Id,
+                        Name = v.Name,
+                        ResourceType = nameof(Volume),
+                        ParentId = null,
+                        Permissions = permissions ?? Array.Empty<string>(),
+                        Metadata = new Dictionary<string, object>
+                        {
+                            ["Endpoint"] = v.Endpoint ?? string.Empty,
+                            ["Description"] = v.Description ?? string.Empty
+                        }
+                    };
+                })
+                .OrderBy(v => v.Name)
+                .ToList();
+
+            var rootNode = new ApiVolumeTreeNodeDto
+            {
+                Id = 0,
+                Name = "Accessible Volumes",
+                ParentId = null,
+                ResourceType = "Root",
+                Volumes = volumeLeaves,
+                Children = new List<ApiVolumeTreeNodeDto>()
+            };
+
+            return new List<ApiVolumeTreeNodeDto> { rootNode };
+        }
+
+        public class ApiVolumeTreeNodeDto
+        {
+            public long Id { get; set; }
+            public string Name { get; set; } = string.Empty;
+            public long? ParentId { get; set; }
+            public string ResourceType { get; set; } = string.Empty;
+            public List<ApiUserResourcePermissionsDto> Volumes { get; set; } = new();
+            public List<ApiVolumeTreeNodeDto> Children { get; set; } = new();
+        }
+
+        public class ApiUserResourcePermissionsDto
+        {
+            public long Id { get; set; }
+            public string Name { get; set; } = string.Empty;
+            public string ResourceType { get; set; } = string.Empty;
+            public IEnumerable<string> Permissions { get; set; } = Array.Empty<string>();
+            public long? ParentId { get; set; }
+            public Dictionary<string, object> Metadata { get; set; } = new();
+        }
     }
 }
