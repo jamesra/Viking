@@ -91,8 +91,8 @@ RUN dotnet publish "Viking.Identity.Server.WebApi.csproj" -c $BUILD_CONFIGURATIO
 # Publish Viking.Identity.Server.WebManagement
 WORKDIR "/src/IdentityServer/Viking.Identity.Server.WebManagement"
 RUN dotnet publish "IdentityManagementWebsite.csproj" -c $BUILD_CONFIGURATION -o /app/publish/identity-server /p:UseAppHost=false --runtime linux-x64 --self-contained false /p:DebugType=portable
-# Copy secrets.json explicitly to ensure it's included in the published output
-COPY IdentityServer/Viking.Identity.Server.WebManagement/secrets.json /app/publish/identity-server/secrets.json
+# secrets.json is not copied into the image; mount it at runtime from
+# IDENTITY_CONFIG_PATH (default: D:/Docker/mounted-configs/IdentityServer)
 
 # Generate Data Protection keys
 FROM build AS keygenerator
@@ -295,12 +295,13 @@ RUN echo '#!/bin/bash' > /app/run-identity-server.sh && \
 RUN cat > /app/health-check.sh <<EOF
 #!/bin/bash
 # Check if all services are running
-curl -f http://localhost:5001/.well-known/openid-configuration || exit 1
-curl -f http://localhost:6001/health || exit 1
-curl -f http://localhost:4001/ || exit 1
+curl -f http://localhost:5000/.well-known/openid-configuration || exit 1
+curl -f http://localhost:6000/health || exit 1
+curl -f http://localhost:4000/ || exit 1
 EOF
 
 RUN chmod +x /app/health-check.sh
+RUN sed -i 's/\r$//' /app/*.sh
 
 # Switch to non-root user
 USER 1654

@@ -30,6 +30,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.FileProviders;
 using Viking.Identity;
 using DotNetEnv;
 using ConfigurationSubstitution;
@@ -335,6 +336,26 @@ namespace Viking.Identity.Server.WebManagement
             Console.WriteLine(" Configuring middleware...");
             app.UseSerilogRequestLogging();
             Console.WriteLine(" Serilog request logging configured");
+
+            // ACME HTTP-01 challenge tokens are extensionless files under
+            // /.well-known/acme-challenge and must be served over plain HTTP.
+            var webRootPath = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
+            var acmeChallengePath = Path.Combine(webRootPath, ".well-known", "acme-challenge");
+            if (Directory.Exists(acmeChallengePath))
+            {
+                app.UseStaticFiles(new StaticFileOptions
+                {
+                    FileProvider = new PhysicalFileProvider(acmeChallengePath),
+                    RequestPath = "/.well-known/acme-challenge",
+                    ServeUnknownFileTypes = true,
+                    DefaultContentType = "text/plain"
+                });
+                Console.WriteLine($" ACME challenge static files configured from: {acmeChallengePath}");
+            }
+            else
+            {
+                Console.WriteLine($" WARNING: ACME challenge path not found: {acmeChallengePath}");
+            }
 
             app.UseHttpsRedirection();
             Console.WriteLine(" HTTPS redirection configured");
