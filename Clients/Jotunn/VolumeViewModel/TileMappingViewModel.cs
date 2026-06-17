@@ -219,7 +219,7 @@ namespace Viking.VolumeViewModel
             //for (int iLevel = 0; iLevel < newTilePyramid.AvailableLevels.Length; iLevel++)
             {
                 int level = newTilePyramid.AvailableLevels[iLevel];
-                SortedDictionary<string, Viking.VolumeModel.TileViewModel> tiles = newTilePyramid.GetTilesForLevel(level);
+                SortedDictionary<TileUniqueKey, Viking.VolumeModel.TileViewModel> tiles = newTilePyramid.GetTilesForLevel(level);
                 bool IgnoreOldPyramid = oldTilePyramid == null;
 
                 //Don't check the old pyramid if it doesn't have the downsample level we are looking at
