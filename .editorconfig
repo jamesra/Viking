@@ -1,0 +1,8 @@
+# Root EditorConfig for VikingLegacy (env and script line endings for Docker/Unix)
+# https://editorconfig.org
+root = true
+
+# Env files must use LF so shell in Linux containers doesn't see \r (e.g. IdentityServer .env mounts)
+[.env*]
+end_of_line = lf
+charset = utf-8
