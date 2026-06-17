@@ -88,7 +88,11 @@ namespace Viking.Identity.Data
             builder.Entity<GrantedGroupPermission>().HasOne(oa => oa.PermittedGroup).WithMany(nameof(Models.Group.PermissionsHeld)).HasForeignKey(oa => oa.GroupId).OnDelete(DeleteBehavior.ClientCascade);
             builder.Entity<GrantedGroupPermission>().HasOne(oa => oa.Resource).WithMany(nameof(Models.Resource.GroupsWithPermissions)).HasForeignKey(oa => oa.ResourceId);
 
-            builder.Entity<GrantedUserPermission>().HasOne(oa => oa.PermittedUser).WithMany(nameof(Models.ApplicationUser.PermissionsHeld)).HasForeignKey(oa => oa.UserId).OnDelete(DeleteBehavior.ClientCascade);
+            // Cascade delete at the DB level so removing an ApplicationUser also removes its
+            // granted permissions. This is safe because AspNetUsers and Resource are independent
+            // principal tables (no multi-cascade-path diamond into GrantedUserPermissions on
+            // SQL Server). Mirrors the pattern already used for UserToGroupAssignment.UserId.
+            builder.Entity<GrantedUserPermission>().HasOne(oa => oa.PermittedUser).WithMany(nameof(Models.ApplicationUser.PermissionsHeld)).HasForeignKey(oa => oa.UserId).OnDelete(DeleteBehavior.Cascade);
             builder.Entity<GrantedUserPermission>().HasOne(oa => oa.Resource).WithMany(nameof(Models.Resource.UsersWithPermissions)).HasForeignKey(oa => oa.ResourceId);
 
             builder.Entity<Resource>().HasOne(oa => oa.Parent)

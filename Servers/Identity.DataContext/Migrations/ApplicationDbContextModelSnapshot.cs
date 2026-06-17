@@ -492,12 +492,26 @@ namespace Viking.Identity.Data.Migrations
                     b.HasDiscriminator().HasValue("OrganizationalUnit");
                 });
 
+            modelBuilder.Entity("Viking.Identity.Models.SegmentationService", b =>
+                {
+                    b.HasBaseType("Viking.Identity.Models.Resource");
+
+                    b.Property<string>("Endpoint")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("Endpoint");
+
+                    b.HasDiscriminator().HasValue("SegmentationService");
+                });
+
             modelBuilder.Entity("Viking.Identity.Models.Volume", b =>
                 {
                     b.HasBaseType("Viking.Identity.Models.Resource");
 
                     b.Property<string>("Endpoint")
-                        .HasColumnType("nvarchar(max)");
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("Endpoint");
 
                     b.HasDiscriminator().HasValue("Volume");
                 });
@@ -583,7 +597,7 @@ namespace Viking.Identity.Data.Migrations
                     b.HasOne("Viking.Identity.Models.ApplicationUser", "PermittedUser")
                         .WithMany("PermissionsHeld")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("PermittedUser");
