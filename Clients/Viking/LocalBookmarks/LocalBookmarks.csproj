@@ -66,12 +66,16 @@
 	  
   </Target>
 
-  <!-- Compile MonoGame content (only for net48) -->
-  <Target Name="CompileContent" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net48'" Inputs="Content\Content.mgcb;Content\Arrow.png;Content\Ring.png;Content\Star.png" Outputs="$(TargetDir)\Content\Arrow.xnb;$(TargetDir)\Content\Ring.xnb;$(TargetDir)\Content\Star.xnb">
+  <!-- Compile MonoGame content (only for net48 and when MGCB is available) -->
+  <Target Name="CompileContent" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net48' AND Exists('$(MGCBPath)')" Inputs="Content\Content.mgcb;Content\Arrow.png;Content\Ring.png;Content\Star.png" Outputs="$(TargetDir)\Content\Arrow.xnb;$(TargetDir)\Content\Ring.xnb;$(TargetDir)\Content\Star.xnb">
 	  <Message Text="Compiling MonoGame content for $(TargetFramework)..." Importance="normal" />
-	  <Exec Command="&quot;C:\Program Files (x86)\MSBuild\MonoGame\v3.0\Tools\MGCB.exe&quot; /@:&quot;Content.mgcb&quot; /platform:Windows /outputDir:&quot;$(TargetDir)\Content&quot; /intermediateDir:&quot;$(MSBuildThisFileDirectory)Content\obj\$(TargetFramework)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)Content" StandardOutputImportance="high" ConsoleToMSBuild="true" />
+	  <Exec Command="&quot;$(MGCBPath)&quot; /@:&quot;Content.mgcb&quot; /platform:Windows /outputDir:&quot;$(TargetDir)\Content&quot; /intermediateDir:&quot;$(MSBuildThisFileDirectory)Content\obj\$(TargetFramework)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)Content" StandardOutputImportance="high" ConsoleToMSBuild="true" />
 	   
 	  <Message Text="MonoGame content compilation completed." Importance="normal" />
+  </Target>
+  
+  <Target Name="WarnMissingMGCB" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net48' AND !Exists('$(MGCBPath)')">
+    <Warning Text="MonoGame Content Builder (MGCB.exe) not found at '$(MGCBPath)'. Content will not be recompiled. Install the MonoGame SDK or set the MGCBPath property." />
   </Target>
 
   <!-- Include compiled MonoGame content -->

@@ -1,6 +1,9 @@
 <Project>
   <PropertyGroup>
     <NoWarn>$(NoWarn);NU1603;NU1605</NoWarn>
+    <!-- Path to MonoGame Content Builder. Installed by the MonoGame SDK at the default path below.
+         Override via /p:MGCBPath=... or by setting the property before this file is imported. -->
+    <MGCBPath Condition="'$(MGCBPath)' == ''">C:\Program Files (x86)\MSBuild\MonoGame\v3.0\Tools\MGCB.exe</MGCBPath>
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">

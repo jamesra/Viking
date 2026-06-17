@@ -41,14 +41,19 @@
 	</ItemGroup>
 	
 	<Target Name="CompileContent" BeforeTargets="Build"
+	        Condition="Exists('$(MGCBPath)')"
 	        Inputs="@(MGCBShaderFiles);@(MGCBContentFiles);@(MGCBConfigFile)"
 	        Outputs="$(MSBuildThisFileDirectory)Content\bin\Windows\.mgcb_timestamp">
 		
 		<Exec
-			Command="&quot;C:\Program Files (x86)\MSBuild\MonoGame\v3.0\Tools\MGCB.exe&quot; /@:&quot;Content.mgcb&quot; /platform:Windows /outputDir:&quot;bin/Windows&quot; /intermediateDir:&quot;obj/Windows&quot;"
+			Command="&quot;$(MGCBPath)&quot; /@:&quot;Content.mgcb&quot; /platform:Windows /outputDir:&quot;bin/Windows&quot; /intermediateDir:&quot;obj/Windows&quot;"
 			WorkingDirectory="$(MSBuildThisFileDirectory)Content" StandardOutputImportance="High" StandardErrorImportance="High" />
 		
 		<!-- Create timestamp file to track when content was built -->
 		<Touch Files="$(MSBuildThisFileDirectory)Content\bin\Windows\.mgcb_timestamp" AlwaysCreate="true" />
+	</Target>
+	
+	<Target Name="WarnMissingMGCB" BeforeTargets="Build" Condition="!Exists('$(MGCBPath)')">
+		<Warning Text="MonoGame Content Builder (MGCB.exe) not found at '$(MGCBPath)'. Content will not be recompiled. Install the MonoGame SDK or set the MGCBPath property." />
 	</Target>
 </Project> 
