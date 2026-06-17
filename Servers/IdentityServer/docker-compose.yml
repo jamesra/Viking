@@ -15,13 +15,11 @@ services:
     image: ${IMAGE_REGISTRY:-}identity-standalone:${IMAGE_VERSION:-latest}
     secrets:
       - ssl_cert
-      - ssl_cert_pfx 
       - ssl_key
     environment:
       - ASPNETCORE_URLS=http://+:80;https://+:443
       - SSL_CERT_PATH=/run/secrets/ssl_cert
       - SSL_KEY_PATH=/run/secrets/ssl_key
-      - SSL_KEY_CERT_PATH=/run/secrets/ssl_cert_pfx
       - ASPNETCORE_ENVIRONMENT=Docker   
       - ConnectionStrings__IdentityConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=${SQL_SERVER_IDENTITY_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
       - ConnectionStrings__ConfigConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=${SQL_SERVER_CONFIG_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
@@ -58,7 +56,6 @@ services:
       - ASPNETCORE_URLS=http://+:80;https://+:443
       - SSL_CERT_PATH=/run/secrets/ssl_cert
       - SSL_KEY_PATH=/run/secrets/ssl_key
-      - SSL_KEY_CERT_PATH=/run/secrets/ssl_cert_pfx
       - ASPNETCORE_ENVIRONMENT=Docker 
       - ConnectionStrings__IdentityConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=${SQL_SERVER_IDENTITY_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
     volumes:
@@ -75,8 +72,6 @@ secrets:
     file: ${SSL_CERT_PATH}
   ssl_key:
     file: ${SSL_KEY_PATH}
-  ssl_cert_pfx:
-    file: ${SSL_CERT_PFX_PATH}
   duende_key:
     file: ${DUENDE_KEY_PATH}
 

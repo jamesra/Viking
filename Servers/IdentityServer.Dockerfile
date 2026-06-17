@@ -1,21 +1,28 @@
 # Multi-service Dockerfile for Identity Server components
 # This Dockerfile builds and runs IdentityServerStandalone, WebApi, and IdentityServer
+# Build context must be Servers/. Direct build from Servers/: docker build -f IdentityServer.dockerfile -t identity-all-services:latest .
+# Compose: run from IdentityServer/; uses context: .. and dockerfile: ../IdentityServer.dockerfile
 
 # Build arguments for port configuration
 ARG IDENTITY_STANDALONE_HTTP_PORT=5000
 ARG IDENTITY_STANDALONE_HTTPS_PORT=5001
 ARG IDENTITY_WEBAPI_HTTP_PORT=6000
 ARG IDENTITY_WEBAPI_HTTPS_PORT=6001
-ARG IDENTITY_MANAGEMENT_HTTP_PORT=4000
-ARG IDENTITY_MANAGEMENT_HTTPS_PORT=4001
+ARG IDENTITY_MANAGEMENT_HTTP_PORT=80
+ARG IDENTITY_MANAGEMENT_HTTPS_PORT=443
 ARG IDENTITY_ENABLE_REMOTE_DEBUG=false
 ARG REMOTE_DEBUG_PORT=4024
 # Environment configuration - can be overridden by build args
 ARG ASPNETCORE_ENVIRONMENT=Production
 ARG HOSTING_ENVIRONMENT=Docker
 
-FROM --platform=linux/amd64 mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
+
+ENV ASPNETCORE_ENVIRONMENT=$ASPNETCORE_ENVIRONMENT
+ENV HOSTING_ENVIRONMENT=$HOSTING_ENVIRONMENT
+ENV IDENTITY_ENABLE_REMOTE_DEBUG=$IDENTITY_ENABLE_REMOTE_DEBUG
+ENV REMOTE_DEBUG_PORT=$REMOTE_DEBUG_PORT
 
 # Install supervisor for process management and dos2unix for line ending conversion
 RUN apt-get update && apt-get install -y supervisor curl dos2unix && rm -rf /var/lib/apt/lists/*
@@ -36,9 +43,9 @@ ENV IDENTITY_ENABLE_REMOTE_DEBUG=$IDENTITY_ENABLE_REMOTE_DEBUG
 ENV REMOTE_DEBUG_PORT=$REMOTE_DEBUG_PORT
 
 # Expose ports for all services (HTTP, HTTPS, and single Debug port)
-EXPOSE 5000 5001 6000 6001 4000 4001 4024
+EXPOSE 5000 5001 6000 6001 80 443 4024
 
-FROM --platform=linux/amd64 mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 # Pass build arguments to build stage
 ARG ASPNETCORE_ENVIRONMENT
 ARG BUILD_CONFIGURATION=Release
@@ -53,14 +60,15 @@ WORKDIR /src
 RUN mkdir IdentityServer
 
 # Copy all project dependencies
-COPY ../Identity.DataContext/ Identity.DataContext/
-COPY ../Identity.Models/ Identity.Models/
+COPY Identity.DataContext/ Identity.DataContext/
+COPY Identity.Models/ Identity.Models/
 COPY IdentityServer/Identity.Configuration/ IdentityServer/Identity.Configuration/
 COPY IdentityServer/Viking.Identity.Server.Extensions/ IdentityServer/Viking.Identity.Server.Extensions/
 
 COPY IdentityServer/IdentityServerStandalone/ IdentityServer/IdentityServerStandalone/
 COPY IdentityServer/Viking.Identity.Server.WebApi/ IdentityServer/Viking.Identity.Server.WebApi/
 COPY IdentityServer/Viking.Identity.Server.WebManagement/ IdentityServer/Viking.Identity.Server.WebManagement/
+COPY IdentityServer/KeyGenerator/ IdentityServer/KeyGenerator/
 
 # Build IdentityServerStandalone
 WORKDIR "/src/IdentityServer/IdentityServerStandalone"
@@ -68,7 +76,7 @@ RUN dotnet restore "IdentityServerStandalone.csproj"
 RUN dotnet build "IdentityServerStandalone.csproj" -c $BUILD_CONFIGURATION -o /app/build/identity-standalone
 
 # Build WebApi
-WORKDIR "/src/IdentityServer/Viking.Identity.Server.WebApi" 
+WORKDIR "/src/IdentityServer/Viking.Identity.Server.WebApi"
 RUN dotnet restore "Viking.Identity.Server.WebApi.csproj"
 RUN dotnet build "Viking.Identity.Server.WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/build/identity-webapi
 
@@ -91,21 +99,15 @@ RUN dotnet publish "Viking.Identity.Server.WebApi.csproj" -c $BUILD_CONFIGURATIO
 # Publish Viking.Identity.Server.WebManagement
 WORKDIR "/src/IdentityServer/Viking.Identity.Server.WebManagement"
 RUN dotnet publish "IdentityManagementWebsite.csproj" -c $BUILD_CONFIGURATION -o /app/publish/identity-server /p:UseAppHost=false --runtime linux-x64 --self-contained false /p:DebugType=portable
-# Copy secrets.json explicitly to ensure it's included in the published output
-COPY IdentityServer/Viking.Identity.Server.WebManagement/secrets.json /app/publish/identity-server/secrets.json
+# secrets.json is not copied into the image; load it at runtime via docker-compose volume from IDENTITY_CONFIG_PATH (e.g. D:/Docker/mounted-configs/IdentityServer)
 
-# Generate Data Protection keys
+# Generate Data Protection keys (consistent keys across restarts; used to protect data stored on disk)
 FROM build AS keygenerator
-
-WORKDIR /src
-COPY IdentityServer/KeyGenerator/ IdentityServer/KeyGenerator/
 WORKDIR "/src/IdentityServer/KeyGenerator"
 RUN dotnet restore "KeyGenerator.csproj"
-RUN dotnet build "KeyGenerator.csproj" -c $BUILD_CONFIGURATION -o /app/build/KeyGenerator 
-RUN dotnet run /app/DataProtectionKeys VikingIdentityServer 
-  
-WORKDIR "/app/IdentityServer/KeyGenerator"
-  
+RUN dotnet build "KeyGenerator.csproj" -c $BUILD_CONFIGURATION -o /app/build/KeyGenerator
+RUN dotnet run -- /app/DataProtectionKeys VikingIdentityServer
+
 # Final stage
 FROM base AS final
 # Pass build arguments to final stage
@@ -121,7 +123,7 @@ ENV IDENTITY_ENABLE_REMOTE_DEBUG=$IDENTITY_ENABLE_REMOTE_DEBUG
 ENV REMOTE_DEBUG_PORT=$REMOTE_DEBUG_PORT
 
 WORKDIR /app
- 
+
 RUN mkdir /app/wwwroot/
 
 # Copy published applications
@@ -129,10 +131,10 @@ COPY --from=publish /app/publish/identity-standalone /app/identity-standalone/
 COPY --from=publish /app/publish/identity-webapi /app/identity-webapi/
 COPY --from=publish /app/publish/identity-server /app/identity-server/
 
-# Copy Data Protection keys
+# Copy Data Protection keys (from keygenerator stage; consistent across restarts)
 COPY --from=keygenerator /app/DataProtectionKeys /app/DataProtectionKeys
-
-# Environment files will be mounted from host
+# Keep a copy to seed the volume when it is mounted empty (avoids "key not found in key ring" on first run)
+COPY --from=keygenerator /app/DataProtectionKeys /app/DataProtectionKeysBuild
 
 # Create supervisor configuration
 RUN mkdir -p /etc/supervisor/conf.d
@@ -216,6 +218,12 @@ RUN echo '#!/bin/bash' > /app/start-services.sh && \
     echo '  echo "Remote debugger ready on port $DEBUG_PORT"' >> /app/start-services.sh && \
     echo 'fi' >> /app/start-services.sh && \
     echo '' >> /app/start-services.sh && \
+    echo '# Seed Data Protection keys if volume is empty (prevents "key not found in key ring" when mount overwrites image keys)' >> /app/start-services.sh && \
+    echo 'DP_KEY_COUNT=$(find /app/DataProtectionKeys -maxdepth 1 -name "*.xml" 2>/dev/null | wc -l)' >> /app/start-services.sh && \
+    echo 'if [ "$DP_KEY_COUNT" -eq 0 ] && [ -d /app/DataProtectionKeysBuild ]; then' >> /app/start-services.sh && \
+    echo '  cp -n /app/DataProtectionKeysBuild/*.xml /app/DataProtectionKeys/ 2>/dev/null && echo "Seeded Data Protection keys from image into volume"' >> /app/start-services.sh && \
+    echo 'fi' >> /app/start-services.sh && \
+    echo '' >> /app/start-services.sh && \
     echo '# Wait for database to be ready (if using external database)' >> /app/start-services.sh && \
     echo 'echo "Waiting for database connection..."' >> /app/start-services.sh && \
     echo 'sleep 1' >> /app/start-services.sh && \
@@ -231,17 +239,14 @@ RUN echo '#!/bin/bash' > /app/run-identity-standalone.sh && \
     echo 'echo "[IS] Checking for .env files..."' >> /app/run-identity-standalone.sh && \
     echo 'echo "[IS] DEBUG: ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}"' >> /app/run-identity-standalone.sh && \
     echo 'echo "[IS] DEBUG: HOSTING_ENVIRONMENT=${HOSTING_ENVIRONMENT}"' >> /app/run-identity-standalone.sh && \
-    echo '# Convert line endings for .env files' >> /app/run-identity-standalone.sh && \
-    echo 'if [ -f /app/.env ]; then dos2unix /app/.env 2>/dev/null || true; fi' >> /app/run-identity-standalone.sh && \
-    echo 'if [ -n "${ASPNETCORE_ENVIRONMENT}" ] && [ -f "/app/.env.${ASPNETCORE_ENVIRONMENT}" ]; then dos2unix /app/.env.${ASPNETCORE_ENVIRONMENT} 2>/dev/null || true; fi' >> /app/run-identity-standalone.sh && \
-    echo 'if [ -n "${HOSTING_ENVIRONMENT}" ] && [ -f "/app/.env.${HOSTING_ENVIRONMENT}" ]; then dos2unix /app/.env.${HOSTING_ENVIRONMENT} 2>/dev/null || true; fi' >> /app/run-identity-standalone.sh && \
-    echo 'if [ -f /app/.env ]; then echo "[IS] Found /app/.env - loading..."; set -a; source /app/.env; set +a; else echo "[IS] /app/.env not found"; fi' >> /app/run-identity-standalone.sh && \
-    echo 'if [ -n "${ASPNETCORE_ENVIRONMENT}" ] && [ -f "/app/.env.${ASPNETCORE_ENVIRONMENT}" ]; then echo "[IS] Found /app/.env.${ASPNETCORE_ENVIRONMENT} - loading..."; set -a; source /app/.env.${ASPNETCORE_ENVIRONMENT}; set +a; else echo "[IS] /app/.env.${ASPNETCORE_ENVIRONMENT} not found"; fi' >> /app/run-identity-standalone.sh && \
-    echo 'if [ -n "${HOSTING_ENVIRONMENT}" ] && [ -f "/app/.env.${HOSTING_ENVIRONMENT}" ]; then echo "[IS] Found /app/.env.${HOSTING_ENVIRONMENT} - loading..."; set -a; source /app/.env.${HOSTING_ENVIRONMENT}; set +a; else echo "[IS] /app/.env.${HOSTING_ENVIRONMENT} not found"; fi' >> /app/run-identity-standalone.sh && \
+    echo 'source_env() { [ -f "$1" ] || return 0; t=$(mktemp); sed "s/\\r\$//" "$1" > "$t"; set -a; . "$t"; set +a; rm -f "$t"; }' >> /app/run-identity-standalone.sh && \
+    echo 'if [ -f /app/.env ]; then echo "[IS] Found /app/.env - loading..."; source_env /app/.env; else echo "[IS] /app/.env not found"; fi' >> /app/run-identity-standalone.sh && \
+    echo 'if [ -n "${ASPNETCORE_ENVIRONMENT}" ] && [ -f "/app/.env.${ASPNETCORE_ENVIRONMENT}" ]; then echo "[IS] Found /app/.env.${ASPNETCORE_ENVIRONMENT} - loading..."; source_env "/app/.env.${ASPNETCORE_ENVIRONMENT}"; else echo "[IS] /app/.env.${ASPNETCORE_ENVIRONMENT} not found"; fi' >> /app/run-identity-standalone.sh && \
+    echo 'if [ -n "${HOSTING_ENVIRONMENT}" ] && [ -f "/app/.env.${HOSTING_ENVIRONMENT}" ]; then echo "[IS] Found /app/.env.${HOSTING_ENVIRONMENT} - loading..."; source_env "/app/.env.${HOSTING_ENVIRONMENT}"; else echo "[IS] /app/.env.${HOSTING_ENVIRONMENT} not found"; fi' >> /app/run-identity-standalone.sh && \
     echo 'ENV_FILES="/app/.env"' >> /app/run-identity-standalone.sh && \
     echo 'if [ -n "${ASPNETCORE_ENVIRONMENT}" ] && [ -f "/app/.env.${ASPNETCORE_ENVIRONMENT}" ]; then ENV_FILES="$ENV_FILES /app/.env.${ASPNETCORE_ENVIRONMENT}"; fi' >> /app/run-identity-standalone.sh && \
     echo 'if [ -n "${HOSTING_ENVIRONMENT}" ] && [ -f "/app/.env.${HOSTING_ENVIRONMENT}" ]; then ENV_FILES="$ENV_FILES /app/.env.${HOSTING_ENVIRONMENT}"; fi' >> /app/run-identity-standalone.sh && \
-    echo 'export $(cat $ENV_FILES 2>/dev/null | grep -v "^#" | grep -v "^$" | grep "=" | cut -d= -f1 | grep -E "^[A-Za-z_][A-Za-z0-9_]*$" | tr "\n" " ")' >> /app/run-identity-standalone.sh && \
+    echo 'export $(cat $ENV_FILES 2>/dev/null | sed "s/\\r\$//" | grep -v "^#" | grep -v "^$" | grep "=" | cut -d= -f1 | grep -E "^[A-Za-z_][A-Za-z0-9_]*$" | tr "\n" " ")' >> /app/run-identity-standalone.sh && \
     echo 'echo "[IS] Loaded environment variables:"' >> /app/run-identity-standalone.sh && \
     echo 'env | grep -E "(IDENTITY_|SQL_|SSL_|AUTHORITY)" | sort' >> /app/run-identity-standalone.sh && \
     echo 'cd /app/identity-standalone' >> /app/run-identity-standalone.sh && \
@@ -254,17 +259,14 @@ RUN echo '#!/bin/bash' > /app/run-identity-webapi.sh && \
     echo 'echo "[API] Checking for .env files..."' >> /app/run-identity-webapi.sh && \
     echo 'echo "[API] DEBUG: ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}"' >> /app/run-identity-webapi.sh && \
     echo 'echo "[API] DEBUG: HOSTING_ENVIRONMENT=${HOSTING_ENVIRONMENT}"' >> /app/run-identity-webapi.sh && \
-    echo '# Convert line endings for .env files' >> /app/run-identity-webapi.sh && \
-    echo 'if [ -f /app/.env ]; then dos2unix /app/.env 2>/dev/null || true; fi' >> /app/run-identity-webapi.sh && \
-    echo 'if [ -n "${ASPNETCORE_ENVIRONMENT}" ] && [ -f "/app/.env.${ASPNETCORE_ENVIRONMENT}" ]; then dos2unix /app/.env.${ASPNETCORE_ENVIRONMENT} 2>/dev/null || true; fi' >> /app/run-identity-webapi.sh && \
-    echo 'if [ -n "${HOSTING_ENVIRONMENT}" ] && [ -f "/app/.env.${HOSTING_ENVIRONMENT}" ]; then dos2unix /app/.env.${HOSTING_ENVIRONMENT} 2>/dev/null || true; fi' >> /app/run-identity-webapi.sh && \
-    echo 'if [ -f /app/.env ]; then echo "[API] Found /app/.env - loading..."; set -a; source /app/.env; set +a; else echo "[API] /app/.env not found"; fi' >> /app/run-identity-webapi.sh && \
-    echo 'if [ -n "${ASPNETCORE_ENVIRONMENT}" ] && [ -f "/app/.env.${ASPNETCORE_ENVIRONMENT}" ]; then echo "[API] Found /app/.env.${ASPNETCORE_ENVIRONMENT} - loading..."; set -a; source /app/.env.${ASPNETCORE_ENVIRONMENT}; set +a; else echo "[API] /app/.env.${ASPNETCORE_ENVIRONMENT} not found"; fi' >> /app/run-identity-webapi.sh && \
-    echo 'if [ -n "${HOSTING_ENVIRONMENT}" ] && [ -f "/app/.env.${HOSTING_ENVIRONMENT}" ]; then echo "[API] Found /app/.env.${HOSTING_ENVIRONMENT} - loading..."; set -a; source /app/.env.${HOSTING_ENVIRONMENT}; set +a; else echo "[API] /app/.env.${HOSTING_ENVIRONMENT} not found"; fi' >> /app/run-identity-webapi.sh && \
+    echo 'source_env() { [ -f "$1" ] || return 0; t=$(mktemp); sed "s/\\r\$//" "$1" > "$t"; set -a; . "$t"; set +a; rm -f "$t"; }' >> /app/run-identity-webapi.sh && \
+    echo 'if [ -f /app/.env ]; then echo "[API] Found /app/.env - loading..."; source_env /app/.env; else echo "[API] /app/.env not found"; fi' >> /app/run-identity-webapi.sh && \
+    echo 'if [ -n "${ASPNETCORE_ENVIRONMENT}" ] && [ -f "/app/.env.${ASPNETCORE_ENVIRONMENT}" ]; then echo "[API] Found /app/.env.${ASPNETCORE_ENVIRONMENT} - loading..."; source_env "/app/.env.${ASPNETCORE_ENVIRONMENT}"; else echo "[API] /app/.env.${ASPNETCORE_ENVIRONMENT} not found"; fi' >> /app/run-identity-webapi.sh && \
+    echo 'if [ -n "${HOSTING_ENVIRONMENT}" ] && [ -f "/app/.env.${HOSTING_ENVIRONMENT}" ]; then echo "[API] Found /app/.env.${HOSTING_ENVIRONMENT} - loading..."; source_env "/app/.env.${HOSTING_ENVIRONMENT}"; else echo "[API] /app/.env.${HOSTING_ENVIRONMENT} not found"; fi' >> /app/run-identity-webapi.sh && \
     echo 'ENV_FILES="/app/.env"' >> /app/run-identity-webapi.sh && \
     echo 'if [ -n "${ASPNETCORE_ENVIRONMENT}" ] && [ -f "/app/.env.${ASPNETCORE_ENVIRONMENT}" ]; then ENV_FILES="$ENV_FILES /app/.env.${ASPNETCORE_ENVIRONMENT}"; fi' >> /app/run-identity-webapi.sh && \
     echo 'if [ -n "${HOSTING_ENVIRONMENT}" ] && [ -f "/app/.env.${HOSTING_ENVIRONMENT}" ]; then ENV_FILES="$ENV_FILES /app/.env.${HOSTING_ENVIRONMENT}"; fi' >> /app/run-identity-webapi.sh && \
-    echo 'export $(cat $ENV_FILES 2>/dev/null | grep -v "^#" | grep -v "^$" | grep "=" | cut -d= -f1 | grep -E "^[A-Za-z_][A-Za-z0-9_]*$" | tr "\n" " ")' >> /app/run-identity-webapi.sh && \
+    echo 'export $(cat $ENV_FILES 2>/dev/null | sed "s/\\r\$//" | grep -v "^#" | grep -v "^$" | grep "=" | cut -d= -f1 | grep -E "^[A-Za-z_][A-Za-z0-9_]*$" | tr "\n" " ")' >> /app/run-identity-webapi.sh && \
     echo 'cd /app/identity-webapi' >> /app/run-identity-webapi.sh && \
     echo 'dotnet Viking.Identity.Server.WebApi.dll 2>&1 | while IFS= read -r line; do echo -e "\033[34m[API]\033[0m $line"; done' >> /app/run-identity-webapi.sh && \
     chmod +x /app/run-identity-webapi.sh && \
@@ -275,17 +277,14 @@ RUN echo '#!/bin/bash' > /app/run-identity-server.sh && \
     echo 'echo "[MGMT] Checking for .env files..."' >> /app/run-identity-server.sh && \
     echo 'echo "[MGMT] DEBUG: ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}"' >> /app/run-identity-server.sh && \
     echo 'echo "[MGMT] DEBUG: HOSTING_ENVIRONMENT=${HOSTING_ENVIRONMENT}"' >> /app/run-identity-server.sh && \
-    echo '# Convert line endings for .env files' >> /app/run-identity-server.sh && \
-    echo 'if [ -f /app/.env ]; then dos2unix /app/.env 2>/dev/null || true; fi' >> /app/run-identity-server.sh && \
-    echo 'if [ -n "${ASPNETCORE_ENVIRONMENT}" ] && [ -f "/app/.env.${ASPNETCORE_ENVIRONMENT}" ]; then dos2unix /app/.env.${ASPNETCORE_ENVIRONMENT} 2>/dev/null || true; fi' >> /app/run-identity-server.sh && \
-    echo 'if [ -n "${HOSTING_ENVIRONMENT}" ] && [ -f "/app/.env.${HOSTING_ENVIRONMENT}" ]; then dos2unix /app/.env.${HOSTING_ENVIRONMENT} 2>/dev/null || true; fi' >> /app/run-identity-server.sh && \
-    echo 'if [ -f /app/.env ]; then echo "[MGMT] Found /app/.env - loading..."; set -a; source /app/.env; set +a; else echo "[MGMT] /app/.env not found"; fi' >> /app/run-identity-server.sh && \
-    echo 'if [ -n "${ASPNETCORE_ENVIRONMENT}" ] && [ -f "/app/.env.${ASPNETCORE_ENVIRONMENT}" ]; then echo "[MGMT] Found /app/.env.${ASPNETCORE_ENVIRONMENT} - loading..."; set -a; source /app/.env.${ASPNETCORE_ENVIRONMENT}; set +a; else echo "[MGMT] /app/.env.${ASPNETCORE_ENVIRONMENT} not found"; fi' >> /app/run-identity-server.sh && \
-    echo 'if [ -n "${HOSTING_ENVIRONMENT}" ] && [ -f "/app/.env.${HOSTING_ENVIRONMENT}" ]; then echo "[MGMT] Found /app/.env.${HOSTING_ENVIRONMENT} - loading..."; set -a; source /app/.env.${HOSTING_ENVIRONMENT}; set +a; else echo "[MGMT] /app/.env.${HOSTING_ENVIRONMENT} not found"; fi' >> /app/run-identity-server.sh && \
+    echo 'source_env() { [ -f "$1" ] || return 0; t=$(mktemp); sed "s/\\r\$//" "$1" > "$t"; set -a; . "$t"; set +a; rm -f "$t"; }' >> /app/run-identity-server.sh && \
+    echo 'if [ -f /app/.env ]; then echo "[MGMT] Found /app/.env - loading..."; source_env /app/.env; else echo "[MGMT] /app/.env not found"; fi' >> /app/run-identity-server.sh && \
+    echo 'if [ -n "${ASPNETCORE_ENVIRONMENT}" ] && [ -f "/app/.env.${ASPNETCORE_ENVIRONMENT}" ]; then echo "[MGMT] Found /app/.env.${ASPNETCORE_ENVIRONMENT} - loading..."; source_env "/app/.env.${ASPNETCORE_ENVIRONMENT}"; else echo "[MGMT] /app/.env.${ASPNETCORE_ENVIRONMENT} not found"; fi' >> /app/run-identity-server.sh && \
+    echo 'if [ -n "${HOSTING_ENVIRONMENT}" ] && [ -f "/app/.env.${HOSTING_ENVIRONMENT}" ]; then echo "[MGMT] Found /app/.env.${HOSTING_ENVIRONMENT} - loading..."; source_env "/app/.env.${HOSTING_ENVIRONMENT}"; else echo "[MGMT] /app/.env.${HOSTING_ENVIRONMENT} not found"; fi' >> /app/run-identity-server.sh && \
     echo 'ENV_FILES="/app/.env"' >> /app/run-identity-server.sh && \
     echo 'if [ -n "${ASPNETCORE_ENVIRONMENT}" ] && [ -f "/app/.env.${ASPNETCORE_ENVIRONMENT}" ]; then ENV_FILES="$ENV_FILES /app/.env.${ASPNETCORE_ENVIRONMENT}"; fi' >> /app/run-identity-server.sh && \
     echo 'if [ -n "${HOSTING_ENVIRONMENT}" ] && [ -f "/app/.env.${HOSTING_ENVIRONMENT}" ]; then ENV_FILES="$ENV_FILES /app/.env.${HOSTING_ENVIRONMENT}"; fi' >> /app/run-identity-server.sh && \
-    echo 'export $(cat $ENV_FILES 2>/dev/null | grep -v "^#" | grep -v "^$" | grep "=" | cut -d= -f1 | grep -E "^[A-Za-z_][A-Za-z0-9_]*$" | tr "\n" " ")' >> /app/run-identity-server.sh && \
+    echo 'export $(cat $ENV_FILES 2>/dev/null | sed "s/\\r\$//" | grep -v "^#" | grep -v "^$" | grep "=" | cut -d= -f1 | grep -E "^[A-Za-z_][A-Za-z0-9_]*$" | tr "\n" " ")' >> /app/run-identity-server.sh && \
     echo 'cd /app/identity-server' >> /app/run-identity-server.sh && \
     echo 'dotnet Viking.Identity.Server.WebManagement.dll 2>&1 | while IFS= read -r line; do echo -e "\033[33m[MGMT]\033[0m $line"; done' >> /app/run-identity-server.sh && \
     chmod +x /app/run-identity-server.sh && \
@@ -297,7 +296,7 @@ RUN cat > /app/health-check.sh <<EOF
 # Check if all services are running
 curl -f http://localhost:5001/.well-known/openid-configuration || exit 1
 curl -f http://localhost:6001/health || exit 1
-curl -f http://localhost:4001/ || exit 1
+curl -f http://localhost:80/ || exit 1
 EOF
 
 RUN chmod +x /app/health-check.sh
@@ -307,4 +306,3 @@ USER 1654
 
 # Use supervisor to manage all services
 ENTRYPOINT ["/app/start-services.sh"]
-

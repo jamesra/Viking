@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
+using Viking.Identity.Server.WebApi.Models;
 using Viking.Identity.Server.WebManagement.ApiControllers;
 using Viking.Identity.Server.WebManagement.Extensions;
 
@@ -356,6 +357,111 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
         public Task<Dictionary<long, object>> UserAccessibleVolumes()
         {
             return UserPermissionsByType(resourceTypeId: nameof(Volume));
+        }
+
+        /// <summary>
+        /// Returns a hierarchical tree of organizational units (branches) and user-accessible volumes (leaves).
+        /// Used by the login/volume selection UI to populate the volume tree.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("UserAccessibleVolumeTree")]
+        public async Task<ActionResult<List<VolumeTreeNodeDto>>> UserAccessibleVolumeTree()
+        {
+            var appUser = await GetApplicationUser();
+            if (appUser == null)
+            {
+                return new List<VolumeTreeNodeDto>();
+            }
+
+            var userPermittedResources = await _context.UserResourcePermissionsByType(appUser.Id, new[] { nameof(Volume) });
+            if (userPermittedResources.Count == 0)
+            {
+                return new List<VolumeTreeNodeDto>();
+            }
+
+            var permittedVolumeIds = userPermittedResources.Keys.ToList();
+            var volumes = await _context.Volume
+                .Where(v => permittedVolumeIds.Contains(v.Id))
+                .Select(v => new VolumeRow { Id = v.Id, Name = v.Name, Description = v.Description, Endpoint = v.Endpoint, ParentID = v.ParentID })
+                .ToListAsync();
+
+            var ouList = await _context.OrgUnit
+                .Select(o => new OuRow { Id = o.Id, Name = o.Name, ParentID = o.ParentID })
+                .ToListAsync();
+            var ouById = ouList.ToDictionary(o => o.Id);
+
+            var ouIdsInTree = new HashSet<long>();
+            foreach (var vol in volumes)
+            {
+                var ouId = vol.ParentID;
+                while (ouId.HasValue)
+                {
+                    ouIdsInTree.Add(ouId.Value);
+                    if (!ouById.TryGetValue(ouId.Value, out var ou))
+                        break;
+                    ouId = ou.ParentID;
+                }
+            }
+
+            var rootOuIds = ouList.Where(o => o.ParentID == null && ouIdsInTree.Contains(o.Id)).Select(o => o.Id).ToList();
+            var result = new List<VolumeTreeNodeDto>();
+            foreach (var rootId in rootOuIds)
+            {
+                var node = BuildVolumeTreeNode(
+                    rootId,
+                    ouList,
+                    ouById,
+                    ouIdsInTree,
+                    volumes,
+                    userPermittedResources);
+                if (node != null)
+                    result.Add(node);
+            }
+
+            return result;
+        }
+
+        private static VolumeTreeNodeDto BuildVolumeTreeNode(
+            long ouId,
+            List<OuRow> ouList,
+            Dictionary<long, OuRow> ouById,
+            HashSet<long> ouIdsInTree,
+            List<VolumeRow> volumes,
+            Dictionary<long, string[]> userPermittedResources)
+        {
+            if (!ouById.TryGetValue(ouId, out var ou))
+                return null;
+
+            var volumesHere = volumes.Where(v => v.ParentID == ouId).ToList();
+            var volumeDtos = volumesHere.Select(v => new UserResourcePermissionsDto
+            {
+                Id = v.Id,
+                Name = v.Name ?? $"Volume {v.Id}",
+                ResourceType = nameof(Volume),
+                Permissions = userPermittedResources.TryGetValue(v.Id, out var perms) ? perms : Array.Empty<string>(),
+                ParentId = v.ParentID,
+                Metadata = new Dictionary<string, object>
+                {
+                    ["Endpoint"] = v.Endpoint?.ToString() ?? (object)string.Empty,
+                    ["Description"] = v.Description ?? (object)string.Empty
+                }
+            }).ToList();
+
+            var childOuIds = ouList.Where(o => o.ParentID == ouId && ouIdsInTree.Contains(o.Id)).Select(o => o.Id).ToList();
+            var childNodes = childOuIds
+                .Select(childId => BuildVolumeTreeNode(childId, ouList, ouById, ouIdsInTree, volumes, userPermittedResources))
+                .Where(n => n != null)
+                .ToList();
+
+            return new VolumeTreeNodeDto
+            {
+                Id = ou.Id,
+                Name = ou.Name ?? "Unnamed",
+                ParentId = ou.ParentID,
+                ResourceType = nameof(OrganizationalUnit),
+                Volumes = volumeDtos,
+                Children = childNodes
+            };
         }
 
         [AllowAnonymous]

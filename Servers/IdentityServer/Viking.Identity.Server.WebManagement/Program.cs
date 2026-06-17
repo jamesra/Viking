@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -206,7 +206,7 @@ namespace Viking.Identity.Server.WebManagement
             services.AddScoped<IAuthorizationHandler, ResourcePermissionsAuthorizationHandler>();
 
             // Configure SSL and HTTPS redirection 
-            var https_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT", 4001); 
+            var https_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT", 443); 
             services.AddHttpsRedirection(options =>
             {
                 options.RedirectStatusCode = StatusCodes.Status308PermanentRedirect;
@@ -277,8 +277,8 @@ namespace Viking.Identity.Server.WebManagement
             {
                 // Configure HTTPS with custom certificate
                 var sslOptions = configuration.GetSection("SSL").Get<SSLOptions>();
-                var http_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTP_PORT", 4000);
-                var https_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT", 4001);
+                var http_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTP_PORT", 80);
+                var https_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT", 443);
 
                 Log.Information("Configuring Kestrel to listen on HTTP port {HttpPort} and HTTPS port {HttpsPort}", http_port, https_port);
 

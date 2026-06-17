@@ -1,0 +1,8 @@
+# Replace this file with your TLS private key in PEM format.
+# Example: contents of privkey.pem from Let's Encrypt or your CA.
+# Keep this file secure and do not commit the real key.
+#
+# PEM format example (the actual key will be longer):
+# -----BEGIN PRIVATE KEY-----
+# MIIE...base64...
+# -----END PRIVATE KEY-----

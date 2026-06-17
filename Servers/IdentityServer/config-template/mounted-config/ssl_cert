@@ -1,0 +1,8 @@
+# Replace this file with your TLS certificate in PEM format.
+# Example: contents of fullchain.pem from Let's Encrypt or your CA.
+# Do not include the private key in this file.
+#
+# PEM format example (the actual cert will be longer):
+# -----BEGIN CERTIFICATE-----
+# MIIE...base64...
+# -----END CERTIFICATE-----
