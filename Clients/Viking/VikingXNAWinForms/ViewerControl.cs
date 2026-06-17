@@ -617,7 +617,17 @@ public class ViewerControl : GraphicsDeviceControl
                 viewport.Height != ClientBounds.Height)
             {
                 if (this.graphicsDeviceService != null)
-                    this.graphicsDeviceService.ResetDevice(ClientRectangle.Width, ClientRectangle.Height);
+                {
+                    try
+                    {
+                        this.graphicsDeviceService.ResetDevice(ClientRectangle.Width, ClientRectangle.Height);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Trace.WriteLine($"ResetDevice failed during viewport update: {ex.Message}");
+                        return;
+                    }
+                }
             }
         }
 
