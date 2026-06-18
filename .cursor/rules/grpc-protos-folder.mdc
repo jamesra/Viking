@@ -1,4 +1,7 @@
 ---
-alwaysApply: true
+description: Protocol buffer files must live in gRPC_Protos
+globs: **/*.proto
+alwaysApply: false
 ---
+
 All .proto files go in the gRPC_Protos folder and are organized by service/category. The canonical location for protocol buffer definitions in this solution is the gRPC_Protos directory structure. Do not create .proto files in any other location (e.g., proto/, Servers/*/protos/, etc.). All projects and build scripts should reference proto files from gRPC_Protos.

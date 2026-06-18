@@ -1,0 +1,10 @@
+---
+name: coordinate-spaces
+description: Coordinate spaces (mosaic vs volume vs screen) used in imaging and annotations
+globs: ["**/Geometry/**", "**/Annotation*/**", "**/WebAnnotation/**", "**/Morphology*/**", "Clients/MonogameXNAGraphicsShared/**", "**/*[V|v]iew*/**", "**/*ViewModel*/**"]
+alwaysApply: false
+---
+
+# Overview
+
+There are two coordinate spaces commonly used. The first is "mosaic space" which is the position on a specific section's 2D image. The second is "Volume Space" which is the position after a section has been transformed into a volume. In a drawing context there may also be a screen coordinate space.

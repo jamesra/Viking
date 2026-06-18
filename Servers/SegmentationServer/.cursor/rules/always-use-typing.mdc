@@ -1,5 +1,0 @@
----
-globs: *.py
-alwaysApply: false
----
-Add typing information to paramaters, attributes, and variables whenever possible.

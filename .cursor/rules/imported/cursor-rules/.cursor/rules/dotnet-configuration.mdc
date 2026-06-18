@@ -1,0 +1,7 @@
+---
+description: .NET configuration file layering and override order
+globs: "**/appsettings*.json,**/.env*,**/Program.cs,**/Startup.cs"
+alwaysApply: false
+---
+
+When working with configuration, check for environment-specific overrides in this order: .env → .env.{Environment} → appsettings.json → appsettings.{Environment}.json. Prefer layering multiple configuration sources rather than hardcoding values in code.

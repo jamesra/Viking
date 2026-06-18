@@ -1,5 +1,6 @@
 ---
-description: Projects using the Microsoft.XNA namespace.  Projects that use XNA or Monogame.
+description: Projects using the Microsoft.XNA namespace. Projects that use XNA or Monogame.
 alwaysApply: false
+globs: ["Clients/MonogameTestbed/**", "Clients/Viking/**", "Clients/MonogameXNAGraphicsShared/**"]
 ---
-Projects in this solution use VikingXNAGraphics for net48 and Monographics for net9.0 projects.  net48 projects use Monogame 3.7.x and net9.0 projects use the latest version of Monogame. 
+Projects in this solution use VikingXNAGraphics for net48 and Monographics for net9.0 projects. net48 projects use Monogame 3.7.x and net9.0 projects use the latest version of Monogame. Shared graphics code used by both Viking and MonogameTestbed lives in clients\MonogameXNAGraphicsShared; changes there must keep both clients buildable.

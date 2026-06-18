@@ -1,0 +1,6 @@
+---
+description: Monogame content pipeline and asset loading
+globs: ["**/Content.mgcb", "**/Content/**"]
+alwaysApply: false
+---
+When adding or changing content assets: register them in both Content.mgcb files that target each version of Monogame. Use standard asset types (Texture2D, Model, SpriteFont, etc.). Reference assets via Content.Load<T>("path") using the path defined in the .mgcb, not filesystem paths.

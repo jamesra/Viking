@@ -1,6 +1,0 @@
----
-description: Do not edit generated code
-globs:
-alwaysApply: false
----
-Do not edit generated code.  Instead, edit the template files or the inputs to the generator.

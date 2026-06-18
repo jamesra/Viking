@@ -1,0 +1,26 @@
+---
+description: Python typing, docstrings, imports, and class member standards
+globs: **/*.py
+alwaysApply: false
+---
+
+When editing or generating Python:
+
+- Place imports at the top of the file.
+- Define class member variables on the class with type annotations before `__init__`.
+- Add type annotations to all function parameters, return types, and variables where practical.
+- Add a PEP 257 docstring to each non-trivial function (not one-line trivial wrappers) with a brief one-line summary of its purpose.
+- Extend the docstring only when behavior, arguments, or return value are non-obvious.
+
+Example:
+
+```python
+class VolumeLoader:
+    _index: int
+
+    def __init__(self, index: int) -> None:
+        self._index = index
+
+    def load_volume(self, url: str) -> Volume:
+        """Load a volume descriptor from the given URL."""
+```

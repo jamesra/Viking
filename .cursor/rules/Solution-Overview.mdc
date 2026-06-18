@@ -1,0 +1,23 @@
+---
+description: Project layout, client/server roles, and cross-project build constraints
+alwaysApply: true
+---
+
+**Project:** Image viewing, annotation, and analysis suite — Viking client plus servers that serve images and annotations from SQL. Client projects live under `Clients/`, server projects under `Servers/`.
+
+**Clients**
+- **Viking** (`Clients/Viking/`) — .NET 4.8, Monogame 3.7.x; main client.
+- **VikingAU** (`Clients/VikingAU/`) — Same stack as Viking; auto-adjusts annotation positions in the DB.
+- **MonogameTestbed** (`Clients/MonogameTestbed/`) — .NET 9.0, latest Monogame; keep in sync with Viking where they share code.
+- **Jotunn** — Abandoned WPF port of Viking; low priority — get it running only if quick; don't invest much time.
+
+**Servers**
+- **AnnotationService** — WCF; planned replacement by gRPC. Working gRPC implementation lives in the Viking repo (sibling to VikingLegacy solution folder).
+- **Export** — Converts annotations to common file formats.
+- **OData** — Exposes annotations as OData. Proto definitions live in gRPC_Protos (see grpc-protos-folder rule).
+- **Segmentation Server** — Python-based gRPC segmentation service; separate repo/solution (e.g. SAM2-Docker).
+- **IdentityServerStandalone** — IdentityServer-based auth service.
+- **IdentityServer.WebApi** — Query service for Identity Server users and rights.
+- **IdentityServer.Management** — Site for creating accounts, assigning rights, and managing volumes.
+
+**Constraint:** All of the above must remain buildable and working. When changing shared code (especially between MonogameTestbed and Viking, e.g. in `Clients/MonogameXNAGraphicsShared/`), ensure both solutions still build and that changes in one do not introduce errors in the other.

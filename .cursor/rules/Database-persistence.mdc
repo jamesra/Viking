@@ -1,0 +1,7 @@
+---
+description: Database access and schema conventions for annotations and images
+globs: "Servers/**/DataContext*.cs,Servers/**/DataModel*.cs,**/Migrations/**,Servers/SQL/**,**/appsettings*.json"
+alwaysApply: false
+---
+
+When changing annotation or image persistence: follow existing migrations and schema conventions. Avoid raw SQL where an ORM or established pattern exists. Connection strings and secrets: use configuration (appsettings, .env), never hardcode.

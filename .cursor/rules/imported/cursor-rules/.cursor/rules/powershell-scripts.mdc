@@ -1,0 +1,7 @@
+---
+description: PowerShell script documentation style
+globs: **/*.ps1
+alwaysApply: false
+---
+
+If a PowerShell script is generated as the response: start the script documentation following PowerShell's standard comment-based help format. Include the purpose of the script and the problem it was generated to solve, which may be the same.

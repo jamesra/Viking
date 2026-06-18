@@ -1,0 +1,7 @@
+---
+description: Do not edit generated code
+globs: "**/*.Designer.cs,**/*.g.cs,**/*ModelSnapshot.cs,**/obj/**,**/*.generated.*"
+alwaysApply: false
+---
+
+Do not edit generated code. Instead, edit the template files or the inputs to the generator.

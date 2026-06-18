@@ -1,4 +1,5 @@
 ---
+description: Do not comment out code to make it compile
 alwaysApply: true
 ---
-When buildingDo not comment code to get code to compile.
+When building, do not comment code to get code to compile.
