@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../../Docker"
+		},
+		{
+			"path": "../bwjoneslab/servers/reverseproxy"
+		}
+	],
+	"settings": {
+		"files.exclude": {
+			"Clients/Jotunn": true
+		},
+		"search.exclude": {
+			"Clients/Jotunn": true
+		}
+	}
+}
