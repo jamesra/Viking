@@ -12,7 +12,7 @@ namespace Viking.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.14.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "18.7.0.0")]
     internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
         
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
@@ -26,8 +26,8 @@ namespace Viking.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("<?xml version=\"1.0\" encoding=\"utf-16\"?>\n<ArrayOfString xmlns:xsd=\"http://www.w3.o" +
-            "rg/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n  <str" +
-            "ing>http://connectomes.utah.edu/Rabbit</string>\n</ArrayOfString>")]
+            "rg/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n</Arra" +
+            "yOfString>")]
         public global::System.Collections.Specialized.StringCollection VolumeURLs {
             get {
                 return ((global::System.Collections.Specialized.StringCollection)(this["VolumeURLs"]));
@@ -46,6 +46,18 @@ namespace Viking.Properties {
             }
             set {
                 this["IdentityServerURL"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string LaunchExchangeBaseUrl {
+            get {
+                return ((string)(this["LaunchExchangeBaseUrl"]));
+            }
+            set {
+                this["LaunchExchangeBaseUrl"] = value;
             }
         }
     }

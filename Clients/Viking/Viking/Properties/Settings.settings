@@ -1,15 +1,18 @@
-﻿<?xml version='1.0' encoding='utf-8'?>
+<?xml version='1.0' encoding='utf-8'?>
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Viking.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
     <Setting Name="VolumeURLs" Type="System.Collections.Specialized.StringCollection" Scope="User">
       <Value Profile="(Default)">&lt;?xml version="1.0" encoding="utf-16"?&gt;
 &lt;ArrayOfString xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"&gt;
-  &lt;&gt;
 &lt;/ArrayOfString&gt;</Value>
     </Setting>
     <Setting Name="IdentityServerURL" Type="System.String" Scope="User">
       <Value Profile="(Default)">https://identity.codepharm.net:5001/</Value>
+    </Setting>
+    <Setting Name="LaunchExchangeBaseUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)"></Value>
+      <Description>Base URL of the Identity WebApi for viking://open code exchange (e.g. https://identity.codepharm.net:6001). When empty, launch codes are not used.</Description>
     </Setting>
   </Settings>
 </SettingsFile>
