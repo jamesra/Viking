@@ -1,0 +1,61 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build-viking",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/Clients/Viking/Viking/Viking.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary;ForceNoAlign"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "silent" }
+    },
+    {
+      "label": "build-and-run-viking",
+      "command": "powershell",
+      "type": "shell",
+      "args": [
+        "-Command",
+        "dotnet build '${workspaceFolder}/Clients/Viking/Viking/Viking.csproj' && Start-Process '${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48/Viking.exe'"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": "build",
+      "presentation": { "reveal": "always" }
+    },
+    {
+      "label": "rebuild-viking",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/Clients/Viking/Viking/Viking.csproj",
+        "--no-incremental",
+        "/property:GenerateFullPaths=true"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": "build",
+      "presentation": { "reveal": "always" }
+    },
+    {
+      "label": "build-monogame-testbed",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/Clients/MonogameTestbed/MonogameTestbed.csproj",
+        "/p:Configuration=Debug",
+        "/p:Platform=x64",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary;ForceNoAlign"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": { "kind": "build", "isDefault": false },
+      "presentation": { "reveal": "silent" }
+    }
+  ]
+}
