@@ -20,8 +20,8 @@
 .PARAMETER CertificateThumbprint
     The thumbprint of the certificate to use for signing (default: 41403cbc59209b576efe575775abe8f4a42da6ba)
 
-.PARAMETER TimestampUrl
-    The timestamp server URL (default: http://timestamp.digicert.com)
+.PARAMETER TimestampRfc3161Url
+    The RFC 3161 timestamp server URL (default: http://timestamp.sectigo.com)
 
 .PARAMETER Version
     The version number to use for the package (default: reads from Viking.csproj)
@@ -38,7 +38,7 @@
 param(
     [string]$Configuration = "Release",
     [string]$CertificateThumbprint = "41403cbc59209b576efe575775abe8f4a42da6ba",
-    [string]$TimestampUrl = "http://timestamp.digicert.com",
+    [string]$TimestampRfc3161Url = "http://timestamp.sectigo.com",
     [string]$Version = "",
     [string]$ReleaseUrl = "http://websvc.codepharm.net/Software/Viking"
 )
@@ -55,7 +55,7 @@ Write-Host "Viking Velopack Build and Sign" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Configuration: $Configuration" -ForegroundColor Yellow
 Write-Host "Certificate Thumbprint: $CertificateThumbprint" -ForegroundColor Yellow
-Write-Host "Timestamp URL: $TimestampUrl" -ForegroundColor Yellow
+Write-Host "Timestamp (RFC 3161): $TimestampRfc3161Url" -ForegroundColor Yellow
 Write-Host ""
 
 # Check if project file exists
@@ -314,7 +314,8 @@ function Sign-FilesBatch {
         
         & $signtoolPath sign `
             /sha1 $CertificateThumbprint `
-            /t $TimestampUrl `
+            /tr $TimestampRfc3161Url `
+            /td SHA256 `
             /fd SHA256 `
             $FilePaths 2>&1 | ForEach-Object {
                 # Parse output line by line
@@ -487,6 +488,36 @@ if (-not (Test-Path $mainExeCheck)) {
 }
 
 Write-Host "Build output verified: Viking.exe found" -ForegroundColor Gray
+
+# Step 4b: Build VikingAU and copy to distribution
+Write-Host ""
+Write-Host "Step 4b: Building VikingAU and copying to distribution..." -ForegroundColor Green
+
+$vikingAuProjectPath = Join-Path (Split-Path (Split-Path $projectDir -Parent) -Parent) "VikingAU\VikingAU.csproj"
+if (Test-Path $vikingAuProjectPath) {
+    dotnet build $vikingAuProjectPath -c $Configuration -f net48
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Error: VikingAU build failed with exit code $LASTEXITCODE" -ForegroundColor Red
+        exit $LASTEXITCODE
+    }
+    $vikingAuOutputDir = Join-Path (Split-Path $vikingAuProjectPath -Parent) "bin\$Configuration\net48"
+    $vikingAuExe = Join-Path $vikingAuOutputDir "VikingAU.exe"
+    $vikingAuConfigExe = Join-Path $vikingAuOutputDir "VikingAU.exe.config"
+    $vikingAuConfigDll = Join-Path $vikingAuOutputDir "VikingAU.dll.config"
+    if (Test-Path $vikingAuExe) {
+        Copy-Item $vikingAuExe $publishDir -Force
+        if (Test-Path $vikingAuConfigExe) {
+            Copy-Item $vikingAuConfigExe $publishDir -Force
+        } elseif (Test-Path $vikingAuConfigDll) {
+            Copy-Item $vikingAuConfigDll (Join-Path $publishDir "VikingAU.exe.config") -Force
+        }
+        Write-Host "VikingAU.exe copied to distribution" -ForegroundColor Green
+    } else {
+        Write-Host "Warning: VikingAU.exe not found at $vikingAuExe" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "Warning: VikingAU project not found at $vikingAuProjectPath" -ForegroundColor Yellow
+}
 
 # Step 5: Pre-sign all files with HSM certificate
 Write-Host ""
@@ -709,7 +740,8 @@ if ($setupExe -and (Test-Path $setupExe)) {
     
     & $signtoolPath sign `
         /sha1 $CertificateThumbprint `
-        /t $TimestampUrl `
+        /tr $TimestampRfc3161Url `
+        /td SHA256 `
         /fd SHA256 `
         "$setupExe"
     
