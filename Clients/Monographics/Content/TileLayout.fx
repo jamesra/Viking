@@ -1,3 +1,11 @@
+#if OPENGL
+#define VS_SHADERMODEL vs_3_0
+#define PS_SHADERMODEL ps_3_0
+#else
+#define VS_SHADERMODEL vs_4_0
+#define PS_SHADERMODEL ps_4_0
+#endif
+
 float4x4 mWorldViewProj;
 
 //int DownsampleLogBaseTwo; //The log base 2 of the downsample level of the texture being rendered, so downsample by 1 = 1, 2 = 2, 4 = 3, 8 = 4, 16 = 5, etc...
@@ -139,8 +147,8 @@ technique TileLayoutToGreyscaleEffect
 		ZEnable = true;  
         ZWriteEnable = true;  
 
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-        PixelShader = compile ps_4_0 TileBlendToGreyscalePixelShaderFunction();
+		VertexShader = compile VS_SHADERMODEL VertexShaderFunction();
+        PixelShader = compile PS_SHADERMODEL TileBlendToGreyscalePixelShaderFunction();
     }
 }
 
@@ -152,7 +160,7 @@ technique TileLayoutToHSVEffect
 		ZEnable = true;  
         ZWriteEnable = true;  
 
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-        PixelShader = compile ps_4_0 TileBlendToHSVPixelShaderFunction();
+		VertexShader = compile VS_SHADERMODEL VertexShaderFunction();
+        PixelShader = compile PS_SHADERMODEL TileBlendToHSVPixelShaderFunction();
     }
 }

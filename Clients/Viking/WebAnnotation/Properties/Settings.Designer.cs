@@ -259,6 +259,30 @@ namespace WebAnnotation.Properties {
                 this["PolygonPointRadius"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("12")]
+        public double PolygonPointDiameter {
+            get {
+                return ((double)(this["PolygonPointDiameter"]));
+            }
+            set {
+                this["PolygonPointDiameter"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool PolygonPointDiameterMigrated {
+            get {
+                return ((bool)(this["PolygonPointDiameterMigrated"]));
+            }
+            set {
+                this["PolygonPointDiameterMigrated"] = value;
+            }
+        }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
@@ -269,6 +293,30 @@ namespace WebAnnotation.Properties {
             }
             set {
                 this["SmallestRenderedSize"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.0025")]
+        public double PolygonVertexPointsVisibleAtWidthFraction {
+            get {
+                return ((double)(this["PolygonVertexPointsVisibleAtWidthFraction"]));
+            }
+            set {
+                this["PolygonVertexPointsVisibleAtWidthFraction"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.001")]
+        public double PolygonVertexPointsHiddenAtWidthFraction {
+            get {
+                return ((double)(this["PolygonVertexPointsHiddenAtWidthFraction"]));
+            }
+            set {
+                this["PolygonVertexPointsHiddenAtWidthFraction"] = value;
             }
         }
     }

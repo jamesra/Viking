@@ -66,5 +66,17 @@ namespace Viking.UI.WPF.Forms
             CancelClicked?.Invoke(this, EventArgs.Empty);
             Close();
         }
+
+        private void ResetToDefaultsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (System.Windows.MessageBox.Show(
+                "Reset all viewer preferences to their default values?",
+                "Reset to Defaults",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question) == MessageBoxResult.Yes)
+            {
+                ViewModel.ResetToDefaults();
+            }
+        }
     }
 }

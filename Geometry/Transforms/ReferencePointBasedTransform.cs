@@ -62,32 +62,34 @@ namespace Geometry.Transforms
         public MappingGridVector2[] MapPoints
         {
             get { return _mapPoints; }
-            protected set
-            {
-                //SortedSet<MappingGridVector2> listPoints = new SortedSet<MappingGridVector2>(value);
-                Array.Sort(value);
-                _mapPoints = value;
+            protected set => AssignMapPoints(value, sortPoints: true);
+        }
 
-                var _mapPointsList = _mapPoints.ToList();
+        protected void AssignMapPoints(MappingGridVector2[] value, bool sortPoints)
+        {
+            if (sortPoints)
+                Array.Sort(value);
+            _mapPoints = value;
+
+            var _mapPointsList = _mapPoints.ToList();
 #if DEBUG
                 DebugVerifyPointsAreUnique(_mapPoints);
 #endif
-                bool ArrayHadDuplicates = false;
-                ArrayHadDuplicates = ArrayHadDuplicates || MappingGridVector2.RemoveControlSpaceDuplicates(_mapPointsList);
-                ArrayHadDuplicates = ArrayHadDuplicates || MappingGridVector2.RemoveMappedSpaceDuplicates(_mapPointsList);
+            bool ArrayHadDuplicates = false;
+            ArrayHadDuplicates = ArrayHadDuplicates || MappingGridVector2.RemoveControlSpaceDuplicates(_mapPointsList);
+            ArrayHadDuplicates = ArrayHadDuplicates || MappingGridVector2.RemoveMappedSpaceDuplicates(_mapPointsList);
 
-                //Replace our map points with the list that had duplicates removed if necessary
-                if (ArrayHadDuplicates)
-                {
-                    _mapPoints = [.. _mapPointsList];
-                    if (_mapPoints.Length < 3)
-                        throw new ArgumentException("Not enough control points after duplicates removed");
-                }
-
-                //Reset the bounds
-                MappedBounds = new GridRectangle();
-                ControlBounds = new GridRectangle();
+            //Replace our map points with the list that had duplicates removed if necessary
+            if (ArrayHadDuplicates)
+            {
+                _mapPoints = [.. _mapPointsList];
+                if (_mapPoints.Length < 3)
+                    throw new ArgumentException("Not enough control points after duplicates removed");
             }
+
+            //Reset the bounds
+            MappedBounds = new GridRectangle();
+            ControlBounds = new GridRectangle();
         }
 
         private static bool DebugVerifyPointsAreUnique(MappingGridVector2[] listPoints)
@@ -98,26 +100,34 @@ namespace Geometry.Transforms
             {
                 Debug.Assert(listPoints[i - 1].ControlPoint != listPoints[i].ControlPoint, $"Duplicate control space points found in transform.  This breaks Delaunay. Point #{i-1} and #{i}");
                 Debug.Assert(listPoints[i - 1].MappedPoint != listPoints[i].MappedPoint, $"Duplicate mapped space points found in transform.  This breaks Delaunay. Point #{i - 1} and #{i}");
-                return false;
             }
-            
+
+            return true;
+#else
             return true;
 #endif
-            return true;
         }
 
         protected ReferencePointBasedTransform(MappingGridVector2[] points, TransformBasicInfo info)
         {
-            //List<MappingGridVector2> listPoints = new List<MappingGridVector2>(points);
-            //MappingGridVector2.RemoveDuplicates(listPoints);
+            AssignMapPoints(points, sortPoints: true);
+            this.Info = info;
+        }
 
-            //this.MapPoints = listPoints.ToArray();
-            this.MapPoints = points;
+        protected ReferencePointBasedTransform(MappingGridVector2[] points, TransformBasicInfo info, bool preserveMapPointOrder)
+        {
+            AssignMapPoints(points, sortPoints: !preserveMapPointOrder);
             this.Info = info;
         }
 
         protected ReferencePointBasedTransform(MappingGridVector2[] points, GridRectangle mappedBounds, TransformBasicInfo info)
             : this(points, info)
+        {
+            this.MappedBounds = mappedBounds;
+        }
+
+        protected ReferencePointBasedTransform(MappingGridVector2[] points, GridRectangle mappedBounds, TransformBasicInfo info, bool preserveMapPointOrder)
+            : this(points, info, preserveMapPointOrder)
         {
             this.MappedBounds = mappedBounds;
         }

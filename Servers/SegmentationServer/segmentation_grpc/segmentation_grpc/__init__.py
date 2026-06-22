@@ -19,6 +19,8 @@ from .segmentation_pb2 import (
     UploadImageResponse,
     DeleteImageRequest,
     DeleteImageResponse,
+    ServerStatusRequest,
+    ServerStatusResponse,
     Point,
     Polygon,
     SegmentResult
@@ -38,6 +40,8 @@ __all__: list[str] = [
     'UploadImageResponse',
     'DeleteImageRequest',
     'DeleteImageResponse',
+    'ServerStatusRequest',
+    'ServerStatusResponse',
     'Point',
     'Polygon',
     'SegmentResult',

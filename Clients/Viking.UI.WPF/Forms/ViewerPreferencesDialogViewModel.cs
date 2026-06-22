@@ -589,6 +589,8 @@ namespace Viking.UI.WPF.Forms
             _sectionNumberOverlayAcceleration = _originalSectionNumberOverlayAcceleration;
             _sectionNumberOverlayEdge = _originalSectionNumberOverlayEdge;
             _sectionNumberOverlayOpacity = _originalSectionNumberOverlayOpacity;
+            _sectionNumberOverlayMinOpacityNonCenter = _originalSectionNumberOverlayMinOpacityNonCenter;
+            _sectionNumberOverlayCenterMagnification = _originalSectionNumberOverlayCenterMagnification;
             _pidProportionalGain = _originalPidProportionalGain;
             _pidDerivativeGain = _originalPidDerivativeGain;
             _pidIntegralGain = _originalPidIntegralGain;

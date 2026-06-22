@@ -571,13 +571,15 @@ namespace WebAnnotation.ViewModel
 
                 // Launch segmentation command
                 var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
+                long[]? includeStructureIds = modelObj.ParentID.HasValue ? [modelObj.ParentID.Value] : null;
                 SegmentationCommand segmentCommand = new(
                     parent,
                     volume_points,
                     Array.Empty<GridVector2>(), // no background points initially
                     callback,
                     channelManager,
-                    modelObj.Parent.TypeID);
+                    [modelObj.Parent.TypeID],
+                    includeStructureIds);
 
                 parent.CurrentCommand = segmentCommand;
             }
@@ -615,13 +617,15 @@ namespace WebAnnotation.ViewModel
                 // Launch segmentation command
                 var parent = AnnotationOverlay.CurrentOverlay.Parent;
                 var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
+                long[]? includeStructureIds = modelObj.ParentID.HasValue ? [modelObj.ParentID.Value] : null;
                 SegmentationCommand segmentCommand = new(
                     parent,
                     medial_axis_points,
                     Array.Empty<GridVector2>(), // no background points initially
                     callback,
                     channelManager,
-                    modelObj.Parent.TypeID);
+                    [modelObj.Parent.TypeID],
+                    includeStructureIds);
 
                 parent.CurrentCommand = segmentCommand;
             }

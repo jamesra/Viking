@@ -484,7 +484,7 @@ namespace MorphologyMesh
 
         private static Dictionary<GridVector2, List<int>> CreatePointToIndexMap(BajajGeneratorMesh mesh)
         {
-            Dictionary<GridVector2, List<int>> result = new(mesh.Verticies.Count);
+            Dictionary<GridVector2, List<int>> result = new(mesh.Verticies.Count, GridVector2EqualityComparer.Default);
             foreach (MorphMeshVertex v in mesh.Verticies)
             {
                 GridVector2 p = v.Position.XY();

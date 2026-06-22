@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -9,7 +9,7 @@ namespace MonogameTestbed
     /// </summary>
     public partial class SqlServerTypesUtilities
     {
-        [LibraryImport("kernel32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [LibraryImport("kernel32.dll", EntryPoint = "LoadLibraryW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
         private static partial IntPtr LoadLibrary(string libname);
 
         /// <summary>

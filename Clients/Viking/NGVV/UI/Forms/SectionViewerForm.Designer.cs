@@ -1,4 +1,4 @@
-﻿namespace Viking.UI.Forms
+namespace Viking.UI.Forms
 {
     partial class SectionViewerForm
     {
@@ -13,9 +13,11 @@
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                SectionControl.Section = null;
+                if (components != null)
+                    components.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -39,7 +41,6 @@
             this.SectionControl.Dock = System.Windows.Forms.DockStyle.Fill;
             this.SectionControl.Location = new System.Drawing.Point(0, 0);
             this.SectionControl.Name = "SectionControl";
-            this.SectionControl.Section = null;
             this.SectionControl.Size = new System.Drawing.Size(284, 264);
             this.SectionControl.StatusMagnification = 2.2535211267605635;
             this.SectionControl.TabIndex = 0;

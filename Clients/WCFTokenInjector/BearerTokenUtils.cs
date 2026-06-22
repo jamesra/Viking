@@ -81,7 +81,7 @@ namespace Viking.Tokens
     public class BearerTokenHelper
     {
         public string ClientId { get; set; } = "ro.viking";
-        public string ClientSecret { get; set; } = "Correct Horse Battery Staple";
+        public string ClientSecret { get; set; } = "CorrectHorseBatteryStaple";
 
         /// <summary>
         /// Uri of service that provides tokens
@@ -396,6 +396,126 @@ namespace Viking.Tokens
         {
             var result = await GetAuthenticatedJsonAsync<List<ApiVolumeTreeNode>>(user_token, "Permissions/UserAccessibleVolumeTree", "UserAccessibleVolumeTree");
             return result ?? [];
+        }
+    }
+
+    /// <summary>
+    /// Shared helper for requesting a volume-scoped bearer token with optional Review rights enforcement.
+    /// Used by Viking and VikingAU for identity server authentication.
+    /// </summary>
+    public static class VolumeAuthHelper
+    {
+        private const string ReviewPermission = "Review";
+        private const string AdminPermission = "admin";
+
+        /// <summary>
+        /// Requests a bearer token scoped to the volume, optionally enforcing that the user has Review rights (admin or Review permission).
+        /// </summary>
+        /// <param name="username">User name</param>
+        /// <param name="password">Password</param>
+        /// <param name="volumeName">Volume name (from volume XML)</param>
+        /// <param name="identityApiUrl">Identity API base URL (from volume XML VolumeToEndpoint)</param>
+        /// <param name="identityServerUrl">Identity server URL (token endpoint authority)</param>
+        /// <param name="requireReviewRights">If true, throws if user does not have admin or Review permission on the volume</param>
+        /// <returns>The volume-scoped bearer token</returns>
+        public static async Task<TokenResponse> RequestVolumeBearerTokenAsync(
+            string username,
+            string password,
+            string volumeName,
+            Uri identityApiUrl,
+            Uri identityServerUrl,
+            bool requireReviewRights = false)
+        {
+            var apiToken = await GetApiTokenAsync(username, password, identityServerUrl);
+            return await GetVolumeTokenAsync(username, password, volumeName, identityApiUrl, identityServerUrl, apiToken, requireReviewRights);
+        }
+
+        /// <summary>
+        /// Requests both an API token and a volume-scoped bearer token. Used when the caller needs the API token for other operations (e.g. segmentation service selection).
+        /// </summary>
+        public static async Task<(TokenResponse apiToken, TokenResponse volumeToken)> RequestVolumeBearerTokenWithApiTokenAsync(
+            string username,
+            string password,
+            string volumeName,
+            Uri identityApiUrl,
+            Uri identityServerUrl,
+            bool requireReviewRights = false)
+        {
+            var apiToken = await GetApiTokenAsync(username, password, identityServerUrl);
+            var volumeToken = await GetVolumeTokenAsync(username, password, volumeName, identityApiUrl, identityServerUrl, apiToken, requireReviewRights);
+            return (apiToken, volumeToken);
+        }
+
+        private static async Task<TokenResponse> GetApiTokenAsync(string username, string password, Uri identityServerUrl)
+        {
+            var apiTokenHelper = new BearerTokenHelper
+            {
+                IdentityServerURL = identityServerUrl,
+                ClientId = "api",
+                ClientSecret = "Correct Horse Battery Staple"
+            };
+
+            var apiTokenResponse = await apiTokenHelper.RetrieveBearerToken(username, password);
+            if (apiTokenResponse is null || apiTokenResponse.IsError)
+            {
+                throw new Exception("Failed to get identity token: " + TokenErrorHelper.ToUserMessage(apiTokenResponse));
+            }
+
+            return apiTokenResponse as TokenResponse;
+        }
+
+        private static async Task<TokenResponse> GetVolumeTokenAsync(
+            string username,
+            string password,
+            string volumeName,
+            Uri identityApiUrl,
+            Uri identityServerUrl,
+            TokenResponse apiToken,
+            bool requireReviewRights)
+        {
+            var identityApiHelper = new IdentityApiHelper
+            {
+                IdentityApiURL = identityApiUrl
+            };
+
+            var volumePermissions = await identityApiHelper.RetrieveUserVolumePermissions(apiToken, volumeName);
+            if (volumePermissions is null || volumePermissions.Length == 0)
+            {
+                throw new Exception("User does not have permissions in volume");
+            }
+
+            if (requireReviewRights)
+            {
+                bool hasReview = volumePermissions.Any(p =>
+                    string.Equals(p, AdminPermission, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(p, ReviewPermission, StringComparison.OrdinalIgnoreCase));
+                if (!hasReview)
+                {
+                    throw new Exception("VikingAU requires Review rights on the volume. User has: " + string.Join(", ", volumePermissions));
+                }
+            }
+
+            var vikingTokenHelper = new BearerTokenHelper
+            {
+                IdentityServerURL = identityServerUrl,
+                ClientId = "Viking",
+                ClientSecret = "Correct Horse Battery Staple"
+            };
+
+            var permissionsList = new List<string>
+            {
+                "openid",
+                "Viking.Annotation"
+            };
+            permissionsList.AddRange(volumePermissions.Select(p => $"{volumeName}.{p}"));
+
+            var bearerTokenResponse = await vikingTokenHelper.RetrieveBearerToken(username, password, [.. permissionsList]);
+            if (bearerTokenResponse is null || bearerTokenResponse.IsError)
+            {
+                throw new Exception("Failed to get bearer token: " + TokenErrorHelper.ToUserMessage(bearerTokenResponse));
+            }
+
+            return bearerTokenResponse as TokenResponse;
         }
     }
 }

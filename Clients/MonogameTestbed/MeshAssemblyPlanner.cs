@@ -57,7 +57,7 @@ namespace MonogameTestbed
                         Math.Round(t.ShapeZ.Average())
                         : -1
                     : -1;
-            }).Select(k => new AssemblyPlannerLeaf(k, sliceGraph.BoundingBox.CenterPoint))];
+            }).Select(k => new AssemblyPlannerLeaf(k))];
 
             Dictionary<ulong, IAssemblyPlannerNode> Nodes = new(sliceGraph.Nodes.Count * 2);
             SortedList<ulong, AssemblyPlannerLeaf> Slices = new(firstLayer.Length);
@@ -405,16 +405,10 @@ namespace MonogameTestbed
 
         public override bool IsLeaf { get; } = true;
 
-        /// <summary>
-        /// Where to position the mesh model this leaf generates in world space;
-        /// </summary>
-        public readonly GridVector3 Position;
-
-        public AssemblyPlannerLeaf(ulong sliceKey, GridVector3 Position, AssemblyPlannerBranch parent = null)
+        public AssemblyPlannerLeaf(ulong sliceKey, AssemblyPlannerBranch parent = null)
         {
             this.Key = sliceKey;
             this.Parent = parent;
-            this.Position = Position;
         }
 
         /// <summary>
@@ -424,7 +418,8 @@ namespace MonogameTestbed
         /// <param name="completedMesh"></param>
         public void OnMeshCompletion(BajajGeneratorMesh completedMesh)
         {
-            SliceGraphMeshModel model = new(Position.XY().ToGridVector3(0));
+            // Vertices are stored in volume coordinates; model transform stays at origin.
+            SliceGraphMeshModel model = new();
             if (completedMesh is null)
             {
                 this.MeshModel = model;
@@ -461,7 +456,7 @@ namespace MonogameTestbed
     /// </remarks>
     /// <param name="plan"></param>
     /// <param name="position">Where in volume space the world matrix should position the model by default</param>
-    class MeshAssemblyPlannerCompletedView(MeshAssemblyPlanner plan, in GridVector3 position) : MeshAssemblyPlannerViewBase(plan), IColorView
+    class MeshAssemblyPlannerCompletedView(MeshAssemblyPlanner plan) : MeshAssemblyPlannerViewBase(plan), IColorView
     {
         /// <summary>
         /// A mapping of all nodes with completed models we can show as part of an incremental view
@@ -497,11 +492,6 @@ namespace MonogameTestbed
             set => Color = Color.SetAlpha(value);
         }
 
-        /// <summary>
-        /// The default position to translate our completed mesh model to
-        /// </summary>
-        readonly GridVector3 Position = position;
-
         public override void OnNodeCompleted(IAssemblyPlannerNode node, bool success)
         {
             try
@@ -510,7 +500,6 @@ namespace MonogameTestbed
                 if (node.MeshModel != null)
                 {
                     node.MeshModel.Color = this.Color;
-                    node.MeshModel.model.Position = Position.XY().ToGridVector3(0);
                     ReadyModels.Add(node.Key, node.MeshModel);
                 }
 

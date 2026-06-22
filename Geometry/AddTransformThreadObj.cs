@@ -38,7 +38,15 @@ namespace Geometry.Transforms
             if (!mapped.All(m => m))
             {
                 //Prepare to remove unmappable points
-                IDiscreteTransform discreteFixedTransform = fixedTransform as IDiscreteTransform;
+                if (fixedTransform is not IDiscreteTransform discreteFixedTransform)
+                {
+                    this.AllPointsTransformed = false;
+                    MappingGridVector2.RemoveControlSpaceDuplicates(newPointsList);
+                    MappingGridVector2.RemoveMappedSpaceDuplicates(newPointsList);
+                    newPoints = [.. newPointsList];
+                    DoneEvent.Set();
+                    return;
+                }
 
                 //OK, cleanup all of the points that could not be mapped
                 foreach (int iPoint in iPoints)

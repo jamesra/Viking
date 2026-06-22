@@ -7,14 +7,16 @@ using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Viking.VolumeModel;
+using Viking.Tokens;
 using WebAnnotationModel;
-using System.Web;
 using Viking.Common;
+using System.Xml.Linq;
 
 namespace Viking.AU
 {
@@ -23,11 +25,14 @@ namespace Viking.AU
         [Option('v', "VolumeURL", Required = true, HelpText = "URL of VolumeXML file")]
         public string VolumeURL { get; set; }
 
-        [Option('u', "username", Required = false, HelpText = "URL of VolumeXML file")]
+        [Option('u', "username", Required = false, HelpText = "Username for identity server authentication")]
         public string Username { get; set; } = "Anonymous";
 
-        [Option('p', "password", Required = false, HelpText = "URL of VolumeXML file")]
+        [Option('p', "password", Required = false, HelpText = "Password")]
         public string Password { get; set; } = "connectome";
+
+        [Option("identity-server-url", Required = false, HelpText = "Identity server URL (default from config or https://identity.codepharm.net:5001/)")]
+        public string IdentityServerUrl { get; set; } = null;
 
         [Option('c', "closed_interpolation_points", Required = false, HelpText = "Number of closed curve interpolation points")]
         public int NumClosedInterpolationPoints { get; set; } = 10;
@@ -214,7 +219,6 @@ namespace Viking.AU
 
         static async Task RunAsync(CommandLineOptions options)
         {
-
             if (options.TranslateFile != null)
             {
                 SectionTranslations = SectionTranslations.CreateFromConfigFile(options.TranslateFile);
@@ -225,11 +229,43 @@ namespace Viking.AU
             System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=16.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
             SqlServerTypesLoader.Loader.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
 
+            var credentials = new NetworkCredential(options.Username, options.Password);
+
+            Console.WriteLine("Loading volume metadata...");
+            var (volumeName, identityApiUrl) = await LoadAndParseVolumeXmlAsync(options.VolumeURL, credentials, options.IdentityServerUrl);
+
+            var identityServerUrl = options.IdentityServerUrl ?? "https://identity.codepharm.net:5001/";
+            if (!Uri.TryCreate(identityServerUrl, UriKind.Absolute, out Uri identityServerUri))
+            {
+                Console.Error.WriteLine("Error: Invalid Identity Server URL: " + identityServerUrl);
+                Environment.Exit(1);
+            }
+
+            Console.WriteLine("Authenticating with identity server (Review rights required)...");
+            try
+            {
+                var bearerToken = await VolumeAuthHelper.RequestVolumeBearerTokenAsync(
+                    options.Username,
+                    options.Password,
+                    volumeName,
+                    identityApiUrl,
+                    identityServerUri,
+                    requireReviewRights: true);
+
+                TokenInjector.BearerToken = bearerToken;
+                TokenInjector.BearerTokenAuthority = identityServerUri.ToString();
+            }
+            catch (Exception ex)
+            {
+                var message = TokenErrorHelper.ToExceptionMessage(ex);
+                Console.Error.WriteLine("Authentication failed: " + message);
+                Environment.Exit(1);
+            }
+
             ConsoleProgressReporter progressReporter = new();
             Progress<ProgressInfo> progress = new();
             progress.ProgressChanged += progressReporter.OnReport;
 
-            CancellationTokenSource cancellationTokenSource = new();
             State.Volume = await Volume.CreateAsync(options.VolumeURL, State.CachePath, progress, CancellationToken.None);
 
             State.MappingsManager = new MappingManager(State.Volume);
@@ -237,7 +273,7 @@ namespace Viking.AU
             Console.Write($"Endpoint: {State.Volume.Endpoint.EndpointURL}");
 
             WebAnnotationModel.State.Endpoint = State.Volume.Endpoint.EndpointURL;
-            WebAnnotationModel.State.UserCredentials = new System.Net.NetworkCredential(options.Username, options.Password);
+            WebAnnotationModel.State.UserCredentials = credentials;
 
             //Preload all structures
             Console.WriteLine("Begin preload all structures");
@@ -631,6 +667,58 @@ namespace Viking.AU
         }
 
 
+
+        static async Task<(string volumeName, Uri identityApiUrl)> LoadAndParseVolumeXmlAsync(string volumeUrl, NetworkCredential credentials, string identityServerUrlFallback)
+        {
+            var xmlDoc = await Volume.LoadXDocumentAsync(volumeUrl, CancellationToken.None, credentials);
+
+            var volumeElement = Volume.GetVolumeElement(xmlDoc);
+            if (volumeElement is null)
+                throw new Exception("Volume element not found in XML");
+
+            var volumeName = volumeElement.Attributes()
+                .FirstOrDefault(a => string.Compare(a.Name.LocalName, "name", StringComparison.OrdinalIgnoreCase) == 0)
+                ?.Value;
+
+            if (string.IsNullOrEmpty(volumeName))
+                throw new Exception("Volume name not found in XML");
+
+            Uri identityApiUrl = null;
+            var endpointElement = volumeElement.Elements()
+                .FirstOrDefault(d => string.Equals(d.Name.LocalName, "VolumeToEndpoint", StringComparison.OrdinalIgnoreCase));
+
+            if (endpointElement != null)
+            {
+                var identityApiAttr = endpointElement.Attributes()
+                    .FirstOrDefault(a => a.Name.LocalName == "IdentityApi")?.Value;
+
+                if (!string.IsNullOrEmpty(identityApiAttr))
+                    Uri.TryCreate(identityApiAttr, UriKind.Absolute, out identityApiUrl);
+
+                if (identityApiUrl is null)
+                {
+                    var authAttr = endpointElement.Attributes()
+                        .FirstOrDefault(a => a.Name.LocalName == "Authentication")?.Value;
+
+                    if (!string.IsNullOrEmpty(authAttr))
+                        Uri.TryCreate(authAttr, UriKind.Absolute, out identityApiUrl);
+                }
+            }
+
+            if (identityApiUrl is null && !string.IsNullOrEmpty(identityServerUrlFallback))
+            {
+                if (Uri.TryCreate(identityServerUrlFallback, UriKind.Absolute, out Uri baseUri))
+                {
+                    var uriBuilder = new UriBuilder(baseUri) { Port = 6001 };
+                    identityApiUrl = uriBuilder.Uri;
+                }
+            }
+
+            if (identityApiUrl is null)
+                throw new Exception("Could not determine Identity API URL from volume XML or --identity-server-url");
+
+            return (volumeName, identityApiUrl);
+        }
 
         static bool AnyPointsAreDifferent(GridVector2[] Original, GridVector2[] New, double epsilonSquared = 0.25)
         {

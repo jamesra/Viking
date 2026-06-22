@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "MonogameTestbed (RC2 Vasculature)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-monogame-testbed",
+      "program": "${workspaceFolder}/Clients/MonogameTestbed/bin/x64/Debug/net9.0-windows/MonogameTestbed.dll",
+      "args": [
+        "-s",
+        "1",
+        "-e",
+        "http://websvc.codepharm.net/RC2/OData",
+        "-o",
+        "C:\\Temp\\Cell_DAEs\\VikingMeshFiles\\RC2\\Vasculature"
+      ],
+      "cwd": "${workspaceFolder}/Clients/MonogameTestbed/bin/x64/Debug/net9.0-windows",
+      "console": "integratedTerminal",
+      "stopAtEntry": false
+    }
+  ]
+}

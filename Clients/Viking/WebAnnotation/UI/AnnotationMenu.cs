@@ -16,7 +16,7 @@ using WebAnnotation.WPF.Forms;
 namespace WebAnnotation
 {
     [MenuAttribute("Annotation")]
-    internal class AnnotationMenu : Viking.Common.IMenuFactory
+    internal class AnnotationMenu : Viking.Common.IMenuFactory, Viking.Common.IPreferencesMenuContributor
     {
         private static MergeStructuresForm? _MergeStructuresForm = null;
         private static WebAnnotation.WPF.Forms.AnnotationPreferencesDialog? _preferencesDialog = null;
@@ -35,10 +35,6 @@ namespace WebAnnotation
             ToolStripMenuItem menuFavoriteTypes = new("Choose Favorited Structure Types");
             menuFavoriteTypes.Click += OnChooseFavoriteStructureTypes;
             menuRoot.DropDownItems.Add(menuFavoriteTypes);
-
-            ToolStripMenuItem menuPreferences = new("Preferences...");
-            menuPreferences.Click += OnPreferences;
-            menuRoot.DropDownItems.Add(menuPreferences);
 
             if (Global.Export != null)
             {
@@ -72,6 +68,13 @@ namespace WebAnnotation
             return menuRoot;
         }
 
+        public ToolStripMenuItem GetPreferencesMenuItem()
+        {
+            var item = new ToolStripMenuItem("Annotation...");
+            item.Click += OnPreferences;
+            return item;
+        }
+
         public static void OnExportMotifsTLP(object sender, EventArgs e)
         {
             Debug.Print("OnExportMotifsTLP");
@@ -101,6 +104,8 @@ namespace WebAnnotation
 
             // Create ViewModel and load current settings
             AnnotationPreferencesDialogViewModel viewModel = new();
+            int? sceneWidth = AnnotationOverlay.CurrentOverlay?.Parent?.Scene?.Viewport.Width;
+            double? sceneDownsample = AnnotationOverlay.CurrentOverlay?.Parent?.Camera?.Downsample;
             viewModel.LoadCurrentSettings(
                 Global.AnnotationSettings.NumSectionsInMemory,
                 Global.AnnotationSettings.NumSectionsLoading,
@@ -117,8 +122,12 @@ namespace WebAnnotation
                 Global.AnnotationSettings.CircleOpacityParentless,
                 Global.AnnotationSettings.CircleOpacityWithParent,
                 Global.AnnotationSettings.SegmentationPointRadius,
-                Global.AnnotationSettings.PolygonPointRadius,
-                Global.AnnotationSettings.SmallestRenderedSize
+                Global.AnnotationSettings.PolygonPointDiameter,
+                Global.AnnotationSettings.SmallestRenderedSize,
+                Global.AnnotationSettings.PolygonVertexPointsVisibleAtWidthFraction,
+                Global.AnnotationSettings.PolygonVertexPointsHiddenAtWidthFraction,
+                sceneWidth,
+                sceneDownsample
             );
 
             // Initialize static accessor properties
@@ -203,6 +212,35 @@ namespace WebAnnotation
             _preferencesDialog.ApplyClicked += (s, args) => SaveSettingsFromViewModel(viewModel);
             _preferencesDialog.OkClicked += (s, args) => SaveSettingsFromViewModel(viewModel);
 
+            // When user confirms Reset to Defaults: persist defaults and reload ViewModel from Global
+            _preferencesDialog.ResetToDefaultsRequested += (s, args) =>
+            {
+                Global.AnnotationSettings.ResetToDefaults();
+                viewModel.LoadCurrentSettings(
+                    Global.AnnotationSettings.NumSectionsInMemory,
+                    Global.AnnotationSettings.NumSectionsLoading,
+                    Global.AnnotationSettings.LocationTextScaleFactor,
+                    Global.AnnotationSettings.ReferenceLocationTextScaleFactor,
+                    Global.AnnotationSettings.DefaultClosedLineWidth,
+                    Global.AnnotationSettings.DefaultLocationJumpDownsample,
+                    Global.AnnotationSettings.AdjacentLocationRadiusScalar,
+                    Global.AnnotationSettings.NumClosedCurveInterpolationPointsForDisplay,
+                    Global.AnnotationSettings.PenSimplifyThreshold,
+                    Global.AnnotationSettings.MinRadius,
+                    Global.AnnotationSettings.PolygonOpacityParentless,
+                    Global.AnnotationSettings.PolygonOpacityWithParent,
+                    Global.AnnotationSettings.CircleOpacityParentless,
+                    Global.AnnotationSettings.CircleOpacityWithParent,
+                    Global.AnnotationSettings.SegmentationPointRadius,
+                    Global.AnnotationSettings.PolygonPointDiameter,
+                    Global.AnnotationSettings.SmallestRenderedSize,
+                    Global.AnnotationSettings.PolygonVertexPointsVisibleAtWidthFraction,
+                    Global.AnnotationSettings.PolygonVertexPointsHiddenAtWidthFraction,
+                    sceneWidth,
+                    sceneDownsample
+                );
+            };
+
             _preferencesDialog.Show(); // Modeless dialog
         }
 
@@ -219,8 +257,10 @@ namespace WebAnnotation
             Global.AnnotationSettings.PenSimplifyThreshold = viewModel.PenSimplifyThreshold;
             Global.AnnotationSettings.MinRadius = viewModel.MinRadius;
             Global.AnnotationSettings.SegmentationPointRadius = viewModel.SegmentationPointRadius;
-            Global.AnnotationSettings.PolygonPointRadius = viewModel.PolygonPointRadius;
+            Global.AnnotationSettings.PolygonPointDiameter = viewModel.PolygonPointDiameter;
             Global.AnnotationSettings.SmallestRenderedSize = viewModel.SmallestRenderedSize;
+            Global.AnnotationSettings.PolygonVertexPointsVisibleAtWidthFraction = viewModel.PolygonVertexPointsVisibleAtWidthFraction;
+            Global.AnnotationSettings.PolygonVertexPointsHiddenAtWidthFraction = viewModel.PolygonVertexPointsHiddenAtWidthFraction;
 
             // Update static accessor properties
             VikingXNAGraphics.CircleView.SmallestRenderedSizeAccessor = () => Global.AnnotationSettings.SmallestRenderedSize;

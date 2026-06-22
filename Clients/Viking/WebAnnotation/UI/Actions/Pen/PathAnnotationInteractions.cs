@@ -103,7 +103,17 @@ namespace WebAnnotation.UI
             return Equals(e);
         }
 
-        public override int GetHashCode() => Index;
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + Index;
+                hash = hash * 23 + Interaction.GetHashCode();
+                hash = hash * 23 + (Annotation?.GetHashCode() ?? 0);
+                return hash;
+            }
+        }
 
         public override string ToString() => $"{Interaction} {(Annotation is null ? "null" : Annotation.ToString())} @ {Index}";
     }

@@ -23,6 +23,25 @@ using MonogameTestbed;
 
 namespace MonogameTestbed
 {
+    static class DebugSessionLog
+    {
+        const string LogPath = @"d:\src\git\VikingLegacy\debug-a0f2bd.log";
+
+        public static void Write(string location, string message, string hypothesisId, object data, string runId = "pre-fix")
+        {
+            #region agent log
+            try
+            {
+                long ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                string dataJson = data != null ? System.Text.Json.JsonSerializer.Serialize(data) : "null";
+                File.AppendAllText(LogPath,
+                    $"{{\"sessionId\":\"a0f2bd\",\"timestamp\":{ts},\"location\":\"{location}\",\"message\":\"{message}\",\"hypothesisId\":\"{hypothesisId}\",\"runId\":\"{runId}\",\"data\":{dataJson}}}\n");
+            }
+            catch { }
+            #endregion
+        }
+    }
+
     class BajajMultiOTVAssignmentView
     {
         public readonly GridPolygon[] Polygons = null;
@@ -70,6 +89,11 @@ namespace MonogameTestbed
 
         public MeshAssemblyPlanner meshAssemblyPlan = null;
         public MeshAssemblyPlannerCompletedView meshCompletedView = null;
+
+        /// <summary>
+        /// GPU mesh built from the assembled composite (same geometry as DAE export).
+        /// </summary>
+        MeshModel<VertexPositionNormalColor> _assembledDisplayModel = null;
         public MeshAssemblyPlannerIncompleteView meshIncompleteView = null;
 
         //LineView[] lineViews = null;
@@ -90,6 +114,12 @@ namespace MonogameTestbed
         /// True if we show composite mesh, false if we show the slice mesh
         /// </summary>
         public bool ShowCompositeMesh = true;
+
+        /// <summary>
+        /// Assembly debug overlay: wireframe bounding boxes for incomplete/failed nodes.
+        /// Off by default so the solid vasculature mesh is visible without scattered wireframes.
+        /// </summary>
+        public bool ShowAssemblyBoundingBoxes = false;
 
         public IndexLabelType VertexLabelType
         {
@@ -179,6 +209,7 @@ namespace MonogameTestbed
             {
                 Name = "Composite Mesh"
             };
+            _assembledDisplayModel = null;
         }
 
         internal async Task GenerateMesh()
@@ -202,7 +233,7 @@ namespace MonogameTestbed
             meshAssemblyPlan = MeshAssemblyPlanner.Create(sliceGraph);
 
             meshIncompleteView = new MeshAssemblyPlannerIncompleteView(meshAssemblyPlan, sliceGraph);
-            meshCompletedView = new MeshAssemblyPlannerCompletedView(meshAssemblyPlan, Graph.BoundingBox.CenterPoint)
+            meshCompletedView = new MeshAssemblyPlannerCompletedView(meshAssemblyPlan)
             {
                 Color = ColorExtensions.Random()
             };
@@ -229,6 +260,23 @@ namespace MonogameTestbed
                     drawlock.Release();
                 }
             }
+
+            if (meshAssemblyPlan.MeshAssembledEvent.IsSet
+                && meshAssemblyPlan.Root?.MeshModel?.composite is { } composite
+                && composite.Faces.Count > 0)
+            {
+                _assembledDisplayModel = BuildDisplayModelFromComposite(composite, meshCompletedView.Color);
+            }
+        }
+
+        private static MeshModel<VertexPositionNormalColor> BuildDisplayModelFromComposite(
+            Mesh3D<MorphMeshVertex> composite, Color color)
+        {
+            var model = new MeshModel<VertexPositionNormalColor>();
+            model.Verticies = [.. composite.Verticies.Select(v => new VertexPositionNormalColor(
+                v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), color))];
+            model.Edges = [.. composite.Faces.SelectMany(f => f.iVerts)];
+            return model;
         }
 
 
@@ -387,6 +435,48 @@ namespace MonogameTestbed
 
         public void Draw3D(MonoTestbed window, Scene3D scene)
         {
+            scene.Viewport = window.GraphicsDevice.Viewport;
+
+            #region agent log
+            if (BajajMultiAssignmentTest.DebugDrawLogCount < 3)
+            {
+                bool assembledBuffersOk = _assembledDisplayModel?.EnsureBuffers(window.GraphicsDevice) ?? false;
+                int completedModelCount = meshCompletedView?.MeshModels?.Length ?? 0;
+                int completedVertCount = meshCompletedView?.MeshModels?.Where(m => m?.Verticies != null).Sum(m => m.Verticies.Length) ?? 0;
+                int incompleteModelCount = meshIncompleteView?.MeshModels?.Length ?? 0;
+                bool assemblyComplete = meshAssemblyPlan?.MeshAssembledEvent.IsSet ?? false;
+                int rootVertCount = meshAssemblyPlan?.Root?.MeshModel?.model?.Verticies?.Length ?? 0;
+                DebugSessionLog.Write(
+                    "BajajMultiTest.cs:Draw3D",
+                    "Draw3D frame",
+                    "A,B,D,E,F",
+                    new
+                    {
+                        frame = BajajMultiAssignmentTest.DebugDrawLogCount,
+                        showCompositeMesh = ShowCompositeMesh,
+                        showAssemblyBoundingBoxes = ShowAssemblyBoundingBoxes,
+                        assemblyComplete,
+                        incompleteModelCount,
+                        hasAssembledDisplayModel = _assembledDisplayModel != null,
+                        assembledVertCount = _assembledDisplayModel?.Verticies?.Length ?? 0,
+                        assembledEdgeCount = _assembledDisplayModel?.Edges?.Length ?? 0,
+                        assembledBuffersOk,
+                        rootVertCount,
+                        completedModelCount,
+                        completedVertCount,
+                        cullMode = CullMode.ToString(),
+                        cameraPos = new { scene.Camera.Position.X, scene.Camera.Position.Y, scene.Camera.Position.Z },
+                        cameraLookAt = new { scene.Camera.LookAt.X, scene.Camera.LookAt.Y, scene.Camera.LookAt.Z },
+                        viewportW = scene.Viewport.Width,
+                        viewportH = scene.Viewport.Height,
+                        minDraw = scene.MinDrawDistance,
+                        maxDraw = scene.MaxDrawDistance,
+                        graphStructureId = Graph?.StructureID
+                    },
+                    "post-fix-v2");
+                BajajMultiAssignmentTest.DebugDrawLogCount++;
+            }
+            #endregion
 
             DepthStencilState dstate = new()
             {
@@ -419,11 +509,37 @@ namespace MonogameTestbed
                             //CompositeMeshModel.ModelLock.EnterReadLock();
                             //CompositeMeshView.Draw(window.GraphicsDevice, scene, CullMode);
                             //MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene, window.basicEffect, CullMode, meshAssemblyPlan.MeshModels);
-                            if (meshIncompleteView != null)
-                                MeshView<VertexPositionColor>.Draw(window.GraphicsDevice, scene, window.basicEffect,
-                                    CullMode, FillMode.WireFrame, meshIncompleteView.MeshModels);
+                            if (ShowAssemblyBoundingBoxes && meshIncompleteView != null)
+                            {
+                                var incompleteModels = meshIncompleteView.MeshModels;
+                                if (incompleteModels.Length > 0)
+                                    MeshView<VertexPositionColor>.Draw(window.GraphicsDevice, scene, window.basicEffect,
+                                        CullMode, FillMode.WireFrame, incompleteModels);
+                            }
 
-                            if (meshCompletedView != null)
+                            bool drewSolidMesh = false;
+                            var rootMeshModel = meshAssemblyPlan?.Root?.MeshModel;
+                            if (rootMeshModel?.model?.Verticies?.Length > 0)
+                            {
+                                try
+                                {
+                                    rootMeshModel.ModelLock.EnterReadLock();
+                                    MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
+                                        window.basicEffect, CullMode, FillMode.Solid, [rootMeshModel.model]);
+                                    drewSolidMesh = true;
+                                }
+                                finally
+                                {
+                                    rootMeshModel.ModelLock.ExitReadLock();
+                                }
+                            }
+
+                            if (!drewSolidMesh && _assembledDisplayModel != null)
+                            {
+                                MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
+                                    window.basicEffect, CullMode, FillMode.Solid, [_assembledDisplayModel]);
+                            }
+                            else if (!drewSolidMesh && meshCompletedView != null)
                                 MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
                                     window.basicEffect, CullMode, FillMode.Solid, meshCompletedView.MeshModels);
                         }
@@ -440,6 +556,58 @@ namespace MonogameTestbed
             {
                 drawlock.Release();
             }
+        }
+
+        /// <summary>
+        /// Axis-aligned bounds of mesh geometry actually drawn in 3D (centered slice-graph space).
+        /// </summary>
+        public bool TryGetRenderedMeshBounds(out Vector3 min, out Vector3 max)
+        {
+            Vector3 boundsMin = new(float.MaxValue);
+            Vector3 boundsMax = new(float.MinValue);
+            bool any = false;
+
+            void Include(Vector3 p)
+            {
+                boundsMin = Vector3.Min(boundsMin, p);
+                boundsMax = Vector3.Max(boundsMax, p);
+                any = true;
+            }
+
+            if (_assembledDisplayModel?.Verticies != null)
+            {
+                foreach (var v in _assembledDisplayModel.Verticies)
+                    Include(v.Position);
+            }
+
+            var rootModel = meshAssemblyPlan?.Root?.MeshModel?.model;
+            if (rootModel?.Verticies != null)
+            {
+                foreach (var v in rootModel.Verticies)
+                    Include(v.Position);
+            }
+
+            if (meshCompletedView?.MeshModels != null)
+            {
+                foreach (var model in meshCompletedView.MeshModels)
+                {
+                    if (model?.Verticies == null)
+                        continue;
+                    foreach (var v in model.Verticies)
+                        Include(v.Position);
+                }
+            }
+
+            var composite = meshAssemblyPlan?.Root?.MeshModel?.composite;
+            if (composite?.Verticies != null)
+            {
+                foreach (var v in composite.Verticies)
+                    Include(v.Position.ToXNAVector3());
+            }
+
+            min = boundsMin;
+            max = boundsMax;
+            return any;
         }
     }
 }
@@ -474,11 +642,10 @@ class BajajMultiAssignmentTest : IGraphicsTest
 
     bool _initialized = false;
     public bool Initialized => _initialized;
+    internal static int DebugDrawLogCount;
 
     public async Task Init(MonoTestbed window)
     {
-        _initialized = true;
-
         this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
 
         this.scene3D = new Scene3D(window.GraphicsDevice.Viewport, new Camera3D())
@@ -510,7 +677,7 @@ class BajajMultiAssignmentTest : IGraphicsTest
             Console.WriteLine(" From command line parameters");
 
             Uri endpoint = Program.options.EndpointUri;
-            graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData([.. Program.options.StructureIDs.Select(id => (long)id)], false, endpoint);
+            graph = await Task.Run(() => AnnotationVizLib.OData.ODataMorphologyFactory.FromOData([.. Program.options.StructureIDs.Select(id => (long)id)], false, endpoint));
         }
         else
         {
@@ -529,7 +696,7 @@ class BajajMultiAssignmentTest : IGraphicsTest
             //Becca's paper, 2nd render
             //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] {933, 23122, 31687, 23095, 23017, 23856, 39762 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
 
-            graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { 476 }, false, DataSource.EndpointMap[Endpoint.TEST]);
+            graph = await Task.Run(() => AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { 476 }, false, DataSource.EndpointMap[Endpoint.TEST]));
 
             //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 30804, 2713 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
             //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 933 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
@@ -581,13 +748,10 @@ class BajajMultiAssignmentTest : IGraphicsTest
 
         if (window.Scene.RestoreCamera(TestMode.BAJAJTEST) == false)
         {
-            window.Scene.Camera.LookAt = graph.BoundingBox.CenterPoint.XY().ToXNAVector2();
+            // 2D overlays use the same centered XY space as SliceGraph mesh geometry.
+            window.Scene.Camera.LookAt = Vector2.Zero;
             window.Scene.Camera.Downsample = graph.BoundingBox.Width / window.GraphicsDevice.Viewport.Width;
         }
-
-        GridBox bbox = graph.BoundingBox;//new GridBox(wrapView.Polygons.BoundingBox(), nodes.Min(n => n.Z), nodes.Max(n => n.Z));
-        scene3D.Camera.Position = (bbox.CenterPoint - new GridVector3(bbox.Width * 2, 0, 0)).ToXNAVector3();
-        scene3D.Camera.LookAt = (bbox.CenterPoint).ToXNAVector3();
 
         List<Task> meshGenTasks = [];
         //AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
@@ -602,6 +766,8 @@ class BajajMultiAssignmentTest : IGraphicsTest
         }
 
         await Task.WhenAll(meshGenTasks);
+
+        FrameCameraOnRenderedMesh(window);
 
         //Save the output in a specific place upon request in the command line parameters
         if (string.IsNullOrWhiteSpace(Program.options.OutputPath) == false)
@@ -631,6 +797,52 @@ class BajajMultiAssignmentTest : IGraphicsTest
         }
 
         Console.WriteLine($"All rendering complete");
+
+        _initialized = true;
+        DebugDrawLogCount = 0;
+
+        #region agent log
+        GridBox bbox = graph.BoundingBox;
+        var compositeVerts = wrapViews.FirstOrDefault()?.meshAssemblyPlan?.Root?.MeshModel?.composite?.Verticies;
+        object meshBounds = null;
+        if (compositeVerts != null && compositeVerts.Count > 0)
+        {
+            meshBounds = new
+            {
+                minX = compositeVerts.Min(v => v.Position.X),
+                maxX = compositeVerts.Max(v => v.Position.X),
+                minY = compositeVerts.Min(v => v.Position.Y),
+                maxY = compositeVerts.Max(v => v.Position.Y),
+                minZ = compositeVerts.Min(v => v.Position.Z),
+                maxZ = compositeVerts.Max(v => v.Position.Z)
+            };
+        }
+
+        DebugSessionLog.Write(
+            "BajajMultiTest.cs:Init",
+            "Init complete",
+            "A,B,E",
+            new
+            {
+                wrapViewCount = wrapViews.Count,
+                bboxCenter = new { bbox.CenterPoint.X, bbox.CenterPoint.Y, bbox.CenterPoint.Z },
+                bboxWidth = bbox.Width,
+                cameraPos = new { scene3D.Camera.Position.X, scene3D.Camera.Position.Y, scene3D.Camera.Position.Z },
+                cameraLookAt = new { scene3D.Camera.LookAt.X, scene3D.Camera.LookAt.Y, scene3D.Camera.LookAt.Z },
+                meshBounds,
+                viewportW = window.GraphicsDevice.Viewport.Width,
+                viewportH = window.GraphicsDevice.Viewport.Height,
+                draw3D = Draw3D,
+                views = wrapViews.Select(wv => new
+                {
+                    structureId = wv.Graph?.StructureID,
+                    meshAssembled = wv.meshAssemblyPlan?.MeshAssembledEvent.IsSet ?? false,
+                    compositeFaces = wv.meshAssemblyPlan?.Root?.MeshModel?.composite?.Faces?.Count ?? 0,
+                    completedModelCount = wv.meshCompletedView?.MeshModels?.Length ?? 0
+                }).ToArray()
+            },
+            "post-fix");
+        #endregion
 
         if (Program.options.Quiet)
         {
@@ -736,11 +948,10 @@ class BajajMultiAssignmentTest : IGraphicsTest
                     wrapView.VertexLabelType ^= IndexLabelType.MESH;
                 }
             }
-            /*
-            if(Gamepad.RightStick_Clicked)
+            if (Gamepad.RightStick_Clicked)
             {
-                wrapView.VertexLabelType = wrapView.VertexLabelType ^ IndexLabelType.POSITION;
-            }*/
+                wrapView.ShowAssemblyBoundingBoxes = !wrapView.ShowAssemblyBoundingBoxes;
+            }
 
             if (Gamepad.LeftStick_Clicked)
             {
@@ -785,7 +996,27 @@ class BajajMultiAssignmentTest : IGraphicsTest
 
     public void Draw(MonoTestbed window)
     {
-        window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
+        scene3D.Viewport = window.GraphicsDevice.Viewport;
+        window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, 1.0f, 0);
+
+        #region agent log
+        if (DebugDrawLogCount < 3)
+        {
+            DebugSessionLog.Write(
+                "BajajMultiTest.cs:Draw",
+                "BajajMulti Draw entry",
+                "C,E",
+                new
+                {
+                    initialized = _initialized,
+                    wrapViewCount = wrapViews.Count,
+                    draw3D = Draw3D,
+                    backBufferW = window.GraphicsDevice.Viewport.Width,
+                    backBufferH = window.GraphicsDevice.Viewport.Height,
+                    renderTargetIsNull = window.GraphicsDevice.GetRenderTargets().Length == 0
+                });
+        }
+        #endregion
 
         foreach (var wrapView in wrapViews)
         {
@@ -806,6 +1037,93 @@ class BajajMultiAssignmentTest : IGraphicsTest
 
             //boundaryView.Draw(window.GraphicsDevice, scene, CullMode.CullCounterClockwiseFace);
         }
+
+        if (Draw3D)
+        {
+            Draw3DDebugHud(window);
+        }
+    }
+
+    private void Draw3DDebugHud(MonoTestbed window)
+    {
+        var cam = scene3D.Camera;
+        float camDistance = (cam.Position - cam.LookAt).Length();
+        StringBuilder hud = new();
+        hud.AppendLine($"Cam ({cam.Position.X:F0}, {cam.Position.Y:F0}, {cam.Position.Z:F0})");
+        hud.AppendLine($"LookAt ({cam.LookAt.X:F0}, {cam.LookAt.Y:F0}, {cam.LookAt.Z:F0})");
+        hud.AppendLine($"Yaw {cam.Yaw * 180 / Math.PI:F1} deg  Pitch {cam.Pitch * 180 / Math.PI:F1} deg  Dist {camDistance:F0}");
+        if (graph?.BoundingBox != null)
+        {
+            var bbox = graph.BoundingBox;
+            hud.AppendLine($"Mesh XY +/-{bbox.Width / 2:F0}  Z {bbox.minVals[2]:F0}-{bbox.maxVals[2]:F0}");
+        }
+
+        foreach (var wrapView in wrapViews)
+        {
+            hud.AppendLine($"Composite={wrapView.ShowCompositeMesh} BBoxOverlay={wrapView.ShowAssemblyBoundingBoxes} Cull={wrapView.CullMode}");
+            bool assembled = wrapView.meshAssemblyPlan?.MeshAssembledEvent.IsSet ?? false;
+            int verts = wrapView.meshAssemblyPlan?.Root?.MeshModel?.model?.Verticies?.Length ?? 0;
+            int incomplete = wrapView.meshIncompleteView?.MeshModels?.Length ?? 0;
+            hud.AppendLine($"Struct {wrapView.Graph?.StructureID} assembled={assembled} verts={verts} incompleteBoxes={incomplete}");
+        }
+
+        hud.AppendLine("RightStick: toggle bbox overlay  LeftStick: toggle cull");
+
+        window.GraphicsDevice.BlendState = BlendState.AlphaBlend;
+        window.spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+        const float hudScale = 0.5f;
+        window.spriteBatch.DrawString(
+            window.fontArial,
+            hud.ToString(),
+            new Vector2(8, 8),
+            Color.Yellow,
+            rotation: 0f,
+            origin: Vector2.Zero,
+            scale: hudScale,
+            effects: SpriteEffects.None,
+            layerDepth: 0f);
+        window.spriteBatch.End();
+    }
+
+    /// <summary>
+    /// Aim the 3D camera at the union bounding box of assembled mesh geometry (not volume-space graph bounds).
+    /// </summary>
+    void FrameCameraOnRenderedMesh(MonoTestbed window)
+    {
+        Vector3 min = new(float.MaxValue);
+        Vector3 max = new(float.MinValue);
+        bool any = false;
+
+        foreach (var wrapView in wrapViews)
+        {
+            if (!wrapView.TryGetRenderedMeshBounds(out Vector3 viewMin, out Vector3 viewMax))
+                continue;
+
+            min = Vector3.Min(min, viewMin);
+            max = Vector3.Max(max, viewMax);
+            any = true;
+        }
+
+        if (!any)
+            return;
+
+        Vector3 center = (min + max) * 0.5f;
+        Vector3 extent = max - min;
+        float maxExtent = Math.Max(extent.X, Math.Max(extent.Y, extent.Z));
+        if (maxExtent < float.Epsilon)
+            maxExtent = 1f;
+
+        float halfFov = scene3D.FieldOfView * 0.5f;
+        float distanceForExtent = (maxExtent * 0.5f) / (float)Math.Tan(halfFov);
+        float distance = Math.Max(distanceForExtent * 1.35f, maxExtent * 1.5f);
+        distance = Math.Max(distance, 1f);
+
+        scene3D.MaxDrawDistance = distance * 25f;
+        scene3D.MinDrawDistance = Math.Max(0.01f, distance * 0.001f);
+
+        Vector3 position = center + new Vector3(-distance, -distance * 0.35f, distance * 0.2f);
+        scene3D.Camera.Position = position;
+        scene3D.Camera.LookAt = center;
     }
 
     public void UnloadContent(MonoTestbed window)

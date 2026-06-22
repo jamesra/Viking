@@ -366,6 +366,7 @@ namespace Viking.ViewModels
 
             if (texTask.IsFaulted == false && texTask.IsCanceled == false && texReader.HasTexture)
             {
+                // Task is known completed; .Result is safe. Caller runs on background thread.
                 this.texture = texTask.Result;
                 return this.texture;
             }

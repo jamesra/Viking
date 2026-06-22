@@ -10,6 +10,15 @@ namespace Viking.Services.Grpc
     /// </summary>
     public class GrpcChannelManager(IGrpcServiceConfiguration configuration) : IGrpcChannelManager
     {
+        /// <summary>Max message size (64 MB) to match the segmentation server configuration.</summary>
+        private const int MaxMessageSizeBytes = 64 * 1024 * 1024;
+
+        private static readonly ChannelOption[] SegmentationChannelOptions =
+        {
+            new(ChannelOptions.MaxReceiveMessageLength, MaxMessageSizeBytes),
+            new(ChannelOptions.MaxSendMessageLength, MaxMessageSizeBytes)
+        };
+
         private readonly object _lock = new();
         private readonly IGrpcServiceConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         private Channel? _channel;
@@ -36,7 +45,7 @@ namespace Viking.Services.Grpc
                 {
                     ShutdownChannelInternal();
 
-                    _channel = new Channel(serviceUrl, ChannelCredentials.Insecure);
+                    _channel = new Channel(serviceUrl, ChannelCredentials.Insecure, SegmentationChannelOptions);
                     _currentServiceUrl = serviceUrl;
 
                     Trace.WriteLine($"Created new shared gRPC channel to {serviceUrl}");

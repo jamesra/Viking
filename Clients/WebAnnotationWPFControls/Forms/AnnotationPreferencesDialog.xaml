@@ -170,6 +170,8 @@
                 <!-- Advanced Settings -->
                 <Expander Header="Advanced Settings" IsExpanded="False" Margin="10">
                     <StackPanel Margin="10">
+                        <!-- General -->
+                        <TextBlock Text="General" FontWeight="Bold" Margin="5,5,5,2"/>
                         <!-- Default Location Jump Downsample -->
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -222,6 +224,8 @@
                                      Text="Size multiplier for annotations displayed on adjacent sections. Default 0.5 shows them at half size."/>
                         </Grid>
 
+                        <!-- Polygon Annotations -->
+                        <TextBlock Text="Polygon Annotations" FontWeight="Bold" Margin="5,15,5,2"/>
                         <!-- Num Curve Interpolation Points -->
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -270,33 +274,11 @@
                                      Text="How close polygon edges must be to the pen stroke. Smaller numbers are more accurate but require more points, negatively impacting performance."/>
                         </Grid>
 
-                        <!-- Min Radius -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="150"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            
-                            <Label Grid.Row="0" Grid.Column="0" Content="Minimum Radius:"/>
-                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
-                                             Value="{Binding MinRadius}" 
-                                             Minimum="0.1" 
-                                             Maximum="10.0"
-                                             Increment="0.1"
-                                             FormatString="F2"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                                     Margin="10,0,10,10"
-                                     FontSize="10"
-                                     Foreground="Gray"
-                                     TextWrapping="Wrap"
-                                     Text="Smallest allowed radius for circle annotations."/>
-                        </Grid>
+                        <!-- Polygon vertex point display diameter info -->
+                        <TextBlock Margin="10,0,10,5" FontSize="10" Foreground="Gray"
+                                   Text="{Binding PolygonVertexDisplayDiameterPx, StringFormat='Current display diameter: {0} px (at current viewport)'}"/>
 
-                        <!-- Smallest Rendered Size -->
+                        <!-- Polygon Point Diameter -->
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -309,16 +291,16 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             
-                            <Label Grid.Row="0" Grid.Column="0" Content="Smallest Rendered Size:"/>
+                            <Label Grid.Row="0" Grid.Column="0" Content="Polygon Point Diameter:"/>
                             <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding SmallestRenderedSize, Mode=TwoWay}"
-                                    Minimum="0.5"
-                                    Maximum="10"
-                                    TickFrequency="0.1"
+                                    Value="{Binding PolygonPointDiameter, Mode=TwoWay}"
+                                    Minimum="2"
+                                    Maximum="100"
+                                    TickFrequency="1"
                                     IsSnapToTickEnabled="True"
                                     Margin="5"/>
                             <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding SmallestRenderedSize, StringFormat='F1'}"
+                                     Text="{Binding PolygonPointDiameter, StringFormat='F0'}"
                                      IsReadOnly="True"
                                      Margin="5,0,0,0"
                                      VerticalAlignment="Center"
@@ -329,43 +311,43 @@
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="Minimum pixel size for circle diameter before it is hidden. Circles smaller than this value will not be rendered. Range: 0.5 to 10.0 pixels."/>
+                                     Text="Diameter in world units for control points on polygon annotations. Range: 2 to 100."/>
                         </Grid>
 
-                        <!-- Polygon Point Radius -->
+                        <!-- Vertex points visibility range (RangeSlider) -->
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="150"/>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="200"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             
-                            <Label Grid.Row="0" Grid.Column="0" Content="Polygon Point Radius:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding PolygonPointRadius, Mode=TwoWay}"
-                                    Minimum="1"
-                                    Maximum="50"
-                                    TickFrequency="0.5"
-                                    IsSnapToTickEnabled="True"
+                            <Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4" Content="Vertex points visible/hidden at width:"/>
+                            <xctk:RangeSlider Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                    Minimum="0.00005"
+                                    Maximum="0.02"
+                                    LowerValue="{Binding PolygonVertexPointsHiddenAtWidthFraction, Mode=TwoWay}"
+                                    HigherValue="{Binding PolygonVertexPointsVisibleAtWidthFraction, Mode=TwoWay}"
+                                    Step="0.00005"
                                     Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding PolygonPointRadius, StringFormat='F1'}"
-                                     IsReadOnly="True"
+                            <TextBlock Grid.Row="1" Grid.Column="3"
+                                     Text="{Binding VertexVisibilityRangeDisplay}"
                                      Margin="5,0,0,0"
                                      VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     HorizontalAlignment="Left"
+                                     TextWrapping="Wrap"/>
+                            <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="Size in pixels for control points displayed on polygon and smooth polygon annotations. Range: 1.0 to 50.0."/>
+                                     Text="Left thumb: hidden below this width fraction. Right thumb: fully visible above this fraction. Pixel values at current viewport width."/>
                         </Grid>
 
                         <!-- Polygon Opacity Parentless -->
@@ -438,6 +420,70 @@
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
                                      Text="Opacity for polygons with a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
+                        </Grid>
+
+                        <!-- Circle Annotations -->
+                        <TextBlock Text="Circle Annotations" FontWeight="Bold" Margin="5,15,5,2"/>
+                        <!-- Min Radius -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Minimum Radius:"/>
+                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
+                                             Value="{Binding MinRadius}" 
+                                             Minimum="0.1" 
+                                             Maximum="10.0"
+                                             Increment="0.1"
+                                             FormatString="F2"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Smallest allowed radius for circle annotations."/>
+                        </Grid>
+
+                        <!-- Smallest Rendered Size -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Smallest Rendered Size:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SmallestRenderedSize, Mode=TwoWay}"
+                                    Minimum="0.5"
+                                    Maximum="10"
+                                    TickFrequency="0.1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding SmallestRenderedSize, StringFormat='F1'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Minimum pixel size for circle diameter before it is hidden. Circles smaller than this value will not be rendered. Range: 0.5 to 10.0 pixels."/>
                         </Grid>
 
                         <!-- Circle Opacity Parentless -->
@@ -563,7 +609,7 @@
                     Width="120" 
                     Height="30" 
                     Margin="5"
-                    Command="{Binding ResetToDefaultsCommand}"/>
+                    Click="ResetToDefaultsButton_Click"/>
             <Button Content="Apply" 
                     Width="80" 
                     Height="30" 

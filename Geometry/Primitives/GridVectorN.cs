@@ -141,7 +141,7 @@ namespace Geometry
             return false;
         }
 
-        public override int GetHashCode() => ((IStructuralEquatable)this.coords).GetHashCode(EqualityComparer<double>.Default);
+        public override int GetHashCode() => GeometryHashCode.PointN(coords);
 
         /// <summary>
         /// The block distance along each axis between the two points

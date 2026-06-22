@@ -161,30 +161,56 @@ namespace WebAnnotation
 
             private const int MIN_SECTIONS_IN_MEMORY = 1;
             private const int MAX_SECTIONS_IN_MEMORY = 100;
+            private const int DEFAULT_NUM_SECTIONS_IN_MEMORY = 10;
             private const int MIN_SECTIONS_LOADING = 1;
             private const int MAX_SECTIONS_LOADING = 50;
+            private const int DEFAULT_NUM_SECTIONS_LOADING = 5;
             private const double MIN_SCALE_FACTOR = 0.1;
             private const double MAX_SCALE_FACTOR = 50.0;
+            private const double DEFAULT_LOCATION_TEXT_SCALE_FACTOR = 5.0;
+            private const double DEFAULT_REFERENCE_LOCATION_TEXT_SCALE_FACTOR = 2.5;
             private const double MIN_LINE_WIDTH = 1.0;
             private const double MAX_LINE_WIDTH = 100.0;
+            private const double DEFAULT_CLOSED_LINE_WIDTH = 24.0;
             private const double MIN_DOWNSAMPLE = 1.0;
             private const double MAX_DOWNSAMPLE = 64.0;
+            private const double DEFAULT_LOCATION_JUMP_DOWNSAMPLE = 4.0;
             private const double MIN_RADIUS_SCALAR = 0.1;
             private const double MAX_RADIUS_SCALAR = 2.0;
+            private const double DEFAULT_ADJACENT_LOCATION_RADIUS_SCALAR = 0.5;
             private const int MIN_CURVE_POINTS = 2;
             private const int MAX_CURVE_POINTS = 20;
+            private const int DEFAULT_NUM_CLOSED_CURVE_INTERPOLATION_POINTS = 4;
             private const int MIN_PEN_THRESHOLD = 1;
             private const int MAX_PEN_THRESHOLD = 100;
+            private const int DEFAULT_PEN_SIMPLIFY_THRESHOLD = 12;
             private const double MIN_RADIUS = 0.1;
             private const double MAX_RADIUS = 10.0;
+            private const double DEFAULT_MIN_RADIUS = 0.5;
             private const double MIN_OPACITY = 0.0;
             private const double MAX_OPACITY = 1.0;
+            private const double DEFAULT_POLYGON_OPACITY_PARENTLESS = 0.5;
+            private const double DEFAULT_POLYGON_OPACITY_WITH_PARENT = 0.33;
+            private const double DEFAULT_CIRCLE_OPACITY_PARENTLESS = 0.5;
+            private const double DEFAULT_CIRCLE_OPACITY_WITH_PARENT = 1.0;
             private const double MIN_SEGMENTATION_POINT_RADIUS = 1.0;
             private const double MAX_SEGMENTATION_POINT_RADIUS = 15.0;
+            private const double DEFAULT_SEGMENTATION_POINT_RADIUS = 5.0;
             private const double MIN_POLYGON_POINT_RADIUS = 1.0;
             private const double MAX_POLYGON_POINT_RADIUS = 50.0;
+            private const double DEFAULT_POLYGON_POINT_RADIUS = 6.0;
+            private const double MIN_POLYGON_POINT_DIAMETER = 2.0;
+            private const double MAX_POLYGON_POINT_DIAMETER = 100.0;
+            private const double DEFAULT_POLYGON_POINT_DIAMETER = 12.0;
             private const double MIN_SMALLEST_RENDERED_SIZE = 0.5;
             private const double MAX_SMALLEST_RENDERED_SIZE = 10.0;
+            private const double DEFAULT_SMALLEST_RENDERED_SIZE = 0.5;
+            private const double MIN_POLYGON_VERTEX_VISIBLE_FRACTION = 0.0001;  // 0.01%
+            private const double MAX_POLYGON_VERTEX_VISIBLE_FRACTION = 0.02;     // 2%
+            private const double DEFAULT_POLYGON_VERTEX_VISIBLE_FRACTION = 0.0025;  // 0.25%
+            private const double MIN_POLYGON_VERTEX_HIDDEN_FRACTION = 0.00005;   // 0.005%
+            private const double MAX_POLYGON_VERTEX_HIDDEN_FRACTION = 0.015;     // 1.5%
+            private const double DEFAULT_POLYGON_VERTEX_HIDDEN_FRACTION = 0.002;   // 0.2%
 
             // Use shared MathUtils.Clamp methods (Math.Clamp not available in .NET Framework 4.8)
 
@@ -394,14 +420,33 @@ namespace WebAnnotation
                 }
             }
 
-            public static double PolygonPointRadius
+            public static double PolygonPointDiameter
             {
-                get => MathUtils.Clamp(Properties.Settings.Default.PolygonPointRadius, MIN_POLYGON_POINT_RADIUS, MAX_POLYGON_POINT_RADIUS);
+                get
+                {
+                    MigratePolygonPointDiameterIfNeeded();
+                    return MathUtils.Clamp(Properties.Settings.Default.PolygonPointDiameter, MIN_POLYGON_POINT_DIAMETER, MAX_POLYGON_POINT_DIAMETER);
+                }
                 set
                 {
-                    Properties.Settings.Default.PolygonPointRadius = MathUtils.Clamp(value, MIN_POLYGON_POINT_RADIUS, MAX_POLYGON_POINT_RADIUS);
+                    Properties.Settings.Default.PolygonPointDiameter = MathUtils.Clamp(value, MIN_POLYGON_POINT_DIAMETER, MAX_POLYGON_POINT_DIAMETER);
                     Properties.Settings.Default.Save();
                 }
+            }
+
+            /// <summary>
+            /// Polygon point radius in world units (computed as diameter / 2). Used by rendering code.
+            /// </summary>
+            public static double PolygonPointRadius => PolygonPointDiameter / 2.0;
+
+            private static void MigratePolygonPointDiameterIfNeeded()
+            {
+                if (Properties.Settings.Default.PolygonPointDiameterMigrated)
+                    return;
+                double legacyRadius = Properties.Settings.Default.PolygonPointRadius;
+                Properties.Settings.Default.PolygonPointDiameter = 2.0 * legacyRadius;
+                Properties.Settings.Default.PolygonPointDiameterMigrated = true;
+                Properties.Settings.Default.Save();
             }
 
             public static double SmallestRenderedSize
@@ -414,25 +459,57 @@ namespace WebAnnotation
                 }
             }
 
+            public static double PolygonVertexPointsVisibleAtWidthFraction
+            {
+                get => MathUtils.Clamp(Properties.Settings.Default.PolygonVertexPointsVisibleAtWidthFraction, MIN_POLYGON_VERTEX_VISIBLE_FRACTION, MAX_POLYGON_VERTEX_VISIBLE_FRACTION);
+                set
+                {
+                    double clamped = MathUtils.Clamp(value, MIN_POLYGON_VERTEX_VISIBLE_FRACTION, MAX_POLYGON_VERTEX_VISIBLE_FRACTION);
+                    if (clamped <= Properties.Settings.Default.PolygonVertexPointsHiddenAtWidthFraction)
+                        clamped = Math.Min(MAX_POLYGON_VERTEX_VISIBLE_FRACTION, Properties.Settings.Default.PolygonVertexPointsHiddenAtWidthFraction + 0.0001);
+                    Properties.Settings.Default.PolygonVertexPointsVisibleAtWidthFraction = clamped;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            public static double PolygonVertexPointsHiddenAtWidthFraction
+            {
+                get => MathUtils.Clamp(Properties.Settings.Default.PolygonVertexPointsHiddenAtWidthFraction, MIN_POLYGON_VERTEX_HIDDEN_FRACTION, MAX_POLYGON_VERTEX_HIDDEN_FRACTION);
+                set
+                {
+                    double clamped = MathUtils.Clamp(value, MIN_POLYGON_VERTEX_HIDDEN_FRACTION, MAX_POLYGON_VERTEX_HIDDEN_FRACTION);
+                    if (clamped >= Properties.Settings.Default.PolygonVertexPointsVisibleAtWidthFraction)
+                        clamped = Math.Max(MIN_POLYGON_VERTEX_HIDDEN_FRACTION, Properties.Settings.Default.PolygonVertexPointsVisibleAtWidthFraction - 0.0001);
+                    Properties.Settings.Default.PolygonVertexPointsHiddenAtWidthFraction = clamped;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>
+            /// Resets all annotation settings exposed in the Annotation Preferences dialog to their default values.
+            /// SegmentationServiceUrl is intentionally not reset so the user's configured URL is preserved.
+            /// </summary>
             public static void ResetToDefaults()
             {
-                Properties.Settings.Default.NumSectionsInMemory = 10;
-                Properties.Settings.Default.NumSectionsLoading = 5;
-                Properties.Settings.Default.LocationTextScaleFactor = 5;
-                Properties.Settings.Default.ReferenceLocationTextScaleFactor = 2.5f;
-                Properties.Settings.Default.DefaultClosedLineWidth = 24.0;
-                Properties.Settings.Default.DefaultLocationJumpDownsample = 4.0;
-                Properties.Settings.Default.AdjacentLocationRadiusScalar = 0.5;
-                Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = 4;
-                Properties.Settings.Default.PenSimplifyThreshold = 12;
-                Properties.Settings.Default.MinRadius = 0.5;
-                Properties.Settings.Default.PolygonOpacityParentless = 0.5f;
-                Properties.Settings.Default.PolygonOpacityWithParent = 0.33f;
-                Properties.Settings.Default.CircleOpacityParentless = 0.5f;
-                Properties.Settings.Default.CircleOpacityWithParent = 1.0f;
-                Properties.Settings.Default.SegmentationPointRadius = 5.0;
-                Properties.Settings.Default.PolygonPointRadius = 6.0;
-                Properties.Settings.Default.SmallestRenderedSize = 0.5;
+                Properties.Settings.Default.NumSectionsInMemory = DEFAULT_NUM_SECTIONS_IN_MEMORY;
+                Properties.Settings.Default.NumSectionsLoading = DEFAULT_NUM_SECTIONS_LOADING;
+                Properties.Settings.Default.LocationTextScaleFactor = (float)DEFAULT_LOCATION_TEXT_SCALE_FACTOR;
+                Properties.Settings.Default.ReferenceLocationTextScaleFactor = (float)DEFAULT_REFERENCE_LOCATION_TEXT_SCALE_FACTOR;
+                Properties.Settings.Default.DefaultClosedLineWidth = DEFAULT_CLOSED_LINE_WIDTH;
+                Properties.Settings.Default.DefaultLocationJumpDownsample = DEFAULT_LOCATION_JUMP_DOWNSAMPLE;
+                Properties.Settings.Default.AdjacentLocationRadiusScalar = DEFAULT_ADJACENT_LOCATION_RADIUS_SCALAR;
+                Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = (uint)DEFAULT_NUM_CLOSED_CURVE_INTERPOLATION_POINTS;
+                Properties.Settings.Default.PenSimplifyThreshold = DEFAULT_PEN_SIMPLIFY_THRESHOLD;
+                Properties.Settings.Default.MinRadius = DEFAULT_MIN_RADIUS;
+                Properties.Settings.Default.PolygonOpacityParentless = (float)DEFAULT_POLYGON_OPACITY_PARENTLESS;
+                Properties.Settings.Default.PolygonOpacityWithParent = (float)DEFAULT_POLYGON_OPACITY_WITH_PARENT;
+                Properties.Settings.Default.CircleOpacityParentless = (float)DEFAULT_CIRCLE_OPACITY_PARENTLESS;
+                Properties.Settings.Default.CircleOpacityWithParent = (float)DEFAULT_CIRCLE_OPACITY_WITH_PARENT;
+                Properties.Settings.Default.SegmentationPointRadius = DEFAULT_SEGMENTATION_POINT_RADIUS;
+                Properties.Settings.Default.PolygonPointDiameter = DEFAULT_POLYGON_POINT_DIAMETER;
+                Properties.Settings.Default.SmallestRenderedSize = DEFAULT_SMALLEST_RENDERED_SIZE;
+                Properties.Settings.Default.PolygonVertexPointsVisibleAtWidthFraction = DEFAULT_POLYGON_VERTEX_VISIBLE_FRACTION;
+                Properties.Settings.Default.PolygonVertexPointsHiddenAtWidthFraction = DEFAULT_POLYGON_VERTEX_HIDDEN_FRACTION;
                 Properties.Settings.Default.Save();
                 OnSettingsChanged();
             }

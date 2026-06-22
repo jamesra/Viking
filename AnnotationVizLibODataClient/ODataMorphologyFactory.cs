@@ -54,13 +54,12 @@ namespace AnnotationVizLib.OData
                         .ToList(), cancellationToken)
                 ).ToArray();
 
-                await Task.WhenAll(tasks);
-
+                List<Structure>[] results = await Task.WhenAll(tasks);
                 List<Structure> allStructures = [];
-                foreach (var task in tasks)
+                foreach (var list in results)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    allStructures.AddRange(task.Result);
+                    allStructures.AddRange(list);
                 }
 
                 return allStructures;
@@ -90,13 +89,12 @@ namespace AnnotationVizLib.OData
                         .ToList(), cancellationToken)
                 ).ToArray();
 
-                await Task.WhenAll(tasks);
-
+                List<Structure>[] results = await Task.WhenAll(tasks);
                 List<Structure> allStructures = [];
-                foreach (var task in tasks)
+                foreach (var list in results)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    allStructures.AddRange(task.Result);
+                    allStructures.AddRange(list);
                 }
 
                 return allStructures;
@@ -123,13 +121,12 @@ namespace AnnotationVizLib.OData
                         .ToList(), cancellationToken)
                 ).ToArray();
 
-                await Task.WhenAll(tasks);
-
+                List<Location>[] results = await Task.WhenAll(tasks);
                 List<Location> allLocations = [];
-                foreach (var task in tasks)
+                foreach (var list in results)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    allLocations.AddRange(task.Result);
+                    allLocations.AddRange(list);
                 }
 
                 return allLocations;

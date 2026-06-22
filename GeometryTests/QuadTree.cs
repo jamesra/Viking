@@ -275,7 +275,7 @@ namespace GeometryTests
             for (int i = 0; i < numPoints; i++)
             {
                 bool Success = treeWithUniqueValues.TryRemove(i, out int Value);
-                Debug.Assert(Success, "Could not remove previously inserted point");
+                Assert.IsTrue(Success, "Could not remove previously inserted point");
 
                 //Make sure if we look for the removed point we get an index higher than the ones we've already removed
                 if (i < numPoints - 1)

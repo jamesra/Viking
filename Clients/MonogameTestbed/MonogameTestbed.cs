@@ -13,9 +13,7 @@ using VikingXNA;
 using VikingXNAGraphics;
 
 namespace MonogameTestbed
-{
-
-
+{ 
     enum TestMode
     {
         TEXT,
@@ -65,10 +63,10 @@ namespace MonogameTestbed
         readonly CurveSimplificationTest curveSimplificationTest = new();
         readonly ClosedCurveViewTest closedCurveTest = new();
         readonly Polygon2DTest polygon2DTest = new();
-        //readonly MeshTest meshTest = new MeshTest();
+        readonly MeshTest meshTest = new MeshTest();
         readonly GeometryTest geometryTest = new();
-        //readonly MorphologyTest morphologyTest = new MorphologyTest();
-        //readonly TriangleAlgorithmTest triangleTest = new TriangleAlgorithmTest();
+        readonly MorphologyTest morphologyTest = new MorphologyTest();
+        readonly TriangleAlgorithmTest triangleTest = new TriangleAlgorithmTest();
         readonly BranchPointTest branchTest = new();
         readonly BranchAssignmentTest brachAssignmentTest = new();
         readonly Delaunay2DTest delaunay2DTest = new();
@@ -83,7 +81,9 @@ namespace MonogameTestbed
         /// <summary>
         /// Test to run at startup
         /// </summary>
-        private TestMode Mode = TestMode.TRIANGLEALGORITHM;
+        private TestMode Mode = TestMode.BAJAJMULTITEST;
+
+        private readonly HashSet<TestMode> _initStartedModes = [];
 
         LabelView testLabel = null;
 
@@ -219,10 +219,10 @@ namespace MonogameTestbed
             listTests.Add(TestMode.CURVESTYLES, curveStyleTest);
             listTests.Add(TestMode.CLOSEDCURVE, closedCurveTest);
             listTests.Add(TestMode.POLYGON2D, polygon2DTest);
-            //listTests.Add(TestMode.MESH, meshTest);
+            listTests.Add(TestMode.MESH, meshTest);
             listTests.Add(TestMode.GEOMETRY, geometryTest);
-            //listTests.Add(TestMode.MORPHOLOGY, morphologyTest);
-            //listTests.Add(TestMode.TRIANGLEALGORITHM, triangleTest);
+            listTests.Add(TestMode.MORPHOLOGY, morphologyTest);
+            listTests.Add(TestMode.TRIANGLEALGORITHM, triangleTest);
             listTests.Add(TestMode.BRANCHPORT, branchTest);
             listTests.Add(TestMode.BRANCHASSIGNMENT, brachAssignmentTest);
             listTests.Add(TestMode.DELAUNAY2D, delaunay2DTest);
@@ -332,10 +332,10 @@ namespace MonogameTestbed
                 return;
             }
 
-            if (!listTests[Mode].Initialized)
+            if (!listTests[Mode].Initialized && !_initStartedModes.Contains(Mode))
             {
-                listTests[Mode].Init(this);
-                Debug.Assert(listTests[Mode].Initialized);
+                _initStartedModes.Add(Mode);
+                _ = listTests[Mode].Init(this);
             }
 
             if (StartMode != this.Mode)
@@ -377,13 +377,18 @@ namespace MonogameTestbed
         {
             if (!listTests[Mode].Initialized)
             {
-                listTests[Mode].Init(this);
-                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperLeft, anchor: Anchor.CenterRight);
-                Debug.Assert(listTests[Mode].Initialized);
+                if (!_initStartedModes.Contains(Mode))
+                {
+                    _initStartedModes.Add(Mode);
+                    _ = listTests[Mode].Init(this);
+                }
+            }
+            else
+            {
+                listTests[Mode].Update();
             }
 
-            listTests[Mode].Update();
-            Window.Title = listTests[Mode].Title;
+            Window.Title = listTests[Mode].Initialized ? listTests[Mode].Title : listTests[Mode].Title + " (loading...)";
 
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape))
             {
@@ -392,10 +397,6 @@ namespace MonogameTestbed
             }
 
             ProcessKeyboard();
-
-            //meshView.Update(gameTime); 
-
-            listTests[Mode].Update();
 
             base.Update(gameTime);
         }
@@ -433,12 +434,18 @@ namespace MonogameTestbed
             // spriteBatch.Begin();
             if (!listTests[Mode].Initialized)
             {
-                listTests[Mode].Init(this);
-                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperLeft, anchor: Anchor.CenterRight, scaleFontWithScene: false);
-                Debug.Assert(listTests[Mode].Initialized);
+                if (!_initStartedModes.Contains(Mode))
+                {
+                    _initStartedModes.Add(Mode);
+                    _ = listTests[Mode].Init(this);
+                }
             }
-
-            listTests[Mode].Draw(this);
+            else
+            {
+                if (testLabel == null)
+                    testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperLeft, anchor: Anchor.CenterRight, scaleFontWithScene: false);
+                listTests[Mode].Draw(this);
+            }
             /*
             testLabel.Position = this.Scene.VisibleWorldBounds.UpperRight - new GridVector2(testLabel.BoundingRect.Width/2.0, 0);//testLabel.BoundingRect.Height);
             testLabel.ScaleFontWithScene = false;

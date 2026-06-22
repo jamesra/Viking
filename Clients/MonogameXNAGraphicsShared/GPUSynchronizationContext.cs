@@ -1,9 +1,38 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace VikingXNAGraphics
 {
+    /// <summary>
+    /// TaskScheduler that runs tasks by posting to a SynchronizationContext.
+    /// Used when TaskScheduler.FromCurrentSynchronizationContext() throws (e.g. on .NET Core with default context).
+    /// </summary>
+    internal sealed class SynchronizationContextTaskScheduler : TaskScheduler
+    {
+        private readonly SynchronizationContext _context;
+
+        internal SynchronizationContextTaskScheduler(SynchronizationContext context)
+        {
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+        }
+
+        protected override void QueueTask(Task task)
+        {
+            _context.Post(_ => TryExecuteTask(task), null);
+        }
+
+        protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
+        {
+            if (SynchronizationContext.Current == _context)
+                return TryExecuteTask(task);
+            return false;
+        }
+
+        protected override IEnumerable<Task> GetScheduledTasks() => Array.Empty<Task>();
+    }
+
     /// <summary>
     /// This class records the thread the GraphicsDeviceManager was created upon.  Initialization should be called 
     /// right after the GraphicsDeviceManager constructor.
@@ -17,7 +46,16 @@ namespace VikingXNAGraphics
         {
             // Capture the current SynchronizationContext
             Context = SynchronizationContext.Current ?? new SynchronizationContext();
-            Scheduler = TaskScheduler.FromCurrentSynchronizationContext();
+            try
+            {
+                Scheduler = TaskScheduler.FromCurrentSynchronizationContext();
+            }
+            catch (InvalidOperationException)
+            {
+                // Some SynchronizationContexts (e.g. default on .NET Core) cannot be used as TaskScheduler.
+                // Fall back to a scheduler that runs tasks by posting to the captured context.
+                Scheduler = new SynchronizationContextTaskScheduler(Context);
+            }
         }
 
         public static void Post(Action action)

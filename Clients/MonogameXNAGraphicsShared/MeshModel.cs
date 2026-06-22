@@ -3,7 +3,9 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -101,15 +103,21 @@ namespace VikingXNAGraphics
             if (device == null || _verticies == null || _verticies.Length == 0 || _edges == null || _edges.Length == 0)
                 return false;
 
-            if (!_bufferDirty && _vertexBuffer != null && !_vertexBuffer.IsDisposed && _indexBuffer != null && !_indexBuffer.IsDisposed)
+            if (!_bufferDirty && _vertexBuffer != null && !_vertexBuffer.IsDisposed && _indexBuffer != null && !_indexBuffer.IsDisposed &&
+                _vertexBuffer.VertexCount == _verticies.Length && _indexBuffer.IndexCount == _edges.Length)
                 return true;
 
             _vertexBuffer?.Dispose();
+            _vertexBuffer = null;
             _indexBuffer?.Dispose();
+            _indexBuffer = null;
 
             VERTEXTYPE v = _verticies[0];
-            _vertexBuffer = new VertexBuffer(device, v.VertexDeclaration, _verticies.Length, BufferUsage.None);
-            _vertexBuffer.SetData(_verticies, 0, _verticies.Length);
+            int declStride = v.VertexDeclaration?.VertexStride ?? -1;
+            int vertexCount = _verticies.Length;
+            int marshalSize = Marshal.SizeOf<VERTEXTYPE>();
+            _vertexBuffer = new VertexBuffer(device, typeof(VERTEXTYPE), _verticies.Length, BufferUsage.None);
+            _vertexBuffer.SetData(0, _verticies, 0, _verticies.Length, marshalSize);
 
             _indexBuffer = new IndexBuffer(device, IndexElementSize.ThirtyTwoBits, _edges.Length, BufferUsage.None);
             _indexBuffer.SetData(_edges, 0, _edges.Length);

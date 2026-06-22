@@ -92,8 +92,6 @@ namespace Geometry
             Corners = CalculateCorners(Left, Bottom, Right, Top);
             _HashCode = CalcHashCode(Left, Bottom, Right, Top);
             Segments = CalculateSegments(Corners);
-
-            _HashCode = Left.GetHashCode() ^ Bottom.GetHashCode();
         }
 
         /// <summary>
@@ -273,7 +271,7 @@ namespace Geometry
             //throw new ArgumentException(string.Format("Unexpected rectangle intersection case {0} {1}", rect, this));
         }
 
-        public bool Intersects(in IShape2D shape) => Equals(ShapeExtensions.RectangleIntersects(this, shape));
+        public bool Intersects(in IShape2D shape) => ShapeExtensions.RectangleIntersects(this, shape);
 
         public bool Intersects(in ICircle2D c) => Intersects(c.Convert());
 

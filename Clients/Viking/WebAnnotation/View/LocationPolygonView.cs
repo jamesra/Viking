@@ -345,14 +345,46 @@ namespace WebAnnotation.View
             double radius_scalar = Math.Sqrt((double)scene.Camera.Downsample);
             double expected_radius = Global.AnnotationSettings.PolygonPointRadius * radius_scalar;
 
-            //Todo: Check if control points will be visible.
+            double sceneWidthPixels = scene.Viewport.Width;
+            double visibleThresholdPx = sceneWidthPixels * Global.AnnotationSettings.PolygonVertexPointsVisibleAtWidthFraction;
+            double hiddenThresholdPx = sceneWidthPixels * Global.AnnotationSettings.PolygonVertexPointsHiddenAtWidthFraction;
+
+            void DrawControlPoints(LocationPolygonView lpv, OverlayStyle overlayStyle)
+            {
+                if (lpv.ControlPointView == null) return;
+                 
+                double pointRadiusWorld = lpv.ControlPointRadius;
+                double renderedPointDiameterPx = (2 * pointRadiusWorld) / scene.Camera.Downsample;
+
+                float visibilityAlpha;
+                if (renderedPointDiameterPx <= hiddenThresholdPx)
+                {
+                    return; // Skip draw entirely—do not render as transparent
+                }
+                if (renderedPointDiameterPx >= visibleThresholdPx)
+                {
+                    visibilityAlpha = 1f;
+                }
+                else
+                {
+                    double range = visibleThresholdPx - hiddenThresholdPx;
+                    visibilityAlpha = (float)((renderedPointDiameterPx - hiddenThresholdPx) / range);
+                } 
+
+                float baseAlpha = lpv.Alpha;
+                float effectiveAlpha = baseAlpha * visibilityAlpha;
+                lpv.ControlPointView.Alpha = effectiveAlpha;
+                lpv.ControlPointView.Draw(device, scene, overlayStyle);
+                lpv.ControlPointView.Alpha = baseAlpha;
+            }
+
 #if DEBUG
             foreach (var lpv in listToDraw.Where(lpv => lpv.ControlPointView != null))
             {
-                if(Math.Abs(lpv.ControlPointRadius - expected_radius) > 0.001)
+                if (Math.Abs(lpv.ControlPointRadius - expected_radius) > 0.001)
                     lpv.ControlPointRadius = expected_radius;
 
-                lpv.ControlPointView.Draw(device, scene, OverlayStyle.Alpha);
+                DrawControlPoints(lpv, OverlayStyle.Alpha);
             }
 #else
             if (!Global.PenMode)
@@ -362,7 +394,7 @@ namespace WebAnnotation.View
                     if (lpv.ControlPointRadius != Global.AnnotationSettings.PolygonPointRadius)
                         lpv.ControlPointRadius = Global.AnnotationSettings.PolygonPointRadius;
 
-                    lpv.ControlPointView.Draw(device, scene, OverlayStyle.Luma);
+                    DrawControlPoints(lpv, OverlayStyle.Luma);
                 }
             }
 #endif

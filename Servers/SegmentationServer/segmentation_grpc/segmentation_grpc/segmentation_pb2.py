@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12segmentation.proto\x12\x0csegmentation\"G\n\x12UploadImageRequest\x12\x12\n\nimage_data\x18\x01 \x01(\x0c\x12\r\n\x05width\x18\x02 \x01(\x05\x12\x0e\n\x06height\x18\x03 \x01(\x05\"\'\n\x13UploadImageResponse\x12\x10\n\x08image_id\x18\x01 \x01(\x04\"&\n\x12\x44\x65leteImageRequest\x12\x10\n\x08image_id\x18\x01 \x01(\x04\"&\n\x13\x44\x65leteImageResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"\xae\x01\n\x13SegmentationRequest\x12\x10\n\x08image_id\x18\x01 \x01(\x04\x12\x12\n\nimage_data\x18\x02 \x01(\x0c\x12\r\n\x05width\x18\x03 \x01(\x05\x12\x0e\n\x06height\x18\x04 \x01(\x05\x12(\n\x0b\x63oordinates\x18\x05 \x03(\x0b\x32\x13.segmentation.Point\x12\x0e\n\x06labels\x18\x06 \x03(\x05\x12\x18\n\x10multimask_output\x18\x07 \x01(\x08\"\xa0\x02\n\x18MultiSegmentationRequest\x12\x10\n\x08image_id\x18\x01 \x01(\x04\x12\x12\n\nimage_data\x18\x02 \x01(\x0c\x12\r\n\x05width\x18\x03 \x01(\x05\x12\x0e\n\x06height\x18\x04 \x01(\x05\x12W\n\x11\x66oreground_points\x18\x05 \x03(\x0b\x32<.segmentation.MultiSegmentationRequest.ForegroundPointsEntry\x12\x18\n\x10multimask_output\x18\x06 \x01(\x08\x1aL\n\x15\x46oregroundPointsEntry\x12\x0b\n\x03key\x18\x01 \x01(\x05\x12\"\n\x05value\x18\x02 \x01(\x0b\x32\x13.segmentation.Point:\x02\x38\x01\"\x1d\n\x05Point\x12\t\n\x01x\x18\x01 \x01(\x05\x12\t\n\x01y\x18\x02 \x01(\x05\".\n\x07Polygon\x12#\n\x06points\x18\x01 \x03(\x0b\x32\x13.segmentation.Point\"{\n\x14SegmentationResponse\x12\x15\n\rlabeled_image\x18\x01 \x01(\x0c\x12\r\n\x05width\x18\x02 \x01(\x05\x12\x0e\n\x06height\x18\x03 \x01(\x05\x12-\n\x08segments\x18\x04 \x03(\x0b\x32\x1b.segmentation.SegmentResult\"z\n\rSegmentResult\x12\r\n\x05index\x18\x01 \x01(\x05\x12\r\n\x05score\x18\x02 \x01(\x02\x12\x0c\n\x04mask\x18\x03 \x01(\x0c\x12\t\n\x01X\x18\x04 \x01(\x05\x12\t\n\x01Y\x18\x05 \x01(\x05\x12\'\n\x08polygons\x18\x06 \x03(\x0b\x32\x15.segmentation.Polygon2\xfd\x02\n\x13SegmentationService\x12T\n\x0bUploadImage\x12 .segmentation.UploadImageRequest\x1a!.segmentation.UploadImageResponse\"\x00\x12W\n\x0cSegmentImage\x12!.segmentation.SegmentationRequest\x1a\".segmentation.SegmentationResponse\"\x00\x12\x61\n\x11MultiSegmentImage\x12&.segmentation.MultiSegmentationRequest\x1a\".segmentation.SegmentationResponse\"\x00\x12T\n\x0b\x44\x65leteImage\x12 .segmentation.DeleteImageRequest\x1a!.segmentation.DeleteImageResponse\"\x00\x42*\xaa\x02\'Viking.gRPC.SegmentationServiceTypes.V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12segmentation.proto\x12\x0csegmentation\"G\n\x12UploadImageRequest\x12\x12\n\nimage_data\x18\x01 \x01(\x0c\x12\r\n\x05width\x18\x02 \x01(\x05\x12\x0e\n\x06height\x18\x03 \x01(\x05\"\'\n\x13UploadImageResponse\x12\x10\n\x08image_id\x18\x01 \x01(\x04\"&\n\x12\x44\x65leteImageRequest\x12\x10\n\x08image_id\x18\x01 \x01(\x04\"&\n\x13\x44\x65leteImageResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"\x15\n\x13ServerStatusRequest\"P\n\x14ServerStatusResponse\x12\x0f\n\x07version\x18\x01 \x01(\t\x12\x16\n\x0euptime_seconds\x18\x02 \x01(\x01\x12\x0f\n\x07message\x18\x03 \x01(\t\"\xae\x01\n\x13SegmentationRequest\x12\x10\n\x08image_id\x18\x01 \x01(\x04\x12\x12\n\nimage_data\x18\x02 \x01(\x0c\x12\r\n\x05width\x18\x03 \x01(\x05\x12\x0e\n\x06height\x18\x04 \x01(\x05\x12(\n\x0b\x63oordinates\x18\x05 \x03(\x0b\x32\x13.segmentation.Point\x12\x0e\n\x06labels\x18\x06 \x03(\x05\x12\x18\n\x10multimask_output\x18\x07 \x01(\x08\"\xa0\x02\n\x18MultiSegmentationRequest\x12\x10\n\x08image_id\x18\x01 \x01(\x04\x12\x12\n\nimage_data\x18\x02 \x01(\x0c\x12\r\n\x05width\x18\x03 \x01(\x05\x12\x0e\n\x06height\x18\x04 \x01(\x05\x12W\n\x11\x66oreground_points\x18\x05 \x03(\x0b\x32<.segmentation.MultiSegmentationRequest.ForegroundPointsEntry\x12\x18\n\x10multimask_output\x18\x06 \x01(\x08\x1aL\n\x15\x46oregroundPointsEntry\x12\x0b\n\x03key\x18\x01 \x01(\x05\x12\"\n\x05value\x18\x02 \x01(\x0b\x32\x13.segmentation.Point:\x02\x38\x01\"\x1d\n\x05Point\x12\t\n\x01x\x18\x01 \x01(\x05\x12\t\n\x01y\x18\x02 \x01(\x05\".\n\x07Polygon\x12#\n\x06points\x18\x01 \x03(\x0b\x32\x13.segmentation.Point\"{\n\x14SegmentationResponse\x12\x15\n\rlabeled_image\x18\x01 \x01(\x0c\x12\r\n\x05width\x18\x02 \x01(\x05\x12\x0e\n\x06height\x18\x03 \x01(\x05\x12-\n\x08segments\x18\x04 \x03(\x0b\x32\x1b.segmentation.SegmentResult\"z\n\rSegmentResult\x12\r\n\x05index\x18\x01 \x01(\x05\x12\r\n\x05score\x18\x02 \x01(\x02\x12\x0c\n\x04mask\x18\x03 \x01(\x0c\x12\t\n\x01X\x18\x04 \x01(\x05\x12\t\n\x01Y\x18\x05 \x01(\x05\x12\'\n\x08polygons\x18\x06 \x03(\x0b\x32\x15.segmentation.Polygon2\xd9\x03\n\x13SegmentationService\x12T\n\x0bUploadImage\x12 .segmentation.UploadImageRequest\x1a!.segmentation.UploadImageResponse\"\x00\x12W\n\x0cSegmentImage\x12!.segmentation.SegmentationRequest\x1a\".segmentation.SegmentationResponse\"\x00\x12\x61\n\x11MultiSegmentImage\x12&.segmentation.MultiSegmentationRequest\x1a\".segmentation.SegmentationResponse\"\x00\x12T\n\x0b\x44\x65leteImage\x12 .segmentation.DeleteImageRequest\x1a!.segmentation.DeleteImageResponse\"\x00\x12Z\n\x0fGetServerStatus\x12!.segmentation.ServerStatusRequest\x1a\".segmentation.ServerStatusResponse\"\x00\x42*\xaa\x02\'Viking.gRPC.SegmentationServiceTypes.V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -42,20 +42,24 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_DELETEIMAGEREQUEST']._serialized_end=188
   _globals['_DELETEIMAGERESPONSE']._serialized_start=190
   _globals['_DELETEIMAGERESPONSE']._serialized_end=228
-  _globals['_SEGMENTATIONREQUEST']._serialized_start=231
-  _globals['_SEGMENTATIONREQUEST']._serialized_end=405
-  _globals['_MULTISEGMENTATIONREQUEST']._serialized_start=408
-  _globals['_MULTISEGMENTATIONREQUEST']._serialized_end=696
-  _globals['_MULTISEGMENTATIONREQUEST_FOREGROUNDPOINTSENTRY']._serialized_start=620
-  _globals['_MULTISEGMENTATIONREQUEST_FOREGROUNDPOINTSENTRY']._serialized_end=696
-  _globals['_POINT']._serialized_start=698
-  _globals['_POINT']._serialized_end=727
-  _globals['_POLYGON']._serialized_start=729
-  _globals['_POLYGON']._serialized_end=775
-  _globals['_SEGMENTATIONRESPONSE']._serialized_start=777
-  _globals['_SEGMENTATIONRESPONSE']._serialized_end=900
-  _globals['_SEGMENTRESULT']._serialized_start=902
-  _globals['_SEGMENTRESULT']._serialized_end=1024
-  _globals['_SEGMENTATIONSERVICE']._serialized_start=1027
-  _globals['_SEGMENTATIONSERVICE']._serialized_end=1408
+  _globals['_SERVERSTATUSREQUEST']._serialized_start=230
+  _globals['_SERVERSTATUSREQUEST']._serialized_end=251
+  _globals['_SERVERSTATUSRESPONSE']._serialized_start=253
+  _globals['_SERVERSTATUSRESPONSE']._serialized_end=333
+  _globals['_SEGMENTATIONREQUEST']._serialized_start=336
+  _globals['_SEGMENTATIONREQUEST']._serialized_end=510
+  _globals['_MULTISEGMENTATIONREQUEST']._serialized_start=513
+  _globals['_MULTISEGMENTATIONREQUEST']._serialized_end=801
+  _globals['_MULTISEGMENTATIONREQUEST_FOREGROUNDPOINTSENTRY']._serialized_start=725
+  _globals['_MULTISEGMENTATIONREQUEST_FOREGROUNDPOINTSENTRY']._serialized_end=801
+  _globals['_POINT']._serialized_start=803
+  _globals['_POINT']._serialized_end=832
+  _globals['_POLYGON']._serialized_start=834
+  _globals['_POLYGON']._serialized_end=880
+  _globals['_SEGMENTATIONRESPONSE']._serialized_start=882
+  _globals['_SEGMENTATIONRESPONSE']._serialized_end=1005
+  _globals['_SEGMENTRESULT']._serialized_start=1007
+  _globals['_SEGMENTRESULT']._serialized_end=1129
+  _globals['_SEGMENTATIONSERVICE']._serialized_start=1132
+  _globals['_SEGMENTATIONSERVICE']._serialized_end=1605
 # @@protoc_insertion_point(module_scope)

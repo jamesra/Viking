@@ -76,15 +76,50 @@ namespace Viking
             Global.HttpClient.CancelPendingRequests();
         }
 
+        private const int VolumeLoadMaxRetries = 3;
+
         private async Task BackgroundLoading(string VolumeURL, Viking.Common.IProgressReporter progressReporter, CancellationToken token)
         {
             if (VolumeURL is null)
                 throw new ArgumentNullException(nameof(VolumeURL));
 
             DateTime startVolume = DateTime.UtcNow;
-            //The constructor populates attributes of the volume element.  Then initialize needs to be called to collect more
-            var Volume = await Viking.VolumeModel.Volume.CreateAsync(VolumeURL, UI.State.CachePath, progressReporter, token);
-            //new Viking.VolumeModel.Volume(VolumeURL, UI.State.CachePath, progressReporter);
+            Viking.VolumeModel.Volume Volume = null;
+            Exception lastVolumeException = null;
+
+            for (int attempt = 1; attempt <= VolumeLoadMaxRetries; attempt++)
+            {
+                if (token.IsCancellationRequested)
+                    throw new OperationCanceledException(token);
+
+                try
+                {
+                    if (attempt > 1)
+                    {
+                        Trace.WriteLine($"Volume load retry {attempt}/{VolumeLoadMaxRetries} for {VolumeURL}");
+                        await Task.Delay(2000 * (attempt - 1), token).ConfigureAwait(false);
+                    }
+
+                    Volume = await Viking.VolumeModel.Volume.CreateAsync(VolumeURL, UI.State.CachePath, progressReporter, token).ConfigureAwait(false);
+                    await Volume.Initialize(token, progressReporter).ConfigureAwait(false);
+                    lastVolumeException = null;
+                    break;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    lastVolumeException = ex;
+                    Trace.WriteLine($"Volume load attempt {attempt} failed: {ex.Message}");
+                    if (attempt == VolumeLoadMaxRetries)
+                        throw;
+                }
+            }
+
+            if (Volume is null && lastVolumeException != null)
+                throw lastVolumeException;
 
             //Start loading textures, this does not need to be done before launching the main app.
             DateTime TextureCacheLoadStart = DateTime.UtcNow;
@@ -93,8 +128,6 @@ namespace Viking
             DateTime stopVolume = DateTime.UtcNow;
             var elapsedTime = stopVolume - startVolume;
             Trace.WriteLine("Volume Load Time: " + elapsedTime.ToString());
-
-            await Volume.Initialize(token, progressReporter);
             int pref = Viking.Properties.Settings.Default.MaxConcurrentTextureRequests;
             if (pref > 0)
                 TextureReaderV2.SetMaxConcurrentRequestLimit(pref);

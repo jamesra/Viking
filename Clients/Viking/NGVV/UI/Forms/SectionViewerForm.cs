@@ -21,13 +21,14 @@ namespace Viking.UI.Forms
 
         public SectionViewerForm(SectionViewModel section)
         {
+            if (section is null)
+                throw new ArgumentNullException(nameof(section));
             InitializeComponent();
 
             this.SectionControl.Section = section;
             this.SectionControl.OnSectionChanged += new SectionChangedEventHandler(OnSectionChanged);
 
-            if (section != null)
-                this.Text = this.BuildTitleString(section.ToString());
+            this.Text = this.BuildTitleString(section.ToString());
         }
 
         private string BuildTitleString(string text)
@@ -75,6 +76,8 @@ namespace Viking.UI.Forms
         /// <returns></returns>
         public static SectionViewerForm Show(SectionViewModel section)
         {
+            if (section is null)
+                throw new ArgumentNullException(nameof(section));
             //  SectionViewerForm form = new SectionViewerForm(section);
             //  form.Show();
             SectionViewerForm form = State.ViewerForm;

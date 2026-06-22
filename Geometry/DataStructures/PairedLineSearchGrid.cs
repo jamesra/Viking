@@ -17,7 +17,7 @@ namespace Geometry
             return false;
         }
 
-        public override int GetHashCode() => mapLine.GetHashCode();
+        public override int GetHashCode() => GeometryHashCode.Combine(mapLine.GetHashCode(), ctrlLine.GetHashCode());
 
         public int CompareTo(object obj)
         {

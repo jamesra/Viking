@@ -32,6 +32,12 @@
 /processorParam:DebugMode=Auto
 /build:BillboardAnnotation.fx
 
+#begin CircleInstanced.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:CircleInstanced.fx
+
 #begin ChannelOverlayShader.fx
 /importer:EffectImporter
 /processor:EffectProcessor

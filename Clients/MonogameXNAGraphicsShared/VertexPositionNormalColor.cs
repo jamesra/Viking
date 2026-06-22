@@ -10,7 +10,10 @@ namespace VikingXNAGraphics
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct VertexPositionNormalColor(Vector3 position, Vector3 normal, Color color) : IVertexType
     {
-        public static VertexDeclaration Declaration = new(
+        /// <summary>Stride in bytes: Vector3 (12) + Vector3 (12) + Color (4) = 28.</summary>
+        public static readonly int StrideBytes = 28;
+
+        public static VertexDeclaration Declaration = new(StrideBytes,
         [
             new(0, VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
             new(12, VertexElementFormat.Vector3, VertexElementUsage.Normal, 0),
@@ -47,7 +50,17 @@ namespace VikingXNAGraphics
                    other.vColor == this.vColor;
         }
 
-        public override readonly int GetHashCode() => this.Position.GetHashCode() + this.Position.GetHashCode() + this.Color.GetHashCode();
+        public override readonly int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + Position.GetHashCode();
+                hash = hash * 23 + Normal.GetHashCode();
+                hash = hash * 23 + Color.GetHashCode();
+                return hash;
+            }
+        }
 
         public override readonly string ToString() => string.Format("P: {0} N: {1} C: {2}", this.vPosition, this.vNormal, this.vColor);
 

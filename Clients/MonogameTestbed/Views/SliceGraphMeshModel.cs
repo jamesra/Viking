@@ -52,12 +52,11 @@ namespace MonogameTestbed
         }
 
         /// <summary>
-        /// 
+        /// Slice mesh render model. Vertices are in volume coordinates; keep model transform at origin
+        /// so live view and exported geometry share the same placement.
         /// </summary>
-        /// <param name="position">Where in world space we want the model displayed</param>
-        public SliceGraphMeshModel(GridVector3 position)
+        public SliceGraphMeshModel()
         {
-            model.Position = position;
         }
 
         /// <summary>

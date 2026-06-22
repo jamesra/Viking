@@ -456,6 +456,7 @@ namespace Geometry
                 this.Value = default;
                 this.HasValue = false;
                 Tree.PointRemoved(this, p, output);
+                return;
             }
 
             if (this.IsLeaf)

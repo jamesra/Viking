@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using System.Security.AccessControl;
 using Viking.UI;
 using System.Net.Security;
+using System.Diagnostics;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Viking.UI.Controls
@@ -196,6 +197,7 @@ namespace Viking.UI.Controls
             }
             catch (Exception ex)
             {
+                Trace.WriteLine($"login_handle failed: {ex}", "UserCredentialsControl");
                 this.update_label.Text = "Authentication failed: " + ex.Message;
             }
         }
@@ -232,6 +234,7 @@ namespace Viking.UI.Controls
             }
             catch (Exception ex)
             {
+                Trace.WriteLine($"Handle_Anonymmous failed: {ex}", "UserCredentialsControl");
                 this.update_label.Text = "Authentication failed: " + ex.Message;
             }
         }

@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
@@ -9,6 +10,7 @@ using System.Windows.Input;
 using Duende.IdentityModel.Client;
 using Viking.Tokens;
 using Viking.Services;
+using Viking.UI.WPF;
 
 namespace Viking.UI.WPF.ViewModels
 {
@@ -328,7 +330,7 @@ namespace Viking.UI.WPF.ViewModels
 
                 if (tokenResponse.IsError)
                 {
-                    StatusMessage = $"Login failed: {tokenResponse.Error}";
+                    StatusMessage = "Login failed: " + TokenErrorHelper.ToUserMessage(tokenResponse);
                     return;
                 }
 
@@ -350,7 +352,7 @@ namespace Viking.UI.WPF.ViewModels
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error: {ex.Message}";
+                StatusMessage = "Error: " + TokenErrorHelper.ToExceptionMessage(ex);
                 System.Diagnostics.Trace.WriteLine($"Login error: {ex}");
             }
             finally
@@ -385,7 +387,7 @@ namespace Viking.UI.WPF.ViewModels
 
                 if (tokenResponse is null || tokenResponse.IsError)
                 {
-                    StatusMessage = tokenResponse != null ? $"Anonymous login failed: {tokenResponse.Error}" : "Anonymous login failed.";
+                    StatusMessage = tokenResponse != null ? "Anonymous login failed: " + TokenErrorHelper.ToUserMessage(tokenResponse) : "Anonymous login failed.";
                     return;
                 }
 
@@ -403,7 +405,7 @@ namespace Viking.UI.WPF.ViewModels
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error: {ex.Message}";
+                StatusMessage = "Error: " + TokenErrorHelper.ToExceptionMessage(ex);
                 System.Diagnostics.Trace.WriteLine($"Anonymous login error: {ex}");
             }
             finally
@@ -448,10 +450,17 @@ namespace Viking.UI.WPF.ViewModels
 
         public async void Execute(object parameter)
         {
-            if (_executeAsync != null)
-                await _executeAsync();
-            else
-                _execute?.Invoke();
+            try
+            {
+                if (_executeAsync != null)
+                    await _executeAsync();
+                else
+                    _execute?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"AsyncRelayCommand Execute failed: {ex}", "LoginViewModel");
+            }
         }
 
         public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);

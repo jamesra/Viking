@@ -1,3 +1,11 @@
+#if OPENGL
+#define VS_SHADERMODEL vs_3_0
+#define PS_SHADERMODEL ps_3_0
+#else
+#define VS_SHADERMODEL vs_4_0
+#define PS_SHADERMODEL ps_4_0
+#endif
+
 #include "../../MonogameXNAGraphicsShared/Content/HSLRGBLib.fx"
 #include "../../MonogameXNAGraphicsShared/Content/OverlayShaderShared.fx"
 
@@ -22,12 +30,18 @@ struct VertexShaderOutput
 {
     float4 Position : POSITION0;
     float4 HSLColor : COLOR0;
+#if OPENGL
+    float4 PositionCopy : TEXCOORD0;
+#endif
 };
-
 
 struct PixelShaderInput
 {
+#if OPENGL
+    float4 Position : TEXCOORD0;
+#else
     float4 Position : SV_Position;
+#endif
     float4 HSLColor : COLOR0;
 };
  
@@ -39,10 +53,12 @@ struct PixelShaderOutput
 
 VertexShaderOutput PolygonVertexShaderFunction(PolygonVertexShaderInput input)
 {
-    VertexShaderOutput output; 
+    VertexShaderOutput output;
     output.Position = mul(input.Position, mWorldViewProj);
     output.HSLColor = input.Color;
-
+#if OPENGL
+    output.PositionCopy = output.Position;
+#endif
     return output;
 }
  
@@ -64,8 +80,8 @@ technique ColorPolygonOverBackgroundLumaEffect
 {
     pass
     {
-        VertexShader = compile vs_4_0 PolygonVertexShaderFunction();
-        PixelShader = compile ps_4_0 ColorPolygonOverBackgroundLumaPixelShaderFunction();
+        VertexShader = compile VS_SHADERMODEL PolygonVertexShaderFunction();
+        PixelShader = compile PS_SHADERMODEL ColorPolygonOverBackgroundLumaPixelShaderFunction();
     }
 
 }

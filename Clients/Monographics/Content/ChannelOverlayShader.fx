@@ -1,3 +1,11 @@
+#if OPENGL
+#define VS_SHADERMODEL vs_3_0
+#define PS_SHADERMODEL ps_3_0
+#else
+#define VS_SHADERMODEL vs_4_0
+#define PS_SHADERMODEL ps_4_0
+#endif
+
 #include "../../MonogameXNAGraphicsShared/Content/HSLRGBLib.fx"
 
 float4x4 mWorldViewProj;
@@ -150,8 +158,8 @@ technique HCLToRGB
 	pass convert
 	{
 		AlphaBlendEnable = false;
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-		PixelShader = compile ps_4_0 HCLToRGBPixelShaderFunction();
+		VertexShader = compile VS_SHADERMODEL VertexShaderFunction();
+		PixelShader = compile PS_SHADERMODEL HCLToRGBPixelShaderFunction();
 	}
 }
 
@@ -160,8 +168,8 @@ technique RGBToHCL
 	pass convert
 	{
 		AlphaBlendEnable = false;
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-		PixelShader = compile ps_4_0 RGBToHCLPixelShaderFunction();
+		VertexShader = compile VS_SHADERMODEL VertexShaderFunction();
+		PixelShader = compile PS_SHADERMODEL RGBToHCLPixelShaderFunction();
 	}
 }
 
@@ -176,8 +184,8 @@ technique HSVOverBackgroundValueOverlayEffect
 		//DestBlend = InvSrcAlpha;
 		//BlendOp = Add;
 		
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-        PixelShader = compile ps_4_0 HSOverBackgroundValuePixelShaderFunction();
+		VertexShader = compile VS_SHADERMODEL VertexShaderFunction();
+        PixelShader = compile PS_SHADERMODEL HSOverBackgroundValuePixelShaderFunction();
     } 
 }
 
@@ -192,8 +200,8 @@ technique HSVOnlyOverlayEffect
 		//DestBlend = InvSrcAlpha;
 		//BlendOp = Add;
 		
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-        PixelShader = compile ps_4_0 HSVOnlyPixelShaderFunction();
+		VertexShader = compile VS_SHADERMODEL VertexShaderFunction();
+        PixelShader = compile PS_SHADERMODEL HSVOnlyPixelShaderFunction();
     }
 }
 
@@ -208,8 +216,8 @@ technique BackgroundOnlyOverlayEffect
 		//DestBlend = InvSrcAlpha;
 		//BlendOp = Add;
 		
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-        PixelShader = compile ps_4_0 BackgroundValueOnlyPixelShaderFunction();
+		VertexShader = compile VS_SHADERMODEL VertexShaderFunction();
+        PixelShader = compile PS_SHADERMODEL BackgroundValueOnlyPixelShaderFunction();
     }
 }
 

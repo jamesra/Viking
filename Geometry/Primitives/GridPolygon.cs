@@ -1110,11 +1110,11 @@ namespace Geometry
             if (innerPoly.ExteriorRing.Any(v => externalPolyOnly.BoundingBox.Contains(v) == false))
                 return false;
 
-            //Perform the expensive intersection test
-            if (innerPoly.Intersects(externalPolyOnly))
-            {
+            if (innerPoly.ExteriorRing.Any(v => externalPolyOnly.Contains(v) == false))
                 return false;
-            }
+
+            if (GridPolygon.SegmentsIntersect(innerPoly, externalPolyOnly))
+                return false;
 
             if (CheckForIntersectionWithOtherInnerPolygons)
             {
@@ -1127,7 +1127,10 @@ namespace Geometry
 
                     GridPolygon otherInner = this.InteriorPolygons[i];
 
-                    if (innerPoly.Intersects(otherInner))
+                    if (GridPolygon.SegmentsIntersect(innerPoly, otherInner))
+                        return false;
+
+                    if (otherInner.Contains(innerPoly.ExteriorRing[0]) || innerPoly.Contains(otherInner.ExteriorRing[0]))
                         return false;
                 }
             }
@@ -1991,17 +1994,9 @@ namespace Geometry
 
                 pIsLeft = SegData.IsPLeftOfSeg.HasValue == false ? polySeg.IsLeft(test_point) : SegData.IsPLeftOfSeg.Value;
 
-                /*if(IsAboveToBelow == 0) //Case of parallel line
-                {
-                    if(polySeg.BoundingBox.Left <= test_point.X && polySeg.BoundingBox.Right >= test_point.X)
-                    {
-                        return ShapeRelation.TOUCHING; //Test point is within the line segment, return true   
-                                    //We aren't using epsilon here, perhaps we should?
-                    }
+                if (IsAboveToBelow == 0)
                     continue;
-                }
-                else*/
-                if (IsAboveToBelow > 0)
+                else if (IsAboveToBelow > 0)
                 {
                     if (pIsLeft >= 0)
                         wind_count += 1;
@@ -2493,6 +2488,9 @@ namespace Geometry
 
             //Check the case of the other polygon entirely inside
             if (this.Contains(other.ExteriorRing[0])) //If it is entirely inside then all other verts must be inside so only check one
+                return true;
+
+            if (other.Contains(this.ExteriorRing[0]))
                 return true;
 
             return SegmentsIntersect(this, other);

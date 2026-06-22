@@ -7,10 +7,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using CommandLine.Text;
+using Newtonsoft.Json;
 using Viking.UI.Forms;
 using VikingCoreResources = Viking.Properties.Resources;
 using System.Linq;
@@ -95,6 +97,9 @@ namespace Viking
             // Upgrade settings from previous versions (preserves user settings across updates)
             SettingsManager.UpgradeSettingsIfNeeded();
 
+            // Register viking:// URL protocol so the OS launches Viking when the user clicks a viking:// link
+            VikingProtocolRegistration.RegisterIfNeeded();
+
             ConfigureHighDpiMode();
             Application.EnableVisualStyles();
 
@@ -136,6 +141,13 @@ namespace Viking
 
             ApplicationSettings? appSettings = null;
 
+            // Handle viking://open?code=...&volume=... protocol (one-use launch code)
+            if (TryHandleVikingOpenUrl(args, out appSettings))
+            {
+                // appSettings set by TryHandleVikingOpenUrl; continue to volume load below
+            }
+            else
+            {
             var options = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
 
             options.WithParsed(o => appSettings = TryBypassSplash(o)).WithNotParsed(errors =>
@@ -156,6 +168,7 @@ namespace Viking
                 // Show login window as fallback
                 appSettings = ShowLoginWindow(null, null, null);
             });
+            }
 
             //Close the program if no settings were provided or the volume is missing
             if (appSettings is null || string.IsNullOrWhiteSpace(appSettings.VolumeURL))
@@ -220,10 +233,115 @@ namespace Viking
             }
         }
 
+        /// <summary>
+        /// Handles viking://open?code=...&volume=... protocol. Returns true if args contained a viking:// URL and it was handled (appSettings may be null if user cancelled).
+        /// </summary>
+        private static bool TryHandleVikingOpenUrl(string[] args, out ApplicationSettings? appSettings)
+        {
+            appSettings = null;
+            string? vikingUrl = args?.FirstOrDefault(a => a?.StartsWith("viking://", StringComparison.OrdinalIgnoreCase) == true);
+            if (string.IsNullOrEmpty(vikingUrl))
+                return false;
+
+            if (!Uri.TryCreate(vikingUrl, UriKind.Absolute, out Uri? uri) || string.IsNullOrEmpty(uri?.Query))
+                return false;
+
+            var query = ParseQueryString(uri.Query);
+            string? code = query.TryGetValue("code", out var c) ? c?.Trim() : null;
+            string? volume = query.TryGetValue("volume", out var v) ? v?.Trim() : null;
+
+            if (!string.IsNullOrEmpty(code))
+            {
+                string baseUrl = Viking.Properties.Settings.Default.LaunchExchangeBaseUrl?.Trim() ?? "";
+                if (string.IsNullOrEmpty(baseUrl))
+                {
+                    Trace.WriteLine("[Viking] viking://open with code ignored: LaunchExchangeBaseUrl not configured.", "Viking");
+                    return false;
+                }
+
+                var exchangeUrl = baseUrl.TrimEnd('/') + "/api/viking/launch-exchange";
+                (string? accessToken, string? identityServerUrl, string? volumeUrl) = ExchangeLaunchCodeAsync(exchangeUrl, code).GetAwaiter().GetResult();
+                if (accessToken == null)
+                {
+                    Trace.WriteLine("[Viking] Launch code exchange failed or returned no token.", "Viking");
+                    appSettings = ShowLoginWindow(null, null, null);
+                    return true;
+                }
+                string? initialVolume = !string.IsNullOrEmpty(volumeUrl) ? volumeUrl : volume;
+                appSettings = ShowLoginWindowWithLaunchResult(accessToken, identityServerUrl ?? "", initialVolume);
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(volume))
+            {
+                appSettings = ShowLoginWindow(volume, null, null);
+                return true;
+            }
+
+            appSettings = ShowLoginWindow(null, null, null);
+            return true;
+        }
+
+        private static Dictionary<string, string> ParseQueryString(string query)
+        {
+            var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(query) || query[0] != '?')
+                return dict;
+            foreach (var pair in query.Substring(1).Split('&'))
+            {
+                var eq = pair.IndexOf('=');
+                if (eq < 0)
+                    continue;
+                var key = Uri.UnescapeDataString(pair.Substring(0, eq).Replace('+', ' '));
+                var value = Uri.UnescapeDataString(pair.Substring(eq + 1).Replace('+', ' '));
+                dict[key] = value;
+            }
+            return dict;
+        }
+
+        private static async Task<(string? accessToken, string? identityServerUrl, string? volumeUrl)> ExchangeLaunchCodeAsync(string exchangeUrl, string code)
+        {
+            try
+            {
+                using var client = new HttpClient();
+                client.Timeout = TimeSpan.FromSeconds(15);
+                var body = new { code };
+                var json = JsonConvert.SerializeObject(body);
+                using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                using var response = await client.PostAsync(exchangeUrl, content).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                    return (null, null, null);
+                var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var obj = JsonConvert.DeserializeObject<Newtonsoft.Json.Linq.JObject>(responseJson);
+                if (obj == null)
+                    return (null, null, null);
+                return (obj["access_token"]?.ToString(), obj["identity_server_url"]?.ToString(), obj["volume_url"]?.ToString());
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[Viking] Launch code exchange error: {ex.Message}", "Viking");
+                return (null, null, null);
+            }
+        }
+
+        private static ApplicationSettings? ShowLoginWindowWithLaunchResult(string initialApiToken, string initialIdentityServerUrl, string? initialVolumeUrl)
+        {
+            LoginWindow wpfLoginWindow = new();
+            wpfLoginWindow.InitialApiToken = initialApiToken;
+            wpfLoginWindow.InitialIdentityServerUrl = string.IsNullOrWhiteSpace(initialIdentityServerUrl) ? null : initialIdentityServerUrl;
+            wpfLoginWindow.InitialVolumeUrl = string.IsNullOrWhiteSpace(initialVolumeUrl) ? null : initialVolumeUrl;
+            return ShowLoginWindowFromDialog(wpfLoginWindow);
+        }
+
         private static ApplicationSettings? ShowLoginWindow(string? volumePath, string? username = null, string? password = null)
         {
-            // Use new WPF-based login system
             LoginWindow wpfLoginWindow = new();
+            wpfLoginWindow.InitialVolumeUrl = string.IsNullOrWhiteSpace(volumePath) ? null : volumePath;
+            return ShowLoginWindowFromDialog(wpfLoginWindow);
+        }
+
+        private static ApplicationSettings? ShowLoginWindowFromDialog(LoginWindow wpfLoginWindow)
+        {
             ApplicationSettings appSettings = new();
             var settings = Viking.Properties.Settings.Default;
 

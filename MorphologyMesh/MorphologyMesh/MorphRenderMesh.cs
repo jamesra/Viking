@@ -122,7 +122,7 @@ namespace MorphologyMesh
 
             //This is used to identify corresponding edges
             //TODO: PositionToIndex does not handle multiple Z Level meshes correctly when generating corresponding edges
-            Dictionary<GridVector2, int> PositionToIndex = [];
+            Dictionary<GridVector2, int> PositionToIndex = new(GridVector2EqualityComparer.Default);
 
             foreach (var i1 in shapeVerts)
             {

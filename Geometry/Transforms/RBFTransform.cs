@@ -299,7 +299,7 @@ namespace Geometry.Transforms
                     else
                     {
                         double dist_squared = GridVector2.DistanceSquared(ControlPoints[iPointA], ControlPoints[iPointB]);
-                        value = dist_squared * (Math.Log(dist_squared) / 2.0); // = distance^2 * log(distance).
+                        value = dist_squared <= 0 ? 0 : dist_squared * (Math.Log(dist_squared) / 2.0); // = distance^2 * log(distance).
                     }
                     BetaMatrix[iRow, iCol] = (float)value;
                     BetaMatrix[iCol + 3, iRow - 3] = (float)value;
@@ -352,7 +352,7 @@ namespace Geometry.Transforms
                     else
                     {
                         double dist_squared = GridVector2.DistanceSquared(ControlPoints[iPointA], ControlPoints[iPointB]);
-                        value = dist_squared * (Math.Log(dist_squared) / 2.0); // = distance^2 * log(distance).
+                        value = dist_squared <= 0 ? 0 : dist_squared * (Math.Log(dist_squared) / 2.0); // = distance^2 * log(distance).
                     }
                     BetaMatrix[iRow, iCol] = (float)value;
                     BetaMatrix[iCol+3, iRow-3] = (float)value;

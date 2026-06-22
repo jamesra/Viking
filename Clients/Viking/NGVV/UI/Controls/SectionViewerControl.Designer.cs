@@ -13,20 +13,26 @@ namespace Viking.UI.Controls
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                UnsubscribeAndCancelTokens();
+                InvalidateSectionTextureCache();
+
+                if (components != null)
+                    components.Dispose();
 
                 if(_OverlayBackgroundDepthState != null)
                     _OverlayBackgroundDepthState.Dispose();
-                if (_DrawSectionDepthState != null)
-                    _DrawSectionDepthState.Dispose();
+                foreach (var state in _overlayDepthStateCache.Values)
+                    state?.Dispose();
+                _overlayDepthStateCache.Clear();
+                foreach (var state in _downsampleDepthStateCache.Values)
+                    state?.Dispose();
+                _downsampleDepthStateCache.Clear();
                 if (_DepthDisabledState != null)
                     _DepthDisabledState.Dispose();
-                if (_OverlayDepthState != null)
-                    _OverlayDepthState.Dispose();
                 if (_defaultDepthState != null)
-                    _defaultDepthState.Dispose(); 
+                    _defaultDepthState.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -61,7 +67,8 @@ namespace Viking.UI.Controls
             this.menuExportTiles = new System.Windows.Forms.ToolStripMenuItem();
             this.timerHelpTextChange = new System.Windows.Forms.Timer(this.components);
             this.menuShowCommandHelp = new System.Windows.Forms.ToolStripMenuItem();
-            this.menuViewerPreferences = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuPreferences = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuVikingPreferences = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -82,7 +89,8 @@ namespace Viking.UI.Controls
             this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.menuVolume,
             this.menuSection,
-            this.menuCommands});
+            this.menuCommands,
+            this.menuPreferences});
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
             this.menuStrip.Size = new System.Drawing.Size(284, 24);
@@ -181,8 +189,7 @@ namespace Viking.UI.Controls
             this.menuCaptureScreen,
             this.menuExportFrames,
             this.menuExportTiles,
-            this.menuShowCommandHelp,
-            this.menuViewerPreferences});
+            this.menuShowCommandHelp});
             this.menuCommands.Name = "menuCommands";
             this.menuCommands.Size = new System.Drawing.Size(81, 20);
             this.menuCommands.Text = "Commands";
@@ -231,12 +238,20 @@ namespace Viking.UI.Controls
             this.menuShowCommandHelp.Text = "Show Command Help";
             this.menuShowCommandHelp.Click += new System.EventHandler(this.menuShowCommandHelp_Click);
             // 
-            // menuViewerPreferences
+            // menuPreferences
             // 
-            this.menuViewerPreferences.Name = "menuViewerPreferences";
-            this.menuViewerPreferences.Size = new System.Drawing.Size(191, 22);
-            this.menuViewerPreferences.Text = "Viewer Preferences...";
-            this.menuViewerPreferences.Click += new System.EventHandler(this.menuViewerPreferences_Click);
+            this.menuPreferences.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.menuVikingPreferences});
+            this.menuPreferences.Name = "menuPreferences";
+            this.menuPreferences.Size = new System.Drawing.Size(80, 20);
+            this.menuPreferences.Text = "Preferences";
+            // 
+            // menuVikingPreferences
+            // 
+            this.menuVikingPreferences.Name = "menuVikingPreferences";
+            this.menuVikingPreferences.Size = new System.Drawing.Size(180, 22);
+            this.menuVikingPreferences.Text = "Viking...";
+            this.menuVikingPreferences.Click += new System.EventHandler(this.menuViewerPreferences_Click);
             // 
             // SectionViewerControl
             // 
@@ -271,6 +286,7 @@ namespace Viking.UI.Controls
         private System.Windows.Forms.ToolStripMenuItem menuClearCache;
         private System.Windows.Forms.Timer timerHelpTextChange;
         private System.Windows.Forms.ToolStripMenuItem menuShowCommandHelp;
-        private System.Windows.Forms.ToolStripMenuItem menuViewerPreferences;
+        private System.Windows.Forms.ToolStripMenuItem menuPreferences;
+        private System.Windows.Forms.ToolStripMenuItem menuVikingPreferences;
     }
 }

@@ -3,7 +3,7 @@
 
 /outputDir:bin/$(Platform)
 /intermediateDir:obj/$(Platform)
-/platform:WindowsDX
+/platform:DesktopGL
 /config:
 /profile:HiDef
 /compress:False
@@ -19,31 +19,32 @@
 /processorParam:TextureFormat=Compressed
 /build:Segoe_UI_15_Bold.spritefont
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/AnnotationOverlayShader.fx
-/importer:EffectImporter
-/processor:EffectProcessor
-/processorParam:DebugMode=Auto
-/build:../../MonogameXNAGraphicsShared/MonogameContent/AnnotationOverlayShader.fx
-
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/Arial.spritefont
+# AnnotationOverlayShader excluded for DesktopGL: HLSL ps_3_0 rejects POSITION0 as pixel input (X4502). Re-add when MonoGame or shader workaround available.
+#begin ../../Monographics/Content/Arial.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor
 /processorParam:TextureFormat=Compressed
-/build:../../MonogameXNAGraphicsShared/MonogameContent/Arial.spritefont
+/build:../../Monographics/Content/Arial.spritefont
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/ChannelOverlayShader.fx
+#begin ../../Monographics/Content/BillboardAnnotation.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:../../MonogameXNAGraphicsShared/MonogameContent/ChannelOverlayShader.fx
+/build:../../Monographics/Content/BillboardAnnotation.fx
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/Channels.fx
+#begin ../../Monographics/Content/ChannelOverlayShader.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:../../MonogameXNAGraphicsShared/MonogameContent/Channels.fx
+/build:../../Monographics/Content/ChannelOverlayShader.fx
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/Circle.png
+#begin ../../Monographics/Content/Channels.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:../../Monographics/Content/Channels.fx
+
+#begin ../../Monographics/Content/Circle.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -53,9 +54,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=NoChange
-/build:../../MonogameXNAGraphicsShared/MonogameContent/Circle.png
+/build:../../Monographics/Content/Circle.png
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/CircleMask.png
+#begin ../../Monographics/Content/CircleMask.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -65,9 +66,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:../../MonogameXNAGraphicsShared/MonogameContent/CircleMask.png
+/build:../../Monographics/Content/CircleMask.png
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/DownArrowV2.png
+#begin ../../Monographics/Content/DownArrowV2.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -77,57 +78,57 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:../../MonogameXNAGraphicsShared/MonogameContent/DownArrowV2.png
+/build:../../Monographics/Content/DownArrowV2.png
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/MergeHSVImages.fx
+#begin ../../Monographics/Content/MergeHSVImages.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:../../MonogameXNAGraphicsShared/MonogameContent/MergeHSVImages.fx
+/build:../../Monographics/Content/MergeHSVImages.fx
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/PolygonOverlayShader.fx
+#begin ../../Monographics/Content/PolygonOverlayShader.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:../../MonogameXNAGraphicsShared/MonogameContent/PolygonOverlayShader.fx
+/build:../../Monographics/Content/PolygonOverlayShader.fx
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/RGBToHSV.fx
+#begin ../../Monographics/Content/RGBToHSV.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:../../MonogameXNAGraphicsShared/MonogameContent/RGBToHSV.fx
+/build:../../Monographics/Content/RGBToHSV.fx
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/RoundCurve.fx
+#begin ../../Monographics/Content/RoundCurve.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:../../MonogameXNAGraphicsShared/MonogameContent/RoundCurve.fx
+/build:../../Monographics/Content/RoundCurve.fx
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/RoundCurveHSV.fx
+#begin ../../Monographics/Content/RoundCurveHSV.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:../../MonogameXNAGraphicsShared/MonogameContent/RoundCurveHSV.fx
+/build:../../Monographics/Content/RoundCurveHSV.fx
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/RoundLine.fx
+#begin ../../Monographics/Content/RoundLine.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:../../MonogameXNAGraphicsShared/MonogameContent/RoundLine.fx
+/build:../../Monographics/Content/RoundLine.fx
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/RoundLineHSV.fx
+#begin ../../Monographics/Content/RoundLineHSV.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:../../MonogameXNAGraphicsShared/MonogameContent/RoundLineHSV.fx
+/build:../../Monographics/Content/RoundLineHSV.fx
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/TileLayout.fx
+#begin ../../Monographics/Content/TileLayout.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:../../MonogameXNAGraphicsShared/MonogameContent/TileLayout.fx
+/build:../../Monographics/Content/TileLayout.fx
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/UpArrowMask.png
+#begin ../../Monographics/Content/UpArrowMask.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -137,9 +138,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:../../MonogameXNAGraphicsShared/MonogameContent/UpArrowMask.png
+/build:../../Monographics/Content/UpArrowMask.png
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/UpArrowV2.png
+#begin ../../Monographics/Content/UpArrowV2.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -149,9 +150,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:../../MonogameXNAGraphicsShared/MonogameContent/UpArrowV2.png
+/build:../../Monographics/Content/UpArrowV2.png
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/Circle2Minus.png
+#begin ../../MonogameXNAGraphicsShared/Content/CircleMinus.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -161,9 +162,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=NoChange
-/build:../../MonogameXNAGraphicsShared/MonogameContent/Circle2Minus.png
+/build:../../MonogameXNAGraphicsShared/Content/CircleMinus.png
 
-#begin ../../MonogameXNAGraphicsShared/MonogameContent/Circle2Plus.png
+#begin ../../MonogameXNAGraphicsShared/Content/CirclePlus.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -173,5 +174,5 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=NoChange
-/build:../../MonogameXNAGraphicsShared/MonogameContent/Circle2Plus.png
+/build:../../MonogameXNAGraphicsShared/Content/CirclePlus.png
 

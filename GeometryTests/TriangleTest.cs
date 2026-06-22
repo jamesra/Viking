@@ -1,7 +1,6 @@
 using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.Diagnostics;
 using System.Linq;
 
 namespace GeometryTests
@@ -62,10 +61,10 @@ namespace GeometryTests
             GridTriangle tri = new(v1, v2, v3);
 
             GridVector2 outsidetest = new(5, 75);
-            Debug.Assert(tri.Contains(outsidetest) == false);
+            Assert.IsFalse(tri.Contains(outsidetest));
 
             GridVector2 insidetest = new(25, 75);
-            Debug.Assert(tri.Contains(insidetest) == true);
+            Assert.IsTrue(tri.Contains(insidetest));
 
             //Bug Fix #1
             v1 = new GridVector2(6313.066666666, 13608);
@@ -75,7 +74,7 @@ namespace GeometryTests
             tri = new GridTriangle(v1, v2, v3);
 
             outsidetest = new GridVector2(double.MaxValue / 2, 10652.94);
-            Debug.Assert(tri.Contains(outsidetest) == false);
+            Assert.IsFalse(tri.Contains(outsidetest));
         }
 
         /// <summary>
@@ -162,12 +161,8 @@ namespace GeometryTests
             int[] iTriangles = Delaunay2D.Triangulate(points);
             int[] iExpected = [0, 1, 4, 0, 3, 4, 1, 2, 5, 1, 4, 5];
 
-            Trace.WriteLine(iTriangles.ToString(), "Geometry");
-            Debug.Assert(iTriangles.Length / 3 == 4); //We should find four triangles
-            for (int i = 0; i < iExpected.Length; i++)
-            {
-                Debug.Assert(iExpected[i] == iTriangles[i]);
-            }
+            Assert.AreEqual(4, iTriangles.Length / 3);
+            CollectionAssert.AreEqual(iExpected, iTriangles);
 
             points = [ new(50, 50),
                                                       new(50, 100),
@@ -183,13 +178,8 @@ namespace GeometryTests
             iTriangles = Delaunay2D.Triangulate(points);
             iExpected = [3, 4, 7, 3, 6, 7, 4, 5, 8, 4, 7, 8, 0, 1, 4, 0, 3, 4, 1, 2, 5, 1, 4, 5];
 
-            Trace.WriteLine(iTriangles.ToString(), "Geometry");
-            Debug.Assert(iTriangles.Length / 3 == 8); //We should find four triangles
-
-            for (int i = 0; i < iExpected.Length; i++)
-            {
-                Debug.Assert(iExpected[i] == iTriangles[i]);
-            }
+            Assert.AreEqual(8, iTriangles.Length / 3);
+            CollectionAssert.AreEqual(iExpected, iTriangles);
 
         }
     }

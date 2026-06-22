@@ -50,11 +50,11 @@ namespace Geometry.Transforms
                     }
                     catch (ArgumentException)
                     {
-                        _TriangleIndicies = null;
+                        _TriangleIndicies = [];
                     }
                 }
 
-                return _TriangleIndicies;
+                return _TriangleIndicies ?? [];
             }
 
             protected set => _TriangleIndicies = value;
@@ -76,6 +76,12 @@ namespace Geometry.Transforms
 
         protected TriangulationTransform(MappingGridVector2[] mapPoints, GridRectangle mappedBounds, TransformBasicInfo info)
             : base(mapPoints, mappedBounds, info)
+        {
+            Debug.Assert(mapPoints.Length >= 3, "Triangulation transform requires at least 3 points");
+        }
+
+        protected TriangulationTransform(MappingGridVector2[] mapPoints, GridRectangle mappedBounds, TransformBasicInfo info, bool preserveMapPointOrder)
+            : base(mapPoints, mappedBounds, info, preserveMapPointOrder)
         {
             Debug.Assert(mapPoints.Length >= 3, "Triangulation transform requires at least 3 points");
         }
@@ -583,13 +589,13 @@ namespace Geometry.Transforms
                     {
                         Added[Triangle.N2] = true;
                         MappingPointList.Add(this.MapPoints[Triangle.N2]);
-                        MappingTriangleList.Add(this._TriangleList[Triangle.N1]);
+                        MappingTriangleList.Add(this._TriangleList[Triangle.N2]);
                     }
                     if (!Added[Triangle.N3])
                     {
                         Added[Triangle.N3] = true;
                         MappingPointList.Add(this.MapPoints[Triangle.N3]);
-                        MappingTriangleList.Add(this._TriangleList[Triangle.N1]);
+                        MappingTriangleList.Add(this._TriangleList[Triangle.N3]);
                     }
                 }
             }

@@ -55,6 +55,11 @@ class SegmentationServiceStub(object):
                 request_serializer=segmentation__pb2.DeleteImageRequest.SerializeToString,
                 response_deserializer=segmentation__pb2.DeleteImageResponse.FromString,
                 _registered_method=True)
+        self.GetServerStatus = channel.unary_unary(
+                '/segmentation.SegmentationService/GetServerStatus',
+                request_serializer=segmentation__pb2.ServerStatusRequest.SerializeToString,
+                response_deserializer=segmentation__pb2.ServerStatusResponse.FromString,
+                _registered_method=True)
 
 
 class SegmentationServiceServicer(object):
@@ -89,6 +94,13 @@ class SegmentationServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetServerStatus(self, request, context):
+        """Return server version, uptime, and optional message (e.g. for health/selection UI)
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SegmentationServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -111,6 +123,11 @@ def add_SegmentationServiceServicer_to_server(servicer, server):
                     servicer.DeleteImage,
                     request_deserializer=segmentation__pb2.DeleteImageRequest.FromString,
                     response_serializer=segmentation__pb2.DeleteImageResponse.SerializeToString,
+            ),
+            'GetServerStatus': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetServerStatus,
+                    request_deserializer=segmentation__pb2.ServerStatusRequest.FromString,
+                    response_serializer=segmentation__pb2.ServerStatusResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -222,6 +239,33 @@ class SegmentationService(object):
             '/segmentation.SegmentationService/DeleteImage',
             segmentation__pb2.DeleteImageRequest.SerializeToString,
             segmentation__pb2.DeleteImageResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetServerStatus(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/segmentation.SegmentationService/GetServerStatus',
+            segmentation__pb2.ServerStatusRequest.SerializeToString,
+            segmentation__pb2.ServerStatusResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -96,7 +96,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// When set, background points are computed from visible same-type annotations in OnActivate and on pan/zoom.
         /// </summary>
-        private readonly long? structureTypeIdForBackgroundPoints;
+        private readonly long[]? structureTypeIdsForBackgroundPoints;
+
+        private readonly HashSet<long> includedStructureIds;
 
         /// <summary>
         /// Set to the segmented polygon if the command completes successfully
@@ -144,10 +146,20 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #endregion
 
         #region Constructor
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="success_callback"></param>
+        /// <param name="grpcChannelManager"></param>
+        /// <param name="excludestructureTypeIds">Structures of this type are excluded from the segmentation by adding background points</param>
+        /// <param name="excludeStructureIds">Structures of this type are included in the segmentation by including foreground points.
+        /// If they are of a type also included in excludeStructureTypeIds then that structure instance is not included in the set of background points contributed by that type.</param>
         public SegmentationCommand(SectionViewerControl parent,
             OnCommandSuccess? success_callback = null,
             IGrpcChannelManager? grpcChannelManager = null,
-            long? structureTypeId = null) : base(parent)
+            long[]? excludestructureTypeIds = null,
+            long[]? includeStructureIds = null) : base(parent)
         {
             this.success_callback = success_callback;
 
@@ -159,7 +171,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             // Initialize viewport bounds
             viewportBounds = GetCurrentViewportBounds();
 
-            structureTypeIdForBackgroundPoints = structureTypeId;
+            structureTypeIdsForBackgroundPoints = excludestructureTypeIds;
+            includedStructureIds = new HashSet<long>();
+            if (includeStructureIds != null) {
+                includedStructureIds.UnionWith(includeStructureIds);
+            }
         }
 
         /// <summary>
@@ -170,7 +186,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             IEnumerable<GridVector2> initialBackgroundPoints,
             OnCommandSuccess? success_callback = null,
             IGrpcChannelManager? grpcChannelManager = null,
-            long? structureTypeId = null) : this(parent, success_callback, grpcChannelManager, structureTypeId)
+            long[]? excludestructureTypeIds = null, 
+            long[]? includeStructureIds = null) : this(parent, success_callback, grpcChannelManager, excludestructureTypeIds, includeStructureIds)
         {
             // Populate initial points
             if (initialForegroundPoints != null)
@@ -183,7 +200,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        private void AddBackgroundPointsFromStructureType(long structureTypeId, VikingXNA.Scene scene)
+        private void AddBackgroundPointsFromStructureType(long structureTypeId, HashSet<long> exemptStructureIds, VikingXNA.Scene scene)
         {
             var sectionAnnotations = AnnotationOverlay.GetOrCreateAnnotationsForSection(Parent.Section.Number);
             if (sectionAnnotations is null)
@@ -193,6 +210,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             var visibleSameType = locationsInView
                 .Where(loc => loc != null && loc.Parent != null && loc.Parent.Type != null
                     && loc.Parent.Type.modelObj.ID == structureTypeId
+                    && !exemptStructureIds.Contains(loc.Parent.ID) 
                     && loc.IsVisible(scene));
 
             var locationObjs = visibleSameType
@@ -207,6 +225,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
             var validVolumePoints = volumePoints.Where((p, i) => i < success.Length && success[i]).ToList();
             backgroundPoints.AddRange(validVolumePoints);
         }
+
+        private void AddBackgroundPointsFromStructureTypes(long[]? structureTypeIds, HashSet<long> exemptStructureIds, VikingXNA.Scene scene)
+        {
+            if(structureTypeIds is null)
+                return;
+
+            foreach(long id in structureTypeIds)
+            {
+                AddBackgroundPointsFromStructureType(id, exemptStructureIds, scene);
+            }
+        }
         #endregion
 
         #region Lifecycle Methods
@@ -214,9 +243,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             base.OnActivate();
 
-            if (structureTypeIdForBackgroundPoints.HasValue && Parent.Scene != null)
+            if (structureTypeIdsForBackgroundPoints is not null && Parent.Scene is not null)
             {
-                AddBackgroundPointsFromStructureType(structureTypeIdForBackgroundPoints.Value, Parent.Scene);
+                AddBackgroundPointsFromStructureTypes(structureTypeIdsForBackgroundPoints, includedStructureIds, Parent.Scene);
             }
 
             try
@@ -275,13 +304,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (hasInitialPoints)
             {
                 Debug.WriteLine($"SegmentationCommand activated with {foregroundPoints.Count} foreground and {backgroundPoints.Count} background points");
-                UploadCurrentImage().ContinueWith(task =>
-                {
-                    if (task.Status == TaskStatus.RanToCompletion && task.Result)
-                    {
-                        RequestSegmentation();
-                    }
-                }, TaskScheduler.FromCurrentSynchronizationContext());
+                UploadThenRequestSegmentationAsync();
             }
         }
 
@@ -427,17 +450,24 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (isFirstPoint && !currentImageId.HasValue && !currentlyUploading)
             {
                 Debug.WriteLine("First point placed, uploading image to server cache");
-                UploadCurrentImage().ContinueWith(task =>
-                {
-                    if (task.Status == TaskStatus.RanToCompletion && task.Result)
-                    {
-                        RequestSegmentation();
-                    }
-                }, TaskScheduler.FromCurrentSynchronizationContext());
+                UploadThenRequestSegmentationAsync();
             }
             else
             {
                 RequestSegmentation();
+            }
+        }
+
+        private async void UploadThenRequestSegmentationAsync()
+        {
+            try
+            {
+                if (await UploadCurrentImage().ConfigureAwait(true))
+                    RequestSegmentation();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"SegmentationCommand UploadThenRequestSegmentation failed: {ex}", "SegmentationCommand");
             }
         }
 
@@ -571,12 +601,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             // User has stopped panning/zooming
             // Recompute structure-type background points when visible set changes (replaces any previously derived points)
-            if (structureTypeIdForBackgroundPoints.HasValue && Parent.Scene != null)
+            if (structureTypeIdsForBackgroundPoints is not null && Parent.Scene is not null)
             {
                 Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
                 {
                     backgroundPoints.Clear();
-                    AddBackgroundPointsFromStructureType(structureTypeIdForBackgroundPoints.Value, Parent.Scene);
+                    AddBackgroundPointsFromStructureTypes(structureTypeIdsForBackgroundPoints, includedStructureIds, Parent.Scene);
                     UpdatePointViews();
                 }));
             }

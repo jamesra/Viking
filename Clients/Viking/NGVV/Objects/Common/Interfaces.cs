@@ -72,6 +72,18 @@ namespace Viking.Common
     }
 
     /// <summary>
+    /// Optional interface for menu extensions that contribute a sub-item to the shared Preferences menu.
+    /// If implemented, the returned menu item is added under the top-level Preferences menu.
+    /// </summary>
+    public interface IPreferencesMenuContributor
+    {
+        /// <summary>
+        /// Returns a single menu item to add under Preferences (e.g. "Annotation...").
+        /// </summary>
+        System.Windows.Forms.ToolStripMenuItem GetPreferencesMenuItem();
+    }
+
+    /// <summary>
     /// </summary>
     public interface IToolBarButtons
     {

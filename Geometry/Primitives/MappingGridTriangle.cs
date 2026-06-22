@@ -30,7 +30,7 @@ namespace Geometry
             return false;
         }
 
-        public override int GetHashCode() => N1 + N2 + N3;
+        public override int GetHashCode() => GeometryHashCode.Combine(N1, N2, N3);
 
         #region MapBounds
 

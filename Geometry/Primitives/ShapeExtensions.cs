@@ -1323,7 +1323,7 @@ namespace Geometry
                     var newAIntersections = polyA.AddPointsAtIntersections(polyB);
 
                     //var newBIntersections = polyB.AddPointsAtIntersections(polyA);
-                    added_intersections.AddRange(newAIntersections.Union(newAIntersections));
+                    added_intersections.AddRange(newAIntersections);
                 }
                 else if (A is GridPolyline lineA && B is GridPolyline lineB)
                 {

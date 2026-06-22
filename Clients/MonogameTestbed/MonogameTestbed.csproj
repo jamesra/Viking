@@ -3,12 +3,14 @@
 	<LangVersion>latest</LangVersion>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net9.0-windows</TargetFramework>
+		<!-- Force Visual Studio to use CoreCLR debugger (required for .NET Core / .NET 5+) -->
+		<UseCoreDebugger>true</UseCoreDebugger>
 		<RollForward>Major</RollForward>
 		<RootNamespace>MonogameTestbed</RootNamespace>
 		<AssemblyName>MonogameTestbed</AssemblyName>
 		<Platforms>x64</Platforms>
 		<PlatformTarget>x64</PlatformTarget>
-		<MonoGamePlatform>Windows</MonoGamePlatform>
+		<MonoGamePlatform>DesktopGL</MonoGamePlatform>
 		<SignManifests>true</SignManifests>
 		<ManifestCertificateThumbprint>2BADCE24EC984EC73C686B32B12C48B543B4441C</ManifestCertificateThumbprint>
 		<UseWPF>False</UseWPF>
@@ -18,15 +20,19 @@
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
 		<DefineConstants>DEBUG;TRACE;WINDOWS</DefineConstants>
-		<Optimize>True</Optimize>
+		<Optimize>False</Optimize>
 		<PlatformTarget>x64</PlatformTarget>
+		<!-- Ensure debug symbols are produced so breakpoints bind in MSVC -->
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>portable</DebugType>
+		<EmbedAllSources>true</EmbedAllSources>
 		<!-- Using standard output path so native DLLs are deployed correctly -->
 		<!-- <OutputPath>bin\Windows\x64\Debug\</OutputPath> -->
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
 		<DefineConstants>WINDOWS</DefineConstants>
-		<Optimize>False</Optimize>
+		<Optimize>True</Optimize>
 		<PlatformTarget>x64</PlatformTarget>
 		<!-- Using standard output path so native DLLs are deployed correctly -->
 		<!-- <OutputPath>bin\Windows\x64\Release\</OutputPath> -->
@@ -49,8 +55,9 @@
 		</None>
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.5-develop.13" />
-		<PackageReference Include="MonoGame.Framework.Native" Version="3.8.5-develop.13" />
+		<PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.5-preview.3" />
+		<PackageReference Include="MonoGame.Framework.Native" Version="3.8.5-preview.3" />
+		<PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.5-preview.3" />
 		<Reference Include="System.Drawing" />
 		<PackageReference Include="CommandLineParser" Version="2.9.1" />
 		<PackageReference Include="EntityFramework" Version="6.5.1" />
@@ -99,13 +106,34 @@
 		<Content Include="SqlServerTypes\x64\msvcr120.dll" CopyToOutputDirectory="Always" />
 		<Content Include="SqlServerTypes\x64\SqlServerSpatial140.dll" CopyToOutputDirectory="Always" />
 	</ItemGroup>
-	
+	<ItemGroup>
+	  <EmbeddedResource Update="Properties\Resources.resx">
+	    <Generator>ResXFileCodeGenerator</Generator>
+	  </EmbeddedResource>
+	</ItemGroup>
+
+	<!-- Ensure content is built for DesktopGL (must match MonoGamePlatform and runtime) -->
+	<PropertyGroup>
+		<MonoGameMGCBAdditionalArguments Condition="'$(MonoGameMGCBAdditionalArguments)' != ''">$(MonoGameMGCBAdditionalArguments) /platform:DesktopGL</MonoGameMGCBAdditionalArguments>
+		<MonoGameMGCBAdditionalArguments Condition="'$(MonoGameMGCBAdditionalArguments)' == ''">/quiet /platform:DesktopGL</MonoGameMGCBAdditionalArguments>
+	</PropertyGroup>
+
+	<!-- Copy built content to output so ContentManager loads DesktopGL .xnb from Content\ next to executable.
+	     Pipeline writes to Content\bin\DesktopGL (project) and the task copies to $(TargetDir)bin\DesktopGL.
+	     We copy from both into $(TargetDir)Content so Load&lt;T&gt;("RoundLine") finds the correct .xnb. -->
 	<Target Name="CopyMonogameContentBin" AfterTargets="Build">
 		<ItemGroup>
-			<MonogameContentFiles Include="$(ProjectDir)..\Monographics\MonogameContent\bin\Windows\Content\**\*.*" />
+			<!-- Pipeline output in project: bin\DesktopGL, bin\Monographics, bin\MonogameXNAGraphicsShared, etc. -->
+			<MonogameContentFiles Include="$(ProjectDir)Content\bin\**\*.*" />
+		</ItemGroup>
+		<ItemGroup Condition="Exists('$(TargetDir)bin\DesktopGL')">
+			<!-- Task copies to TargetDir\bin\DesktopGL when building -->
+			<MonogameContentFilesFromTarget Include="$(TargetDir)bin\DesktopGL\**\*.*" />
 		</ItemGroup>
 		<MakeDir Directories="$(TargetDir)Content" />
-		<Copy SourceFiles="@(MonogameContentFiles)" DestinationFiles="@(MonogameContentFiles->'$(TargetDir)Content\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(MonogameContentFiles)" DestinationFiles="@(MonogameContentFiles->'$(TargetDir)Content\%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+		<!-- Prefer task output (DesktopGL) in bin\DesktopGL so it overwrites any project copy -->
+		<Copy SourceFiles="@(MonogameContentFilesFromTarget)" DestinationFiles="@(MonogameContentFilesFromTarget->'$(TargetDir)Content\%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
 		
 		<!-- Copy MonoGame native DLLs to output directory for both command line and Visual Studio debugging -->
 		<Copy SourceFiles="$(NuGetPackageRoot)monogame.library.sdl\2.32.2.1\runtimes\win-x64\native\SDL2.dll" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="Exists('$(NuGetPackageRoot)monogame.library.sdl\2.32.2.1\runtimes\win-x64\native\SDL2.dll')" />

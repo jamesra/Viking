@@ -9,12 +9,11 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <SignAssembly>False</SignAssembly>
-    <ManifestTimestampUrl>http://timestamp.digicert.com</ManifestTimestampUrl>
     <ProductName>Viking</ProductName>
     <PublisherName>Marc Lab</PublisherName>
-    <ApplicationVersion>1.2.48.0</ApplicationVersion>
-    <FileVersion>1.2.48.0</FileVersion>
-    <AssemblyVersion>1.2.48.0</AssemblyVersion>
+    <ApplicationVersion>1.2.52.0</ApplicationVersion>
+    <FileVersion>1.2.52.0</FileVersion>
+    <AssemblyVersion>1.2.52.0</AssemblyVersion>
     <Deterministic>True</Deterministic>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <NoWarn>$(NoWarn);CS0436;CA1014;CS3009</NoWarn>
@@ -34,11 +33,16 @@
     <PackageReference Include="protobuf-net" Version="3.2.56" />
     <PackageReference Include="protobuf-net.ServiceModel" Version="3.2.52" />
     <PackageReference Include="Velopack" Version="0.0.1298" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\NGVV\VikingCore.csproj" />
     <ProjectReference Include="..\..\..\SqlServerTypesLoader\SqlServerTypesLoader.csproj" />
     <ProjectReference Include="..\..\Viking.UI.WPF\Viking.UI.WPF.csproj" />
+    <!-- Ensure MGCB content is built before Viking copies graphics assets to output -->
+    <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
     <!-- Module projects - built as plugins, not direct references -->
     <ProjectReference Include="..\WebAnnotation\WebAnnotation.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
@@ -120,13 +124,30 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <IsPublishable>True</IsPublishable>
   </PropertyGroup>
-  <Target Name="CopyGraphicsContent" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net48'">
-    <Message Text="Copying graphics content to output directory..." Importance="high" />
-    <ItemGroup>
-      <GraphicsContent Include="..\..\VikingXNAGraphics\bin\$(Configuration)\net48\Content\**\*.xnb" />
+  <Target Name="CopyGraphicsContent"
+          AfterTargets="Build"
+          BeforeTargets="PrepareForRun"
+          Condition="'$(DesignTimeBuild)' != 'true'">
+    <PropertyGroup>
+      <_GraphicsBuildConfig Condition="'$(Configuration)' != ''">$(Configuration)</_GraphicsBuildConfig>
+      <_GraphicsBuildConfig Condition="'$(_GraphicsBuildConfig)' == ''">Debug</_GraphicsBuildConfig>
+      <_GraphicsContentSourceDir>$(MSBuildThisFileDirectory)..\..\VikingXNAGraphics\bin\$(_GraphicsBuildConfig)\net48\Content\</_GraphicsContentSourceDir>
+      <_GraphicsContentFallbackDir>$(MSBuildThisFileDirectory)..\..\VikingXNAGraphics\Content\bin\Windows\</_GraphicsContentFallbackDir>
+      <_GraphicsContentDestDir>$(OutputPath)Content\</_GraphicsContentDestDir>
+    </PropertyGroup>
+    <ItemGroup Condition="Exists('$(_GraphicsContentSourceDir)')">
+      <GraphicsContent Include="$(_GraphicsContentSourceDir)**\*.xnb" />
     </ItemGroup>
-    <Copy SourceFiles="@(GraphicsContent)" DestinationFolder="$(TargetDir)\Content\%(RecursiveDir)" SkipUnchangedFiles="true" />
-    <Message Text="Copied @(GraphicsContent-&gt;Count()) content files" Importance="high" />
+    <ItemGroup Condition="'@(GraphicsContent)' == '' and Exists('$(_GraphicsContentFallbackDir)')">
+      <GraphicsContent Include="$(_GraphicsContentFallbackDir)*.xnb" />
+    </ItemGroup>
+    <MakeDir Directories="$(_GraphicsContentDestDir)" />
+    <Copy SourceFiles="@(GraphicsContent)"
+          DestinationFolder="$(_GraphicsContentDestDir)%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+    <Message Text="Copied @(GraphicsContent-&gt;Count()) graphics content file(s) to $(_GraphicsContentDestDir)" Importance="high" />
+    <Error Text="No graphics content (.xnb) was copied to Viking output. Build Clients\VikingXNAGraphics\MonographicsNet48.csproj and ensure MGCB is installed at '$(MGCBPath)'."
+           Condition="'@(GraphicsContent)' == ''" />
   </Target>
   <!-- Define the list of modules to process -->
   <ItemGroup>

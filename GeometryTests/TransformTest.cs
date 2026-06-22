@@ -491,10 +491,13 @@ namespace GeometryTests
             GridVector2 movingV3 = new(12.5, 12.5);
             GridVector2 movingV4 = new(12.5, 2.5);
 
-            MappingGridVector2[] transformPoints = [new(fixedV1, movingV1),
-                                                                         new(fixedV2, movingV2),
-                                                                         new(fixedV3, movingV3),
-                                                                         new(fixedV4, movingV4)];
+            MappingGridVector2[] transformPoints =
+            [
+                new(fixedV1, GridTransform.CoordinateFromGridPos(0, 0, 2, 2, 10, 10)),
+                new(fixedV2, GridTransform.CoordinateFromGridPos(1, 0, 2, 2, 10, 10)),
+                new(fixedV3, GridTransform.CoordinateFromGridPos(0, 1, 2, 2, 10, 10)),
+                new(fixedV4, GridTransform.CoordinateFromGridPos(1, 1, 2, 2, 10, 10)),
+            ];
 
             GridTransform fixedTransform = new(transformPoints, new GridRectangle(fixedV1, 10, 10), 2, 2, new TransformBasicInfo(DateTime.UtcNow));
 

@@ -5,6 +5,14 @@
 // Based on RoundLine by Michael Anderson
 //
 
+#if OPENGL
+#define VS_SHADERMODEL vs_3_0
+#define PS_SHADERMODEL ps_3_0
+#else
+#define VS_SHADERMODEL vs_4_0
+#define PS_SHADERMODEL ps_4_0
+#endif
+
 // This shader draws one polyline at a time.
 // Each control point occupies an entry in the control point array
 
@@ -21,8 +29,8 @@ technique Standard
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSStandard();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSStandard();
 	}
 }
 
@@ -35,8 +43,8 @@ technique AlphaGradient
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSAlphaGradient();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSAlphaGradient();
 	}
 }
 
@@ -50,8 +58,8 @@ technique NoBlur
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSNoBlur();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSNoBlur();
 	}
 }
 
@@ -65,8 +73,8 @@ technique AnimatedLinear
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSAnimatedLinear();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSAnimatedLinear();
 	}
 }
 
@@ -79,8 +87,8 @@ technique AnimatedBidirectional
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSAnimatedBidirectional();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSAnimatedBidirectional();
 	}
 }
 
@@ -94,8 +102,8 @@ technique AnimatedRadial
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSAnimatedRadial();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSAnimatedRadial();
 	}
 }
 
@@ -109,8 +117,8 @@ technique Ladder
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSLadder();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSLadder();
 	}
 }
 
@@ -123,8 +131,8 @@ technique Dashed
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSDashed();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSDashed();
 	}
 }
 
@@ -139,8 +147,8 @@ technique Modern
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSModern();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSModern();
 	}
 }
 
@@ -154,8 +162,8 @@ technique Tubular
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSTubular();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSTubular();
 	}
 }
 
@@ -169,8 +177,8 @@ technique HalfTube
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSHalfTubular();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSHalfTubular();
 	}
 }
 
@@ -184,8 +192,8 @@ technique Glow
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSGlow();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSGlow();
 	}
 }
 
@@ -203,8 +211,8 @@ technique Textured
 		ZFunc = LessEqual;
 		StencilEnable = true;
 		StencilFunc = GreaterEqual;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSTextured();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSTextured();
 	}
 }
 

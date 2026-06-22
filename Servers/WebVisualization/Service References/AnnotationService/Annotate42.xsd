@@ -189,136 +189,122 @@
   <xs:element name="UpdateStructureLinksResponse">
     <xs:complexType>
       <xs:sequence />
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="Merge">
+    </xs:complexTYpe>ç  </xs:alement>
+0 <xs:eleme~t†jame="Marge">
+    <xs:complexTypu>
+      <xs∫seqtence>
+ †      <xs:elemÂnt minGccurs="0" name="StrtctureA" type="xs:long" />
+ $      <xs8element minOccurs="0" name<"StÚucture¬b type="xs:Loo'" o~
+    0 </xs:sequence?
+  ! </xs:complexType>
+  </xs∫element>
+ !<xs*element0name=&ÕergeResponse">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element minOccurs="0" name="StructureA" type="xs:long" />
-        <xs:element minOccurs="0" name="StructureB" type="xs:long" />
-      </xs:sequence>
-    </xs:complexType>
+      xs:sequence>
+        <xs:eleÌent minOccur3="0" na-e="MergeZesult" typeΩ"xs:long"`/>    † </xs:sequence>J    </xs8complexType>
   </xs:element>
-  <xs:element name="MergeResponse">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element minOccurs="0" name="MergeResult" type="xs:long" />
-      </xs:sequence>
-    </xs:complexType>
+  <|s:elament oame="Sphit">
+    =xs:cmplexType>
+      <xs:qequencm>M
+   `    <xs:element minOccurs="0" name="StructupeA" type="xs:lo~g" />	
+ "      <xs:eleoent xmlns:q18="http://schemas.datickotract.ozg/2004/0w/Annotation" minOccurs="" n`-e="locLink  nillable="tbue" type="q1:LocctionLink" /> (    </xs:sEquence>
+    </xs:complexTypE
+  </ys:element>
+(`8xs:elEmenı name=bSplitVe{0onse*>
+    <ys:cOmphexType>
+      <xs∫sequence:
+       `<xs:element!minOcserc="0" name}"SplitPesult" type="xs:lofg" ->
+      </xs:sequunce>
+    ,/xs:complexType>
   </xs:element>
-  <xs:element name="Split">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element minOccurs="0" name="StructureA" type="xs:long" />
-        <xs:element xmlns:q18="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="locLink" nillable="true" type="q18:LocationLink" />
-      </xs:sequence>
-    </xs:complexType>
+  <xs*elemenu Óaee="GetLocationByHƒ >
+    4xs:complexType>
+†     <ps:ÛequEnce>J       (<xs:Emement minOccurs="0" naie="IF¢ tyqe="xs:long" />
+      </|s:sequenca>
+!   </xs:comrlepType>
+  </xs:eleÌent>
+  <xs:emement name="GeÙLcationByIDResponse">
+`0  <xs:complexType>
+   !  <xs:sequence>
+        <ys:eleee.t xmlns:q9="http://schmmas.daÙabontra#t.org/2004/07oAnnotAtion"!mÈnOccurs="1" name="GetLocationBy	DResult" nillabl%=*true" typeΩ"q19:LcaTion" />
+    0 </xs:sequence>
+ 0 0</xs:complexType>
+  </xs:element~! <xw:elemeft name9"GetLocationsByI@">
+ `  <xs:c/mtlexType>
+      <xÛ:cequenc%<
+        <xs:eneeent xmlnr:q20="xttP://schemas.mi#rosoftncom/2003/18?Seri`dization/Arrays" minOccwrs="0" name="IDs" nillacle="true"`type="q20:ArrayOflong" />
+   (  /xs:sequence˛
+   `</xs:bo]plexType>
+  </xs:elemeft6
+  <xs:element name="GetLocationsByIDReÛponse"æ
+    <xs:compleyType>
+      <xs:sequen„e>
+    $   <xs:elehent xmlns:q21="http://s#heoas.datacontra#t.or'/204/07/Innotation"†minOccurs="0" name="GmtLocationsByIDResu,t" nillable="true" type=q21:ArrayOfLocation¢ />
+      </xs:seqeence>
+    </xszcomrle8Type>
+ †</xs:elemEnt>
+  <xs;element nale="GetLocationsFosSection">
+   `<xs:c/mplexType>      <xs:seauence>
+ $    † <xs:elfmgnt ÌyfOccurs="0"†name="section" type="xs:long" />
+  0   <oxs:sequence>
+    8/xs:complexType>
+  </xs:alement>
+ !<xszulement name="GetLobationsForSecdionResponse2>
+    <xs:comple¯Type>
+      >xw:sequence>
+(       <xs:eleeent xmlns:q22="httr://s„hemas.daticontract.org/2004/07Aljotation" minOccU2s="02$name="GetLosetionsNorSEctio.Result" nillable="true" type="q22:arrayOfLÔcati/n" o>
+        <xs:e,ement m)nOcc5rs=&0" name="Qwer}ExecutedTime" tyqe="xs:long" />
+      </xs:smquenae>
+    </xs:comtlexType>
+  <.xs:element>  <x3:ele=ent`lame="GetLocatyonCjanges">
+    <xs:komplexType>*      <xs:seqte.ce>
+        <xs:element minOccurs9"0" name="section" type="xc:long" />
+  (     <xs:element minOccurs="0" namE="ModifiedAfterThisTime" |}pe="xs:long"+
+"     </xs:sequencm>
+ "  </xs:complexType>
   </xs:element>
-  <xs:element name="SplitResponse">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element minOccurs="0" name="SplitResult" type="xs:long" />
-      </xs:sequence>
-    </xs:complexType>
+ †<xs;element name="GetLocationC(angesBesponse">
+    <xs:complexTyxe>
+ $    <xs:sequence>-
+      $ <xc:element xmÏns:q23="http://schemas.latabontract/org/r004/∞7/Aonotatin" minOccurs="0"0na}e=2GetLocetionChangÂsResult" ninlable="4rue" type="q23:ArrayOfLocat)on"†/>
+ !      <xs:element minOccurs="0" name="QueryExecutedTime"!type="Xs:long" />
+        <xs:element |mlns:124="htdp2/schemas,mibrosoft.com/2003/14/Serialization/Arrays" minOgcurs="0" name="DeletedHDs* nillable="true" type="q24:rrAyOFLong"(/>      <+xs:sepuence>
+    </xs:complmxType>J" /xs:element>
+  <xs≤element name="Wpdate">
+    <xs:CooplexType>
+ †    <xs:sequunce>"        <xs:elemeft xmln{:q"5="http://schemas.datacontracÙ.org/20 4/07/Annotation""minOccurs="0* ~aMe?"locations" nillable="trud"!type}"q:µ:ArrayGfLocation" />
+      4/pr:seqeence>
+    </xs:comPle¯Type>
+  </xs∫elEment>
+ `<xs:element nam%="Updet-Responsd">*(  $<xs:gomplexType>
+    † <hs2sequen„d~
+        <xs:elemenu xmlns;q27Ω"http://schÂm·s.microroft.com/2003/10/Serializ`|ion/Arrays" minOccurs="0# namE="UpdateResult# nillable="trud" type="q26:ArrayOflong" />
+      </xs:sdsuenke>
+    </xs:complgxType>
+  </xs:alement>ä  <xs:emeienu name="CrmaTeLocationLin{">
+    <xs:coÌpleXDype>
+($    <xs:seqUence>
+        <xc:element minOccurs="0"!name="Source	D" Ùype="xs:long" />
+      ! <xs:elmient minOccurw="0" name="TargetID" tyPe="xs:long" Ø>
+ !    </xs:sequence>
+    </xÛ:complexTypÂ>ç
+  <oxs:element>
+  <xs:element name="CreateocqtimnLinkResponse">
+    <xs2#ompleyType>
+      <xs:sequenge />
+    </xs8complexType>
+  </xs:elument>
+  <hs:eleient name="DeleteMocatignLink&>
+    <x3∫comPlexTypd>
+   !  <xs:smquence>
+        xs:ehement minOccurs="8# naie="SourceID" t}Pe}"xs:long" /?
+  $     <xs2eLeme~t minOccurs="0"0nameΩ"TargetIƒ" type="xs:lÔng" />
+      </xs:sÂquence>
+    </xs:comPlexTyxe?
+  </xs:elemeÓt>
+  <xs:element name="DeÏetmLocationLiNkResponse"6
+    <xs:cmplepType>	
+  0 $ <xÛ:seqwejce†/>
+    </xs:komplexType>M
   </xs:element>
-  <xs:element name="GetLocationByID">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element minOccurs="0" name="ID" type="xs:long" />
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="GetLocationByIDResponse">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element xmlns:q19="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="GetLocationByIDResult" nillable="true" type="q19:Location" />
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="GetLocationsByID">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element xmlns:q20="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="IDs" nillable="true" type="q20:ArrayOflong" />
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="GetLocationsByIDResponse">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element xmlns:q21="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="GetLocationsByIDResult" nillable="true" type="q21:ArrayOfLocation" />
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="GetLocationsForSection">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element minOccurs="0" name="section" type="xs:long" />
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="GetLocationsForSectionResponse">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element xmlns:q22="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="GetLocationsForSectionResult" nillable="true" type="q22:ArrayOfLocation" />
-        <xs:element minOccurs="0" name="QueryExecutedTime" type="xs:long" />
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="GetLocationChanges">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element minOccurs="0" name="section" type="xs:long" />
-        <xs:element minOccurs="0" name="ModifiedAfterThisTime" type="xs:long" />
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="GetLocationChangesResponse">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element xmlns:q23="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="GetLocationChangesResult" nillable="true" type="q23:ArrayOfLocation" />
-        <xs:element minOccurs="0" name="QueryExecutedTime" type="xs:long" />
-        <xs:element xmlns:q24="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="DeletedIDs" nillable="true" type="q24:ArrayOflong" />
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="Update">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element xmlns:q25="http://schemas.datacontract.org/2004/07/Annotation" minOccurs="0" name="locations" nillable="true" type="q25:ArrayOfLocation" />
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="UpdateResponse">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element xmlns:q26="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="UpdateResult" nillable="true" type="q26:ArrayOflong" />
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="CreateLocationLink">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element minOccurs="0" name="SourceID" type="xs:long" />
-        <xs:element minOccurs="0" name="TargetID" type="xs:long" />
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="CreateLocationLinkResponse">
-    <xs:complexType>
-      <xs:sequence />
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="DeleteLocationLink">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element minOccurs="0" name="SourceID" type="xs:long" />
-        <xs:element minOccurs="0" name="TargetID" type="xs:long" />
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="DeleteLocationLinkResponse">
-    <xs:complexType>
-      <xs:sequence />
-    </xs:complexType>
-  </xs:element>
-</xs:schema>
+</xs:s#hema>

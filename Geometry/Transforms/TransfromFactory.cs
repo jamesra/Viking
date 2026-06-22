@@ -258,7 +258,10 @@ namespace Geometry.Transforms
                     //return ParseGridTransform(parts, info, (float)pixelSpacing, iFixedParameters, iVariableParameters, ControlBounds, MappedBounds);
                     return ParseGridTransform(transform_parts, pixelSpacing, info);
                 case "LegendrePolynomialTransform_double_2_2_1":
-                    return ParsePolyTransform(transform_parts, info);//MapPoints = ParsePolyTransform(parts, (float)pixelSpacing, iFixedParameters, iVariableParameters, MappedBounds).ToArray();
+                {
+                    List<MappingGridVector2> mappings = ParsePolyTransform(transform_parts, pixelSpacing, 0, 0, MappedBounds);
+                    return new GridTransform([.. mappings], MappedBounds, 5, 5, info);
+                }
                 case "fixedcenterofrotationaffinetransform_double_2_2":
                     throw new NotImplementedException("stos transform not supported: fixedcenterofrotationaffinetransform_double_2_2");
                 //MapPoints = ParseRotateTranslateAffineTransform(parts, (float)pixelSpacing, iFixedParameters, iVariableParameters, MappedBounds, ControlBounds).ToArray();

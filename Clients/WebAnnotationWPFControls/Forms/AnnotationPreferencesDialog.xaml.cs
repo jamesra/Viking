@@ -16,6 +16,11 @@ namespace WebAnnotation.WPF.Forms
         public event EventHandler OkClicked;
         public event EventHandler CancelClicked;
 
+        /// <summary>
+        /// Raised when the user confirms Reset to Defaults. The subscriber should call Global.AnnotationSettings.ResetToDefaults() and then reload the ViewModel from Global.
+        /// </summary>
+        public event EventHandler ResetToDefaultsRequested;
+
         public AnnotationPreferencesDialog()
         {
             InitializeComponent();
@@ -55,6 +60,18 @@ namespace WebAnnotation.WPF.Forms
             ViewModel.RevertToOriginal();
             CancelClicked?.Invoke(this, EventArgs.Empty);
             Close();
+        }
+
+        private void ResetToDefaultsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (MessageBox.Show(
+                "Reset all annotation settings to their default values?",
+                "Reset to Defaults",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question) == MessageBoxResult.Yes)
+            {
+                ResetToDefaultsRequested?.Invoke(this, EventArgs.Empty);
+            }
         }
     }
 }

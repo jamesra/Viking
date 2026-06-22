@@ -133,7 +133,8 @@ namespace Geometry
         }
 
 
-        public override int GetHashCode() => throw new InvalidOperationException("It is not possible to generate a hashcode for points when using an epsilon value, see GridVector2.GetHashCode");
+        public override int GetHashCode() =>
+            GeometryHashCode.Combine(_p1.GetHashCode(), _p2.GetHashCode(), _p3.GetHashCode());
 
         public static bool operator ==(in GridTriangle A, in GridTriangle B)
         {
@@ -267,7 +268,7 @@ namespace Geometry
 
             if (uvw.X >= 0 && uvw.Y >= 0 && uvw.Z >= 0)
             {
-                if (uvw.X + uvw.Y + uvw.Z <= 1.0f)
+                if (uvw.X + uvw.Y + uvw.Z <= 1.0)
                 {
                     //The point is on or inside the triangle if any barycentric coordinate is 0
                     if (uvw.coords.Any(c => c == 0))
@@ -411,6 +412,15 @@ namespace Geometry
             {
                 if (this.Contains(p))
                     return true;
+            }
+
+            foreach (GridLineSegment edge in Segments)
+            {
+                foreach (GridLineSegment otherEdge in other.Segments)
+                {
+                    if (edge.Intersects(otherEdge, out _))
+                        return true;
+                }
             }
 
             return false;

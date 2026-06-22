@@ -3,7 +3,8 @@
 
 /outputDir:bin/$(Platform)
 /intermediateDir:obj/$(Platform)
-/platform:Windows 
+/platform:DesktopGL
+/config:
 /profile:HiDef
 /compress:False
 
@@ -16,6 +17,8 @@
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
+/processorParam:Defines=
+/processorParam:Version=3.8.5.0
 /build:AnnotationOverlayShader.fx
 
 #begin Arial.spritefont
@@ -23,24 +26,31 @@
 /processor:FontDescriptionProcessor
 /processorParam:PremultiplyAlpha=True
 /processorParam:TextureFormat=Compressed
+/processorParam:Version=3.8.5.0
 /build:Arial.spritefont
 
 #begin BillboardAnnotation.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
+/processorParam:Defines=
+/processorParam:Version=3.8.5.0
 /build:BillboardAnnotation.fx
 
 #begin ChannelOverlayShader.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
+/processorParam:Defines=
+/processorParam:Version=3.8.5.0
 /build:ChannelOverlayShader.fx
 
 #begin Channels.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
+/processorParam:Defines=
+/processorParam:Version=3.8.5.0
 /build:Channels.fx
 
 #begin Circle.png
@@ -53,6 +63,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=NoChange
+/processorParam:Version=3.8.5.0
 /build:Circle.png
 
 #begin CircleChain.png
@@ -65,6 +76,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
+/processorParam:Version=3.8.5.0
 /build:CircleChain.png
 
 #begin CircleConnect.png
@@ -77,7 +89,16 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:CircleConnect.png;
+/processorParam:Version=3.8.5.0
+/build:CircleConnect.png
+
+#begin CircleInstanced.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/processorParam:Defines=
+/processorParam:Version=3.8.5.0
+/build:CircleInstanced.fx
 
 #begin CircleMask.png
 /importer:TextureImporter
@@ -89,6 +110,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=NoChange
+/processorParam:Version=3.8.5.0
 /build:CircleMask.png
 
 #begin CircleMinus.png
@@ -101,6 +123,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=NoChange
+/processorParam:Version=3.8.5.0
 /build:CircleMinus.png
 
 #begin CirclePlus.png
@@ -113,6 +136,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=NoChange
+/processorParam:Version=3.8.5.0
 /build:CirclePlus.png
 
 #begin CircleX.png
@@ -125,6 +149,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
+/processorParam:Version=3.8.5.0
 /build:CircleX.png
 
 #begin DownArrowV2.png
@@ -137,54 +162,71 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
+/processorParam:Version=3.8.5.0
 /build:DownArrowV2.png
 
 #begin MergeHSVImages.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
+/processorParam:Defines=
+/processorParam:Version=3.8.5.0
 /build:MergeHSVImages.fx
 
 #begin PolygonOverlayShader.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
+/processorParam:Defines=
+/processorParam:Version=3.8.5.0
 /build:PolygonOverlayShader.fx
 
 #begin RGBToHSV.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
+/processorParam:Defines=
+/processorParam:Version=3.8.5.0
 /build:RGBToHSV.fx
 
 #begin RoundCurve.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
+/processorParam:Defines=
+/processorParam:Version=3.8.5.0
 /build:RoundCurve.fx
 
 #begin RoundCurveHSV.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
+/processorParam:Defines=
+/processorParam:Version=3.8.5.0
 /build:RoundCurveHSV.fx
 
 #begin RoundLine.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
+/processorParam:Defines=
+/processorParam:Version=3.8.5.0
 /build:RoundLine.fx
 
 #begin RoundLineHSV.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
+/processorParam:Defines=
+/processorParam:Version=3.8.5.0
 /build:RoundLineHSV.fx
 
 #begin TileLayout.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
+/processorParam:Defines=
+/processorParam:Version=3.8.5.0
 /build:TileLayout.fx
 
 #begin UpArrowMask.png
@@ -197,6 +239,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
+/processorParam:Version=3.8.5.0
 /build:UpArrowMask.png
 
 #begin UpArrowV2.png
@@ -209,7 +252,6 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
+/processorParam:Version=3.8.5.0
 /build:UpArrowV2.png
-
-
 

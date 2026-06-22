@@ -360,26 +360,32 @@ namespace MorphologyMesh
         /// <param name="tolerance"></param>
         private async void InitializeSliceTopology(double tolerance = 0)
         {
-            this.MorphNodeToShape ??= await SliceGraph.InitializeShapes(this.Graph, tolerance);
-
-            ConcurrentTopologyInitializer concurrentInitializer = new(this);
-
-            this.SliceToTopology = concurrentInitializer.InitializeSliceTopology();
-
-            /*
-            //Create corresponding verticies for all shapes
-            foreach (var node in this.Nodes.Values)
+            try
             {
-                SliceTopology st = GetSliceTopology(node, MorphNodeToShape);
+                this.MorphNodeToShape ??= await SliceGraph.InitializeShapes(this.Graph, tolerance);
 
-                //Add corresponding verticies.  Will insert into the polygons without creating new ones, which will update MorphNodeToShape
-                //List<GridVector2> correspondingPoints = st.Polygons.AddCorrespondingVerticies();
-                 
-                //AddPointsBetweenAdjacentCorrespondingVerticies(st.Polygons,  correspondingPoints);
+                ConcurrentTopologyInitializer concurrentInitializer = new(this);
+
+                this.SliceToTopology = concurrentInitializer.InitializeSliceTopology();
+
+                /*
+                //Create corresponding verticies for all shapes
+                foreach (var node in this.Nodes.Values)
+                {
+                    SliceTopology st = GetSliceTopology(node, MorphNodeToShape);
+
+                    //Add corresponding verticies.  Will insert into the polygons without creating new ones, which will update MorphNodeToShape
+                    //List<GridVector2> correspondingPoints = st.Polygons.AddCorrespondingVerticies();
+
+                    //AddPointsBetweenAdjacentCorrespondingVerticies(st.Polygons,  correspondingPoints);
+                }
+                */
             }
-            */
-
-            return;
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"InitializeSliceTopology failed: {ex}", "SliceGraph");
+                // Log and swallow: caller cannot await async void; leaving MorphNodeToShape/SliceToTopology unchanged is the safe default.
+            }
         }
 
         /// <summary>

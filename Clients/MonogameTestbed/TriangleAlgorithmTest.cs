@@ -49,7 +49,7 @@ namespace MonogameTestbed
             return Task.CompletedTask;
         }
 
-        public void UnloadContent(MonoTestbed window) => this.scene.SaveCamera(TestMode.MESH);
+        public void UnloadContent(MonoTestbed window) => this.scene.SaveCamera(TestMode.TRIANGLEALGORITHM);
 
         public void Update()
         {

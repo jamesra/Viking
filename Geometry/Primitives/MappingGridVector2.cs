@@ -212,11 +212,9 @@ namespace Geometry
         }
 
         public override int GetHashCode() =>
-            //It is not possible to return a hash code for a point because a point can be within an epsilon distance of two other points which generate two 
-            //different hash codes.  The solution is either to throw an exception or return a single value for GetHashCode.
-
-            //throw new InvalidOperationException($"It is not mathematically possible to implement {nameof(GetHashCode)} for a point where equality is epsilon based");
-            0;
+            GeometryHashCode.Combine(
+                GeometryHashCode.Point2D(ControlPoint),
+                GeometryHashCode.Point2D(MappedPoint));
 
         public override bool Equals(object obj)
         {

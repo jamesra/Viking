@@ -183,6 +183,7 @@ namespace VikingXNAGraphics
         {
             if (PointViews != null)
             {
+                // Circles are batch-rendered via CircleView's instanced shader when CircleInstancedEffect is available.
                 CircleView.Draw(device, scene, overlayStyle, PointViews);
             }
 

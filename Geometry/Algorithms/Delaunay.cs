@@ -57,18 +57,29 @@ namespace Geometry
             if (points.Length < 3)
                 return [];
 
+            GridVector2[] sortedPoints = (GridVector2[])points.Clone();
+            Array.Sort(sortedPoints, new GridVectorComparer(xyOrder: true));
+
+            for (int i = 1; i < sortedPoints.Length; i++)
+            {
+                if (GridVector2.Distance(in sortedPoints[i - 1], in sortedPoints[i]) < Global.Epsilon)
+                    throw new ArgumentException($"Duplicate points, this breaks delaunay: #{i - 1} and #{i}");
+            }
+
 #if DEBUG
 
             //Check to ensure the input is really sorted on the X-Axis
-            for (int iDebug = 1; iDebug < points.Length; iDebug++)
+            for (int iDebug = 1; iDebug < sortedPoints.Length; iDebug++)
             {
-                if(points[iDebug - 1].X > points[iDebug].X)
+                if(sortedPoints[iDebug - 1].X > sortedPoints[iDebug].X)
                     throw new ArgumentException($"Points not sorted on X axis: #{iDebug - 1} and #{iDebug}");
 
-                if(GridVector2.Distance(in points[iDebug - 1], in points[iDebug]) < Global.Epsilon)
+                if(GridVector2.Distance(in sortedPoints[iDebug - 1], in sortedPoints[iDebug]) < Global.Epsilon)
                     throw new ArgumentException($"Duplicate points, this breaks delaunay: #{iDebug - 1} and #{iDebug}");
             }
 #endif
+
+            points = sortedPoints;
 
             List<GridIndexTriangle> triangles = new(points.Length);
 

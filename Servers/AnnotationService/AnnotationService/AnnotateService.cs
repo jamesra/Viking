@@ -775,18 +775,18 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Structure[] GetStructuresByIDs(long[] IDs, bool IncludeChildren)
         {
+            return GetStructuresByIDsAsync(IDs, IncludeChildren).GetAwaiter().GetResult();
+        }
 
+        private async Task<AnnotationService.Types.Structure[]> GetStructuresByIDsAsync(long[] IDs, bool IncludeChildren)
+        {
             List<AnnotationService.Types.Structure> ListStructures = new(IDs.Length);
-            //LINQ creates a SQL query with parameters when using contains, and there is a 2100 parameter limit.  So we cut the query into smaller chunks and run 
-            //multiple queries.  Since we are stuck doing this I run the query in parallel
             uint QueryChunkSize = 1024;
-
             var chunks = IDs.SortAndChunk(QueryChunkSize, CanSortIDsInPlace: true);
 
             if (chunks.Count > 1)
                 Trace.WriteLine(string.Format("Dividing GetStructuresByIDs for {0} keys in {1} chunks", IDs.Length, chunks.Count));
 
-            //We won't spawn any tasks if we only have one chunk.
             Task<List<AnnotationService.Types.Structure>>[] tasks = new Task<List<AnnotationService.Types.Structure>>[chunks.Count];
 
             for (int iChunk = 1; iChunk < chunks.Count; iChunk++)
@@ -795,12 +795,13 @@ namespace Annotation
                 tasks[iChunk] = Task.Run(() => GetStructureByIDsChunk(chunk, IncludeChildren));
             }
 
-            // Chunk 0 run synchronously to avoid an extra task when there is only one chunk.
             ListStructures = GetStructureByIDsChunk(chunks[0], IncludeChildren);
 
-            for (int iChunk = 1; iChunk < chunks.Count; iChunk++)
+            if (chunks.Count > 1)
             {
-                ListStructures.AddRange(tasks[iChunk].Result);
+                List<List<AnnotationService.Types.Structure>> tailResults = [.. await Task.WhenAll(tasks.Skip(1).Where(t => t != null))];
+                foreach (var list in tailResults)
+                    ListStructures.AddRange(list);
             }
 
             return [.. ListStructures];
@@ -1504,19 +1505,18 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Location[] GetLocationsByID(long[] IDs)
         {
+            return GetLocationsByIDAsync(IDs).GetAwaiter().GetResult();
+        }
 
+        private async Task<AnnotationService.Types.Location[]> GetLocationsByIDAsync(long[] IDs)
+        {
             List<AnnotationService.Types.Location> listObjs;
-
-            //LINQ creates a SQL query with parameters when using contains, and there is a 2100 parameter limit.  So we cut the query into smaller chunks and run 
-            //multiple queries.  Since we are stuck doing this I run the query in parallel
             uint QueryChunkSize = 2000;
-
             var chunks = IDs.SortAndChunk(QueryChunkSize, CanSortIDsInPlace: true);
 
             if (chunks.Count > 1)
                 Trace.WriteLine(string.Format("Dividing GetLocationsByID for {0} keys in {1} chunks", IDs.Length, chunks.Count));
 
-            //We won't spawn any tasks if we only have one chunk.
             Task<List<AnnotationService.Types.Location>>[] tasks = new Task<List<AnnotationService.Types.Location>>[chunks.Count];
 
             for (int iChunk = 1; iChunk < chunks.Count; iChunk++)
@@ -1525,12 +1525,13 @@ namespace Annotation
                 tasks[iChunk] = Task.Run(() => _GetReadOnlyLocationsByIDChunked(chunk, true));
             }
 
-            // Chunk 0 run synchronously to avoid an extra task when there is only one chunk.
             listObjs = _GetReadOnlyLocationsByIDChunked(chunks[0], true);
 
-            for (int iChunk = 1; iChunk < chunks.Count; iChunk++)
+            if (chunks.Count > 1)
             {
-                listObjs.AddRange(tasks[iChunk].Result);
+                List<List<AnnotationService.Types.Location>> tailResults = [.. await Task.WhenAll(tasks.Skip(1).Where(t => t != null))];
+                foreach (var list in tailResults)
+                    listObjs.AddRange(list);
             }
 
             return [.. listObjs];
@@ -1774,10 +1775,10 @@ namespace Annotation
                 Debug.WriteLine(section.ToString() + ": Query Section Annotations: " + elapsed.TotalMilliseconds);
 
                 Task<long[]> deletedTask = Task.Run(() => GetDeletedLocations(ModifiedAfterThisTime));
-                Task<AnnotationService.Types.Structure[]> structConvTask = Task<AnnotationService.Types.Structure[]>.Run(() => dbAnnotations.Structures.Values.Select(s => s.Create(false)).ToArray());
-                Task<AnnotationService.Types.Location[]> locConvTask = Task<AnnotationService.Types.Location[]>.Run(() => dbAnnotations.Locations.Values.Select(l => l.Create(true)).ToArray());
+                Task<AnnotationService.Types.Structure[]> structConvTask = Task.Run(() => dbAnnotations.Structures.Values.Select(s => s.Create(false)).ToArray());
+                Task<AnnotationService.Types.Location[]> locConvTask = Task.Run(() => dbAnnotations.Locations.Values.Select(l => l.Create(true)).ToArray());
 
-                Task.WaitAll(deletedTask, structConvTask, locConvTask);
+                Task.WhenAll(deletedTask, structConvTask, locConvTask).GetAwaiter().GetResult();
 
                 DeletedIDs = deletedTask.Result;
                 AnnotationService.Types.Structure[] structs = structConvTask.Result;

@@ -28,8 +28,8 @@ namespace AnnotationVizLib.SimpleOData
                 tasks.Add(t);
             }
 
-            await Task.WhenAll(tasks);
-            List<Structure> structures = [.. tasks.SelectMany(t => t.Result)];
+            List<List<Structure>> results = [.. await Task.WhenAll(tasks)];
+            List<Structure> structures = [.. results.SelectMany(x => x)];
 
             await MorphologyForStructures(Endpoint, rootGraph, structures, include_children, scale);
             return rootGraph;
@@ -57,6 +57,14 @@ namespace AnnotationVizLib.SimpleOData
 
         public static MorphologyGraph FromOData(ICollection<ulong> StructureIDs, bool include_children, Uri Endpoint)
         {
+            return FromODataAsync(StructureIDs, include_children, Endpoint).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Async overload: retrieve the morphology graph for the given structure IDs.
+        /// </summary>
+        public static async Task<MorphologyGraph> FromODataAsync(ICollection<ulong> StructureIDs, bool include_children, Uri Endpoint)
+        {
             ODataClient client = new(Endpoint);
 
             var scale = client.GetScale();
@@ -69,8 +77,8 @@ namespace AnnotationVizLib.SimpleOData
                 return rootGraph;
             }
 
-            List<Structure> listStructures = LoadStructures(client, StructureIDs, rootGraph.scale);
-            MorphologyForStructures(Endpoint, rootGraph, listStructures, include_children, rootGraph.scale).Wait();
+            List<Structure> listStructures = await LoadStructuresAsync(client, StructureIDs, rootGraph.scale);
+            await MorphologyForStructures(Endpoint, rootGraph, listStructures, include_children, rootGraph.scale);
 
             return rootGraph;
         }
@@ -84,60 +92,53 @@ namespace AnnotationVizLib.SimpleOData
         /// <returns></returns>
         public static MorphologyGraph FromODataLocationIDs(ICollection<ulong> LocationIDs, Uri Endpoint, int hops = 0)
         {
+            return FromODataLocationIDsAsync(LocationIDs, Endpoint, hops).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Async overload: loads the specified Location IDs.
+        /// </summary>
+        public static async Task<MorphologyGraph> FromODataLocationIDsAsync(ICollection<ulong> LocationIDs, Uri Endpoint, int hops = 0)
+        {
             ODataClient client = new(Endpoint);
 
-            ///////////////////////////////////////
-            //Download the initial set of locations
-            List<Task<Location>> listLocationFetchTasks = new(LocationIDs.Count);
-
-            foreach (ulong ID in LocationIDs.Distinct())
+            List<Task<Location>> listLocationFetchTasks = new(LocationIDs?.Count ?? 0);
+            if (LocationIDs != null)
             {
-                long lID = (long)ID; //ulong is not supported by the library so we need to cast
-                Task<Location> t = client.For<Location>().Filter(l => (long)l.ID == lID).FindEntryAsync();
-                listLocationFetchTasks.Add(t);
+                foreach (ulong ID in LocationIDs.Distinct())
+                {
+                    long lID = (long)ID;
+                    Task<Location> t = client.For<Location>().Filter(l => (long)l.ID == lID).FindEntryAsync();
+                    listLocationFetchTasks.Add(t);
+                }
             }
 
-            /////////////////////////////////////////////////////////////////////////////
-            //Run tasks (fetch scale and structure) in parallel during location download
             var scale = client.GetScale();
             Debug.Assert(scale != null, "We need a scale to do morphology properly");
 
-            /////////////////////////////////////////////////////////////////////////////////////
-            //Check if any work was actually requested, if not return empty graph with scale data
             MorphologyGraph rootGraph = new(0, scale);
-            if (LocationIDs is null || LocationIDs.Count() == 0)
+            if (LocationIDs is null || LocationIDs.Count == 0)
             {
-                //TODO: Retrieve the full network if no structureID's are passed
                 return rootGraph;
             }
 
-            ///////////////////////////////////////////////////////////////////////////////////////////////////////
-            //Wait for first set of locations to download, but start the request for structure as soon as possible. 
-
-            long StructureID = 0;
-            //st_task is the task that will fetch the structure once we identify it
-
-            List<Location> listLocations = WaitForLocations(client, listLocationFetchTasks, scale, ref StructureID, out Task<Structure> st_task, out Task<IEnumerable<IDictionary<string, object>>> st_loc_links_task);
+            (List<Location> listLocations, Structure Parent, _, bool multipleStructures) = await WaitForLocationsAsync(client, listLocationFetchTasks, scale);
             listLocationFetchTasks.Clear();
 
+            if (multipleStructures)
+                throw new NotImplementedException("Multiple structure ID's present in FromODataLocationIDs");
+            if (Parent == null)
+                throw new InvalidOperationException("FromODataLocationIDs: could not load structure for locations.");
 
-            //////////////////////////////////////
-            //First set of locations is downloaded
-            //Need the structure request to finish before we load locations
-            st_task.Wait();
-            Structure Parent = st_task.Result;
+            Parent.LocationLinks = [.. (await CreateLoadStructureLocationLinksTask(client, (long)Parent.ID)).Select(dict => LocationLink.FromDictionary(dict))];
 
-            st_loc_links_task.Wait();
-            Parent.LocationLinks = [.. st_loc_links_task.Result.Select(dict => LocationLink.FromDictionary(dict))];
-
-            /////////////////////////////////////////////////////////////
-            //Request additional locationID's based on the number of hops
             SortedSet<ulong> LocationsAlreadyRequested = [.. LocationIDs];
+            int hopsRemaining = hops;
 
-            while (hops > 0)
+            while (hopsRemaining > 0)
             {
                 SortedSet<ulong> LocationsRequestedThisHop = [];
-                hops--;
+                hopsRemaining--;
 
                 foreach (var ll in Parent.LocationLinks)
                 {
@@ -148,11 +149,10 @@ namespace AnnotationVizLib.SimpleOData
                     {
                         ulong LocationIDToRequest = AddedA ? ll.B : ll.A;
 
-                        if (false == LocationsAlreadyRequested.Contains(LocationIDToRequest) && false == LocationsRequestedThisHop.Contains(LocationIDToRequest))
+                        if (!LocationsAlreadyRequested.Contains(LocationIDToRequest) && !LocationsRequestedThisHop.Contains(LocationIDToRequest))
                         {
-                            long lID = (long)LocationIDToRequest; //The OData client we use does not understand ulong
-                            Task<Location> t = client.For<Location>().Filter(l => (long)l.ID == lID).FindEntryAsync();
-                            listLocationFetchTasks.Add(t);
+                            long lID = (long)LocationIDToRequest;
+                            listLocationFetchTasks.Add(client.For<Location>().Filter(l => (long)l.ID == lID).FindEntryAsync());
                             LocationsRequestedThisHop.Add(LocationIDToRequest);
                         }
                     }
@@ -161,18 +161,13 @@ namespace AnnotationVizLib.SimpleOData
                 LocationsAlreadyRequested.UnionWith(LocationsRequestedThisHop);
             }
 
-            ////////////////////////////////////////////////////////// 
-            List<Location> listHopLocations = WaitForLocations(client, listLocationFetchTasks, scale, ref StructureID, out st_task, out st_loc_links_task);
+            (List<Location> listHopLocations, _, _, _) = await WaitForLocationsAsync(client, listLocationFetchTasks, scale);
             listLocations.AddRange(listHopLocations);
 
             MorphologyGraph graph = new((ulong)Parent.ID, scale, Parent);
 
-            //LoadStructureLocationLinks(client, new Structure[] { Parent });
-
             foreach (Location loc in listLocations.Distinct())
             {
-                //TODO: REMOVE Z * 10
-                //loc.Z *= 10;
                 graph.AddNode(new MorphologyNode((ulong)loc.ID, loc, graph));
             }
 
@@ -182,15 +177,9 @@ namespace AnnotationVizLib.SimpleOData
         }
 
         /// <summary>
-        /// A specialized helper function for the FromODataLocationIDs that waits for a list of location tasks to finish downloading 
+        /// A specialized helper function for the FromODataLocationIDs that waits for a list of location tasks to finish downloading
         /// and fires off a request to fetch the locations structure if it is not already present.
         /// </summary>
-        /// <param name="client">Client for structure request.  If null structure will not be requested.</param>
-        /// <param name="listLocationFetchTasks">Tasks we will wait on</param>
-        /// <param name="scale">Scale to add to Location objects</param>
-        /// <param name="StructureID">ID of structure, if 0 StructureID is unknown and a request will be sent when it is known</param>
-        /// <param name="st">Task we created to download structure, if any</param>
-        /// <returns></returns>
         private static List<Location> WaitForLocations(Simple.OData.Client.ODataClient client,
                                                         List<Task<Location>> listLocationFetchTasks,
                                                         IScale scale,
@@ -198,46 +187,53 @@ namespace AnnotationVizLib.SimpleOData
                                                         out Task<Structure> st_task,
                                                         out Task<IEnumerable<IDictionary<string, object>>> st_loc_links_task)
         {
-            st_task = null;
+            (List<Location> listLocations, Structure parent, _, _) = WaitForLocationsAsync(client, listLocationFetchTasks, scale).GetAwaiter().GetResult();
+            st_task = Task.FromResult(parent);
             st_loc_links_task = null;
+            StructureID = parent != null ? (long)parent.ID : 0;
+            return listLocations;
+        }
+
+        private static async Task<(List<Location> listLocations, Structure Parent, long StructureID, bool multipleStructures)> WaitForLocationsAsync(Simple.OData.Client.ODataClient client,
+                                                        List<Task<Location>> listLocationFetchTasks,
+                                                        IScale scale)
+        {
+            if (listLocationFetchTasks == null || listLocationFetchTasks.Count == 0)
+                return ([], null, 0, false);
+
+            Location[] locations = await Task.WhenAll(listLocationFetchTasks);
             List<Location> listLocations = [];
-            var locationFetchTasksArray = listLocationFetchTasks.ToArray();
+            long structureID = 0;
+            Structure parent = null;
 
-            while (listLocationFetchTasks.Count > 0)
+            foreach (Location l in locations)
             {
-                int iFinishedTask = Task.WaitAny(locationFetchTasksArray);
-                var t = listLocationFetchTasks[iFinishedTask];
-
-                listLocationFetchTasks.RemoveAt(iFinishedTask);
-                locationFetchTasksArray = locationFetchTasksArray.RemoveAt(iFinishedTask);
-
-                Location l = t.Result;
                 if (l != null)
                 {
                     l.scale = scale;
                     listLocations.Add(l);
 
-                    if (StructureID == 0)
+                    if (structureID == 0)
                     {
-                        StructureID = (long)l.ParentID;
-
-                        long sID = StructureID;
-
+                        structureID = (long)l.ParentID;
                         if (client != null)
                         {
-                            //Begin the request for the structure.
-                            st_task = client.For<Structure>().Filter(s => (long)s.ID == sID).FindEntryAsync();
-                            st_loc_links_task = CreateLoadStructureLocationLinksTask(client, sID);
+                            parent = await client.For<Structure>().Filter(s => (long)s.ID == structureID)
+                                .Expand(s => s.Type)
+                                .Expand(s => s.Locations)
+                                .Expand(s => s.Children)
+                                .Expand(s => s.SourceOfLinks)
+                                .Expand(s => s.TargetOfLinks).FindEntryAsync();
                         }
                     }
-                    else if (StructureID != (long)l.ParentID)
+                    else if (structureID != (long)l.ParentID)
                     {
-                        throw new NotImplementedException("Multiple structure ID's present in FromODataLocationIDs");
+                        return (listLocations, parent, structureID, true);
                     }
                 }
             }
 
-            return listLocations;
+            return (listLocations, parent, structureID, false);
         }
 
         private static void SetLocationScale(IEnumerable<Structure> structures, IScale scale)
@@ -321,6 +317,11 @@ namespace AnnotationVizLib.SimpleOData
         /// <returns></returns>
         private static List<Structure> LoadStructures(Simple.OData.Client.ODataClient client, IEnumerable<ulong> StructureIDs, UnitsAndScale.IScale scale)
         {
+            return LoadStructuresAsync(client, StructureIDs, scale).GetAwaiter().GetResult();
+        }
+
+        private static async Task<List<Structure>> LoadStructuresAsync(Simple.OData.Client.ODataClient client, IEnumerable<ulong> StructureIDs, UnitsAndScale.IScale scale)
+        {
             List<Structure> listStructures = [];
 
             if (StructureIDs is null)
@@ -328,38 +329,26 @@ namespace AnnotationVizLib.SimpleOData
                 return listStructures;
             }
 
+            List<ulong> idList = [.. StructureIDs];
             List<Task<Structure>> listTasks = [];
-            SortedList<ulong, Task<IEnumerable<IDictionary<string, object>>>> st_loc_link_tasks = [];
-
-            foreach (ulong ID in StructureIDs)
+            foreach (ulong ID in idList)
             {
                 long sID = (long)ID;
                 Task<Structure> t = client.For<Structure>().Filter(s => (long)s.ID == sID)
-                                                            .Expand(s => s.Type)
-                                                            //.Expand(s => s.Locations.Select(l => new Location {ID = l.ID, ParentID = l.ParentID, VolumeShape = l.VolumeShape, Z = l.Z, Tags = l.Tags, Terminal = l.Terminal, OffEdge = l.OffEdge}))
-                                                            .Expand(s => s.Locations)
-                                                            .Expand(s => s.Children)
-                                                            .Expand(s => s.SourceOfLinks)
-                                                            .Expand(s => s.TargetOfLinks).FindEntryAsync();
+                    .Expand(s => s.Type)
+                    .Expand(s => s.Locations)
+                    .Expand(s => s.Children)
+                    .Expand(s => s.SourceOfLinks)
+                    .Expand(s => s.TargetOfLinks).FindEntryAsync();
                 listTasks.Add(t);
             }
 
-            //////////////////////////////////////////////////////////////////////////////////////////
-            //Create tasks to fetch the structure location links before waiting on our structure tasks
-            st_loc_link_tasks = CreateLoadStructureLocationLinksTasks(client, StructureIDs);
+            SortedList<ulong, Task<IEnumerable<IDictionary<string, object>>>> st_loc_link_tasks = CreateLoadStructureLocationLinksTasks(client, idList);
 
-            List<Task> populate_structure_location_links_tasks = [];
-            Task<Structure>[] taskArray = [.. listTasks];
-            while (taskArray.Length > 0)
+            Structure[] structures = await Task.WhenAll(listTasks);
+
+            foreach (Structure s in structures)
             {
-                int iFinished = Task<Structure>.WaitAny(taskArray);
-                Task<Structure> t = taskArray[iFinished];
-                Structure s = t.Result;
-
-                taskArray = taskArray.RemoveAt(iFinished);
-                listTasks.RemoveAt(iFinished);
-
-                //Try to load location Links
                 if (s != null && s.Locations != null)
                 {
                     foreach (Location l in s.Locations)
@@ -369,22 +358,28 @@ namespace AnnotationVizLib.SimpleOData
 
                     listStructures.Add(s);
 
-                    //Create a continuation on the structure location links tasks to populate our structure if we can
                     if (st_loc_link_tasks.TryGetValue(s.ID, out var loc_link_task))
                     {
-                        var populate_location_links_task = loc_link_task.ContinueWith(links_task =>
-                        {
-                            s.LocationLinks = [.. links_task.Result.Select(dict => LocationLink.FromDictionary(dict))];
-                        }, TaskContinuationOptions.OnlyOnRanToCompletion);
-
-                        populate_structure_location_links_tasks.Add(populate_location_links_task);
+                        IEnumerable<IDictionary<string, object>> links = await loc_link_task;
+                        s.LocationLinks = [.. links.Select(dict => LocationLink.FromDictionary(dict))];
                     }
                 }
-
             }
 
-            Task.WaitAll([.. populate_structure_location_links_tasks]);
             return listStructures;
+        }
+
+        private static async Task SetLocationLinksFromTaskAsync(Structure s, Simple.OData.Client.ODataClient client)
+        {
+            try
+            {
+                var links = await client.ExecuteFunctionAsArrayAsync<LocationLink>("StructureLocationLinks", new Dictionary<string, object>() { { "StructureID", System.Convert.ToInt64(s.ID) } });
+                s.LocationLinks = links ?? Array.Empty<LocationLink>();
+            }
+            catch
+            {
+                s.LocationLinks = Array.Empty<LocationLink>();
+            }
         }
 
         /// <summary>
@@ -394,41 +389,12 @@ namespace AnnotationVizLib.SimpleOData
         /// <param name="structures"></param>
         private static Task LoadStructureLocationLinks(Simple.OData.Client.ODataClient client, ICollection<Structure> structures)
         {
-            //SortedList<ulong, Task<IEnumerable<IDictionary<string, object>>>> tasks = new SortedList<ulong, Task<IEnumerable<IDictionary<string, object>>>>();
-            /*
-            ulong[] StructuresToRequest = structures.Where(s => s.LocationLinks is null).Select(s => s.ID).Distinct().ToArray();
-            tasks = CreateLoadStructureLocationLinksTasks(client, StructuresToRequest);
-
-            foreach (Structure s in structures)
-            {
-                if (!tasks.ContainsKey(s.ID))
-                {
-                    continue;
-                }
-
-                Task<IEnumerable<IDictionary<string, object>>> T = tasks[s.ID];
-                T.Wait();
-                if (!T.IsFaulted)
-                {
-                    s.LocationLinks = T.Result.Select(dict => LocationLink.FromDictionary(dict)).ToArray();
-                }
-            }
-            */
-
-            //A bug, https://github.com/object/Simple.OData.Client/issues/340, prevented this from working correctly.  When it is fixed these lines can call the function.
-
             List<Task> tasks = new(structures.Count);
             foreach (Structure s in structures)
             {
                 if (s.LocationLinks is null)
                 {
-
-                    var t = client.ExecuteFunctionAsArrayAsync<LocationLink>("StructureLocationLinks", new Dictionary<string, object>() { { "StructureID", System.Convert.ToInt64(s.ID) } })
-                            .ContinueWith((task) =>
-                            {
-                                s.LocationLinks = task.IsFaulted == false ? task.Result : Array.Empty<LocationLink>();
-                            });
-                    tasks.Add(t);
+                    tasks.Add(SetLocationLinksFromTaskAsync(s, client));
                 }
             }
 
@@ -501,7 +467,7 @@ namespace AnnotationVizLib.SimpleOData
                     //MorphologyGraph subgraph = await FromOData(s.Children.Select(child => System.Convert.ToInt64(child.ID)).ToList(), include_children, Endpoint);
                     //graph.AddSubgraph(subgraph);
 
-                    List<Structure> child_structs = LoadStructures(new Simple.OData.Client.ODataClient(Endpoint), [.. s.Children.Select(child => System.Convert.ToUInt64(child.ID))], scale);
+                    List<Structure> child_structs = await LoadStructuresAsync(new Simple.OData.Client.ODataClient(Endpoint), [.. s.Children.Select(child => System.Convert.ToUInt64(child.ID))], scale);
                     await MorphologyForStructures(Endpoint, graph, child_structs, include_children, scale);
 
                     //IList<Structure> child_structs = client.Structures.Expand(st => st.Locations).Expand(st => st.Type).Expand(st => st.Children).Where(st => st.ParentID == s.ID).ToList();

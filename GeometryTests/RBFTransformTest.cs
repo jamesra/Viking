@@ -43,14 +43,14 @@ namespace GeometryTests
             {
                 GridVector2 tPoint = transform.Transform(MappedPoints[i]);
                 Trace.WriteLine(tPoint.ToString() + " should equal " + ControlPoints[i]);
-                Debug.Assert(GridVector2.Distance(tPoint, ControlPoints[i]) < 1.0);
+                Assert.IsTrue(GridVector2.Distance(tPoint, ControlPoints[i]) < 1.0);
             }
 
             for (int i = 0; i < ControlPoints.Length; i++)
             {
                 GridVector2 tPoint = transform.InverseTransform(ControlPoints[i]);
                 Trace.WriteLine(tPoint.ToString() + " should equal " + MappedPoints[i]);
-                Debug.Assert(GridVector2.Distance(tPoint, MappedPoints[i]) < 1.0);
+                Assert.IsTrue(GridVector2.Distance(tPoint, MappedPoints[i]) < 1.0);
             }
 
 

@@ -124,6 +124,21 @@ namespace Geometry
     }
 
 
+    /// <summary>
+    /// For <see cref="Dictionary{TKey,TValue}"/> and <see cref="HashSet{T}"/> when keys use
+    /// epsilon-based <see cref="GridVector2"/> equality. Constant hash code ensures
+    /// <see cref="Equals"/> is used within a bucket (see GridVector2.GetHashCode for spatial hashing).
+    /// </summary>
+    public sealed class GridVector2EqualityComparer : IEqualityComparer<GridVector2>
+    {
+        public static GridVector2EqualityComparer Default { get; } = new();
+
+        public bool Equals(GridVector2 x, GridVector2 y) => GridVector2.Equals(in x, in y);
+
+        public int GetHashCode(GridVector2 obj) => 0;
+    }
+
+
     [Serializable]
     public struct GridVector2 : IShape2D, IPoint, ICloneable, IComparable,
                                 IComparable<GridVector2>, IEquatable<GridVector2>,
@@ -276,12 +291,7 @@ namespace Geometry
 
         readonly object ICloneable.Clone() => new GridVector2(X, Y);
 
-        public override readonly int GetHashCode() =>
-            //It is not possible to return a hash code for a point because a point can be within an epsilon distance of two other points which generate two 
-            //different hash codes.  The solution is either to throw an exception or return a single value for GetHashCode.
-
-            //throw new InvalidOperationException($"It is not mathematically possible to implement {nameof(GetHashCode)} for a point where equality is epsilon based");
-            0;
+        public override readonly int GetHashCode() => GeometryHashCode.Point2D(X, Y);
 
         public override readonly string ToString() => $"X: {X:F2} Y: {Y:F2}";//return '{' + string.Format("\"X\":{0:F2},\"Y\":{1:F2}", X, Y) + '}';
 
@@ -309,6 +319,9 @@ namespace Geometry
         public void Normalize()
         {
             double mag = this.Magnitude;
+            if (mag <= Global.Epsilon)
+                return;
+
             X /= mag;
             Y /= mag;
         }
@@ -318,6 +331,9 @@ namespace Geometry
         public static GridVector2 Normalize(in GridVector2 A)
         {
             double mag = A.Magnitude;
+            if (mag <= Global.Epsilon)
+                return A;
+
             return new GridVector2(A.X / mag, A.Y / mag);
         }
 

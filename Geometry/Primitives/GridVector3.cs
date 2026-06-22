@@ -201,16 +201,7 @@ namespace Geometry
             return newObj;
         }
 
-        public override readonly int GetHashCode()
-        {
-            double prod = this._coords.Aggregate((accumulator, val) => accumulator * val);
-            double code = Math.Abs(prod);
-            if (code < 1)
-            {
-                return (int)(1.0 / code);
-            }
-            return (int)prod;
-        }
+        public override readonly int GetHashCode() => GeometryHashCode.PointN(_coords);
 
         public readonly bool Equals(IPoint2D other) => false;
 

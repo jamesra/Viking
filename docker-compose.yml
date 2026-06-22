@@ -35,6 +35,7 @@ services:
     build:
       context: .
       dockerfile: Servers/SegmentationServer/Dockerfile
+    restart: on-failure
     ports:
       - "50051:50051"
     volumes:

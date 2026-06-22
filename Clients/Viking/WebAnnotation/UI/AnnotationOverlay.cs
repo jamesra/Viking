@@ -1049,7 +1049,7 @@ break;
                             null,
                             new SegmentationCommand.OnCommandSuccess((outputPolygon) => SegmentationCommand.CreateAnnotationFromPolygon(this.Parent, null, outputPolygon)),
                             channelManager,
-                            structureTypeId);
+                            new long[]{structureTypeId });
                     }
                     return;
                 case Keys.F5:

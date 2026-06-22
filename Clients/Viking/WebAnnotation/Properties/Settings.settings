@@ -68,8 +68,20 @@
     <Setting Name="PolygonPointRadius" Type="System.Double" Scope="User">
       <Value Profile="(Default)">6</Value>
     </Setting>
+    <Setting Name="PolygonPointDiameter" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">12</Value>
+    </Setting>
+    <Setting Name="PolygonPointDiameterMigrated" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
     <Setting Name="SmallestRenderedSize" Type="System.Double" Scope="User">
       <Value Profile="(Default)">0.5</Value>
+    </Setting>
+    <Setting Name="PolygonVertexPointsVisibleAtWidthFraction" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.0025</Value>
+    </Setting>
+    <Setting Name="PolygonVertexPointsHiddenAtWidthFraction" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.002</Value>
     </Setting>
   </Settings>
 </SettingsFile>

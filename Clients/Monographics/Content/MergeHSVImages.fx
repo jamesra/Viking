@@ -1,3 +1,11 @@
+#if OPENGL
+#define VS_SHADERMODEL vs_3_0
+#define PS_SHADERMODEL ps_3_0
+#else
+#define VS_SHADERMODEL vs_4_0
+#define PS_SHADERMODEL ps_4_0
+#endif
+
 uniform const float4x4 mWorldViewProj;
 
 //These textures are in HSV space, except that Hue is indicated by two components, alpha and beta.  The only value we need from the textures is saturation.  Hue is constant for each channel
@@ -223,8 +231,8 @@ technique HCLToRGB
 	pass convert
 	{
 		AlphaBlendEnable = false;
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-		PixelShader = compile ps_4_0 HCLToRGBPixelShaderFunction();
+		VertexShader = compile VS_SHADERMODEL VertexShaderFunction();
+		PixelShader = compile PS_SHADERMODEL HCLToRGBPixelShaderFunction();
 	}
 }
 
@@ -233,8 +241,8 @@ technique RGBToHCL
 	pass convert
 	{
 		AlphaBlendEnable = false;
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-		PixelShader = compile ps_4_0 RGBToHCLPixelShaderFunction();
+		VertexShader = compile VS_SHADERMODEL VertexShaderFunction();
+		PixelShader = compile PS_SHADERMODEL RGBToHCLPixelShaderFunction();
 	}
 }
 
@@ -243,8 +251,8 @@ technique SumHCLImages
 	pass convert
 	{
 		AlphaBlendEnable = false;
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-		PixelShader = compile ps_4_0 SumHCLImagesShaderFunction();
+		VertexShader = compile VS_SHADERMODEL VertexShaderFunction();
+		PixelShader = compile PS_SHADERMODEL SumHCLImagesShaderFunction();
 	}
 }
 /*
@@ -254,8 +262,8 @@ technique NormalizeHCLSumImage
 	pass convert
 	{
 		AlphaBlendEnable = false;
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-		PixelShader = compile ps_4_0 MergeHCLImagesShaderFunction();
+		VertexShader = compile VS_SHADERMODEL VertexShaderFunction();
+		PixelShader = compile PS_SHADERMODEL MergeHCLImagesShaderFunction();
 	}
 }
 */
@@ -265,8 +273,8 @@ technique SumRGBImages
     pass P0
     {	
 		AlphaBlendEnable = false; 
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-        PixelShader = compile ps_4_0 SumRGBPixelShaderFunction();
+		VertexShader = compile VS_SHADERMODEL VertexShaderFunction();
+        PixelShader = compile PS_SHADERMODEL SumRGBPixelShaderFunction();
     } 
 }
 
@@ -275,8 +283,8 @@ technique NormalizeByTotal
 	pass P0
 	{
 		AlphaBlendEnable = false;
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-		PixelShader = compile ps_4_0 NormalizeShaderFunction();
+		VertexShader = compile VS_SHADERMODEL VertexShaderFunction();
+		PixelShader = compile PS_SHADERMODEL NormalizeShaderFunction();
 	}
 }
 
@@ -285,8 +293,8 @@ technique MergeHSVImages
     pass P0
     {	
 		AlphaBlendEnable = true; 
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-        PixelShader = compile ps_4_0 HSVMergePixelShaderFunction();
+		VertexShader = compile VS_SHADERMODEL VertexShaderFunction();
+        PixelShader = compile PS_SHADERMODEL HSVMergePixelShaderFunction();
     } 
 }
 

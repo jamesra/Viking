@@ -166,12 +166,6 @@ namespace VikingXNAWinForms
                 return;
             }
 
-            if (graphicsDevice.GraphicsDeviceStatus == GraphicsDeviceStatus.Lost)
-            {
-                System.Diagnostics.Trace.WriteLine("Skipping device reset: device is lost");
-                return;
-            }
-
             // Clear cached device-dependent resources before reset
             ClearDeviceDependentCaches();
 
@@ -183,31 +177,12 @@ namespace VikingXNAWinForms
             parameters.IsFullScreen = false;
             parameters.RenderTargetUsage = RenderTargetUsage.DiscardContents;
 
-            try
-            {
-                graphicsDevice.Reset(parameters);
-            }
-            catch (Exception ex) when (IsDeviceRemovedError(ex))
-            {
-                System.Diagnostics.Trace.WriteLine($"GPU device removed during reset: {ex.Message}");
-                return;
-            }
+            graphicsDevice.Reset(parameters);
 
             // Reload global textures after reset
             LoadGlobalPrimitivesTextures();
 
             DeviceReset?.Invoke(this, EventArgs.Empty);
-        }
-
-        /// <summary>
-        /// Returns true if the exception represents a GPU device-removed or device-reset error
-        /// (DXGI_ERROR_DEVICE_REMOVED 0x887A0005 or DXGI_ERROR_DEVICE_RESET 0x887A0007).
-        /// </summary>
-        private static bool IsDeviceRemovedError(Exception ex)
-        {
-            const int DXGI_ERROR_DEVICE_REMOVED = unchecked((int)0x887A0005);
-            const int DXGI_ERROR_DEVICE_RESET = unchecked((int)0x887A0007);
-            return ex.HResult == DXGI_ERROR_DEVICE_REMOVED || ex.HResult == DXGI_ERROR_DEVICE_RESET;
         }
 
         /// <summary>
@@ -223,6 +198,7 @@ namespace VikingXNAWinForms
             DeviceEffectsStore<RoundCurve.CurveManagerHSV>.ClearAll();
             DeviceEffectsStore<PolygonOverlayEffect>.ClearAll();
             DeviceEffectsStore<OverlayShaderEffect>.ClearAll();
+            DeviceEffectsStore<CircleInstancedEffect>.ClearAll();
 
             // Clear font store
             DeviceFontStore.ClearAll();

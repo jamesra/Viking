@@ -287,6 +287,11 @@ namespace Geometry
             return ShapeRelation.NONE;
         }
 
+        /// <summary>
+        /// True if the circle contains all of the points in the polygon
+        /// </summary>
+        /// <param name="poly"></param>
+        /// <returns></returns>
         public bool Contains(in GridPolygon poly)
         {
             //if (this.BoundingBox.GetRelation(poly.BoundingBox) == ShapeRelation.CONTAINED)
@@ -298,9 +303,14 @@ namespace Geometry
                     return false;
             }
 
-            return false;
+            return true;
         }
 
+        /// <summary>
+        /// True if the circle contains both endpoints of the line segment
+        /// </summary>
+        /// <param name="line"></param>
+        /// <returns></returns>
         public bool Contains(in GridLineSegment line)
         {
             if (!this.Contains(line.A))
@@ -309,8 +319,7 @@ namespace Geometry
             if (!this.Contains(line.B))
                 return false;
 
-
-            return false;
+            return true;
         }
 
         ShapeRelation IShape2D.GetRelation(in ILineSegment2D line) => ContainsExt(line.Convert());
@@ -449,20 +458,8 @@ namespace Geometry
         public bool Equals(ICircle2D other) => this.Center.Equals(other.Center) && this.Radius.Equals(other.Radius);
 
 
-        public override int GetHashCode()
-        {
-            throw new InvalidOperationException($"It is not mathematically possible to implement {nameof(GetHashCode)} for a point where equality is epsilon based");
-            return 0;
-            //return _HashCode;
-            /*
-            if (!_HashCode.HasValue)
-            {
-                _HashCode = Center.GetHashCode();
-            }
-
-            return _HashCode.Value;
-            */
-        }
+        public override int GetHashCode() =>
+            GeometryHashCode.Combine(Center.GetHashCode(), GeometryHashCode.QuantizedCoord(Radius));
 
 
         public bool Intersects(in IShape2D shape) => ShapeExtensions.CircleIntersects(in this, in shape);

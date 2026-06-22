@@ -5,6 +5,14 @@
 // Based on RoundLine by Michael Anderson
 //
 
+#if OPENGL
+#define VS_SHADERMODEL vs_3_0
+#define PS_SHADERMODEL ps_3_0
+#else
+#define VS_SHADERMODEL vs_4_0
+#define PS_SHADERMODEL ps_4_0
+#endif
+
 // This shader draws one polyline at a time.
 // Each control point occupies an entry in the control point array
 
@@ -21,8 +29,8 @@ technique Standard
 		SrcBlend = SrcAlpha;
 		DestBlend = InvSrcAlpha;
 		BlendOp = Add;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSStandardHSV();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSStandardHSV();
 	}
 }
 
@@ -38,8 +46,8 @@ technique AlphaGradient
 		ZEnable = true;
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSAlphaGradientHSV();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSAlphaGradientHSV();
 	}
 }
 
@@ -56,8 +64,8 @@ technique NoBlur
 		ZEnable = true;
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSNoBlurHSV();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSNoBlurHSV();
 	}
 }
 
@@ -74,8 +82,8 @@ technique AnimatedLinear
 		ZEnable = true;
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSAnimatedLinearHSV();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSAnimatedLinearHSV();
 	}
 }
 
@@ -91,8 +99,8 @@ technique AnimatedBidirectional
 		ZEnable = true;
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSAnimatedBidirectionalHSV();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSAnimatedBidirectionalHSV();
 	}
 }
 
@@ -109,8 +117,8 @@ technique AnimatedRadial
 		ZEnable = true;
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSAnimatedRadialHSV();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSAnimatedRadialHSV();
 	}
 }
 
@@ -127,8 +135,8 @@ technique Ladder
 		ZEnable = true;
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSLadderHSV();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSLadderHSV();
 	}
 }
 
@@ -145,8 +153,8 @@ technique Dashed
 		ZEnable = true;
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSDashedHSV();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSDashedHSV();
 	}
 } 
 
@@ -163,8 +171,8 @@ technique Modern
 		ZEnable = true;
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSModernHSV();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSModernHSV();
 	}
 }
 
@@ -181,8 +189,8 @@ technique Tubular
 		ZEnable = true;
 		ZFunc = LessEqual;
 		ZWriteEnable = true;*/
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSTubularHSV();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSTubularHSV();
 	}
 }
 
@@ -199,8 +207,8 @@ technique HalfTube
 		ZEnable = true;
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSHalfTubularHSV();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSHalfTubularHSV();
 	}
 }
 
@@ -217,8 +225,8 @@ technique Glow
 		ZEnable = true;
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSGlowHSV();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSGlowHSV();
 	}
 }
 
@@ -235,8 +243,8 @@ technique Textured
 		ZEnable = true;
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
-		vertexShader = compile vs_4_0 CurveVertexShader();
-		pixelShader = compile ps_4_0 MyPSTexturedHSV();
+		vertexShader = compile VS_SHADERMODEL CurveVertexShader();
+		pixelShader = compile PS_SHADERMODEL MyPSTexturedHSV();
 	}
 }
 

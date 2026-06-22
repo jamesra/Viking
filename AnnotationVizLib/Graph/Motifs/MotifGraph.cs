@@ -55,7 +55,16 @@ namespace AnnotationVizLib
 
         public override string ToString() => this.SourceNodeKey + " -> " + this.TargetNodeKey + " via " + this.SynapseType;
 
-        public override int GetHashCode() => this.SourceNodeKey.GetHashCode();
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + SourceNodeKey.GetHashCode();
+                hash = hash * 23 + TargetNodeKey.GetHashCode();
+                return hash;
+            }
+        }
 
         public int Compare(MotifEdge x, MotifEdge y)
         {

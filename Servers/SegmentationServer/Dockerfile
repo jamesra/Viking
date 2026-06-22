@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # Use an NVIDIA CUDA image as the base
 FROM nvidia/cuda:12.8.1-devel-ubuntu24.04
 
@@ -45,36 +44,12 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.13 2
 
 
-RUN --mount=type=cache,target=/root/.cache/pip \
-    curl -sS https://bootstrap.pypa.io/get-pip.py | python3.13
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.13
 
 WORKDIR /home/user
 
-# Pin to a specific commit hash for a stable cache key and reproducible builds.
-# To update: find the desired commit on GitHub and set SAM2_COMMIT via --build-arg or update the default here.
-ARG SAM2_COMMIT=2b90b9f
-RUN git clone https://github.com/facebookresearch/segment-anything-2 && \
-    cd segment-anything-2 && \
-    git checkout ${SAM2_COMMIT} && \
-    PINNED=$(git rev-parse HEAD) && \
-    LATEST=$(git rev-parse origin/main) && \
-    echo "SAM2 pinned commit : $PINNED" && \
-    echo "SAM2 latest main   : $LATEST" && \
-    if [ "$PINNED" != "$LATEST" ]; then \
-        echo "" && \
-        echo "╔══════════════════════════════════════════════════════════╗" && \
-        echo "║  WARNING: SAM2 is behind the latest commit on main.     ║" && \
-        echo "║  Pinned : $PINNED  ║" && \
-        echo "║  Latest : $LATEST  ║" && \
-        echo "║  Update SAM2_COMMIT build arg when ready to upgrade.    ║" && \
-        echo "╚══════════════════════════════════════════════════════════╝" && \
-        echo ""; \
-    else \
-        echo "SAM2 commit is current with main."; \
-    fi
-
-RUN --mount=type=cache,target=/root/.cache/pip \
-    cd segment-anything-2 && \
+RUN git clone https://github.com/facebookresearch/segment-anything-2 
+RUN cd segment-anything-2 && \
     python3 -m pip install -e . -v && \
     python3 -m pip install -e ".[demo]" && \
     python3 -m pip install grpcio grpcio-tools numpy torch Pillow opencv-python matplotlib
@@ -98,13 +73,11 @@ COPY ./Servers/SegmentationServer/segmentation_server/requirements-docker.txt /h
 
 # Install dependencies (this layer is cached unless setup files change)
 # Install grpc package first (lighter dependency)
-RUN --mount=type=cache,target=/root/.cache/pip \
-    cd /home/user/segmentation_grpc && \
+RUN cd /home/user/segmentation_grpc && \
     python3 -m pip install -e .
 
 # Install server package using Docker-specific requirements (excludes sam2)
-RUN --mount=type=cache,target=/root/.cache/pip \
-    cd /home/user/segmentation_server && \
+RUN cd /home/user/segmentation_server && \
     python3 -m pip install -r requirements-docker.txt && \
     python3 -m pip install -e . --no-deps && \
     python3 -m pip install debugpy
@@ -116,16 +89,6 @@ COPY ./gRPC_Protos /home/user/gRPC_Protos
 COPY ./Servers/SegmentationServer/segmentation_grpc /home/user/segmentation_grpc
 COPY ./Servers/SegmentationServer/segmentation_server/segmentation_server /home/user/segmentation_server/segmentation_server/
   
-# Force-regenerate pb2 files from the proto so they always match, regardless of Docker timestamp normalization.
-# Also fixes the import path in the generated grpc file.
-RUN python3 -m grpc_tools.protoc \
-        --proto_path=/home/user/gRPC_Protos/Segmentation/SAM2 \
-        --python_out=/home/user/segmentation_grpc/segmentation_grpc \
-        --grpc_python_out=/home/user/segmentation_grpc/segmentation_grpc \
-        /home/user/gRPC_Protos/Segmentation/SAM2/segmentation.proto && \
-    sed -i 's/^import segmentation_pb2 as/from segmentation_grpc import segmentation_pb2 as/' \
-        /home/user/segmentation_grpc/segmentation_grpc/segmentation_pb2_grpc.py
-
 # Set ownership of the project directories to the user
 RUN chown -R user:user /home/user/gRPC_Protos
 RUN chown -R user:user /home/user/segmentation_grpc
@@ -136,20 +99,35 @@ EXPOSE 50051
 EXPOSE 5678
 EXPOSE 12348
 
-# Copy startup script as root, strip CRLF, then lock down ownership/permissions
-COPY ./Servers/SegmentationServer/start.sh /home/user/start.sh
-RUN sed -i 's/\r$//' /home/user/start.sh && \
-    chmod +x /home/user/start.sh && \
-    chown user:user /home/user/start.sh
-
 RUN usermod -aG dialout user
 USER user
-
+  
 # Ensure Python can find the local segmentation packages first
 ENV PYTHONPATH=/home/user/segmentation_server:/home/user/segmentation_grpc
 ENV VS_CODE_DEBUG="false"
 
 STOPSIGNAL SIGTERM
+
+# Create a startup script that supports debugging
+RUN cat << 'EOF' > /home/user/start.sh
+#!/bin/bash
+set -e
+
+if [ "$VS_CODE_DEBUG" = "true" ] && [ "$PYCHARM_DEBUG" = "true" ]; then
+    echo "Starting with both VS Code (debugpy) and PyCharm debugging..."
+    python3 -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m segmentation_server 
+elif [ "$VS_CODE_DEBUG" = "true" ]; then
+    echo "Starting with VS Code debugpy on port 5678..."
+    python3 -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m segmentation_server 
+elif [ "$PYCHARM_DEBUG" = "true" ]; then
+    echo "Starting with PyCharm debugging on port 12348..."
+    python3 -c "import pydevd_pycharm; pydevd_pycharm.settrace('0.0.0.0', port=12348, stdout_to_server=True, stderr_to_server=True, suspend=False); import segmentation_server.__main__ as main_mod; import asyncio; asyncio.run(main_mod.main())"
+else
+    echo "Starting normally..."
+    python3 -m segmentation_server
+fi
+EOF
+RUN chmod +x /home/user/start.sh
 
 ENTRYPOINT ["/home/user/start.sh"]
 #CMD sudo service ssh start && python3 -m segmentation_grpc && python3 -m segmentation_server --generate-grpc & /bin/bash

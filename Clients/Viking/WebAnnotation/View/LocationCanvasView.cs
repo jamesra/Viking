@@ -80,14 +80,36 @@ namespace WebAnnotation.View
             }
         }
 
-        private int CalculateParentDepth(StructureObj obj)
+        private const int MaxParentDepth = 128;
+
+        private static int CalculateParentDepth(StructureObj obj)
         {
             if (obj is null)
             {
                 return 0;
             }
 
-            return CalculateParentDepth(obj.Parent) + 1;
+            int depth = 0;
+            HashSet<long> visited = [];
+            StructureObj current = obj;
+
+            while (current is not null)
+            {
+                if (!visited.Add(current.ID))
+                {
+                    return depth;
+                }
+
+                depth++;
+                if (depth >= MaxParentDepth)
+                {
+                    return depth;
+                }
+
+                current = current.Parent;
+            }
+
+            return depth;
         }
 
 

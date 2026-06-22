@@ -1,3 +1,11 @@
+#if OPENGL
+#define VS_SHADERMODEL vs_3_0
+#define PS_SHADERMODEL ps_3_0
+#else
+#define VS_SHADERMODEL vs_4_0
+#define PS_SHADERMODEL ps_4_0
+#endif
+
 float4x4 mWorldViewProj;
 
 //Channel Color
@@ -125,8 +133,8 @@ technique RGBToHSVEffect
 {
     pass
     {	
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-        PixelShader = compile ps_4_0 RGBToHSVPixelShaderFunction();
+		VertexShader = compile VS_SHADERMODEL VertexShaderFunction();
+        PixelShader = compile PS_SHADERMODEL RGBToHSVPixelShaderFunction();
     }
 }
 
@@ -140,7 +148,7 @@ technique HSVAdditionEffect
 		SrcBlend = One; 
 		DestBlend = One; 
 
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-        PixelShader = compile ps_4_0 HSVAdditionPixelShaderFunction();
+		VertexShader = compile VS_SHADERMODEL VertexShaderFunction();
+        PixelShader = compile PS_SHADERMODEL HSVAdditionPixelShaderFunction();
 	}
 }

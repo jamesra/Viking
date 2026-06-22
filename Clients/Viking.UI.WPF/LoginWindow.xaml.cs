@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,8 +36,49 @@ namespace Viking.UI.WPF
         public LoginWindow()
         {
             InitializeComponent();
-
+            Loaded += OnLoaded;
             InitializeLoginStage();
+        }
+
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(InitialApiToken))
+                return;
+            if (_loginViewModel == null)
+                return;
+            if (!string.IsNullOrWhiteSpace(InitialIdentityServerUrl))
+                _loginViewModel.IdentityServerUrl = InitialIdentityServerUrl;
+            var apiToken = CreateTokenResponseFromAccessToken(InitialApiToken);
+            if (apiToken == null)
+                return;
+            ShowVolumeStage(apiToken);
+            if (!string.IsNullOrWhiteSpace(InitialVolumeUrl) && _volumeSelectionViewModel != null)
+                _volumeSelectionViewModel.ManualVolumeUrl = InitialVolumeUrl;
+        }
+
+        /// <summary>Creates a minimal TokenResponse from a raw access token (e.g. from launch code exchange).</summary>
+        private static TokenResponse CreateTokenResponseFromAccessToken(string accessToken)
+        {
+            if (string.IsNullOrWhiteSpace(accessToken))
+                return null;
+            var response = new TokenResponse();
+            SetTokenResponseAccessToken(response, accessToken);
+            return response;
+        }
+
+        private static void SetTokenResponseAccessToken(TokenResponse response, string accessToken)
+        {
+            var type = typeof(TokenResponse);
+            var prop = type.GetProperty("AccessToken", BindingFlags.Public | BindingFlags.Instance);
+            if (prop?.CanWrite == true)
+            {
+                prop.SetValue(response, accessToken);
+                return;
+            }
+            var backingField = type.GetField("<AccessToken>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?? type.GetField("_accessToken", BindingFlags.NonPublic | BindingFlags.Instance);
+            if (backingField != null)
+                backingField.SetValue(response, accessToken);
         }
 
         public LoginStage CurrentStage
@@ -69,6 +112,15 @@ namespace Viking.UI.WPF
         public TokenResponse ApiToken { get; private set; }
 
         public string InitialSegmentationServiceUrl { get; set; }
+
+        /// <summary>When set (e.g. from viking://open code exchange), skip login and use this as the API token.</summary>
+        public string InitialApiToken { get; set; }
+
+        /// <summary>Identity server URL when launching with a code (from exchange response).</summary>
+        public string InitialIdentityServerUrl { get; set; }
+
+        /// <summary>Optional initial volume URL (from command line or code exchange). When set with InitialApiToken, volume selection is pre-filled/skipped to this volume.</summary>
+        public string InitialVolumeUrl { get; set; }
 
         private void InitializeLoginStage()
         {
@@ -155,23 +207,30 @@ namespace Viking.UI.WPF
 
         private async void OnVolumeSelected(object sender, VolumeSelectedEventArgs e)
         {
-            VolumeURL = e.Url;
-            VolumeName = e.Name;
-
-            // Validate the volume endpoint before proceeding
-            bool isValid = await ValidateVolumeEndpointAsync(VolumeURL);
-
-            if (!isValid)
+            try
             {
-                // Validation failed - error message already displayed in UI
-                // User stays on volume selection stage
-                return;
+                VolumeURL = e.Url;
+                VolumeName = e.Name;
+
+                // Validate the volume endpoint before proceeding
+                bool isValid = await ValidateVolumeEndpointAsync(VolumeURL);
+
+                if (!isValid)
+                {
+                    // Validation failed - error message already displayed in UI
+                    // User stays on volume selection stage
+                    return;
+                }
+
+                await PrepareSegmentationStageAsync(e.Name, VolumeURL);
+
+                // Update the recent volumes list in the UI (remove duplicates and add to top)
+                _volumeSelectionViewModel?.AddRecentVolume(VolumeURL, VolumeName);
             }
-
-            await PrepareSegmentationStageAsync(e.Name, VolumeURL);
-
-            // Update the recent volumes list in the UI (remove duplicates and add to top)
-            _volumeSelectionViewModel?.AddRecentVolume(VolumeURL, VolumeName);
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"OnVolumeSelected failed: {ex}", "LoginWindow");
+            }
         }
 
 
@@ -218,14 +277,20 @@ namespace Viking.UI.WPF
                     throw new Exception("Invalid Identity Server URL");
                 }
 
-                var (_, _, apiToken) = await RequestApiToken(identityApiUrl, identityServerUrl);
-                ApiToken = apiToken;
-
-                Task<Dictionary<long, object>> segmentationTask = FetchSegmentationServicesAsync(apiToken, identityApiUrl);
                 SetViewModelStatusMessage($"Authenticating to volume '{volumeName}'...");
 
-                TokenResponse volumeToken = await RequestVolumePermissionsWithApiToken(volumeName, identityApiUrl, identityServerUrl, apiToken);
+                var (apiToken, volumeToken) = await VolumeAuthHelper.RequestVolumeBearerTokenWithApiTokenAsync(
+                    _savedUsername,
+                    _savedPassword,
+                    volumeName,
+                    identityApiUrl,
+                    identityServerUrl,
+                    requireReviewRights: false);
+
+                ApiToken = apiToken;
                 BearerToken = volumeToken;
+
+                Task<Dictionary<long, object>> segmentationTask = FetchSegmentationServicesAsync(apiToken, identityApiUrl);
                 // Set TokenInjector immediately so WCF AnnotationService calls use the volume-scoped token (critical for non-anonymous users after pre-load segmentation flow).
                 TokenInjector.BearerToken = volumeToken;
                 TokenInjector.BearerTokenAuthority = identityServerUrl?.ToString() ?? _loginViewModel?.IdentityServerUrl;
@@ -245,10 +310,11 @@ namespace Viking.UI.WPF
             }
             catch (Exception ex)
             {
-                UpdateViewModelStatus(false, $"Error: {ex.Message}");
+                var message = TokenErrorHelper.ToExceptionMessage(ex);
+                UpdateViewModelStatus(false, $"Error: {message}");
                 System.Diagnostics.Trace.WriteLine($"Volume authentication error: {ex}");
                 System.Windows.MessageBox.Show(
-                    $"Failed to authenticate to volume:\n\n{ex.Message}",
+                    $"Failed to authenticate to volume:\n\n{message}",
                     "Authentication Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -287,39 +353,6 @@ namespace Viking.UI.WPF
             }
         }
 
-        private async Task<TokenResponse> RequestVolumePermissionsWithApiToken(string volumeName, Uri identityApiUrl, Uri identityServerUrl, TokenResponse apiToken)
-        {
-            var identityApiHelper = new IdentityApiHelper { IdentityApiURL = identityApiUrl };
-
-            var vikingTokenHelper = new BearerTokenHelper
-            {
-                IdentityServerURL = identityServerUrl,
-                ClientId = "Viking",
-                ClientSecret = "Correct Horse Battery Staple"
-            };
-
-            string[] volumePermissions = await identityApiHelper.RetrieveUserVolumePermissions(apiToken, volumeName);
-            if (volumePermissions is null || volumePermissions.Length == 0)
-            {
-                throw new Exception("User does not have permissions in volume");
-            }
-
-            List<string> permissionsList =
-            [
-                "openid",
-                "Viking.Annotation",
-                .. volumePermissions.Select(p => $"{volumeName}.{p}"),
-            ];
-
-            var bearerTokenResponse = await vikingTokenHelper.RetrieveBearerToken(_savedUsername, _savedPassword, [.. permissionsList]);
-            if (bearerTokenResponse is null || bearerTokenResponse.IsError)
-            {
-                throw new Exception($"Failed to get bearer token: {bearerTokenResponse?.Error}");
-            }
-
-            return bearerTokenResponse as TokenResponse;
-        }
-
         private async Task PerformVolumeAuthenticationAsync(string volumeName, string volumeUrl)
         {
             try
@@ -349,10 +382,11 @@ namespace Viking.UI.WPF
             }
             catch (Exception ex)
             {
-                UpdateViewModelStatus(false, $"Error: {ex.Message}");
+                var message = TokenErrorHelper.ToExceptionMessage(ex);
+                UpdateViewModelStatus(false, $"Error: {message}");
                 System.Diagnostics.Trace.WriteLine($"Volume authentication error: {ex}");
                 System.Windows.MessageBox.Show(
-                    $"Failed to authenticate to volume:\n\n{ex.Message}",
+                    $"Failed to authenticate to volume:\n\n{message}",
                     "Authentication Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -628,7 +662,7 @@ namespace Viking.UI.WPF
             var idTokenResponse = await apiTokenHelper.RetrieveBearerToken(_savedUsername, _savedPassword);
             if (idTokenResponse is null || idTokenResponse.IsError)
             {
-                throw new Exception($"Failed to get identity token: {idTokenResponse?.Error}");
+                throw new Exception("Failed to get identity token: " + TokenErrorHelper.ToUserMessage(idTokenResponse));
             }
 
             TokenResponse idToken = idTokenResponse as TokenResponse;
@@ -646,42 +680,14 @@ namespace Viking.UI.WPF
         {
             try
             {
-                Viking.Tokens.BearerTokenHelper apiTokenHelper;
-                Viking.Tokens.IdentityApiHelper identityApiHelper;
-                TokenResponse apiToken = null;
-                (apiTokenHelper, identityApiHelper, apiToken) = await RequestApiToken(identityApiUrl, identityServerUrl);
-
-                // Create helper for Viking client token
-                BearerTokenHelper vikingTokenHelper = new()
-                {
-                    IdentityServerURL = identityServerUrl,
-                    ClientId = "Viking",
-                    ClientSecret = "Correct Horse Battery Staple"
-                };
-
-                // Retrieve volume-specific permissions using the API token
-                string[] volumePermissions = await identityApiHelper.RetrieveUserVolumePermissions(apiToken, volumeName);
-                if (volumePermissions is null || volumePermissions.Length == 0)
-                {
-                    throw new Exception("User does not have permissions in volume");
-                }
-
-                // Build permissions list
-                List<string> permissionsList =
-                [
-                    "openid",
-                    "Viking.Annotation",
-                    .. volumePermissions.Select(p => $"{volumeName}.{p}"),
-                ];
-
-                // Request final bearer token with volume-specific permissions
-                var bearerTokenResponse = await vikingTokenHelper.RetrieveBearerToken(_savedUsername, _savedPassword, [.. permissionsList]);
-                if (bearerTokenResponse is null || bearerTokenResponse.IsError)
-                {
-                    throw new Exception($"Failed to get bearer token: {bearerTokenResponse?.Error}");
-                }
-
-                TokenResponse volumeToken = bearerTokenResponse as TokenResponse;
+                var (_, _, apiToken) = await RequestApiToken(identityApiUrl, identityServerUrl);
+                var volumeToken = await VolumeAuthHelper.RequestVolumeBearerTokenAsync(
+                    _savedUsername,
+                    _savedPassword,
+                    volumeName,
+                    identityApiUrl,
+                    identityServerUrl,
+                    requireReviewRights: false);
                 return (apiToken, volumeToken);
             }
             catch (Exception ex)

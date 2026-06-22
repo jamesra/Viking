@@ -14,21 +14,30 @@ namespace VolumeModel
     /// </summary>
     public static class JsonTransformSerializer
     {
-        private static readonly JsonSerializerOptions _jsonOptions = new()
+        // Read options must not include ComputedPropertyJsonConverter: its Read implementation
+        // delegates to JsonSerializer.Deserialize with the same options and overflows the stack.
+        internal static JsonSerializerOptions ReadOptions { get; } = CreateOptions(includeComputedPropertyConverter: false);
+
+        private static readonly JsonSerializerOptions _writeJsonOptions = CreateOptions(includeComputedPropertyConverter: true);
+
+        private static JsonSerializerOptions CreateOptions(bool includeComputedPropertyConverter)
         {
-            WriteIndented = false,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
-            ReferenceHandler = ReferenceHandler.IgnoreCycles,
-            // Allow polymorphic serialization for ITransform implementations
-            Converters =
+            var options = new JsonSerializerOptions
             {
-                new JsonStringEnumConverter(),
-                new TransformJsonConverter(),
-                new ComputedPropertyJsonConverter()
-            }
-        };
+                WriteIndented = false,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+                ReferenceHandler = ReferenceHandler.IgnoreCycles,
+            };
+
+            options.Converters.Add(new JsonStringEnumConverter());
+            options.Converters.Add(new TransformJsonConverter());
+            if (includeComputedPropertyConverter)
+                options.Converters.Add(new ComputedPropertyJsonConverter());
+
+            return options;
+        }
 
         /// <summary>
         /// Serialize an ITransform to a stream using JSON
@@ -41,7 +50,7 @@ namespace VolumeModel
             if (transform is null)
                 throw new ArgumentNullException(nameof(transform));
 
-            JsonSerializer.Serialize(stream, transform, _jsonOptions);
+            JsonSerializer.Serialize(stream, transform, _writeJsonOptions);
         }
 
         /// <summary>
@@ -52,7 +61,7 @@ namespace VolumeModel
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
 
-            return JsonSerializer.Deserialize<ITransform>(stream, _jsonOptions);
+            return JsonSerializer.Deserialize<ITransform>(stream, ReadOptions);
         }
 
         /// <summary>
@@ -66,7 +75,7 @@ namespace VolumeModel
             if (transforms is null)
                 throw new ArgumentNullException(nameof(transforms));
 
-            JsonSerializer.Serialize(stream, transforms, _jsonOptions);
+            JsonSerializer.Serialize(stream, transforms, _writeJsonOptions);
         }
 
         /// <summary>
@@ -77,7 +86,25 @@ namespace VolumeModel
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
 
-            return JsonSerializer.Deserialize<ITransform[]>(stream, _jsonOptions);
+            // Deserialize each element via TransformJsonConverter so ITransform[] never routes through
+            // ComputedPropertyJsonConverter (write-only; would recurse if used on read).
+            using JsonDocument doc = JsonDocument.Parse(stream);
+            JsonElement root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Array)
+                throw new JsonException("Expected JSON array of transforms");
+
+            var converter = new TransformJsonConverter();
+            var results = new ITransform[root.GetArrayLength()];
+            for (int i = 0; i < results.Length; i++)
+            {
+                byte[] elementBytes = System.Text.Encoding.UTF8.GetBytes(root[i].GetRawText());
+                var reader = new Utf8JsonReader(elementBytes);
+                reader.Read();
+                results[i] = converter.Read(ref reader, typeof(ITransform), ReadOptions)
+                    ?? throw new JsonException($"Transform at index {i} deserialized to null");
+            }
+
+            return results;
         }
     }
 
@@ -99,12 +126,12 @@ namespace VolumeModel
             if (root.TryGetProperty("triangleIndicies", out _))
             {
                 // Likely a triangulation transform
-                return JsonSerializer.Deserialize<Geometry.Transforms.TriangulationTransform>(root.GetRawText(), options);
+                return JsonSerializer.Deserialize<Geometry.Transforms.TriangulationTransform>(root.GetRawText(), JsonTransformSerializer.ReadOptions);
             }
             else if (root.TryGetProperty("mapPoints", out _))
             {
                 // Likely a control point transform
-                return JsonSerializer.Deserialize<Geometry.Transforms.RBFTransform>(root.GetRawText(), options);
+                return JsonSerializer.Deserialize<Geometry.Transforms.RBFTransform>(root.GetRawText(), JsonTransformSerializer.ReadOptions);
             }
             else
             {
@@ -133,7 +160,16 @@ namespace VolumeModel
     {
         public override bool CanConvert(Type typeToConvert)
         {
-            // Only apply to types that might have computed properties
+            if (typeToConvert is null ||
+                typeToConvert.IsArray ||
+                typeToConvert.IsInterface ||
+                typeToConvert.IsAbstract ||
+                typeToConvert == typeof(ITransform))
+            {
+                return false;
+            }
+
+            // Only apply to concrete Geometry/VolumeModel types that might have computed properties
             return typeToConvert.Namespace?.StartsWith("Geometry") == true ||
                    typeToConvert.Namespace?.StartsWith("VolumeModel") == true;
         }
@@ -147,8 +183,8 @@ namespace VolumeModel
         private class ComputedPropertyJsonConverterInner<T> : JsonConverter<T>
         {
             public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-                // For reading, we'll use the default behavior
-                JsonSerializer.Deserialize<T>(ref reader, options);
+                throw new NotSupportedException(
+                    "ComputedPropertyJsonConverter is write-only. Use JsonTransformSerializer.ReadOptions for deserialization.");
 
             public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
             {

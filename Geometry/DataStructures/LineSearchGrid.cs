@@ -380,10 +380,11 @@ namespace Geometry
                 rwLock.EnterWriteLock();
 
                 tableLineToValue.Clear();
+                tableValueToLine.Clear();
 
-                for (int iX = 0; iX < NumGridsX; iX++)
+                for (int iX = 0; iX < NumGridsX + 1; iX++)
                 {
-                    for (int iY = 0; iY < NumGridsY; iY++)
+                    for (int iY = 0; iY < NumGridsY + 1; iY++)
                     {
                         _LineGrid[iX, iY].Clear();
                     }
@@ -899,7 +900,7 @@ namespace Geometry
                 //                Coord end = GetCoord(new GridVector2(line.MaxX, line.MaxY));
 
                 IEnumerable<Coord> coords = GetCoordsForLine(line);
-                return new LineSearchGridCoordListEnumerator(this, coords, true);
+                return new LineSearchGridCoordListEnumerator(this, coords, TakeSpinLock);
             }
             finally
             {
@@ -987,10 +988,11 @@ namespace Geometry
             try
             {
                 rwLock.EnterReadLock();
+                LockTaken = true;
 
                 intersection = default;
-                nearestIntersect = double.MinValue;
-                IEnumerable<GridLineSegment> potentialIntersections = GetPotentialIntersections(TestLine, !LockTaken);
+                nearestIntersect = double.MaxValue;
+                IEnumerable<GridLineSegment> potentialIntersections = GetPotentialIntersections(TestLine, false);
                 GridLineSegment BestLine = default;
                 foreach (GridLineSegment l in potentialIntersections)
                 {
@@ -1026,7 +1028,8 @@ namespace Geometry
             }
             finally
             {
-                rwLock.ExitReadLock();
+                if (LockTaken)
+                    rwLock.ExitReadLock();
             }
         }
 

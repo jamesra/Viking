@@ -232,6 +232,7 @@ public class ViewerControl : GraphicsDeviceControl
             DeviceEffectsStore<RoundLineCode.LumaOverlayRoundLineManager>.GetOrCreateForDevice(this.Device, this.Content);
             DeviceEffectsStore<RoundCurve.CurveManager>.GetOrCreateForDevice(this.Device, this.Content);
             DeviceEffectsStore<RoundCurve.CurveManagerHSV>.GetOrCreateForDevice(this.Device, this.Content);
+            DeviceEffectsStore<CircleInstancedEffect>.GetOrCreateForDevice(this.Device, this.Content);
         }
     }
 
@@ -280,6 +281,7 @@ public class ViewerControl : GraphicsDeviceControl
         DeviceEffectsStore<RoundCurve.CurveManagerHSV>.GetOrCreateForDevice(this.Device, this.Content);
         DeviceEffectsStore<PolygonOverlayEffect>.GetOrCreateForDevice(this.Device, this.Content);
         DeviceEffectsStore<OverlayShaderEffect>.GetOrCreateForDevice(this.Device, this.Content);
+        DeviceEffectsStore<CircleInstancedEffect>.GetOrCreateForDevice(this.Device, this.Content);
 
         // Font store will be recreated on demand
         DeviceFontStore.GetOrCreateForDevice(this.Device, this.Content);
@@ -617,17 +619,7 @@ public class ViewerControl : GraphicsDeviceControl
                 viewport.Height != ClientBounds.Height)
             {
                 if (this.graphicsDeviceService != null)
-                {
-                    try
-                    {
-                        this.graphicsDeviceService.ResetDevice(ClientRectangle.Width, ClientRectangle.Height);
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Trace.WriteLine($"ResetDevice failed during viewport update: {ex.Message}");
-                        return;
-                    }
-                }
+                    this.graphicsDeviceService.ResetDevice(ClientRectangle.Width, ClientRectangle.Height);
             }
         }
 

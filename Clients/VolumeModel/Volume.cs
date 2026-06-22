@@ -453,6 +453,9 @@ namespace Viking.VolumeModel
             return VolumePath;
         }
 
+        private const int VolumeXmlRequestTimeoutSeconds = 60;
+        private const int VolumeXmlMaxRetries = 3;
+
         protected static async Task<XDocument> LoadHTTPAsync(string path, System.Net.NetworkCredential UserCredentials, CancellationToken token)
         {
             Uri pathURI = new(path);
@@ -466,26 +469,46 @@ namespace Viking.VolumeModel
                 {
                     UseDefaultCredentials = true
                 };
-            using HttpClient httpClient = new(handler);
-            httpClient.Timeout = TimeSpan.FromSeconds(15); // Set a timeout for the request 
-            try
-            {
-                var response = await httpClient.GetAsync(pathURI, token).ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
 
+            Exception lastException = null;
+            for (int attempt = 0; attempt <= VolumeXmlMaxRetries; attempt++)
+            {
                 if (token.IsCancellationRequested)
                     throw new TaskCanceledException("LoadHttpAsync cancelled by token");
 
-                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                if (token.IsCancellationRequested)
-                    throw new TaskCanceledException("LoadHttpAsync cancelled by token");
+                if (attempt > 0)
+                {
+                    Trace.WriteLine($"Volume XML load retry {attempt}/{VolumeXmlMaxRetries} for {path}");
+                    await Task.Delay(1000 * attempt, token).ConfigureAwait(false);
+                }
 
-                return XDocument.Parse(content);
+                using HttpClient httpClient = new(handler);
+                httpClient.Timeout = TimeSpan.FromSeconds(VolumeXmlRequestTimeoutSeconds);
+                try
+                {
+                    var response = await httpClient.GetAsync(pathURI, token).ConfigureAwait(false);
+                    response.EnsureSuccessStatusCode();
+
+                    if (token.IsCancellationRequested)
+                        throw new TaskCanceledException("LoadHttpAsync cancelled by token");
+
+                    var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    if (token.IsCancellationRequested)
+                        throw new TaskCanceledException("LoadHttpAsync cancelled by token");
+
+                    return XDocument.Parse(content);
+                }
+                catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+                {
+                    lastException = e;
+                    if (attempt == VolumeXmlMaxRetries)
+                        throw new WebException($"Error connecting to volume server after {VolumeXmlMaxRetries + 1} attempts: \n{path}\n{e.Message}", e);
+                }
             }
-            catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
-            {
-                throw new WebException($"Error connecting to volume server: \n{path}\n{e.Message}", e);
-            }
+
+            if (lastException != null)
+                throw new WebException($"Error connecting to volume server: \n{path}\n{lastException.Message}", lastException);
+            throw new WebException($"Error connecting to volume server: \n{path}", null);
         }
 
         protected static XDocument LoadLocal(string path)
@@ -729,6 +752,11 @@ namespace Viking.VolumeModel
                 catch (XMLMissingDataException e)
                 {
                     Trace.WriteLine($"Optional {e.Message}");
+                }
+                catch (Exception e)
+                {
+                    Trace.WriteLine($"FetchStosZip failed, falling back to normal STOS loading: {e.Message}");
+                    HaveStosZip = false;
                 }
 
                 int countStos = 0;

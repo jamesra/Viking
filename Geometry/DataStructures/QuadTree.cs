@@ -189,7 +189,7 @@ namespace Geometry
                 {
                     rwLock.EnterWriteLock();
 
-                    this.Root.Update(p, value);
+                    SetValueAtPoint(p, value);
                 }
                 finally
                 {
@@ -268,13 +268,15 @@ namespace Geometry
             }
         }
 
-        public void Update(GridVector2 p, T value)
+        protected virtual void SetValueAtPoint(GridVector2 p, T value) => Root.Update(p, value);
+
+        public virtual void Update(GridVector2 p, T value)
         {
             try
             {
                 rwLock.EnterWriteLock();
 
-                Root.Update(p, value);
+                SetValueAtPoint(p, value);
             }
             finally
             {
@@ -305,6 +307,29 @@ namespace Geometry
         }
 
         public bool ContainsKey(GridVector2 p) => Contains(p);
+
+        public bool TryRemove(GridVector2 point, out T RemovedValue)
+        {
+            RemovedValue = default;
+
+            if (Root is null)
+                return false;
+
+            try
+            {
+                rwLock.EnterWriteLock();
+                Root.Remove(point, out RemovedValue);
+                return true;
+            }
+            catch (KeyNotFoundException)
+            {
+                return false;
+            }
+            finally
+            {
+                rwLock.ExitWriteLock();
+            }
+        }
 
         /*
         /// <summary>
@@ -599,6 +624,47 @@ namespace Geometry
             base.PointRemoved(node, point, value);
         }
 
+        public override void Update(GridVector2 p, T value)
+        {
+            try
+            {
+                rwLock.EnterWriteLock();
+
+                SetValueAtPoint(p, value);
+            }
+            finally
+            {
+                rwLock.ExitWriteLock();
+            }
+        }
+
+        protected override void SetValueAtPoint(GridVector2 p, T value)
+        {
+            if (!TryFindNearest(p, out GridVector2 foundPoint, out T oldValue, out double distance) ||
+                distance > Global.Epsilon ||
+                !foundPoint.Equals(p))
+            {
+                Root.Update(p, value);
+                return;
+            }
+
+            if (EqualityComparer<T>.Default.Equals(oldValue, value))
+                return;
+
+            if (!ValueToNodeTable.TryGetValue(oldValue, out QuadTreeNode<T> node))
+            {
+                Root.Update(p, value);
+                return;
+            }
+
+            ValueToNodeTable.Remove(oldValue);
+            if (ValueToNodeTable.ContainsKey(value))
+                throw new DuplicateValueException(p, value);
+
+            node.Value = value;
+            ValueToNodeTable.Add(value, node);
+        }
+
         //ICollection<GridVector2> IDictionary<GridVector2, T>.Keys => Keys.ToArray();
 
         //ICollection<T> IDictionary<GridVector2, T>.Values => Values;
@@ -815,34 +881,6 @@ namespace Geometry
             }
 
             return true;
-        }
-
-
-        public bool TryRemove(GridVector2 point, out T RemovedValue)
-        {
-            RemovedValue = default;
-
-            if (Root is null)
-            {
-                return false;
-            }
-
-            try
-            {
-                rwLock.EnterWriteLock();
-
-
-                Root.Remove(point, out RemovedValue);
-                return true;
-            }
-            catch (KeyNotFoundException)
-            {
-                return false;
-            }
-            finally
-            {
-                rwLock.ExitWriteLock();
-            }
         }
 
         public bool TryGetPosition(T value, out GridVector2 position)

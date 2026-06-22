@@ -139,7 +139,7 @@ namespace MorphologyMesh
         /// </summary>
         internal static List<GridVector2> NudgeCorrespondingVerticies(GridPolygon[] Polygons, List<GridVector2> correspondingPoints)
         {
-            Dictionary<GridVector2, List<PolygonIndex>> pointToIndexList = [];
+            Dictionary<GridVector2, List<PolygonIndex>> pointToIndexList = new(GridVector2EqualityComparer.Default);
             //GridPolygon[] Polygons = this.Polygons;
 
             for (int iPoly = 0; iPoly < Polygons.Length; iPoly++)// GridPolygon poly in Polygons)

@@ -89,7 +89,7 @@ namespace Geometry
             return Compare(this, SegB);
         }
 
-        public override int GetHashCode() => (int)MinX;
+        public override int GetHashCode() => GeometryHashCode.LineSegmentUndirected(A, B);
 
         public override bool Equals(object obj)
         {

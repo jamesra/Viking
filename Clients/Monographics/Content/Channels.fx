@@ -1,3 +1,11 @@
+#if OPENGL
+#define VS_SHADERMODEL vs_3_0
+#define PS_SHADERMODEL ps_3_0
+#else
+#define VS_SHADERMODEL vs_4_0
+#define PS_SHADERMODEL ps_4_0
+#endif
+
 float4x4 World;
 float4x4 View;
 float4x4 Projection;
@@ -49,7 +57,7 @@ technique Technique1
         // TODO: set renderstates here.
 
         //VertexShader = compile vs_1_1 VertexShaderFunction();
-        PixelShader = compile ps_4_0 PixelShaderFunction();
+        PixelShader = compile PS_SHADERMODEL PixelShaderFunction();
     }
 }
 

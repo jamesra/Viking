@@ -121,6 +121,18 @@ namespace Viking.Common
 
                     if (ExtensionItem != null)
                         menuStrip.Items.Add(ExtensionItem);
+
+                    // If extension contributes to the shared Preferences menu, add its item there
+                    if (menuObj is IPreferencesMenuContributor preferencesContributor)
+                    {
+                        System.Windows.Forms.ToolStripItem[] preferencesMenus = menuStrip.Items.Find("menuPreferences", false);
+                        if (preferencesMenus != null && preferencesMenus.Length > 0 && preferencesMenus[0] is System.Windows.Forms.ToolStripMenuItem preferencesMenu)
+                        {
+                            System.Windows.Forms.ToolStripMenuItem item = preferencesContributor.GetPreferencesMenuItem();
+                            if (item != null)
+                                preferencesMenu.DropDownItems.Add(item);
+                        }
+                    }
                 }
 
                 //Create a menu item if we haven't yet
@@ -228,6 +240,15 @@ namespace Viking.Common
                         continue;
                     }
 
+#if !DEBUG
+                    // Release builds: load only Authenticode-signed extension assemblies
+                    if (!AuthenticodeVerifier.IsAuthenticodeSigned(FileName))
+                    {
+                        Trace.WriteLine($"Skipping extension assembly (not Authenticode-signed): {FileName}", "ExtMan");
+                        continue;
+                    }
+#endif
+
                     Assembly A = Assembly.LoadFrom(FileName);
 
                     VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
@@ -244,6 +265,16 @@ namespace Viking.Common
                 catch (System.BadImageFormatException e)
                 {
                     Trace.WriteLine("Bad image format loading assembly " + FileName + ". This can be OK if it is a support assembly and not an extension module.  Otherwise it usually indicates loading a 64-bit DLL from a 32-bit process.");
+                    continue;
+                }
+                catch (System.IO.FileLoadException ex)
+                {
+                    Trace.WriteLine($"Could not load assembly (policy or load failure): {FileName}. {ex.Message}", "ExtMan");
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"Error loading extension assembly {FileName}: {ex.Message}", "ExtMan");
                     continue;
                 }
             }
@@ -265,6 +296,11 @@ namespace Viking.Common
             catch (FileNotFoundException)
             {
                 // File not found, treat as invalid
+                return false;
+            }
+            catch (FileLoadException)
+            {
+                // Policy block (e.g. 0x800711C7), or other load failure reading metadata
                 return false;
             }
         }

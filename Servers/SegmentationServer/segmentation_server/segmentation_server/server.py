@@ -7,6 +7,8 @@ to the SegmentationModel implementation.
 """
 
 import asyncio
+import importlib.metadata
+import signal
 import threading
 import time
 from concurrent import futures
@@ -27,6 +29,8 @@ from segmentation_grpc import (
     UploadImageResponse,
     DeleteImageRequest,
     DeleteImageResponse,
+    ServerStatusRequest,
+    ServerStatusResponse,
     Point,
     Polygon,
     SegmentResult,
@@ -74,17 +78,20 @@ class SegmentationServicer(SegmentationServiceServicer):
         cache_max_memory_bytes: int = 1073741824,  # 1 GB
         cache_ttl_seconds: int = 300,  # 5 minutes
         inference_executor: Optional[Any] = None,
+        server_start_time: Optional[float] = None,
     ) -> None:
         """
         Initialize the servicer with a SegmentationModel and ImageCache.
-        
+
         Args:
             cache_max_memory_bytes: Maximum memory for image cache (default: 1 GB)
             cache_ttl_seconds: Time-to-live for cached images (default: 5 minutes)
             inference_executor: Optional executor for model inference operations
+            server_start_time: Monotonic start time for uptime (from time.monotonic())
         """
         self.model = SegmentationModel()
         self.inference_executor = inference_executor
+        self._server_start_time = server_start_time if server_start_time is not None else 0.0
         self.image_cache = ImageCache(
             max_memory_bytes=cache_max_memory_bytes,
             ttl_seconds=cache_ttl_seconds,
@@ -160,8 +167,8 @@ class SegmentationServicer(SegmentationServiceServicer):
                 index=segment['index'],
                 score=segment['score'],
                 mask=mask_bytes,
-                x=x,
-                y=y
+                X=x,
+                Y=y
             )
             
             # Add polygons to the segment result
@@ -561,6 +568,25 @@ class SegmentationServicer(SegmentationServiceServicer):
             print(f" (failed in {elapsed_time:.3f}s)")
             print(f"Error deleting image: {e}\n{stack_trace}")
             await context.abort(grpc.StatusCode.INTERNAL, f"Error deleting image: {e}")
+
+    async def GetServerStatus(
+        self,
+        request: ServerStatusRequest,
+        context: ServicerContext,
+    ) -> ServerStatusResponse:
+        """
+        Return server version, uptime, and optional message for health/selection UI.
+        """
+        try:
+            version = importlib.metadata.version("segmentation_server")
+        except importlib.metadata.PackageNotFoundError:
+            version = "0.1.0"
+        uptime_seconds = time.monotonic() - self._server_start_time if self._server_start_time else 0.0
+        return ServerStatusResponse(
+            version=version,
+            uptime_seconds=uptime_seconds,
+            message="",
+        )
     
     async def SegmentImage(
         self,
@@ -695,7 +721,8 @@ async def serve(port: int = 50051, max_workers: int = 10, inference_workers: Opt
     # Create a dedicated executor for model inference operations
     if inference_workers is None:
         inference_workers = max_workers
-    
+
+    server_start_time = time.monotonic()
     inference_executor = futures.ThreadPoolExecutor(max_workers=inference_workers)
     
     # Create a server with the specified number of workers
@@ -709,7 +736,11 @@ async def serve(port: int = 50051, max_workers: int = 10, inference_workers: Opt
 
     # Add the servicer to the server with inference executor
     add_SegmentationServiceServicer_to_server(
-        SegmentationServicer(inference_executor=inference_executor), server
+        SegmentationServicer(
+            inference_executor=inference_executor,
+            server_start_time=server_start_time,
+        ),
+        server,
     )
 
     # Add a port for the server to listen on
@@ -720,8 +751,28 @@ async def serve(port: int = 50051, max_workers: int = 10, inference_workers: Opt
     await server.start()
     print(f"Server started, listening on {server_address}")
 
-    # Keep the server running until it is terminated
-    await server.wait_for_termination()
+    # Graceful shutdown: on SIGTERM/SIGINT, stop the server so __del__ does not run against a closed loop
+    loop = asyncio.get_running_loop()
+    grace_seconds = 5
+
+    def _request_stop() -> None:
+        asyncio.ensure_future(server.stop(grace_seconds))
+
+    try:
+        loop.add_signal_handler(signal.SIGTERM, _request_stop)
+        loop.add_signal_handler(signal.SIGINT, _request_stop)
+    except NotImplementedError:
+        # Windows: add_signal_handler not available; use signal.signal and schedule on the loop
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            try:
+                signal.signal(sig, lambda s, f: loop.call_soon_threadsafe(_request_stop))
+            except (ValueError, OSError):
+                pass
+
+    try:
+        await server.wait_for_termination()
+    except asyncio.CancelledError:
+        await server.stop(grace_seconds)
 
 
 if __name__ == '__main__':

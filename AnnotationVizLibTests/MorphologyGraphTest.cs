@@ -11,9 +11,9 @@ namespace AnnotationVizLibTests
 
     public static class GraphTestShared
     {
-        public static string WCFEndpoint = "https://webdev.connectomes.utah.edu/RC1Test/Annotation/Annotate.svc";
-        public static string ODataEndpoint = "https://webdev.connectomes.utah.edu/RC1Test/OData/";
-        public static string ExportEndpoint = "https://webdev.connectomes.utah.edu/RC1Test/Export/";
+        public static string WCFEndpoint =    "https://webdev1.codepharm.net/RC1Test/Annotation/Annotate.svc";
+        public static string ODataEndpoint =  "https://webdev1.codepharm.net/RC1Test/OData/";
+        public static string ExportEndpoint = "https://webdev1.codepharm.net/RC1Test/Export/";
         public static System.Net.NetworkCredential userCredentials;
 
         static GraphTestShared()

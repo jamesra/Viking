@@ -12,12 +12,12 @@ namespace Geometry.Transforms
     /// </summary>
     static class GridTransformHelper
     {
-        static readonly ConcurrentDictionary<GridVector2, int[]> TriangleIndexDictionary = new();
+        static readonly ConcurrentDictionary<GridVector2, int[]> TriangleIndexDictionary = new(GridVector2EqualityComparer.Default);
         //        static ConcurrentDictionary<GridVector2, MappingGridTriangle[]> TriangleListDictionary = new ConcurrentDictionary<GridVector2, MappingGridTriangle[]>();
 
-        static readonly ConcurrentDictionary<GridVector2, List<int>[]> EdgesDictionary = new();
+        static readonly ConcurrentDictionary<GridVector2, List<int>[]> EdgesDictionary = new(GridVector2EqualityComparer.Default);
 
-        public static int IndexForCoord(int x, int y, int GridSizeX, int GridSizeY) => y + (x * GridSizeY);
+        public static int IndexForCoord(int x, int y, int GridSizeX, int GridSizeY) => x + (y * GridSizeX);
 
         /// <summary>
         /// Returns triangles for a grid of specified size, thread safe
@@ -37,25 +37,15 @@ namespace Geometry.Transforms
                 int iNextIndex = 0;
 
 
-                for (int x = 0; x < GridSizeX - 1; x++)
+                for (int y = 0; y < GridSizeY - 1; y++)
                 {
-                    for (int y = 0; y < GridSizeY - 1; y++)
+                    for (int x = 0; x < GridSizeX - 1; x++)
                     {
-                        /*
                         int botLeft = x + (y * GridSizeX);
                         int botRight = (x + 1) + (y * GridSizeX);
                         int topLeft = x + ((y + 1) * GridSizeX);
                         int topRight = (x + 1) + ((y + 1) * GridSizeX);
-                        */
 
-                        int botLeft = y + (x * GridSizeY);
-                        int topLeft = (y + 1) + (x * GridSizeY);
-                        int botRight = y + ((x + 1) * GridSizeY);
-                        int topRight = (y + 1) + ((x + 1) * GridSizeY);
-
-
-                        //int[] triangles = new int[] { botLeft, botRight, topLeft, botRight, topRight, topLeft };
-                        //triangleIndicies.AddRange(triangles);
                         int[] newIndicies = [botLeft, botRight, topLeft, botRight, topRight, topLeft];
                         newIndicies.CopyTo(Indicies, iNextIndex);
                         iNextIndex += newIndicies.Length;
@@ -105,8 +95,7 @@ namespace Geometry.Transforms
                 iY--;
             }
 
-            int iTri = (iY << 1) + (((GridSizeY - 1) << 1) * iX); //(iY * 2) + ((GridSizeY - 1) * 2 * iX)
-            //int iTri = (iX * 2) + ((GridSizeX-1) * 2 * iY);
+            int iTri = 2 * (iY * (GridSizeX - 1) + iX);
             iTri += IsUpper ? 1 : 0;
             iTri *= 3;//Multiply by three to get the triangle offset
 
@@ -138,21 +127,21 @@ namespace Geometry.Transforms
                     edges[i] = new List<int>(6); //The max number of edges for a grid point
                 }
 
-                for (int x = 0; x < GridSizeX; x++)
+                for (int y = 0; y < GridSizeY; y++)
                 {
-                    for (int y = 0; y < GridSizeY; y++)
+                    for (int x = 0; x < GridSizeX; x++)
                     {
-                        int iPoint = y + (x * GridSizeY); //The edges we are populating
+                        int iPoint = x + (y * GridSizeX);
 
                         if (y + 1 < GridSizeY)
                         {
-                            int iAbove = (y + 1) + (x * GridSizeY);
+                            int iAbove = x + ((y + 1) * GridSizeX);
                             edges[iPoint].Add(iAbove);
                             edges[iAbove].Add(iPoint);
 
-                            if (x - 1 > 0)
+                            if (x > 0)
                             {
-                                int iAboveLeft = (y + 1) + ((x - 1) * GridSizeY);
+                                int iAboveLeft = (x - 1) + ((y + 1) * GridSizeX);
                                 edges[iPoint].Add(iAboveLeft);
                                 edges[iAboveLeft].Add(iPoint);
                             }
@@ -160,7 +149,7 @@ namespace Geometry.Transforms
 
                         if (x + 1 < GridSizeX)
                         {
-                            int iRight = y + ((x + 1) * GridSizeY);
+                            int iRight = (x + 1) + (y * GridSizeX);
                             edges[iPoint].Add(iRight);
                             edges[iRight].Add(iPoint);
                         }
@@ -214,12 +203,10 @@ namespace Geometry.Transforms
         }
 
         public GridTransform(MappingGridVector2[] points, GridRectangle mappedBounds, int gridSizeX, int gridSizeY, TransformBasicInfo info)
-            : base(points, mappedBounds, info)
+            : base(points, mappedBounds, info, preserveMapPointOrder: true)
         {
             GridSizeX = gridSizeX;
             GridSizeY = gridSizeY;
-
-            Array.Sort(points);
 
             Debug.Assert(points.Length == gridSizeX * gridSizeY, "Invalid argument to GridTransform constructor.  Number of points incorrect");
             if (points.Length != gridSizeX * gridSizeY)
@@ -386,7 +373,7 @@ namespace Geometry.Transforms
             if (RoundErrorTestValue > 0.99)
             {
                 //OK, better check if there is a rounding error we need to correct.
-                if (!L.Intersects(foundMapLine, out testIntersection))
+                if (!L.Intersects(pair.mapLine, out testIntersection))
                 {
                     //OK, probably a rounding error for a point very close to the end of the line
                     if (IntersectDir == Direction.RIGHT || IntersectDir == Direction.LEFT)

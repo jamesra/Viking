@@ -28,8 +28,10 @@ namespace WebAnnotation.WPF.Forms
         private double _originalCircleOpacityParentless;
         private double _originalCircleOpacityWithParent;
         private double _originalSegmentationPointRadius;
-        private double _originalPolygonPointRadius;
+        private double _originalPolygonPointDiameter;
         private double _originalSmallestRenderedSize;
+        private double _originalPolygonVertexPointsVisibleAtWidthFraction;
+        private double _originalPolygonVertexPointsHiddenAtWidthFraction;
         #endregion
 
         #region Basic Settings Properties
@@ -256,19 +258,38 @@ namespace WebAnnotation.WPF.Forms
             }
         }
 
-        private double _polygonPointRadius;
-        public double PolygonPointRadius
+        private double _polygonPointDiameter;
+        public double PolygonPointDiameter
         {
-            get => _polygonPointRadius;
+            get => _polygonPointDiameter;
             set
             {
-                if (Math.Abs(_polygonPointRadius - value) > 0.01)
+                if (Math.Abs(_polygonPointDiameter - value) > 0.01)
                 {
-                    _polygonPointRadius = MathUtils.Clamp(value, 1.0, 50.0);
+                    _polygonPointDiameter = MathUtils.Clamp(value, 2.0, 100.0);
                     OnPropertyChanged();
+                    OnPropertyChanged(nameof(PolygonVertexDisplayDiameterPx));
                 }
             }
         }
+
+        private double _sceneDownsample = 1.0;
+        public double SceneDownsample
+        {
+            get => _sceneDownsample;
+            set
+            {
+                if (Math.Abs(_sceneDownsample - value) > 0.0001)
+                {
+                    _sceneDownsample = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(PolygonVertexDisplayDiameterPx));
+                }
+            }
+        }
+
+        public int PolygonVertexDisplayDiameterPx =>
+            _sceneDownsample > 0 ? (int)(_polygonPointDiameter / _sceneDownsample) : 0;
 
         private double _smallestRenderedSize;
         public double SmallestRenderedSize
@@ -283,6 +304,68 @@ namespace WebAnnotation.WPF.Forms
                 }
             }
         }
+
+        private int _sceneWidthPixels = 1920;
+        public int SceneWidthPixels
+        {
+            get => _sceneWidthPixels;
+            set
+            {
+                if (_sceneWidthPixels != value)
+                {
+                    _sceneWidthPixels = value;
+                    OnPropertyChanged(nameof(VisibleAtPixelDisplay));
+                    OnPropertyChanged(nameof(HiddenAtPixelDisplay));
+                }
+            }
+        }
+
+        private double _polygonVertexPointsVisibleAtWidthFraction;
+        public double PolygonVertexPointsVisibleAtWidthFraction
+        {
+            get => _polygonVertexPointsVisibleAtWidthFraction;
+            set
+            {
+                double clamped = MathUtils.Clamp(value, 0.0001, 0.02);
+                if (clamped <= _polygonVertexPointsHiddenAtWidthFraction)
+                    clamped = Math.Min(0.02, _polygonVertexPointsHiddenAtWidthFraction + 0.0001);
+                if (Math.Abs(_polygonVertexPointsVisibleAtWidthFraction - clamped) > 0.00001)
+                {
+                    _polygonVertexPointsVisibleAtWidthFraction = clamped;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(VisibleAtPixelDisplay));
+                    OnPropertyChanged(nameof(VertexVisibilityRangeDisplay));
+                }
+            }
+        }
+
+        private double _polygonVertexPointsHiddenAtWidthFraction;
+        public double PolygonVertexPointsHiddenAtWidthFraction
+        {
+            get => _polygonVertexPointsHiddenAtWidthFraction;
+            set
+            {
+                double clamped = MathUtils.Clamp(value, 0.00005, 0.015);
+                if (clamped >= _polygonVertexPointsVisibleAtWidthFraction)
+                    clamped = Math.Max(0.00005, _polygonVertexPointsVisibleAtWidthFraction - 0.0001);
+                if (Math.Abs(_polygonVertexPointsHiddenAtWidthFraction - clamped) > 0.00001)
+                {
+                    _polygonVertexPointsHiddenAtWidthFraction = clamped;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(HiddenAtPixelDisplay));
+                    OnPropertyChanged(nameof(VertexVisibilityRangeDisplay));
+                }
+            }
+        }
+
+        public string VertexVisibilityRangeDisplay =>
+            $"Hidden: {_polygonVertexPointsHiddenAtWidthFraction * 100:F2}% ({(int)(_sceneWidthPixels * _polygonVertexPointsHiddenAtWidthFraction)} px){Environment.NewLine}Visible: {_polygonVertexPointsVisibleAtWidthFraction * 100:F2}% ({(int)(_sceneWidthPixels * _polygonVertexPointsVisibleAtWidthFraction)} px)";
+
+        public string VisibleAtPixelDisplay =>
+            $"{_polygonVertexPointsVisibleAtWidthFraction * 100:F2}% ({(int)(_sceneWidthPixels * _polygonVertexPointsVisibleAtWidthFraction)} px)";
+
+        public string HiddenAtPixelDisplay =>
+            $"{_polygonVertexPointsHiddenAtWidthFraction * 100:F2}% ({(int)(_sceneWidthPixels * _polygonVertexPointsHiddenAtWidthFraction)} px)";
 
         #endregion
 
@@ -325,8 +408,12 @@ namespace WebAnnotation.WPF.Forms
             double circleOpacityParentless,
             double circleOpacityWithParent,
             double segmentationPointRadius,
-            double polygonPointRadius,
-            double smallestRenderedSize)
+            double polygonPointDiameter,
+            double smallestRenderedSize,
+            double polygonVertexPointsVisibleAtWidthFraction,
+            double polygonVertexPointsHiddenAtWidthFraction,
+            int? sceneWidthPixels = null,
+            double? sceneDownsample = null)
         {
             // Store current values
             _numSectionsInMemory = numSectionsInMemory;
@@ -340,8 +427,12 @@ namespace WebAnnotation.WPF.Forms
             _penSimplifyThreshold = penSimplifyThreshold;
             _minRadius = minRadius;
             _segmentationPointRadius = segmentationPointRadius;
-            _polygonPointRadius = polygonPointRadius;
+            _polygonPointDiameter = polygonPointDiameter;
             _smallestRenderedSize = smallestRenderedSize;
+            _sceneDownsample = sceneDownsample ?? 1.0;
+            _polygonVertexPointsVisibleAtWidthFraction = polygonVertexPointsVisibleAtWidthFraction;
+            _polygonVertexPointsHiddenAtWidthFraction = polygonVertexPointsHiddenAtWidthFraction;
+            _sceneWidthPixels = sceneWidthPixels ?? 1920;
 
             // Store original values for Cancel revert BEFORE setting properties
             _originalNumSectionsInMemory = numSectionsInMemory;
@@ -359,8 +450,10 @@ namespace WebAnnotation.WPF.Forms
             _originalCircleOpacityParentless = circleOpacityParentless;
             _originalCircleOpacityWithParent = circleOpacityWithParent;
             _originalSegmentationPointRadius = segmentationPointRadius;
-            _originalPolygonPointRadius = polygonPointRadius;
+            _originalPolygonPointDiameter = polygonPointDiameter;
             _originalSmallestRenderedSize = smallestRenderedSize;
+            _originalPolygonVertexPointsVisibleAtWidthFraction = polygonVertexPointsVisibleAtWidthFraction;
+            _originalPolygonVertexPointsHiddenAtWidthFraction = polygonVertexPointsHiddenAtWidthFraction;
 
             // Use property setters to ensure bindings are established correctly
             // Temporarily disable preview updates during initial load
@@ -377,8 +470,10 @@ namespace WebAnnotation.WPF.Forms
             CircleOpacityChanged = tempCircleHandler;
 
             SegmentationPointRadius = segmentationPointRadius;
-            PolygonPointRadius = polygonPointRadius;
+            PolygonPointDiameter = polygonPointDiameter;
             SmallestRenderedSize = smallestRenderedSize;
+            PolygonVertexPointsVisibleAtWidthFraction = polygonVertexPointsVisibleAtWidthFraction;
+            PolygonVertexPointsHiddenAtWidthFraction = polygonVertexPointsHiddenAtWidthFraction;
 
             OnPropertyChanged(string.Empty); // Notify all properties changed
         }
@@ -402,8 +497,10 @@ namespace WebAnnotation.WPF.Forms
             _originalCircleOpacityParentless = _circleOpacityParentless;
             _originalCircleOpacityWithParent = _circleOpacityWithParent;
             _originalSegmentationPointRadius = _segmentationPointRadius;
-            _originalPolygonPointRadius = _polygonPointRadius;
+            _originalPolygonPointDiameter = _polygonPointDiameter;
             _originalSmallestRenderedSize = _smallestRenderedSize;
+            _originalPolygonVertexPointsVisibleAtWidthFraction = _polygonVertexPointsVisibleAtWidthFraction;
+            _originalPolygonVertexPointsHiddenAtWidthFraction = _polygonVertexPointsHiddenAtWidthFraction;
         }
 
         public void RevertToOriginal()
@@ -423,8 +520,10 @@ namespace WebAnnotation.WPF.Forms
             _circleOpacityParentless = _originalCircleOpacityParentless;
             _circleOpacityWithParent = _originalCircleOpacityWithParent;
             _segmentationPointRadius = _originalSegmentationPointRadius;
-            _polygonPointRadius = _originalPolygonPointRadius;
+            _polygonPointDiameter = _originalPolygonPointDiameter;
             _smallestRenderedSize = _originalSmallestRenderedSize;
+            _polygonVertexPointsVisibleAtWidthFraction = _originalPolygonVertexPointsVisibleAtWidthFraction;
+            _polygonVertexPointsHiddenAtWidthFraction = _originalPolygonVertexPointsHiddenAtWidthFraction;
 
             OnPropertyChanged(string.Empty); // Notify all properties changed
         }
@@ -446,8 +545,10 @@ namespace WebAnnotation.WPF.Forms
             _circleOpacityParentless = 0.5;
             _circleOpacityWithParent = 1.0;
             _segmentationPointRadius = 5.0;
-            _polygonPointRadius = 6.0;
+            _polygonPointDiameter = 12.0;
             _smallestRenderedSize = 0.5;
+            _polygonVertexPointsVisibleAtWidthFraction = 0.0025;
+            _polygonVertexPointsHiddenAtWidthFraction = 0.002;
 
             OnPropertyChanged(string.Empty); // Notify all properties changed
         }

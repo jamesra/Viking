@@ -1,8 +1,8 @@
 {
   "profiles": {
-    "MonogameTestbed": {
+    "MonogameTestbed (RC2 Vasculature)": {
       "commandName": "Project",
-      "commandLineArgs": "-e RPC2 -s 9 -v -l -o C:\\Temp\\Test.dae ",
+      "commandLineArgs": "-s 1 -e http://websvc.codepharm.net/RC2/OData -o C:\\Temp\\Cell_DAEs\\VikingMeshFiles\\RC2\\Vasculature",
       "workingDirectory": "$(TargetDir)"
     }
   }

@@ -303,7 +303,7 @@ namespace MonogameTestbed
         /// <returns></returns>
         private static Dictionary<GridVector2, int> CreatePointToShapeIndexLookup(GridPolygon[] Shapes)
         {
-            Dictionary<GridVector2, int> PointToShapeIndex = [];
+            Dictionary<GridVector2, int> PointToShapeIndex = new(GridVector2EqualityComparer.Default);
             //Create an index map of points
             List<GridVector2> listPoints = [];
             List<int> listIndicies = [];
@@ -336,7 +336,7 @@ namespace MonogameTestbed
         /// <returns></returns>
         private static Dictionary<GridVector2, SortedSet<int>> CreatePointToConnectedTrianglesIndexLookup(GridTriangle[] Shapes)
         {
-            Dictionary<GridVector2, SortedSet<int>> PointToShapeIndex = [];
+            Dictionary<GridVector2, SortedSet<int>> PointToShapeIndex = new(GridVector2EqualityComparer.Default);
             //Create an index map of points
             List<GridVector2> listPoints = [];
             List<int> listIndicies = [];
@@ -526,7 +526,7 @@ namespace MonogameTestbed
 
         private static Dictionary<GridVector2, int> CreatePointToShapeIndexLookup(List<GridVector2[]> shapeVerticies)
         {
-            Dictionary<GridVector2, int> PointToShapeIndex = [];
+            Dictionary<GridVector2, int> PointToShapeIndex = new(GridVector2EqualityComparer.Default);
             //Create an index map of points
             List<GridVector2> listPoints = [];
             List<int> listIndicies = [];
