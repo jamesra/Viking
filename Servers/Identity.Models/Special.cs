@@ -1,4 +1,4 @@
-﻿namespace Viking.Identity.Models
+namespace Viking.Identity.Models
 {
     public readonly struct GroupInfo
     {
@@ -27,8 +27,9 @@
 
         public static class Groups
         {
-            public static GroupInfo Everyone = new GroupInfo(-1, "Everyone"); 
-             
+            public static GroupInfo Everyone = new GroupInfo(-1, "Everyone");
+            public static GroupInfo Anonymous = new GroupInfo(-2, "Anonymous");
+
             //public const long AdminId = -2;
             //public const string Admin = "Administrators";
         }

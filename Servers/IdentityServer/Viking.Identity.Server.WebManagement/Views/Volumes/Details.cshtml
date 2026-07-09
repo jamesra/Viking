@@ -1,4 +1,4 @@
-﻿@using Viking.Identity.Server.Authorization
+@using Viking.Identity.Server.Authorization
 @model Viking.Identity.Models.Volume
 
 @{
@@ -67,6 +67,12 @@
                             <a href="@Model.Endpoint" target="_blank" class="btn btn-success btn-sm">
                                 <i class="bi bi-box-arrow-up-right"></i> Open Volume
                             </a>
+                            <a asp-controller="VikingLaunch" asp-action="CreateCode" asp-route-volume="@(Model.Endpoint?.ToString())" class="btn btn-primary btn-sm">
+                                <i class="bi bi-box-arrow-up-right"></i> Open in Viking
+                            </a>
+                            <a href="https://websvc.codepharm.net/Software/Viking/Viking-win-Setup.exe" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary btn-sm" title="Download Viking if not installed">
+                                <i class="bi bi-download"></i> Install Viking
+                            </a>
                             <small class="text-muted ms-2">@Model.Endpoint</small>
                         </dd>
                     }
@@ -100,6 +106,12 @@
                 {
                     <a href="@Model.Endpoint" target="_blank" class="list-group-item list-group-item-action">
                         <i class="bi bi-box-arrow-up-right"></i> Open Volume
+                    </a>
+                    <a asp-controller="VikingLaunch" asp-action="CreateCode" asp-route-volume="@(Model.Endpoint?.ToString())" class="list-group-item list-group-item-action">
+                        <i class="bi bi-box-arrow-up-right"></i> Open in Viking
+                    </a>
+                    <a href="https://websvc.codepharm.net/Software/Viking/Viking-win-Setup.exe" target="_blank" rel="noopener noreferrer" class="list-group-item list-group-item-action" title="Download Viking if not installed">
+                        <i class="bi bi-download"></i> Install Viking
                     </a>
                 }
                 @if (Model.Parent != null)

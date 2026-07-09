@@ -86,7 +86,7 @@ namespace Viking.Identity
                 result = new Client
                 {
                     ClientId = clientId,
-                    AllowedGrantTypes = new[] { GrantType.AuthorizationCode, GrantType.ResourceOwnerPassword, GrantType.ClientCredentials },
+                    AllowedGrantTypes = new[] { GrantType.AuthorizationCode, GrantType.ResourceOwnerPassword, GrantType.ClientCredentials, VikingUserTokenGrantValidator.VikingUserTokenGrantType },
                     RequireConsent = false,
                     ClientSecrets = { _clientSecret },
                     RedirectUris = { new Uri(_redirectUri, "signin-oidc").ToString() },

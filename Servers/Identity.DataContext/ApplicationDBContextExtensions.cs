@@ -1,4 +1,4 @@
-﻿using Viking.Identity.Data;
+using Viking.Identity.Data;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -327,7 +327,39 @@ namespace Viking.Identity.Data
 
             var rr = recursiveResults.SelectMany(rr => rr.Result);
             Results.AddRange(rr);
+
+            // Every user is considered a member of the Anonymous group (virtual membership)
+            var anonymousGroup = await context.Group.FindAsync(Special.Groups.Anonymous.Id);
+            if (anonymousGroup != null && !Results.Any(g => g.Id == Special.Groups.Anonymous.Id))
+            {
+                Results.Add(anonymousGroup);
+            }
+
             return Results.Distinct();
+        }
+
+        /// <summary>
+        /// Returns permissions for the Anonymous group only (for unauthenticated callers).
+        /// Same dictionary shape as UserResourcePermissionsByType: resource Id -> permission ids.
+        /// </summary>
+        public static async Task<Dictionary<long, string[]>> UserResourcePermissionsByTypeForAnonymous(this ApplicationDbContext context, [NotNull] string[] resourceTypeIds)
+        {
+            if (resourceTypeIds == null || !resourceTypeIds.Any())
+            {
+                return new Dictionary<long, string[]>();
+            }
+
+            var group_permissions = await context.GrantedGroupPermissions
+                .Include(ggp => ggp.Resource)
+                .Where(ggp => ggp.GroupId == Special.Groups.Anonymous.Id && resourceTypeIds.Contains(ggp.Resource.ResourceTypeId))
+                .Select(ggp => new { ggp.ResourceId, ggp.Resource.Name, ggp.PermissionId, ggp.Resource.ResourceTypeId })
+                .ToListAsync();
+
+            var result = group_permissions
+                .GroupBy(p => p.ResourceId, p => p.PermissionId)
+                .ToDictionary(d => d.Key, d => d.ToArray());
+
+            return result;
         }
 
         /// <summary>

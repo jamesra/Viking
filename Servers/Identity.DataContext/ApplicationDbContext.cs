@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Security.Policy;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -116,7 +116,11 @@ namespace Viking.Identity.Data
                 .Property(s => s.Endpoint)
                 .HasColumnName("Endpoint")
                 .HasConversion(uriConverter);
-                 
+
+            builder.Entity<VikingLaunchCode>()
+                .ToTable("VikingLaunchCodes")
+                .HasIndex(c => c.ExpiresAtUtc);
+
             InitialPopulationOfDatabase(builder);
         }
 
@@ -157,11 +161,14 @@ namespace Viking.Identity.Data
             //////////////////////////
             /// Create standard groups 
             var EveryoneGroup = new Group { Id = Special.Groups.Everyone, Name = Special.Groups.Everyone };
+            var AnonymousGroup = new Group { Id = Special.Groups.Anonymous, Name = Special.Groups.Anonymous };
             builder.Entity<Group>().HasData(new Group[] {
-               EveryoneGroup
+               EveryoneGroup,
+               AnonymousGroup
             });
 
             // Note: UserToGroupAssignment for Everyone group will be created when first user registers
+            // Anonymous group has virtual membership (no UserToGroupAssignment rows)
         }
 
 
@@ -240,5 +247,7 @@ namespace Viking.Identity.Data
         public DbSet<GrantedGroupPermission> GrantedGroupPermissions { get; set; }
 
         public DbSet<GrantedUserPermission> GrantedUserPermissions { get; set; }
+
+        public DbSet<VikingLaunchCode> VikingLaunchCodes { get; set; }
     }
 }

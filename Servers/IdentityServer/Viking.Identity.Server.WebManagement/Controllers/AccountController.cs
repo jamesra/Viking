@@ -9,10 +9,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
 using Viking.Identity.Server.WebManagement.Extensions;
 using Viking.Identity.Server.WebManagement.Models.AccountViewModels;
+using Viking.Identity.Server;
 using Viking.Identity.Server.Services;
 
 namespace Viking.Identity.Server.WebManagement.Controllers
@@ -27,6 +29,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         private readonly ILogger _logger;
         private readonly ApplicationDbContext _context;
         private readonly Microsoft.AspNetCore.Hosting.IWebHostEnvironment _env;
+        private readonly VikingIdentityServerOptions _identityServerOptions;
 
         public AccountController(
             UserManager<ApplicationUser> userManager,
@@ -34,7 +37,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             IEmailSender emailSender,
             ApplicationDbContext context,
             ILogger<AccountController> logger,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+            IOptions<VikingIdentityServerOptions> identityServerOptions)
         {
             _env = env;
             _userManager = userManager;
@@ -42,6 +46,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             _emailSender = emailSender;
             _context = context;
             _logger = logger;
+            _identityServerOptions = identityServerOptions?.Value;
         }
 
         [TempData]
@@ -254,7 +259,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                         if (_env == null || !_env.IsDevelopment())
                         {
                             var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                            var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme);
+                            var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme, _identityServerOptions?.Authority);
                             await _emailSender.SendEmailConfirmationAsync(model.Email, callbackUrl);
                         }
                     }
@@ -414,7 +419,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 // For more information on how to enable account confirmation and password reset please
                 // visit https://go.microsoft.com/fwlink/?LinkID=532713
                 var code = await _userManager.GeneratePasswordResetTokenAsync(user);
-                var callbackUrl = Url.ResetPasswordCallbackLink(user.Id, code, Request.Scheme);
+                var callbackUrl = Url.ResetPasswordCallbackLink(user.Id, code, Request.Scheme, _identityServerOptions?.Authority);
                 await _emailSender.SendEmailAsync(new string[] { model.Email }, "Reset Password",
                    $"Please reset your password by clicking here: <a href='{callbackUrl}'>link</a>");
                 return RedirectToAction(nameof(ForgotPasswordConfirmation));

@@ -29,6 +29,7 @@ using Viking.Identity.Data;
 using Viking.Identity.Models;
 using Viking.Identity.Server;
 using Viking.Identity.Server.Authorization;
+using Viking.Identity.Server.Extensions.Services;
 using Viking.Identity.Server.Services;
 using Viking.Identity.Server.WebManagement.Extensions;
 using Viking.SSL;
@@ -157,6 +158,9 @@ public class Program
             // Configure Identity Server Data Context
             builder.Services.ConfigureIdentityServerDataContext(builder.Configuration);
 
+            builder.Services.Configure<VikingIdentityServerOptions>(
+                builder.Configuration.GetSection(nameof(VikingIdentityServerOptions)));
+
             var vikingConfig = builder.Configuration.GetSection("VikingIdentityServerOptions").Get<VikingIdentityServerOptions>();
 
             // Configure Authentication
@@ -184,6 +188,13 @@ public class Program
                 .AddDefaultTokenProviders();
 
             builder.Services.AddTransient<IEmailSender, EmailSender>();
+
+            builder.Services.AddScoped<Viking.Identity.Server.Extensions.Services.IPermissionService, Viking.Identity.Server.Extensions.Services.PermissionService>();
+            builder.Services.AddScoped<Viking.Identity.Server.Extensions.Services.IAuthenticationService, Viking.Identity.Server.Extensions.Services.AuthenticationService>();
+            builder.Services.Configure<DebugLoggingOptions>(builder.Configuration.GetSection("DebugLogging"));
+            builder.Services.AddSingleton<IDebugLoggingService, DebugLoggingService>();
+
+            builder.Services.AddHttpClient();
 
             // Configure Swagger/OpenAPI
             builder.Services.AddEndpointsApiExplorer();

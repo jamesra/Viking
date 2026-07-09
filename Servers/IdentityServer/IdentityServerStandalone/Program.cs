@@ -301,6 +301,7 @@ namespace Viking.Identity.Server.Standalone
             Log.Information("Adding remaining services...");
             builder.AddInMemoryCaching()
                 .AddAspNetIdentity<ApplicationUser>()
+                .AddExtensionGrantValidator<VikingUserTokenGrantValidator>()
                 .AddDefaultEndpoints();
 
             Log.Information("=== END IDENTITYSERVER CONFIGURATION DEBUG ===");

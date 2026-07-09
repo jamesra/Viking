@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -55,6 +55,10 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 UserPermissions = _permissionsHelper.ResourcePermissionsByUser(applicationDbContext),
                 GroupPermissions = _permissionsHelper.ResourcePermissionsByGroup(applicationDbContext)
             };
+
+            ViewBag.ResourceId = id;
+            ViewBag.ResourceName = applicationDbContext.Name;
+            ViewBag.ResourceType = applicationDbContext.ResourceTypeId;
 
             return View(model);
         }
