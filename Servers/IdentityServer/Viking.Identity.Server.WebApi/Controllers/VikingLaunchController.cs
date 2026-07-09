@@ -96,9 +96,6 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
                 return Unauthorized(new { error = "code expired" });
             }
 
-            launchCode.UsedAtUtc = now;
-            await _context.SaveChangesAsync();
-
             var authority = _identityOptions.Authority?.TrimEnd('/') ?? "";
             var tokenEndpoint = authority + "/connect/token";
             var scopes = "openid profile " + _identityOptions.ApiScopeNames;
@@ -141,6 +138,9 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
                 _logger.LogWarning("Launch exchange: no access_token in response");
                 return StatusCode(502, new { error = "invalid token response" });
             }
+
+            launchCode.UsedAtUtc = now;
+            await _context.SaveChangesAsync();
 
             var response = new LaunchExchangeResponse
             {

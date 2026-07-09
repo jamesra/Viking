@@ -196,6 +196,8 @@ public class Program
 
             builder.Services.AddHttpClient();
 
+            builder.Services.AddHealthChecks();
+
             // Configure Swagger/OpenAPI
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
@@ -223,6 +225,7 @@ public class Program
             app.UseAuthentication();
             app.UseAuthorization();
 
+            app.MapHealthChecks("/health");
             app.MapControllers();
             app.MapRazorPages();
             app.MapDefaultControllerRoute();

@@ -144,7 +144,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 //resource.AddGrantedGroupPermissions(grantedPermissions.Permissions, grantedPermissions.Groups);
 
                 await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index), grantedPermissions.Resource.Id);
+                return RedirectToAction(nameof(Index), new { id = grantedPermissions.Resource.Id });
             }
 
             //ViewData["ResourceId"] = new SelectList(_context.Group, "Id", "Name", grantedUserPermission.ResourceId);

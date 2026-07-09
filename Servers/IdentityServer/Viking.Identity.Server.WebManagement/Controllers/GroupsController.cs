@@ -336,7 +336,10 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            return RedirectToAction(nameof(Details));
+            ViewBag.AvailableParents = await _context.OrgUnit
+                .Select(ou => new SelectListItem(ou.Name, ou.Id.ToString()))
+                .ToListAsync();
+            return View(groupDetails);
         }
 
         // GET: Organizations/Delete/5
