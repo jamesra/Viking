@@ -174,7 +174,15 @@ public class Program
                     options.EnableCaching = true;
                 });
 
-            // Configure Authorization
+            // Configure Authorization — require bearer token on all endpoints unless [AllowAnonymous]
+            builder.Services.AddAuthorization(options =>
+            {
+                options.FallbackPolicy = new AuthorizationPolicyBuilder()
+                    .AddAuthenticationSchemes(OAuth2IntrospectionDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser()
+                    .Build();
+            });
+
             builder.Services.AddTransient<Duende.IdentityServer.Validation.ICustomTokenRequestValidator, Viking.Identity.Server.WebManagement.Extensions.UserScopeTokenRequestValidator>();
             builder.Services.AddScoped<IAuthorizationHandler, ResourceIdPermissionsAuthorizationHandler>();
             builder.Services.AddScoped<IAuthorizationHandler, ResourcePermissionsAuthorizationHandler>();
@@ -210,7 +218,7 @@ public class Program
             var app = builder.Build();
 
             // Configure the HTTP request pipeline
-            if (app.Environment.IsDevelopment() || Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") == "Docker")
+            if (app.Environment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();

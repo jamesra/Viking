@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"path": "IdentityServer"
+		},
+		{
+			"path": "Identity.DataContext"
+		},
+		{
+			"path": "Identity.Models"
+		},
+		{
+			"path": "Identity.Tests"
+		},
+		{
+			"path": "PasswordHashGenerator"
+		}
+	],
+	"settings": {
+		"dotnet.defaultSolution": "IdentityServer/IdentityServer.sln"
+	}
+}

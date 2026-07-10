@@ -304,6 +304,8 @@ namespace Viking.Identity.Server.Standalone
                 .AddExtensionGrantValidator<VikingUserTokenGrantValidator>()
                 .AddDefaultEndpoints();
 
+            services.AddTransient<Duende.IdentityServer.Validation.ICustomTokenRequestValidator, Viking.Identity.Server.WebManagement.Extensions.UserScopeTokenRequestValidator>();
+
             Log.Information("=== END IDENTITYSERVER CONFIGURATION DEBUG ===");
 
             // Configure SSL certificate and signing credentials

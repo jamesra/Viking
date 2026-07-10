@@ -12,6 +12,7 @@ using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 
 namespace Viking.Identity.Server.WebManagement.Controllers
 {
+    [Authorize]
     public class ResourcesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -23,18 +24,29 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             _authorization = authorization;
         }
 
-        public IActionResult VerifyUniqueName(string Name, long? Id)
+        public IActionResult VerifyUniqueName(string Name, long? Id, string ResourceTypeId = null)
         {
-            if (Id.HasValue)
+            if (_context.IsResourceNameTaken(Name, ResourceTypeId, Id))
             {
-                if (_context.Resource.Where(r => r.Id != Id.Value).Any(r => r.Name == Name))
-                    return Json($"A resource named {Name} already exists");
+                var typeLabel = string.IsNullOrWhiteSpace(ResourceTypeId) ? "resource" : ResourceTypeId.ToLowerInvariant();
+                return Json($"A {typeLabel} named {Name} already exists");
             }
-            else
+
+            // When ResourceTypeId is omitted (legacy callers), fall back to global name check.
+            if (string.IsNullOrWhiteSpace(ResourceTypeId))
             {
-                if (_context.Resource.Any(g => g.Name == Name))
+                var query = _context.Resource.AsQueryable();
+                if (Id.HasValue)
+                {
+                    query = query.Where(r => r.Id != Id.Value);
+                }
+
+                if (query.Any(r => r.Name == Name))
+                {
                     return Json($"A resource named {Name} already exists");
+                }
             }
+
             return Json(true);
         }
 

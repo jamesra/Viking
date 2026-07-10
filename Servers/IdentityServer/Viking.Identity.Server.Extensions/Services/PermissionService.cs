@@ -116,16 +116,7 @@ namespace Viking.Identity.Server.Extensions.Services
 
         public async Task<List<string>> GetUserResourcePermissionsAsync(string userId, string resourceId)
         {
-            Resource resourceObj = null;
-            try
-            {
-                long rId = System.Convert.ToInt64(resourceId);
-                resourceObj = await _context.Resource.FirstOrDefaultAsync(r => r.Id == rId);
-            }
-            catch (FormatException)
-            {
-                resourceObj = await _context.Resource.FirstOrDefaultAsync(r => r.Name == resourceId);
-            }
+            var resourceObj = await _context.FindApiFacingResourceAsync(resourceId);
 
             if (resourceObj == null)
             {
@@ -264,57 +255,61 @@ namespace Viking.Identity.Server.Extensions.Services
 
         private async Task<List<VolumeTreeNode>> BuildVolumeTreeAsync(string userId, long? parentID = null, Dictionary<long, UserResourcePermissions> volumes = null, List<Resource> organizations = null)
         {
-            var result = new List<VolumeTreeNode>();
-
             if (volumes is null)
             {
                 volumes = await GetUserPermissionsByTypeAsync(userId, nameof(Volume));
                 if (volumes.Count == 0)
                 {
-                    return null;
+                    return new List<VolumeTreeNode>();
                 }
             }
-            
-            if(organizations is null)
+
+            if (organizations is null)
             {
                 organizations = await _context.Resource
                     .Where(o => o.ResourceTypeId == nameof(OrganizationalUnit))
                     .OrderBy(o => o.Name)
                     .ToListAsync();
-            } 
+            }
 
-            var parent_org = organizations.Where(o => o.ParentID == parentID).ToList();
+            var result = new List<VolumeTreeNode>();
 
-            var tasks = new List<Task<(VolumeTreeNode node, List<VolumeTreeNode> children)>>();
-
-            foreach (var org in parent_org)
+            // Root-level volumes (no parent OU)
+            if (parentID is null)
             {
-                var org_volumes = volumes.Values.Where(v => v.ParentId == org.Id).ToList();
-                // Note: This method appears incomplete - returning volumes for now
-                if (org_volumes.Any())
-                { 
-                    var node = new VolumeTreeNode
+                var rootVolumes = volumes.Values.Where(v => v.ParentId == null).ToList();
+                if (rootVolumes.Any())
+                {
+                    result.Add(new VolumeTreeNode
                     {
-                        Id = org.Id,
-                        Name = org.Name,
+                        Id = 0,
+                        Name = "Volumes",
                         ResourceType = nameof(OrganizationalUnit),
-                        Volumes = org_volumes,
-                        Children = null
-                    };
-
-                    tasks.Add(BuildVolumeTreeAsync(userId, org.Id, volumes, organizations).ContinueWith(t =>
-                    {
-                        return (node, t.Result);
-                    }));
+                        Volumes = rootVolumes,
+                        Children = new List<VolumeTreeNode>()
+                    });
                 }
             }
 
-            var completedTasks = await Task.WhenAll(tasks);
-            
-            foreach (var (node, children) in completedTasks)
+            var parentOrgs = organizations.Where(o => o.ParentID == parentID).ToList();
+
+            foreach (var org in parentOrgs)
             {
-                node.Children = children;
-                result.Add(node);
+                var orgVolumes = volumes.Values.Where(v => v.ParentId == org.Id).ToList();
+                var children = await BuildVolumeTreeAsync(userId, org.Id, volumes, organizations);
+
+                if (!orgVolumes.Any() && (children == null || children.Count == 0))
+                    continue;
+
+                result.Add(new VolumeTreeNode
+                {
+                    Id = org.Id,
+                    Name = org.Name,
+                    ParentId = org.ParentID,
+                    ResourceType = nameof(OrganizationalUnit),
+                    Volumes = orgVolumes,
+                    Children = children ?? new List<VolumeTreeNode>()
+                });
             }
 
             return result;

@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
-using Viking.Identity.Server.WebManagement.Extensions;
+using Viking.Identity.Server;
 
 namespace Viking.Identity.Server.Extensions.Services
 {

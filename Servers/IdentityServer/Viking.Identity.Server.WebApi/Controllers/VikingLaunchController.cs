@@ -76,6 +76,7 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             var now = DateTime.UtcNow;
 
             var launchCode = await _context.VikingLaunchCodes
+                .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Code == code);
 
             if (launchCode == null)
@@ -94,6 +95,17 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             {
                 _logger.LogWarning("Launch exchange failed: code expired");
                 return Unauthorized(new { error = "code expired" });
+            }
+
+            // Atomically claim the code before requesting a token (prevents concurrent double-exchange).
+            var claimed = await _context.VikingLaunchCodes
+                .Where(c => c.Code == code && c.UsedAtUtc == null && c.ExpiresAtUtc >= now)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.UsedAtUtc, now));
+
+            if (claimed == 0)
+            {
+                _logger.LogWarning("Launch exchange failed: code already claimed");
+                return Unauthorized(new { error = "code already used" });
             }
 
             var authority = _identityOptions.Authority?.TrimEnd('/') ?? "";
@@ -118,12 +130,14 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             }
             catch (Exception ex)
             {
+                await ReleaseLaunchCodeAsync(code, now);
                 _logger.LogError(ex, "Launch exchange: failed to call Identity Server token endpoint");
                 return StatusCode(503, new { error = "identity service unavailable" });
             }
 
             if (!tokenResponse.IsSuccessStatusCode)
             {
+                await ReleaseLaunchCodeAsync(code, now);
                 var body = await tokenResponse.Content.ReadAsStringAsync();
                 _logger.LogWarning("Launch exchange: token request failed {StatusCode} {Body}", tokenResponse.StatusCode, body);
                 return Unauthorized(new { error = "token request failed" });
@@ -135,12 +149,10 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             var accessToken = root.TryGetProperty("access_token", out var at) ? at.GetString() : null;
             if (string.IsNullOrEmpty(accessToken))
             {
+                await ReleaseLaunchCodeAsync(code, now);
                 _logger.LogWarning("Launch exchange: no access_token in response");
                 return StatusCode(502, new { error = "invalid token response" });
             }
-
-            launchCode.UsedAtUtc = now;
-            await _context.SaveChangesAsync();
 
             var response = new LaunchExchangeResponse
             {
@@ -150,6 +162,13 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             };
 
             return Ok(response);
+        }
+
+        private async Task ReleaseLaunchCodeAsync(string code, DateTime claimedAtUtc)
+        {
+            await _context.VikingLaunchCodes
+                .Where(c => c.Code == code && c.UsedAtUtc == claimedAtUtc)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.UsedAtUtc, (DateTime?)null));
         }
     }
 }

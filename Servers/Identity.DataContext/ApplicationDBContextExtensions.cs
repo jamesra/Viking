@@ -44,8 +44,38 @@ namespace Viking.Identity.Data
             return context.IsUserPermitted(GroupId, UserId, Special.Permissions.Group.AccessManager);
         }
 
+        private static readonly string[] ApiFacingResourceTypeIds =
+        {
+            nameof(Volume),
+            nameof(SegmentationService)
+        };
+
+        /// <summary>
+        /// Resolves a resource by numeric id or by name. When looking up by name, prefers
+        /// Volume/SegmentationService so Group/OrgUnit name collisions (e.g. "Yiu") do not win.
+        /// </summary>
+        public static async Task<Resource> FindApiFacingResourceAsync(this ApplicationDbContext context, string resourceIdOrName)
+        {
+            if (long.TryParse(resourceIdOrName, out var resourceId))
+            {
+                return await context.Resource.FirstOrDefaultAsync(r => r.Id == resourceId);
+            }
+
+            return await context.Resource
+                .Where(r => r.Name == resourceIdOrName && ApiFacingResourceTypeIds.Contains(r.ResourceTypeId))
+                .OrderBy(r => r.Id)
+                .FirstOrDefaultAsync()
+                ?? await context.Resource
+                    .Where(r => r.Name == resourceIdOrName)
+                    .OrderBy(r => r.Id)
+                    .FirstOrDefaultAsync();
+        }
+
         public static async Task<bool> IsUserPermitted(this ApplicationDbContext context, long ResourceId, string UserId, string PermissionId)
         {
+            if (await context.GetUsersInAdminRole().AnyAsync(u => u.Id == UserId))
+                return true;
+
             var permitted_users = from user in context.Users
                 join permit in context.GrantedUserPermissions on user.Id equals permit.UserId
                 where permit.PermissionId == PermissionId && permit.ResourceId == ResourceId && permit.UserId == UserId
@@ -80,6 +110,26 @@ namespace Viking.Identity.Data
             if (!resourceTypeIds.Any())
             {
                 return new Dictionary<long, string[]>();
+            }
+
+            // Site administrators have full access to all resources of the requested types.
+            if (await context.GetUsersInAdminRole().AnyAsync(u => u.Id == userId))
+            {
+                var permissionsByType = await context.Permissions
+                    .Where(p => resourceTypeIds.Contains(p.ResourceTypeId))
+                    .GroupBy(p => p.ResourceTypeId)
+                    .ToDictionaryAsync(g => g.Key, g => g.Select(p => p.PermissionId).ToArray());
+
+                var resources = await context.Resource
+                    .Where(r => resourceTypeIds.Contains(r.ResourceTypeId))
+                    .Select(r => new { r.Id, r.ResourceTypeId })
+                    .ToListAsync();
+
+                return resources
+                    .Where(r => permissionsByType.ContainsKey(r.ResourceTypeId))
+                    .ToDictionary(
+                        r => r.Id,
+                        r => permissionsByType[r.ResourceTypeId]);
             }
 
             var user_permissions = from gup in context.GrantedUserPermissions.Include(nameof(GrantedGroupPermission.Resource))
@@ -470,6 +520,29 @@ namespace Viking.Identity.Data
             }
 
             return parents;
+        }
+
+        /// <summary>
+        /// True when another resource of the same type already uses <paramref name="name"/>.
+        /// Used to keep Duende ApiResource names unique for Volume/SegmentationService.
+        /// </summary>
+        public static bool IsResourceNameTaken(this ApplicationDbContext context, string name, string resourceTypeId, long? excludeId = null)
+        {
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(resourceTypeId))
+            {
+                return false;
+            }
+
+            var query = context.Resource.Where(r =>
+                r.ResourceTypeId == resourceTypeId &&
+                r.Name == name);
+
+            if (excludeId.HasValue)
+            {
+                query = query.Where(r => r.Id != excludeId.Value);
+            }
+
+            return query.Any();
         }
     }
 }

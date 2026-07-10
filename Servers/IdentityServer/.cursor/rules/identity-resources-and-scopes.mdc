@@ -1,0 +1,60 @@
+---
+description: Identity resources, permissions, and OAuth scopes
+alwaysApply: false
+---
+
+# Identity Resources & Access
+
+## Resource types
+
+| Type | Role | Duende ApiResource / scopes? |
+|------|------|------------------------------|
+| `Volume` | Annotatable image volume | Yes — scopes `{Name}.Read\|Annotate\|Review` |
+| `SegmentationService` | Segmentation backend | Yes — scopes `{Name}.User\|Access Manager` |
+| `Group` | User grouping / grants | No — management only |
+| `OrganizationalUnit` | Hierarchy / ownership | No — management only (`Administrator`) |
+
+API-facing types only: `Volume`, `SegmentationService`. Resource stores must filter to these when building ApiResources/ApiScopes.
+
+## Names are unique per type, not globally
+
+`IsResourceNameTaken` is scoped by `ResourceTypeId`. A **Group** and a **Volume** may share the same name (e.g. both `"Yiu"`).
+
+When resolving permissions or token scopes **by name**:
+
+- Prefer Volume / SegmentationService (`FindApiFacingResourceAsync`)
+- Never use bare `Resource.FirstOrDefault(r => r.Name == name)` for volume login / scope checks — the Group row often wins by lower Id
+
+```csharp
+// BAD — may return Group "Yiu"
+await context.Resource.FirstOrDefaultAsync(r => r.Name == name);
+
+// GOOD
+await context.FindApiFacingResourceAsync(name);
+```
+
+## Grants vs site admin
+
+- Explicit access: `GrantedUserPermissions` + `GrantedGroupPermissions` (via recursive group membership, including virtual Anonymous)
+- Site role `Administrator` (`Special.Roles.Admin`) has full access; list/token helpers short-circuit via `UserResourcePermissionsByType` / `IsUserPermitted`
+- OrgUnit `Administrator` manages children in the **management UI**; it does **not** by itself populate volume OAuth scopes
+
+## OAuth scopes
+
+- Standard: `openid`, `profile`, `Viking.Annotation`
+- Per volume: `{VolumeName}.Read`, `{VolumeName}.Annotate`, `{VolumeName}.Review`
+- Do not treat `Viking.Annotation` as a Volume named `Viking` when parsing `resource.permission` scopes
+
+## Which process does what
+
+| Process | Typical ports | Responsibility |
+|---------|---------------|----------------|
+| IdentityServerStandalone | `:5001` | Discovery, `/connect/token`, resource/client stores |
+| WebManagement | `:4001` | MVC admin, MyAccess, `api/permissions/*` (cookie/bearer) |
+| WebApi | `:6001` | `/Permissions/*` (introspection / anonymous username endpoints) |
+
+MyAccess and management UIs should query `ApplicationDbContext` (or authenticated APIs) — never call WebApi `/Permissions/AccessibleVolumes` without a bearer token (returns `{}`).
+
+## Client AllowedScopes
+
+`IdentityServerVikingClientStore` must rebuild AllowedScopes from the live resource store. Do not permanently cache clients — new volumes would cause `invalid_scope` until restart.

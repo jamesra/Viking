@@ -12,6 +12,7 @@ using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 
 namespace Viking.Identity.Server.WebManagement.Controllers
 {
+    [Authorize]
     public class SegmentationServicesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -71,10 +72,22 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             var segmentationService = await _context.SegmentationServices
                 .Include(s => s.Parent)
                 .Include(s => s.ResourceType)
+                .Include(s => s.UsersWithPermissions)
+                .Include(s => s.GroupsWithPermissions)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (segmentationService == null)
             {
                 return NotFound();
+            }
+
+            var isParentAdmin = await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, segmentationService);
+            var userId = HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var hasDirectPermissions = !string.IsNullOrEmpty(userId) &&
+                segmentationService.UsersWithPermissions?.Any(p => p.UserId == userId) == true;
+
+            if (!isParentAdmin && !hasDirectPermissions && !User.IsInRole(Special.Roles.Admin))
+            {
+                return Forbid();
             }
 
             return View(segmentationService);
@@ -105,6 +118,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Endpoint,Name,Description,ParentId")] CreateSegmentationServiceViewModel model)
         {
+            if (_context.IsResourceNameTaken(model.Name, nameof(SegmentationService)))
+            {
+                ModelState.AddModelError(nameof(model.Name), $"A segmentation service named {model.Name} already exists");
+            }
+
             if (ModelState.IsValid)
             {
                 var segmentationService = new SegmentationService
@@ -155,6 +173,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             if (id != segmentationService.Id)
             {
                 return NotFound();
+            }
+
+            if (_context.IsResourceNameTaken(segmentationService.Name, nameof(SegmentationService), segmentationService.Id))
+            {
+                ModelState.AddModelError(nameof(segmentationService.Name), $"A segmentation service named {segmentationService.Name} already exists");
             }
 
             if (ModelState.IsValid)

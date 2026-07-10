@@ -13,6 +13,7 @@ using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 
 namespace Viking.Identity.Server.WebManagement.Controllers
 {
+    [Authorize]
     [Route("[controller]/[action]")]
     public class ApplicationUsersController : Controller
     {
@@ -34,6 +35,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         }
 
         // GET: ApplicationUsers
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> Index()
         {
             return View(await _context.ApplicationUser.Include("GroupAssignments").ToListAsync());
@@ -45,6 +47,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         }
 
         // GET: ApplicationUsers/Details/5
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> Details(string id)
         {
             if (id == null)
@@ -124,6 +127,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             {
                 return NotFound();
             }
+
+            ViewBag.IsAdmin = User.IsInRole(Special.Roles.Admin);
             return View(applicationUser);
         }
 
@@ -181,16 +186,20 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 currentUser.FamilyName = applicationUser.FamilyName;
                 currentUser.GivenName = applicationUser.GivenName;
                 currentUser.UserName = applicationUser.UserName;
-                currentUser.NormalizedUserName = applicationUser.NormalizedUserName;
                 currentUser.Email = applicationUser.Email;
                 currentUser.NormalizedEmail = applicationUser.NormalizedEmail;
-                currentUser.EmailConfirmed = applicationUser.EmailConfirmed;
                 currentUser.PhoneNumber = applicationUser.PhoneNumber;
-                currentUser.PhoneNumberConfirmed = applicationUser.PhoneNumberConfirmed;
-                currentUser.TwoFactorEnabled = applicationUser.TwoFactorEnabled;
-                currentUser.LockoutEnd = applicationUser.LockoutEnd;
-                currentUser.LockoutEnabled = applicationUser.LockoutEnabled;
-                currentUser.AccessFailedCount = applicationUser.AccessFailedCount;
+
+                if (User.IsInRole(Special.Roles.Admin))
+                {
+                    currentUser.NormalizedUserName = applicationUser.NormalizedUserName;
+                    currentUser.EmailConfirmed = applicationUser.EmailConfirmed;
+                    currentUser.PhoneNumberConfirmed = applicationUser.PhoneNumberConfirmed;
+                    currentUser.TwoFactorEnabled = applicationUser.TwoFactorEnabled;
+                    currentUser.LockoutEnd = applicationUser.LockoutEnd;
+                    currentUser.LockoutEnabled = applicationUser.LockoutEnabled;
+                    currentUser.AccessFailedCount = applicationUser.AccessFailedCount;
+                }
                 
                 try
                 {

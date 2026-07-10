@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc;
 using Viking.Identity.Models;
 
 namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
@@ -8,6 +9,7 @@ namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
     {
         [Display(Name = "Name")]
         [Required]
+        [Remote(action: "VerifyUniqueName", controller: "Resources", AdditionalFields = nameof(ResourceTypeId))]
         public string Name { get; set; }
 
         [Display(Name = "Description")]

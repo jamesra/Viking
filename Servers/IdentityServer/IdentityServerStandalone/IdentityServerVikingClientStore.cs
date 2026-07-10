@@ -21,8 +21,6 @@ namespace Viking.Identity
         ApplicationDbContext _context;
         IResourceStore _resourceStore;
 
-        Dictionary<string, Client> ClientCache = new Dictionary<string, Client>();
-        
         private readonly Secret _clientSecret;
 
         private readonly Uri _redirectUri;
@@ -43,9 +41,8 @@ namespace Viking.Identity
             if (clientId != "ro.viking" && clientId != "mvc" && clientId != "Viking" && clientId != "api")
                 return null;
 
-            if (ClientCache.ContainsKey(clientId))
-                return ClientCache[clientId];
-
+            // Rebuild AllowedScopes from the live resource store on every lookup so newly
+            // created volumes (e.g. Yiu) are usable without restarting Identity Server.
             var allResources = await _resourceStore.GetAllResourcesAsync();
 
             var scopes = allResources.ApiScopes.Where(s => s != null).Select(s => s.Name).ToList();
@@ -63,11 +60,9 @@ namespace Viking.Identity
             scopes.Add(IdentityServerConstants.StandardScopes.Profile);
             scopes.AddRange(IdentityServerCustomResourceStore.StandardScopes.Select(s => s.Name));
 
-            Client result;
-            
             if (clientId == "mvc")  /* The MVC client is used for the Identity Management Site */
             {
-                result = new Client
+                return new Client
                 {
                     ClientId = clientId,
                     ClientName = "MVC Client",
@@ -83,7 +78,7 @@ namespace Viking.Identity
             }
             else if (clientId == "api") /* Clients of the API*/
             {
-                result = new Client
+                return new Client
                 {
                     ClientId = clientId,
                     AllowedGrantTypes = new[] { GrantType.AuthorizationCode, GrantType.ResourceOwnerPassword, GrantType.ClientCredentials, VikingUserTokenGrantValidator.VikingUserTokenGrantType },
@@ -98,7 +93,7 @@ namespace Viking.Identity
             }
             else if (clientId == "Viking") /* The Viking client is used for the Viking Application */
             {
-                result = new Client
+                return new Client
                 {
                     ClientId = clientId,
                     AllowedGrantTypes = new[] { GrantType.AuthorizationCode, GrantType.ResourceOwnerPassword, GrantType.ClientCredentials },
@@ -106,15 +101,12 @@ namespace Viking.Identity
                     RedirectUris = { new Uri(_redirectUri, "signin-oidc").ToString() },
                     FrontChannelLogoutUri = new Uri(_redirectUri,"signout-oidc").ToString(),
                     PostLogoutRedirectUris = { new Uri(_redirectUri,"signout-callback-oidc").ToString() },
-                    /*AllowedScopes = scopes.Where(s => s == IdentityServerConstants.StandardScopes.OpenId || 
-                                                      s == IdentityServerConstants.StandardScopes.Profile).ToArray()
-                    */
                     AllowedScopes = scopes
                 };
             }
             else // ro.viking = Read only tools/applications that access Viking Data
             {
-                result = new Client
+                return new Client
                 {
                     ClientId = clientId,
                     AllowedGrantTypes = new[] { GrantType.ResourceOwnerPassword, GrantType.ClientCredentials },
@@ -125,10 +117,6 @@ namespace Viking.Identity
                     PostLogoutRedirectUris = { new Uri(_redirectUri,"signout-callback-oidc").ToString() },
                 };
             }
-
-            ClientCache[clientId] = result;
-
-            return result;
         }
     }
 }
