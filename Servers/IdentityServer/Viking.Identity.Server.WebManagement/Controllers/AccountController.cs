@@ -16,6 +16,7 @@ using Viking.Identity.Server.WebManagement.Extensions;
 using Viking.Identity.Server.WebManagement.Models.AccountViewModels;
 using Viking.Identity.Server;
 using Viking.Identity.Server.Services;
+using Viking.Identity.Server.Extensions.Services;
 
 namespace Viking.Identity.Server.WebManagement.Controllers
 {
@@ -30,6 +31,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         private readonly ApplicationDbContext _context;
         private readonly Microsoft.AspNetCore.Hosting.IWebHostEnvironment _env;
         private readonly VikingIdentityServerOptions _identityServerOptions;
+        private readonly CollaboratorOnboardingService _collaboratorOnboarding;
 
         public AccountController(
             UserManager<ApplicationUser> userManager,
@@ -38,7 +40,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             ApplicationDbContext context,
             ILogger<AccountController> logger,
             IWebHostEnvironment env,
-            IOptions<VikingIdentityServerOptions> identityServerOptions)
+            IOptions<VikingIdentityServerOptions> identityServerOptions,
+            CollaboratorOnboardingService collaboratorOnboarding)
         {
             _env = env;
             _userManager = userManager;
@@ -47,6 +50,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             _context = context;
             _logger = logger;
             _identityServerOptions = identityServerOptions?.Value;
+            _collaboratorOnboarding = collaboratorOnboarding;
         }
 
         [TempData]
@@ -218,18 +222,55 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
         [HttpGet]
         [AllowAnonymous]
-        public IActionResult Register(string returnUrl = null)
+        public async Task<IActionResult> Register(string returnUrl = null, string invite = null)
         {
             ViewData["ReturnUrl"] = returnUrl;
-            return View();
+            var model = new RegisterViewModel();
+
+            if (!string.IsNullOrWhiteSpace(invite))
+            {
+                var inviteInfo = await _collaboratorOnboarding.GetInviteInfoAsync(invite);
+                ViewData["Invite"] = invite;
+                if (inviteInfo.IsValid)
+                {
+                    model.Email = inviteInfo.Email;
+                    model.EmailLocked = true;
+                    ViewData["InviteMessage"] =
+                        $"You are joining organization {inviteInfo.OrganizationalUnitName} for volume {inviteInfo.VolumeName}.";
+                }
+                else
+                {
+                    ModelState.AddModelError(string.Empty, inviteInfo.ErrorMessage ?? "Invalid invite.");
+                }
+            }
+
+            return View(model);
         }
 
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(RegisterViewModel model, string returnUrl = null)
+        public async Task<IActionResult> Register(RegisterViewModel model, string returnUrl = null, string invite = null)
         {
             ViewData["ReturnUrl"] = returnUrl;
+            ViewData["Invite"] = invite;
+
+            if (!string.IsNullOrWhiteSpace(invite))
+            {
+                var inviteInfo = await _collaboratorOnboarding.GetInviteInfoAsync(invite);
+                if (!inviteInfo.IsValid)
+                {
+                    ModelState.AddModelError(string.Empty, inviteInfo.ErrorMessage ?? "Invalid invite.");
+                }
+                else
+                {
+                    model.Email = inviteInfo.Email;
+                    model.EmailLocked = true;
+                    ViewData["InviteMessage"] =
+                        $"You are joining organization {inviteInfo.OrganizationalUnitName} for volume {inviteInfo.VolumeName}.";
+                }
+            }
+
             if (ModelState.IsValid)
             {
                 bool firstUser = _userManager.Users.Any() == false; 
@@ -253,6 +294,39 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     };
                     _context.UserToGroupAssignments.Add(everyoneGroupAssignment);
                     await _context.SaveChangesAsync();
+
+                    if (!string.IsNullOrWhiteSpace(invite))
+                    {
+                        try
+                        {
+                            await _collaboratorOnboarding.RedeemInviteAsync(invite, user.Id, user.Email);
+                            _logger.LogInformation("Redeemed collaborator invite for user {UserId}", user.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to redeem collaborator invite for user {UserId}", user.Id);
+                            ModelState.AddModelError(string.Empty,
+                                "Your account was created, but the invite could not be applied: " + ex.Message +
+                                " Contact an administrator to finish granting access.");
+                            // Do not treat as a successful invite registration redirect.
+                            try
+                            {
+                                if (_env == null || !_env.IsDevelopment())
+                                {
+                                    var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                                    var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme, _identityServerOptions?.Authority);
+                                    await _emailSender.SendEmailConfirmationAsync(model.Email, callbackUrl);
+                                }
+                            }
+                            catch (System.Net.Mail.SmtpException e)
+                            {
+                                _logger.LogError("SMTP Error sending confirmation E-mail.\n" + e.ToString());
+                            }
+
+                            await _signInManager.SignInAsync(user, isPersistent: false);
+                            return View(model);
+                        }
+                    }
 
                     try
                     {

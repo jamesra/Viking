@@ -484,6 +484,52 @@ namespace Viking.Identity.Data.Migrations
                     b.ToTable("VikingLaunchCodes", (string)null);
                 });
 
+            modelBuilder.Entity("Viking.Identity.Models.CollaboratorInvite", b =>
+                {
+                    b.Property<string>("Token")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("ClaimedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ClaimedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("OrganizationalUnitId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("VolumeId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Token");
+
+                    b.HasIndex("ExpiresAtUtc");
+
+                    b.HasIndex("OrganizationalUnitId");
+
+                    b.HasIndex("VolumeId");
+
+                    b.ToTable("CollaboratorInvites", (string)null);
+                });
+
             modelBuilder.Entity("Viking.Identity.Models.ApplicationRole", b =>
                 {
                     b.HasBaseType("Microsoft.AspNetCore.Identity.IdentityRole");
@@ -702,6 +748,25 @@ namespace Viking.Identity.Data.Migrations
                     b.Navigation("Group");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Viking.Identity.Models.CollaboratorInvite", b =>
+                {
+                    b.HasOne("Viking.Identity.Models.OrganizationalUnit", "OrganizationalUnit")
+                        .WithMany()
+                        .HasForeignKey("OrganizationalUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Viking.Identity.Models.Volume", "Volume")
+                        .WithMany()
+                        .HasForeignKey("VolumeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("OrganizationalUnit");
+
+                    b.Navigation("Volume");
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.ApplicationUser", b =>

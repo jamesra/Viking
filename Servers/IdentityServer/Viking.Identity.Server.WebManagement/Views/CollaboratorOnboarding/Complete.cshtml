@@ -1,0 +1,108 @@
+@model Viking.Identity.Server.WebManagement.Models.UserViewModels.CollaboratorOnboardingCompleteViewModel
+
+@{
+    ViewData["Title"] = "Onboarding Complete";
+    ViewData["Breadcrumbs"] = new List<(string Text, string Url)>
+    {
+        ("Dashboard", Url.Action("Index", "Home")),
+        ("Collaborator Volume Wizard", Url.Action("Index", "CollaboratorOnboarding")),
+        ("Complete", null)
+    };
+}
+
+<div class="alert alert-success" role="alert">
+    <h4 class="alert-heading"><i class="bi bi-check-circle"></i> Lab resources created</h4>
+    <p class="mb-0">
+        Organization <strong>@Model.OrganizationalUnitName</strong> and volume <strong>@Model.VolumeName</strong>
+        are ready.
+    </p>
+</div>
+
+<div class="card card-modern mb-4">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Organization</dt>
+            <dd class="col-sm-9">
+                <a asp-controller="OrganizationalUnits" asp-action="Details" asp-route-id="@Model.OrganizationalUnitId">
+                    @Model.OrganizationalUnitName
+                </a>
+            </dd>
+            <dt class="col-sm-3">Volume</dt>
+            <dd class="col-sm-9">
+                <a asp-controller="Volumes" asp-action="Details" asp-route-id="@Model.VolumeId">
+                    @Model.VolumeName
+                </a>
+            </dd>
+            <dt class="col-sm-3">Collaborator</dt>
+            <dd class="col-sm-9">@Model.CollaboratorEmail</dd>
+        </dl>
+    </div>
+</div>
+
+@if (Model.ExistingUserGranted)
+{
+    <div class="alert alert-info">
+        An existing account with this email was found. Org administrator and full volume access were granted immediately.
+        No invite email was sent.
+    </div>
+}
+else
+{
+    @if (Model.EmailSent)
+    {
+        <div class="alert alert-info">
+            An invitation email was sent to <strong>@Model.CollaboratorEmail</strong>.
+            You can also copy the registration URL below if they do not receive it.
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning">
+            @(string.IsNullOrEmpty(Model.EmailError)
+                ? "Invite email was not sent."
+                : Model.EmailError)
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.InviteUrl))
+    {
+        <div class="card card-modern mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-link-45deg"></i> Manual invite URL</h5>
+            </div>
+            <div class="card-body">
+                <div class="input-group">
+                    <input type="text" class="form-control font-monospace" id="inviteUrl" value="@Model.InviteUrl" readonly />
+                    <button type="button" class="btn btn-outline-secondary" id="copyInviteUrl">
+                        <i class="bi bi-clipboard"></i> Copy
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+<div class="mb-5">
+    <a asp-action="Index" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Create another
+    </a>
+    <a asp-controller="OrganizationalUnits" asp-action="Details" asp-route-id="@Model.OrganizationalUnitId" class="btn btn-outline-secondary ms-2">
+        View organization
+    </a>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('copyInviteUrl')?.addEventListener('click', async function () {
+            const input = document.getElementById('inviteUrl');
+            if (!input) return;
+            try {
+                await navigator.clipboard.writeText(input.value);
+                this.innerHTML = '<i class="bi bi-check"></i> Copied';
+            } catch {
+                input.select();
+                document.execCommand('copy');
+            }
+        });
+    </script>
+}

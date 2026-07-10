@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.8" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.9" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.9" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0" />
@@ -36,6 +37,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Identity.DataContext\Identity.DataContext.csproj" />
     <ProjectReference Include="..\Identity.Models\Identity.Models.csproj" />
+    <ProjectReference Include="..\IdentityServer\Viking.Identity.Server.Extensions\Viking.Identity.Server.Extensions.csproj" />
   </ItemGroup>
 
 </Project>

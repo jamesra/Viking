@@ -34,5 +34,10 @@ namespace Viking.Identity.Server.WebManagement.Models.AccountViewModels
         [Required(AllowEmptyStrings = false)]
         [Display(Name = "Last Name", Description = "Family Name")]
         public string FamilyName { get; set; }
+
+        /// <summary>
+        /// When true, the email field is pre-filled from a collaborator invite and should not be edited.
+        /// </summary>
+        public bool EmailLocked { get; set; }
     }
 }

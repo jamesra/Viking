@@ -8,19 +8,27 @@ using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
 using Viking.Identity.Server.Authorization;
+using Viking.Identity.Server.Extensions.Services;
+using Viking.Identity.Server.WebManagement.Helpers;
 using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 
 namespace Viking.Identity.Server.WebManagement.Controllers
 { 
+    [Authorize]
     public class VolumesController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly IAuthorizationService _authorization;
+        private readonly ResourceProvisioningService _provisioning;
 
-        public VolumesController(ApplicationDbContext context, IAuthorizationService authorization)
+        public VolumesController(
+            ApplicationDbContext context,
+            IAuthorizationService authorization,
+            ResourceProvisioningService provisioning)
         {
             _context = context;
             _authorization = authorization;
+            _provisioning = provisioning;
         }
 
         // GET: Volumes
@@ -78,10 +86,22 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             var volume = await _context.Volume
                 .Include(v => v.Parent)
                 .Include(v => v.ResourceType)
+                .Include(v => v.UsersWithPermissions)
+                .Include(v => v.GroupsWithPermissions)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (volume == null)
             {
                 return NotFound();
+            }
+
+            var isParentAdmin = await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, volume);
+            var userId = HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var hasDirectPermissions = !string.IsNullOrEmpty(userId) &&
+                volume.UsersWithPermissions?.Any(p => p.UserId == userId) == true;
+
+            if (!isParentAdmin && !hasDirectPermissions && !User.IsInRole(Special.Roles.Admin))
+            {
+                return Forbid();
             }
 
             return View(volume);
@@ -90,7 +110,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // GET: Volumes/Create
         public IActionResult Create(long? parentOrgId = null)
         {
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), parentOrgId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, parentOrgId);
             var viewModel = new CreateVolumeViewModel();
             if (parentOrgId.HasValue && parentOrgId.Value > 0)
             {
@@ -104,7 +124,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         {
             //Continues creation after user selects a resource type
             model.ResourceTypeId = nameof(Volume);
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), model.ParentId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, model.ParentId);
             return View(nameof(Create), new CreateVolumeViewModel(model));
         }
 
@@ -115,9 +135,14 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Endpoint,Name,Description,ParentId,URL")] CreateVolumeViewModel model)
         {
+            if (_context.IsResourceNameTaken(model.Name, nameof(Volume)))
+            {
+                ModelState.AddModelError(nameof(model.Name), $"A volume named {model.Name} already exists");
+            }
+
             if (ModelState.IsValid)
-            { 
-                Volume obj = new Volume
+            {
+                var authProbe = new Volume
                 {
                     Name = model.Name,
                     ParentID = model.ParentId == 0 ? null : model.ParentId,
@@ -125,17 +150,16 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     Endpoint = model.URL
                 };
 
-                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, obj))
+                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, authProbe))
                 {
                     return Unauthorized();
                 }
 
-                _context.Volume.Add(obj);
-                await _context.SaveChangesAsync();
+                await _provisioning.CreateVolumeAsync(model.Name, model.Description, model.ParentId, model.URL);
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), model.ParentId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, model.ParentId);
             return View(model);
         }
 
@@ -152,7 +176,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             {
                 return NotFound();
             }
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), volume.ParentID);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, volume.ParentID);
             return View(volume);
         }
 
@@ -166,6 +190,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             if (id != volume.Id)
             {
                 return NotFound();
+            }
+
+            if (_context.IsResourceNameTaken(volume.Name, nameof(Volume), volume.Id))
+            {
+                ModelState.AddModelError(nameof(volume.Name), $"A volume named {volume.Name} already exists");
             }
 
             if (ModelState.IsValid)
@@ -193,7 +222,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), volume.ParentID);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, volume.ParentID);
             return View(volume);
         }
 

@@ -23,6 +23,7 @@ using Viking.Identity.Models;
 using Viking.Identity.Server.Authorization;
 using Viking.Identity.Server.WebManagement.Extensions;
 using Viking.Identity.Server.Services;
+using Viking.Identity.Server.Extensions.Services;
 using Viking.SSL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -224,6 +225,13 @@ namespace Viking.Identity.Server.WebManagement
             // Add application services
             services.AddTransient<IEmailSender, EmailSender>();
             services.AddTransient<IPermissionsViewModelHelper, PermissionsViewModelHelper>();
+            services.AddScoped<ResourceProvisioningService>();
+            services.AddScoped<CollaboratorOnboardingService>();
+            services.AddHttpClient<VikingXmlMetadataService>()
+                .ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.HttpClientHandler
+                {
+                    AllowAutoRedirect = false
+                });
 
             // Add HTTP context accessor
             services.AddHttpContextAccessor();
@@ -256,19 +264,6 @@ namespace Viking.Identity.Server.WebManagement
 
             // Configure Email options
             services.Configure<Viking.Identity.Server.Services.EmailOptions>(configuration.GetSection("Email"));
-
-            // Configure access token management
-            services.AddAccessTokenManagement(options =>
-            {
-                // client config is inferred from OpenID Connect settings
-            });
-
-            // Configure HttpClient for calling the WebAPI
-            services.AddHttpClient("IdentityApi", client =>
-            {
-                var webApiOptions = configuration.GetSection(nameof(WebApiOptions)).Get<WebApiOptions>();
-                client.BaseAddress = new Uri(webApiOptions.BaseUrl);
-            });
         }
 
         private static void ConfigureKestrel(IWebHostBuilder webHostBuilder, IConfiguration configuration)

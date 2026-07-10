@@ -121,6 +121,22 @@ namespace Viking.Identity.Data
                 .ToTable("VikingLaunchCodes")
                 .HasIndex(c => c.ExpiresAtUtc);
 
+            builder.Entity<CollaboratorInvite>()
+                .ToTable("CollaboratorInvites")
+                .HasIndex(c => c.ExpiresAtUtc);
+
+            builder.Entity<CollaboratorInvite>()
+                .HasOne(c => c.OrganizationalUnit)
+                .WithMany()
+                .HasForeignKey(c => c.OrganizationalUnitId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<CollaboratorInvite>()
+                .HasOne(c => c.Volume)
+                .WithMany()
+                .HasForeignKey(c => c.VolumeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             InitialPopulationOfDatabase(builder);
         }
 
@@ -249,5 +265,7 @@ namespace Viking.Identity.Data
         public DbSet<GrantedUserPermission> GrantedUserPermissions { get; set; }
 
         public DbSet<VikingLaunchCode> VikingLaunchCodes { get; set; }
+
+        public DbSet<CollaboratorInvite> CollaboratorInvites { get; set; }
     }
 }

@@ -65,5 +65,35 @@ namespace Viking.Identity.Server.WebManagement.Extensions
                 values: new { userId, code },
                 protocol: scheme);
         }
+
+        /// <summary>Build collaborator invite registration URL using request scheme.</summary>
+        public static string CollaboratorInviteRegistrationLink(this IUrlHelper urlHelper, string invite, string scheme)
+        {
+            return urlHelper.Action(
+                action: nameof(AccountController.Register),
+                controller: "Account",
+                values: new { invite },
+                protocol: scheme);
+        }
+
+        /// <summary>Build collaborator invite registration URL using configured authority (preferred behind TLS-terminating proxy).</summary>
+        public static string CollaboratorInviteRegistrationLink(this IUrlHelper urlHelper, string invite, string scheme, string baseAuthority)
+        {
+            if (!string.IsNullOrWhiteSpace(baseAuthority))
+            {
+                var path = urlHelper.Action(
+                    action: nameof(AccountController.Register),
+                    controller: "Account",
+                    values: new { invite },
+                    protocol: null);
+                if (!string.IsNullOrEmpty(path))
+                    return new Uri(new Uri(baseAuthority.TrimEnd('/')), path).ToString();
+            }
+            return urlHelper.Action(
+                action: nameof(AccountController.Register),
+                controller: "Account",
+                values: new { invite },
+                protocol: scheme);
+        }
     }
 }
