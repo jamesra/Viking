@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Viking.Identity.Data.Migrations
 {
     /// <inheritdoc />
-    [Migration("20260710202000_AddCollaboratorInvites")]
     public partial class AddCollaboratorInvites : Migration
     {
         /// <inheritdoc />
