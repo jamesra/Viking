@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -249,6 +250,44 @@ namespace Viking.Identity.Server.Extensions.Services
 
             await _provisioning.GrantUserOrgUnitAdminAsync(userId, invite.OrganizationalUnitId);
             await _provisioning.GrantUserVolumeFullAccessAsync(userId, invite.VolumeId);
+        }
+
+        /// <summary>
+        /// Removes invites that reference an organizational unit or any of its child volumes.
+        /// Call before deleting the org to satisfy Restrict FKs.
+        /// </summary>
+        public async Task DeleteInvitesForOrganizationalUnitAsync(long organizationalUnitId)
+        {
+            var childVolumeIds = await _context.Volume
+                .Where(v => v.ParentID == organizationalUnitId)
+                .Select(v => v.Id)
+                .ToListAsync();
+
+            var invites = await _context.CollaboratorInvites
+                .Where(i => i.OrganizationalUnitId == organizationalUnitId || childVolumeIds.Contains(i.VolumeId))
+                .ToListAsync();
+
+            if (invites.Count == 0)
+                return;
+
+            _context.CollaboratorInvites.RemoveRange(invites);
+            await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Removes invites that reference a volume. Call before deleting the volume.
+        /// </summary>
+        public async Task DeleteInvitesForVolumeAsync(long volumeId)
+        {
+            var invites = await _context.CollaboratorInvites
+                .Where(i => i.VolumeId == volumeId)
+                .ToListAsync();
+
+            if (invites.Count == 0)
+                return;
+
+            _context.CollaboratorInvites.RemoveRange(invites);
+            await _context.SaveChangesAsync();
         }
     }
 }

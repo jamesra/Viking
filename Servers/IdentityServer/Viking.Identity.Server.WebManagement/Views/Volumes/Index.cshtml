@@ -57,10 +57,11 @@
                 <div class="row">
                     @foreach (var volume in orgGroup.OrderBy(v => v.Name))
                     {
+                        var canManageVolume = (await AuthorizationService.IsParentOrgUnitAdminAsync(User, volume));
                         <div class="col-md-6 col-lg-4 mb-3">
                             <div class="card card-modern card-volume h-100">
-                                <div class="card-body">
-                                    @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, volume)))
+                                <div class="card-body d-flex flex-column">
+                                    @if (canManageVolume)
                                     {
                                         <div class="form-check mb-2">
                                             <input class="form-check-input volume-checkbox" type="checkbox" value="@volume.Id" id="volume_@volume.Id">
@@ -114,7 +115,7 @@
                                         <a asp-action="Details" asp-route-id="@volume.Id" class="btn btn-outline-info">
                                             <i class="bi bi-info-circle"></i> Details
                                         </a>
-                                        @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, volume)))
+                                        @if (canManageVolume)
                                         {
                                             <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@volume.Id" class="btn btn-outline-primary">
                                                 <i class="bi bi-shield-check"></i> Permissions
@@ -124,6 +125,16 @@
                                             </a>
                                         }
                                     </div>
+
+                                    @if (canManageVolume)
+                                    {
+                                        <div class="mt-auto pt-3 d-flex justify-content-end">
+                                            <a asp-action="Delete" asp-route-id="@volume.Id"
+                                               class="btn btn-sm btn-outline-danger" title="Delete volume">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </div>
+                                    }
                                 </div>
                             </div>
                         </div>

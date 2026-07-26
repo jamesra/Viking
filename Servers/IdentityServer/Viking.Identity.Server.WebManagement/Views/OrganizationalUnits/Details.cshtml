@@ -243,9 +243,10 @@
             <div class="row">
                 @foreach (var volume in volumes.OrderBy(v => v.Name))
                 {
+                    var canManageVolume = (await AuthorizationService.IsParentOrgUnitAdminAsync(User, volume));
                     <div class="col-md-6 col-lg-4 mb-3">
                         <div class="card card-modern card-volume h-100">
-                            <div class="card-body">
+                            <div class="card-body d-flex flex-column">
                                 <h6 class="card-title">
                                     <i class="bi bi-hdd entity-icon-volume"></i> @volume.Name
                                 </h6>
@@ -298,13 +299,23 @@
                                     <a asp-controller="Volumes" asp-action="Details" asp-route-id="@volume.Id" class="btn btn-outline-info">
                                         <i class="bi bi-info-circle"></i> Details
                                     </a>
-                                    @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, volume)))
+                                    @if (canManageVolume)
                                     {
                                         <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@volume.Id" class="btn btn-outline-primary">
                                             <i class="bi bi-shield-check"></i> Permissions
                                         </a>
                                     }
                                 </div>
+
+                                @if (canManageVolume)
+                                {
+                                    <div class="mt-auto pt-3 d-flex justify-content-end">
+                                        <a asp-controller="Volumes" asp-action="Delete" asp-route-id="@volume.Id"
+                                           class="btn btn-sm btn-outline-danger" title="Delete volume">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                }
                             </div>
                         </div>
                     </div>

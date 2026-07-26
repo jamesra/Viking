@@ -20,15 +20,18 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IAuthorizationService _authorization;
         private readonly ResourceProvisioningService _provisioning;
+        private readonly CollaboratorOnboardingService _onboarding;
 
         public VolumesController(
             ApplicationDbContext context,
             IAuthorizationService authorization,
-            ResourceProvisioningService provisioning)
+            ResourceProvisioningService provisioning,
+            CollaboratorOnboardingService onboarding)
         {
             _context = context;
             _authorization = authorization;
             _provisioning = provisioning;
+            _onboarding = onboarding;
         }
 
         // GET: Volumes
@@ -262,6 +265,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return Unauthorized();
             }
 
+            await _onboarding.DeleteInvitesForVolumeAsync(id);
             _context.Volume.Remove(volume);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));

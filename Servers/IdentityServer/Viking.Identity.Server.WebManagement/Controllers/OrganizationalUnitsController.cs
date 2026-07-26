@@ -20,15 +20,18 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IAuthorizationService _authorization;
         private readonly ResourceProvisioningService _provisioning;
+        private readonly CollaboratorOnboardingService _onboarding;
 
         public OrganizationalUnitsController(
             ApplicationDbContext context,
             IAuthorizationService authorization,
-            ResourceProvisioningService provisioning)
+            ResourceProvisioningService provisioning,
+            CollaboratorOnboardingService onboarding)
         {
             _authorization = authorization;
             _context = context;
             _provisioning = provisioning;
+            _onboarding = onboarding;
         }
 
         // GET: OrganizationalUnits
@@ -235,11 +238,17 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         public async Task<IActionResult> DeleteConfirmed(long id)
         {   
             var organizationalUnit = await _context.OrgUnit.FindAsync(id);
+            if (organizationalUnit == null)
+            {
+                return NotFound();
+            }
+
             if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, organizationalUnit))
             {
                 return Unauthorized();
             }
 
+            await _onboarding.DeleteInvitesForOrganizationalUnitAsync(id);
             _context.OrgUnit.Remove(organizationalUnit);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));

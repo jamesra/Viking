@@ -273,8 +273,17 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
             if (ModelState.IsValid)
             {
-                bool firstUser = _userManager.Users.Any() == false; 
-                var user = new ApplicationUser { UserName = model.Username, Email = model.Email, GivenName = model.GivenName, FamilyName = model.FamilyName};
+                bool firstUser = _userManager.Users.Any() == false;
+                bool registeredViaInvite = !string.IsNullOrWhiteSpace(invite);
+                var user = new ApplicationUser
+                {
+                    UserName = model.Username,
+                    Email = model.Email,
+                    GivenName = model.GivenName,
+                    FamilyName = model.FamilyName,
+                    // Invite was delivered to this address; treat it as verified.
+                    EmailConfirmed = registeredViaInvite
+                };
                 var result = await _userManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
                 {
@@ -295,7 +304,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     _context.UserToGroupAssignments.Add(everyoneGroupAssignment);
                     await _context.SaveChangesAsync();
 
-                    if (!string.IsNullOrWhiteSpace(invite))
+                    if (registeredViaInvite)
                     {
                         try
                         {
@@ -326,6 +335,10 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                             await _signInManager.SignInAsync(user, isPersistent: false);
                             return View(model);
                         }
+
+                        await _signInManager.SignInAsync(user, isPersistent: false);
+                        _logger.LogInformation("User created a new account via collaborator invite.");
+                        return RedirectToLocal(returnUrl);
                     }
 
                     try
