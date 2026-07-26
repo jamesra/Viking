@@ -7546,9 +7546,9 @@ BEGIN TRANSACTION main
 	if(not(exists(select (1) from DBVersion where DBVersionID = 79)))
 	begin
      print N'Move a subset of functions to mem_integer_list to get path finding to work'
-	 BEGIN TRANSACTION seventyeight
+	 BEGIN TRANSACTION seventynine
 
-	EXEC('CREATE FUNCTION [dbo].[ufnLinkedToLocations] 
+	EXEC('CREATE OR ALTER FUNCTION [dbo].[ufnLinkedToLocations] 
 	(	
 		-- Add the parameters for the function here
 		 @SourceLocIDs mem_integer_list READONLY --The location IDs we are starting from
@@ -7580,7 +7580,7 @@ BEGIN TRANSACTION main
 		   RETURN
 		 end 
 
-	EXEC('CREATE FUNCTION [dbo].[MorphologyPaths]
+	EXEC('CREATE OR ALTER FUNCTION [dbo].[MorphologyPaths]
 	(
 		-- Add the parameters for the function here
 		@SourceID bigint,
@@ -7856,7 +7856,7 @@ BEGIN TRANSACTION main
 		 end
 
 	 EXEC('
-		CREATE FUNCTION [dbo].[ufnDistance3D] 
+		CREATE OR ALTER FUNCTION [dbo].[ufnDistance3D] 
 		(
 			-- Add the parameters for the function here
 			@AX float,
@@ -7887,7 +7887,7 @@ BEGIN TRANSACTION main
 		   RETURN
 		 end
 
-	INSERT INTO DBVersion values (81, 
+	INSERT INTO DBVersion values (80, 
 		      N'Add functions to list all location links and calculate distance in 3D',getDate(),User_ID())
 	 COMMIT TRANSACTION eighty
 	end
@@ -7897,7 +7897,7 @@ BEGIN TRANSACTION main
      print N'Add functions to find weighted centroid for structures'  
 	 BEGIN TRANSACTION eightyone
 		
-	 EXEC('CREATE FUNCTION [dbo].[WeightedStructureCenters3D](
+	 EXEC('CREATE OR ALTER FUNCTION [dbo].[WeightedStructureCenters3D](
 				@StructureIDs mem_integer_list READONLY
 			) --The Structure IDs we are calculating, NULL causes us to get all rows
 			RETURNS @Result TABLE (
@@ -7978,7 +7978,7 @@ BEGIN TRANSACTION main
 		 end
 
 	 EXEC('
-		CREATE FUNCTION [dbo].[ufnWeightedStructureCentroidXY]
+		CREATE OR ALTER FUNCTION [dbo].[ufnWeightedStructureCentroidXY]
 	(
 		@StructureID bigint
 	)
@@ -8053,7 +8053,7 @@ BEGIN TRANSACTION main
 		   RETURN
 		 end
 
-	EXEC('CREATE FUNCTION [dbo].[ufnWeightedStructureCentroidZ]
+	EXEC('CREATE OR ALTER FUNCTION [dbo].[ufnWeightedStructureCentroidZ]
 		(
 			@StructureID bigint
 		)
@@ -8121,15 +8121,20 @@ BEGIN TRANSACTION main
 		 end
 
 	INSERT INTO DBVersion values (81, 
-		      N'Add functions to list all location links and calculate distance in 3D',getDate(),User_ID())
+		      N'Add functions to find weighted centroid for structures',getDate(),User_ID())
 	 COMMIT TRANSACTION eightyone
 	end
 
-	
-	INSERT INTO DBVersion values (82, 
-		      N'Enable Query Store',getDate(),User_ID())
-	 COMMIT TRANSACTION eightytwo
-	end 
+	if(not(exists(select (1) from DBVersion where DBVersionID = 82)))
+	begin
+     print N'Enable Query Store'
+
+	-- ALTER DATABASE is never allowed while @@TRANCOUNT > 0, even inside a
+	-- nested/named transaction (naming BEGIN/COMMIT TRANSACTION does not create
+	-- a real savepoint here, since SAVE TRANSACTION was never used). "main" must
+	-- be fully committed before this statement runs, then reopened afterwards so
+	-- the remaining version blocks stay wrapped exactly as before.
+	COMMIT TRANSACTION main
 
 	EXEC('
 	-- Enable Query Store on your database
@@ -8143,29 +8148,29 @@ BEGIN TRANSACTION main
 );
 	')
 
-	 if(@@error <> 0)
+	DECLARE @QueryStoreError int = @@error
+
+	BEGIN TRANSACTION main
+
+	 if(@QueryStoreError <> 0)
 		 begin
-		   ROLLBACK TRANSACTION 
 		   RETURN
 		 end
 
 	INSERT INTO DBVersion values (82, 
 		      N'Enable Query Store',getDate(),User_ID())
-	 COMMIT TRANSACTION eightytwo
 	end
 
-	
-	INSERT INTO DBVersion values (83, 
-		      N'Improve SelectSectionLocationsAndLinksInMosaicBounds',getDate(),User_ID())
-	 COMMIT TRANSACTION eightythree
-	end 
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 83)))
+	begin
+     print N'Improve SelectSectionLocationsAndLinksInMosaicBounds'
+	 BEGIN TRANSACTION eightythree
+
+	SET ANSI_NULLS ON
+	SET QUOTED_IDENTIFIER ON
 
 	EXEC('
-	SET ANSI_NULLS ON
-	GO
-	SET QUOTED_IDENTIFIER ON
-	GO
-
 	ALTER PROCEDURE [dbo].[SelectSectionLocationsAndLinksInMosaicBounds]
 					-- Add the parameters for the stored procedure here
 					@Z float,
@@ -8224,9 +8229,7 @@ BEGIN TRANSACTION main
 						FROM LocationLink LL
 						WHERE EXISTS (SELECT 1 FROM @LocationIDsInBounds IDs WHERE IDs.ID = LL.A)
 						OR EXISTS (SELECT 1 FROM @LocationIDsInBounds IDs WHERE IDs.ID = LL.B);
-								END 
-);
-	')
+								END')
 
 	 if(@@error <> 0)
 		 begin
@@ -8234,12 +8237,10 @@ BEGIN TRANSACTION main
 		   RETURN
 		 end
 
-	EXEC('
 	SET ANSI_NULLS ON
-	GO
 	SET QUOTED_IDENTIFIER ON
-	GO
 
+	EXEC('
 				ALTER PROCEDURE [dbo].[SelectSectionLocationsAndLinksInVolumeBounds]
 					-- Add the parameters for the stored procedure here
 					@Z float,
@@ -8298,9 +8299,7 @@ BEGIN TRANSACTION main
 						FROM LocationLink LL
 						WHERE EXISTS (SELECT 1 FROM @LocationIDsInBounds IDs WHERE IDs.ID = LL.A)
 						OR EXISTS (SELECT 1 FROM @LocationIDsInBounds IDs WHERE IDs.ID = LL.B);
-								END 
-);
-	')
+								END')
 
 	 if(@@error <> 0)
 		 begin

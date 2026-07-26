@@ -41,7 +41,6 @@ set @ZRange = @SearchDistance / dbo.ZScale()
 
 declare @GlialID int
 set @GlialID = 8887
-/*  If you could run this query for 8886, 8887, 5048, and 9025 and give me the output csv files I would really appreciate it*/
 
 declare @SynapseTypeIDs dbo.integer_list
 
@@ -60,6 +59,9 @@ inner join Structure SynapseStruct ON SynapseLoc.ParentID = SynapseStruct.ID
 inner join @SynapseTypeIDs SynapseTypes ON SynapseTypes.ID = SynapseStruct.TypeID
 where GlialLoc.ParentID = @GlialID and GlialLoc.VolumeShape.STDistance(SynapseLoc.VolumeShape) * dbo.XYScale() < @SearchDistance;
 
+/*Remove candidates that are too far in 3D space*/
+delete from @Candidates
+where SQRT(ZDist * ZDist + XYDist * XYDist) > @SearchDistance;
 
 /* Join to Location when geometry columns are needed. */
 select C.GlialID,
@@ -77,6 +79,7 @@ select C.SynapseStructID,
 	   MIN(SQRT(C.ZDist * C.ZDist + C.XYDist * C.XYDist)) as Dist
 from @Candidates C
 GROUP BY C.SynapseStructID
+
 	   
 /* Get the real number of synapses since 0 distance results show up multiple times in the next query*/
 select COUNT(SynapseStructID) from @ChildDistance;
