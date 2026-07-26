@@ -63,9 +63,14 @@ namespace Viking.DataModel.Annotation.Tests
             builder = builder.UseSqlServer(connString, config => config.UseNetTopologySuite()).EnableDetailedErrors().EnableSensitiveDataLogging();
             var contextOptions = builder.Options;
             DataContext = ActivatorUtilities.CreateInstance<T>(provider, contextOptions);
+            try { 
             DataContext.Database.Migrate();
-            //DataContext.Database.EnsureCreated();
-            
+            }
+            catch (Exception ex) {
+                DataContext?.Database?.EnsureDeleted();
+                throw;
+            }
+            //DataContext.Database.EnsureCreated(); 
         }
 
         protected virtual void Dispose(bool disposing)
@@ -87,7 +92,6 @@ namespace Viking.DataModel.Annotation.Tests
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
-        }
-
+        } 
     }
 }

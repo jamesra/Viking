@@ -85,7 +85,7 @@ namespace Viking.DataModel.Annotation.Tests
 
             _dbContext.StructureTypes.Remove(foundChild);
             int nChanges = _dbContext.SaveChanges();
-            Assert.Equal(nChanges,2); //Remove child and parent from previous attempt
+            Assert.Equal(2, nChanges); //Remove child and parent from previous attempt
         }  
     }
 }

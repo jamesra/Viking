@@ -20,7 +20,7 @@ namespace Viking.DataModel.Annotation.Tests
         }
 
         [Fact]
-        public async Task PermittedStructureLinkBasics()
+        public void PermittedStructureLinkBasics()
         {
             var synapseLink = new PermittedStructureLink
             {
@@ -37,9 +37,7 @@ namespace Viking.DataModel.Annotation.Tests
             };
 
             _dbContext.PermittedStructureLinks.Add(synapseLink);
-            _dbContext.PermittedStructureLinks.Add(gapJunctionLink); 
-
-            
+            _dbContext.PermittedStructureLinks.Add(gapJunctionLink);  
         }
     }
 }
