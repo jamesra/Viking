@@ -1,6 +1,6 @@
 /Deployment/
 packages/
 /.vs/
-IdentityServer/
-Identity.DataContext/
-Identity.Models/
+
+# Runtime logs written next to the Identity Server binaries
+IdentityServer/logs/
