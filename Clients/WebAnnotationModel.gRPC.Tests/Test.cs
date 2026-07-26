@@ -67,8 +67,7 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         IHostBuilder CreateHostBuilder()
-        { 
-            var endpoint = new Uri("http://webdev.connectomes.utah.edu/Test/");
+        {  
             return Host.CreateDefaultBuilder() 
                 .ConfigureAppConfiguration((appContext) => appContext.UseTestConfigurationBuilder())
                 .ConfigureServices((context, services) =>

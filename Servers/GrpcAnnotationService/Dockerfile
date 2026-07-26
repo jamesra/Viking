@@ -1,25 +1,33 @@
 #See https://aka.ms/containerfastmode to understand how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
-#Depending on the operating system of the host machines(s) that will build or run the containers, the image specified in the FROM statement may need to be changed.
-#For more information, please see https://aka.ms/containercompat
-
-FROM mcr.microsoft.com/dotnet/core/aspnet:3.1-nanoserver-1903 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:5.0 AS base
 WORKDIR /app
 EXPOSE 80
 EXPOSE 443
 
-FROM mcr.microsoft.com/dotnet/core/sdk:3.1-nanoserver-1903 AS build
+FROM mcr.microsoft.com/dotnet/sdk:5.0 AS build
 WORKDIR /src
-COPY ["Servers/GrpcAnnotationService/GrpcAnnotationService.csproj", "Servers/GrpcAnnotationService/"]
-RUN dotnet restore "Servers/GrpcAnnotationService/GrpcAnnotationService.csproj"
+COPY ["nuget.config", "."]
+COPY ["Servers/GrpcAnnotationService/gRPCAnnotationService.csproj", "Servers/GrpcAnnotationService/"]
+COPY ["gRPCAnnotationServiceTypes/AnnotationServiceTypes.gRPC.csproj", "gRPCAnnotationServiceTypes/"]
+COPY ["Geometry/Geometry.csproj", "Geometry/"]
+COPY ["Clients/Common/Common.csproj", "Clients/Common/"]
+COPY ["Utils/Utils.csproj", "Utils/"]
+COPY ["UnitsAndScale/UnitsAndScale.csproj", "UnitsAndScale/"]
+COPY ["RTree/RTree.csproj", "RTree/"]
+COPY ["AnnotationInterfaces/AnnotationInterfaces.csproj", "AnnotationInterfaces/"]
+COPY ["Servers/ConnectomeDataModelCore/ConnectomeDataModelCore.csproj", "Servers/ConnectomeDataModelCore/"]
+COPY ["Servers/Libs/NetTopologySuite.IO.SqlServerBytes/src/NetTopologySuite.IO.SqlServerBytes/NetTopologySuite.IO.SqlServerBytes.csproj", "Servers/Libs/NetTopologySuite.IO.SqlServerBytes/src/NetTopologySuite.IO.SqlServerBytes/"]
+COPY ["Servers/Libs/EntityFrameworkExtras/EntityFrameworkExtras.EF6/EntityFrameworkExtras.EF6.csproj", "Servers/Libs/EntityFrameworkExtras/EntityFrameworkExtras.EF6/"]
+RUN dotnet restore "Servers/GrpcAnnotationService/gRPCAnnotationService.csproj"
 COPY . .
 WORKDIR "/src/Servers/GrpcAnnotationService"
-RUN dotnet build "GrpcAnnotationService.csproj" -c Release -o /app/build
+RUN dotnet build "gRPCAnnotationService.csproj" -c Release -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "GrpcAnnotationService.csproj" -c Release -o /app/publish
+RUN dotnet publish "gRPCAnnotationService.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "GrpcAnnotationService.dll"]
+ENTRYPOINT ["dotnet", "gRPCAnnotationService.dll"]
