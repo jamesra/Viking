@@ -1,0 +1,6 @@
+﻿"Action","RelPath","Source"
+"RECONSTRUCT-FROM-CLEAN","Clients\Viking\Content\LocalBookmarks\ChannelOverlayShader.fx","Clients\Content\VikingXNAGraphics\ChannelOverlayShader.fx"
+"RECONSTRUCT-FROM-CLEAN","Clients\Viking\Content\LocalBookmarks\MergeHSVImages.fx","Clients\Content\VikingXNAGraphics\MergeHSVImages.fx"
+"RECONSTRUCT-FROM-CLEAN","Clients\Viking\Content\VikingXNAGraphics\RoundCurveHSV.fx","Clients\Content\VikingXNAGraphics\RoundCurveHSV.fx"
+"RECONSTRUCT-FROM-CLEAN","Clients\Viking\Viking\Content\VikingXNAGraphics\RGBToHSV.fx","Clients\Content\VikingXNAGraphics\RGBToHSV.fx"
+"STUB-UNRECOVERABLE","Triangle.NET\TestApp\FormExport.resx","(empty resx stub)"
