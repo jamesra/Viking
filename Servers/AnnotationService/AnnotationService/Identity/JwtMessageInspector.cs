@@ -105,7 +105,8 @@ namespace Annotation.Identity
                         }
 
                         // Also set it in the HttpContext if available
-                        HttpContext.Current?.User = wcfPrincipal;
+                        if (HttpContext.Current != null)
+                            HttpContext.Current.User = wcfPrincipal;
 
                         // Set Thread.CurrentPrincipal directly (backup in case RoleAuthorizationManager doesn't run)
                         Thread.CurrentPrincipal = wcfPrincipal;

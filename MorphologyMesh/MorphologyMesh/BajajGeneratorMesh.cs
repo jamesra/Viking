@@ -4,10 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
 
 namespace MorphologyMesh
 {
@@ -79,6 +77,12 @@ namespace MorphologyMesh
         /// suspect rather than a fully successful reconstruction.
         /// </summary>
         public bool GenerationHadErrors { get; set; } = false;
+
+        /// <summary>
+        /// The manifold state measured at the end of face generation.  Lets callers and tests inspect why a
+        /// slice was flagged rather than only knowing that something went wrong.
+        /// </summary>
+        public MeshManifoldReport ManifoldReport { get; set; }
 
         public override string ToString()
         {
@@ -264,12 +268,9 @@ namespace MorphologyMesh
         /// </summary>
         public void EnsureFacesHaveExternalNormals()
         {
-            #region agent log
-            var beforeStats = MeshWindingDiagnostics.Analyze(this);
             int totalReversals = 0;
             int anchorConflicts = 0;
             int componentsFlipped = 0;
-            #endregion
 
             HashSet<IFace> visited = [];
 
@@ -278,56 +279,34 @@ namespace MorphologyMesh
                 if (visited.Contains(start))
                     continue;
 
-                //1. Discover the connected component (no winding changes yet) and find a trusted seed if present.
-                List<MorphMeshFace> componentFaces = CollectConnectedComponent(start, visited, out MorphMeshFace anchorSeed);
+                //1. Discover the connected component (no winding changes yet) and collect its trusted anchors.
+                List<MorphMeshFace> componentFaces = CollectConnectedComponent(start, visited, out List<MorphMeshFace> anchors);
 
-                MorphMeshFace seed = anchorSeed ?? componentFaces[0];
-
-                //2. Propagate consistent winding across the component from the seed.
-                List<MorphMeshFace> component = PropagateWindingFromSeed(seed, ref totalReversals, ref anchorConflicts);
+                //2. Propagate consistent winding across the component, starting from every anchor at once.
+                //Seeding from a single face meant propagation could reach an anchor only after already orienting
+                //its neighbors the opposite way, and the anchor (which is never reversed) was then stranded in
+                //conflict.  Placing all anchors up front leaves only anchor-versus-anchor disagreements, which are
+                //genuinely ambiguous rather than an artifact of traversal order.
+                List<MorphMeshFace> seeds = anchors.Count > 0 ? anchors : [componentFaces[0]];
+                List<MorphMeshFace> component = PropagateWindingFromSeeds(seeds, ref totalReversals, ref anchorConflicts);
 
                 //3. Flip the whole component if it points inward relative to annotation contours.
                 if (OrientComponentOutward(component))
                     componentsFlipped++;
             }
 
+            //4. Propagation cannot fix a component reached through a non-manifold junction, so sweep up whatever
+            //pairs of faces still disagree across a shared edge.
+            int repaired = MeshWindingReorientation.RepairManifoldConsistency(this);
+
             foreach (MorphMeshFace f in this.MorphFaces)
                 f.NormalIsKnownCorrect = true;
 
-            #region agent log
-            var afterStats = MeshWindingDiagnostics.Analyze(this);
-            AgentLog(
-                "BajajGeneratorMesh.cs:EnsureFacesHaveExternalNormals",
-                "Winding reorientation complete",
-                "A,C,H",
-                new
-                {
-                    mesh = ToString(),
-                    beforeInconsistent = beforeStats.InconsistentManifoldEdges,
-                    afterInconsistent = afterStats.InconsistentManifoldEdges,
-                    beforeNonManifold = beforeStats.NonManifoldEdges,
-                    afterNonManifold = afterStats.NonManifoldEdges,
-                    totalReversals,
-                    anchorConflicts,
-                    componentsFlipped,
-                    faceCount = Faces.Count
-                });
-            #endregion
+            //An anchor conflict means two trusted faces disagree, so the component keeps inconsistent winding that
+            //no later pass will resolve.
+            if (anchorConflicts > 0)
+                Trace.WriteLine($"{this}: winding propagation reversed {totalReversals} faces, flipped {componentsFlipped} components outward and repaired {repaired} more, but {anchorConflicts} trusted faces disagreed with another anchor.");
         }
-
-        #region agent log
-        static void AgentLog(string location, string message, string hypothesisId, object data)
-        {
-            try
-            {
-                long ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                string dataJson = JsonSerializer.Serialize(data);
-                File.AppendAllText(@"d:\src\git\VikingLegacy\debug-84f952.log",
-                    $"{{\"sessionId\":\"84f952\",\"timestamp\":{ts},\"location\":\"{location}\",\"message\":\"{message}\",\"hypothesisId\":\"{hypothesisId}\",\"runId\":\"pre-fix\",\"data\":{dataJson}}}\n");
-            }
-            catch { }
-        }
-        #endregion
 
         /// <summary>
         /// A face is a trusted orientation anchor if its normal was set correct at creation (e.g. region/cap faces)
@@ -339,10 +318,10 @@ namespace MorphologyMesh
         /// <summary>
         /// Flood the faces connected to <paramref name="start"/> via shared edges without modifying winding.
         /// </summary>
-        /// <param name="anchorSeed">The first trusted anchor face encountered, or null if the component has none.</param>
-        private List<MorphMeshFace> CollectConnectedComponent(MorphMeshFace start, HashSet<IFace> visited, out MorphMeshFace anchorSeed)
+        /// <param name="anchors">Every trusted anchor face in the component, empty if it has none.</param>
+        private List<MorphMeshFace> CollectConnectedComponent(MorphMeshFace start, HashSet<IFace> visited, out List<MorphMeshFace> anchors)
         {
-            anchorSeed = null;
+            anchors = [];
             List<MorphMeshFace> component = [];
             Queue<MorphMeshFace> queue = new();
             queue.Enqueue(start);
@@ -352,8 +331,8 @@ namespace MorphologyMesh
             {
                 MorphMeshFace f = queue.Dequeue();
                 component.Add(f);
-                if (anchorSeed is null && IsAnchorFace(f))
-                    anchorSeed = f;
+                if (IsAnchorFace(f))
+                    anchors.Add(f);
 
                 foreach (IEdgeKey ek in f.Edges)
                 {
@@ -374,16 +353,17 @@ namespace MorphologyMesh
         }
 
         /// <summary>
-        /// Breadth-first traversal from a seed, reversing any neighbor whose winding disagrees with the placed
-        /// face across their shared edge.  Trusted anchor faces are never reversed (their orientation wins).
+        /// Breadth-first traversal from every seed at once, reversing any neighbor whose winding disagrees with the
+        /// placed face across their shared edge.  Trusted anchor faces are never reversed (their orientation wins).
         /// Returns the live face instances of the component after reorientation.
         /// </summary>
-        private List<MorphMeshFace> PropagateWindingFromSeed(MorphMeshFace seed, ref int totalReversals, ref int anchorConflicts)
+        private List<MorphMeshFace> PropagateWindingFromSeeds(List<MorphMeshFace> seeds, ref int totalReversals, ref int anchorConflicts)
         {
             List<MorphMeshFace> component = [];
-            HashSet<IFace> placed = [seed];
+            HashSet<IFace> placed = [.. seeds.Cast<IFace>()];
             Queue<MorphMeshFace> queue = new();
-            queue.Enqueue(seed);
+            foreach (MorphMeshFace seed in seeds)
+                queue.Enqueue(seed);
 
             while (queue.Count > 0)
             {
@@ -409,16 +389,12 @@ namespace MorphologyMesh
                         {
                             if (IsAnchorFace(neighbor))
                             {
-                                #region agent log
                                 anchorConflicts++;
-                                #endregion
                             }
                             else
                             {
                                 neighbor = (MorphMeshFace)this.ReverseFace(neighbor);
-                                #region agent log
                                 totalReversals++;
-                                #endregion
                             }
                         }
 
@@ -461,6 +437,20 @@ namespace MorphologyMesh
             if (component.Count == 0)
                 return false;
 
+            //A closed component encloses a volume, so the sign of that volume settles which way it faces without
+            //relying on a representative face.  Outward faces are clockwise viewed from outside under the
+            //renderer's culling convention, which gives a negative signed volume, so a positive one is inverted.
+            if (IsComponentClosed(component))
+            {
+                if (ComponentSignedVolume(component) <= 0)
+                    return false;
+
+                foreach (MorphMeshFace f in component.ToArray())
+                    this.ReverseFace(f);
+
+                return true;
+            }
+
             var ctx = MorphMeshOutwardOrientation.ShapeContext.FromSliceTopology(Topology);
             MorphMeshFace rep = null;
             double bestAbsZ = -1;
@@ -483,6 +473,26 @@ namespace MorphologyMesh
 
             foreach (MorphMeshFace f in component.ToArray())
                 this.ReverseFace(f);
+            return true;
+        }
+
+        /// <summary>
+        /// True when every edge of the component is shared by exactly two of that component's own faces, so the
+        /// component encloses a volume and its signed volume is meaningful.
+        /// </summary>
+        private bool IsComponentClosed(List<MorphMeshFace> component)
+        {
+            HashSet<IFace> componentFaces = [.. component.Cast<IFace>()];
+
+            foreach (MorphMeshFace f in component)
+            {
+                foreach (IEdgeKey ek in f.Edges)
+                {
+                    if (this.Edges[ek].Faces.Count(componentFaces.Contains) != 2)
+                        return false;
+                }
+            }
+
             return true;
         }
 

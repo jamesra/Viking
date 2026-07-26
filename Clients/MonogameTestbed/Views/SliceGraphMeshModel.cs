@@ -35,6 +35,12 @@ namespace MonogameTestbed
 
         public ReaderWriterLockSlim ModelLock = new();
 
+        /// <summary>
+        /// The manifold state of the merged composite, measured after the winding pass.  A correct reconstruction
+        /// is closed: every slice seam is shared by two faces once its neighbor has been merged in.
+        /// </summary>
+        public MeshManifoldReport CompositeManifoldReport { get; private set; }
+
         private Color _color = Color.CornflowerBlue;
         public Color Color
         {
@@ -118,17 +124,6 @@ namespace MonogameTestbed
 
             UpdateModel(modelVerts, NewModelEdges, mesh_to_global);
 
-            #region agent log
-            try
-            {
-                var stats = MeshWindingDiagnostics.Analyze(composite);
-                long ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                string sliceLabel = mesh.Slice?.ToString() ?? mesh.ToString();
-                System.IO.File.AppendAllText(@"d:\src\git\VikingLegacy\debug-84f952.log",
-                    $"{{\"sessionId\":\"84f952\",\"timestamp\":{ts},\"location\":\"SliceGraphMeshModel.cs:AddSlice\",\"message\":\"Composite after slice add\",\"hypothesisId\":\"B\",\"runId\":\"pre-fix\",\"data\":{{\"slice\":\"{sliceLabel.Replace("\"", "'")}\",\"compositeFaces\":{composite.Faces.Count},\"inconsistentManifold\":{stats.InconsistentManifoldEdges},\"nonManifold\":{stats.NonManifoldEdges},\"manifold\":{stats.ManifoldEdges}}}}}\n");
-            }
-            catch { }
-            #endregion
         }
 
         /// <summary>
@@ -256,30 +251,11 @@ namespace MonogameTestbed
                 ModelLock.ExitWriteLock();
             }
 
-            #region agent log
-            var postStats = MeshWindingDiagnostics.Analyze(composite);
-            MeshWindingReorientation.AgentLog(
-                "SliceGraphMeshModel.cs:EnsureCompositeWinding",
-                "Composite winding reorientation complete",
-                "B,F,G,H",
-                new
-                {
-                    beforeInconsistent = result.BeforeInconsistent,
-                    afterReorientInconsistent = result.AfterInconsistent,
-                    afterInconsistentAwayFromNonManifold = MeshWindingDiagnostics.CountInconsistentAwayFromNonManifold(composite),
-                    result.TotalReversals,
-                    outwardFlips,
-                    repairAfterOutward,
-                    shapesAtZCount = _shapesAtZ.Count,
-                    compositeFaces = composite.Faces.Count,
-                    postInconsistent = postStats.InconsistentManifoldEdges,
-                    modelEdgeCount = model.Edges?.Length ?? 0,
-                    postStats.ManifoldEdges,
-                    postStats.NonManifoldEdges,
-                    postStats.BoundaryEdges
-                },
-                "post-fix");
-            #endregion
+            CompositeManifoldReport = MeshManifoldValidator.Validate(composite);
+            System.Diagnostics.Trace.WriteLine(
+                $"Composite winding: {result.BeforeInconsistent} -> {result.AfterInconsistent} inconsistent edges, " +
+                $"{result.TotalReversals} reversals, {outwardFlips} components flipped outward, {repairAfterOutward} repaired.  " +
+                $"Composite {CompositeManifoldReport}");
         }
 
         /// <summary>

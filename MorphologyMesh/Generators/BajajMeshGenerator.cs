@@ -250,7 +250,12 @@ namespace MorphologyMesh
     public static class BajajMeshGenerator
     {
 
-        public delegate void OnMeshGeneratedEventHandler(BajajGeneratorMesh mesh, bool Success);
+        /// <summary>
+        /// Raised once for every slice in the graph.  <paramref name="mesh"/> is null when the slice produced no
+        /// mesh at all.  Every slice reports, successfully or not, so a consumer assembling slices knows when it
+        /// has heard from all of them.
+        /// </summary>
+        public delegate void OnMeshGeneratedEventHandler(Slice slice, BajajGeneratorMesh mesh, bool Success);
 
         /*
         /// <summary>
@@ -277,7 +282,7 @@ namespace MorphologyMesh
             //List<MeshingGroup> MeshingGroups = CalculateMeshingGroups(graph);
             List<BajajGeneratorMesh> listBajajMeshGenerators = [];
 
-            List<Task<BajajGeneratorMesh>> meshGenTasks = [];
+            List<Task<(Slice slice, BajajGeneratorMesh mesh)>> meshGenTasks = [];
 
             //var SimplerPolygon = CreateSimplerPolygonLookup(graph, 2.0);
 
@@ -285,54 +290,44 @@ namespace MorphologyMesh
             {
                 //Trace.WriteLine(string.Format("Creating group {0}", group.ToString()));
 
-                //var sliceTopology = sliceGraph.GetTopology(slice);
-
-                meshGenTasks.Add(Task<BajajGeneratorMesh>.Factory.StartNew(() =>
+                //Capture the slice in the result so a slice that fails to produce a mesh can still be reported.
+                Slice capturedSlice = slice;
+                meshGenTasks.Add(Task.Factory.StartNew(() =>
                 {
-                    var topology = sliceGraph.GetTopology(slice);
-                    if (!topology.IsValid)
-                    {
-                        Trace.WriteLine($"Skipping mesh for slice {slice}: topology initialisation failed.");
-                        return null;
-                    }
-                    return new BajajGeneratorMesh(topology, slice);
-                }));
-
-                //                BajajGeneratorMesh mesh = new BajajGeneratorMesh(Polygons.Select(p => p.Simplify(1.0)).ToList(), PolyZ, IsUpper);
-                //              listBajajMeshGenerators.Add(mesh);
-            }
-
-            var meshGenTaskArray = meshGenTasks.ToArray();
-            while (meshGenTasks.Any())
-            {
-                try
-                {
-                    var finishedTask = Task.WhenAny(meshGenTasks);
-
                     try
                     {
-                        var t = finishedTask.Result;
-                        if (t.Status == TaskStatus.RanToCompletion && t.Result is not null)
+                        var topology = sliceGraph.GetTopology(capturedSlice);
+                        if (topology.IsValid == false)
                         {
-                            listBajajMeshGenerators.Add(t.Result);
+                            Trace.WriteLine($"Slice {capturedSlice} produced no mesh: topology initialisation failed.");
+                            return (capturedSlice, (BajajGeneratorMesh)null);
                         }
+
+                        return (capturedSlice, new BajajGeneratorMesh(topology, capturedSlice));
                     }
                     catch (Exception e)
                     {
-                        Trace.WriteLine($"Exception constructing slice topology mesh {finishedTask.Result.AsyncState}\n{e}");
+                        Trace.WriteLine($"Slice {capturedSlice} produced no mesh:\n{e}");
+                        return (capturedSlice, (BajajGeneratorMesh)null);
                     }
-                    finally
-                    {
-                        meshGenTasks.Remove(finishedTask.Result);
-                    }
-                }
-                catch (Exception e)
-                {
-                    Trace.WriteLine($"Exception generating mesh {e}");
-                }
+                }));
             }
 
-            //listBajajMeshGenerators.AddRange(meshGenTasks.Select(t => t.Result));
+            //The tasks capture their own failures, so none of them fault and every slice yields a result.
+            var meshGenResults = await Task.WhenAll(meshGenTasks).ConfigureAwait(false);
+
+            foreach (var (slice, mesh) in meshGenResults)
+            {
+                if (mesh is null)
+                {
+                    //Report the slice anyway.  A consumer merging slices into one model waits on a result for each
+                    //one, and silently skipping a slice leaves it waiting forever.
+                    OnMeshGenerated?.Invoke(slice, null, false);
+                    continue;
+                }
+
+                listBajajMeshGenerators.Add(mesh);
+            }
 
             listBajajMeshGenerators.Sort(Comparer<BajajGeneratorMesh>.Create((a, b) => a.AverageZ.CompareTo(b.AverageZ)));  //Sorting the bajaj generators before launching tasks is optional but built the model in a predictable order for debug viewing
             List<Task> bajajTasks = [];
@@ -344,17 +339,18 @@ namespace MorphologyMesh
                 //BajajGeneratorMesh mesh = listBajajMeshGenerators[iMesh];
                 bajajTasks.Add(Task.Factory.StartNew((i) =>
                    {
+                       BajajGeneratorMesh mesh = BajajGeneratorMeshArray[(int)i];
                        try
                        {
-                           GenerateFaces(BajajGeneratorMeshArray[(int)i]);
+                           GenerateFaces(mesh);
                            //A non-fatal error (e.g. a region that could not be closed) leaves a partial mesh.
                            //Report success only if generation completed without flagged errors.
-                           OnMeshGenerated?.Invoke(BajajGeneratorMeshArray[(int)i], !BajajGeneratorMeshArray[(int)i].GenerationHadErrors);
+                           OnMeshGenerated?.Invoke(mesh.Slice, mesh, !mesh.GenerationHadErrors);
                        }
                        catch (Exception e)
                        {
-                           Trace.WriteLine($"Exception building mesh {BajajGeneratorMeshArray[(int)i]}\n{e}");
-                           OnMeshGenerated?.Invoke(BajajGeneratorMeshArray[(int)i], false);
+                           Trace.WriteLine($"Exception building mesh {mesh}\n{e}");
+                           OnMeshGenerated?.Invoke(mesh.Slice, mesh, false);
                        }
                    }, iMesh));
 
@@ -497,6 +493,13 @@ namespace MorphologyMesh
 
             //Recompute per-vertex normals now that face winding is consistent so lighting matches the corrected surface.
             mesh.RecalculateNormals();
+
+            mesh.ManifoldReport = MeshManifoldValidator.Validate(mesh);
+            if (mesh.ManifoldReport.IsValidSliceSurface == false)
+            {
+                mesh.GenerationHadErrors = true;
+                Trace.WriteLine($"Mesh {mesh} is not a valid slice surface: {mesh.ManifoldReport}");
+            }
         }
 
         private static Dictionary<GridVector2, List<int>> CreatePointToIndexMap(BajajGeneratorMesh mesh)
@@ -1654,7 +1657,19 @@ return;
             GridVector2 p1 = vertex.Point(Shapes);
             GridVector2 p2 = candidate.Point(Shapes);
             if (p1 == p2)
+            {
+                //Corresponding verticies: the same X,Y appears on both contours.  A zero-length chord cannot
+                //intersect anything and has no orientation, so the geometric theorems are vacuous here and only the
+                //Correspondance flag decides whether the pairing is allowed.  That flag was ignored, so a caller
+                //that deliberately left it out still had its corresponding chords accepted.
+                if ((TestsToRun & SliceChordTestType.Correspondance) == 0)
+                {
+                    results |= SliceChordTestType.Correspondance;
+                    return false;
+                }
+
                 return true;
+            }
 
             GridLineSegment ChordLine = new(p1, p2);
 
@@ -1680,7 +1695,6 @@ return;
 
             bool AngleOrientation = true;
             bool T2 = true;
-            bool T2Opp = true;
             bool T4 = true;
             bool T4Opp = true;
 
@@ -1696,6 +1710,9 @@ return;
 
             if ((TestsToRun & SliceChordTestType.Theorem2) > 0)
             {
+                //Theorem 2 is symmetric in its two verticies: swapping them exchanges both the points and the
+                //adjacency rings, and the side comparison is an inequality between the two, so one evaluation
+                //covers the chord in both directions.
                 T2 = Theorem2(Shapes, vertex, candidate);
                 if (!T2)
                 {
@@ -1704,8 +1721,6 @@ return;
                 }
 
             }
-
-            //bool T2 = true;
 
             if ((TestsToRun & SliceChordTestType.Theorem4) > 0)
             {
@@ -1724,7 +1739,7 @@ return;
                 }
             }
 
-            return AngleOrientation && T2 && T2Opp && T4 && T4Opp;
+            return AngleOrientation && T2 && T4 && T4Opp;
             //return Theorem2(OppositeContours, candidate, p) && Theorem4(OppositeContours, ContourLine) && Theorem4(Contours, ContourLine);
         }
 

@@ -413,7 +413,9 @@ namespace Geometry.Meshing
         /// <param name="face"></param>
         public virtual void AddFace(IFace face)
         {
-            //Debug.Assert(Faces.Contains(face) == false, string.Format("Mesh already contains {0}", face));
+            //Re-adding an existing face is idempotent: Faces and each Edge's face set are both sorted sets, so the
+            //repeat add changes nothing.  The invariant worth enforcing is per-edge (no edge may collect a third
+            //face), which morphology meshes report through MeshManifoldValidator.
 #if TRACEMESH
             Trace.WriteLine(string.Format("Add face {0}", face));
 #endif

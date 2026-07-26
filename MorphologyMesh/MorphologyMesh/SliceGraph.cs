@@ -64,6 +64,14 @@ namespace MorphologyMesh
         /// </summary>
         internal Dictionary<ulong, IShape2D> MorphNodeToShape = null;
 
+        private GridVector2? _translationToCenter;
+
+        /// <summary>
+        /// The translation InitializeShapes applied to every cached shape, so any shape rebuilt outside that cache
+        /// can be placed in the same centered space.
+        /// </summary>
+        private GridVector2 TranslationToCenter => _translationToCenter ??= -Graph.BoundingBox.CenterPoint.XY();
+
         private Dictionary<ulong, SliceTopology> SliceToTopology = null;
 
         /// <summary>
@@ -528,63 +536,67 @@ namespace MorphologyMesh
 
         internal SliceTopology GetSliceTopology(Slice group) => GetSliceTopology(group, this.MorphNodeToShape);
 
+        /// <summary>
+        /// A shape in a slice together with the data that must stay indexed alongside it.  These used to be four
+        /// separate parallel lists, which desynchronized as soon as a shape was filtered out (a polyline, or a
+        /// polygon the shape cache dropped), pairing each surviving shape with another shape's Z and upper/lower flag.
+        /// </summary>
+        private readonly record struct SliceShape(IShape2D Shape, bool IsUpper, double Z, ulong MorphNodeIndex);
+
         internal SliceTopology GetSliceTopology(Slice group, IReadOnlyDictionary<ulong, IShape2D> polyLookup = null)
         {
-            List<IShape2D> ShapeList = [];
-            List<bool> IsUpper = [];
-            List<double> ShapeZ = [];
-            List<ulong> VertexShapeIndexToMorphNodeIndex = [];
+            List<SliceShape> sliceShapes = [];
+            sliceShapes.AddRange(group.NodesAbove.Select(id => CreateSliceShape(id, true, polyLookup)));
+            sliceShapes.AddRange(group.NodesBelow.Select(id => CreateSliceShape(id, false, polyLookup)));
 
-            if (polyLookup != null)
+            //Correspondence is computed over every shape in the slice, including shapes we cannot tile, because a
+            //polyline still contributes corresponding verticies to the polygons it touches.
+            List<IShape2D> ShapeList = [.. sliceShapes.Select(s => s.Shape)];
+            var correspondingPoints = ShapeList.AddCorrespondingVerticies();
+
+            GridPolygon[] Polygons = [.. ShapeList.OfType<GridPolygon>()];
+            SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(Polygons, correspondingPoints);
+
+            GridPolyline[] Polylines = [.. ShapeList.OfType<GridPolyline>()];
+            SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(Polylines, correspondingPoints);
+
+            //The Bajaj generator only tiles polygons.  Filter the shapes and their per-shape data as a unit so the
+            //surviving entries remain indexed in lockstep.
+            SliceShape[] tileable = [.. sliceShapes.Where(s => s.Shape is GridPolygon)];
+
+            if (tileable.Length != sliceShapes.Count)
+                Trace.WriteLine($"Slice {group.Key}: {sliceShapes.Count - tileable.Length} of {sliceShapes.Count} shapes are not polygons and were excluded from the mesh.");
+
+            return new SliceTopology(group.Key,
+                tileable.Select(s => s.Shape),
+                tileable.Select(s => s.IsUpper),
+                tileable.Select(s => s.Z),
+                tileable.Select(s => s.MorphNodeIndex),
+                this.SectionThickness);
+        }
+
+        private SliceShape CreateSliceShape(ulong id, bool isUpper, IReadOnlyDictionary<ulong, IShape2D> polyLookup)
+        {
+            IShape2D shape;
+
+            if (polyLookup is null)
             {
-                ShapeList.AddRange(group.NodesAbove.Select(id => polyLookup.TryGetValue(id, out var value) ? value : Graph[id].Geometry.ToPolygon()));
-                ShapeList.AddRange(group.NodesBelow.Select(id => polyLookup.TryGetValue(id, out var value) ? value : Graph[id].Geometry.ToPolygon()));
+                //Without the shape cache nothing in this topology is recentered, so the raw geometry is consistent.
+                shape = Graph[id].Geometry.ToShape2D();
+            }
+            else if (polyLookup.TryGetValue(id, out var cached))
+            {
+                shape = cached;
             }
             else
             {
-                ShapeList.AddRange(group.NodesAbove.Select(id => Graph[id].Geometry.ToShape2D()));
-                ShapeList.AddRange(group.NodesBelow.Select(id => Graph[id].Geometry.ToShape2D()));
+                //The cache omits shapes it could not prepare, such as a polygon below MinAnnotationArea.  Cached
+                //shapes are centered on the graph bounding box, so rebuilding without that translation would place
+                //this contour a half-volume away from the neighbors it is meant to tile against.
+                shape = Graph[id].Geometry.ToPolygon().Translate(TranslationToCenter);
             }
 
-            VertexShapeIndexToMorphNodeIndex.AddRange(group.NodesAbove);
-            VertexShapeIndexToMorphNodeIndex.AddRange(group.NodesBelow);
-
-            IsUpper.AddRange(group.NodesAbove.Select(id => true));
-            IsUpper.AddRange(group.NodesBelow.Select(id => false));
-
-            ShapeZ.AddRange(group.NodesAbove.Select(id => Graph[id].Z));
-            ShapeZ.AddRange(group.NodesBelow.Select(id => Graph[id].Z));
-
-
-            //
-
-            //Todo Monday, this should not be in the constructor or the class I think.
-            //Add corresponding points until we've run out of new correspondances
-            var correspondingPoints = ShapeList.AddCorrespondingVerticies();
-
-            /*
-            List<GridVector2> novelCorrespondingPoints = correspondingPoints.ToList();
-            do
-            {
-                var nudgedPoints = SliceTopology.NudgeCorrespondingVerticies(Polygons, novelCorrespondingPoints);
-            */
-            GridPolygon[] Polygons = [.. ShapeList.Where(s => s is GridPolygon).Cast<GridPolygon>()];
-            SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(Polygons, correspondingPoints);
-
-            GridPolyline[] Polylines = [.. ShapeList.Where(l => l is GridPolyline).Cast<GridPolyline>()];
-            SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(Polylines, correspondingPoints);
-
-            /*
-                var NewCorresponingPoints = Polygons.AddCorrespondingVerticies();
-//                novelCorrespondingPoints = NewCorresponingPoints.Where(p => correspondingPoints.Contains(p) == false).ToList();
-                //correspondingPoints = NewCorresponingPoints;
-            }
-            while (novelCorrespondingPoints.Count > 0);
-            */
-
-            SliceTopology output = new(group.Key, Polygons, IsUpper, ShapeZ, VertexShapeIndexToMorphNodeIndex, this.SectionThickness);
-
-            return output;
+            return new SliceShape(shape, isUpper, Graph[id].Z, id);
         }
     }
 

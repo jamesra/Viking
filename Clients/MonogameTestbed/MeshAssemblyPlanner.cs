@@ -135,9 +135,15 @@ namespace MonogameTestbed
         /// Thread safe
         /// </summary>
         /// <param name="mesh"></param>
-        public void OnMeshCompleted(BajajGeneratorMesh mesh, bool Success)
+        public void OnMeshCompleted(Slice slice, BajajGeneratorMesh mesh, bool Success)
         {
-            AssemblyPlannerLeaf leaf = this.Slices[mesh.Slice.Key];
+            AssemblyPlannerLeaf leaf = this.Slices[slice.Key];
+
+            //A null mesh means the slice produced no geometry.  The leaf still has to complete, otherwise its
+            //branch never merges and the assembly never reaches the root.
+            if (mesh is null || Success == false)
+                Trace.WriteLine($"Slice {slice.Key} merged without a complete mesh{(mesh is null ? " (no mesh was generated)" : $": {mesh.ManifoldReport}")}.");
+
             leaf.OnMeshCompletion(mesh);
             OnNodeCompleted?.Invoke(leaf, Success);
 

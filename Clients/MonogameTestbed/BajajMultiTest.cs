@@ -142,7 +142,8 @@ namespace MonogameTestbed
             get => PolyViews is null ? IndexLabelType.NONE : PolyViews.PointLabelType;
             set
             {
-                PolyViews?.PointLabelType = value;
+                if (PolyViews is not null)
+                    PolyViews.PointLabelType = value;
             }
         }
 
@@ -191,11 +192,11 @@ namespace MonogameTestbed
                 return;
         }
 
-        private void OnSliceCompleted(BajajGeneratorMesh mesh, bool Success) => this.AddMesh(mesh, Success);
+        private void OnSliceCompleted(Slice slice, BajajGeneratorMesh mesh, bool Success) => this.AddMesh(slice, mesh, Success);
 
-        private void AddMesh(BajajGeneratorMesh mesh, bool Success) => 
-                meshAssemblyPlan.OnMeshCompleted(mesh, Success);
-          
+        private void AddMesh(Slice slice, BajajGeneratorMesh mesh, bool Success) =>
+                meshAssemblyPlan.OnMeshCompleted(slice, mesh, Success);
+
 
         /// <summary>
         /// Called before GenerateMesh to reset the class views.

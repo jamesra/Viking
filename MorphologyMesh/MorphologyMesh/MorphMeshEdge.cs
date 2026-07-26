@@ -14,28 +14,30 @@ namespace MorphologyMesh
 
         public bool MatchingOrientation = false; //True if this edge is outside of one shape and inside another
 
-        public override void AddFace(IFace f) => base.AddFace(f);//Debug.Assert(this.Faces.Count < 3, string.Format("{0} was extra face on {1}", f, this));
+        public override void AddFace(IFace f) => base.AddFace(f);
 
         public new static IEdge Create(int A, int B) => new MorphMeshEdge(EdgeType.UNKNOWN, A, B);
 
         public new ImmutableSortedSet<MorphMeshFace> Faces => new SortedSet<MorphMeshFace>(this._Faces.Select(f => (MorphMeshFace)f)).ToImmutableSortedSet();
 
         /// <summary>
-        /// Returns false if the edge requires additional faces to complete the meshing of the morphology.
-        /// Currently used for Bajaj meshing, where CONTOUR edges require one face, and all others require two.
+        /// The number of faces this edge carries in a correct Bajaj mesh.  CONTOUR edges are the seam shared with
+        /// the neighboring slice, so within a single slice mesh they carry one face.  Every other edge is interior
+        /// to the slice and carries two.
         /// </summary>
-        /// <returns></returns>
-        public bool FacesComplete
-        {
-            get
-            {
-                //System.Diagnostics.Debug.Assert(this.Faces.Count < 3); // We cannot have more than two faces on an edge when meshing morphology
-                if (this.Faces.Count > 2)
-                    return true;    //I don't know how we could have three, but that's enough faces for this edge
+        public int RequiredFaceCount => Type == EdgeType.CONTOUR ? 1 : 2;
 
-                return Type == EdgeType.CONTOUR ? Faces.Count == 1 : Faces.Count == 2;
-            }
-        }
+        /// <summary>
+        /// Returns false if the edge requires additional faces to complete the meshing of the morphology.
+        /// </summary>
+        public bool FacesComplete => Faces.Count >= RequiredFaceCount;
+
+        /// <summary>
+        /// True when the edge carries more faces than a manifold surface allows.  This used to be reported as
+        /// "complete", which hid non-manifold edges from region detection instead of surfacing them.  The count of
+        /// such edges is reported per mesh by <see cref="MeshManifoldValidator"/>.
+        /// </summary>
+        public bool HasTooManyFaces => Faces.Count > RequiredFaceCount;
 
         public static IEdge Duplicate(IEdge old, int A, int B)
         {

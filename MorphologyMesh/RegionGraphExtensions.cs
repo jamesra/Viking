@@ -186,9 +186,19 @@ namespace MorphologyMesh
             //TODO: This appears to only select verts without faces... shouldn't we look for any vert without a chord?
             List<int> vertsWithoutFaces = [.. region.Verticies.Where(v => mesh[v].Edges.SelectMany(e => mesh[e].Faces).Count() == 0)];
 
+            //Candidates are selected and then added under one suite of tests.  These used to differ: the table was
+            //built with Theorem2 and Theorem4 but added with LineOrientation, so the region could be judged
+            //closeable against criteria that were never applied when the chords were actually created, and the
+            //chords could then fail to be added, leaving the region open.
+            const SliceChordTestType RegionChordTests = SliceChordTestType.Correspondance
+                                                      | SliceChordTestType.ChordIntersection
+                                                      | SliceChordTestType.Theorem2
+                                                      | SliceChordTestType.Theorem4
+                                                      | SliceChordTestType.LineOrientation;
+
             BajajMeshGenerator.CreateOptimalTilingVertexTable(vertsWithoutFaces.Select(v => mesh[v].ShapeIndex),
                                                               mesh.Shapes, mesh.IsUpperShape,
-                                                              SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.Theorem4,
+                                                              RegionChordTests,
                                                               out OTVTable OTVTable, ref rTree);
 
             //If we can't map every vertex in the region it needs to be mapped to another region before being capped off
@@ -199,7 +209,7 @@ namespace MorphologyMesh
                 return OTVTable;
             }
 
-            int added = BajajMeshGenerator.TryAddOTVTable(mesh, OTVTable, rTree, SliceChordTestType.ChordIntersection | SliceChordTestType.LineOrientation, SliceChordPriority.Orientation);
+            int added = BajajMeshGenerator.TryAddOTVTable(mesh, OTVTable, rTree, RegionChordTests, SliceChordPriority.Orientation);
             if (added == OTVTable.Count)
             {
                 return null;
@@ -465,20 +475,10 @@ namespace MorphologyMesh
         /// <param name="OnProgress"></param>
         public static void CapMeshEnd(this BajajGeneratorMesh mesh, bool CloseUpper, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
         {
-            IShape2D[] polysToClose = CloseUpper ? mesh.UpperShapes : mesh.LowerShapes;
+            //A cap extends half a section beyond the contour it closes, so the annotation occupies its own section
+            //rather than collapsing onto the contour plane.
+            double halfThickness = mesh.SliceThickness / 2.0;
 
-            //double HalfThickness = mesh.SliceThickness / 2.0;
-            //double targetZ = CloseUpper ? mesh.UpperPolyIndicies.Min() + HalfThickness : mesh.LowerPolyIndicies.Max() - HalfThickness;
-            double targetZ = mesh.SliceCenterZ;
-            targetZ += CloseUpper ? mesh.SliceThickness : -mesh.SliceThickness;
-
-            /*
-            double MinZ = mesh.LowerPolyIndicies.Max(i => mesh.PolyZ[i]); //Pick the largest of the low-end Z values
-            double MaxZ = mesh.UpperPolyIndicies.Min(i => mesh.PolyZ[i]); //Pick the smallest of the high-end Z values
-
-            double HalfThickness = (MaxZ - MinZ) / 2.0;
-            double targetZ = CloseUpper ? MaxZ + HalfThickness : MinZ - HalfThickness;
-            */
             for (int iPoly = 0; iPoly < mesh.Shapes.Length; iPoly++)
             {
                 bool ClosePoly = CloseUpper ? mesh.IsUpperShape[iPoly] : !mesh.IsUpperShape[iPoly];
@@ -502,18 +502,53 @@ namespace MorphologyMesh
                         continue;
                     }
 
-                    //TODO: Adjust the Z level of the output based on the type of region and verticies we are connecting to.
-                    var MedialAxisMeshVerts = NewVerts.Select(mv => new MorphMeshVertex(new MedialAxisIndex(MedialAxis, mv), (mv.Key + polyCenter).ToGridVector3(targetZ))).ToArray();
-                    int iNewVerts = mesh.AddVerticies(MedialAxisMeshVerts);
+                    //The cap is a dome, not a plateau.  Every medial axis vertex used to be placed at a single
+                    //target Z, which produced a flat-topped surface joined to the contour by a vertical wall.
+                    //Instead each vertex rises in proportion to how deep inside the contour it sits: the vertex
+                    //with the greatest clearance from the boundary reaches the full half-section, and vertices
+                    //near the boundary stay near the contour so the cap meets the ring smoothly.
+                    double contourZ = mesh.ShapeZ[iPoly];
+                    double peakOffset = CloseUpper ? halfThickness : -halfThickness;
+
+                    double[] clearance = [.. NewVerts.Select(v => BoundaryClearance(centeredPolygon, v.Key))];
+                    double maxClearance = clearance.Max();
+
+                    //Build the cap verticies with the indicies they will receive, but hold them back until the
+                    //triangulation succeeds.  Committing first left orphan verticies behind whenever the
+                    //triangulation threw on this polygon.
+                    int predictedStartIndex = mesh.Verticies.Count;
+                    var MedialAxisMeshVerts = NewVerts.Select((mv, k) =>
+                    {
+                        double depthFraction = maxClearance > 0 ? clearance[k] / maxClearance : 0;
+                        double vertZ = contourZ + (peakOffset * depthFraction);
+                        MorphMeshVertex vtx = new(new MedialAxisIndex(MedialAxis, mv), (mv.Key + polyCenter).ToGridVector3(vertZ));
+                        vtx.SetIndex(predictedStartIndex + k);
+                        return vtx;
+                    }).ToArray();
 
                     PolygonVertexEnum polyVertEnum = new(poly, iPoly);
                     List<MorphMeshVertex> PolygonMeshVerticies = [.. polyVertEnum.Select(pi => mesh[pi])];
                     PolygonMeshVerticies.AddRange(MedialAxisMeshVerts);
 
-                    var capTriangulation = TriangulateCapWithMedialAxis([.. PolygonMeshVerticies.Select(v => new Vertex2D<MorphMeshVertex>(v.Position.XY(), v))],
+                    TriangulationMesh<IVertex2D<MorphMeshVertex>> capTriangulation;
+                    try
+                    {
+                        capTriangulation = TriangulateCapWithMedialAxis([.. PolygonMeshVerticies.Select(v => new Vertex2D<MorphMeshVertex>(v.Position.XY(), v))],
                                                                         poly,
                                                                         iPoly,
                                                                         OnProgress: null);
+                    }
+                    catch (System.Exception e) when (e is GeometryMeshExceptionBase || e is System.ArgumentException)
+                    {
+                        //Capping one polygon must not abandon the rest of the mesh.  This end of this polygon stays
+                        //open, which the manifold report will show as a hole, but the tiled surface is still usable.
+                        Trace.WriteLine($"Could not cap shape {iPoly} of mesh {mesh}: triangulation failed ({e.GetType().Name}: {e.Message})");
+                        mesh.GenerationHadErrors = true;
+                        continue;
+                    }
+
+                    int iNewVerts = mesh.AddVerticies(MedialAxisMeshVerts);
+                    System.Diagnostics.Debug.Assert(iNewVerts == predictedStartIndex, "Cap vertex indicies must match the indicies predicted before triangulation");
 
                     //var polyMesh = regionPolygon.Triangulate(iPoly: 0);
                     //TriangleNet.Meshing.IMesh triangulation = regionPolygon.Triangulate(internalPoints: NewVerts.Select(v => v.Key).ToArray());
@@ -561,7 +596,27 @@ namespace MorphologyMesh
                         mesh.AddFace(newFace);
                     }
                 }
+                else
+                {
+                    //Only polygons can be capped.  A shape reaching here leaves an open end in the surface, so make
+                    //that visible instead of silently producing a mesh with a hole where the cap should be.
+                    Trace.WriteLine($"Cannot cap {mesh.Shapes[iPoly].GetType().Name} at shape index {iPoly} of mesh {mesh}.  This end of the mesh is left open.");
+                }
             }
+        }
+
+        /// <summary>
+        /// Distance from an interior point to the nearest polygon boundary, counting interior rings.  GridPolygon.Distance
+        /// only measures the exterior ring, which would report a point beside a hole as deep inside the shape.
+        /// </summary>
+        private static double BoundaryClearance(GridPolygon poly, GridVector2 point)
+        {
+            double clearance = poly.Distance(point);
+
+            foreach (GridPolygon inner in poly.InteriorPolygons)
+                clearance = System.Math.Min(clearance, inner.Distance(point));
+
+            return clearance;
         }
 
         /// <summary>

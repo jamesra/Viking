@@ -15,7 +15,6 @@ namespace VikingXNAGraphics
     public class MeshView<VERTEXTYPE>
         where VERTEXTYPE : struct, IVertexType
     {
-        private static int MeshViewDrawLogCount;
         private static readonly object RasterizerCacheLock = new();
         private static readonly Dictionary<(GraphicsDevice device, CullMode cull, FillMode fill), RasterizerState> RasterizerStateCache = [];
 
@@ -204,23 +203,6 @@ namespace VikingXNAGraphics
         {
            if (meshmodels is null)
                 return;
-
-            #region agent log
-            if (MeshViewDrawLogCount < 3)
-            {
-                var modelList = meshmodels.Where(m => m != null).ToList();
-                int drawable = modelList.Count(m => m.Edges != null && m.Verticies != null && m.Edges.Length != 0 && m.Verticies.Length != 0);
-                try
-                {
-                    string logPath = @"d:\src\git\VikingLegacy\debug-84f952.log";
-                    long ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                    File.AppendAllText(logPath,
-                        $"{{\"sessionId\":\"84f952\",\"timestamp\":{ts},\"location\":\"MeshView.cs:Draw\",\"message\":\"MeshView static draw\",\"hypothesisId\":\"D,E\",\"runId\":\"pre-fix\",\"data\":{{\"frame\":{MeshViewDrawLogCount},\"modelCount\":{modelList.Count},\"drawableCount\":{drawable},\"totalVerts\":{modelList.Sum(m => m.Verticies?.Length ?? 0)},\"totalEdges\":{modelList.Sum(m => m.Edges?.Length ?? 0)},\"cullMode\":\"{cullmode}\",\"fillMode\":\"{fillMode}\"}}}}\n");
-                }
-                catch { }
-                MeshViewDrawLogCount++;
-            }
-            #endregion
 
             if (effect is null || effect.IsDisposed)
             {

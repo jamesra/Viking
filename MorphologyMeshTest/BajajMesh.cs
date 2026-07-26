@@ -21,7 +21,11 @@ namespace MorphologyMeshTest
         /// Triangulates the verticies and add constraints for every exterior segment.
         /// </summary>
         [TestMethod]
-        [Ignore("Known-failing property test: the Bajaj generator can still produce non-manifold output (edges with more than two faces) for some random polygon pairs. Tracked by the Bajaj mesh analysis; unrelated to face-winding reorientation.")]
+        [Ignore("Known-failing: the generator still produces non-manifold output for complex random polygon pairs. " +
+                "Latest run falsified on two 65-vertex polygons each with one interior ring, where a CORRESPONDING edge " +
+                "collected a third face during region closing. Pairing interior rings across slices was never implemented " +
+                "(see the abandoned region-pairing block in RegionGraphExtensions.MergeAndCloseRegionsPass), which is the " +
+                "suspected cause. MeshManifoldValidator reports the same condition per mesh without failing the suite.")]
         public void TestPolygonOverlapAndBajajMeshing()
         {
             GeometryArbitraries.Register();
@@ -110,12 +114,16 @@ namespace MorphologyMeshTest
                 SecondPassRegions.MergeAndCloseRegionsPass(mesh, rTree);
                 mesh.RecalculateNormals();
 
-                edgesHaveMoreThanTwoFaces = EdgesHaveMoreThanTwoFaces(mesh);
+                MeshManifoldReport report = MeshManifoldValidator.Validate(mesh);
+
                 bool AllContourEdgesHaveOneFace = mesh.Edges.Values.Where(e => ((MorphMeshEdge)e).Type == EdgeType.CONTOUR).All(e => e.Faces.Count == 1);
                 bool AllCorrespondingEdgesHaveTwoFaces = mesh.Edges.Values.Where(e => ((MorphMeshEdge)e).Type == EdgeType.CORRESPONDING).All(e => e.Faces.Count == 2);
                 return AllContourEdgesHaveOneFace.Label("All contour edges have one face.")
-                        .And((false == edgesHaveMoreThanTwoFaces).Label("Edges have three or more faces"))
+                        .And(report.IsEdgeManifold.Label("Edges have three or more faces"))
+                        .And(report.IsConsistentlyOriented.Label("Faces disagree across a shared edge"))
+                        .And(report.IsFreeOfUnexpectedHoles.Label("The surface has holes away from the contour seam"))
                         .And((AllCorrespondingEdgesHaveTwoFaces).Label("All Corresponding Edges have two faces"))
+                        .Label("Manifold report: " + report)
                         .Label("A: " + A.ToJSON())
                         .Label("B: " + B.ToJSON());
             }).Check(configuration);

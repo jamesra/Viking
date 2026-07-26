@@ -101,6 +101,18 @@ namespace MorphologyMesh
 
             ShapeIndexToMorphNodeIndex = shapeIndexToMorphNodeIndex?.ToArray();
 
+            //These arrays are indexed in lockstep by shape index.  A mismatch means a caller filtered one of them
+            //without filtering the others, which silently attributes a shape's Z or upper/lower flag to a different
+            //shape.  Fail loudly rather than build a mesh from scrambled correspondence.
+            if (IsUpper.Length != Shapes.Length)
+                throw new ArgumentException($"IsUpper has {IsUpper.Length} entries for {Shapes.Length} shapes.  These must be indexed in lockstep.", nameof(isUpper));
+
+            if (ShapeZ.Length != Shapes.Length)
+                throw new ArgumentException($"ShapeZ has {ShapeZ.Length} entries for {Shapes.Length} shapes.  These must be indexed in lockstep.", nameof(shapeZ));
+
+            if (ShapeIndexToMorphNodeIndex is not null && ShapeIndexToMorphNodeIndex.Length != Shapes.Length)
+                throw new ArgumentException($"ShapeIndexToMorphNodeIndex has {ShapeIndexToMorphNodeIndex.Length} entries for {Shapes.Length} shapes.  These must be indexed in lockstep.", nameof(shapeIndexToMorphNodeIndex));
+
             //Assign polys to sets for convenience later
             CalculateUpperAndLowerPolygons(IsUpper, Shapes, out UpperShapes, out UpperShapeIndicies, out LowerShapes, out LowerShapeIndicies);
 
@@ -481,7 +493,7 @@ namespace MorphologyMesh
         private static void CalculateUpperAndLowerPolygons(bool[] IsUpper, IShape2D[] Shapes, out IShape2D[] UpperPolygons, out ImmutableSortedSet<int> UpperShapeIndicies, out IShape2D[] LowerPolygons, out ImmutableSortedSet<int> LowerShapeIndicies)
         {
             int nUpper = IsUpper.Count(u => u == true);
-            int nLower = Shapes.Length - nUpper;
+            int nLower = IsUpper.Count(u => u == false);
 
             UpperPolygons = new IShape2D[nUpper];
             LowerPolygons = new IShape2D[nLower];

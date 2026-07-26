@@ -393,6 +393,11 @@ namespace MorphologyMesh
         {
             MorphMeshRegionGraph graph = new();
 
+            //Two incomplete verticies on the same hole can each walk out the same perimeter.  Closing that region
+            //twice triangulates the hole twice and leaves the shared edges carrying more faces than a manifold
+            //surface allows, so track the faces already claimed by a region.
+            HashSet<MorphMeshFace> facesAlreadyInRegions = [];
+
             SortedSet<MorphMeshVertex> listUnassignedVerticies = [.. IncompleteVerticies];
             while (listUnassignedVerticies.Count > 0)
             {
@@ -418,6 +423,11 @@ namespace MorphologyMesh
                             //We probably removed corresponding verticies and had no faces left.
                             break;
                         }
+
+                        if (listRegionFaces.All(facesAlreadyInRegions.Contains))
+                            break;
+
+                        facesAlreadyInRegions.UnionWith(listRegionFaces);
 
                         region = new MorphMeshRegion(mesh, listRegionFaces, RegionType.UNTILED);
 
@@ -511,10 +521,12 @@ namespace MorphologyMesh
                 if (CleanedFace.Count <= 2)
                     return [];
 
-                //Nothing left but a single face we can create
+                //Nothing left but a single face we can create.  Build it from the cleaned perimeter: the original
+                //Face still holds the corresponding verticies that were just removed, so using it here produced a
+                //face with more verticies than the region actually has.
                 if (CleanedFace.Count == 3)
                 {
-                    MorphMeshFace newFace = new(Face);
+                    MorphMeshFace newFace = new(CleanedFace);
                     return [newFace];
                 }
 

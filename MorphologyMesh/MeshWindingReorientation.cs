@@ -1,11 +1,8 @@
 using Geometry;
 using Geometry.Meshing;
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
-using System.Text.Json;
 
 namespace MorphologyMesh
 {
@@ -289,18 +286,5 @@ namespace MorphologyMesh
             return false;
         }
 
-        #region agent log
-        public static void AgentLog(string location, string message, string hypothesisId, object data, string runId = "post-fix")
-        {
-            try
-            {
-                long ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                string dataJson = JsonSerializer.Serialize(data);
-                File.AppendAllText(@"d:\src\git\VikingLegacy\debug-84f952.log",
-                    $"{{\"sessionId\":\"84f952\",\"timestamp\":{ts},\"location\":\"{location}\",\"message\":\"{message}\",\"hypothesisId\":\"{hypothesisId}\",\"runId\":\"{runId}\",\"data\":{dataJson}}}\n");
-            }
-            catch { }
-        }
-        #endregion
     }
 }
