@@ -11,8 +11,6 @@
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
-		<TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
-		<NuGetTargetMoniker>.NETFramework,Version=v4.8</NuGetTargetMoniker>
 	</PropertyGroup>
 	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
 		<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.7.1.189" />

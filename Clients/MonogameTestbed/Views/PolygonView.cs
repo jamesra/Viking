@@ -73,7 +73,7 @@ namespace MonogameTestbed
             InteriorEdgeView.LineViews = [.. lines.Where(l => !Polygon.ExteriorSegments.Contains(l)).Select(s => new LineView(s, this.width, this.Color, LineStyle.Ladder))];
 
             MedialAxisView = new LineSetView();
-            var MedialAxis = MedialAxisFinder.ApproximateMedialAxisImproved(_Polygon);
+            var MedialAxis = MedialAxisFinder.ApproximateMedialAxisChordal(_Polygon, extendToApex: true);
             GridLineSegment[] MedialAxisSegments = MedialAxis.Segments;
             MedialAxisView.LineViews = [.. MedialAxisSegments.Select(s => new LineView(s, this.width, this.Color, LineStyle.Glow))];
             var NewVerts = MedialAxis.Nodes.Values.ToArray();
@@ -159,7 +159,7 @@ namespace MonogameTestbed
             InteriorEdgeView.LineViews = [.. lines.Where(l => !Polygon.ExteriorSegments.Contains(l)).Select(s => new LineView(s, this.width, this.Color, LineStyle.Ladder))];
 
             MedialAxisView = new LineSetView();
-            GridLineSegment[] MedialAxis = MedialAxisFinder.ApproximateMedialAxisImproved(_Polygon).Segments;
+            GridLineSegment[] MedialAxis = MedialAxisFinder.ApproximateMedialAxisChordal(_Polygon, extendToApex: true).Segments;
             MedialAxisView.LineViews = [.. MedialAxis.Select(s => new LineView(s, this.width, this.Color, LineStyle.Glow))];
         }
 

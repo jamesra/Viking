@@ -14,8 +14,6 @@
 		<UserSecretsId>9f8bc87c-d0ad-4a76-8844-443667d5e510</UserSecretsId>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
-		<TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
-		<NuGetTargetMoniker>.NETFramework,Version=v4.8</NuGetTargetMoniker>
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">

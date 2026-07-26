@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace Viking.VolumeModel
 {
@@ -23,7 +22,8 @@ namespace Viking.VolumeModel
             var key = tileViewModel.UniqueKey;
             if (TilesAtLevel.TryGetValue(downsample, out SortedDictionary<TileUniqueKey, TileViewModel> tiles))
             {
-                Debug.Assert(false == tiles.ContainsKey(key));
+                if (tiles.ContainsKey(key))
+                    return;
                 tiles.Add(key, tileViewModel);
             }
             else
@@ -52,7 +52,8 @@ namespace Viking.VolumeModel
 
             foreach (TileViewModel t in AddedTileArray)
             {
-                tiles.Add(t.UniqueKey, t);
+                if (!tiles.ContainsKey(t.UniqueKey))
+                    tiles.Add(t.UniqueKey, t);
             }
         }
 

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PipelineBuildEvent xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <SourceFile>D:/src/git/VikingLegacy/Clients/MonogameTestbed/Content/../../Monographics/Content/Arial.spritefont</SourceFile>
+  <SourceTime>2026-02-21T15:40:03.7241993-08:00</SourceTime>
+  <DestFile>D:/src/git/VikingLegacy/Clients/MonogameTestbed/Content/bin/DesktopGL/../../Monographics/Content/Arial.xnb</DestFile>
+  <DestTime>2026-06-17T23:32:30.0187096-07:00</DestTime>
+  <Importer>FontDescriptionImporter</Importer>
+  <ImporterTime>2026-01-17T03:11:16-08:00</ImporterTime>
+  <Processor>FontDescriptionProcessor</Processor>
+  <ProcessorTime>2026-01-17T03:11:16-08:00</ProcessorTime>
+  <Parameters>
+    <Key>TextureFormat</Key>
+    <Value>Compressed</Value>
+  </Parameters>
+  <Dependencies />
+  <BuildAsset />
+  <BuildOutput />
+</PipelineBuildEvent>

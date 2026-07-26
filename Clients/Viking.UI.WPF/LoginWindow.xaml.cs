@@ -158,7 +158,8 @@ namespace Viking.UI.WPF
             InitializeVolumeSelectionViewModel(bearerToken);
 
             _segmentationServiceSelectionViewModel = null;
-            segmentationSelectionControl?.DataContext = null;
+            if (segmentationSelectionControl != null)
+                segmentationSelectionControl.DataContext = null;
 
             CurrentStage = LoginStage.VolumeSelection;
             Title = "Viking - Select Volume";
@@ -251,16 +252,20 @@ namespace Viking.UI.WPF
 
         private void SetViewModelLoading(bool isLoading)
         {
-            _volumeSelectionViewModel?.IsLoading = isLoading;
+            if (_volumeSelectionViewModel != null)
+                _volumeSelectionViewModel.IsLoading = isLoading;
 
-            _segmentationServiceSelectionViewModel?.IsLoading = isLoading;
+            if (_segmentationServiceSelectionViewModel != null)
+                _segmentationServiceSelectionViewModel.IsLoading = isLoading;
         }
 
         private void SetViewModelStatusMessage(string message)
         {
-            _volumeSelectionViewModel?.StatusMessage = message;
+            if (_volumeSelectionViewModel != null)
+                _volumeSelectionViewModel.StatusMessage = message;
 
-            _segmentationServiceSelectionViewModel?.StatusMessage = message;
+            if (_segmentationServiceSelectionViewModel != null)
+                _segmentationServiceSelectionViewModel.StatusMessage = message;
         }
 
         private async Task PrepareSegmentationStageAsync(string volumeName, string volumeUrl)

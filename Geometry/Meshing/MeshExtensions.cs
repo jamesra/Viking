@@ -266,6 +266,70 @@ namespace Geometry.Meshing
         }
 
         /// <summary>
+        /// Removes degenerate input before triangulating a region: perimeter vertices that sit within
+        /// <see cref="Global.Epsilon"/> of the previously kept perimeter vertex (or the ring start), perimeter
+        /// vertices that are colinear with their neighbors (redundant midpoints), and interior points that
+        /// coincide with a kept perimeter vertex or a previously kept interior point.
+        /// The original vertex <see cref="IVertex.Index"/> values are preserved so callers can map the
+        /// triangulation result back to their source mesh.  Without this the divide-and-conquer Delaunay
+        /// generator throws on coincident or near-colinear points (e.g. "Can't create line with two identical points").
+        /// </summary>
+        /// <param name="perimeter">Ordered perimeter ring of the region.</param>
+        /// <param name="interior">Interior (e.g. medial-axis) points that must lie inside the region.</param>
+        public static (IVertex2D[] Perimeter, IVertex2D[] Interior) CleanRegionTriangulationInput(IReadOnlyList<IVertex2D> perimeter, IReadOnlyList<IVertex2D> interior)
+        {
+            List<IVertex2D> cleanedPerimeter = new(perimeter.Count);
+            foreach (IVertex2D v in perimeter)
+            {
+                if (cleanedPerimeter.Count > 0 && GridVector2.Equals(cleanedPerimeter[cleanedPerimeter.Count - 1].Position, v.Position))
+                    continue; //Skip a point that duplicates the previous perimeter point
+
+                cleanedPerimeter.Add(v);
+            }
+
+            //Drop a trailing point that closes the ring back onto the first point
+            while (cleanedPerimeter.Count > 1 && GridVector2.Equals(cleanedPerimeter[0].Position, cleanedPerimeter[cleanedPerimeter.Count - 1].Position))
+                cleanedPerimeter.RemoveAt(cleanedPerimeter.Count - 1);
+
+            //Remove redundant colinear midpoints.  Keep removing while the middle of a triplet lies on the line
+            //connecting its neighbors, but never reduce the ring below a triangle.
+            bool removed = true;
+            while (removed && cleanedPerimeter.Count > 3)
+            {
+                removed = false;
+                for (int i = 0; i < cleanedPerimeter.Count; i++)
+                {
+                    GridVector2 prev = cleanedPerimeter[(i - 1 + cleanedPerimeter.Count) % cleanedPerimeter.Count].Position;
+                    GridVector2 curr = cleanedPerimeter[i].Position;
+                    GridVector2 next = cleanedPerimeter[(i + 1) % cleanedPerimeter.Count].Position;
+
+                    if (prev.Winding(curr, next) == RotationDirection.COLINEAR)
+                    {
+                        cleanedPerimeter.RemoveAt(i);
+                        removed = true;
+                        break;
+                    }
+                }
+            }
+
+            List<IVertex2D> cleanedInterior = new(interior?.Count ?? 0);
+            if (interior != null)
+            {
+                foreach (IVertex2D v in interior)
+                {
+                    bool duplicate = cleanedPerimeter.Any(p => GridVector2.Equals(p.Position, v.Position))
+                                  || cleanedInterior.Any(p => GridVector2.Equals(p.Position, v.Position));
+                    if (duplicate)
+                        continue;
+
+                    cleanedInterior.Add(v);
+                }
+            }
+
+            return ([.. cleanedPerimeter], [.. cleanedInterior]);
+        }
+
+        /// <summary>
         /// Triangulate a set of points on a face, that include a set of points inside the faces.
         /// </summary>
         /// <param name="verts">Exterior ring of a polygon</param>

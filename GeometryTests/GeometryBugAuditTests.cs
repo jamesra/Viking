@@ -237,6 +237,33 @@ namespace GeometryTests
         }
 
         [TestMethod]
+        public void AddPointsAtIntersections_LargeCoordinates_SharesVerticesAndStaysValid()
+        {
+            //Reproduces the slice-graph correspondence scenario from the Bajaj mesh log: two overlapping
+            //polygons positioned at large coordinates (~61000, -72000) where the fixed epsilon (0.001) is tiny
+            //relative to the magnitude.  AddPointsAtIntersections must insert the intersection points on both
+            //polygons (so adjacent slices share corresponding vertices) and leave both polygons valid.
+            GridVector2 offset = new(61000, -72000);
+
+            GridPolygon a = RectanglePolygon(new GridRectangle(-50, 50, -50, 50)).Translate(offset);
+            GridPolygon b = RectanglePolygon(new GridRectangle(0, 100, 0, 100)).Translate(offset);
+
+            List<GridVector2> intersections = a.AddPointsAtIntersections(b);
+
+            Assert.IsTrue(a.IsValid(), "Polygon A must remain valid after inserting corresponding points.");
+            Assert.IsTrue(b.IsValid(), "Polygon B must remain valid after inserting corresponding points.");
+
+            //The two rectangles cross at (50, 0) and (0, 50) relative to the offset.
+            Assert.IsTrue(intersections.Count >= 2, "Expected the overlapping rectangle edges to produce corresponding points.");
+
+            foreach (GridVector2 p in intersections)
+            {
+                Assert.IsTrue(a.IsVertex(p), $"Intersection {p} should be a vertex of polygon A.");
+                Assert.IsTrue(b.IsVertex(p), $"Intersection {p} should be a vertex of polygon B.");
+            }
+        }
+
+        [TestMethod]
         public void QuadTreeWithUniqueValues_UpdateValue_RefreshesReverseLookup()
         {
             QuadTreeWithUniqueValues<string> tree = new(new GridRectangle(-10, 10, -10, 10));

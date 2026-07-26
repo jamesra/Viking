@@ -72,9 +72,6 @@ namespace Geometry.Transforms
             _mapPoints = value;
 
             var _mapPointsList = _mapPoints.ToList();
-#if DEBUG
-                DebugVerifyPointsAreUnique(_mapPoints);
-#endif
             bool ArrayHadDuplicates = false;
             ArrayHadDuplicates = ArrayHadDuplicates || MappingGridVector2.RemoveControlSpaceDuplicates(_mapPointsList);
             ArrayHadDuplicates = ArrayHadDuplicates || MappingGridVector2.RemoveMappedSpaceDuplicates(_mapPointsList);
@@ -86,6 +83,10 @@ namespace Geometry.Transforms
                 if (_mapPoints.Length < 3)
                     throw new ArgumentException("Not enough control points after duplicates removed");
             }
+
+#if DEBUG
+            DebugVerifyPointsAreUnique(_mapPoints);
+#endif
 
             //Reset the bounds
             MappedBounds = new GridRectangle();

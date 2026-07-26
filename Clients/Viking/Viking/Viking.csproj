@@ -11,9 +11,9 @@
     <SignAssembly>False</SignAssembly>
     <ProductName>Viking</ProductName>
     <PublisherName>Marc Lab</PublisherName>
-    <ApplicationVersion>1.2.52.0</ApplicationVersion>
-    <FileVersion>1.2.52.0</FileVersion>
-    <AssemblyVersion>1.2.52.0</AssemblyVersion>
+    <ApplicationVersion>1.2.57.0</ApplicationVersion>
+    <FileVersion>1.2.57.0</FileVersion>
+    <AssemblyVersion>1.2.57.0</AssemblyVersion>
     <Deterministic>True</Deterministic>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <NoWarn>$(NoWarn);CS0436;CA1014;CS3009</NoWarn>
@@ -124,10 +124,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <IsPublishable>True</IsPublishable>
   </PropertyGroup>
-  <Target Name="CopyGraphicsContent"
-          AfterTargets="Build"
-          BeforeTargets="PrepareForRun"
-          Condition="'$(DesignTimeBuild)' != 'true'">
+  <Target Name="CopyGraphicsContent" AfterTargets="Build" BeforeTargets="PrepareForRun" Condition="'$(DesignTimeBuild)' != 'true'">
     <PropertyGroup>
       <_GraphicsBuildConfig Condition="'$(Configuration)' != ''">$(Configuration)</_GraphicsBuildConfig>
       <_GraphicsBuildConfig Condition="'$(_GraphicsBuildConfig)' == ''">Debug</_GraphicsBuildConfig>
@@ -142,12 +139,9 @@
       <GraphicsContent Include="$(_GraphicsContentFallbackDir)*.xnb" />
     </ItemGroup>
     <MakeDir Directories="$(_GraphicsContentDestDir)" />
-    <Copy SourceFiles="@(GraphicsContent)"
-          DestinationFolder="$(_GraphicsContentDestDir)%(RecursiveDir)"
-          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(GraphicsContent)" DestinationFolder="$(_GraphicsContentDestDir)%(RecursiveDir)" SkipUnchangedFiles="true" />
     <Message Text="Copied @(GraphicsContent-&gt;Count()) graphics content file(s) to $(_GraphicsContentDestDir)" Importance="high" />
-    <Error Text="No graphics content (.xnb) was copied to Viking output. Build Clients\VikingXNAGraphics\MonographicsNet48.csproj and ensure MGCB is installed at '$(MGCBPath)'."
-           Condition="'@(GraphicsContent)' == ''" />
+    <Error Text="No graphics content (.xnb) was copied to Viking output. Build Clients\VikingXNAGraphics\MonographicsNet48.csproj and ensure MGCB is installed at '$(MGCBPath)'." Condition="'@(GraphicsContent)' == ''" />
   </Target>
   <!-- Define the list of modules to process -->
   <ItemGroup>

@@ -30,6 +30,9 @@
     The base URL where releases are hosted for downloading previous versions (default: http://websvc.codepharm.net/Software/Viking)
 
 .EXAMPLE
+    .\PublishVelopack.cmd
+    Builds Release (default) when no configuration is specified.
+.EXAMPLE
     .\PublishVelopack.ps1 -Configuration Release
 .EXAMPLE
     .\PublishVelopack.ps1 -Configuration Release -Version "1.2.1.0"
@@ -44,6 +47,26 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Accept dotnet-style "--configuration Release" args (PowerShell 5.1 does not bind these to -Configuration).
+for ($i = 0; $i -lt $args.Count; $i++) {
+    $arg = $args[$i]
+    if ($arg -match '^--?configuration$' -or $arg -eq '-c') {
+        if ($i + 1 -lt $args.Count) {
+            $Configuration = $args[$i + 1]
+            $i++
+        }
+    }
+}
+
+# Default to Release when omitted or malformed (e.g. "--configuration" passed without a value).
+$validConfigurations = @('Debug', 'Release')
+if ([string]::IsNullOrWhiteSpace($Configuration) -or $Configuration.StartsWith('-') -or ($Configuration -notin $validConfigurations)) {
+    if (-not [string]::IsNullOrWhiteSpace($Configuration) -and $Configuration -ne 'Release') {
+        Write-Host "Warning: Unrecognized configuration '$Configuration'. Using Release." -ForegroundColor Yellow
+    }
+    $Configuration = 'Release'
+}
 
 $projectPath = Join-Path $PSScriptRoot "Viking.csproj"
 $projectDir = $PSScriptRoot
@@ -269,7 +292,10 @@ function Download-PreviousRelease {
     }
 }
 
-# Helper function to sign files in a batch
+# Helper function to sign files in one signtool invocation via cmd.exe.
+# PowerShell's call operator / piping often breaks YubiKey PIN caching (prompt every
+# file or batch) or suppresses the PIN dialog. cmd.exe keeps one native process and
+# one PIN unlock for the whole file list.
 function Sign-FilesBatch {
     param(
         [string[]]$FilePaths,
@@ -285,123 +311,65 @@ function Sign-FilesBatch {
     $totalFiles = $FilePaths.Count
     
     if ($AttemptNumber -eq 1) {
-        Write-Host "Signing $totalFiles file(s) in batch (you will be prompted for PIN once)..." -ForegroundColor Gray
-        Write-Host "Please enter your YubiKey PIN when prompted..." -ForegroundColor Yellow
+        Write-Host "Signing $totalFiles file(s) in one signtool run (PIN once)..." -ForegroundColor Gray
     } else {
-        Write-Host "Batch signing attempt $AttemptNumber of $MaxAttempts ($totalFiles file(s))..." -ForegroundColor Gray
-        Write-Host "Please enter your YubiKey PIN when prompted..." -ForegroundColor Yellow
+        Write-Host "Signing attempt $AttemptNumber of $MaxAttempts ($totalFiles file(s))..." -ForegroundColor Gray
     }
+    Write-Host "Please enter your YubiKey PIN when the Windows dialog appears." -ForegroundColor Yellow
+    Write-Host "If no dialog appears, check behind other windows, or run PublishVelopack.cmd from Explorer / an external console." -ForegroundColor DarkYellow
     
-    # Show progress indicator in Velopack style
     $activityName = "Code-sign application"
     $startTime = Get-Date
-    $signedCount = 0
-    
+    Write-Host ""
+    Write-VelopackProgress -Activity $activityName -PercentComplete 0 -ElapsedTime (New-TimeSpan)
     Write-Host ""
     
-    # Start progress at 0%
-    Write-VelopackProgress -Activity $activityName -PercentComplete 0 -ElapsedTime (New-TimeSpan)
+    # Build a cmd.exe command line so signtool is not hosted by PowerShell.
+    $quotedFiles = ($FilePaths | ForEach-Object { '"{0}"' -f $_ }) -join ' '
+    $cmdLine = '"{0}" sign /sha1 {1} /tr "{2}" /td SHA256 /fd SHA256 {3}' -f `
+        $signtoolPath, $CertificateThumbprint, $TimestampRfc3161Url, $quotedFiles
     
-    # Capture signtool output and parse progress from "Successfully signed:" messages
-    # Suppress terminating errors so we can handle them gracefully and continue with retries
-    $hasError = $false
-    $signtoolExitCode = 0
-    
+    $oldErrorAction = $ErrorActionPreference
     try {
-        # Temporarily change error action to continue so signtool errors don't stop the script
-        $oldErrorAction = $ErrorActionPreference
         $ErrorActionPreference = "Continue"
-        
-        & $signtoolPath sign `
-            /sha1 $CertificateThumbprint `
-            /tr $TimestampRfc3161Url `
-            /td SHA256 `
-            /fd SHA256 `
-            $FilePaths 2>&1 | ForEach-Object {
-                # Parse output line by line
-                $line = $_
-                
-                # Check if this line indicates a successfully signed file
-                if ($line -match "Successfully signed:\s+(.+)") {
-                    $signedCount++
-                    $percentComplete = [math]::Round(($signedCount / $totalFiles) * 100)
-                    $elapsedTime = (Get-Date) - $startTime
-                    
-                    # If we had an error, move to a new line before updating progress
-                    if ($hasError) {
-                        Write-Host ""
-                        $hasError = $false
-                    }
-                    
-                    # Update progress bar with current progress
-                    Write-VelopackProgress -Activity $activityName -PercentComplete $percentComplete -ElapsedTime $elapsedTime
-                }
-                elseif ($line -match "Error|Warning|SignTool Error") {
-                    # Error messages - output on a new line and mark that we had an error
-                    if (-not $hasError) {
-                        Write-Host "" # Move to new line first
-                    }
-                    Write-Host $line
-                    $hasError = $true
-                }
-            }
-        
-        # Capture the exit code
+        cmd.exe /c $cmdLine
         $signtoolExitCode = $LASTEXITCODE
-        
-        # Restore error action preference
-        $ErrorActionPreference = $oldErrorAction
     }
     catch {
-        # If we catch an exception, capture it but don't stop execution
         $signtoolExitCode = $LASTEXITCODE
-        if ($hasError -eq $false) {
-            Write-Host ""
+        if ($signtoolExitCode -eq 0 -or $null -eq $signtoolExitCode) {
+            $signtoolExitCode = 1
         }
-        Write-Host $_.Exception.Message
-        $hasError = $true
+        Write-Host $_.Exception.Message -ForegroundColor Red
     }
     finally {
-        # Ensure error action is restored
-        $ErrorActionPreference = "Stop"
+        $ErrorActionPreference = $oldErrorAction
     }
     
-    # If we ended with an error, move to a new line before final progress update
-    if ($hasError) {
-        Write-Host ""
-    }
-    
-    # Set LASTEXITCODE for the calling code to check
     $global:LASTEXITCODE = $signtoolExitCode
-    
-    # Update progress to 100% after completion
     $elapsedTime = (Get-Date) - $startTime
     Write-VelopackProgress -Activity $activityName -PercentComplete 100 -ElapsedTime $elapsedTime
-    Write-Host "" # New line after progress
+    Write-Host ""
     
     if ($signtoolExitCode -eq 0) {
-        # First attempt succeeded, assume all files are signed (don't check individually)
         return @{ Success = $true; UnsignedFiles = @() }
-    } else {
-        # Signing failed
-        if ($CheckUnsignedAfterFailure) {
-            # Only check which files are unsigned on first failure (slow operation)
-            Write-Host "Batch signing failed. Checking which files are still unsigned..." -ForegroundColor Yellow
-            $stillUnsigned = Get-UnsignedFiles -FilePaths $FilePaths
-            if ($stillUnsigned.Count -gt 0) {
-                Write-Host "Found $($stillUnsigned.Count) unsigned file(s). Failed file(s):" -ForegroundColor Yellow
-                foreach ($failedFile in $stillUnsigned) {
-                    $fileName = [System.IO.Path]::GetFileName($failedFile)
-                    Write-Host "  - $fileName" -ForegroundColor Yellow
-                }
-            }
-            return @{ Success = $false; UnsignedFiles = $stillUnsigned }
-        } else {
-            # On retries, assume all files in the list are still unsigned (already checked)
-            Write-Host "Batch signing failed. Retrying $($FilePaths.Count) file(s)..." -ForegroundColor Yellow
-            return @{ Success = $false; UnsignedFiles = $FilePaths }
-        }
     }
+    
+    if ($CheckUnsignedAfterFailure) {
+        Write-Host "Signing failed. Checking which files are still unsigned..." -ForegroundColor Yellow
+        $stillUnsigned = Get-UnsignedFiles -FilePaths $FilePaths
+        if ($stillUnsigned.Count -gt 0) {
+            Write-Host "Found $($stillUnsigned.Count) unsigned file(s). Failed file(s):" -ForegroundColor Yellow
+            foreach ($failedFile in $stillUnsigned) {
+                $fileName = [System.IO.Path]::GetFileName($failedFile)
+                Write-Host "  - $fileName" -ForegroundColor Yellow
+            }
+        }
+        return @{ Success = $false; UnsignedFiles = $stillUnsigned }
+    }
+    
+    Write-Host "Signing failed. Retrying $($FilePaths.Count) file(s)..." -ForegroundColor Yellow
+    return @{ Success = $false; UnsignedFiles = $FilePaths }
 }
 
 # Step 3: Get version from project if not provided
@@ -542,17 +510,14 @@ if ($filesToSign.Count -eq 0) {
 } else {
     Write-Host "Found $($filesToSign.Count) files to sign..." -ForegroundColor Gray
     
-    # Build file list for signtool
-    $filePaths = $filesToSign | ForEach-Object { $_.FullName }
-    
-    # Sign all files in batches, retrying only unsigned files
+    # One signtool invocation for all files (via cmd.exe) so PIN is entered once.
+    $filePaths = @($filesToSign | ForEach-Object { $_.FullName })
     $unsignedFiles = $filePaths
     $maxAttempts = 10
     $attempt = 1
     $allSigned = $false
     
     while ($attempt -le $maxAttempts -and $unsignedFiles.Count -gt 0) {
-        # Only check unsigned files on first failure, not on retries
         $checkUnsigned = ($attempt -eq 1)
         $result = Sign-FilesBatch -FilePaths $unsignedFiles -AttemptNumber $attempt -MaxAttempts $maxAttempts -CheckUnsignedAfterFailure:$checkUnsigned
         
@@ -561,14 +526,14 @@ if ($filesToSign.Count -eq 0) {
             break
         }
         
-        $unsignedFiles = $result.UnsignedFiles
+        $unsignedFiles = @($result.UnsignedFiles)
         
         if ($unsignedFiles.Count -gt 0) {
             $attempt++
             if ($attempt -le $maxAttempts) {
-                Write-Host "" -ForegroundColor Yellow
+                Write-Host ""
                 Write-Host "Attempt $($attempt - 1) failed. $($unsignedFiles.Count) file(s) remain unsigned. Retrying..." -ForegroundColor Yellow
-                Start-Sleep -Seconds 1  # Brief pause between batch retries
+                Start-Sleep -Seconds 1
             }
         }
     }
@@ -576,16 +541,17 @@ if ($filesToSign.Count -eq 0) {
     if ($allSigned) {
         Write-Host "Successfully pre-signed $($filesToSign.Count) files!" -ForegroundColor Green
         if ($attempt -gt 1) {
-            Write-Host "(Completed after $attempt batch attempt(s))" -ForegroundColor Gray
+            Write-Host "(Completed after $attempt attempt(s))" -ForegroundColor Gray
         }
     } else {
-        Write-Host "" -ForegroundColor Red
-        Write-Host "Error: Failed to sign $($unsignedFiles.Count) file(s) after $maxAttempts batch attempts:" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Error: Failed to sign $($unsignedFiles.Count) file(s) after $maxAttempts attempts:" -ForegroundColor Red
         foreach ($failedFile in $unsignedFiles) {
             Write-Host "  - $failedFile" -ForegroundColor Red
         }
-        Write-Host "" -ForegroundColor Red
+        Write-Host ""
         Write-Host "Check your YubiKey is connected and functioning properly." -ForegroundColor Yellow
+        Write-Host "If no PIN dialog appeared, run PublishVelopack.cmd from Explorer or Windows Terminal (not Cursor)." -ForegroundColor Yellow
         exit 1
     }
 }
@@ -738,12 +704,9 @@ if ($setupExe -and (Test-Path $setupExe)) {
     Write-Host "Found Setup.exe: $setupExe" -ForegroundColor Gray
     Write-Host "Please enter your YubiKey PIN when prompted..." -ForegroundColor Yellow
     
-    & $signtoolPath sign `
-        /sha1 $CertificateThumbprint `
-        /tr $TimestampRfc3161Url `
-        /td SHA256 `
-        /fd SHA256 `
-        "$setupExe"
+    $setupCmd = '"{0}" sign /sha1 {1} /tr "{2}" /td SHA256 /fd SHA256 "{3}"' -f `
+        $signtoolPath, $CertificateThumbprint, $TimestampRfc3161Url, $setupExe
+    cmd.exe /c $setupCmd
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Successfully signed Setup.exe!" -ForegroundColor Green

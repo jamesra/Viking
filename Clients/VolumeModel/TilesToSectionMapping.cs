@@ -59,6 +59,11 @@ namespace Viking.VolumeModel
                 if (token.IsCancellationRequested)
                     return;
 
+                if (transforms is null || transforms.Length == 0)
+                {
+                    return;
+                }
+
                 ////Determine boundaries of the section////
                 var transformControlPoints = transforms.Cast<ITransformControlPoints>().ToArray();
                 _VolumeBounds =
@@ -259,6 +264,7 @@ namespace Viking.VolumeModel
                         this._LastModified = System.IO.File.GetLastWriteTimeUtc(this.CachedTransformsFileName);
                         return loadedTransforms;
                     }
+
                 }
                 catch (Exception)
                 {

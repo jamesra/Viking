@@ -4,8 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 
 namespace MorphologyMesh
 {
@@ -70,6 +72,13 @@ namespace MorphologyMesh
         /// A cache for failures when finding slice chords
         /// </summary>
         internal SliceChordsTestResultsCache SliceChordCandidateCache = new();
+
+        /// <summary>
+        /// Set to true if a non-fatal error occurred during face generation (e.g. a region or pass could
+        /// not be completed).  The mesh may still be partially generated, but callers should treat it as
+        /// suspect rather than a fully successful reconstruction.
+        /// </summary>
+        public bool GenerationHadErrors { get; set; } = false;
 
         public override string ToString()
         {
@@ -243,27 +252,259 @@ namespace MorphologyMesh
         }
 
         /// <summary>
-        /// Flip the winding of any faces that point internally to the slice.  Ensures correct lighting.
+        /// Ensure every face has consistent, outward-facing winding so backface culling does not punch holes
+        /// in the surface.  Faces are grouped into connected components (linked by shared edges).  Within each
+        /// component the winding is propagated from a trusted seed so adjacent faces traverse their shared edge
+        /// in opposite directions (a manifold-consistent orientation).  Trusted seeds are faces whose orientation
+        /// is already known correct (medial-axis caps).  Components with no trusted seed are flipped as a unit so
+        /// a representative cap face faces outward.
+        ///
+        /// This replaces the previous per-face heuristic, which decided each face independently and bailed out
+        /// ("Not implemented") for the vertical side-wall faces, leaving neighboring faces wound inconsistently.
         /// </summary>
         public void EnsureFacesHaveExternalNormals()
         {
-            MorphMeshFace[] faces = [.. this.MorphFaces.Where(f => f.NormalIsKnownCorrect == false)];
-            for (int i = 0; i < faces.Length; i++)
+            #region agent log
+            var beforeStats = MeshWindingDiagnostics.Analyze(this);
+            int totalReversals = 0;
+            int anchorConflicts = 0;
+            int componentsFlipped = 0;
+            #endregion
+
+            HashSet<IFace> visited = [];
+
+            foreach (MorphMeshFace start in this.MorphFaces.ToArray())
             {
-                MorphMeshFace f = faces[i];
-                MorphMeshVertex[] verts = [.. this[f.iVerts]];
-                if (verts.Any(v => v.MedialAxisIndex.HasValue))
-                {
-                    //Medial axis verts are caps and always have normals that point either up or down.  They should be set correctly at creation.
+                if (visited.Contains(start))
                     continue;
-                }
 
-                if (this.FaceHasCCWWinding(f))
-                    this.ReverseFace(f);
+                //1. Discover the connected component (no winding changes yet) and find a trusted seed if present.
+                List<MorphMeshFace> componentFaces = CollectConnectedComponent(start, visited, out MorphMeshFace anchorSeed);
 
-                f.NormalIsKnownCorrect = true;
+                MorphMeshFace seed = anchorSeed ?? componentFaces[0];
+
+                //2. Propagate consistent winding across the component from the seed.
+                List<MorphMeshFace> component = PropagateWindingFromSeed(seed, ref totalReversals, ref anchorConflicts);
+
+                //3. Flip the whole component if it points inward relative to annotation contours.
+                if (OrientComponentOutward(component))
+                    componentsFlipped++;
             }
 
+            foreach (MorphMeshFace f in this.MorphFaces)
+                f.NormalIsKnownCorrect = true;
+
+            #region agent log
+            var afterStats = MeshWindingDiagnostics.Analyze(this);
+            AgentLog(
+                "BajajGeneratorMesh.cs:EnsureFacesHaveExternalNormals",
+                "Winding reorientation complete",
+                "A,C,H",
+                new
+                {
+                    mesh = ToString(),
+                    beforeInconsistent = beforeStats.InconsistentManifoldEdges,
+                    afterInconsistent = afterStats.InconsistentManifoldEdges,
+                    beforeNonManifold = beforeStats.NonManifoldEdges,
+                    afterNonManifold = afterStats.NonManifoldEdges,
+                    totalReversals,
+                    anchorConflicts,
+                    componentsFlipped,
+                    faceCount = Faces.Count
+                });
+            #endregion
+        }
+
+        #region agent log
+        static void AgentLog(string location, string message, string hypothesisId, object data)
+        {
+            try
+            {
+                long ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                string dataJson = JsonSerializer.Serialize(data);
+                File.AppendAllText(@"d:\src\git\VikingLegacy\debug-84f952.log",
+                    $"{{\"sessionId\":\"84f952\",\"timestamp\":{ts},\"location\":\"{location}\",\"message\":\"{message}\",\"hypothesisId\":\"{hypothesisId}\",\"runId\":\"pre-fix\",\"data\":{dataJson}}}\n");
+            }
+            catch { }
+        }
+        #endregion
+
+        /// <summary>
+        /// A face is a trusted orientation anchor if its normal was set correct at creation (e.g. region/cap faces)
+        /// or it touches a medial-axis vertex (caps always point up or down and are oriented at creation).
+        /// </summary>
+        private bool IsAnchorFace(MorphMeshFace f) =>
+            f.NormalIsKnownCorrect || this[f.iVerts].Any(v => v.MedialAxisIndex.HasValue);
+
+        /// <summary>
+        /// Flood the faces connected to <paramref name="start"/> via shared edges without modifying winding.
+        /// </summary>
+        /// <param name="anchorSeed">The first trusted anchor face encountered, or null if the component has none.</param>
+        private List<MorphMeshFace> CollectConnectedComponent(MorphMeshFace start, HashSet<IFace> visited, out MorphMeshFace anchorSeed)
+        {
+            anchorSeed = null;
+            List<MorphMeshFace> component = [];
+            Queue<MorphMeshFace> queue = new();
+            queue.Enqueue(start);
+            visited.Add(start);
+
+            while (queue.Count > 0)
+            {
+                MorphMeshFace f = queue.Dequeue();
+                component.Add(f);
+                if (anchorSeed is null && IsAnchorFace(f))
+                    anchorSeed = f;
+
+                foreach (IEdgeKey ek in f.Edges)
+                {
+                    foreach (IFace nf in this.Edges[ek].Faces)
+                    {
+                        if (nf is not MorphMeshFace neighbor)
+                            continue;
+                        if (visited.Contains(neighbor))
+                            continue;
+
+                        visited.Add(neighbor);
+                        queue.Enqueue(neighbor);
+                    }
+                }
+            }
+
+            return component;
+        }
+
+        /// <summary>
+        /// Breadth-first traversal from a seed, reversing any neighbor whose winding disagrees with the placed
+        /// face across their shared edge.  Trusted anchor faces are never reversed (their orientation wins).
+        /// Returns the live face instances of the component after reorientation.
+        /// </summary>
+        private List<MorphMeshFace> PropagateWindingFromSeed(MorphMeshFace seed, ref int totalReversals, ref int anchorConflicts)
+        {
+            List<MorphMeshFace> component = [];
+            HashSet<IFace> placed = [seed];
+            Queue<MorphMeshFace> queue = new();
+            queue.Enqueue(seed);
+
+            while (queue.Count > 0)
+            {
+                MorphMeshFace current = queue.Dequeue();
+                component.Add(current);
+
+                foreach (IEdgeKey ek in current.Edges)
+                {
+                    //Snapshot the edge's faces because ReverseFace mutates the edge to face map mid-loop.
+                    IFace[] neighbors = [.. this.Edges[ek].Faces];
+                    foreach (IFace nf in neighbors)
+                    {
+                        if (nf is not MorphMeshFace neighbor)
+                            continue;
+                        if (current.Equals(neighbor) || placed.Contains(neighbor))
+                            continue;
+
+                        bool currentForward = TraversesForward(current.iVerts, ek.A, ek.B);
+                        bool neighborForward = TraversesForward(neighbor.iVerts, ek.A, ek.B);
+
+                        //Consistent winding requires the two faces to traverse the shared edge in opposite directions.
+                        if (currentForward == neighborForward)
+                        {
+                            if (IsAnchorFace(neighbor))
+                            {
+                                #region agent log
+                                anchorConflicts++;
+                                #endregion
+                            }
+                            else
+                            {
+                                neighbor = (MorphMeshFace)this.ReverseFace(neighbor);
+                                #region agent log
+                                totalReversals++;
+                                #endregion
+                            }
+                        }
+
+                        placed.Add(neighbor);
+                        queue.Enqueue(neighbor);
+                    }
+                }
+            }
+
+            return component;
+        }
+
+        /// <summary>
+        /// Returns true if the closed ring of vertex indicies traverses the directed edge a to b,
+        /// false if it traverses b to a.
+        /// </summary>
+        private static bool TraversesForward(ImmutableArray<int> iVerts, int a, int b)
+        {
+            for (int i = 0; i < iVerts.Length; i++)
+            {
+                int x = iVerts[i];
+                int y = iVerts[(i + 1) % iVerts.Length];
+                if (x == a && y == b)
+                    return true;
+                if (x == b && y == a)
+                    return false;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Flip an internally-consistent component as a unit so it faces outward.  Uses the up/down cap test on the
+        /// most horizontal face (reliable and matching the renderer's CullCounterClockwiseFace convention).  For a
+        /// capless/vertical component it falls back to signed volume: outward faces are clockwise-from-exterior under
+        /// that convention, which yields negative signed volume, so a positive volume means the component is inverted.
+        /// </summary>
+        private bool OrientComponentOutward(List<MorphMeshFace> component)
+        {
+            if (component.Count == 0)
+                return false;
+
+            var ctx = MorphMeshOutwardOrientation.ShapeContext.FromSliceTopology(Topology);
+            MorphMeshFace rep = null;
+            double bestAbsZ = -1;
+            foreach (MorphMeshFace f in component)
+            {
+                if (f.IsTriangle() == false)
+                    continue;
+
+                double absZ = Math.Abs(this.Normal(f).Z);
+                if (absZ > bestAbsZ)
+                {
+                    bestAbsZ = absZ;
+                    rep = f;
+                }
+            }
+
+            IFace faceToTest = rep ?? component[0];
+            if (MorphMeshOutwardOrientation.FaceNeedsFlipForOutward(this, faceToTest, ctx) == false)
+                return false;
+
+            foreach (MorphMeshFace f in component.ToArray())
+                this.ReverseFace(f);
+            return true;
+        }
+
+        /// <summary>
+        /// Signed volume of the component using the divergence theorem, fan-triangulating any non-triangular faces.
+        /// </summary>
+        private double ComponentSignedVolume(List<MorphMeshFace> component)
+        {
+            double sixV = 0;
+            foreach (MorphMeshFace f in component)
+            {
+                MorphMeshVertex[] verts = [.. this[f.iVerts]];
+                for (int i = 1; i + 1 < verts.Length; i++)
+                {
+                    GridVector3 a = verts[0].Position;
+                    GridVector3 b = verts[i].Position;
+                    GridVector3 c = verts[i + 1].Position;
+                    sixV += GridVector3.Dot(a, GridVector3.Cross(b, c));
+                }
+            }
+
+            return sixV / 6.0;
         }
 
         /// <summary>

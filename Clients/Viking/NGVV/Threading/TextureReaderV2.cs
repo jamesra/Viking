@@ -167,14 +167,12 @@ class TextureReaderV2 : IDisposable
     private static long TriedToCreateDirectory = 0;
     private static void DeleteFileFromCache(string CacheFilename)
     {
+        if (string.IsNullOrEmpty(CacheFilename))
+            return;
+
         try
         {
-            System.IO.File.Delete(CacheFilename);
-        }
-        catch (System.IO.FileNotFoundException)
-        {
-            Trace.WriteLine($"Failed To delete non-existent cache file (probably OK): {CacheFilename}",
-                "TextureUse");
+            LocalTextureCache.DeleteCachedFile(CacheFilename);
         }
         catch (System.IO.DirectoryNotFoundException)
         {
@@ -183,10 +181,6 @@ class TextureReaderV2 : IDisposable
                 Trace.WriteLine($"Failed To delete cache file from non-existant directory (probably OK): {CacheFilename}", "TextureUse");
                 TryCreatingCacheDirectory(CacheFilename);
             }
-        }
-        catch (System.IO.IOException e)
-        {
-            Trace.WriteLine("Failed To delete bad cache file: {CacheFilename}\n{e}", "TextureUse");
         }
     }
 
@@ -221,7 +215,9 @@ class TextureReaderV2 : IDisposable
                 }
 
                 if (cacheFileInfo.Exists == false)
+                {
                     return null;
+                }
 
                 if (cacheFileInfo.Length == 0)
                 {
@@ -230,7 +226,9 @@ class TextureReaderV2 : IDisposable
                 }
 
                 if (textureUri is null)
+                {
                     return null;
+                }
 
                 try
                 {
@@ -250,7 +248,9 @@ class TextureReaderV2 : IDisposable
 
                             var textureLastModifiedValue = textureHeaders.Content.Headers.LastModified;
                             if (textureLastModifiedValue.HasValue == false)
+                            {
                                 return await TryLoadingFromHttpClientResponse(textureHeaders, CacheFilename, token).ConfigureAwait(false);
+                            }
 
                             var textureLastModifiedUtc = textureLastModifiedValue.Value.UtcDateTime;
 
@@ -263,7 +263,9 @@ class TextureReaderV2 : IDisposable
                                 using var stream = Global.TextureCache.Fetch(CacheFilename);
                                 //If something is wrong with the stream load from the server
                                 if (stream is null)
+                                {
                                     return await TryLoadingFromHttpClientResponse(textureHeaders, CacheFilename, token).ConfigureAwait(false);
+                                }
                                 else
                                 {
                                     if (token.IsCancellationRequested)
@@ -320,10 +322,15 @@ class TextureReaderV2 : IDisposable
             HandleCachedFileException(e, CacheFilename);
             return null;
         }
+        catch (IOException e)
+        {
+            HandleCachedFileException(e, CacheFilename);
+            return null;
+        }
         catch (Exception e)
         {
             HandleCachedFileException(e, CacheFilename);
-            throw;
+            return null;
         }
 
         return null;
@@ -369,13 +376,15 @@ class TextureReaderV2 : IDisposable
                 }
 
                 if (response != null)
+                {
                     Trace.WriteLine($"Failed to load {textureUri} : {response.StatusCode}");
+                }
                 return null;
             }
         }
         catch (ArgumentException e)
         {
-            Trace.WriteLine($"Failed to load {textureUri}", e.Message);
+            Trace.WriteLine($"Failed to load {textureUri}: {e.Message}", "TextureUse");
         }
         catch (WebException e)
         {
@@ -411,20 +420,33 @@ class TextureReaderV2 : IDisposable
             if (token.IsCancellationRequested)
                 return null;
 
+
             using MemoryStream memStream = new(data, false);
             var tex = await GetTextureFromStreamAsync(graphicsDevice, memStream).ConfigureAwait(false);
+
 
             if (CacheFilename != null && tex != null)
             {
                 memStream.Seek(0, SeekOrigin.Begin);
-                await Global.TextureCache.AddAsync(CacheFilename, memStream).ConfigureAwait(false);
+                try
+                {
+                    bool cached = await Global.TextureCache.AddAsync(CacheFilename, memStream).ConfigureAwait(false);
+                }
+                catch (IOException ex)
+                {
+                }
             }
 
             return tex;
         }
         catch (ArgumentException e)
         {
-            Trace.WriteLine($"Failed to load {response}", e.Message);
+            var uri = response.RequestMessage?.RequestUri;
+            Trace.WriteLine($"Failed to load {(uri != null ? uri.ToString() : "response")}: {e.Message}", "TextureUse");
+            return null;
+        }
+        catch (IOException ex)
+        {
             return null;
         }
     }
@@ -659,6 +681,7 @@ class TextureReaderV2 : IDisposable
 
         CancellationToken semaphoreToken = _sectionToken ?? token;
 
+
         try
         {
             await LoadTextureSemaphore.WaitAsync(semaphoreToken).ConfigureAwait(false);
@@ -673,39 +696,40 @@ class TextureReaderV2 : IDisposable
 
             if (Filename.Scheme.ToLower() == "http" || Filename.Scheme.ToLower() == "https")
             {
+                Texture2D texture = null;
                 try
                 {
-                    var texture = await TryLoadingFromCacheOrServer(Filename, CacheFilename, token) ?? await TryLoadingFromServer(this.Filename, token);
-                    SetTexture(texture);
-                    return this._Result;
+                    texture = await TryLoadingFromCacheOrServer(Filename, CacheFilename, token)
+                        ?? await TryLoadingFromServer(this.Filename, token);
                 }
                 catch (OutOfMemoryException e)
                 {
                     Trace.WriteLine("Out of memory exception: " + CacheFilename);
                 }
-                catch (ArgumentException e)
+                catch (ArgumentException)
                 {
                     Trace.WriteLine("Problem loading cached tile, deleting and loading from server: " +
                                     CacheFilename);
                     TryDeleteFile(CacheFilename);
-                    //Continue and try to load from server
+                    texture = await TryLoadingFromServer(this.Filename, token);
                 }
                 catch (System.Threading.Tasks.TaskCanceledException)
                 {
-                    //Trace.WriteLine($"Aborted loading {Filename}");
                     return null;
                 }
                 catch (System.OperationCanceledException)
                 {
-                    //Trace.WriteLine($"Aborted loading {Filename}");
                     return null;
                 }
                 catch (Exception e)
                 {
                     Trace.WriteLine($"Problem loading cached tile {CacheFilename}, deleting and loading from server.\n{e}");
                     TryDeleteFile(CacheFilename);
-                    //Continue and try to load from server
+                    texture = await TryLoadingFromServer(this.Filename, token);
                 }
+
+                SetTexture(texture);
+                return this._Result;
             }
             else
             {

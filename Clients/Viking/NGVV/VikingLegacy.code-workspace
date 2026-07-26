@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "../../.."
+		},
+		{
+			"path": "../../../../reverse-proxy"
+		},
+		{
+			"path": "../../../../../../DockerContainerData"
+		},
+		{
+			"path": "../../../../Viking"
+		}
+	],
+	"settings": {
+		"dotnet.preferCSharpExtension": true,
+		"dotnet.defaultSolution": "Everything.sln"
+	}
+}

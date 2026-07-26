@@ -65,6 +65,12 @@ namespace MorphologyMesh
         public readonly double SliceThickness;
 
         /// <summary>
+        /// True when this topology was constructed with valid shape data.
+        /// A default-constructed SliceTopology (produced when topology initialisation fails) has Shapes = null and IsValid = false.
+        /// </summary>
+        public bool IsValid => Shapes is not null;
+
+        /// <summary>
         /// Center of the slice in Z axis
         /// </summary>
         public readonly double SliceCenterZ;
@@ -129,8 +135,10 @@ namespace MorphologyMesh
             }
             else
             {
-                double MinZ = UpperPolyIndicies.Select(i => PolyZ[i]).Min(); //Pick the largest of the low-end Z values 
-                return MinZ + SliceThickness;
+                //Center the slice on the mid-plane between the top of the lower set and the bottom of the upper set.
+                double LowerMaxZ = LowerPolyIndicies.Select(i => PolyZ[i]).Max(); //Top of the lower set
+                double UpperMinZ = UpperPolyIndicies.Select(i => PolyZ[i]).Min(); //Bottom of the upper set
+                return (LowerMaxZ + UpperMinZ) / 2.0;
             }
         }
 

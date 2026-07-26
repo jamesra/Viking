@@ -170,6 +170,168 @@ namespace GeometryTests.Algorithms
                     "Edge target should exist as a node in the graph");
             }
         }
+
+        // ---- Chordal Axis Transform (CAT) tests ----
+
+        /// <summary>
+        /// Counts connected components of a medial axis graph via a breadth-first traversal over node adjacency.
+        /// Isolated nodes (degree 0) each count as their own component.
+        /// </summary>
+        private static int CountConnectedComponents(MedialAxisGraph graph)
+        {
+            System.Collections.Generic.HashSet<GridVector2> visited = [];
+            int components = 0;
+
+            foreach (var startKey in graph.Nodes.Keys)
+            {
+                if (visited.Contains(startKey))
+                    continue;
+
+                components++;
+                System.Collections.Generic.Queue<GridVector2> queue = new();
+                queue.Enqueue(startKey);
+                visited.Add(startKey);
+
+                while (queue.Count > 0)
+                {
+                    GridVector2 current = queue.Dequeue();
+                    foreach (var neighbor in graph.Nodes[current].Edges.Keys)
+                    {
+                        if (visited.Add(neighbor))
+                            queue.Enqueue(neighbor);
+                    }
+                }
+            }
+
+            return components;
+        }
+
+        [TestMethod]
+        public void TestChordalAxis_AllNodesStrictlyContained()
+        {
+            GridPolygon[] shapes =
+            [
+                new([new(0, 0), new(100, 0), new(100, 50), new(0, 50), new(0, 0)]),               // rectangle
+                new([new(0, 0), new(100, 0), new(50, 86.6), new(0, 0)]),                          // triangle
+                new([new(0, 0), new(100, 0), new(100, 50), new(50, 50), new(50, 100), new(0, 100), new(0, 0)]) // L-shape
+            ];
+
+            foreach (GridPolygon shape in shapes)
+            {
+                MedialAxisGraph graph = MedialAxisFinder.ApproximateMedialAxis(shape);
+
+                Assert.IsTrue(graph.Nodes.Count > 0, "CAT should produce at least one interior node");
+
+                foreach (var node in graph.Nodes.Values)
+                {
+                    ShapeRelation relation = shape.GetRelation(node.Key);
+                    Assert.AreEqual(ShapeRelation.CONTAINED, relation,
+                        $"CAT vertex at {node.Key} must be strictly inside the polygon (no boundary-touching nodes when extendToApex is false)");
+                }
+            }
+        }
+
+        [TestMethod]
+        public void TestChordalAxis_Connectivity_SingleComponent()
+        {
+            GridPolygon[] shapes =
+            [
+                new([new(0, 0), new(100, 0), new(100, 50), new(0, 50), new(0, 0)]),               // rectangle
+                new([new(0, 0), new(100, 0), new(100, 50), new(50, 50), new(50, 100), new(0, 100), new(0, 0)]) // L-shape
+            ];
+
+            foreach (GridPolygon shape in shapes)
+            {
+                MedialAxisGraph graph = MedialAxisFinder.ApproximateMedialAxis(shape);
+
+                Assert.IsTrue(graph.Nodes.Count > 0, "CAT should produce at least one node");
+                Assert.AreEqual(1, CountConnectedComponents(graph),
+                    "The Chordal Axis Transform must produce a single connected component");
+            }
+        }
+
+        [TestMethod]
+        public void TestChordalAxis_Spine_LongRectangle_Unbranched()
+        {
+            // A long, thin rectangle with subdivided long edges triangulates into a strip of sleeve triangles,
+            // which should yield an unbranched chain (every node degree <= 2) with no hairs to the corners.
+            System.Collections.Generic.List<GridVector2> pts = [];
+            for (int x = 0; x <= 400; x += 40)
+                pts.Add(new GridVector2(x, 0));
+            for (int x = 400; x >= 0; x -= 40)
+                pts.Add(new GridVector2(x, 40));
+            pts.Add(pts[0]); // close the ring
+
+            GridPolygon longRect = new([.. pts]);
+
+            MedialAxisGraph graph = MedialAxisFinder.ApproximateMedialAxis(longRect);
+
+            Assert.IsTrue(graph.Nodes.Count > 0, "Spine should have nodes");
+            Assert.AreEqual(1, CountConnectedComponents(graph), "Spine should be a single connected component");
+
+            int maxDegree = graph.Nodes.Values.Max(n => n.Edges.Count);
+            Assert.IsTrue(maxDegree <= 2,
+                $"A long rectangle's CAT spine should be an unbranched chain (max degree <= 2) but found degree {maxDegree}");
+        }
+
+        [TestMethod]
+        public void TestChordalAxis_Junction_PlusShape()
+        {
+            // A plus/cross shape has a central region whose triangle(s) carry no boundary edges, producing a
+            // junction node of degree >= 3.
+            GridPolygon plus = new(
+            [
+                new(40, 0), new(80, 0), new(80, 40), new(120, 40), new(120, 80),
+                new(80, 80), new(80, 120), new(40, 120), new(40, 80), new(0, 80),
+                new(0, 40), new(40, 40), new(40, 0)
+            ]);
+
+            MedialAxisGraph graph = MedialAxisFinder.ApproximateMedialAxis(plus);
+
+            Assert.AreEqual(1, CountConnectedComponents(graph), "Plus shape CAT should be connected");
+            Assert.IsTrue(graph.Nodes.Values.Any(n => n.Edges.Count >= 3),
+                "A plus shape should produce at least one junction node of degree >= 3");
+        }
+
+        [TestMethod]
+        public void TestChordalAxis_ThinSliver_NonEmptyInterior()
+        {
+            // A very thin polygon triangulates into highly obtuse triangles whose circumcenters fall far
+            // outside the boundary; the old circumcenter approach could drop them all and produce zero interior
+            // points. The CAT, using interior-edge midpoints, must still yield at least one interior node.
+            GridPolygon sliver = new(
+            [
+                new(0, 0), new(100, 0), new(200, 0),
+                new(200, 1), new(100, 1), new(0, 1),
+                new(0, 0)
+            ]);
+
+            MedialAxisGraph catGraph = MedialAxisFinder.ApproximateMedialAxis(sliver);
+
+            Assert.IsTrue(catGraph.Nodes.Count >= 1,
+                "CAT must produce at least one interior node for a thin sliver region");
+
+            foreach (var node in catGraph.Nodes.Values)
+            {
+                Assert.AreEqual(ShapeRelation.CONTAINED, sliver.GetRelation(node.Key),
+                    $"Sliver CAT vertex at {node.Key} must be strictly inside the polygon");
+            }
+        }
+
+        [TestMethod]
+        public void TestChordalAxis_Pruning_RemovesHairs()
+        {
+            // The extend-to-apex skeleton sprouts hairs into convex corners; pruning with a positive ratio
+            // should remove them, leaving no more nodes than the unpruned-but-interior-only axis.
+            GridPolygon rectangle = new([new(0, 0), new(200, 0), new(200, 100), new(0, 100), new(0, 0)]);
+
+            MedialAxisGraph withHairs = MedialAxisFinder.ApproximateMedialAxisChordal(rectangle, extendToApex: true, pruneRatio: 0.0);
+            MedialAxisGraph pruned = MedialAxisFinder.ApproximateMedialAxisChordal(rectangle, extendToApex: true, pruneRatio: 0.9);
+
+            Assert.IsTrue(pruned.Nodes.Count <= withHairs.Nodes.Count,
+                "Pruning should not increase the node count");
+            Assert.AreEqual(1, CountConnectedComponents(pruned), "Pruned axis should remain connected");
+        }
     }
 }
 

@@ -605,7 +605,7 @@ namespace WebAnnotation.ViewModel
 
                 // Get the circle geometry
                 GridPolygon poly = modelObj.VolumeShape.ToPolygon();
-                var medial_axis = Geometry.MedialAxisFinder.ApproximateMedialAxisImproved(poly);
+                var medial_axis = Geometry.MedialAxisFinder.ApproximateMedialAxis(poly);
                 var medial_axis_points = medial_axis.Points;
 
                 // Create callback to update location shape

@@ -326,7 +326,9 @@ namespace Viking.ViewModels
             _SectionLoadingToken = token;
 
             if (token.IsCancellationRequested)
+            {
                 return null;
+            }
 
             //Check if the texture's graphics device has been disposed, in which case load a new texture
 
@@ -350,7 +352,9 @@ namespace Viking.ViewModels
 
             // Already in the queue (or dequeued but not yet completed); don't start another load.
             if (PendingTextureQueue.IsTileViewPending(this) || TextureRequestQueue.IsTileViewPending(this))
+            {
                 return null;
+            }
 
             // Enqueue to priority-sorted request queue (both HTTP and local paths)
             return await TextureRequestQueue.EnqueueRequest(this, graphicsDevice, token).ConfigureAwait(false);

@@ -21,8 +21,6 @@
   
   <!-- .NET Framework 4.8 specific properties -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
-    <TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
-    <NuGetTargetMoniker>.NETFramework,Version=v4.8.1</NuGetTargetMoniker>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
@@ -30,8 +28,6 @@
   
   <!-- .NET 9.0-windows specific properties -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net9.0-windows'">
-    <TargetFrameworkMoniker>.NETCoreApp,Version%3Dv9.0</TargetFrameworkMoniker>
-    <NuGetTargetMoniker>.NETCoreApp,Version=v9.0</NuGetTargetMoniker>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Grpc.Core" Version="2.38.0" />

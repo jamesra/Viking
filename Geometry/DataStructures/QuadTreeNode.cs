@@ -540,7 +540,7 @@ namespace Geometry
             {
                 if (this.IsRoot && HasValue == false)
                     throw new InvalidOperationException(
-                        $"{nameof(QuadTreeWithUniqueValues<>)} has no entries, so FindNearest cannot return a valid value");
+                        $"QuadTreeWithUniqueValues has no entries, so FindNearest cannot return a valid value");
 
                 Debug.Assert(this.HasValue);
                 distance = GridVector2.Distance(in this.Point, in point);

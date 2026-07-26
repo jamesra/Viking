@@ -286,7 +286,8 @@ namespace WebAnnotation.View
             set
             {
                 circleView.Color = value;
-                OverlappedLinkView?.Color = value;
+                if (OverlappedLinkView != null)
+                    OverlappedLinkView.Color = value;
             }
         }
 
@@ -299,7 +300,8 @@ namespace WebAnnotation.View
                 if (circleView.Alpha != value)
                 {
                     circleView.Alpha = value;
-                    OverlappedLinkView?.Alpha = value;
+                    if (OverlappedLinkView != null)
+                        OverlappedLinkView.Alpha = value;
                 }
             }
         }

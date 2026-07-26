@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.10" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>spatial-columns-factsheet</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="export.css" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">spatial-columns-factsheet</h1>
+</header>
+<h1 id="spatial-columns-fact-sheet">Spatial Columns Fact Sheet</h1>
+<p>A one-page reference for citing when SQL Server spatial geometry was
+added to the Viking annotation database. Prepared for the 3D connectome
+analysis methods paper.</p>
+<h2 id="when-were-spatial-columns-added">When were spatial columns
+added?</h2>
+<p>The <code>MosaicShape</code> and <code>VolumeShape</code> spatial
+<code>geometry</code> columns were added to the <code>Location</code>
+table on <strong>19 August 2015</strong>, in commit
+<code>ffe9cceb</code> on the <code>dev</code> branch (“Migration to
+spatial columns in database”, author James Anderson). That is roughly
+<strong>11 years</strong> before the present (June 2026) and about
+<strong>6 years after</strong> the 2009 PLoS Biology framework paper
+(Anderson et al.).</p>
+<p>The change is recorded in the versioned database build script, <a
+href="../../../Servers/SQL/DatabaseCreateUpdate/CreateUpdateDatabase.sql"><code>Servers/SQL/DatabaseCreateUpdate/CreateUpdateDatabase.sql</code></a>
+(originally
+<code>Servers/AnnotationService/SQL/DatabaseCreateUpdate/CreateUpdateDatabase.sql</code>
+before later repository reorganization).</p>
+<h2 id="what-changed-two-step-migration">What changed (two-step
+migration)</h2>
+<p>The migration is applied as two sequential schema versions in the
+<code>DBVersion</code> table:</p>
+<table>
+<colgroup>
+<col style="width: 44%" />
+<col style="width: 24%" />
+<col style="width: 32%" />
+</colgroup>
+<thead>
+<tr>
+<th>DBVersion</th>
+<th>Date</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>24</td>
+<td>2015-08-19</td>
+<td><code>ALTER TABLE Location ADD MosaicShape geometry</code> and
+<code>ADD VolumeShape geometry</code></td>
+</tr>
+<tr>
+<td>25</td>
+<td>2015-08-19</td>
+<td>Populate the new shapes from the legacy scalar columns; drop
+<code>Verticies</code>, <code>X</code>, <code>Y</code>,
+<code>VolumeX</code>, <code>VolumeY</code>; re-add
+<code>X</code>/<code>Y</code>/<code>VolumeX</code>/<code>VolumeY</code>
+as persisted computed centroids of the shapes</td>
+</tr>
+</tbody>
+</table>
+<p>Before this migration, an annotation footprint was stored as scalar
+columns (<code>X</code>, <code>Y</code>, <code>Radius</code>) plus a
+<code>Verticies</code> vertex list for polygons. After the migration,
+each <code>Location</code> row stores two true geometries:</p>
+<ul>
+<li><code>MosaicShape</code> – the footprint in the native
+section/mosaic coordinate space.</li>
+<li><code>VolumeShape</code> – the same footprint in the registered
+volume coordinate space.</li>
+</ul>
+<p>Circular annotations were converted to
+<code>CURVEPOLYGON(CIRCULARSTRING(...))</code> and point annotations to
+<code>POINT(...)</code>, as seen in the version 25 block of the build
+script (around lines 2389-2440). The scalar centroid columns are
+retained as <code>PERSISTED</code> computed columns, for example:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">ALTER</span> <span class="kw">TABLE</span> Location <span class="kw">ADD</span> X <span class="kw">as</span> ISNULL(MosaicShape.STCentroid().STX, ISNULL(MosaicShape.STX,<span class="dv">0</span>)) PERSISTED</span></code></pre></div>
+<h2 id="follow-up-spatial-commits-same-era">Follow-up spatial commits
+(same era)</h2>
+<table>
+<colgroup>
+<col style="width: 34%" />
+<col style="width: 26%" />
+<col style="width: 39%" />
+</colgroup>
+<thead>
+<tr>
+<th>Commit</th>
+<th>Date</th>
+<th>Summary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ffe9cceb</code></td>
+<td>2015-08-19</td>
+<td>Migration to spatial columns in database (DBVersion 24-25)</td>
+</tr>
+<tr>
+<td><code>b579196a</code></td>
+<td>2015-08-21</td>
+<td>Further updates for spatial migration</td>
+</tr>
+<tr>
+<td><code>19b70b34</code></td>
+<td>2015-08-26</td>
+<td>Add spatial index to the database</td>
+</tr>
+<tr>
+<td><code>64203551</code></td>
+<td>2016-03-24</td>
+<td>Spatial queries use mosaic or volume coordinates; synapse-to-lines
+migration</td>
+</tr>
+</tbody>
+</table>
+<p>The same script has since grown to <strong>DBVersion 83</strong>,
+which improves the spatial bounds stored procedure
+<code>SelectSectionLocationsAndLinksInMosaicBounds</code>.</p>
+<h2 id="methods-ready-paragraph-copypaste">Methods-ready paragraph
+(copy/paste)</h2>
+<blockquote>
+<p>Annotation geometry in the Viking database was migrated from scalar
+coordinates (X, Y, radius, and polygon vertex lists) to native SQL
+Server <code>geometry</code> types in August 2015 (database schema
+versions 24 and 25). Each annotation footprint (<code>Location</code>)
+stores a <code>MosaicShape</code> and a <code>VolumeShape</code>,
+representing the footprint in section-mosaic and registered-volume
+coordinate spaces respectively; the scalar centroid columns (X, Y,
+VolumeX, VolumeY) are retained as persisted computed columns derived
+from those geometries. Spatial indexes (added August 2015) and
+region/bounds stored procedures support efficient viewport and radius
+queries during connectome tracing, review, and 3D reconstruction.</p>
+</blockquote>
+<h2 id="how-to-reproduce-these-dates">How to reproduce these dates</h2>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Primary introduction of the spatial columns</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> log origin/dev <span class="at">--format</span><span class="op">=</span><span class="st">&quot;%h %ad %an %s&quot;</span> <span class="at">--date</span><span class="op">=</span>short <span class="dt">\</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-S</span> <span class="st">&quot;MosaicShape geometry&quot;</span> <span class="at">--</span> <span class="st">&quot;**/CreateUpdateDatabase.sql&quot;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Inspect the follow-up commits</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> show <span class="at">-s</span> <span class="at">--format</span><span class="op">=</span><span class="st">&quot;%h %ad %an %s&quot;</span> <span class="at">--date</span><span class="op">=</span>short b579196a 19b70b34 64203551</span></code></pre></div>
+</body>
+</html>

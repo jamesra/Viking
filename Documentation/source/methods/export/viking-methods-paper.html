@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.10" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>viking-methods-paper</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="export.css" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">viking-methods-paper</h1>
+</header>
+<h1
+id="viking-a-modern-platform-for-ultrastructural-connectome-mapping-and-analysis">Viking:
+A Modern Platform for Ultrastructural Connectome Mapping and
+Analysis</h1>
+<p><em>Methods paper draft. This document expands the original framework
+described by Anderson et al. (2009), “A Computational Framework for
+Ultrastructural Mapping of Neural Circuitry”, PLoS Biology
+7(3):e1000074, to reflect the substantial development of the Viking
+platform in the years since publication. It is intended as a starting
+draft for a peer-reviewed methods manuscript and for a colleague’s
+methods paper on 3D connectome analysis. Citation markers in the form
+[CITE: …] mark places where the authors should insert formal references;
+technical claims are grounded in the current source tree and noted with
+file paths.</em></p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>The reconstruction of neural circuits from serial-section electron
+microscopy requires software that can assemble terabyte-scale image
+volumes, support the collaborative annotation of cells and their
+connections, and convert those annotations into quantitative anatomical
+and network models. The original Viking framework (Anderson et al.,
+2009) established an end-to-end pipeline for acquiring, registering, and
+viewing such volumes, together with a client for slice-by-slice
+annotation. Since then the platform has been substantially
+re-engineered. The desktop client has been rebuilt on a modern real-time
+graphics stack; annotation geometry is now stored as indexed spatial
+types in a relational database; programmatic access is provided through
+an OData service, with a gRPC service under development; user access is
+mediated by a dedicated identity service with volume-scoped permissions;
+and a reconstruction pipeline converts two-dimensional annotations into
+three-dimensional surface meshes and connectivity graphs suitable for
+downstream analysis. This paper documents the current architecture, the
+data model, and the analysis pipeline, with emphasis on the components
+that did not exist when the framework was first described.</p>
+<hr />
+<h2 id="introduction">1. Introduction</h2>
+<p>The 2009 framework paper addressed a then-novel problem: how to turn
+the raw output of automated serial-section transmission electron
+microscopy into a navigable, annotatable volume at a scale of terabytes
+[CITE: Anderson 2009]. Its contributions spanned acquisition with
+SerialEM [CITE: Mastronarde], image mosaicking and slice-to-slice
+registration with the ir-tools suite, color and intensity correction,
+volume assembly, and a Win32 client (“Viking”) that paged through
+reconstructed sections over HTTP and let annotators mark structures and
+their connections.</p>
+<p>That framework remains sound, and the acquisition and registration
+stages are largely unchanged. What has changed is everything downstream
+of a registered volume. Connectome projects now involve more annotators
+working concurrently, larger and more numerous volumes, and a strong
+demand for quantitative outputs: not just “which cells connect to
+which”, but the three-dimensional morphology of each process and the
+spatial distribution of its synapses. Meeting these demands required
+changes that the original paper did not anticipate: a spatially indexed
+database so the client can load only the annotations within the current
+viewport; service APIs so that analysis code can read the annotation
+graph without screen scraping; an authentication layer so that volumes
+can be shared across institutions with appropriate permissions; and an
+automated pipeline that lifts flat, per-section annotations into closed
+3D surfaces.</p>
+<p>This paper documents the platform as it exists today. Where a stage
+is unchanged from 2009 we summarize it briefly and refer to the original
+work; where a stage is new or substantially revised we describe it in
+enough detail to support methods reporting and reproduction.</p>
+<hr />
+<h2 id="image-volume-pipeline">2. Image volume pipeline</h2>
+<h3 id="acquisition-mosaicking-and-registration">2.1 Acquisition,
+mosaicking, and registration</h3>
+<p>Image acquisition, tile mosaicking, intensity correction, and
+slice-to-slice registration follow the pipeline described in 2009 and
+are only summarized here. Sections are imaged as overlapping tiles;
+tiles are assembled into a per-section mosaic; and consecutive mosaics
+are registered to one another to build a coherent volume. The
+registration between any two sections is captured as a “slice-to-slice”
+(STOS) transform.</p>
+<h3 id="volume-model">2.2 Volume model</h3>
+<p>In the current client, a dataset is described by a VikingXML document
+that the <code>Volume</code> class parses (<a
+href="../../../Clients/VolumeModel/Volume.cs"><code>Clients/VolumeModel/Volume.cs</code></a>).
+A <code>Volume</code> holds an ordered set of <code>Section</code>
+objects (<a
+href="../../../Clients/VolumeModel/Section.cs"><code>Clients/VolumeModel/Section.cs</code></a>),
+the groups of STOS transforms that register them, the host URL, and
+local cache paths. Each section exposes one or more image pyramids
+(<code>Pyramid</code>, <a
+href="../../../Clients/VolumeModel/Pyramid.cs"><code>Clients/VolumeModel/Pyramid.cs</code></a>),
+which map a downsampling level to the directory of tiles at that
+resolution.</p>
+<p>Two tile-mapping strategies coexist.
+<code>FixedTileCountMapping</code> (<a
+href="../../../Clients/VolumeModel/FixedTileCountMapping.cs"><code>Clients/VolumeModel/FixedTileCountMapping.cs</code></a>)
+models classic EM mosaics, where each pyramid level has a fixed number
+of tiles of varying size, driven by per-tile <code>.mosaic</code>
+transforms. <code>TileGridMapping</code> models pre-tiled pyramids with
+a fixed pixel size per tile and a grid that grows with resolution, which
+is also used for tile servers in the style of the Open Connectome
+Project. At render time, the visible tiles for the current view frustum
+are gathered into a <code>TilePyramid</code> (<a
+href="../../../Clients/VolumeModel/TilePyramid.cs"><code>Clients/VolumeModel/TilePyramid.cs</code></a>),
+and each becomes a <code>TileViewModel</code> carrying mesh vertices,
+texture coordinates, and a texture URL.</p>
+<h3 id="tile-serving-and-caching">2.3 Tile serving and caching</h3>
+<p>Tiles and metadata are fetched over HTTP through a shared client.
+Tile images are loaded by <code>TextureReaderV2</code> (<a
+href="../../../Clients/Viking/NGVV/Threading/TextureReaderV2.cs"><code>Clients/Viking/NGVV/Threading/TextureReaderV2.cs</code></a>),
+which checks a local disk cache before requesting from the server and
+writes fetched tiles back to disk. Decoded tiles are held in an
+in-memory, time-ordered cache (<code>TileCache</code>, <a
+href="../../../Clients/VolumeModel/TileCache.cs"><code>Clients/VolumeModel/TileCache.cs</code></a>)
+that is trimmed periodically to bound memory use. This multi-layer
+caching is what allows fluid navigation through volumes far larger than
+memory.</p>
+<hr />
+<h2 id="coordinate-spaces-and-registration">3. Coordinate spaces and
+registration</h2>
+<h3 id="two-coordinate-spaces">3.1 Two coordinate spaces</h3>
+<p>A central concept, only implicit in the 2009 paper, is that Viking
+maintains two distinct two-dimensional coordinate spaces and converts
+between them constantly:</p>
+<ul>
+<li><strong>Mosaic (section) space</strong> is the native coordinate
+system of a single assembled section, after tile mosaicking but before
+slice-to-slice registration. Annotations are authored and stored in this
+space.</li>
+<li><strong>Volume space</strong> is the common, registered coordinate
+frame shared across all sections. Cross-section navigation,
+adjacent-section overlays, and 3D morphology all live in this
+space.</li>
+</ul>
+<p>The distinction is documented for developers in <a
+href="../../../.cursor/rules/coordinate-spaces.mdc"><code>.cursor/rules/coordinate-spaces.mdc</code></a>,
+and the database stores each annotation footprint in both spaces
+(Section 5).</p>
+<h3 id="transform-types">3.2 Transform types</h3>
+<p>STOS transforms are represented by a family of classes in <a
+href="../../../Geometry/Transforms/"><code>Geometry/Transforms/</code></a>:
+<code>RigidTransform</code> for rotation and translation,
+<code>GridTransform</code> and <code>MeshTransform</code> for discrete
+warps, <code>RBFTransform</code> for a continuous radial-basis fallback,
+and <code>TriangulationTransform</code> as the base for triangulated
+warps. Transforms are read from <code>.stos</code> files (from disk,
+HTTP, or zip archives) by <code>TransformFactory</code>, with provenance
+recorded in <code>StosTransformInfo</code> (control section, mapped
+section, and modification time). By convention the control section
+corresponds to the volume side and the mapped section to the mosaic
+side.</p>
+<h3 id="from-pairwise-to-global-registration">3.3 From pairwise to
+global registration</h3>
+<p>VikingXML lists the pairwise STOS files. The
+<code>RegistrationTree</code> (<a
+href="../../../Clients/VolumeModel/RegistrationTree.cs"><code>Clients/VolumeModel/RegistrationTree.cs</code></a>)
+arranges these pairwise relationships into a tree, and
+<code>Volume.CreateVolumeTransforms</code> walks the tree to compose,
+for each section, the chain of transforms that maps it into the volume
+reference frame. Composed transforms are cached to disk to avoid
+recomputation. Tile rendering adds a second warp stage:
+<code>SectionToVolumeMapping</code> composes each per-tile mosaic
+transform with the section’s STOS transform, so individual tiles are
+triangulated through the registration rather than merely
+repositioned.</p>
+<h3 id="runtime-conversion-and-the-transform-cache">3.4 Runtime
+conversion and the transform cache</h3>
+<p>At runtime, the interface <code>IVolumeToSectionTransform</code>
+exposes <code>SectionToVolume</code> and <code>VolumeToSection</code>
+(with bounds-safe <code>Try</code> variants). The client uses these to
+convert the visible volume rectangle into mosaic-space bounds before
+querying the database, and to place annotations correctly on screen.</p>
+<p>Composed transforms are serialized to a JSON cache by
+<code>JsonTransformSerializer</code> (<a
+href="../../../Clients/VolumeModel/JsonTransformSerializer.cs"><code>Clients/VolumeModel/JsonTransformSerializer.cs</code></a>),
+which replaced an older binary format. The serializer uses a polymorphic
+converter to handle the transform class hierarchy. A 2026 revision
+separated the read and write option sets so that deserialization does
+not re-enter the computed-property converter, eliminating a stack
+overflow that occurred when large cached section mappings were loaded on
+section change.</p>
+<hr />
+<h2 id="the-annotation-workflow">4. The annotation workflow</h2>
+<p>The 2009 paper described annotation as a roughly twelve-step manual
+process of marking structures section by section. That basic loop
+remains, but the mechanics have changed in three important ways:
+annotations are loaded by spatial region rather than by whole section;
+structures and locations are first-class linked entities; and adjacent
+sections are displayed simultaneously to support tracing continuity.</p>
+<p>An annotator navigates to a section, and the client loads the
+structures and locations whose footprints intersect the current
+viewport. New annotations are drawn with a markup tool appropriate to
+the structure type (a point, a line, or a polygon). As a process is
+traced from section to section, successive footprints are linked to
+express physical continuity, and connections between distinct structures
+(for example, a synapse between two cells) are expressed as structure
+links. The following sections describe the data model and client that
+make this workflow efficient at scale.</p>
+<hr />
+<h2 id="annotation-data-model">5. Annotation data model</h2>
+<h3 id="core-entities">5.1 Core entities</h3>
+<p>The annotation database is built around four entities, defined in <a
+href="../../../Servers/ConnectomeDataModelCore/"><code>Servers/ConnectomeDataModelCore/</code></a>
+and mirrored on the client in <a
+href="../../../Clients/WebAnnotationModel/"><code>Clients/WebAnnotationModel/</code></a>:</p>
+<ul>
+<li><strong>Structure</strong> – a logical biological object: a cell, a
+process, an organelle, or a synapse. A structure has a
+<code>StructureType</code> and may have a parent structure, which is
+how, for example, a synapse is modeled as a child of the cell that
+contains it.</li>
+<li><strong>Location</strong> – the two-dimensional footprint of a
+structure on a single section. Locations carry shape information and
+flags such as terminal (the end of a process) and off-edge (the process
+leaves the imaged volume).</li>
+<li><strong>StructureLink</strong> – a connectivity edge between two
+structures, directional or bidirectional; this is the substrate of the
+connectome graph.</li>
+<li><strong>LocationLink</strong> – a continuity link between two
+locations, typically on adjacent sections, expressing that they are the
+same process traced across the cut.</li>
+</ul>
+<h3 id="types-markup-and-permitted-links">5.2 Types, markup, and
+permitted links</h3>
+<p>Each structure has a <code>StructureType</code> (<a
+href="../../../Clients/WebAnnotationModel/Objects/StructureTypeObj.cs"><code>Clients/WebAnnotationModel/Objects/StructureTypeObj.cs</code></a>)
+that defines its name, code, display color, hotkey, and default markup
+geometry (point, line, or polygon). Structure types form their own
+parent/child hierarchy. To keep annotation biologically meaningful, the
+schema records <em>permitted</em> structure links: which source type may
+connect to which target type, and in which direction (<a
+href="../../../Clients/WebAnnotationModel/Objects/PermittedStructureLinkObj.cs"><code>Clients/WebAnnotationModel/Objects/PermittedStructureLinkObj.cs</code></a>).
+The client uses these constraints to validate connections as they are
+drawn.</p>
+<h3 id="spatial-geometry">5.3 Spatial geometry</h3>
+<p>The most consequential schema change since 2009 is the migration of
+annotation geometry to native SQL Server spatial types. Before August
+2015, a footprint was stored as scalar <code>X</code>, <code>Y</code>,
+and <code>Radius</code> columns plus a vertex list for polygons. On 19
+August 2015 (database schema versions 24 and 25, commit
+<code>ffe9cceb</code>), the <code>Location</code> table gained two
+<code>geometry</code> columns:</p>
+<ul>
+<li><code>MosaicShape</code> – the footprint in mosaic (section)
+space.</li>
+<li><code>VolumeShape</code> – the footprint in registered volume
+space.</li>
+</ul>
+<p>Circular footprints were converted to
+<code>CURVEPOLYGON(CIRCULARSTRING(...))</code> and point footprints to
+<code>POINT(...)</code>. The scalar centroid columns were retained as
+persisted computed columns derived from the geometry, for example:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">ALTER</span> <span class="kw">TABLE</span> Location <span class="kw">ADD</span> X <span class="kw">as</span> ISNULL(MosaicShape.STCentroid().STX, ISNULL(MosaicShape.STX,<span class="dv">0</span>)) PERSISTED</span></code></pre></div>
+<p>The full migration is in <a
+href="../../../Servers/SQL/DatabaseCreateUpdate/CreateUpdateDatabase.sql"><code>Servers/SQL/DatabaseCreateUpdate/CreateUpdateDatabase.sql</code></a>
+(version 24 and 25 blocks, approximately lines 2368-2440), and is
+described for citation in <a
+href="spatial-columns-factsheet.md"><code>spatial-columns-factsheet.md</code></a>.
+A spatial index was added a week later (26 August 2015), and queries
+were updated to operate in either mosaic or volume coordinates in March
+2016. Storing geometry natively is what makes region-based annotation
+loading (Section 6.2) efficient, because the database can answer “which
+footprints intersect this rectangle on this section” using a spatial
+index rather than a full scan.</p>
+<h3 id="schema-versioning-and-change-tracking">5.4 Schema versioning and
+change tracking</h3>
+<p>The database is created and upgraded by a single idempotent script
+that applies numbered migrations and records each in a
+<code>DBVersion</code> table; the script currently reaches version 83.
+Change Data Capture is enabled on annotation tables, which supports
+auditing and downstream replication. Region queries are served by stored
+procedures such as
+<code>SelectSectionLocationsAndLinksInMosaicBounds</code>, which returns
+the locations and links within a bounding box on a section as of a given
+query time, enabling consistent reads while other annotators are
+editing.</p>
+<hr />
+<h2 id="viking-client-architecture">6. Viking client architecture</h2>
+<h3 id="rendering-and-navigation">6.1 Rendering and navigation</h3>
+<p>The client has been rebuilt on the MonoGame/XNA real-time graphics
+stack, with a shared graphics library (<a
+href="../../../Clients/MonogameXNAGraphicsShared/"><code>Clients/MonogameXNAGraphicsShared/</code></a>)
+reused across tools. The section viewer (<a
+href="../../../Clients/Viking/NGVV/UI/Controls/SectionViewerControl.cs"><code>Clients/Viking/NGVV/UI/Controls/SectionViewerControl.cs</code></a>)
+pages through sections in volume order, preloading the immediately
+adjacent sections, and supports keyboard, mouse, and pen input for
+stepping and zooming. Users designate reference sections above and below
+the current one, which drives the adjacent-section overlays used during
+tracing.</p>
+<h3 id="region-based-annotation-loading">6.2 Region-based annotation
+loading</h3>
+<p>Rather than loading all annotations on a section, the client loads
+only those within the current view. The <code>RegionLoader</code> (<a
+href="../../../Clients/WebAnnotationModel/RegionLoader/RegionLoader.cs"><code>Clients/WebAnnotationModel/RegionLoader/RegionLoader.cs</code></a>)
+divides space into a pyramid of grid cells and issues asynchronous
+queries per cell as the view changes, refreshing on an interval so that
+other annotators’ edits appear. The visible volume rectangle is
+converted to mosaic-space bounds through
+<code>IVolumeToSectionTransform</code>, the bounds query is sent to the
+server, and results are held locally in an R-tree for fast intersection
+and radius tests. The overlay loads not only the current section but a
+configurable window of nearby sections, prioritized by distance from the
+current depth.</p>
+<h3 id="rendering-annotations">6.3 Rendering annotations</h3>
+<p>Annotations are drawn by an overlay (<a
+href="../../../Clients/Viking/WebAnnotation/UI/AnnotationOverlay.cs"><code>Clients/Viking/WebAnnotation/UI/AnnotationOverlay.cs</code></a>)
+that composes several view layers: filled and outlined footprints on the
+current section; footprints from adjacent sections shown with distinct
+styling so an annotator can follow a process across the cut; location
+links that connect a footprint to its continuation on the neighboring
+section; structure links drawn between connected structures; and text
+labels. A depth/stencil pass ensures that annotation fills do not
+obscure the underlying electron micrograph.</p>
+<hr />
+<h2 id="server-infrastructure-and-apis">7. Server infrastructure and
+APIs</h2>
+<h3 id="annotation-service-wcf-and-grpc">7.1 Annotation service (WCF and
+gRPC)</h3>
+<p>Annotations are read and written through a service layer. The
+established implementation is a WCF service (<a
+href="../../../Servers/AnnotationService/"><code>Servers/AnnotationService/</code></a>)
+exposing contracts for structures, structure types, locations, permitted
+links, circuit queries, and volume metadata, with role-based
+authorization (Read, Write, Annotate, Review, Modify). A gRPC
+replacement is under active development (<a
+href="../../../Servers/GrpcAnnotationService/"><code>Servers/GrpcAnnotationService/</code></a>),
+with protocol definitions for the same domain under <a
+href="../../../gRPCAnnotationServiceTypes/Protos/"><code>gRPCAnnotationServiceTypes/Protos/</code></a>.
+The migration to gRPC is ongoing; both services target the same
+database.</p>
+<h3 id="odata-read-api">7.2 OData read API</h3>
+<p>For programmatic analysis, the platform exposes an OData v4 read API
+(<a
+href="../../../Servers/ConnectomeODataV4/"><code>Servers/ConnectomeODataV4/</code></a>).
+It publishes entity sets for structure types, structures, locations,
+structure links, permitted structure links, location links, and spatial
+caches, and it offers bound functions for connectivity analysis,
+including <code>Network</code> (the subgraph reachable from a set of
+structures within a number of hops), <code>NetworkLinks</code>, and
+<code>Scale</code> (the physical scale of the volume). This API is the
+primary entry point for the morphology and network pipeline described in
+Section 9, and it is well suited to external analysis code, including a
+collaborator’s 3D connectome analysis.</p>
+<h3 id="export-service">7.3 Export service</h3>
+<p>A dedicated export service (<a
+href="../../../Servers/DataExport/"><code>Servers/DataExport/</code></a>)
+builds graphs through the same factories used internally and serializes
+them to standard formats: DOT, TLP, GraphML (GML), and JSON for network
+and motif graphs, and TLP and JSON for morphology graphs. These formats
+let connectome graphs be loaded directly into common graph-analysis and
+visualization tools.</p>
+<h3 id="authentication-and-authorization">7.4 Authentication and
+authorization</h3>
+<p>Access is mediated by a dedicated identity service based on the
+IdentityServer framework, comprising a token issuer, a query API for
+users and rights, and a management site for accounts and volume
+permissions. Authorization is volume-scoped: claims take the form
+<code>{VolumeName}.{permission}</code> (for example,
+<code>RC1.Read</code>), and the annotation service validates the bearer
+token’s issuer and audience and checks the required claim before serving
+a request. This is what allows a single deployment to host multiple
+volumes for multiple institutions with appropriate separation.</p>
+<h3 id="deployment">7.5 Deployment</h3>
+<p>Servers are deployed with Docker. A combined Windows/IIS image
+packages the WCF annotation service, the OData API, and the export
+service behind a single container, exposing them under
+<code>/annotation</code>, <code>/odata</code>, and
+<code>/dataexport</code> respectively; the gRPC and segmentation
+services run as Linux containers. Runtime configuration and secrets are
+mounted from host directories following the convention
+<code>D:\Docker\mounted-configs\&lt;ServiceName&gt;</code> and
+<code>D:\Docker\Builds\&lt;ServiceName&gt;</code>, documented in <a
+href="../../../.cursor/rules/docker-config-and-builds-location.mdc"><code>.cursor/rules/docker-config-and-builds-location.mdc</code></a>.</p>
+<hr />
+<h2 id="segmentation-and-assisted-tracing">8. Segmentation and assisted
+tracing</h2>
+<p>Beyond manual tracing, the platform integrates a segmentation service
+over gRPC that wraps a Segment Anything (SAM2) model (<a
+href="../../../gRPC_Protos/Segmentation/SAM2/segmentation.proto"><code>gRPC_Protos/Segmentation/SAM2/segmentation.proto</code></a>),
+hosted as a separate container. The intent is to accelerate the most
+laborious part of annotation, the drawing of accurate polygon
+boundaries, by proposing segmentations that an annotator can accept or
+correct. This service is separate from the annotation CRUD path and is
+deployed independently.</p>
+<hr />
+<h2 id="three-dimensional-morphology-and-connectome-analysis">9.
+Three-dimensional morphology and connectome analysis</h2>
+<h3 id="from-annotations-to-graphs">9.1 From annotations to graphs</h3>
+<p>The analysis pipeline begins by reading annotations into in-memory
+graphs through <a
+href="../../../AnnotationVizLib/"><code>AnnotationVizLib/</code></a>.
+Two graph abstractions are central. A <code>MorphologyGraph</code>
+represents one or more structures at the level of geometry: its nodes
+are locations (each a spatial geometry plus a Z depth) and its edges are
+location links. A <code>NeuronGraph</code> represents connectivity at
+the level of structures, where nodes are cells and edges are structure
+links. The same data can be fetched through three interchangeable
+backends – an OData client (<code>ODataMorphologyFactory</code>), the
+WCF service (<code>WCFMorphologyFactory</code>), and a lightweight OData
+client (<code>SimpleODataMorphologyFactory</code>) – so analysis code is
+not tied to a single transport.</p>
+<h3 id="surface-reconstruction">9.2 Surface reconstruction</h3>
+<p>To produce three-dimensional surfaces, the per-section footprints of
+a structure must be tiled into a closed mesh. This is handled in <a
+href="../../../MorphologyMesh/"><code>MorphologyMesh/</code></a>. A
+<code>SliceGraph</code> groups the connected locations of a morphology
+into slices between adjacent Z levels. The
+<code>BajajMeshGenerator</code> (<a
+href="../../../MorphologyMesh/Generators/BajajMeshGenerator.cs"><code>MorphologyMesh/Generators/BajajMeshGenerator.cs</code></a>)
+then reconstructs a surface between consecutive contours using a
+branching-aware tiling approach: it computes a constrained Delaunay
+triangulation of the paired contours, builds a region graph, selects
+optimal tiling vertices, and generates validated “slice chords” that
+connect contour pairs while respecting branching and avoiding
+self-intersection [CITE: Bajaj contour tiling]. The resulting mesh can
+be exported to COLLADA via <code>MorphologyColladaView</code> for
+visualization and for import into 3D analysis tools. The interactive
+testbeds <code>BajajTest</code> and <code>BajajMultiTest</code> (<a
+href="../../../Clients/MonogameTestbed/BajajTest.cs"><code>Clients/MonogameTestbed/BajajTest.cs</code></a>)
+visualize the reconstruction stage by stage and were used to validate
+the algorithm.</p>
+<h3 id="network-export-for-analysis">9.3 Network export for
+analysis</h3>
+<p>In parallel with morphology, the connectivity graph is exported for
+quantitative network analysis through the export service (Section 7.3),
+in DOT, TLP, GraphML, and JSON. This is the natural hand-off point to
+external connectome analysis methods, including studies of network
+motifs and 3D spatial organization.</p>
+<hr />
+<h2 id="quality-control-performance-and-scale">10. Quality control,
+performance, and scale</h2>
+<p>Several mechanisms support data quality and performance at scale.
+VikingAU (<a
+href="../../../Clients/VikingAU/"><code>Clients/VikingAU/</code></a>)
+automatically adjusts annotation positions in the database, correcting
+systematic offsets. Spatial indexes and bounds stored procedures keep
+region queries fast even as the number of annotations grows into the
+millions. The tile and transform caches (Sections 2.3 and 3.4) bound
+client memory and network use. Query-date semantics in the region stored
+procedures give annotators a consistent view of the data while edits
+proceed concurrently, and Change Data Capture provides an audit
+trail.</p>
+<hr />
+<h2 id="discussion">11. Discussion</h2>
+<p>The table below summarizes how the platform has changed relative to
+the 2009 framework.</p>
+<table>
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 34%" />
+<col style="width: 39%" />
+</colgroup>
+<thead>
+<tr>
+<th>Capability</th>
+<th>2009 framework</th>
+<th>Current platform</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Client</td>
+<td>Win32 multislice pager</td>
+<td>MonoGame/XNA real-time client</td>
+</tr>
+<tr>
+<td>Coordinate handling</td>
+<td>Implicit</td>
+<td>Explicit mosaic and volume spaces with composed STOS transforms</td>
+</tr>
+<tr>
+<td>Annotation storage</td>
+<td>Scalar coordinates</td>
+<td>Indexed SQL Server spatial geometry (2015)</td>
+</tr>
+<tr>
+<td>Annotation loading</td>
+<td>Per section</td>
+<td>Per spatial region (viewport)</td>
+</tr>
+<tr>
+<td>Programmatic access</td>
+<td>None described</td>
+<td>OData read API; gRPC in progress</td>
+</tr>
+<tr>
+<td>Graph export</td>
+<td>None described</td>
+<td>DOT, TLP, GraphML, JSON via export service</td>
+</tr>
+<tr>
+<td>Authentication</td>
+<td>None described</td>
+<td>Identity service with volume-scoped claims</td>
+</tr>
+<tr>
+<td>Assisted annotation</td>
+<td>Manual only</td>
+<td>gRPC segmentation (SAM2)</td>
+</tr>
+<tr>
+<td>3D morphology</td>
+<td>None</td>
+<td>Bajaj surface reconstruction to COLLADA</td>
+</tr>
+<tr>
+<td>Deployment</td>
+<td>Lab servers</td>
+<td>Docker, mounted-config convention</td>
+</tr>
+</tbody>
+</table>
+<p>Limitations and ongoing work remain. The gRPC annotation service has
+not yet fully replaced the WCF implementation, so both are maintained.
+Mesh export to COLLADA is implemented in the morphology library but is
+not yet wired into the export service’s public endpoints. These are
+areas of active development.</p>
+<hr />
+<h2 id="availability">12. Availability</h2>
+<p>Viking and its servers are maintained in the project repository.
+Server components are distributed as Docker images; client builds target
+Windows. Access to specific volumes is governed by the identity service
+and granted per volume. [CITE: repository URL, license,
+data-availability statement.]</p>
+<hr />
+<h2 id="notes-for-co-authors">Notes for co-authors</h2>
+<ul>
+<li>Bracketed <code>[CITE: ...]</code> markers indicate where formal
+references belong (Anderson 2009; SerialEM; ir-tools; the Bajaj
+contour-tiling method; SAM2; and the repository/data-availability
+statement).</li>
+<li>Figures referenced in the outline (<a
+href="viking-methods-outline.md"><code>viking-methods-outline.md</code></a>)
+are not yet drawn; the architecture diagram there can seed Figure 1 and
+Figure 3.</li>
+<li>Quantitative scale figures (volume sizes, annotation counts,
+annotator numbers) should be filled from current project records; the
+original RC1 figures are in Anderson 2009.</li>
+<li>All technical claims here are grounded in the current source tree at
+the cited paths; verify against the specific release used for the
+manuscript.</li>
+</ul>
+</body>
+</html>

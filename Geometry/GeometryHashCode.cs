@@ -9,7 +9,7 @@ namespace Geometry
     internal static class GeometryHashCode
     {
         internal static int QuantizedCoord(double value) =>
-            (int)Math.Round(value / Global.Epsilon);
+            (int)Math.Round(value / (Global.Epsilon * 2.0));
 
         internal static int Point2D(double x, double y)
         {

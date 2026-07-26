@@ -580,6 +580,5 @@ namespace Viking
         [DllImport("Shcore.dll")]
         private static extern int SetProcessDpiAwareness(int awareness);
 
-
     }
 }

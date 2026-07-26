@@ -504,7 +504,11 @@ namespace VikingXNAGraphics
             DepthStencilState originalDepthState = spriteBatch.GraphicsDevice.DepthStencilState;
             RasterizerState originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
             SamplerState originalSamplerState = spriteBatch.GraphicsDevice.SamplerStates[0];
-            SamplerState originalVSamplerState = spriteBatch.GraphicsDevice.VertexSamplerStates[0];
+            // Vertex sampler slots are not guaranteed to exist on all backends (e.g. DesktopGL/OpenGL
+            // exposes 0 vertex texture samplers), so reading [0] can throw IndexOutOfRangeException.
+            SamplerState originalVSamplerState = null;
+            try { originalVSamplerState = spriteBatch.GraphicsDevice.VertexSamplerStates[0]; }
+            catch (IndexOutOfRangeException) { }
 
             try
             {
@@ -534,8 +538,6 @@ namespace VikingXNAGraphics
                 if (originalVSamplerState != null)
                     spriteBatch.GraphicsDevice.VertexSamplerStates[0] = originalVSamplerState;
             }
-
-
         }
 
         /*

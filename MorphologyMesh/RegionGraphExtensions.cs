@@ -1,6 +1,7 @@
 using Geometry;
 using Geometry.Meshing;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 //using TriangleNet.Meshing;
@@ -20,6 +21,8 @@ namespace MorphologyMesh
         /// <returns>A list of the OTV tables generated when attempting to merge the regions.  Used for debugging</returns>
         public static List<OTVTable> MergeAndCloseRegionsPass(this MorphMeshRegionGraph graph, BajajGeneratorMesh mesh, SliceChordRTree rTree = null, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
         {
+            int closedRegions = 0;
+            int skippedRegions = 0;
             while (true)
             {
                 var regionNode = graph.Nodes.Values.FirstOrDefault(n => n.Edges.Count == 0 && n.Key.Type == RegionType.UNTILED);
@@ -28,11 +31,22 @@ namespace MorphologyMesh
 
                 try
                 {
-                    TryClosingUntiledRegion(mesh, regionNode.Key, rTree, OnProgress);
+                    if (TryClosingUntiledRegion(mesh, regionNode.Key, rTree, OnProgress))
+                        closedRegions++;
+                    else
+                        skippedRegions++;
                 }
                 catch (System.NotImplementedException)
                 {
-
+                    skippedRegions++;
+                }
+                catch (System.Exception e)
+                {
+                    //An unexpected failure closing this region.  Count it as skipped and continue so we still
+                    //remove the node below (preventing an infinite re-pick of the same region) and produce a
+                    //partial mesh instead of aborting the whole pass.
+                    Trace.WriteLine($"Unexpected exception closing untiled region {regionNode.Key} in mesh {mesh}:\n{e}");
+                    skippedRegions++;
                 }
 
                 /*
@@ -44,6 +58,14 @@ namespace MorphologyMesh
                 */
                 graph.RemoveNode(regionNode.Key);
             }
+
+            if (closedRegions + skippedRegions > 0)
+                Trace.WriteLine($"MergeAndCloseRegionsPass on mesh {mesh}: closed {closedRegions} of {closedRegions + skippedRegions} untiled regions ({skippedRegions} skipped).");
+
+            //A skipped region leaves an open hole in the mesh.  Flag the mesh so callers do not treat it as a
+            //fully successful reconstruction.
+            if (skippedRegions > 0)
+                mesh.GenerationHadErrors = true;
 
             rTree ??= mesh.CreateChordTree(graph.ZLevels);
 
@@ -235,20 +257,21 @@ namespace MorphologyMesh
         /// <param name="mesh"></param>
         /// <param name="region"></param>
         /// <param name="rTree"></param>
-        private static void TryClosingUntiledRegion(BajajGeneratorMesh mesh, MorphMeshRegion region, SliceChordRTree rTree, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
+        /// <returns>True if the region was closed (or required no work); false if it was skipped because the triangulation failed on degenerate geometry.</returns>
+        private static bool TryClosingUntiledRegion(BajajGeneratorMesh mesh, MorphMeshRegion region, SliceChordRTree rTree, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
         {
             if (region.Verticies.Length == 3)
             {
                 MorphMeshFace face = new(region.Verticies);
                 mesh.AddFace(face);
-                return;
+                return true;
             }
             else if (region.Verticies.Length == 4)
             {
                 MorphMeshFace face = new(region.Verticies);
                 //Split face will add the face too
                 mesh.SplitFace(face);
-                return;
+                return true;
             }
 
             GridPolygon regionPolygon = region.Polygon;
@@ -266,22 +289,35 @@ namespace MorphologyMesh
 
             if (NewVerts.Length == 0)
             {
-                return;
+                //The medial axis approximation produced no interior points, so this region cannot be tiled.
+                //Report it as unclosed so the caller tracks the open hole rather than silently dropping it.
+                Trace.WriteLine($"Skipping untiled region {region} in mesh {mesh}: medial axis produced no interior points.");
+                return false;
             }
 
-            //double MinZ = region.VertPositions.Min(v => v.Z);
-            //double MaxZ = region.VertPositions.Max(v => v.Z);
+            //Fallback Z (flat mid-plane) used only when the region perimeter carries no Z information.
+            double fallbackZ = mesh.SliceCenterZ;
 
-            double targetZ = mesh.SliceCenterZ;
+            //Interpolate each medial-axis vertex's Z from the region perimeter (Edwards 2011) instead of
+            //flattening the whole skeleton to the mid-plane.  Perimeter positions are in absolute coordinates,
+            //while the medial-axis vertices live in the centered space used for triangulation, so compare them
+            //in the same (centered) frame.
+            MorphMeshVertex[] perimeter = region.RegionPerimeter;
+            GridVector2[] perimeterCenteredXY = [.. perimeter.Select(v => v.Position.XY() - regionPolygonCenter)];
+            double[] perimeterZ = [.. perimeter.Select(v => v.Position.Z)];
 
-            /*double MinZ = mesh.LowerPolyIndicies.Max(i => mesh.PolyZ[i]); //Pick the largest of the low-end Z values
-            double MaxZ = mesh.UpperPolyIndicies.Min(i => mesh.PolyZ[i]); //Pick the smallest of the high-end Z values
-            double targetZ = (MinZ + MaxZ) / 2.0;
-            */
-
-            //TODO: Adjust the Z level of the output based on the type of region and verticies we are connecting to.
-            var MedialAxisMeshVerts = NewVerts.Select(mv => new MorphMeshVertex(new MedialAxisIndex(MedialAxis, mv), (mv.Key + regionPolygonCenter).ToGridVector3(targetZ))).ToArray();
-            int iNewVerts = mesh.AddVerticies(MedialAxisMeshVerts);
+            //Build the medial-axis verticies but DO NOT add them to the mesh yet.  Pre-assign the indicies they
+            //will receive so the triangulation can map its output back to these verticies, then commit them to
+            //the mesh only if triangulation succeeds.  This prevents orphan verticies when triangulation fails
+            //on degenerate input.
+            int predictedStartIndex = mesh.Verticies.Count;
+            var MedialAxisMeshVerts = NewVerts.Select((mv, k) =>
+            {
+                double vertZ = InterpolateZFromPerimeter(mv.Key, perimeterCenteredXY, perimeterZ, fallbackZ);
+                MorphMeshVertex vtx = new(new MedialAxisIndex(MedialAxis, mv), (mv.Key + regionPolygonCenter).ToGridVector3(vertZ));
+                vtx.SetIndex(predictedStartIndex + k);
+                return vtx;
+            }).ToArray();
 
             /*
             foreach(var edge in MedialAxis.Edges)
@@ -301,9 +337,38 @@ namespace MorphologyMesh
             }
             */
 
-            var polyMesh = Geometry.Meshing.MeshExtensions.Triangulate([.. region.RegionPerimeter.Cast<IVertex2D>()],
-                                                                       [.. MedialAxisMeshVerts.Cast<IVertex2D>()],
-                                                                       OnProgress);
+            //Clean degenerate input (coincident / colinear perimeter points and duplicate interior points) before
+            //triangulating.  Without this the divide-and-conquer Delaunay generator throws on degenerate geometry.
+            var (cleanedPerimeter, cleanedInterior) = Geometry.Meshing.MeshExtensions.CleanRegionTriangulationInput(
+                [.. region.RegionPerimeter.Cast<IVertex2D>()],
+                [.. MedialAxisMeshVerts.Cast<IVertex2D>()]);
+
+            if (cleanedPerimeter.Length < 3)
+            {
+                //No mesh verticies have been committed yet, so there is nothing to roll back.
+                Trace.WriteLine($"Skipping untiled region {region}: fewer than 3 unique perimeter points after cleaning.");
+                return false;
+            }
+
+            TriangulationMesh<IVertex2D<int>> polyMesh;
+            try
+            {
+                polyMesh = Geometry.Meshing.MeshExtensions.Triangulate(cleanedPerimeter, cleanedInterior, OnProgress);
+            }
+            catch (System.Exception e) when (e is GeometryMeshExceptionBase || e is System.ArgumentException)
+            {
+                //Degenerate triangulation input (near-duplicate or colinear points) that survived cleaning.
+                //Log the offending region so it can be reproduced deterministically, then skip it rather than
+                //aborting the entire region-closing pass for this mesh.  No mesh verticies were committed yet,
+                //so the failed region leaves no orphan geometry behind.
+                Trace.WriteLine($"Skipping untiled region {region} in mesh {mesh}: triangulation failed ({e.GetType().Name}: {e.Message})\n{DescribeTriangulationInput(cleanedPerimeter, cleanedInterior)}");
+                return false;
+            }
+
+            //Triangulation succeeded, so commit the medial-axis verticies to the mesh.  Their pre-assigned
+            //indicies match the indicies AddVerticies assigns because nothing else mutated the mesh in between.
+            int iNewVerts = mesh.AddVerticies(MedialAxisMeshVerts);
+            System.Diagnostics.Debug.Assert(iNewVerts == predictedStartIndex, "Medial axis vertex indicies must match the indicies predicted before triangulation");
 
             //var polyMesh = regionPolygon.Triangulate(iPoly: 0);
             //TriangleNet.Meshing.IMesh triangulation = regionPolygon.Triangulate(internalPoints: NewVerts.Select(v => v.Key).ToArray());
@@ -335,6 +400,60 @@ namespace MorphologyMesh
                 newFace.NormalIsKnownCorrect = true;
                 mesh.AddFace(newFace);
             }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Interpolates the Z value for an interior (medial-axis) point from the region perimeter using inverse
+        /// distance weighting (Edwards 2011).  This gives the closing mesh a smoothly varying surface that
+        /// follows the perimeter Z, rather than flattening every interior vertex to the slice mid-plane.
+        /// </summary>
+        /// <param name="point">The interior point, in the same (centered) frame as <paramref name="perimeterXY"/></param>
+        /// <param name="perimeterXY">The region perimeter vertex positions (XY) in the centered frame</param>
+        /// <param name="perimeterZ">The region perimeter vertex Z values, parallel to <paramref name="perimeterXY"/></param>
+        /// <param name="fallbackZ">The Z to use when the perimeter is empty</param>
+        /// <returns>The interpolated Z value</returns>
+        private static double InterpolateZFromPerimeter(GridVector2 point, GridVector2[] perimeterXY, double[] perimeterZ, double fallbackZ)
+        {
+            if (perimeterXY.Length == 0)
+                return fallbackZ;
+
+            double weightSum = 0;
+            double weightedZSum = 0;
+
+            for (int i = 0; i < perimeterXY.Length; i++)
+            {
+                double distSq = GridVector2.DistanceSquared(point, perimeterXY[i]);
+
+                //Coincident with a perimeter vertex: snap to that vertex's Z exactly.
+                if (distSq <= Global.EpsilonSquared)
+                    return perimeterZ[i];
+
+                double weight = 1.0 / distSq;
+                weightSum += weight;
+                weightedZSum += weight * perimeterZ[i];
+            }
+
+            return weightedZSum / weightSum;
+        }
+
+        /// <summary>
+        /// Formats the perimeter and interior points fed to the region triangulation so a failing region can be
+        /// reproduced deterministically from the log output.
+        /// </summary>
+        private static string DescribeTriangulationInput(IReadOnlyList<IVertex2D> perimeter, IReadOnlyList<IVertex2D> interior)
+        {
+            System.Text.StringBuilder sb = new();
+            sb.AppendLine($"  Perimeter ({perimeter.Count} points):");
+            foreach (IVertex2D v in perimeter)
+                sb.AppendLine($"    I:{v.Index} P:({v.Position.X:F4}, {v.Position.Y:F4})");
+
+            sb.AppendLine($"  Interior ({interior.Count} points):");
+            foreach (IVertex2D v in interior)
+                sb.AppendLine($"    I:{v.Index} P:({v.Position.X:F4}, {v.Position.Y:F4})");
+
+            return sb.ToString();
         }
 
         /// <summary>
@@ -372,14 +491,15 @@ namespace MorphologyMesh
                     GridPolygon centeredPolygon = poly.Translate(-polyCenter);
 
                     var MedialAxis = MedialAxisFinder.ApproximateMedialAxis(centeredPolygon);
-                    MedialAxisVertex[] NewVerts = [.. MedialAxis.Nodes.Values];
+                    MedialAxisVertex[] NewVerts = DeduplicateMedialAxisVerts([.. MedialAxis.Nodes.Values], (double)Global.Epsilon * 100.0);
                     System.Diagnostics.Debug.Assert(NewVerts.All(v => centeredPolygon.Contains(v.Key)), "Interior points must be inside Face");
 
                     //TODO: Split any edges with an existing face into two parts so we can better merge the medial axis with the existing shape
 
                     if (NewVerts.Length == 0)
                     {
-                        return;
+                        //This polygon has no medial axis to cap with, but other polygons on this end still need capping.
+                        continue;
                     }
 
                     //TODO: Adjust the Z level of the output based on the type of region and verticies we are connecting to.
@@ -442,6 +562,30 @@ namespace MorphologyMesh
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Removes near-duplicate medial axis vertices, keeping only one representative per cluster
+        /// within <paramref name="threshold"/> distance. This prevents the Delaunay triangulator from
+        /// receiving nearly-coincident interior points that produce degenerate zero-length edges or
+        /// trigger EdgesIntersectTriangulationException during the merge phase.
+        /// </summary>
+        private static MedialAxisVertex[] DeduplicateMedialAxisVerts(MedialAxisVertex[] verts, double threshold)
+        {
+            double threshSq = threshold * threshold;
+            List<MedialAxisVertex> result = new(verts.Length);
+            foreach (MedialAxisVertex v in verts)
+            {
+                bool isDuplicate = result.Any(kept =>
+                {
+                    double dx = kept.Key.X - v.Key.X;
+                    double dy = kept.Key.Y - v.Key.Y;
+                    return dx * dx + dy * dy <= threshSq;
+                });
+                if (!isDuplicate)
+                    result.Add(v);
+            }
+            return [.. result];
         }
 
         private static TriangulationMesh<IVertex2D<MorphMeshVertex>> TriangulateCapWithMedialAxis(IVertex2D<MorphMeshVertex>[] verts, GridPolygon poly, int iPoly, TriangulationMesh<IVertex2D<MorphMeshVertex>>.ProgressUpdate OnProgress = null)

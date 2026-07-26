@@ -107,7 +107,8 @@ namespace WebAnnotation.ViewModel
             set
             {
                 _Color = value;
-                lineView?.Color = value;
+                if (lineView != null)
+                    lineView.Color = value;
             }
         }
 
@@ -118,7 +119,8 @@ namespace WebAnnotation.ViewModel
             set
             {
                 _Color.SetAlpha(value);
-                lineView?.Color = lineView.Color.SetAlpha(value);
+                if (lineView != null)
+                    lineView.Color = lineView.Color.SetAlpha(value);
             }
         }
 

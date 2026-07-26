@@ -30,6 +30,9 @@ namespace MonogameTestbed
 
         private readonly Dictionary<IShapeIndex, int> ShapeIndexToVertex = [];
 
+        readonly List<MorphMeshOutwardOrientation.ShapeAtZ> _shapesAtZ = [];
+        readonly Dictionary<int, bool> _isUpperByMorphShape = [];
+
         public ReaderWriterLockSlim ModelLock = new();
 
         private Color _color = Color.CornflowerBlue;
@@ -64,6 +67,8 @@ namespace MonogameTestbed
         /// <param name="mesh"></param>
         public void AddSlice(BajajGeneratorMesh mesh)
         {
+            AccumulateSliceTopology(mesh.Topology);
+
             //Maps mesh vertex index to the global vertex index
             int[] mesh_to_global = new int[mesh.Verticies.Count];
 
@@ -112,6 +117,18 @@ namespace MonogameTestbed
             composite.RecalculateNormals(mesh_to_global);
 
             UpdateModel(modelVerts, NewModelEdges, mesh_to_global);
+
+            #region agent log
+            try
+            {
+                var stats = MeshWindingDiagnostics.Analyze(composite);
+                long ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                string sliceLabel = mesh.Slice?.ToString() ?? mesh.ToString();
+                System.IO.File.AppendAllText(@"d:\src\git\VikingLegacy\debug-84f952.log",
+                    $"{{\"sessionId\":\"84f952\",\"timestamp\":{ts},\"location\":\"SliceGraphMeshModel.cs:AddSlice\",\"message\":\"Composite after slice add\",\"hypothesisId\":\"B\",\"runId\":\"pre-fix\",\"data\":{{\"slice\":\"{sliceLabel.Replace("\"", "'")}\",\"compositeFaces\":{composite.Faces.Count},\"inconsistentManifold\":{stats.InconsistentManifoldEdges},\"nonManifold\":{stats.NonManifoldEdges},\"manifold\":{stats.ManifoldEdges}}}}}\n");
+            }
+            catch { }
+            #endregion
         }
 
         /// <summary>
@@ -169,6 +186,102 @@ namespace MonogameTestbed
             return NewModelEdges;
         }
 
+        private void AccumulateSliceTopology(SliceTopology topology)
+        {
+            for (int i = 0; i < topology.Shapes.Length; i++)
+            {
+                int morphShape = (int)topology.ShapeIndexToMorphNodeIndex[i];
+                _isUpperByMorphShape[morphShape] = topology.IsUpper[i];
+                _shapesAtZ.Add(new MorphMeshOutwardOrientation.ShapeAtZ
+                {
+                    Shape = topology.Shapes[i],
+                    IsUpper = topology.IsUpper[i],
+                    Z = topology.ShapeZ[i]
+                });
+            }
+        }
+
+        /// <summary>
+        /// Merge another model's accumulated contour context into this one.  Used when compositing two
+        /// SliceGraphMeshModels so the survivor retains the shapes needed for outward winding orientation.
+        /// </summary>
+        private void MergeAccumulatedSliceTopology(SliceGraphMeshModel other)
+        {
+            _shapesAtZ.AddRange(other._shapesAtZ);
+
+            foreach (var kvp in other._isUpperByMorphShape)
+                _isUpperByMorphShape[kvp.Key] = kvp.Value;
+        }
+
+        /// <summary>
+        /// Reorient the merged composite so adjacent faces agree across slice boundaries, then refresh GPU normals.
+        /// Per-slice meshes are oriented locally; merging can leave thousands of inconsistent shared edges.
+        /// </summary>
+        public void EnsureCompositeWinding()
+        {
+            var options = new MeshWindingReorientation.Options
+            {
+                RespectAnchorFaces = false,
+                AlwaysOrientOutward = false,
+                RunRepairPass = false
+            };
+
+            var result = MeshWindingReorientation.Reorient(composite, options);
+
+            var outwardCtx = MorphMeshOutwardOrientation.ShapeContext.FromAccumulated(_shapesAtZ, _isUpperByMorphShape);
+            int outwardFlips = MorphMeshOutwardOrientation.OrientComponentsOutward(composite, outwardCtx);
+            int repairAfterOutward = MeshWindingReorientation.RepairManifoldConsistency(composite);
+
+            composite.RecalculateNormals();
+
+            try
+            {
+                ModelLock.EnterWriteLock();
+
+                //Triangle index order must match reoriented composite faces or backface culling ignores the fix.
+                model.Edges = [.. composite.Faces.SelectMany(f => f.iVerts)];
+
+                for (int i = 0; i < composite.Verticies.Count && i < model.Verticies.Length; i++)
+                {
+                    var v = model.Verticies[i];
+                    v.Normal = composite[i].Normal.ToXNAVector3();
+                    model.Verticies[i] = v;
+                }
+
+                //In-place vertex edits do not mark buffers dirty; reassign to force GPU refresh.
+                model.Verticies = [.. model.Verticies];
+            }
+            finally
+            {
+                ModelLock.ExitWriteLock();
+            }
+
+            #region agent log
+            var postStats = MeshWindingDiagnostics.Analyze(composite);
+            MeshWindingReorientation.AgentLog(
+                "SliceGraphMeshModel.cs:EnsureCompositeWinding",
+                "Composite winding reorientation complete",
+                "B,F,G,H",
+                new
+                {
+                    beforeInconsistent = result.BeforeInconsistent,
+                    afterReorientInconsistent = result.AfterInconsistent,
+                    afterInconsistentAwayFromNonManifold = MeshWindingDiagnostics.CountInconsistentAwayFromNonManifold(composite),
+                    result.TotalReversals,
+                    outwardFlips,
+                    repairAfterOutward,
+                    shapesAtZCount = _shapesAtZ.Count,
+                    compositeFaces = composite.Faces.Count,
+                    postInconsistent = postStats.InconsistentManifoldEdges,
+                    modelEdgeCount = model.Edges?.Length ?? 0,
+                    postStats.ManifoldEdges,
+                    postStats.NonManifoldEdges,
+                    postStats.BoundaryEdges
+                },
+                "post-fix");
+            #endregion
+        }
+
         /// <summary>
         /// Update our mesh model with new verticies and edges from a merge or additional slice operation.  Thread safe.
         /// </summary>
@@ -210,6 +323,16 @@ namespace MonogameTestbed
         {
             // When we merge another SliceGraphMeshModel we know the PolyIndex values for the other model match our own.  We need to create new verticies, edges, and faces into our models
             Mesh3D<MorphMeshVertex> mesh = other.composite;
+
+            //Carry over the other model's accumulated contour context.  The binary-tree assembly merges child
+            //models into a single survivor; without this the root's EnsureCompositeWinding would only see the
+            //shapes from one subtree and orient the rest of the surface using incomplete context.
+            MergeAccumulatedSliceTopology(other);
+
+            //Note: verticies with a null ShapeIndex (medial-axis / cap verticies) are intentionally not merged
+            //across slices.  Each slice places its medial-axis verticies at that slice's center Z and caps only
+            //exist on open ends, so these interior points never coincide between slices.  Merging them by
+            //position would risk welding distinct points and pinching the surface.
 
             //Maps mesh vertex index to the global vertex index
             int[] mesh_to_global = new int[mesh.Verticies.Count];

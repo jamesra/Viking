@@ -89,25 +89,38 @@ namespace Viking
         /// </summary>
         private static RequestItem? TryDequeueNext()
         {
+            List<RequestItem>? cancelledItems = null;
+            RequestItem? result = null;
             lock (_lock)
             {
-                RequestItem? item = null;
-                while(item is null)
-                { 
-                    if (_requests.Count == 0)
-                        return null;
-                    item = _requests[0];
+                while (_requests.Count > 0)
+                {
+                    RequestItem candidate = _requests[0];
                     _requests.RemoveAt(0);
 
-                    if(item.TileView.SectionLoadingCancelled)
+                    if (candidate.TileView.SectionLoadingCancelled)
                     {
-                        Trace.WriteLine($"{item.TileView} cancelled and dropped from Queue");
-                        item = null;
-                        continue; 
-                    } 
+                        Trace.WriteLine($"{candidate.TileView} cancelled and dropped from Queue");
+                        //Must remove from the pending set here, otherwise EnqueueRequest will believe this TileView
+                        //still has a request in flight and will refuse to ever queue a new load for it again.
+                        _pendingTileViews.Remove(candidate.TileView);
+                        (cancelledItems ??= new List<RequestItem>()).Add(candidate);
+                        continue;
+                    }
+
+                    result = candidate;
+                    break;
                 }
-                return item;
             }
+
+            //Complete cancelled items' tasks outside the lock so continuations cannot re-enter it.
+            if (cancelledItems != null)
+            {
+                foreach (RequestItem cancelled in cancelledItems)
+                    cancelled.Tcs.TrySetResult(null);
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -222,16 +235,37 @@ namespace Viking
                 return;
             }
 
-            if (!PendingTextureQueue.TryBeginLoadingFile(item.TileView.TextureFileName))
+            if (!PendingTextureQueue.TryBeginLoadingFile(item.TileView.TextureFileName, out Task<Texture2D> inFlightLoad))
             {
-                CompleteRequest(item, null);
-                return;
+                if (inFlightLoad != null)
+                {
+                    try
+                    {
+                        Texture2D shared = await inFlightLoad.ConfigureAwait(false);
+                        if (shared != null)
+                            item.TileView.SetTextureFromQueue(shared);
+                        CompleteRequest(item, shared);
+                    }
+                    catch (Exception ex)
+                    {
+                        Trace.WriteLine($"TextureRequestQueue in-flight await failed for {item.TileView.TextureFileName}: {ex.Message}");
+                        CompleteRequest(item, null);
+                    }
+                    return;
+                }
+
+                PendingTextureQueue.EndLoadingFile(item.TileView.TextureFileName);
+                if (!PendingTextureQueue.TryBeginLoadingFile(item.TileView.TextureFileName, out _))
+                {
+                    CompleteRequest(item, null);
+                    return;
+                }
             }
 
             var volume = UI.State.volume;
             if (volume is null)
             {
-                PendingTextureQueue.EndLoadingFile(item.TileView.TextureFileName);
+                PendingTextureQueue.EndLoadingFile(item.TileView.TextureFileName, null);
                 CompleteRequest(item, null);
                 return;
             }
@@ -269,7 +303,8 @@ namespace Viking
             }
             finally
             {
-                PendingTextureQueue.EndLoadingFile(item.TileView.TextureFileName);
+                // GPU queue may have already released the file claim; this is a no-op if so.
+                PendingTextureQueue.EndLoadingFile(item.TileView.TextureFileName, null);
             }
         }
 

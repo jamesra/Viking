@@ -122,9 +122,25 @@ namespace Viking.VolumeModel
             if (transforms is null)
                 return Task.CompletedTask;
 
-            using (FileStream fstream = new(CachedTransformsFileName, FileMode.Create, FileAccess.Write))
+            ITransform[] transformsCopy = transforms;
+            string cacheFile = CachedTransformsFileName;
+            try
             {
-                JsonTransformSerializer.SerializeArray(fstream, transforms);
+                TransformCacheFileIO.Save(cacheFile, stream =>
+                    JsonTransformSerializer.SerializeArray(stream, transformsCopy));
+
+                // Reject caches that cannot be read back (e.g. RBFTransform ctor/param mismatch).
+                ITransform[] roundTrip = TransformCacheFileIO.TryLoad(
+                    cacheFile, JsonTransformSerializer.DeserializeArray, out Exception verifyError);
+                if (roundTrip is null)
+                {
+                    TransformCacheFileIO.TryDelete(cacheFile);
+                    Trace.WriteLine($"Transform cache not saved (round-trip failed): {cacheFile}: {verifyError?.GetType().Name} - {verifyError?.Message}");
+                }
+            }
+            catch (Exception e)
+            {
+                Trace.WriteLine($"Unable to save transform cache {cacheFile}: {e.GetType().Name} - {e.Message}");
             }
 
             return Task.CompletedTask;
@@ -133,22 +149,23 @@ namespace Viking.VolumeModel
         protected virtual ITransform[] LoadFromCache()
         {
             //Replaced BinaryFormatter with modern JSON deserialization to avoid security vulnerabilities
+            string cachePath = CachedTransformsFileName;
+            ITransform[] transforms = TransformCacheFileIO.TryLoad(
+                cachePath,
+                JsonTransformSerializer.DeserializeArray,
+                out Exception loadError);
 
-            ITransform[] transforms = null;
 
-            try
+            if (transforms != null)
+                return transforms;
+
+            if (loadError != null)
             {
-                using FileStream fstream = new(CachedTransformsFileName, FileMode.Open, FileAccess.Read);
-                transforms = JsonTransformSerializer.DeserializeArray(fstream);
-            }
-            catch (Exception e)
-            {
-                transforms = null;
-                Trace.WriteLine(string.Format("Unable to load {0} from cache", CachedTransformsFileName));
-                System.IO.File.Delete(CachedTransformsFileName);
+                Trace.WriteLine($"Unable to load {cachePath} from cache: {loadError.GetType().Name} - {loadError.Message}");
+                TransformCacheFileIO.TryDelete(cachePath);
             }
 
-            return transforms;
+            return null;
         }
 
         #endregion
@@ -223,7 +240,7 @@ namespace Viking.VolumeModel
                     }
                 }
 
-                if (T is IControlPointTriangulation T_Triangulation)
+                else if (T is IControlPointTriangulation T_Triangulation)
                 {
                     //If this tile has been transformed out of existence then skip it
                     if (T_Triangulation.MapPoints.Length < 3)
@@ -249,6 +266,21 @@ namespace Viking.VolumeModel
             // Only include tiles already completed (cached hits via Task.FromResult).
             // Background CreateTile tasks continue asynchronously; they will populate
             // Global.TileCache and appear on the next draw cycle.
+            // Wait for in-flight CreateTile tasks so the first draw after a cache miss
+            // still enumerates visible tiles (regression fix for 9b1e065a removing Task.WaitAll).
+            Task[] incompleteTasks = tileTasks.Where(t => !t.IsCompleted).Cast<Task>().ToArray();
+            if (incompleteTasks.Length > 0)
+            {
+                try
+                {
+                    Task.WaitAll(incompleteTasks);
+                }
+                catch (AggregateException)
+                {
+                    // Individual task faults are handled below when adding tiles.
+                }
+            }
+
             foreach (var task in tileTasks)
             {
                 if (task.Status == System.Threading.Tasks.TaskStatus.RanToCompletion)
@@ -260,6 +292,7 @@ namespace Viking.VolumeModel
                     VisibleTiles.AddTile(tile.Downsample, tile);
                 }
             }
+
 
             return VisibleTiles;
         }
@@ -281,11 +314,12 @@ namespace Viking.VolumeModel
                     tileTasks.Add(Task.FromResult(tileViewModel));
                 else
                 {
+                    int levelForTask = level;
                     if (T is IControlPointTriangulation T_Triangulation)
-                        tileTasks.Add(Task.Run(() => CreateTile(uniqueID, level,
+                        tileTasks.Add(Task.Run(() => CreateTile(uniqueID, levelForTask,
                             T_Triangulation, info)));
                     else if (T is IContinuousTransform T_Cont)
-                        tileTasks.Add(Task.Run(() => CreateTile(uniqueID, level,
+                        tileTasks.Add(Task.Run(() => CreateTile(uniqueID, levelForTask,
                             T_Cont, info)));
                     else
                         throw new NotImplementedException("Unknown transform type for Tiles");

@@ -287,7 +287,16 @@ namespace MorphologyMesh
 
                 //var sliceTopology = sliceGraph.GetTopology(slice);
 
-                meshGenTasks.Add(Task<BajajGeneratorMesh>.Factory.StartNew(() => new BajajGeneratorMesh(sliceGraph.GetTopology(slice), slice)));
+                meshGenTasks.Add(Task<BajajGeneratorMesh>.Factory.StartNew(() =>
+                {
+                    var topology = sliceGraph.GetTopology(slice);
+                    if (!topology.IsValid)
+                    {
+                        Trace.WriteLine($"Skipping mesh for slice {slice}: topology initialisation failed.");
+                        return null;
+                    }
+                    return new BajajGeneratorMesh(topology, slice);
+                }));
 
                 //                BajajGeneratorMesh mesh = new BajajGeneratorMesh(Polygons.Select(p => p.Simplify(1.0)).ToList(), PolyZ, IsUpper);
                 //              listBajajMeshGenerators.Add(mesh);
@@ -303,14 +312,14 @@ namespace MorphologyMesh
                     try
                     {
                         var t = finishedTask.Result;
-                        if (t.Status == TaskStatus.RanToCompletion)
+                        if (t.Status == TaskStatus.RanToCompletion && t.Result is not null)
                         {
                             listBajajMeshGenerators.Add(t.Result);
                         }
                     }
                     catch (Exception e)
                     {
-                        Trace.WriteLine($"Exception generating mesh {finishedTask.Result.AsyncState}");
+                        Trace.WriteLine($"Exception constructing slice topology mesh {finishedTask.Result.AsyncState}\n{e}");
                     }
                     finally
                     {
@@ -338,10 +347,13 @@ namespace MorphologyMesh
                        try
                        {
                            GenerateFaces(BajajGeneratorMeshArray[(int)i]);
-                           OnMeshGenerated?.Invoke(BajajGeneratorMeshArray[(int)i], true);
+                           //A non-fatal error (e.g. a region that could not be closed) leaves a partial mesh.
+                           //Report success only if generation completed without flagged errors.
+                           OnMeshGenerated?.Invoke(BajajGeneratorMeshArray[(int)i], !BajajGeneratorMeshArray[(int)i].GenerationHadErrors);
                        }
-                       catch
+                       catch (Exception e)
                        {
+                           Trace.WriteLine($"Exception building mesh {BajajGeneratorMeshArray[(int)i]}\n{e}");
                            OnMeshGenerated?.Invoke(BajajGeneratorMeshArray[(int)i], false);
                        }
                    }, iMesh));
@@ -429,7 +441,7 @@ namespace MorphologyMesh
             }
 #endif
 */
-            return null;//listBajajMeshGenerators;
+            return listBajajMeshGenerators;
         }
 
         public static void GenerateFaces(BajajGeneratorMesh mesh)
@@ -462,6 +474,9 @@ namespace MorphologyMesh
             }
             catch (Exception e)
             {
+                //The second pass failed.  We continue so the partial mesh is still produced, but flag the
+                //mesh so callers do not treat it as a fully successful reconstruction.
+                mesh.GenerationHadErrors = true;
                 Trace.WriteLine(string.Format("Exception building mesh {0}\n{1}", mesh.ToString(), e));
             }
 
@@ -479,7 +494,9 @@ namespace MorphologyMesh
             }
 
             mesh.EnsureFacesHaveExternalNormals();
-            //mesh.RecalculateNormals();
+
+            //Recompute per-vertex normals now that face winding is consistent so lighting matches the corrected surface.
+            mesh.RecalculateNormals();
         }
 
         private static Dictionary<GridVector2, List<int>> CreatePointToIndexMap(BajajGeneratorMesh mesh)
@@ -1945,7 +1962,7 @@ return;
                             return testPoint;
                         else
                         {
-                            KnownCandidateFailures?.RecordFailure(NearestPoint.Index, failures); //Record the failure for any future passes
+                            KnownCandidateFailures?.RecordFailure(testPoint.Index, failures); //Record the failure for any future passes
                         }
                     }
                 }

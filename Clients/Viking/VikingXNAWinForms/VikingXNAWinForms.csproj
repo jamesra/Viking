@@ -12,8 +12,6 @@
 	
 	<!-- .NET Framework 4.8 specific properties -->
 	<PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
-		<TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
-		<NuGetTargetMoniker>.NETFramework,Version=v4.8</NuGetTargetMoniker>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>

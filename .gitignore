@@ -48,3 +48,19 @@ TestResults
 
 # Optional local mirror of another Viking checkout (not part of this tree)
 /Viking/
+
+# Cursor plan files (local only, not for version control)
+.cursor/plans/
+
+# Benchmark run output
+/BenchmarkDotNet.Artifacts/
+
+# Reference papers (large PDFs, mirrors the /Papers/ rule above)
+/MorphologyMesh/Papers/
+
+# Local build/scratch output
+build_output.txt
+cleanup-list.txt
+debug-*.log
+*.mp3
+/mgcb Clients/

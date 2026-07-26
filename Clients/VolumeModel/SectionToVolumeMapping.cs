@@ -112,12 +112,13 @@ namespace Viking.VolumeModel
                     _SectionBounds =
                         Geometry.Transforms.ReferencePointBasedTransform.CalculateMappedBounds(transformControlPoints);
                     Interlocked.Exchange(ref _Initialized, 1);
-                    Interlocked.CompareExchange(ref _InitializationInProgress, 0, 1);
                 }
             }
             finally
             {
+                Interlocked.Exchange(ref _InitializationInProgress, 0);
                 _InitializeSemaphore.Release();
+
             }
         }
 
@@ -177,24 +178,11 @@ namespace Viking.VolumeModel
                 if (cacheFileInfo.LastWriteTimeUtc >= VolumeTransformInfo.LastModified &&
                     cacheFileInfo.LastWriteTimeUtc >= SourceMapping.LastModified)
                 {
-                    try
-                    {
-                        return LoadFromCache();
-                    }
-                    catch (Exception)
-                    {
-                        //On any error, use the traditional path
-                        this._TileTransforms = null;
-                        Trace.WriteLine("Deleting invalid cache file: " + this.CachedTransformsFileName);
-                        try
-                        {
-                            System.IO.File.Delete(this.CachedTransformsFileName);
-                        }
-                        catch (System.IO.IOException except)
-                        {
-                            Trace.WriteLine("Could not delete invalid cache file: " + this.CachedTransformsFileName);
-                        }
-                    }
+                    var cachedTransforms = LoadFromCache();
+                    if (cachedTransforms != null)
+                        return cachedTransforms;
+
+                    // LoadFromCache deletes corrupt entries; fall through to rebuild from source mapping.
                 }
                 else
                 {

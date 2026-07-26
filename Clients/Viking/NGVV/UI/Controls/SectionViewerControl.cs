@@ -164,7 +164,8 @@ namespace Viking.UI.Controls
             set
             {
                 _Magnification = value;
-                tsMagnification?.Text = "Magnification: " + value.ToString("F2");
+                if (tsMagnification != null)
+                    tsMagnification.Text = "Magnification: " + value.ToString("F2");
             }
         }
 
@@ -871,6 +872,27 @@ namespace Viking.UI.Controls
                 _sectionMappingInitTasks[sectionNumber] = task;
                 Interlocked.Exchange(ref _lastInitSectionNumber, sectionNumber);
                 Interlocked.Exchange(ref _lastInitTask, task);
+
+
+                _ = task.ContinueWith(t =>
+                {
+                    bool initOk = mapping.Initialized;
+                    bool cancelled = token.IsCancellationRequested;
+
+                    if (initOk && !cancelled && !t.IsFaulted && !IsDisposed)
+                    {
+                        try
+                        {
+                            if (InvokeRequired)
+                                BeginInvoke(new Action(() => { if (!IsDisposed) Invalidate(); }));
+                            else
+                                Invalidate();
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                        }
+                    }
+                }, TaskScheduler.Default);
             }
         }
 
@@ -952,7 +974,8 @@ namespace Viking.UI.Controls
 
         private void OnSelectedItemChanged(object sender, Viking.Common.ObjectSelectedEventArgs e)
         {
-            CurrentCommand?.Deactivated = true;
+            if (CurrentCommand != null)
+                CurrentCommand.Deactivated = true;
 
             this.Invalidate();
         }
@@ -2075,7 +2098,9 @@ namespace Viking.UI.Controls
 
             MappingBase mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel, this.CurrentTransform);
             if (mapping is null)
+            {
                 return (null, false);
+            }
 
             if (mapping.Initialized == false)
             {
@@ -2085,12 +2110,28 @@ namespace Viking.UI.Controls
 
             int[] DownsamplesToRender = CalculateDownsamplesToRender(mapping, scene.Camera.Downsample);
 
-            //If we aren't loading asynchronously only load the hi-res textures since we are waiting for completion
-            if (!AsynchTextureLoad)
-                DownsamplesToRender = [DownsamplesToRender.Last()];
-
             //Get all of the visible tiles
             var visibleTiles = mapping.VisibleTiles(scene.VisibleWorldBounds, scene.Camera.Downsample);
+
+            if (DownsamplesToRender.Length == 0)
+            {
+                int[] available = mapping.AvailableLevels;
+                var fallback = new System.Collections.Generic.List<int>(available.Length);
+                for (int i = 0; i < available.Length; i++)
+                {
+                    if (visibleTiles.GetTilesForLevel(available[i]).Count > 0)
+                        fallback.Add(i);
+                }
+
+                if (fallback.Count > 0)
+                {
+                    DownsamplesToRender = fallback.ToArray();
+                }
+            }
+
+            //If we aren't loading asynchronously only load the hi-res textures since we are waiting for completion
+            if (!AsynchTextureLoad && DownsamplesToRender.Length > 0)
+                DownsamplesToRender = [DownsamplesToRender.Last()];
 
             RenderTarget2D renderTarget = new(graphicsDevice,
                                               scene.Viewport.Width,
@@ -2106,6 +2147,11 @@ namespace Viking.UI.Controls
             DepthStencilState originalDepthState = graphicsDevice.DepthStencilState;
 
             bool allVisibleTilesHadTextures = true;
+            // No tiles visible at any downsample level — don't cache the empty result so the
+            // timer's Invalidate keeps the draw loop live until the camera moves into tile range.
+            if (DownsamplesToRender.Length == 0)
+                allVisibleTilesHadTextures = false;
+            CancellationToken sectionTextureLoadToken = GetOrCreateSectionTextureLoadToken(section.Number);
             for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
             {
                 int level = mapping.AvailableLevels[DownsamplesToRender[iLevel]];
@@ -2122,7 +2168,6 @@ namespace Viking.UI.Controls
                 List<TileView> tileViewsToDraw = [];
 
                 int iColor = 0;
-                CancellationToken sectionTextureLoadToken = GetOrCreateSectionTextureLoadToken(section.Number);
                 foreach (TileViewModel t in tileList.Values)
                 {
                     TileView tileView = FetchOrConstructTileForSection(t, section, mapping.Name);
@@ -2179,6 +2224,7 @@ namespace Viking.UI.Controls
                 //     if (AllTilesDrawn)
                 //         break; 
             }
+
 
 
             if (Viking.UI.State.ShowStosMesh)
@@ -2366,7 +2412,7 @@ namespace Viking.UI.Controls
                     MappingBase mapping = this.Section.VolumeViewModel.GetTileMapping(Volume.ActiveVolumeTransform,
                                                                     sectionToDraw.Number,
                                                                     ChannelName,
-                                                                    Section.DefaultPyramidTransform);
+                                                                    this.CurrentTransform);
 
                     if (mapping is null)
                     {
@@ -3079,9 +3125,12 @@ namespace Viking.UI.Controls
             Volume.ActiveVolumeTransform = menuItem.Text.ToLower() == "none" ? null : menuItem.Text;
         }
 
-        private void OnVolumeTransformChanged(object sender, TransformChangedEventArgs e) =>
+        private void OnVolumeTransformChanged(object sender, TransformChangedEventArgs e)
+        {
             //TODO: Cancel the active command
+            InvalidateSectionTextureCache();
             this.Invalidate();
+        }
 
         private void OnSectionTransformChanged(object sender, TransformChangedEventArgs e) =>
             //TODO: Cancel the active command

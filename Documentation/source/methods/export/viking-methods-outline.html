@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.10" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>viking-methods-outline</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="export.css" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">viking-methods-outline</h1>
+</header>
+<h1 id="viking-methods-paper-detailed-outline">Viking Methods Paper –
+Detailed Outline</h1>
+<p>Working title: <em>Viking: A Modern Platform for Ultrastructural
+Connectome Mapping and Analysis</em></p>
+<p>This outline expands the 2009 framework paper (Anderson et al., “A
+Computational Framework for Ultrastructural Mapping of Neural
+Circuitry”, PLoS Biology 2009) to cover the substantial work done on
+Viking since publication. It is written for a connectomics / EM
+reconstruction methods audience. The companion fact sheet on spatial
+database columns is in <a
+href="spatial-columns-factsheet.md"><code>spatial-columns-factsheet.md</code></a>;
+the full prose draft is in <a
+href="viking-methods-paper.md"><code>viking-methods-paper.md</code></a>.</p>
+<h2 id="how-this-maps-to-the-2009-paper">How this maps to the 2009
+paper</h2>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 37%" />
+<col style="width: 25%" />
+<col style="width: 37%" />
+</colgroup>
+<thead>
+<tr>
+<th>2009 paper section</th>
+<th>Status today</th>
+<th>New paper coverage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Image acquisition (SerialEM)</td>
+<td>Largely unchanged</td>
+<td>Brief recap, cite original</td>
+</tr>
+<tr>
+<td>Mosaicking and registration (ir-tools, CMP)</td>
+<td>Largely unchanged</td>
+<td>Brief recap; STOS transform model in client</td>
+</tr>
+<tr>
+<td>MosaicBuilder / volume assembly</td>
+<td>Evolved</td>
+<td>Volume pyramids, transform composition</td>
+</tr>
+<tr>
+<td>Viking client (Win32 multislice pager)</td>
+<td>Replaced</td>
+<td>MonoGame/XNA client, dual coordinate spaces</td>
+</tr>
+<tr>
+<td>Annotation workflow (12 steps)</td>
+<td>Expanded</td>
+<td>Structure/location model, region loading, links</td>
+</tr>
+<tr>
+<td>Data storage</td>
+<td>Barely described</td>
+<td>SQL Server schema, spatial geometry, CDC</td>
+</tr>
+<tr>
+<td>Programmatic access</td>
+<td>Not present</td>
+<td>OData API, gRPC migration, Export service</td>
+</tr>
+<tr>
+<td>Authentication</td>
+<td>Not present</td>
+<td>Identity Server, volume-scoped rights</td>
+</tr>
+<tr>
+<td>3D morphology</td>
+<td>Not present</td>
+<td>AnnotationVizLib graphs, Bajaj mesh, COLLADA</td>
+</tr>
+<tr>
+<td>Deployment</td>
+<td>Lab servers</td>
+<td>Docker compose, mounted-config convention</td>
+</tr>
+</tbody>
+</table>
+<h2 id="architecture-at-a-glance">Architecture at a glance</h2>
+<pre class="mermaid"><code>flowchart TD
+    SerialEM[SerialEM acquisition] --&gt; irTools[ir-tools mosaicking and registration]
+    irTools --&gt; CMP[CMP correction]
+    CMP --&gt; MosaicBuilder[MosaicBuilder volume assembly]
+    MosaicBuilder --&gt; Pyramids[Image pyramids and STOS transforms]
+    Pyramids --&gt; Viking[Viking MonoGame client]
+    Viking --&gt; DB[(SQL Server annotation database)]
+    DB --&gt; OData[ConnectomeODataV4 read API]
+    DB --&gt; WCF[AnnotationService WCF]
+    DB --&gt; Grpc[GrpcAnnotationService in progress]
+    OData --&gt; VizLib[AnnotationVizLib morphology and network graphs]
+    VizLib --&gt; Mesh[MorphologyMesh Bajaj reconstruction]
+    VizLib --&gt; Export[DataExport DOT TLP GML JSON]
+    Mesh --&gt; Collada[COLLADA 3D meshes]
+    Identity[Identity Server] --&gt; Viking
+    Identity --&gt; WCF
+    Seg[Segmentation gRPC SAM2] --&gt; Viking</code></pre>
+<h2 id="section-by-section-outline">Section-by-section outline</h2>
+<h3 id="abstract">1. Abstract</h3>
+<ul>
+<li>Same scientific goal as 2009: terabyte-scale EM volumes traced into
+validated neural circuits.</li>
+<li>New emphases: collaborative web-scale annotation, a spatially
+indexed database, programmatic analysis APIs, and an automated 2D-to-3D
+morphology reconstruction pipeline.</li>
+</ul>
+<h3 id="introduction">2. Introduction</h3>
+<ul>
+<li>Recap the 2009 framework and the problem it solved.</li>
+<li>Motivate the changes: larger volumes, more annotators, demand for
+quantitative 3D morphology and network analysis, and security for
+multi-institution access.</li>
+<li>State scope: this paper documents the platform as it exists
+now.</li>
+</ul>
+<h3 id="image-volume-pipeline-brief-recap-plus-what-changed">3. Image
+volume pipeline (brief recap plus what changed)</h3>
+<ul>
+<li>Acquisition and mosaicking unchanged; cite 2009.</li>
+<li>Volume model in code: <code>Volume</code>, <code>Section</code>,
+<code>Pyramid</code>, <code>TilePyramid</code> (<a
+href="../../../Clients/VolumeModel/"><code>Clients/VolumeModel/</code></a>).</li>
+<li>Two tile-mapping strategies: <code>FixedTileCountMapping</code>
+(classic EM mosaics) and <code>TileGridMapping</code> (pre-tiled / OCP
+pyramids).</li>
+<li>HTTP tile serving and the local disk/in-memory tile cache
+(<code>TileCache</code>, <code>TextureReaderV2</code>).</li>
+</ul>
+<h3 id="coordinate-spaces-and-registration">4. Coordinate spaces and
+registration</h3>
+<ul>
+<li>Mosaic/section space versus volume space; see <a
+href="../../../.cursor/rules/coordinate-spaces.mdc"><code>.cursor/rules/coordinate-spaces.mdc</code></a>.</li>
+<li>STOS transform types: <code>GridTransform</code>,
+<code>MeshTransform</code>, <code>RigidTransform</code>,
+<code>RBFTransform</code>, <code>TriangulationTransform</code> (<a
+href="../../../Geometry/Transforms/"><code>Geometry/Transforms/</code></a>).</li>
+<li>Pairwise to global registration via <code>RegistrationTree</code>
+and <code>Volume.CreateVolumeTransforms</code>.</li>
+<li>Runtime conversion: <code>IVolumeToSectionTransform</code>
+(<code>SectionToVolume</code> / <code>VolumeToSection</code>).</li>
+<li>The JSON transform cache (<code>JsonTransformSerializer</code>,
+<code>FixedTileCountMapping</code>) and the 2026 polymorphic
+deserializer fix.</li>
+</ul>
+<h3 id="annotation-data-model">5. Annotation data model</h3>
+<ul>
+<li>Core entities: <code>Structure</code>, <code>Location</code>,
+<code>StructureLink</code>, <code>LocationLink</code> (<a
+href="../../../Servers/ConnectomeDataModelCore/"><code>Servers/ConnectomeDataModelCore/</code></a>,
+client mirror in <a
+href="../../../Clients/WebAnnotationModel/"><code>Clients/WebAnnotationModel/</code></a>).</li>
+<li>Biological mapping: structures are
+cells/processes/organelles/synapses; locations are per-section
+footprints; structure links are connectivity edges; location links are
+tracing continuity.</li>
+<li>Structure types, markup types (point/line/poly), permitted link
+types, and parent/child hierarchies
+(<code>PermittedStructureLinkObj</code>,
+<code>StructureTypeObj</code>).</li>
+<li>Spatial geometry columns (<code>MosaicShape</code>,
+<code>VolumeShape</code>) and the August 2015 migration; schema
+versioning via the <code>DBVersion</code> table (currently 83).</li>
+<li>Change Data Capture and the bounds stored procedures (e.g.
+<code>SelectSectionLocationsAndLinksInMosaicBounds</code>).</li>
+</ul>
+<h3 id="viking-client-architecture">6. Viking client architecture</h3>
+<ul>
+<li>MonoGame/XNA rendering stack (<a
+href="../../../Clients/MonogameXNAGraphicsShared/"><code>Clients/MonogameXNAGraphicsShared/</code></a>).</li>
+<li>Multislice navigation: <code>SectionViewerControl</code>, step/zoom
+controls, reference sections above/below.</li>
+<li>Region-based annotation loading: <code>RegionLoader</code>,
+viewport-to-mosaic bounds, spatial query per grid cell, in-memory
+R-tree.</li>
+<li>Rendering annotations: <code>AnnotationOverlay</code>, on-section
+and adjacent-section views, location links and structure links, label
+rendering.</li>
+</ul>
+<h3 id="server-infrastructure-and-apis">7. Server infrastructure and
+APIs</h3>
+<ul>
+<li>WCF <code>AnnotationService</code> (<code>AnnotateService</code>,
+role-based: Read/Write/Annotate/ Review/Modify).</li>
+<li>gRPC replacement in progress (<code>GrpcAnnotationService</code>,
+protos under <a
+href="../../../gRPCAnnotationServiceTypes/Protos/"><code>gRPCAnnotationServiceTypes/Protos/</code></a>).</li>
+<li>OData v4 read API (<code>Servers/ConnectomeODataV4/</code>): entity
+sets and network functions (<code>Network</code>,
+<code>NetworkLinks</code>, <code>Scale</code>).</li>
+<li>Export service (<code>Servers/DataExport/</code>): DOT, TLP, GML,
+JSON for graphs.</li>
+<li>Identity Server: volume-scoped claims
+(<code>{VolumeName}.{permission}</code>), JWT validation in
+<code>JwtMessageInspector</code>.</li>
+<li>Docker deployment: combined Windows/IIS image and the
+<code>D:\Docker\mounted-configs\&lt;ServiceName&gt;</code>
+convention.</li>
+</ul>
+<h3 id="segmentation-and-assisted-tracing">8. Segmentation and assisted
+tracing</h3>
+<ul>
+<li>Segmentation gRPC service and SAM2 integration (<a
+href="../../../gRPC_Protos/Segmentation/SAM2/segmentation.proto"><code>gRPC_Protos/Segmentation/SAM2/segmentation.proto</code></a>).</li>
+<li>How assisted polygons fit the annotation workflow (high level).</li>
+</ul>
+<h3 id="d-morphology-and-connectome-analysis">9. 3D morphology and
+connectome analysis</h3>
+<ul>
+<li>Building graphs from annotations: <code>MorphologyGraph</code>
+(nodes = locations, edges = location links) and <code>NeuronGraph</code>
+(structure-level connectivity).</li>
+<li>Three client backends: <code>ODataMorphologyFactory</code>,
+<code>WCFMorphologyFactory</code>,
+<code>SimpleODataMorphologyFactory</code>.</li>
+<li>Mesh reconstruction: <code>SliceGraph</code> to
+<code>BajajMeshGenerator</code> (constrained Delaunay, optimal tiling
+vertices, slice chords) to <code>MorphologyColladaView</code> (<a
+href="../../../MorphologyMesh/"><code>MorphologyMesh/</code></a>).</li>
+<li>Output formats and how they feed downstream analysis (the
+colleague’s 3D connectome methods).</li>
+</ul>
+<h3 id="quality-control-performance-and-scale">10. Quality control,
+performance, and scale</h3>
+<ul>
+<li>VikingAU automated position adjustment (<a
+href="../../../Clients/VikingAU/"><code>Clients/VikingAU/</code></a>).</li>
+<li>Spatial indexes and bounds queries; tile and transform caches;
+query-date consistency for multi-user editing.</li>
+<li>Terabyte-scale considerations (update figures if newer volumes
+exist).</li>
+</ul>
+<h3 id="discussion">11. Discussion</h3>
+<ul>
+<li>Comparison table (2009 versus current).</li>
+<li>Limitations and ongoing work (gRPC cutover, mesh export
+wiring).</li>
+</ul>
+<h3 id="availability">12. Availability</h3>
+<ul>
+<li>Repositories, server deployment, and data access.</li>
+</ul>
+<h2 id="figures-to-produce">Figures to produce</h2>
+<ul>
+<li>Figure 1: Updated end-to-end workflow (extends 2009 Figure 3).</li>
+<li>Figure 2: Mosaic versus volume coordinate spaces with one structure
+traced across sections.</li>
+<li>Figure 3: Client/server/data-flow architecture.</li>
+<li>Figure 4: Region-based spatial loading concept.</li>
+<li>Figure 5: 2D annotations to 3D Bajaj mesh pipeline.</li>
+</ul>
+<h2 id="source-files-to-mine-for-the-full-draft">Source files to mine
+for the full draft</h2>
+<ul>
+<li>Database: <a
+href="../../../Servers/SQL/DatabaseCreateUpdate/CreateUpdateDatabase.sql"><code>Servers/SQL/DatabaseCreateUpdate/CreateUpdateDatabase.sql</code></a></li>
+<li>Volume model: <a
+href="../../../Clients/VolumeModel/"><code>Clients/VolumeModel/</code></a>,
+<a
+href="../../../Geometry/Transforms/"><code>Geometry/Transforms/</code></a></li>
+<li>Client annotation: <a
+href="../../../Clients/Viking/WebAnnotation/"><code>Clients/Viking/WebAnnotation/</code></a>,
+<a
+href="../../../Clients/WebAnnotationModel/"><code>Clients/WebAnnotationModel/</code></a></li>
+<li>Morphology and mesh: <a
+href="../../../AnnotationVizLib/"><code>AnnotationVizLib/</code></a>, <a
+href="../../../MorphologyMesh/"><code>MorphologyMesh/</code></a></li>
+<li>Servers: <a
+href="../../../Servers/ConnectomeODataV4/"><code>Servers/ConnectomeODataV4/</code></a>,
+<a
+href="../../../Servers/DataExport/"><code>Servers/DataExport/</code></a>,
+<a
+href="../../../Servers/AnnotationService/"><code>Servers/AnnotationService/</code></a>,
+<a
+href="../../../Servers/GrpcAnnotationService/"><code>Servers/GrpcAnnotationService/</code></a></li>
+</ul>
+</body>
+</html>

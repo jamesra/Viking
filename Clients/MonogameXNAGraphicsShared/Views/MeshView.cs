@@ -212,10 +212,10 @@ namespace VikingXNAGraphics
                 int drawable = modelList.Count(m => m.Edges != null && m.Verticies != null && m.Edges.Length != 0 && m.Verticies.Length != 0);
                 try
                 {
-                    string logPath = @"d:\src\git\VikingLegacy\debug-a0f2bd.log";
+                    string logPath = @"d:\src\git\VikingLegacy\debug-84f952.log";
                     long ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                     File.AppendAllText(logPath,
-                        $"{{\"sessionId\":\"a0f2bd\",\"timestamp\":{ts},\"location\":\"MeshView.cs:Draw\",\"message\":\"MeshView static draw\",\"hypothesisId\":\"B,D\",\"runId\":\"pre-fix\",\"data\":{{\"frame\":{MeshViewDrawLogCount},\"modelCount\":{modelList.Count},\"drawableCount\":{drawable},\"totalVerts\":{modelList.Sum(m => m.Verticies?.Length ?? 0)},\"totalEdges\":{modelList.Sum(m => m.Edges?.Length ?? 0)},\"cullMode\":\"{cullmode}\",\"fillMode\":\"{fillMode}\"}}}}\n");
+                        $"{{\"sessionId\":\"84f952\",\"timestamp\":{ts},\"location\":\"MeshView.cs:Draw\",\"message\":\"MeshView static draw\",\"hypothesisId\":\"D,E\",\"runId\":\"pre-fix\",\"data\":{{\"frame\":{MeshViewDrawLogCount},\"modelCount\":{modelList.Count},\"drawableCount\":{drawable},\"totalVerts\":{modelList.Sum(m => m.Verticies?.Length ?? 0)},\"totalEdges\":{modelList.Sum(m => m.Edges?.Length ?? 0)},\"cullMode\":\"{cullmode}\",\"fillMode\":\"{fillMode}\"}}}}\n");
                 }
                 catch { }
                 MeshViewDrawLogCount++;

@@ -78,6 +78,16 @@ namespace MorphologyMesh
 
         public static async Task<SliceGraph> Create(MorphologyGraph graph, double tolerance = 0)
         {
+            //An empty morphology graph has no bounding box; downstream code (InitializeShapes ->
+            //graph.BoundingBox.CenterPoint) would otherwise dereference a default GridBox and throw an opaque
+            //NullReferenceException.  Fail fast with an actionable message instead.
+            if (graph.Nodes.Count == 0 && graph.Subgraphs.IsEmpty)
+                throw new ArgumentException(
+                    "Cannot create a SliceGraph from an empty MorphologyGraph (no nodes). " +
+                    "This usually means the OData query returned no annotations for the requested IDs " +
+                    "(e.g. location IDs were queried as structure IDs, or the IDs/endpoint are wrong).",
+                    nameof(graph));
+
             SliceGraph output = new(graph);
 
             SortedSet<MorphologyEdge> Edges = [.. graph.Edges.Values];
@@ -254,7 +264,7 @@ namespace MorphologyMesh
                 else
                 {
                     ///Hmm... return what we have?
-                    Console.WriteLine("Bailing out of one MeshingCrossSection build because I found a cycle at {e.NodesWithACycle[0]} I couldn't remove automatically.");
+                    Trace.WriteLine($"Bailing out of one MeshingCrossSection build because I found a cycle at {e.NodesWithACycle[0]} I couldn't remove automatically.");
                     return;
                 }
             }
@@ -309,7 +319,7 @@ namespace MorphologyMesh
             {
                 foreach (var id in cycle_ids)
                 {
-                    Console.WriteLine($"Location {id} forms a cycle in the morphology graph");
+                    Trace.WriteLine($"Location {id} forms a cycle in the morphology graph");
                 }
 
                 //Debug.Assert(cycle_ids.Length == 0, string.Format("Cycle found in graph: {0}", cycle_ids[0]));
@@ -429,10 +439,10 @@ namespace MorphologyMesh
                                 }
                                 catch (ArgumentException e)
                                 {
-                                    Console.WriteLine(
+                                    Trace.WriteLine(
                                         $"Could not simplify location #{node.ID}.  Using original (more detailed) polygon instead.");
 #if DEBUG
-                                    Console.WriteLine($"{e}");
+                                    Trace.WriteLine($"{e}");
 #endif
                                     return poly;
                                 }

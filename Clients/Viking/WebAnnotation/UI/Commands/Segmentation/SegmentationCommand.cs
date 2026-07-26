@@ -1711,12 +1711,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double backgroundPulse = Math.Cos(phaseAngle);
 
             // Draw background points (red circles) with pulsing alpha (opposite phase)
-            backgroundPointsView?.Alpha = (float)(0.64 + backgroundPulse * 0.33); // Range: 0.0 to 1.0
-            backgroundPointsView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+            if (backgroundPointsView != null)
+            {
+                backgroundPointsView.Alpha = (float)(0.64 + backgroundPulse * 0.33); // Range: 0.0 to 1.0
+                backgroundPointsView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+            }
 
             // Draw foreground points (green circles) with pulsing alpha
-            foregroundPointsView?.Alpha = (float)(0.64 + foregroundPulse * 0.33); // Range: 0.0 to 1.0
-            foregroundPointsView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+            if (foregroundPointsView != null)
+            {
+                foregroundPointsView.Alpha = (float)(0.64 + foregroundPulse * 0.33); // Range: 0.0 to 1.0
+                foregroundPointsView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+            }
 
             
 

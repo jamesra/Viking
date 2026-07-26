@@ -25,7 +25,7 @@ namespace MonogameTestbed
 {
     static class DebugSessionLog
     {
-        const string LogPath = @"d:\src\git\VikingLegacy\debug-a0f2bd.log";
+        const string LogPath = @"d:\src\git\VikingLegacy\debug-84f952.log";
 
         public static void Write(string location, string message, string hypothesisId, object data, string runId = "pre-fix")
         {
@@ -35,10 +35,26 @@ namespace MonogameTestbed
                 long ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                 string dataJson = data != null ? System.Text.Json.JsonSerializer.Serialize(data) : "null";
                 File.AppendAllText(LogPath,
-                    $"{{\"sessionId\":\"a0f2bd\",\"timestamp\":{ts},\"location\":\"{location}\",\"message\":\"{message}\",\"hypothesisId\":\"{hypothesisId}\",\"runId\":\"{runId}\",\"data\":{dataJson}}}\n");
+                    $"{{\"sessionId\":\"84f952\",\"timestamp\":{ts},\"location\":\"{location}\",\"message\":\"{message}\",\"hypothesisId\":\"{hypothesisId}\",\"runId\":\"{runId}\",\"data\":{dataJson}}}\n");
             }
             catch { }
             #endregion
+        }
+
+        public static object WindingStats(Mesh3D<MorphMeshVertex> mesh)
+        {
+            if (mesh == null)
+                return null;
+            var s = MeshWindingDiagnostics.Analyze(mesh);
+            return new
+            {
+                faces = mesh.Faces.Count,
+                verts = mesh.Verticies.Count,
+                s.ManifoldEdges,
+                s.InconsistentManifoldEdges,
+                s.NonManifoldEdges,
+                s.BoundaryEdges
+            };
         }
     }
 
@@ -956,12 +972,36 @@ class BajajMultiAssignmentTest : IGraphicsTest
             if (Gamepad.LeftStick_Clicked)
             {
                 wrapView.CullMode = wrapView.CullMode == CullMode.None ? CullMode.CullCounterClockwiseFace : CullMode.None;
+                #region agent log
+                DebugSessionLog.Write(
+                    "BajajMultiTest.cs:LeftStick",
+                    "Cull mode toggled",
+                    "D,E",
+                    new
+                    {
+                        cullMode = wrapView.CullMode.ToString(),
+                        showCompositeMesh = wrapView.ShowCompositeMesh,
+                        compositeWinding = DebugSessionLog.WindingStats(wrapView.meshAssemblyPlan?.Root?.MeshModel?.composite)
+                    });
+                #endregion
             }
 
             if (Gamepad.LeftShoulder_Clicked)
             {
                 //this.Draw3D = !this.Draw3D;
                 wrapView.ShowCompositeMesh = !wrapView.ShowCompositeMesh;
+                #region agent log
+                DebugSessionLog.Write(
+                    "BajajMultiTest.cs:LeftShoulder",
+                    "Composite mesh visibility toggled",
+                    "D,E",
+                    new
+                    {
+                        showCompositeMesh = wrapView.ShowCompositeMesh,
+                        cullMode = wrapView.CullMode.ToString(),
+                        compositeWinding = DebugSessionLog.WindingStats(wrapView.meshAssemblyPlan?.Root?.MeshModel?.composite)
+                    });
+                #endregion
             }
 
             if (Gamepad.Back_Clicked || keyboard.Pressed(Keys.PrintScreen))
@@ -1067,11 +1107,11 @@ class BajajMultiAssignmentTest : IGraphicsTest
             hud.AppendLine($"Struct {wrapView.Graph?.StructureID} assembled={assembled} verts={verts} incompleteBoxes={incomplete}");
         }
 
-        hud.AppendLine("RightStick: toggle bbox overlay  LeftStick: toggle cull");
+        hud.AppendLine("RightStick: bbox overlay  LeftStick: cull on/off (off shows backfaces)");
 
         window.GraphicsDevice.BlendState = BlendState.AlphaBlend;
         window.spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
-        const float hudScale = 0.5f;
+        const float hudScale = 0.3f;
         window.spriteBatch.DrawString(
             window.fontArial,
             hud.ToString(),

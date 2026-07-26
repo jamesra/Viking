@@ -1,26 +1,18 @@
 using Geometry;
+using Geometry.Transforms;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace VolumeModel
 {
-    /// <summary>
-    /// Modern JSON-based serializer to replace BinaryFormatter for transform serialization
-    /// </summary>
     public static class JsonTransformSerializer
     {
-        // Read options must not include ComputedPropertyJsonConverter: its Read implementation
-        // delegates to JsonSerializer.Deserialize with the same options and overflows the stack.
-        internal static JsonSerializerOptions ReadOptions { get; } = CreateOptions(includeComputedPropertyConverter: false);
+        internal static JsonSerializerOptions ReadOptions { get; } = CreateOptions();
+        private static readonly JsonSerializerOptions _writeJsonOptions = CreateOptions();
 
-        private static readonly JsonSerializerOptions _writeJsonOptions = CreateOptions(includeComputedPropertyConverter: true);
-
-        private static JsonSerializerOptions CreateOptions(bool includeComputedPropertyConverter)
+        private static JsonSerializerOptions CreateOptions()
         {
             var options = new JsonSerializerOptions
             {
@@ -32,62 +24,53 @@ namespace VolumeModel
             };
 
             options.Converters.Add(new JsonStringEnumConverter());
+            options.Converters.Add(new GridVector2JsonConverter());
+            options.Converters.Add(new GridRectangleJsonConverter());
+            options.Converters.Add(new TransformBasicInfoJsonConverter());
+            options.Converters.Add(new MappingGridVector2JsonConverter());
             options.Converters.Add(new TransformJsonConverter());
-            if (includeComputedPropertyConverter)
-                options.Converters.Add(new ComputedPropertyJsonConverter());
-
             return options;
         }
 
-        /// <summary>
-        /// Serialize an ITransform to a stream using JSON
-        /// </summary>
         public static void Serialize(Stream stream, ITransform transform)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
-
             if (transform is null)
                 throw new ArgumentNullException(nameof(transform));
 
-            JsonSerializer.Serialize(stream, transform, _writeJsonOptions);
+            using var writer = new Utf8JsonWriter(stream);
+            TransformJsonConverter.WriteTransform(writer, transform, _writeJsonOptions);
+            writer.Flush();
         }
 
-        /// <summary>
-        /// Deserialize an ITransform from a stream using JSON
-        /// </summary>
         public static ITransform Deserialize(Stream stream)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
-
             return JsonSerializer.Deserialize<ITransform>(stream, ReadOptions);
         }
 
-        /// <summary>
-        /// Serialize an array of ITransform objects to a stream using JSON
-        /// </summary>
         public static void SerializeArray(Stream stream, ITransform[] transforms)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
-
             if (transforms is null)
                 throw new ArgumentNullException(nameof(transforms));
 
-            JsonSerializer.Serialize(stream, transforms, _writeJsonOptions);
+            using var writer = new Utf8JsonWriter(stream);
+            writer.WriteStartArray();
+            foreach (ITransform transform in transforms)
+                TransformJsonConverter.WriteTransform(writer, transform, _writeJsonOptions);
+            writer.WriteEndArray();
+            writer.Flush();
         }
 
-        /// <summary>
-        /// Deserialize an array of ITransform objects from a stream using JSON
-        /// </summary>
         public static ITransform[] DeserializeArray(Stream stream)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
 
-            // Deserialize each element via TransformJsonConverter so ITransform[] never routes through
-            // ComputedPropertyJsonConverter (write-only; would recurse if used on read).
             using JsonDocument doc = JsonDocument.Parse(stream);
             JsonElement root = doc.RootElement;
             if (root.ValueKind != JsonValueKind.Array)
@@ -108,9 +91,6 @@ namespace VolumeModel
         }
     }
 
-    /// <summary>
-    /// Custom JSON converter to handle polymorphic serialization of ITransform implementations
-    /// </summary>
     public class TransformJsonConverter : JsonConverter<ITransform>
     {
         public override ITransform Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -119,28 +99,48 @@ namespace VolumeModel
                 throw new JsonException("Expected start of object");
 
             using JsonDocument jsonDoc = JsonDocument.ParseValue(ref reader);
-            var root = jsonDoc.RootElement;
-
-            // Try to determine the concrete type based on available properties
-            // This is a simplified approach - you may need to add more type discrimination logic
-            if (root.TryGetProperty("triangleIndicies", out _))
-            {
-                // Likely a triangulation transform
-                return JsonSerializer.Deserialize<Geometry.Transforms.TriangulationTransform>(root.GetRawText(), JsonTransformSerializer.ReadOptions);
-            }
-            else if (root.TryGetProperty("mapPoints", out _))
-            {
-                // Likely a control point transform
-                return JsonSerializer.Deserialize<Geometry.Transforms.RBFTransform>(root.GetRawText(), JsonTransformSerializer.ReadOptions);
-            }
-            else
-            {
-                // Default fallback - you may need to add more specific type handling
-                throw new JsonException("Unable to determine transform type from JSON");
-            }
+            return DeserializeTransform(jsonDoc.RootElement);
         }
 
-        public override void Write(Utf8JsonWriter writer, ITransform value, JsonSerializerOptions options)
+        internal static ITransform DeserializeTransform(JsonElement root)
+        {
+            if (root.TryGetProperty("gridSizeX", out JsonElement gridSizeXEl))
+            {
+                MappingGridVector2[] mapPoints = ReadMapPoints(root);
+                TransformBasicInfo info = ReadInfo(root);
+                GridRectangle mappedBounds = root.TryGetProperty("mappedBounds", out JsonElement mb)
+                    ? GridRectangleSerialization.Read(mb)
+                    : mapPoints.MappedBounds();
+                return new GridTransform(mapPoints, mappedBounds, gridSizeXEl.GetInt32(),
+                    root.GetProperty("gridSizeY").GetInt32(), info);
+            }
+
+            if (root.TryGetProperty("triangleIndicies", out _))
+            {
+                MappingGridVector2[] mapPoints = ReadMapPoints(root);
+                return new MeshTransform(mapPoints, ReadInfo(root));
+            }
+
+            if (root.TryGetProperty("mapPoints", out _))
+            {
+                MappingGridVector2[] mapPoints = ReadMapPoints(root);
+                return new RBFTransform(mapPoints, ReadInfo(root));
+            }
+
+            throw new JsonException("Unable to determine transform type from JSON");
+        }
+
+        private static MappingGridVector2[] ReadMapPoints(JsonElement root) =>
+            root.GetProperty("mapPoints").Deserialize<MappingGridVector2[]>(JsonTransformSerializer.ReadOptions)
+            ?? throw new JsonException("mapPoints is null");
+
+        private static TransformBasicInfo ReadInfo(JsonElement root) =>
+            TransformBasicInfoSerialization.Read(root.GetProperty("info"));
+
+        public override void Write(Utf8JsonWriter writer, ITransform value, JsonSerializerOptions options) =>
+            WriteTransform(writer, value, options);
+
+        internal static void WriteTransform(Utf8JsonWriter writer, ITransform value, JsonSerializerOptions options)
         {
             if (value is null)
             {
@@ -148,70 +148,225 @@ namespace VolumeModel
                 return;
             }
 
-            JsonSerializer.Serialize(writer, value, value.GetType(), options);
+            if (value is not ReferencePointBasedTransform rbt || value is not ITransformInfo infoTransform)
+                throw new JsonException($"Unsupported transform type for cache: {value.GetType().Name}");
+
+            writer.WriteStartObject();
+            writer.WritePropertyName("mapPoints");
+            WriteMapPoints(writer, rbt.MapPoints);
+            writer.WritePropertyName("info");
+            TransformBasicInfoSerialization.Write(writer, infoTransform.Info);
+
+            switch (value)
+            {
+                case GridTransform grid:
+                    writer.WriteNumber("gridSizeX", grid.GridSizeX);
+                    writer.WriteNumber("gridSizeY", grid.GridSizeY);
+                    writer.WritePropertyName("mappedBounds");
+                    GridRectangleSerialization.Write(writer, grid.MappedBounds);
+                    break;
+                case MeshTransform mesh:
+                    writer.WritePropertyName("triangleIndicies");
+                    JsonSerializer.Serialize(writer, mesh.TriangleIndicies, options);
+                    break;
+            }
+
+            writer.WriteEndObject();
+        }
+
+        private static void WriteMapPoints(Utf8JsonWriter writer, MappingGridVector2[] mapPoints)
+        {
+            writer.WriteStartArray();
+            foreach (MappingGridVector2 point in mapPoints)
+                MappingGridVector2JsonConverter.WritePoint(writer, point);
+            writer.WriteEndArray();
         }
     }
 
-
-    /// <summary>
-    /// Custom JSON converter that filters out computed properties (getter-only properties)
-    /// </summary>
-    public class ComputedPropertyJsonConverter : JsonConverterFactory
+    internal static class GridVector2Serialization
     {
-        public override bool CanConvert(Type typeToConvert)
+        internal static void Write(Utf8JsonWriter writer, in GridVector2 value)
         {
-            if (typeToConvert is null ||
-                typeToConvert.IsArray ||
-                typeToConvert.IsInterface ||
-                typeToConvert.IsAbstract ||
-                typeToConvert == typeof(ITransform))
-            {
-                return false;
-            }
-
-            // Only apply to concrete Geometry/VolumeModel types that might have computed properties
-            return typeToConvert.Namespace?.StartsWith("Geometry") == true ||
-                   typeToConvert.Namespace?.StartsWith("VolumeModel") == true;
+            writer.WriteStartObject();
+            writer.WriteNumber("x", value.X);
+            writer.WriteNumber("y", value.Y);
+            writer.WriteEndObject();
         }
 
-        public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+        internal static GridVector2 Read(JsonElement element)
         {
-            var converterType = typeof(ComputedPropertyJsonConverterInner<>).MakeGenericType(typeToConvert);
-            return (JsonConverter)Activator.CreateInstance(converterType);
+            double x = element.TryGetProperty("x", out JsonElement xEl) ? xEl.GetDouble()
+                : element.GetProperty("X").GetDouble();
+            double y = element.TryGetProperty("y", out JsonElement yEl) ? yEl.GetDouble()
+                : element.GetProperty("Y").GetDouble();
+            return new GridVector2(x, y);
         }
 
-        private class ComputedPropertyJsonConverterInner<T> : JsonConverter<T>
+        internal static GridVector2 Read(ref Utf8JsonReader reader)
         {
-            public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-                throw new NotSupportedException(
-                    "ComputedPropertyJsonConverter is write-only. Use JsonTransformSerializer.ReadOptions for deserialization.");
+            using JsonDocument doc = JsonDocument.ParseValue(ref reader);
+            return Read(doc.RootElement);
+        }
+    }
 
-            public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
+    internal sealed class GridVector2JsonConverter : JsonConverter<GridVector2>
+    {
+        public override GridVector2 Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+            GridVector2Serialization.Read(ref reader);
+
+        public override void Write(Utf8JsonWriter writer, GridVector2 value, JsonSerializerOptions options) =>
+            GridVector2Serialization.Write(writer, in value);
+    }
+
+    internal static class GridRectangleSerialization
+    {
+        internal static void Write(Utf8JsonWriter writer, in GridRectangle value)
+        {
+            writer.WriteStartObject();
+            writer.WriteNumber("left", value.Left);
+            writer.WriteNumber("right", value.Right);
+            writer.WriteNumber("bottom", value.Bottom);
+            writer.WriteNumber("top", value.Top);
+            writer.WriteEndObject();
+        }
+
+        internal static GridRectangle Read(JsonElement element)
+        {
+            return new GridRectangle(
+                element.GetProperty("left").GetDouble(),
+                element.GetProperty("right").GetDouble(),
+                element.GetProperty("bottom").GetDouble(),
+                element.GetProperty("top").GetDouble());
+        }
+    }
+
+    internal sealed class GridRectangleJsonConverter : JsonConverter<GridRectangle>
+    {
+        public override GridRectangle Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            using JsonDocument doc = JsonDocument.ParseValue(ref reader);
+            return GridRectangleSerialization.Read(doc.RootElement);
+        }
+
+        public override void Write(Utf8JsonWriter writer, GridRectangle value, JsonSerializerOptions options) =>
+            GridRectangleSerialization.Write(writer, in value);
+    }
+
+    internal static class TransformBasicInfoSerialization
+    {
+        internal static void Write(Utf8JsonWriter writer, TransformBasicInfo info)
+        {
+            writer.WriteStartObject();
+            switch (info)
             {
-                if (value is null)
-                {
-                    writer.WriteNullValue();
-                    return;
-                }
-
-                var type = typeof(T);
-                List<PropertyInfo> properties = [.. type.GetProperties().Where(p => p.CanRead && p.CanWrite)];
-
-                writer.WriteStartObject();
-
-                foreach (var property in properties)
-                {
-                    var propertyValue = property.GetValue(value);
-                    if (propertyValue != null)
-                    {
-                        var propertyName = options.PropertyNamingPolicy?.ConvertName(property.Name) ?? property.Name;
-                        writer.WritePropertyName(propertyName);
-                        JsonSerializer.Serialize(writer, propertyValue, property.PropertyType, options);
-                    }
-                }
-
-                writer.WriteEndObject();
+                case TileTransformInfo tile:
+                    writer.WriteString("infoType", "tile");
+                    writer.WriteString("tileFileName", tile.TileFileName);
+                    writer.WriteNumber("tileNumber", tile.TileNumber);
+                    writer.WriteNumber("imageWidth", tile.ImageWidth);
+                    writer.WriteNumber("imageHeight", tile.ImageHeight);
+                    writer.WriteString("lastModified", tile.LastModified.ToString("O"));
+                    break;
+                case StosTransformInfo stos:
+                    writer.WriteString("infoType", "stos");
+                    writer.WriteNumber("controlSection", stos.ControlSection);
+                    writer.WriteNumber("mappedSection", stos.MappedSection);
+                    writer.WriteString("lastModified", stos.LastModified.ToString("O"));
+                    break;
+                default:
+                    writer.WriteString("infoType", "basic");
+                    writer.WriteString("lastModified", info.LastModified.ToString("O"));
+                    break;
             }
+            writer.WriteEndObject();
+        }
+
+        internal static TransformBasicInfo Read(JsonElement element)
+        {
+            string infoType = element.TryGetProperty("infoType", out JsonElement typeEl)
+                ? typeEl.GetString()
+                : "basic";
+            DateTime lastModified = element.TryGetProperty("lastModified", out JsonElement lmEl)
+                ? DateTime.Parse(lmEl.GetString(), null, System.Globalization.DateTimeStyles.RoundtripKind)
+                : DateTime.MinValue;
+
+            return infoType switch
+            {
+                "tile" => new TileTransformInfo(
+                    element.GetProperty("tileFileName").GetString(),
+                    element.GetProperty("tileNumber").GetInt32(),
+                    lastModified,
+                    element.GetProperty("imageWidth").GetDouble(),
+                    element.GetProperty("imageHeight").GetDouble()),
+                "stos" => new StosTransformInfo(
+                    element.GetProperty("controlSection").GetInt32(),
+                    element.GetProperty("mappedSection").GetInt32(),
+                    lastModified),
+                _ => new TransformBasicInfo(lastModified),
+            };
+        }
+    }
+
+    internal sealed class TransformBasicInfoJsonConverter : JsonConverter<TransformBasicInfo>
+    {
+        public override TransformBasicInfo Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            using JsonDocument doc = JsonDocument.ParseValue(ref reader);
+            return TransformBasicInfoSerialization.Read(doc.RootElement);
+        }
+
+        public override void Write(Utf8JsonWriter writer, TransformBasicInfo value, JsonSerializerOptions options) =>
+            TransformBasicInfoSerialization.Write(writer, value);
+    }
+
+    internal sealed class MappingGridVector2JsonConverter : JsonConverter<MappingGridVector2>
+    {
+        public override MappingGridVector2 Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType != JsonTokenType.StartObject)
+                throw new JsonException("Expected start of object for MappingGridVector2");
+
+            GridVector2 control = default;
+            GridVector2 mapped = default;
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndObject)
+                    break;
+                if (reader.TokenType != JsonTokenType.PropertyName)
+                    throw new JsonException("Expected property name");
+
+                string name = reader.GetString();
+                reader.Read();
+                if (string.Equals(name, "controlPoint", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(name, "control", StringComparison.OrdinalIgnoreCase))
+                {
+                    control = GridVector2Serialization.Read(ref reader);
+                }
+                else if (string.Equals(name, "mappedPoint", StringComparison.OrdinalIgnoreCase)
+                         || string.Equals(name, "mapped", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped = GridVector2Serialization.Read(ref reader);
+                }
+                else
+                {
+                    reader.Skip();
+                }
+            }
+
+            return new MappingGridVector2(control, mapped);
+        }
+
+        public override void Write(Utf8JsonWriter writer, MappingGridVector2 value, JsonSerializerOptions options) =>
+            WritePoint(writer, value);
+
+        internal static void WritePoint(Utf8JsonWriter writer, MappingGridVector2 value)
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName("controlPoint");
+            GridVector2Serialization.Write(writer, value.ControlPoint);
+            writer.WritePropertyName("mappedPoint");
+            GridVector2Serialization.Write(writer, value.MappedPoint);
+            writer.WriteEndObject();
         }
     }
 }

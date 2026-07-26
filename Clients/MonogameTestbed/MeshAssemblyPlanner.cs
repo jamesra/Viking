@@ -159,8 +159,17 @@ namespace MonogameTestbed
 
             if (leaf == Root)//This covers the case of a single node mesh plan.
             {
+                FinalizeRootComposite();
                 this.MeshAssembledEvent.Set();
             }
+        }
+
+        /// <summary>
+        /// Run composite-level winding fix once the full structure mesh is assembled at the root.
+        /// </summary>
+        private void FinalizeRootComposite()
+        {
+            Root?.MeshModel?.EnsureCompositeWinding();
         }
 
         public void CheckForMerge(AssemblyPlannerBranch node)
@@ -232,6 +241,7 @@ namespace MonogameTestbed
                 {
                     if (Root.MeshComplete)
                     {
+                        FinalizeRootComposite();
                         MeshAssembledEvent.Set();
                     }
                 }

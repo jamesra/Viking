@@ -534,7 +534,7 @@ namespace WebAnnotation
                                 loc.Parent.Type.Color.ToXNAColor(0.25f),
                                 (polygon, points) =>
                                 {
-                                    var medial_axis = Geometry.MedialAxisFinder.ApproximateMedialAxisImproved(mosaic_shape_poly);
+                                    var medial_axis = Geometry.MedialAxisFinder.ApproximateMedialAxis(mosaic_shape_poly);
                                     var mosaic_medial_axis_points = medial_axis.Points;
                                     var transformed = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(points, out GridVector2[] volume_points);
                                     var volume_medial_axis = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(mosaic_medial_axis_points, out GridVector2[] volume_medial_axis_points);

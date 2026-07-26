@@ -1,6 +1,7 @@
 {
   "version": "0.2.0",
   "configurations": [
+  
     {
       "name": "MonogameTestbed (RC2 Vasculature)",
       "type": "coreclr",
@@ -17,6 +18,17 @@
       ],
       "cwd": "${workspaceFolder}/Clients/MonogameTestbed/bin/x64/Debug/net9.0-windows",
       "console": "integratedTerminal",
+      "stopAtEntry": false
+    },
+    {
+      "name": "Viking (Debug)",
+      "type": "clr",
+      "request": "launch",
+      "preLaunchTask": "build-viking",
+      "program": "${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48/Viking.exe",
+      "args": [],
+      "cwd": "${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48",
+      "console": "internalConsole",
       "stopAtEntry": false
     }
   ]

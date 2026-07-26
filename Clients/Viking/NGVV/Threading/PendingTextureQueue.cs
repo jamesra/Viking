@@ -46,6 +46,8 @@ namespace Viking
         private static readonly List<PendingItem> _items = new();
         private static readonly HashSet<TileView> PendingTileViews = new();
         private static readonly HashSet<string> _loadingFiles = new();
+        /// <summary>Waiters for in-flight loads keyed by texture URL/path. Completed in EndLoadingFile.</summary>
+        private static readonly Dictionary<string, TaskCompletionSource<Texture2D>> _inflightLoadsByFile = new();
         private static readonly ReaderWriterLockSlim _pendingLock = new();
         private static DispatcherTimer? _emptyQueueTimer;
         private static readonly object TimerLock = new();
@@ -56,14 +58,30 @@ namespace Viking
         /// </summary>
         public static bool TryBeginLoadingFile(string fileKey)
         {
+            if (TryBeginLoadingFile(fileKey, out _))
+                return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Claims the file for loading. When false, <paramref name="inFlightLoad"/> is the task to await for the active load (if any).
+        /// </summary>
+        public static bool TryBeginLoadingFile(string fileKey, out Task<Texture2D> inFlightLoad)
+        {
+            inFlightLoad = null;
             if (string.IsNullOrEmpty(fileKey))
                 return true;
             _pendingLock.EnterWriteLock();
             try
             {
                 if (_loadingFiles.Contains(fileKey))
+                {
+                    if (_inflightLoadsByFile.TryGetValue(fileKey, out TaskCompletionSource<Texture2D> tcs))
+                        inFlightLoad = tcs.Task;
                     return false;
+                }
                 _loadingFiles.Add(fileKey);
+                _inflightLoadsByFile[fileKey] = new TaskCompletionSource<Texture2D>(TaskCreationOptions.RunContinuationsAsynchronously);
                 return true;
             }
             finally
@@ -75,19 +93,23 @@ namespace Viking
         /// <summary>
         /// Releases the file claim. Call exactly once when the load completes (success, failure, or cancel).
         /// </summary>
-        public static void EndLoadingFile(string fileKey)
+        public static void EndLoadingFile(string fileKey, Texture2D texture = null)
         {
             if (string.IsNullOrEmpty(fileKey))
                 return;
+            TaskCompletionSource<Texture2D> tcs = null;
             _pendingLock.EnterWriteLock();
             try
             {
                 _loadingFiles.Remove(fileKey);
+                if (_inflightLoadsByFile.TryGetValue(fileKey, out tcs))
+                    _inflightLoadsByFile.Remove(fileKey);
             }
             finally
             {
                 _pendingLock.ExitWriteLock();
             }
+            tcs?.TrySetResult(texture);
         }
 
         /// <summary>
@@ -153,6 +175,8 @@ namespace Viking
             {
                 _pendingLock.ExitWriteLock();
             }
+
+            _ = PostPump(0);
         }
 
         /// <summary>
@@ -235,41 +259,8 @@ namespace Viking
 
                 if (item?.TileView?.SectionLoadingCancelled ?? false)
                 {
-                    item.Tcs.TrySetResult(null);
-                    continue;
-                }
-
-                try
-                {
-                    GraphicsDevice device = null;
-                    var viewer = State.ViewerControl;
-                    if (viewer is GraphicsDeviceControl gdc)
-                        device = gdc.Device;
-
-                    if (device is null || device.IsDisposed)
-                    {
-                        item.Tcs.TrySetResult(null);
-                        break;
-                    }
-
-                    Texture2D texture = null;
-                    try
-                    {
-                        texture = TextureReaderV2.TextureFromData(device, item.Data, item.UseMipMaps);
-                    }
-                    catch (Exception)
-                    {
-                        item.Tcs.TrySetResult(null);
-                        continue;
-                    }
-
-                    if (texture != null && item.TileView != null)
-                        item.TileView.SetTextureFromQueue(texture);
-                    item.Tcs.TrySetResult(texture);
-                    texturesLoaded++;
-                }
-                finally
-                {
+                    //Must remove from the pending set here, otherwise Enqueue/IsTileViewPending will believe this
+                    //TileView still has a request in flight and will refuse to ever queue a new load for it again.
                     _pendingLock.EnterWriteLock();
                     try
                     {
@@ -281,7 +272,70 @@ namespace Viking
                         _pendingLock.ExitWriteLock();
                     }
                     if (item.FileKey != null)
-                        EndLoadingFile(item.FileKey);
+                        EndLoadingFile(item.FileKey, null);
+                    item.Tcs.TrySetResult(null);
+                    continue;
+                }
+
+                bool requeuedForDevice = false;
+                try
+                {
+                    GraphicsDevice device = null;
+                    var viewer = State.ViewerControl;
+                    if (viewer is GraphicsDeviceControl gdc)
+                        device = gdc.Device;
+
+                    if (device is null || device.IsDisposed)
+                    {
+                        _pendingLock.EnterWriteLock();
+                        try
+                        {
+                            _items.Insert(0, item);
+                        }
+                        finally
+                        {
+                            _pendingLock.ExitWriteLock();
+                        }
+                        requeuedForDevice = true;
+                        PostPump(msSliceTime);
+                        return;
+                    }
+
+                    Texture2D texture = null;
+                    try
+                    {
+                        texture = TextureReaderV2.TextureFromData(device, item.Data, item.UseMipMaps);
+                    }
+                    catch (Exception)
+                    {
+                        item.Tcs.TrySetResult(null);
+                        if (item.FileKey != null)
+                            EndLoadingFile(item.FileKey, null);
+                        continue;
+                    }
+
+                    if (texture != null && item.TileView != null)
+                        item.TileView.SetTextureFromQueue(texture);
+                    item.Tcs.TrySetResult(texture);
+                    texturesLoaded++;
+                    if (item.FileKey != null)
+                        EndLoadingFile(item.FileKey, texture);
+                }
+                finally
+                {
+                    if (!requeuedForDevice)
+                    {
+                        _pendingLock.EnterWriteLock();
+                        try
+                        {
+                            if (item.TileView != null)
+                                PendingTileViews.Remove(item.TileView);
+                        }
+                        finally
+                        {
+                            _pendingLock.ExitWriteLock();
+                        }
+                    }
                 }
             }
 
