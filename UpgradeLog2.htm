@@ -1,0 +1,326 @@
+﻿<!DOCTYPE html>
+<!-- saved from url=(0014)about:internet -->
+ <html xmlns:msxsl="urn:schemas-microsoft-com:xslt"><head><meta content="en-us" http-equiv="Content-Language" /><meta content="text/html; charset=utf-16" http-equiv="Content-Type" /><title _locID="ConversionReport0">
+          Migration Report
+        </title><style> 
+                    /* Body style, for the entire document */
+                    body
+                    {
+                        background: #F3F3F4;
+                        color: #1E1E1F;
+                        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                        padding: 0;
+                        margin: 0;
+                    }
+
+                    /* Header1 style, used for the main title */
+                    h1
+                    {
+                        padding: 10px 0px 10px 10px;
+                        font-size: 21pt;
+                        background-color: #E2E2E2;
+                        border-bottom: 1px #C1C1C2 solid; 
+                        color: #201F20;
+                        margin: 0;
+                        font-weight: normal;
+                    }
+
+                    /* Header2 style, used for "Overview" and other sections */
+                    h2
+                    {
+                        font-size: 18pt;
+                        font-weight: normal;
+                        padding: 15px 0 5px 0;
+                        margin: 0;
+                    }
+
+                    /* Header3 style, used for sub-sections, such as project name */
+                    h3
+                    {
+                        font-weight: normal;
+                        font-size: 15pt;
+                        margin: 0;
+                        padding: 15px 0 5px 0;
+                        background-color: transparent;
+                    }
+
+                    /* Color all hyperlinks one color */
+                    a
+                    {
+                        color: #1382CE;
+                    }
+
+                    /* Table styles */ 
+                    table
+                    {
+                        border-spacing: 0 0;
+                        border-collapse: collapse;
+                        font-size: 10pt;
+                    }
+
+                    table th
+                    {
+                        background: #E7E7E8;
+                        text-align: left;
+                        text-decoration: none;
+                        font-weight: normal;
+                        padding: 3px 6px 3px 6px;
+                    }
+
+                    table td
+                    {
+                        vertical-align: top;
+                        padding: 3px 6px 5px 5px;
+                        margin: 0px;
+                        border: 1px solid #E7E7E8;
+                        background: #F7F7F8;
+                    }
+
+                    /* Local link is a style for hyperlinks that link to file:/// content, there are lots so color them as 'normal' text until the user mouse overs */
+                    .localLink
+                    {
+                        color: #1E1E1F;
+                        background: #EEEEED;
+                        text-decoration: none;
+                    }
+
+                    .localLink:hover
+                    {
+                        color: #1382CE;
+                        background: #FFFF99;
+                        text-decoration: none;
+                    }
+
+                    /* Center text, used in the over views cells that contain message level counts */ 
+                    .textCentered
+                    {
+                        text-align: center;
+                    }
+
+                    /* The message cells in message tables should take up all avaliable space */
+                    .messageCell
+                    {
+                        width: 100%;
+                    }
+
+                    /* Padding around the content after the h1 */ 
+                    #content 
+                    {
+	                    padding: 0px 12px 12px 12px; 
+                    }
+
+                    /* The overview table expands to width, with a max width of 97% */ 
+                    #overview table
+                    {
+                        width: auto;
+                        max-width: 75%; 
+                    }
+
+                    /* The messages tables are always 97% width */
+                    #messages table
+                    {
+                        width: 97%;
+                    }
+
+                    /* All Icons */
+                    .IconSuccessEncoded, .IconInfoEncoded, .IconWarningEncoded, .IconErrorEncoded
+                    {
+                        min-width:18px;
+                        min-height:18px; 
+                        background-repeat:no-repeat;
+                        background-position:center;
+                    }
+
+                    /* Success icon encoded */
+                    .IconSuccessEncoded
+                    {
+                        /* Note: Do not delete the comment below. It is used to verify the correctness of the encoded image resource below before the product is released */
+                        /* [---XsltValidateInternal-Base64EncodedImage:IconSuccess#Begin#background-image: url(data:image/png;base64,#Separator#);#End#] */
+                        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAA7EAAAOxAGVKw4bAAABcElEQVR4Xq2TsUsCURzHv15g8ZJcBWlyiYYgCIWcb9DFRRwMW5TA2c0/QEFwFkxxUQdxVlBwCYWOi6IhWgQhBLHJUCkhLr/BW8S7gvrAg+N+v8/v+x68Z8MGy+XSCyABQAXgBgHGALoASkIIDWSLeLBetdHryMjd5IxQPWT4rn1c/P7+xxp72Cs9m5SZ0Bq2vPnbPFafK2zDvmNHypdC0BPkLlQhxJsCAhQoZwdZU5mwxh720qGo8MzTxTTKZDPCx2HoVzp6lz0Q9tKhyx0kGs8Ny+TkWRKk8lCROwEduhyg9l/6lunOPSfmH3NUH6uQ0KHLAe7JYvJjevm+DAMGJHToKtigE+vwvIidxLamb8IBY9e+C5LiXREkfho3TSd06HJA13/oh6T51MTsfQbHrsMynQ5dDihFjiK8JJAU9AKIWTp76dCVN7HWHrajmUEGvyF9nkbAE6gLIS7kTUyuf2gscLoJrElZo/Mvj+nPz/kLTmfnEwP3tB0AAAAASUVORK5CYII=);
+                    }
+
+                    /* Information icon encoded */
+                    .IconInfoEncoded
+                    {
+                        /* Note: Do not delete the comment below. It is used to verify the correctness of the encoded image resource below before the product is released */
+                        /* [---XsltValidateInternal-Base64EncodedImage:IconInformation#Begin#background-image: url(data:image/png;base64,#Separator#);#End#] */
+                        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABHElEQVR4Xs2TsUoDQRRF7wwoziokjZUKadInhdhukR9YP8DMX1hYW+QvdsXa/QHBbcXC7W0CamWTQnclFutceIQJwwaWNLlwm5k5d94M76mmaeCrrmsLYOocY12FcxZFUeozCqKqqgYA8uevv1H6VuPxcwlfk5N92KHBxfFeCSAxxswlYAW/Xr989x/mv9gkhtyMDhcAxgzRsp7flj8B/HF1RsMXq+NZMkopaHe7lbKxQUEIGbKsYNoGn969060hZBkQex/W8oRQwsQaW2o3Ago2SVcJUzAgY3N0lTCZZm+zPS8HB51gMmS1DEYyOz9acKO1D8JWTlafKIMxdhvlfdyT94Vv5h7P8Ky7nQzACmhvKq3zk3PjW9asz9D/1oigecsioooAAAAASUVORK5CYII=);
+                    }
+
+                    /* Warning icon encoded */
+                    .IconWarningEncoded
+                    {
+                        /* Note: Do not delete the comment below. It is used to verify the correctness of the encoded image resource below before the product is released */
+                        /* [---XsltValidateInternal-Base64EncodedImage:IconWarning#Begin#background-image: url(data:image/png;base64,#Separator#);#End#] */
+                        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAx0lEQVR4XpWSMQ7CMAxFf4xAyBMLCxMrO8dhaBcuwdCJS3RJBw7SA/QGTCxdWJgiQYWKXJWKIXHIlyw5lqr34tQgEOdcBsCOx5yZK3hCCKdYXneQkh4pEfqzLfu+wVDSyyzFoJjfz9NB+pAF+eizx2Vruts0k15mPgvS6GYvpVtQhB61IB/dk6AF6fS4Ben0uIX5odtFe8Q/eW1KvFeH4e8khT6+gm5B+t3juyDt7n0jpe+CANTd+oTUjN/U3yVaABnSUjFz/gFq44JaVSCXeQAAAABJRU5ErkJggg==);
+                    }
+
+                    /* Error icon encoded */
+                    .IconErrorEncoded
+                    {
+                        /* Note: Do not delete the comment below. It is used to verify the correctness of the encoded image resource below before the product is released */
+                        /* [---XsltValidateInternal-Base64EncodedImage:IconError#Begin#background-image: url(data:image/png;base64,#Separator#);#End#] */
+                        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABQElEQVR4XqWTvUoEQRCE6wYPZUA80AfwAQz23uCMjA7MDRQEIzPBVEyNTQUFIw00vcQTTMzuAh/AxEQQT8HF/3G/oGGnEUGuoNnd6qoZuqltyKEsyzVJq5I6rnUp6SjGeGhESikzzlc1eL7opfuVbrqbU1Zw9NCgtQMaZpY0eNnaaL2fHusvTK5vKu7sjSS1Y4y3QUA6K3e3Mau5UFDyMP7tYF9o8cAHZv68vipoIJg971PZIZ5HiwdvYGGvFVFHmGmZ2MxwmQYPXubPl9Up0tfoMQGetXd6mRbvhBw+boZ6WF7Mbv1+GsHRk0fQmPAH1GfmZirbCfDJ61tw3Px8/8pZsPAG4jlVhcPgZ7adwNWBB68lkRQWFiTgFlbnLY3DGGM7izIJIyT/jjIvEJw6fdJTc6krDzh6aMwMP9bvDH4ADSsa9uSWVJkAAAAASUVORK5CYII=);
+                    }
+                 </style><script type="text/javascript" language="javascript"> 
+          
+            // Startup 
+            // Hook up the the loaded event for the document/window, to linkify the document content
+            var startupFunction = function() { linkifyElement("messages"); };
+            
+            if(window.attachEvent)
+            {
+              window.attachEvent('onload', startupFunction);
+            }
+            else if (window.addEventListener) 
+            {
+              window.addEventListener('load', startupFunction, false);
+            }
+            else 
+            {
+              document.addEventListener('load', startupFunction, false);
+            } 
+            
+            // Toggles the visibility of table rows with the specified name 
+            function toggleTableRowsByName(name)
+            {
+               var allRows = document.getElementsByTagName('tr');
+               for (i=0; i < allRows.length; i++)
+               {
+                  var currentName = allRows[i].getAttribute('name');
+                  if(!!currentName && currentName.indexOf(name) == 0)
+                  {
+                      var isVisible = allRows[i].style.display == ''; 
+                      isVisible ? allRows[i].style.display = 'none' : allRows[i].style.display = '';
+                  }
+               }
+            }
+            
+            function scrollToFirstVisibleRow(name) 
+            {
+               var allRows = document.getElementsByTagName('tr');
+               for (i=0; i < allRows.length; i++)
+               {
+                  var currentName = allRows[i].getAttribute('name');
+                  var isVisible = allRows[i].style.display == ''; 
+                  if(!!currentName && currentName.indexOf(name) == 0 && isVisible)
+                  {
+                     allRows[i].scrollIntoView(true); 
+                     return true; 
+                  }
+               }
+               
+               return false;
+            }
+            
+            // Linkifies the specified text content, replaces candidate links with html links 
+            function linkify(text)
+            {
+                 if(!text || 0 === text.length)
+                 {
+                     return text; 
+                 }
+
+                 // Find http, https and ftp links and replace them with hyper links 
+                 var urlLink = /(http|https|ftp)\:\/\/[a-zA-Z0-9\-\.]+(:[a-zA-Z0-9]*)?\/?([a-zA-Z0-9\-\._\?\,\/\\\+&%\$#\=~;\{\}])*/gi;
+                 
+                 return text.replace(urlLink, '<a href="$&">$&</a>') ;
+            }
+            
+            // Linkifies the specified element by ID
+            function linkifyElement(id)
+            {
+                var element = document.getElementById(id);
+                if(!!element)
+                {
+                  element.innerHTML = linkify(element.innerHTML); 
+                }
+            }
+            
+            function ToggleMessageVisibility(projectName)
+            {
+              if(!projectName || 0 === projectName.length)
+              {
+                return; 
+              }
+              
+              toggleTableRowsByName("MessageRowClass" + projectName);
+              toggleTableRowsByName('MessageRowHeaderShow' + projectName);
+              toggleTableRowsByName('MessageRowHeaderHide' + projectName); 
+            }
+            
+            function ScrollToFirstVisibleMessage(projectName)
+            {
+              if(!projectName || 0 === projectName.length)
+              {
+                return; 
+              }
+              
+              // First try the 'Show messages' row
+              if(!scrollToFirstVisibleRow('MessageRowHeaderShow' + projectName))
+              {
+                // Failed to find a visible row for 'Show messages', try an actual message row 
+                scrollToFirstVisibleRow('MessageRowClass' + projectName); 
+              }
+            }
+           </script></head><body><h1 _locID="ConversionReport">
+          Migration Report - </h1><div id="content"><h2 _locID="OverviewTitle">Overview</h2><div id="overview"><table><tr><th></th><th _locID="ProjectTableHeader">Project</th><th _locID="PathTableHeader">Path</th><th _locID="ErrorsTableHeader">Errors</th><th _locID="WarningsTableHeader">Warnings</th><th _locID="MessagesTableHeader">Messages</th></tr><tr><td class="IconErrorEncoded" /><td><strong><a href="#AnnotationService">AnnotationService</a></strong></td><td>Servers\AnnotationService\AnnotationService\AnnotationService.csproj</td><td class="textCentered"><a href="#AnnotationServiceError">1</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconErrorEncoded" /><td><strong><a href="#ConnectomeODataV4">ConnectomeODataV4</a></strong></td><td>Servers\ConnectomeODataV4\ConnectomeODataV4.csproj</td><td class="textCentered"><a href="#ConnectomeODataV4Error">1</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconErrorEncoded" /><td><strong><a href="#LocalBookmarks">LocalBookmarks</a></strong></td><td>Clients\Viking\LocalBookmarks\LocalBookmarks.csproj</td><td class="textCentered"><a href="#LocalBookmarksError">1</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconErrorEncoded" /><td><strong><a href="#LocalBookmarksContent">LocalBookmarksContent</a></strong></td><td>Clients\Viking\LocalBookmarks\Content\LocalBookmarksContent.contentproj</td><td class="textCentered"><a href="#LocalBookmarksContentError">1</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconErrorEncoded" /><td><strong><a href="#VikingCore">VikingCore</a></strong></td><td>Clients\Viking\NGVV\VikingCore.csproj</td><td class="textCentered"><a href="#VikingCoreError">1</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconErrorEncoded" /><td><strong><a href="#VikingXNAGraphics">VikingXNAGraphics</a></strong></td><td>Clients\MonogameXNAGraphicsShared\VikingXNAGraphics.csproj</td><td class="textCentered"><a href="#VikingXNAGraphicsError">1</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconErrorEncoded" /><td><strong><a href="#VikingXNAGraphicsContent">VikingXNAGraphicsContent</a></strong></td><td>Clients\MonogameXNAGraphicsShared\XNAContent\VikingXNAGraphicsContent.contentproj</td><td class="textCentered"><a href="#VikingXNAGraphicsContentError">1</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconErrorEncoded" /><td><strong><a href="#XNATestbed">XNATestbed</a></strong></td><td>Clients\XNATestbed\XNATestbed\XNATestbed.csproj</td><td class="textCentered"><a href="#XNATestbedError">1</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconErrorEncoded" /><td><strong><a href="#XNATestbedContent">XNATestbedContent</a></strong></td><td>Clients\XNATestbed\XNATestbedContent\XNATestbedContent.contentproj</td><td class="textCentered"><a href="#XNATestbedContentError">1</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#.nuget">.nuget</a></strong></td><td>.nuget</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#AnnotationInterfaces">AnnotationInterfaces</a></strong></td><td>AnnotationInterfaces\AnnotationInterfaces.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#AnnotationModel">AnnotationModel</a></strong></td><td>Clients\AnnotationModel\AnnotationModel.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#AnnotationServiceTypes.gRPC">AnnotationServiceTypes.gRPC</a></strong></td><td>gRPCAnnotationServiceTypes\AnnotationServiceTypes.gRPC.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Client">Client</a></strong></td><td>Servers\IdentityServer\Client\Client.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Clients">Clients</a></strong></td><td>Clients</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Common">Common</a></strong></td><td>Clients\Common\Common.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#ConnectomeDataModelCore">ConnectomeDataModelCore</a></strong></td><td>Servers\ConnectomeDataModelCore\ConnectomeDataModelCore.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#ConnectomeDataModelCoreTests">ConnectomeDataModelCoreTests</a></strong></td><td>Servers\ConnectomeDataModelCoreTests\ConnectomeDataModelCoreTests.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#ConnectomeOpenData">ConnectomeOpenData</a></strong></td><td>Servers\ConnectomeOpenData\ConnectomeOpenData.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#DevTest">DevTest</a></strong></td><td>Servers\IdentityServer\DevTest\DevTest.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#DevTestAPI">DevTestAPI</a></strong></td><td>Servers\IdentityServer\DevTestAPI\DevTestAPI.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Geometry">Geometry</a></strong></td><td>Geometry\Geometry.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#GeometryOGCMapper">GeometryOGCMapper</a></strong></td><td>GeometrySqlTypeMapper\GeometryOGCMapper.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#GeometryOGCMapperTest">GeometryOGCMapperTest</a></strong></td><td>GeometryOGCMapperTest\GeometryOGCMapperTest.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#gRPCAnnotationService">gRPCAnnotationService</a></strong></td><td>Servers\GrpcAnnotationService\gRPCAnnotationService.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#gRPCAnnotationServiceTests">gRPCAnnotationServiceTests</a></strong></td><td>gRPC_Tests\gRPCAnnotationServiceTests.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#gRPCSegmentAnything">gRPCSegmentAnything</a></strong></td><td>Servers\gRPCSegmentAnything\gRPCSegmentAnything.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Identity.Configuration">Identity.Configuration</a></strong></td><td>Servers\IdentityServer\Identity.Configuration\Identity.Configuration.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Identity.DataContext">Identity.DataContext</a></strong></td><td>Servers\Identity.DataContext\Identity.DataContext.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Identity.Models">Identity.Models</a></strong></td><td>Servers\Identity.Models\Identity.Models.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Identity.Tests">Identity.Tests</a></strong></td><td>Servers\Identity.Tests\Identity.Tests.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#IdentityManagementWebsite">IdentityManagementWebsite</a></strong></td><td>Servers\IdentityServer\IdentityServer\IdentityManagementWebsite.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#IdentityServer">IdentityServer</a></strong></td><td>Servers\IdentityServer\IdentityServer\IdentityServer.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Jotunn">Jotunn</a></strong></td><td>Jotunn</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#MonogameTestbed">MonogameTestbed</a></strong></td><td>MonogameTestbed</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Monographics">Monographics</a></strong></td><td>Clients\MonogameXNAGraphicsShared\Monographics.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#NetTopologySuite.IO.SqlServerBytes">NetTopologySuite.IO.SqlServerBytes</a></strong></td><td>Servers\Libs\NetTopologySuite.IO.SqlServerBytes\src\NetTopologySuite.IO.SqlServerBytes\NetTopologySuite.IO.SqlServerBytes.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#RTree">RTree</a></strong></td><td>RTree\RTree.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Servers">Servers</a></strong></td><td>Servers</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#SIMeasurement">SIMeasurement</a></strong></td><td>SIMeasurement\SIMeasurement.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Solution Items">Solution Items</a></strong></td><td>Solution Items</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#UnitsAndScale">UnitsAndScale</a></strong></td><td>UnitsAndScale\UnitsAndScale.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Utils">Utils</a></strong></td><td>Utils\Utils.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Viking">Viking</a></strong></td><td>Viking</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Viking.Annotation.Geometry">Viking.Annotation.Geometry</a></strong></td><td>Viking.Annotation.Geometry\Viking.Annotation.Geometry.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Viking.Annotation.Mapping">Viking.Annotation.Mapping</a></strong></td><td>Viking.Annotation.Mapping\Viking.Annotation.Mapping.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Viking.Identity.Server.Extensions">Viking.Identity.Server.Extensions</a></strong></td><td>Servers\IdentityServer\Viking.Identity.Server.Extensions\Viking.Identity.Server.Extensions.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Viking.Identity.Server.WebApi">Viking.Identity.Server.WebApi</a></strong></td><td>Servers\IdentityServer\Viking.Identity.Server.WebApi\Viking.Identity.Server.WebApi.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#VikingWebAppSettings">VikingWebAppSettings</a></strong></td><td>Servers\WebAppSettings\VikingWebAppSettings.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#VolumeModel">VolumeModel</a></strong></td><td>Clients\VolumeModel\VolumeModel.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#WebAnnotationModel">WebAnnotationModel</a></strong></td><td>Clients\WebAnnotationModel\WebAnnotationModel.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#WebAnnotationModel.Geometry">WebAnnotationModel.Geometry</a></strong></td><td>Annotation.Geometry\WebAnnotationModel.Geometry.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#WebAnnotationModel.gRPC">WebAnnotationModel.gRPC</a></strong></td><td>Clients\WebAnnotationModel.gRPC\WebAnnotationModel.gRPC.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#WebAnnotationModel.gRPC.Tests">WebAnnotationModel.gRPC.Tests</a></strong></td><td>Clients\WebAnnotationModel.gRPC.Tests\WebAnnotationModel.gRPC.Tests.csproj</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#">0</a></td></tr><tr><td class="IconSuccessEncoded" /><td><strong><a href="#Solution"><span _locID="OverviewSolutionSpan">Solution</span></a></strong></td><td>Everything.sln</td><td class="textCentered"><a>0</a></td><td class="textCentered"><a>0</a></td><td class="textCentered"><a href="#" onclick="ScrollToFirstVisibleMessage('Solution'); return false;">1</a></td></tr></table></div><h2 _locID="SolutionAndProjectsTitle">Solution and projects</h2><div id="messages"><a name="AnnotationService" /><h3>AnnotationService</h3><table><tr id="AnnotationServiceHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr name="ErrorRowClassAnnotationService"><td class="IconErrorEncoded"><a name="AnnotationServiceError" /></td><td class="messageCell"><strong>Servers\AnnotationService\AnnotationService\AnnotationService.csproj:
+        </strong><span>The application which this project type is based on was not found. Please try this link for further information: http://go.microsoft.com/fwlink/?LinkID=299083&amp;projecttype=3D9AD99F-2412-4246-B90B-4EAA41C64699</span></td></tr></table><a name="ConnectomeODataV4" /><h3>ConnectomeODataV4</h3><table><tr id="ConnectomeODataV4HeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr name="ErrorRowClassConnectomeODataV4"><td class="IconErrorEncoded"><a name="ConnectomeODataV4Error" /></td><td class="messageCell"><strong>Servers\ConnectomeODataV4\ConnectomeODataV4.csproj:
+        </strong><span>Error on line 776978416. Expected 'ENCODING' but found 'utf-8'.</span></td></tr></table><a name="LocalBookmarks" /><h3>LocalBookmarks</h3><table><tr id="LocalBookmarksHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr name="ErrorRowClassLocalBookmarks"><td class="IconErrorEncoded"><a name="LocalBookmarksError" /></td><td class="messageCell"><strong>Clients\Viking\LocalBookmarks\LocalBookmarks.csproj:
+        </strong><span>The application which this project type is based on was not found. Please try this link for further information: http://go.microsoft.com/fwlink/?LinkID=299083&amp;projecttype=6D335F3A-9D43-41b4-9D22-F6F17C4BE596</span></td></tr></table><a name="LocalBookmarksContent" /><h3>LocalBookmarksContent</h3><table><tr id="LocalBookmarksContentHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr name="ErrorRowClassLocalBookmarksContent"><td class="IconErrorEncoded"><a name="LocalBookmarksContentError" /></td><td class="messageCell"><strong>Clients\Viking\LocalBookmarks\Content\LocalBookmarksContent.contentproj:
+        </strong><span>Error on line 1. Expected 'ENCODING' but found 'utf-8'.</span></td></tr></table><a name="VikingCore" /><h3>VikingCore</h3><table><tr id="VikingCoreHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr name="ErrorRowClassVikingCore"><td class="IconErrorEncoded"><a name="VikingCoreError" /></td><td class="messageCell"><strong>Clients\Viking\NGVV\VikingCore.csproj:
+        </strong><span>Error on line -1838056832. Expected 'ENCODING' but found 'utf-8'.</span></td></tr></table><a name="VikingXNAGraphics" /><h3>VikingXNAGraphics</h3><table><tr id="VikingXNAGraphicsHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr name="ErrorRowClassVikingXNAGraphics"><td class="IconErrorEncoded"><a name="VikingXNAGraphicsError" /></td><td class="messageCell"><strong>Clients\MonogameXNAGraphicsShared\VikingXNAGraphics.csproj:
+        </strong><span>The application which this project type is based on was not found. Please try this link for further information: http://go.microsoft.com/fwlink/?LinkID=299083&amp;projecttype=6D335F3A-9D43-41b4-9D22-F6F17C4BE596</span></td></tr></table><a name="VikingXNAGraphicsContent" /><h3>VikingXNAGraphicsContent</h3><table><tr id="VikingXNAGraphicsContentHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr name="ErrorRowClassVikingXNAGraphicsContent"><td class="IconErrorEncoded"><a name="VikingXNAGraphicsContentError" /></td><td class="messageCell"><strong>Clients\MonogameXNAGraphicsShared\XNAContent\VikingXNAGraphicsContent.contentproj:
+        </strong><span>The application which this project type is based on was not found. Please try this link for further information: http://go.microsoft.com/fwlink/?LinkID=299083&amp;projecttype=96E2B04D-8817-42c6-938A-82C39BA4D311</span></td></tr></table><a name="XNATestbed" /><h3>XNATestbed</h3><table><tr id="XNATestbedHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr name="ErrorRowClassXNATestbed"><td class="IconErrorEncoded"><a name="XNATestbedError" /></td><td class="messageCell"><strong>Clients\XNATestbed\XNATestbed\XNATestbed.csproj:
+        </strong><span>The application which this project type is based on was not found. Please try this link for further information: http://go.microsoft.com/fwlink/?LinkID=299083&amp;projecttype=6D335F3A-9D43-41b4-9D22-F6F17C4BE596</span></td></tr></table><a name="XNATestbedContent" /><h3>XNATestbedContent</h3><table><tr id="XNATestbedContentHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr name="ErrorRowClassXNATestbedContent"><td class="IconErrorEncoded"><a name="XNATestbedContentError" /></td><td class="messageCell"><strong>Clients\XNATestbed\XNATestbedContent\XNATestbedContent.contentproj:
+        </strong><span>The application which this project type is based on was not found. Please try this link for further information: http://go.microsoft.com/fwlink/?LinkID=299083&amp;projecttype=96E2B04D-8817-42c6-938A-82C39BA4D311</span></td></tr></table><a name=".nuget" /><h3>.nuget</h3><table><tr id=".nugetHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">.nuget logged no messages.
+                  </td></tr></table><a name="AnnotationInterfaces" /><h3>AnnotationInterfaces</h3><table><tr id="AnnotationInterfacesHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">AnnotationInterfaces logged no messages.
+                  </td></tr></table><a name="AnnotationModel" /><h3>AnnotationModel</h3><table><tr id="AnnotationModelHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">AnnotationModel logged no messages.
+                  </td></tr></table><a name="AnnotationServiceTypes.gRPC" /><h3>AnnotationServiceTypes.gRPC</h3><table><tr id="AnnotationServiceTypes.gRPCHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">AnnotationServiceTypes.gRPC logged no messages.
+                  </td></tr></table><a name="Client" /><h3>Client</h3><table><tr id="ClientHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Client logged no messages.
+                  </td></tr></table><a name="Clients" /><h3>Clients</h3><table><tr id="ClientsHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Clients logged no messages.
+                  </td></tr></table><a name="Common" /><h3>Common</h3><table><tr id="CommonHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Common logged no messages.
+                  </td></tr></table><a name="ConnectomeDataModelCore" /><h3>ConnectomeDataModelCore</h3><table><tr id="ConnectomeDataModelCoreHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">ConnectomeDataModelCore logged no messages.
+                  </td></tr></table><a name="ConnectomeDataModelCoreTests" /><h3>ConnectomeDataModelCoreTests</h3><table><tr id="ConnectomeDataModelCoreTestsHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">ConnectomeDataModelCoreTests logged no messages.
+                  </td></tr></table><a name="ConnectomeOpenData" /><h3>ConnectomeOpenData</h3><table><tr id="ConnectomeOpenDataHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">ConnectomeOpenData logged no messages.
+                  </td></tr></table><a name="DevTest" /><h3>DevTest</h3><table><tr id="DevTestHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">DevTest logged no messages.
+                  </td></tr></table><a name="DevTestAPI" /><h3>DevTestAPI</h3><table><tr id="DevTestAPIHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">DevTestAPI logged no messages.
+                  </td></tr></table><a name="Geometry" /><h3>Geometry</h3><table><tr id="GeometryHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Geometry logged no messages.
+                  </td></tr></table><a name="GeometryOGCMapper" /><h3>GeometryOGCMapper</h3><table><tr id="GeometryOGCMapperHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">GeometryOGCMapper logged no messages.
+                  </td></tr></table><a name="GeometryOGCMapperTest" /><h3>GeometryOGCMapperTest</h3><table><tr id="GeometryOGCMapperTestHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">GeometryOGCMapperTest logged no messages.
+                  </td></tr></table><a name="gRPCAnnotationService" /><h3>gRPCAnnotationService</h3><table><tr id="gRPCAnnotationServiceHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">gRPCAnnotationService logged no messages.
+                  </td></tr></table><a name="gRPCAnnotationServiceTests" /><h3>gRPCAnnotationServiceTests</h3><table><tr id="gRPCAnnotationServiceTestsHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">gRPCAnnotationServiceTests logged no messages.
+                  </td></tr></table><a name="gRPCSegmentAnything" /><h3>gRPCSegmentAnything</h3><table><tr id="gRPCSegmentAnythingHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">gRPCSegmentAnything logged no messages.
+                  </td></tr></table><a name="Identity.Configuration" /><h3>Identity.Configuration</h3><table><tr id="Identity.ConfigurationHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Identity.Configuration logged no messages.
+                  </td></tr></table><a name="Identity.DataContext" /><h3>Identity.DataContext</h3><table><tr id="Identity.DataContextHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Identity.DataContext logged no messages.
+                  </td></tr></table><a name="Identity.Models" /><h3>Identity.Models</h3><table><tr id="Identity.ModelsHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Identity.Models logged no messages.
+                  </td></tr></table><a name="Identity.Tests" /><h3>Identity.Tests</h3><table><tr id="Identity.TestsHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Identity.Tests logged no messages.
+                  </td></tr></table><a name="IdentityManagementWebsite" /><h3>IdentityManagementWebsite</h3><table><tr id="IdentityManagementWebsiteHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">IdentityManagementWebsite logged no messages.
+                  </td></tr></table><a name="IdentityServer" /><h3>IdentityServer</h3><table><tr id="IdentityServerHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">IdentityServer logged no messages.
+                  </td></tr></table><a name="Jotunn" /><h3>Jotunn</h3><table><tr id="JotunnHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Jotunn logged no messages.
+                  </td></tr></table><a name="MonogameTestbed" /><h3>MonogameTestbed</h3><table><tr id="MonogameTestbedHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">MonogameTestbed logged no messages.
+                  </td></tr></table><a name="Monographics" /><h3>Monographics</h3><table><tr id="MonographicsHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Monographics logged no messages.
+                  </td></tr></table><a name="NetTopologySuite.IO.SqlServerBytes" /><h3>NetTopologySuite.IO.SqlServerBytes</h3><table><tr id="NetTopologySuite.IO.SqlServerBytesHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">NetTopologySuite.IO.SqlServerBytes logged no messages.
+                  </td></tr></table><a name="RTree" /><h3>RTree</h3><table><tr id="RTreeHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">RTree logged no messages.
+                  </td></tr></table><a name="Servers" /><h3>Servers</h3><table><tr id="ServersHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Servers logged no messages.
+                  </td></tr></table><a name="SIMeasurement" /><h3>SIMeasurement</h3><table><tr id="SIMeasurementHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">SIMeasurement logged no messages.
+                  </td></tr></table><a name="Solution Items" /><h3>Solution Items</h3><table><tr id="Solution ItemsHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Solution Items logged no messages.
+                  </td></tr></table><a name="UnitsAndScale" /><h3>UnitsAndScale</h3><table><tr id="UnitsAndScaleHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">UnitsAndScale logged no messages.
+                  </td></tr></table><a name="Utils" /><h3>Utils</h3><table><tr id="UtilsHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Utils logged no messages.
+                  </td></tr></table><a name="Viking" /><h3>Viking</h3><table><tr id="VikingHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Viking logged no messages.
+                  </td></tr></table><a name="Viking.Annotation.Geometry" /><h3>Viking.Annotation.Geometry</h3><table><tr id="Viking.Annotation.GeometryHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Viking.Annotation.Geometry logged no messages.
+                  </td></tr></table><a name="Viking.Annotation.Mapping" /><h3>Viking.Annotation.Mapping</h3><table><tr id="Viking.Annotation.MappingHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Viking.Annotation.Mapping logged no messages.
+                  </td></tr></table><a name="Viking.Identity.Server.Extensions" /><h3>Viking.Identity.Server.Extensions</h3><table><tr id="Viking.Identity.Server.ExtensionsHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Viking.Identity.Server.Extensions logged no messages.
+                  </td></tr></table><a name="Viking.Identity.Server.WebApi" /><h3>Viking.Identity.Server.WebApi</h3><table><tr id="Viking.Identity.Server.WebApiHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">Viking.Identity.Server.WebApi logged no messages.
+                  </td></tr></table><a name="VikingWebAppSettings" /><h3>VikingWebAppSettings</h3><table><tr id="VikingWebAppSettingsHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">VikingWebAppSettings logged no messages.
+                  </td></tr></table><a name="VolumeModel" /><h3>VolumeModel</h3><table><tr id="VolumeModelHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">VolumeModel logged no messages.
+                  </td></tr></table><a name="WebAnnotationModel" /><h3>WebAnnotationModel</h3><table><tr id="WebAnnotationModelHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">WebAnnotationModel logged no messages.
+                  </td></tr></table><a name="WebAnnotationModel.Geometry" /><h3>WebAnnotationModel.Geometry</h3><table><tr id="WebAnnotationModel.GeometryHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">WebAnnotationModel.Geometry logged no messages.
+                  </td></tr></table><a name="WebAnnotationModel.gRPC" /><h3>WebAnnotationModel.gRPC</h3><table><tr id="WebAnnotationModel.gRPCHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">WebAnnotationModel.gRPC logged no messages.
+                  </td></tr></table><a name="WebAnnotationModel.gRPC.Tests" /><h3>WebAnnotationModel.gRPC.Tests</h3><table><tr id="WebAnnotationModel.gRPC.TestsHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr><td class="IconInfoEncoded" /><td class="messageCell" _locID="NoMessagesRow">WebAnnotationModel.gRPC.Tests logged no messages.
+                  </td></tr></table><a name="Solution" /><h3 _locID="ProjectDisplayNameHeader">Solution</h3><table><tr id="SolutionHeaderRow"><th></th><th class="messageCell" _locID="MessageTableHeader">Message</th></tr><tr name="MessageRowHeaderShowSolution"><td class="IconInfoEncoded" /><td class="messageCell"><a _locID="ShowAdditionalMessages" href="#" name="SolutionMessage" onclick="ToggleMessageVisibility('Solution'); return false;">
+          Show 1 additional messages
+        </a></td></tr><tr name="MessageRowClassSolution" style="display: none"><td class="IconInfoEncoded"><a name="SolutionMessage" /></td><td class="messageCell"><strong>Everything.sln:
+        </strong><span>The solution file does not require migration.</span></td></tr><tr style="display: none" name="MessageRowHeaderHideSolution"><td class="IconInfoEncoded" /><td class="messageCell"><a _locID="HideAdditionalMessages" href="#" name="SolutionMessage" onclick="ToggleMessageVisibility('Solution'); return false;">
+          Hide 1 additional messages
+        </a></td></tr></table></div></div></body></html>

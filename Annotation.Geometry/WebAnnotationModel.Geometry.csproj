@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <RootNamespace>Viking.Annotation.Geometry</RootNamespace>
-    <AssemblyName>Viking.Annotation.Geometry</AssemblyName>
+    <RootNamespace>WebAnnotationModel.Geometry</RootNamespace>
+    <AssemblyName>WebAnnotationModel.Geometry</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
