@@ -18,9 +18,25 @@ namespace gRPCAnnotationService
             _context = context;
         }
 
-        public override Task<CreateStructureTypeResponse> CreateStructureType(CreateStructureTypeRequest request, ServerCallContext context)
+        public override async Task<CreateStructureTypeResponse> CreateStructureType(CreateStructureTypeRequest request, ServerCallContext context)
         {
-            return base.CreateStructureType(request, context);
+            try
+            {
+                var row = request.Obj.ToStructureType();
+                row.Username = context.GetHttpContext()?.User?.Identity?.Name ?? "unknown";
+                row.Created = System.DateTime.UtcNow;
+                row.LastModified = row.Created;
+
+                var added = await _context.StructureTypes.AddAsync(row);
+                await _context.SaveChangesAsync();
+
+                return new CreateStructureTypeResponse { Result = added.Entity.ToProtobufMessage() };
+            }
+            catch (System.Exception e)
+            {
+                _logger.LogError(e, "{Operation} failed", nameof(CreateStructureType));
+                throw new Grpc.Core.RpcException(new Status(StatusCode.Unknown, nameof(CreateStructureType), e));
+            }
         }
 
         public override async Task<GetStructureTypeByIDResponse> GetStructureTypeByID(GetStructureTypeByIDRequest request, ServerCallContext context)
