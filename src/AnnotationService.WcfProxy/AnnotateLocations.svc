@@ -1,0 +1,1 @@
+<%@ ServiceHost Language="C#" Debug="true" Service="AnnotationService.WcfProxy.AnnotateLocations" CodeBehind="AnnotateLocations.svc.cs" %>
