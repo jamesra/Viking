@@ -2,7 +2,6 @@ using System;
 using System.Windows.Forms;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
-using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Commands
 {

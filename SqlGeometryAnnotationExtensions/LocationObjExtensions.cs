@@ -1,7 +1,6 @@
 using Geometry;
 using System;
 using System.Collections.Generic;
-using WebAnnotationModel.Objects;
 
 namespace Viking.VolumeModel
 {
@@ -16,7 +15,7 @@ namespace Viking.VolumeModel
         /// <param name="location"></param>
         /// <param name="volumePoints"></param>
         /// <param name="volume_innerRingPoints"></param>
-        public static void SetShapeFromPointsInVolume(this LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, GridVector2[] volumePoints, ICollection<GridVector2[]> volume_innerRingPoints)
+        public static void SetShapeFromPointsInVolume(this WebAnnotationModel.LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, GridVector2[] volumePoints, ICollection<GridVector2[]> volume_innerRingPoints)
         {
             GridVector2[] mosaic_points = mapper.VolumeToSection(volumePoints);
 
@@ -33,7 +32,7 @@ namespace Viking.VolumeModel
         /// <param name="location"></param>
         /// <param name="volumePoints"></param>
         /// <param name="volume_innerRingPoints"></param>
-        public static void SetShapeFromPointsInSection(this LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, GridVector2[] sectionPoints, ICollection<GridVector2[]> section_innerRingPoints)
+        public static void SetShapeFromPointsInSection(this WebAnnotationModel.LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, GridVector2[] sectionPoints, ICollection<GridVector2[]> section_innerRingPoints)
         {
             GridVector2[] volume_points = mapper.SectionToVolume(sectionPoints);
 
@@ -50,7 +49,7 @@ namespace Viking.VolumeModel
         /// <param name="location"></param>
         /// <param name="volumePoints"></param>
         /// <param name="volume_innerRingPoints"></param>
-        public static void SetShapeFromGeometryInSection(this LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
+        public static void SetShapeFromGeometryInSection(this WebAnnotationModel.LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
             if (!shape.STIsValid().Value)
                 throw new ArgumentException("Shape must be valid SQL Geometry " + shape.IsValidDetailed());
@@ -70,7 +69,7 @@ namespace Viking.VolumeModel
         /// <param name="location"></param>
         /// <param name="volumePoints"></param>
         /// <param name="volume_innerRingPoints"></param>
-        public static void SetShapeFromGeometryInVolume(this LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry volume_shape)
+        public static void SetShapeFromGeometryInVolume(this WebAnnotationModel.LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry volume_shape)
         {
             if (!volume_shape.STIsValid().Value)
                 throw new ArgumentException("Shape must be valid SQL Geometry " + volume_shape.IsValidDetailed());

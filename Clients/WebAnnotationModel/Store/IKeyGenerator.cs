@@ -3,7 +3,7 @@
     /// <summary>
     /// This interface generates arbitrary keys 
     /// </summary>
-    public interface IKeyGenerator<out T>
+    public interface IKeyGenerator<T>
     {
         T NextKey();
     }

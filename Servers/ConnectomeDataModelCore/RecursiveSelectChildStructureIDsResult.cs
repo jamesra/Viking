@@ -7,5 +7,6 @@ namespace Viking.DataModel.Annotation
 {
     public partial class RecursiveSelectChildStructureIDsResult
     {
+        public long ID { get; set; }
     }
 }

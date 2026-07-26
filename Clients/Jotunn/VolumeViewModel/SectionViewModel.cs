@@ -137,9 +137,9 @@ namespace Viking.VolumeViewModel
             this._MappingManager = _MappingManager;
         }
 
-        public async System.Threading.Tasks.Task PrepareTransform(string transform)
+        public void PrepareTransform(string transform)
         {
-            await this.section.PrepareTransform(transform); 
+            this.section.PrepareTransform(transform); 
         }
         
         #region Commands

@@ -87,7 +87,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VikingXNAGraphicsContent", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Triangle", "..\Triangle.NET\Triangle\Triangle.csproj", "{F7907A0A-B75F-400B-9E78-BFAD00DB4D6B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationServiceTypes.WCF", "..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj", "{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationServiceTypes", "..\AnnotationServiceTypes\AnnotationServiceTypes.csproj", "{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TriangleNetGeometryExtensions", "..\TriangleNetGeometryExtensions\TriangleNetGeometryExtensions.csproj", "{2B2E3C2E-BE56-466C-98F3-6F9BFA82B213}"
 EndProject

@@ -1,10 +1,8 @@
 using System.Diagnostics;
 
 using Viking.Common;
-using WebAnnotationModel.Objects;
 
 using WebAnnotationModel;
-using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI
 {

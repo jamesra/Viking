@@ -35,7 +35,10 @@ namespace SqlServerTypes
             var ptr = LoadLibrary(path);
             if (ptr == IntPtr.Zero)
             {
-                throw new Exception($"Error loading {assemblyName} (ErrorCode: {Marshal.GetLastWin32Error()})");
+                throw new Exception(string.Format(
+                    "Error loading {0} (ErrorCode: {1})",
+                    assemblyName,
+                    Marshal.GetLastWin32Error()));
             }
         }
     }

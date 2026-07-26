@@ -18,7 +18,7 @@ namespace gRPCAnnotationService
             _context = context;
         }
 
-        public override Task<GetPermittedStructureLinksResponse> GetPermittedStructureLinks(GetPermittedStructureLinksRequest request, ServerCallContext context)
+        public override async Task<GetPermittedStructureLinksResponse> GetPermittedStructureLinks(GetPermittedStructureLinksRequest request, ServerCallContext context)
         {
             try
             {
@@ -27,14 +27,14 @@ namespace gRPCAnnotationService
                 };
 
                 response.PermittedLinks.AddRange(_context.PermittedStructureLinks.Select(p =>
-                    new global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.PermittedStructureLink() {
+                    new Viking.AnnotationServiceTypes.gRPC.V1.Protos.PermittedStructureLink() {
                         SourceTypeId = p.SourceTypeId,
                         TargetTypeId = p.TargetTypeId,
                         Bidirectional = p.Bidirectional,
                     })
                 );
 
-                return Task.FromResult(response);
+                return response;
             }
             catch (System.Exception e)
             {

@@ -1,231 +1,268 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
+using AnnotationService.Types;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Utils;
-using WebAnnotationModel;
-using Viking.AnnotationServiceTypes;
+using WebAnnotationModel.Objects;
 
-namespace WebAnnotationModel.Objects
+namespace WebAnnotationModel
 {
-    public class StructureObj : AnnotationModelObjBaseWithParent<long, IStructure, StructureObj>, IDataObjectLinks<StructureLinkKey, StructureLinkObj>, IEquatable<StructureObj>, IStructureReadOnly
+    public class StructureObj : WCFObjBaseWithParent<long, Structure, StructureObj>, IStructureReadOnly
     {
-        private readonly long _ID;
-        public override long ID => _ID;
+        public override long ID => Data.ID;
 
-        private long? _ParentID;
         public override long? ParentID
         {
-            get => _ParentID; 
+            get => Data.ParentID;
             set
             {
-                if (_ParentID != value)
+                if (Data.ParentID != value)
                 {
-                    OnPropertyChanging(nameof(ParentID));
+                    OnPropertyChanging("ParentID");
 
-                    _ParentID = value;
-                    Parent = null;
+                    Data.ParentID = value;
 
                     SetDBActionForChange();
-                    OnPropertyChanged(nameof(ParentID));
+                    OnPropertyChanged("ParentID");
                 }
             }
         }
 
-        public long TypeID
+        public long TypeID => Data.TypeID;
+
+        private uint? _Color;
+
+        public uint Color
         {
-            get;
+            get
+            {
+                if (_Color.HasValue == false)
+                {
+                    _Color = (uint)ID.ToString().GetHashCode() | 0xFF0707FF;
+                }
+
+                return _Color.Value;
+            }
+            set => _Color = value;
         }
+
 
         /// <summary>
         /// The ID for newo bjects can change from a negative number to the number in the database.
         /// In this case make sure we always return the same hash code.  As a result this is called for each object only once.
         /// </summary>
         /// <returns></returns>
-        protected override int GenerateHashCode()
-        {
-            return (int)(ID % int.MaxValue);
-        }
+        protected override int GenerateHashCode() => (int)(ID % int.MaxValue);
 
-        private string _Notes;
         public string Notes
         {
-            get => _Notes;
+            get => Data.Notes;
             set
             {
-                OnPropertyChanging(nameof(Notes));
-                _Notes = value;
-                SetDBActionForChange();
-                OnPropertyChanged(nameof(Notes));
+                if (Data.Notes != value)
+                {
+                    OnPropertyChanging("Notes");
+
+                    Data.Notes = value;
+
+                    SetDBActionForChange();
+                    OnPropertyChanged("Notes");
+                }
             }
         }
 
-        private bool _Verified;
         public bool Verified
         {
-            get => _Verified;
+            get => Data.Verified;
             set
             {
-                if (_Verified != value)
+                if (Data.Verified != value)
                 {
-                    OnPropertyChanging(nameof(Verified));
-                    _Verified = value;
+                    OnPropertyChanging("Verified");
+                    Data.Verified = value;
                     SetDBActionForChange();
-                    OnPropertyChanged(nameof(Verified));
+                    OnPropertyChanged("Verified");
                 }
             }
         }
 
-        private double _Confidence;
         public double Confidence
         {
-            get => _Confidence;
+            get => Data.Confidence;
             set
             {
-                if (_Confidence != value)
+                if (Confidence != value)
                 {
-                    OnPropertyChanging(nameof(Confidence));
-                    _Confidence = value;
+                    OnPropertyChanging("Confidence");
+                    Data.Confidence = value;
                     SetDBActionForChange();
-                    OnPropertyChanged(nameof(Confidence));
+                    OnPropertyChanged("Confidence");
                 }
             }
         }
 
-        public ConcurrentObservableAttributeSet _Attributes { get; private set; }
+        private IEnumerable<ObjAttribute> _AttributesCache = null;
 
-        public Task<ObjAttribute[]> CopyAttributesAsync()
+        public IEnumerable<ObjAttribute> Attributes
         {
-            return _Attributes.CreateCopyAsync();
-        }
+            get
+            {
+                _AttributesCache ??= [.. ObjAttribute.Parse(Data.AttributesXml)];
+                return _AttributesCache;
+            }
+            set
+            {
+                if (Data.AttributesXml is null && value is null)
+                    return;
 
-        public ReadOnlyObservableCollection<ObjAttribute> Attributes => _Attributes.ReadOnlyObservable;
+                _AttributesCache = value;
 
-        public Task SetAttributes(IEnumerable<ObjAttribute> attribs)
-        {
-            return _Attributes.SetAttributes(attribs);
+                string xmlstring = ObjAttribute.ToXml(value);
+
+                if (Data.AttributesXml != xmlstring)
+                {
+                    OnPropertyChanging("Attributes");
+
+                    Data.AttributesXml = xmlstring;
+
+                    //Refresh the tags
+                    SetDBActionForChange();
+                    OnPropertyChanged("Attributes");
+                }
+            }
         }
 
         /// <summary>
         /// Add the specified name to the attributes if it does not exists, removes it 
         /// </summary>
         /// <param name="tag"></param>
-        public Task<bool> ToggleAttribute(string tag, string value = null)
+        public bool ToggleAttribute(string tag, string value = null)
         {
-            return _Attributes.ToggleAttribute(tag, value);
+            //ObjAttribute attrib = new ObjAttribute(tag, value);
+            List<ObjAttribute> listAttributes = [.. this.Attributes];
+            bool InList = listAttributes.ToggleAttribute(tag, value);
+            this.Attributes = listAttributes;
+            return InList;
         }
 
-        /// <summary>
-        /// Allows LocationLinkStore to adjust the client after a link is created
-        /// </summary>
-        /// <param name="ID"></param>
-        public Task AddAttributeAsync(ObjAttribute attribute)
-        {
-            return _Attributes.AddAsync(attribute);
-        }
-
-        /// <summary>
-        /// Adjust the client after a link is removed
-        /// </summary>
-        /// <param name="ID"></param>
-        public Task RemoveAttributeAsync(ObjAttribute attribute)
-        {
-            return _Attributes.RemoveAsync(attribute);
-        }
-
-        private string _Label;
         public string Label
         {
-            get => _Label;
+            get => Data.Label;
             set
             {
-                if (_Label != value)
+                if (Label != value)
                 {
-                    OnPropertyChanging(nameof(Label));
-                    _Label = value;
+                    OnPropertyChanging("Label");
+                    Data.Label = value;
                     //Refresh the tags
                     SetDBActionForChange();
-                    OnPropertyChanged(nameof(Label));
+                    OnPropertyChanged("Label");
                 }
             }
         }
 
-        private string _Username;
-        public string Username
-        {
-            get => _Username;
-            internal set
-            {
-                if (_Username == value) 
-                    return; 
+        public string Username => Data.Username;
 
-                OnPropertyChanging(nameof(Username));
-                _Username = value;
-                //Refresh the tags
-                SetDBActionForChange();
-                OnPropertyChanged(nameof(Username));
+        private readonly object LinksLock = new();
+        private ObservableCollection<StructureLinkObj> _Links = null;
+        internal ObservableCollection<StructureLinkObj> Links
+        {
+            get
+            {
+                lock (LinksLock)
+                {
+                    if (_Links is null)
+                    {
+                        if (Data.Links != null)
+                        {
+                            StructureLinkKey[] keys = [.. Data.Links.Select(l => new StructureLinkKey(l))];
+
+                            List<StructureLinkObj> linkArray = new(Data.Links.Length);
+                            //Initialize from the Data object
+                            foreach (StructureLink link in Data.Links)
+                            {
+                                Debug.Assert(link != null);
+                                //Add it if it doesn't exist, otherwise get the official version
+                                StructureLinkObj linkObj = Store.StructureLinks.GetOrAdd(new StructureLinkKey(link),
+                                                                                         new Func<StructureLinkKey, StructureLinkObj>(key => new StructureLinkObj(link)),
+                                                                                         out bool added); //This call will fire events that add the link to this.Links if it is new to the local store
+                                Debug.Assert(linkObj != null, "If structureObj has the value the store should have the value.   Does it link to itself?");
+                                linkArray.Add(linkObj);
+                            }
+
+                            _Links = new ObservableCollection<StructureLinkObj>(linkArray);
+                        }
+                        else
+                        {
+                            _Links = [];
+                        }
+
+                        _Links.CollectionChanged += this.OnLinksChanged;
+                    }
+
+                    return _Links;
+                }
             }
         }
 
-        private DateTime _LastModified;
-        public DateTime LastModified
+        public int NumLinks
         {
-            get => _LastModified;
-            internal set
+            get
             {
-                if (value == _LastModified)
-                    return;
-
-                OnPropertyChanging(nameof(LastModified));
-                _LastModified = value; 
-                OnPropertyChanged(nameof(LastModified));
+                lock (LinksLock)
+                {
+                    return Data.Links is null ? 0 : Data.Links.Length;
+                }
             }
         }
-
-        private DateTime _Created;
-        public DateTime Created
-        {
-            get => _Created;
-            internal set
-            {
-                if (value == _Created)
-                    return;
-                
-                OnPropertyChanging(nameof(Created));
-                _Created = value; 
-                OnPropertyChanged(nameof(Created));
-            }
-        }
-
-        private readonly ConcurrentObservableStructureLinkSet _Links = new ConcurrentObservableStructureLinkSet();
-
-        private readonly SemaphoreSlim LinkLock = new SemaphoreSlim(1); 
-
-        internal ReadOnlyObservableCollection<StructureLinkObj> Links => _Links.ReadOnlyObservable;
-
-        public int NumLinks => Links.Count;
 
         /// <summary>
         /// This provides a copy of the links collection so there is no danger of another thread changing the collection while it is enumerated.
         /// </summary>
-        public Task<StructureLinkObj[]> CopyLinksAsync()
+        public StructureLinkObj[] LinksCopy
         {
-            return _Links.CreateCopyAsync();
+            get
+            {
+                lock (LinksLock)
+                {
+                    if (NumLinks == 0)
+                        return [];
+
+                    StructureLinkObj[] copy = new StructureLinkObj[Links.Count];
+
+                    Links.CopyTo(copy, 0);
+                    return copy;
+                }
+            }
         }
 
+        private void OnLinksChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            lock (LinksLock)
+            {
+                //Update the underlying object we will send to the server]
+                Data.Links = [.. _Links.Select(l => l.GetData())];
+            }
+
+            SetDBActionForChange();
+        }
 
         /// <summary>
         /// Allows LocationLinkStore to adjust the client after a link is created.
         /// Because Links is an observable collection all modifications must be syncronized
         /// </summary>
         /// <param name="ID"></param>
-        public Task<bool> AddLinkAsync(StructureLinkObj ID)
+        internal void AddLink(StructureLinkObj ID)
         {
-            return _Links.AddAsync(ID);
+            lock (LinksLock)
+            {
+                if (Links.Contains(ID))
+                    return;
+
+                Links.Add(ID);
+            }
         }
 
         /// <summary>
@@ -233,76 +270,93 @@ namespace WebAnnotationModel.Objects
         /// Because Links is an observable collection all modifications must be syncronized
         /// </summary>
         /// <param name="ID"></param>
-        public Task<bool> RemoveLinkAsync(StructureLinkObj link)
-        {
-            return _Links.RemoveAsync(link.ID);
-        }
+        internal void RemoveLink(StructureLinkObj link) => RemoveLink(link.ID);
 
         /// <summary>
         /// Adjust the client after a link is removed
         /// Because Links is an observable collection all modifications must be syncronized
         /// </summary>
         /// <param name="ID"></param>
-        public Task<bool> RemoveLinkAsync(StructureLinkKey key)
+        internal void RemoveLink(StructureLinkKey key)
         {
-            return _Links.RemoveAsync(key);
+            lock (LinksLock)
+            {
+                StructureLinkObj LinkToRemove = Links.FirstOrDefault(link => link.SourceID == key.SourceID && link.TargetID == key.TargetID);
+                if (LinkToRemove is null)
+                    return;
+
+                Links.Remove(LinkToRemove);
+            }
         }
+
+        /*
+        public StructureLink[] Links
+        {
+            get { return Data.Links; }
+        }
+
+        /// <summary>
+        /// Adjust the client after a link is created
+        /// </summary>
+        /// <param name="ID"></param>
+        public void AddLink(StructureLink link)
+        {
+            List<StructureLink> listLinks = Data.Links.ToList<StructureLink>();
+            listLinks.Add(link);
+            Data.Links = listLinks.ToArray();
+        }
+
+        /// <summary>
+        /// Adjust the client after a link is removed
+        /// </summary>
+        /// <param name="ID"></param>
+        public void RemoveLink(StructureLink link)
+        {
+            List<StructureLink> listLinks = Data.Links.ToList<StructureLink>();
+            for(int i = 0; i < listLinks.Count; i++)
+            {
+                StructureLink item = listLinks[i]; 
+                if(item.SourceID == link.SourceID && item.TargetID == link.TargetID)
+                {
+                    listLinks.RemoveAt(i);
+                    i--; 
+                }
+            }
+            Data.Links = listLinks.ToArray();
+        }*/
 
         public StructureObj()
         {
-            //_ID = Store.Structures.NextKey();
+
         }
 
-        internal StructureObj(long typeid)
+        public StructureObj(StructureTypeObj type)
         {
-            //_ID = Store.Structures.NextKey();
-            TypeID = typeid;
+            this.Data = new Structure();
+            InitNewData(type);
         }
 
-        public StructureObj(long id, long typeid)
+        public StructureObj(Structure data)
         {
-            _ID = id;
-            TypeID = typeid;
-        }
+            this.Data = data;
 
-        public StructureObj(long id, StructureTypeObj type) : this(id, type.ID)
-        {
-            _Type = type;
-        }
-
-        public StructureObj(IStructure data) : this(data.ID)
-        {
-
-            /*
             if (data.Links != null)
             {
-                foreach (IStructureLink link in data.Links)
+                foreach (StructureLink link in data.Links)
                 {
                     Store.StructureLinks.GetOrAdd(new StructureLinkKey(link),
-                                                  new Func<StructureLinkKey, StructureLinkObj>(l => { return new StructureLinkObj(link); }),
+                                                  new Func<StructureLinkKey, StructureLinkObj>(l => new StructureLinkObj(link)),
                                                   out bool added);
                 }
             }
-            */
         }
 
-        private int Initialized = 0;
 
-        public async Task InitializeAsync(IAnnotationStores stores, CancellationToken token)
+
+        protected void InitNewData(StructureTypeObj type)
         {
-            if (Interlocked.Exchange(ref Initialized, 1) == 0)
-            {
-                _Type = await stores.StructureTypes.GetObjectByID(TypeID, true, false, token);
+            this.Data.DBAction = AnnotationService.Types.DBACTION.INSERT;
 
-                List<Task> tasks = new List<Task>();
-                if (ParentID.HasValue)
-                    this.Parent = await stores.Structures.GetObjectByID(ParentID.Value, true, false, token); 
-            }
-        }
-          
-        /*
-        protected static Task<StructureObj> CreateForType(IStructureType type)
-        { 
             this.Data.ID = Store.Structures.GetTempKey();
             this.Data.TypeID = type.ID;
             Debug.Assert(type.ID >= 0);
@@ -311,46 +365,25 @@ namespace WebAnnotationModel.Objects
             this.Data.ParentID = new long?();
             this.Data.Links = null;
         }
-        */
-
-        internal static Task<StructureObj> Create(IStructure newdata)
-        {
-            return Task.FromResult(new StructureObj(newdata.ID, newdata.TypeID)
-            {
-                Notes = newdata.Notes,
-                Label = newdata.Label,
-                Confidence = newdata.Confidence,
-                ParentID = newdata.ParentID,
-                _Username = newdata.Username,
-                _Verified = newdata.Verified,
-                _Attributes = new ConcurrentObservableAttributeSet(ObjAttributeParser.ParseAttributes(newdata.Attributes))
-            });
-        }
-
-        internal override Task Update(IStructure newdata)
-        {
-            Notes = newdata.Notes;
-            Label = newdata.Label;
-            Confidence = newdata.Confidence;
-            Username = newdata.Username;
-            return Task.CompletedTask;
-        }
 
         private StructureTypeObj _Type = null;
         public StructureTypeObj Type
         {
-            get => _Type;
-            /*
+            get
+            {
+                _Type ??= Store.StructureTypes.GetObjectByID(Data.TypeID);
+                return _Type;
+            }
             set
             {
                 Debug.Assert(value != null);
-                if (value.ID == TypeID)
+                if (value.ID == Data.TypeID)
                     return;
 
                 if (value != null)
                 {
                     OnPropertyChanging("Type");
-                    TypeID = value.ID;
+                    Data.TypeID = value.ID;
                     _Type = value;
 
                     SetDBActionForChange();
@@ -358,59 +391,42 @@ namespace WebAnnotationModel.Objects
                     OnPropertyChanged("Type");
                 }
             }
-            */
         }
+
+        ulong IStructureReadOnly.ID => (ulong)this.ID;
+
+        ulong? IStructureReadOnly.ParentID => this.ParentID.HasValue ? new ulong?((ulong)ParentID.Value) : new ulong?();
+
+        ulong IStructureReadOnly.TypeID => (ulong)this.TypeID;
+
+        ICollection<IStructureLink> IStructureReadOnly.Links => [.. this.Links.Select(sl => (IStructureLink)sl)];
+
+        IStructureTypeReadOnly IStructureReadOnly.Type => this.Type;
 
         public string TagsXML => this.TagsXML;
 
-        ulong IStructureReadOnly.ID => (ulong)ID;
-
-        ulong? IStructureReadOnly.ParentID => (ulong?)ParentID ?? new ulong?();
-
-        ulong IStructureReadOnly.TypeID => (ulong)TypeID;
-
-        ICollection<IStructureLinkKey> IStructureReadOnly.Links => Links.Cast<IStructureLinkKey>().ToArray();
-
-        IStructureTypeReadOnly IStructureReadOnly.Type => Type;
-
-        IReadOnlyDictionary<string, string> IStructureReadOnly.Attributes => _Attributes.ReadOnlyObservable.ToDictionary(o => o.Name, o => o.Value);
+        protected override StructureObj OnMissingParent() => Store.Structures.GetObjectByID(ParentID.Value, true);
 
         protected static event EventHandler OnCreate;
-        protected void CallOnCreate()
-        {
+        protected void CallOnCreate() =>
             //TODO, create notification
             //Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null });
             OnCreate?.Invoke(this, null);
-        }
-
-        public new bool Equals(object obj)
-        {
-            if (obj is StructureObj other)
-            {
-                return Equals(other);
-            }
-            else if (obj is IStructureReadOnly Iother)
-            {
-                return Equals(Iother);
-            }
-
-            return base.Equals(obj);
-        }
 
         public bool Equals(IStructureReadOnly other)
         {
-            if (ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return (long)other.ID == this.ID;
         }
 
-        public bool Equals(StructureObj other)
+        public static event EventHandler Create
         {
-            if (other is null)
-                return false;
-
-            return other.ID == this.ID;
+            add => OnCreate += value;
+            remove => OnCreate -= value;
         }
+
+
     }
 }

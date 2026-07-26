@@ -25,9 +25,8 @@ namespace Viking.VolumeView
 
             Viking.VolumeViewModel.VolumeViewModel volume = Microsoft.Practices.ServiceLocation.ServiceLocator.Current.GetInstance<Viking.VolumeViewModel.VolumeViewModel>();
 
-            /*WebAnnotationModel.State.Endpoint = GetEndpointFromXML(volume.VolumeXML).Uri;
+            WebAnnotationModel.State.Endpoint = GetEndpointFromXML(volume.VolumeXML).Uri;
             WebAnnotationModel.State.UserCredentials = new System.Net.NetworkCredential("anonymous", "connectome"); 
-            */
         }
 
         /// <summary>
@@ -78,14 +77,14 @@ namespace Viking.VolumeView
                 {
                     case "Volume":
                         IEnumerable<XElement> SettingsElements = elem.Elements().Where(e => e.Name.LocalName == "DefaultWebAnnotationUserSettings");
-                        if (SettingsElements.Any())
+                        if (SettingsElements.Count() > 0)
                         {
                             //UserSettingsElement = SettingsElements.First();
                         }
 
                         IEnumerable<XElement> MappingElements = elem.Elements().Where(e => e.Name.LocalName == "VolumeToEndpoint");
 
-                        if (!MappingElements.Any())
+                        if (MappingElements.Count() == 0)
                             break;
 
                         XElement MappingElement = MappingElements.First();

@@ -2,7 +2,6 @@
 using System.Globalization;
 using System.Windows.Data;
 using WebAnnotationModel;
-using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.WPF.Converters
 {

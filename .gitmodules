@@ -1,12 +1,3 @@
 [submodule "gRPC_Protos"]
 	path = gRPC_Protos
 	url = https://github.com/jamesra/viking_gRPC_protos.git
-[submodule "Servers/Libs/NetTopologySuite.IO.SqlServerBytes"]
-	path = Servers/Libs/NetTopologySuite.IO.SqlServerBytes
-	url = ../../NetTopologySuite/NetTopologySuite.IO.SqlServerBytes
-[submodule "Servers/Libs/NetTopologySuite.Curved"]
-	path = Servers/Libs/NetTopologySuite.Curved
-	url = ../NetTopologySuite.Curved
-[submodule "Servers/Libs/NetTopologySuite"]
-	path = Servers/Libs/NetTopologySuite
-	url = ../NetTopologySuite.git

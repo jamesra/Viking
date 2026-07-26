@@ -1,4 +1,4 @@
-﻿namespace gRPCAnnotationService.Protos
+namespace gRPCAnnotationService.Protos
 {
     public static class StructureTypeEFExtensions
     {
@@ -12,12 +12,12 @@
                 LastModified = src.LastModified.ToDateTime(),
                 Notes = src.Notes,
                 Username = src.Username,
-                Tags = src.Attributes,
+                Tags = src.Attributes ?? string.Empty,
                 Abstract = src.Abstract,
                 Code = src.Code,
-                Color = (int)src.Color,
+                Color = src.Color,
                 Name = src.Name,
-                StructureTags = src.StructureAttributes,
+                StructureTags = src.StructureAttributes ?? string.Empty,
                 //MarkupType = src.M
             }; 
 
@@ -41,12 +41,12 @@
                 converted.LastModified = src.LastModified.ToDateTime();
                 converted.Notes = src.Notes;
                 converted.Username = src.Username;
-                converted.Tags = src.Attributes;
+                converted.Tags = src.Attributes ?? string.Empty;
                 converted.Abstract = src.Abstract;
                 converted.Code = src.Code;
-                converted.Color = (int)src.Color;
+                converted.Color = src.Color;
                 converted.Name = src.Name;
-                converted.StructureTags = src.StructureAttributes;
+                converted.StructureTags = src.StructureAttributes ?? string.Empty;
                 //MarkupType = src.M 
         }
 
@@ -64,12 +64,12 @@
                 LastModified = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(src.LastModified),
                 Notes = src.Notes,
                 Username = src.Username,
-                Attributes = src.Tags,
+                Attributes = src.Tags ?? string.Empty,
                 Abstract = src.Abstract,
                 Code = src.Code,
-                Color = (uint)src.Color,
+                Color = src.Color,
                 Name = src.Name,
-                StructureAttributes = src.StructureTags,
+                StructureAttributes = src.StructureTags ?? string.Empty,
                 //Markuptype = src.MarkupType
             };
 

@@ -8,7 +8,6 @@ using VikingXNAGraphics;
 using VikingXNAWinForms;
 using WebAnnotation.View;
 using WebAnnotationModel;
-using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Commands
 {

@@ -1,12 +1,11 @@
 ﻿using System.Windows;
 using WebAnnotationModel;
-using WebAnnotationModel.Objects;
 
 namespace AnnotationViewModel
 {
     public class LocationViewModel : DependencyObject
     {
-        private readonly LocationObj obj; 
+        private readonly WebAnnotationModel.LocationObj obj; 
         
         public static readonly DependencyProperty ScreenPositionProperty;
 

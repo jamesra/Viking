@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 
-namespace Viking.DataModel.Annotation.Tests
+namespace ConnectomeDataModelCoreTests
 {
     public class Startup
     {
@@ -14,23 +14,20 @@ namespace Viking.DataModel.Annotation.Tests
             Configuration = new ConfigurationBuilder()
             .SetBasePath(AppContext.BaseDirectory)
             .AddJsonFile("appsettings.json")
-            .AddJsonFile("appsettings.Development.json")
             .Build();
         }
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddOptions<ContextBuilderOptions<AnnotationContext>>()
-                .Configure(o =>
-                {
-                    o.ConnectionStringName = "AnnotationConnection";
-                });
+            var connectionString = Configuration.GetConnectionString("AnnotationConnection");
 
             services.AddSingleton<IConfiguration>(Configuration);
 
-            services.AddTransient<IContextBuilder<AnnotationContext>, ContextBuilder<AnnotationContext>>();
-
-            services.AddTransient<AnnotationContext>();
+            services.AddDbContext<Viking.DataModel.Annotation.AnnotationContext>(options =>
+                options.UseSqlServer(Configuration.GetConnectionString("AnnotationConnection"),
+                                     options => options.UseNetTopologySuite())
+                       .EnableDetailedErrors()
+                       .EnableSensitiveDataLogging());
         }
     }
 }

@@ -10,7 +10,6 @@ using VikingXNA;
 using VikingXNAGraphics;
 using WebAnnotation.UI;
 using WebAnnotationModel;
-using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.View
 {

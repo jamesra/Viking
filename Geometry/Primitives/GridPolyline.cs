@@ -54,7 +54,12 @@ namespace Geometry
         {
             this.AllowsSelfIntersection = AllowSelfIntersection;
 
-            _Points = points.ToList();
+            _Points = new List<IPoint2D>(points.Count());
+
+            foreach (var p in points)
+            {
+                this.Add(p);
+            }
         }
 
         public GridPolyline(IEnumerable<GridVector2> points, bool AllowSelfIntersection = false)
@@ -421,8 +426,6 @@ namespace Geometry
 
 
         public IReadOnlyList<IPoint2D> Points => this._Points;
-
-        GridVector2 IShape2D.Centroid => GridVector2.Average(LineSegments.Select(l => l.PointAlongLine(0.5)));
 
         public bool Contains(in IPoint2D p)
         {

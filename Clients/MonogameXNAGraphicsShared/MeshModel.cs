@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace VikingXNAGraphics
 {
-    public interface IMeshModel<out VERTEXTYPE>
+    public interface IMeshModel<VERTEXTYPE>
          where VERTEXTYPE : struct, IVertexType
     {
         VERTEXTYPE[] Verticies { get; }

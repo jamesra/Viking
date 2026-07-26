@@ -1,7 +1,6 @@
 using System;
 using System.Windows.Forms;
 using WebAnnotationModel;
-using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI
 {

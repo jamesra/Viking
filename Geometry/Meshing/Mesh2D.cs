@@ -171,7 +171,7 @@ namespace Geometry.Meshing
             }
         }
 
-        protected virtual JObject ToJObject()
+        public virtual JObject ToJObject()
         {
             dynamic jObj = new JObject();
             jObj.verts = this.Verticies.Select(v => v.Position).ToJArray();

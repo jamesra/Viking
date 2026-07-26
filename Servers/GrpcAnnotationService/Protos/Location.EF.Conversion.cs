@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 
 namespace gRPCAnnotationService.Protos
@@ -12,14 +12,14 @@ namespace gRPCAnnotationService.Protos
                 Id = src.Id,
                 ParentId = src.ParentId,
                 Z = src.Section,
-                VolumeShape = src.VolumeShape.ToNetTopologyGeometry(),
-                MosaicShape = src.MosaicShape.ToNetTopologyGeometry(),
+                //VolumeShape = src.VolumeShape.ToNetTopologyGeometry(),
+                //MosaicShape = src.MosaicShape.ToNetTopologyGeometry(),
                 X = src.MosaicPosition.X,
                 Y = src.MosaicPosition.Y,
                 VolumeX = src.VolumePosition.X,
                 VolumeY = src.VolumePosition.Y,
                 Closed = src.Closed,
-                Tags = src.Attributes,
+                Tags = src.Attributes ?? string.Empty,
                 Terminal = src.Terminal,
                 OffEdge = src.OffEdge,
                 Radius = src.Radius,
@@ -50,18 +50,18 @@ namespace gRPCAnnotationService.Protos
                 Id = src.Id,
                 ParentId = src.ParentId,
                 Section = src.Z,
-                MosaicPosition = new global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.AnnotationPoint { X = src.X, Y = src.Y, Z = src.Z },
-                VolumePosition = new global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.AnnotationPoint { X = src.VolumeX, Y = src.VolumeY, Z = src.Z },
-                MosaicShape = src.MosaicShape.ToProtobufMessage(), 
-                VolumeShape = src.VolumeShape.ToProtobufMessage(),
+                MosaicPosition = new global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.AnnotationPoint { X = src.X, Y = src.Y },
+                VolumePosition = new global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.AnnotationPoint { X = src.VolumeX, Y = src.VolumeY },
+                //MosaicShape = src.MosaicShape.ToProtobufMessage(),
+                //VolumeShape = src.VolumeShape.ToProtobufMessage(),
                 Closed = src.Closed,
-                Attributes = src.Tags ?? "",
+                Attributes = src.Tags ?? string.Empty,
                 Terminal = src.Terminal,
                 OffEdge = src.OffEdge,
                 Radius = src.Radius,
                 Width = src.Width,
                 TypeCode = (AnnotationType)(short)src.TypeCode,
-                LastModified = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(src.LastModified.ToUniversalTime()),
+                LastModified = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(src.LastModified),
                 Username = src.Username,
             };
 

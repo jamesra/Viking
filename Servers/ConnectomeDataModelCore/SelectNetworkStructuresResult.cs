@@ -7,5 +7,17 @@ namespace Viking.DataModel.Annotation
 {
     public partial class SelectNetworkStructuresResult
     {
+        public long ID { get; set; }
+        public long TypeID { get; set; }
+        public string Notes { get; set; }
+        public bool Verified { get; set; }
+        public string Tags { get; set; }
+        public double Confidence { get; set; }
+        public byte[] Version { get; set; }
+        public long? ParentID { get; set; }
+        public DateTime Created { get; set; }
+        public string Label { get; set; }
+        public string Username { get; set; }
+        public DateTime LastModified { get; set; }
     }
 }

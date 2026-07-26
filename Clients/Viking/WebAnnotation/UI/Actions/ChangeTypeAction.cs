@@ -6,7 +6,6 @@ using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using WebAnnotationModel;
-using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Actions
 {

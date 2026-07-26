@@ -117,7 +117,7 @@
                    loc.VolumePosition.Y < 0)
                     continue; 
 
-                foreach (long linkID in loc.CreateCopyAsync)
+                foreach (long linkID in loc.LinksCopy)
                 {
                     AddLocationLink(new LocationLinkKey(loc.ID, linkID));
                 }
@@ -322,7 +322,7 @@
             {
 //                Trace.WriteLine("Linked Location property changed: " + loc.ToString() + " property: " + e.PropertyName);
 
-                foreach (long linkID in loc.CreateCopyAsync)
+                foreach (long linkID in loc.LinksCopy)
                 {
                     LocationLinkKey key = new LocationLinkKey(loc.ID, linkID);
                     RemoveLocationLinks(key);

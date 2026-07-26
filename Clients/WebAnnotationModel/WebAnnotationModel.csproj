@@ -1,25 +1,89 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<UseWCF>true</UseWCF>
+		<GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+	</PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net48</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<RootNamespace>WebAnnotationModel</RootNamespace>
+		<AssemblyName>WebAnnotationModel</AssemblyName>
+		<Deterministic>true</Deterministic>
+		<WarningLevel>4</WarningLevel>
+		<UseWindowsForms>true</UseWindowsForms>
+		<NoWarn>$(NoWarn);CA1014</NoWarn>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<DefineConstants>DEBUG;TRACE</DefineConstants>
+		<Optimize>false</Optimize>
+		<OutputPath>bin\Debug\</OutputPath>
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>full</DebugType>
+		<CodeAnalysisRuleSet>..\Main.ruleset</CodeAnalysisRuleSet>
+		<RunCodeAnalysis>false</RunCodeAnalysis>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<DefineConstants></DefineConstants>
+		<Optimize>true</Optimize>
+		<OutputPath>bin\Release\</OutputPath>
+		<DebugType>pdbonly</DebugType>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseWithSymbols|AnyCPU'">
+		<DefineConstants></DefineConstants>
+		<Optimize>true</Optimize>
+		<OutputPath>bin\ReleaseWithSymbols\</OutputPath>
+		<DebugType>full</DebugType>
+		<DebugSymbols>true</DebugSymbols>
+		<CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+		<CodeAnalysisLogFile>bin\Release\WebAnnotationModel.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+		<CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+		<CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Include="Service References\Service\Reference.svcmap">
+			<Generator>WCF Proxy Generator</Generator>
+			<LastGenOutput>Reference.cs</LastGenOutput>
+		</None>
+		<None Include="Service References\Service\**\*" /> 
+	</ItemGroup>
+	<ItemGroup>
+		
+	</ItemGroup>
+	<ItemGroup>
+		<None Include="**\*.config" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Compile Remove="bin\**" />
+	  <EmbeddedResource Remove="bin\**" />
+	  <None Remove="bin\**" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
+		<ProjectReference Include="..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
+		<ProjectReference Include="..\..\Geometry\Geometry.csproj" />
+		<ProjectReference Include="..\..\RTree\RTree.csproj" />
+		<ProjectReference Include="..\..\SqlGeometryUtils\SqlGeometryUtils.csproj" />
+		<ProjectReference Include="..\Common\Common.csproj" />
+		<ProjectReference Include="..\Viking\NGVV\VikingCore.csproj" />
+	</ItemGroup>
+	<!-- Conditional Package References for net48 -->
+	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+		<PackageReference Include="EntityFramework" Version="6.5.1" />
+		<PackageReference Include="Microsoft.OData.Client" Version="6.17.0" />
+		<PackageReference Include="protobuf-net" Version="3.2.56" />
+		<PackageReference Include="protobuf-net.ServiceModel" Version="3.2.52" /> 
+		<PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
+		<PackageReference Include="Thinktecture.IdentityModel.Client" Version="4.0.1" />
+		<PackageReference Include="System.Memory" Version="4.6.3" />
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+	</ItemGroup>
 
-  <PropertyGroup>
-    <TargetFrameworks>netstandard2.0</TargetFrameworks>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Spatial\**" />
-    <EmbeddedResource Remove="Spatial\**" />
-    <None Remove="Spatial\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
-    <ProjectReference Include="..\..\GeometrySqlTypeMapper\GeometryOGCMapper.csproj" />
-    <ProjectReference Include="..\..\Geometry\Geometry.csproj" />
-    <ProjectReference Include="..\..\Viking.Annotation.Geometry\Viking.Annotation.Geometry.csproj" />
-    <ProjectReference Include="..\Common\Common.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Nito.AsyncEx" Version="5.1.2" />
-  </ItemGroup>
-
+	<PropertyGroup>
+		<PostBuildEvent>
+			mkdir $(SolutionDir)Viking\Viking\Modules\WebAnnotation
+			copy $(TargetDir)* $(SolutionDir)Viking\Viking\Modules\WebAnnotation /Y
+		</PostBuildEvent>
+	</PropertyGroup>
 </Project>

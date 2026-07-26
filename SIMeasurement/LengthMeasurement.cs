@@ -174,16 +174,6 @@ namespace SIMeasurement
 
             return A.Length / B.Length;
         }
-         
-        public static LengthMeasurement operator *(LengthMeasurement A, double B)
-        {
-            return new LengthMeasurement(A.Units, A.Length * B);
-        }
-         
-        public static LengthMeasurement operator /(LengthMeasurement A, double B)
-        {
-            return new LengthMeasurement(A.Units, A.Length / B);
-        }
 
         public static LengthMeasurement operator *(LengthMeasurement A, double B) => new LengthMeasurement(A.Units, A.Length * B);
 

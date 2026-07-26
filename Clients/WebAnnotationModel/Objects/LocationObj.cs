@@ -1,108 +1,66 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
-using Geometry; 
+using Viking.AnnotationServiceTypes.Interfaces;
+using AnnotationService.Types;
+using Geometry;
+using Microsoft.SqlServer.Types;
+using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Viking.AnnotationServiceTypes;
-using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
-namespace WebAnnotationModel.Objects
+namespace WebAnnotationModel
 {
 
     public static class LocationTypeExtensions
     {
-        public static bool HasRadius(this LocationType value)
-        {
-            switch (value)
-            {
-                case LocationType.CIRCLE:
-                case LocationType.POINT:
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
-        public static bool HasWidth(this LocationType value)
-        {
-            switch (value)
-            {
-                case LocationType.OPENCURVE:
-                case LocationType.POLYLINE:
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
         public static bool AllowsClosed2DShape(this LocationType value)
         {
-            switch (value)
+            return value switch
             {
-                case LocationType.POLYGON:
-                case LocationType.CURVEPOLYGON:
-                case LocationType.CLOSEDCURVE:
-                    return true;
-                default:
-                    return false;
-            }
+                LocationType.POLYGON or LocationType.CURVEPOLYGON or LocationType.CLOSEDCURVE => true,
+                _ => false,
+            };
         }
 
         public static bool AllowsInteriorHoles(this LocationType value)
         {
-            switch (value)
+            return value switch
             {
-                case LocationType.POLYGON:
-                case LocationType.CURVEPOLYGON:
-                    return true;
-                default:
-                    return false;
-            }
+                LocationType.POLYGON or LocationType.CURVEPOLYGON => true,
+                _ => false,
+            };
         }
 
         public static bool AllowsOpen2DShape(this LocationType value)
         {
-            switch (value)
+            return value switch
             {
-                case LocationType.POLYLINE:
-                case LocationType.OPENCURVE:
-                    return true;
-                default:
-                    return false;
-            }
+                LocationType.POLYLINE or LocationType.OPENCURVE => true,
+                _ => false,
+            };
         }
     }
 
-    public class LocationObj : AnnotationModelObjBaseWithKey<long, ILocation>, ISectionIndex, IDataObjectLinks<long, long>, IEquatable<LocationObj>, ILocationReadOnly
+    public class LocationObj : WCFObjBaseWithKey<long, Location>, ILocationReadOnly
     {
-        private readonly long _ID;
-
-        public override long ID => _ID;
-
         public static bool IsPositionProperty(string propertyName)
         {
             if (string.IsNullOrEmpty(propertyName))
                 return true;
 
-            switch (propertyName)
+            return propertyName switch
             {
-                case nameof(Position):
-                    return true;
-                case nameof(VolumePosition):
-                    return true;
+                "Position" => true,
+                "WorldPosition" => true,
                 //case "VolumePosition":
                 //    return true;
                 //case "VolumeShape":
                 //  return true;
-                case nameof(MosaicShape):
-                    return true;
-                default:
-                    return false;
-            }
+                "MosaicShape" => true,
+                _ => false,
+            };
         }
 
         public static bool IsGeometryProperty(string propertyName)
@@ -110,19 +68,15 @@ namespace WebAnnotationModel.Objects
             if (string.IsNullOrEmpty(propertyName))
                 return true;
 
-            switch (propertyName)
+            return propertyName switch
             {
                 //case "VolumeShape":
                 //  return true;
-                case nameof(MosaicShape):
-                    return true;
-                case nameof(Radius):
-                    return true;
-                case nameof(Width):
-                    return true;
-                default:
-                    return false;
-            }
+                "MosaicShape" => true,
+                "Radius" => true,
+                "Width" => true,
+                _ => false,
+            };
         }
 
         public static bool IsTerminalProperty(string propertyName)
@@ -130,54 +84,44 @@ namespace WebAnnotationModel.Objects
             if (string.IsNullOrEmpty(propertyName))
                 return true;
 
-            switch (propertyName)
+            return propertyName switch
             {
-                case nameof(Terminal):
-                    return true;
-                case nameof(OffEdge):
-                    return true;
-                case nameof(Attributes):
-                    return true;
-                default:
-                    return false;
-            }
+                "Terminal" => true,
+                "OffEdge" => true,
+                "Attributes" => true,
+                _ => false,
+            };
         }
+
+        public override long ID => Data.ID;
 
         /// <summary>
         /// The ID for newo bjects can change from a negative number to the number in the database.
         /// In this case make sure we always return the same hash code.  As a result this is called for each object only once.
         /// </summary>
         /// <returns></returns>
-        protected override int GenerateHashCode()
-        {
-            return (int)(ID % int.MaxValue);
-        }
+        protected override int GenerateHashCode() => (int)(ID % int.MaxValue);
 
         public string Label
         {
             get
             {
-                if (Parent == null)
+                if (Parent is null)
                     return "";
 
-                if (Parent.Type == null)
+                if (Parent.Type is null)
                     return "";
 
                 return Parent.Type.Code + " " + Parent.ID.ToString();
             }
         }
 
-        public long? ParentID
-        {
-            get;
-            internal set;
-        }
+        public long? ParentID => Data.ParentID;
 
         // private StructureObj _Parent;
         public StructureObj Parent
         {
-            get;
-            /*
+            get
             {
                 //       if (_Parent != null)
                 //                    return _Parent;
@@ -185,18 +129,18 @@ namespace WebAnnotationModel.Objects
                 if (ParentID.HasValue == false)
                     return null;
 
-                StructureObj _Parent = Store.Structures.GetObjectByID(ParentID.Value, false).Result;
+                StructureObj _Parent = Store.Structures.GetObjectByID(ParentID.Value, false);
 
                 //Queue a request for later
-                if (_Parent == null)
+                if (_Parent is null)
                 {
-                    Store.Structures.GetObjectByID(ParentID.Value);
+                    System.Threading.Tasks.Task.Factory.StartNew(() => Store.Structures.GetObjectByID(ParentID.Value));
                     //Action<long> request = new Action<long>((ID) => Store.Structures.GetObjectByID(ID));
                     //request.BeginInvoke(ParentID.Value, null, null); 
                 }
 
                 return _Parent;
-            }*/
+            }
         }
 
 
@@ -209,7 +153,7 @@ namespace WebAnnotationModel.Objects
 
                 if (!_MosaicPosition.HasValue)
                 {
-                    _MosaicPosition = CenterOfLocationShape(this.MosaicShape);
+                    _MosaicPosition = CenterOfLocationShape(this.TypeCode, this.MosaicShape);
                     //_MosaicPosition = new GridVector2(Data.Position.X, Data.Position.Y);
                 }
                 /*
@@ -224,6 +168,24 @@ namespace WebAnnotationModel.Objects
 
 
             }
+            /*
+            set
+            {
+                if (GridVector2.Equals(this.Position, value))
+                    return;
+
+                OnPropertyChanging("Position");
+
+                AnnotationPoint point = new AnnotationPoint();
+                point.X = value.X;
+                point.Y = value.Y;
+                point.Z = Data.Position.Z;
+                Data.Position = point;
+                _MosaicPosition = value; 
+                OnPropertyChanged("Position");
+
+                SetDBActionForChange();
+            }*/
         }
 
 
@@ -240,7 +202,7 @@ namespace WebAnnotationModel.Objects
 
                 if (!_VolumePosition.HasValue)
                 {
-                    _VolumePosition = CenterOfLocationShape(this.VolumeShape);
+                    _VolumePosition = CenterOfLocationShape(this.TypeCode, this.VolumeShape);
                     //_VolumePosition = Data.VolumeShape.Centroid();
                     //_VolumePosition = new GridVector2(Data.VolumePosition.X, Data.VolumePosition.Y);
                 }
@@ -251,82 +213,113 @@ namespace WebAnnotationModel.Objects
                 return _VolumePosition.Value;
             }
 
+            /*
+            set
+            {
+                if (GridVector2.Equals(this.VolumePosition, value))
+                    return;
+
+                OnPropertyChanging("VolumePosition");
+
+                AnnotationPoint point = new AnnotationPoint();
+                point.X = value.X;
+                point.Y = value.Y;
+                point.Z = Data.Position.Z;
+                Data.VolumePosition = point;
+                _VolumePosition = value;
+                OnPropertyChanged("VolumePosition");
+
+                //                SetDBActionForChange();
+            }*/
+
         }
 
-        private static GridVector2 CenterOfLocationShape(IShape2D shape)
+        private static GridVector2 CenterOfLocationShape(LocationType type, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
-            if (shape is ICentroid c)
-                return c.Centroid.ToGridVector2();
-
-            return shape.BoundingBox.Center;
+            return type switch
+            {
+                LocationType.POINT or LocationType.CIRCLE or LocationType.ELLIPSE => shape.BoundingBox().Center,
+                _ => shape.Centroid(),
+            };
         }
 
         /// <summary>
         /// This is readonly because changing it would break a datastructure in location store
         /// and also would require update of X,Y to the section space of the different section
         /// </summary>
-        public double Z => Section;
+        public double Z => Data.Position.Z;
 
-        private IShape2D _VolumeShape;
-        public IShape2D VolumeShape
+        private Microsoft.SqlServer.Types.SqlGeometry _VolumeShape;
+        public Microsoft.SqlServer.Types.SqlGeometry VolumeShape
         {
-            get => _VolumeShape;
+            get
+            {
+                if (_VolumeShape is null && Data.VolumeShapeWKB != null)
+                {
+                    //_VolumeShape = Data.VolumeShape.ToSqlGeometry();
+                    _VolumeShape = Data.VolumeShapeWKB.ToSqlGeometry();
+                }
+                return _VolumeShape;
+            }
             set
             {
                 Debug.Assert(value != null);
-                if (value == null)
+                if (value is null)
                     return;
 
                 //                DbGeometry newValue = value.ToDbGeometry();
-                if (VolumeShape != null && VolumeShape.Equals(value)) return;
+                if (VolumeShape != null && VolumeShape.SpatialEquals(value)) return;
 
-                OnPropertyChanging(nameof(VolumeShape));
+                OnPropertyChanging("VolumeShape");
 
-                OnPropertyChanging(nameof(VolumePosition));
-                if (value is ICentroid c)
-                    _VolumePosition = c.Centroid.ToGridVector2();
-                else
-                    _VolumePosition = value.BoundingBox.Center;
-                OnPropertyChanged(nameof(VolumePosition));
+                OnPropertyChanging("VolumePosition");
+                _VolumePosition = value.Centroid();
+                OnPropertyChanged("VolumePosition");
 
                 //Data.VolumeShape = newValue;
+                Data.VolumeShapeWKB = value.AsBinary();
                 _VolumeShape = value;
-                OnPropertyChanged(nameof(VolumeShape));
+                OnPropertyChanged("VolumeShape");
 
                 SetDBActionForChange();
             }
 
         }
 
-        private IShape2D _MosaicShape;
-        public IShape2D MosaicShape
+        private Microsoft.SqlServer.Types.SqlGeometry _MosaicShape;
+        public Microsoft.SqlServer.Types.SqlGeometry MosaicShape
         {
-            get => _MosaicShape;
+            get
+            {
+                if (_MosaicShape is null && Data.MosaicShapeWKB != null)
+                {
+                    _MosaicShape = Data.MosaicShapeWKB.ToSqlGeometry();
+                }
+                return _MosaicShape;
+            }
             set
             {
                 Debug.Assert(value != null);
-                if (value == null)
+                if (value is null)
                     return;
 
                 //DbGeometry newValue = value.ToDbGeometry();
-                if (MosaicShape != null && MosaicShape.Equals(value)) return;
+                if (MosaicShape != null && MosaicShape.SpatialEquals(value)) return;
 
-                OnPropertyChanging(nameof(MosaicShape));
+                OnPropertyChanging("MosaicShape");
 
-                OnPropertyChanging(nameof(Position));
-                if (value is ICentroid c)
-                    _MosaicPosition = c.Centroid.ToGridVector2();
-                else
-                    _MosaicPosition = value.BoundingBox.Center;
-                OnPropertyChanged(nameof(Position));
+                OnPropertyChanging("Position");
+                _MosaicPosition = value.Centroid();
+                OnPropertyChanged("Position");
 
                 //Data.MosaicShape = newValue;
-                _MosaicShape = value;
-                OnPropertyChanged(nameof(MosaicShape));
+                Data.MosaicShapeWKB = value.AsBinary();
+                _MosaicShape = null;
+                OnPropertyChanged("MosaicShape");
 
-                OnPropertyChanging(nameof(Radius));
+                OnPropertyChanging("Radius");
                 _Radius = CalculateRadius(value);
-                OnPropertyChanged(nameof(Radius));
+                OnPropertyChanged("Radius");
 
                 SetDBActionForChange();
             }
@@ -341,39 +334,40 @@ namespace WebAnnotationModel.Objects
         /// <summary>
         /// Return true if the location's volume position has not yet been mapped by this Viking client
         /// </summary>
-        public bool VolumePositionHasBeenCalculated
+        public bool VolumePositionHasBeenCalculated => this.VolumeTransformID.HasValue;
+
+        public void ResetVolumePositionHasBeenCalculated() => this.VolumeTransformID = new int?();
+
+        private double CalculateRadius(Microsoft.SqlServer.Types.SqlGeometry shape)
         {
-            get { return this.VolumeTransformID.HasValue; }
-        }
-
-        public void ResetVolumePositionHasBeenCalculated()
-        {
-            this.VolumeTransformID = new int?();
-        }
-
-        private double CalculateRadius(IShape2D shape)
-        {
-            if (shape is ICircle2D circle)
-                return circle.Radius;
-
-            if (shape is IRectangle rect)
-                return Math.Sqrt(rect.Area);
-
-            if (shape is ILineSegment2D line)
-                return GridVector2.Distance(line.A, line.B) / 2.0;
-
-            if (shape is IPoint2D point)
+            if (shape.STDimension() == 0)
+            {
                 return 8;
-
-            if (shape is IPolygon2D poly)
-                return Math.Sqrt(poly.Area);
-
-            if (shape is IPolyLine2D polyline)
-                return polyline.Length;
-
-            return Math.Sqrt(shape.BoundingBox.Area);
+            }
+            else if (shape.STDimension() == 1)
+            {
+                return shape.STLength().Value / 2.0;
+            }
+            else if (shape.STDimension() == 2)
+            {
+                return Math.Sqrt(shape.STArea().Value / Math.PI);
+            }
+            else
+                return this.Width.Value / 2.0;
         }
-         
+
+        private double CalculateRadius(System.Data.Entity.Spatial.DbGeometry shape)
+        {
+            if (shape.Dimension == 1)
+            {
+                return shape.Length.Value / 2.0;
+            }
+            else if (shape.Dimension == 2)
+                return Math.Sqrt(shape.Area.Value / Math.PI);
+            else
+                return this.Width.Value / 2.0;
+        }
+
         private double? _Radius;
         public double Radius
         {
@@ -386,47 +380,75 @@ namespace WebAnnotationModel.Objects
                 }
 
                 return _Radius.Value;
-            } 
+            }
+            /*
+            set {
+                if (Data.Radius == value)
+                    return;
+
+                OnPropertyChanging("Radius");
+                Data.Radius = value;
+                OnPropertyChanged("Radius");
+
+                if (this.TypeCode == LocationType.CIRCLE)
+                {
+                    this.MosaicShape = SqlGeometryUtils.GeometryExtensions.ToCircle(this.Position.X,
+                                           this.Position.Y,
+                                           this.Z,
+                                           value);
+
+                    this.VolumeShape = SqlGeometryUtils.GeometryExtensions.ToCircle(this.VolumePosition.X,
+                                           this.VolumePosition.Y,
+                                           this.Z,
+                                           value);
+                }
+                 
+                SetDBActionForChange();
+            }
+            */
         }
 
         private const double g_MinimumWidth = 1.0;
-
-        private double? _Width;
         public double? Width
         {
             get
             {
-                if (_Width.HasValue)
-                    return _Width.Value < g_MinimumWidth ? g_MinimumWidth : _Width.Value;
-                else
-                    return _Width ?? g_MinimumWidth;
+                if (Data.Width.HasValue && Data.Width < g_MinimumWidth)
+                {
+                    return g_MinimumWidth;
+                }
+                else if (Data.Width.HasValue == false)
+                {
+                    return g_MinimumWidth;
+                }
+
+                return Data.Width;
             }
             set
             {
-                if (_Width.Equals(value))
+                if (Data.Width == value)
                     return;
 
-                OnPropertyChanging(nameof(Width));
-                _Width = value;
-                OnPropertyChanged(nameof(Width));
+                OnPropertyChanging("Width");
+                Data.Width = value;
+                OnPropertyChanged("Width");
 
                 SetDBActionForChange();
             }
         }
 
-        private LocationType _TypeCode;
         public LocationType TypeCode
         {
-            get => _TypeCode;
+            get => (LocationType)Data.TypeCode;
             set
             {
-                if (_TypeCode == value)
+                if (Data.TypeCode == (short)value)
                     return;
 
-                OnPropertyChanging(nameof(TypeCode));
-                _TypeCode = value;
+                OnPropertyChanging("TypeCode");
+                Data.TypeCode = (short)value;
                 SetDBActionForChange();
-                OnPropertyChanged(nameof(TypeCode));
+                OnPropertyChanged("TypeCode");
             }
         }
 
@@ -439,7 +461,7 @@ namespace WebAnnotationModel.Objects
         {
             get
             {
-                if (Links.Count >= 2)
+                if (NumLinks >= 2)
                     return false;
                 return !(Terminal || OffEdge || VericosityCap || Untraceable);
             }
@@ -448,333 +470,383 @@ namespace WebAnnotationModel.Objects
         /// <summary>
         /// This should return true when we know no further annotation will proceed from this point
         /// </summary>
-        public bool IsVerifiedTerminal
-        {
-            get
-            {
-                return (Terminal || OffEdge || VericosityCap || Untraceable);
-            }
-        }
-
+        public bool IsVerifiedTerminal => (Terminal || OffEdge || VericosityCap || Untraceable);
 
 
         /// <summary>
         /// This is readonly because changing it would break a datastructure in location store
         /// and also would require update of X,Y to the section space of the different section
         /// </summary>
-        public long Section
-        {
-            get; internal set;
-        }
+        public int Section => (int)Data.Section;
 
         /// <summary>
-        /// Name of the last user to edit the location.  Updated by server only.
+        /// Name of the last user to edit the location
         /// </summary>
-        public string Username
+        public string Username => Data.Username;
+
+        private readonly object LinkLock = new();
+
+        private ObservableCollection<long> _ObservableLinks = null;
+        private ReadOnlyObservableCollection<long> _ReadOnlyObservableLinks = null;
+
+        public long[] LinksCopy
         {
-            get; internal set;
+            get
+            {
+                lock (LinkLock)
+                {
+                    if (_ObservableLinks is null)
+                        return [];
+
+                    return [.. _ObservableLinks];
+                }
+            }
         }
-
-        private ConcurrentObservableSet<long> _Links { get; set; }
-
-        public Task<long[]> CopyLinksAsync()
-        {
-            return _Links.CreateCopyAsync(); 
-        } 
 
         /// <summary>
         /// This needs sorting out.  Do we need this as an observable collection or should 
         /// we fire our own collection changed events with Add/Remove link calls.
         /// </summary>
-        public ReadOnlyObservableCollection<long> Links => _Links.ReadOnlyObservable;
+        public ReadOnlyObservableCollection<long> Links
+        {
+            get
+            {
+                lock (LinkLock)
+                {
+                    if (_ObservableLinks is null)
+                    {
+                        _ObservableLinks = Data.Links != null ? new ObservableCollection<long>(Data.Links) : [];
+
+                        _ReadOnlyObservableLinks = new ReadOnlyObservableCollection<long>(_ObservableLinks);
+                    }
+
+                    return _ReadOnlyObservableLinks;
+                    /*
+                    return new ReadOnlyObservableCollection<long>(_Links); 
+                    if (_Links is null)
+                    {
+                        //Initialize from the Data object
+                        if (Data.Links is null)
+                        {
+                            _Links = new ObservableCollection<long>();
+                            _Links.CollectionChanged += this.OnLinksChanged;
+                        }
+                        else
+                        {
+                            _Links = new ObservableCollection<long>(Data.Links);
+                            _Links.CollectionChanged += this.OnLinksChanged;
+                        }
+                    }
+
+                    return _Links;
+                    */
+                }
+            }
+        }
+
+        /// <summary>
+        /// The number of locations linked to this annotation.
+        /// </summary>
+        public int NumLinks
+        {
+            get
+            {
+                if (_ObservableLinks is null)
+                {
+                    if (Data.Links is null)
+                        return 0;
+                    else
+                        return Data.Links.Length;
+                }
+                else
+                {
+                    //Debug.Assert(Data.Links.Length == Links.Count);
+                    return _ObservableLinks.Count;
+                }
+            }
+        }
 
         /// <summary>
         /// Allows LocationLinkStore to adjust the client after a link is created
         /// </summary>
         /// <param name="ID"></param>
-        public Task<bool> AddLinkAsync(long ID)
+        internal void AddLink(long ID)
         {
             if (ID == this.ID)
                 throw new ArgumentException("Can't add own ID from location links");
 
-            return _Links.AddAsync(ID); 
+            lock (LinkLock)
+            {
+                if (Links.Contains(ID))
+                    return;
+
+                _ObservableLinks.Add(ID);
+
+                this.Data.Links = [.. this._ObservableLinks];
+            }
         }
 
         /// <summary>
         /// Adjust the client after a link is removed
         /// </summary>
         /// <param name="ID"></param>
-        public Task<bool> RemoveLinkAsync(long ID)
+        internal void RemoveLink(long ID)
         {
             if (ID == this.ID)
                 throw new ArgumentException("Can't remove own ID from location links");
 
-            return _Links.RemoveAsync(ID);
-        }
-
-        private bool _Terminal;
-        public bool Terminal
-        {
-            get => _Terminal;
-            set
+            lock (LinkLock)
             {
-                if (_Terminal == value)
+                if (!Links.Contains(ID))
                     return;
 
-                OnPropertyChanging(nameof(Terminal));
-                _Terminal = value;
-                SetDBActionForChange();
-                OnPropertyChanged(nameof(Terminal));
+                _ObservableLinks.Remove(ID);
+
+                this.Data.Links = _ObservableLinks.Count > 0 ? [.. this._ObservableLinks] : null;
+
             }
         }
-
-        private bool _OffEdge;
-        public bool OffEdge
-        {
-            get => _OffEdge;
-            set
-            {
-                if (_OffEdge == value)
-                    return;
-
-                OnPropertyChanging(nameof(OffEdge));
-                _OffEdge = value;
-                SetDBActionForChange();
-                OnPropertyChanged(nameof(OffEdge));
-            }
-        }
-
-        public bool VericosityCap
-        {
-            get { return Attributes.Any(a => a.Name == "Varicosity Cap"); }
-        }
-
-        public bool Untraceable
-        {
-            get { return Attributes.Any(a => a.Name == "Untraceable"); }
-        }
-
-        private DateTime _LastModified;
 
         /// <summary>
-        /// Only the server can update this attribute.  Protected set is to allow factory function to set the value.
+        /// True if the location marks where a structure process ends as part of normal biology
         /// </summary>
-        public DateTime LastModified
+        public bool Terminal
         {
-            get => _LastModified;
-            internal set { 
-                if(_LastModified != value)
+            get => Data.Terminal;
+            set
+            {
+                if (Data.Terminal == value)
+                    return;
+
+                OnPropertyChanging("Terminal");
+                Data.Terminal = value;
+                SetDBActionForChange();
+                OnPropertyChanged("Terminal");
+            }
+        }
+
+        /// <summary>
+        /// True if the location marks where a structure goes off the edge of a volume
+        /// </summary>
+        public bool OffEdge
+        {
+            get => Data.OffEdge;
+            set
+            {
+                if (Data.OffEdge == value)
+                    return;
+
+                OnPropertyChanging("OffEdge");
+                Data.OffEdge = value;
+                SetDBActionForChange();
+                OnPropertyChanged("OffEdge");
+            }
+        }
+
+        /// <summary>
+        /// True if the location is a vericosity cap, this terminates a process in a structure
+        /// </summary>
+        public bool VericosityCap => Attributes.Any(a => a.Name == "Varicosity Cap");
+
+        /// <summary>
+        /// True if the location indicates a boundary beyond which the structure cannot be traced
+        /// </summary>
+        public bool Untraceable => Attributes.Any(a => a.Name == "Untraceable");
+
+        public DateTime LastModified => new(Data.LastModified, DateTimeKind.Utc);
+
+        List<ObjAttribute> _Attributes = null;
+
+        public IEnumerable<ObjAttribute> Attributes
+        {
+            get
+            {
+
+                _Attributes ??= ObjAttribute.Parse(Data.AttributesXml);
+
+                return _Attributes;
+            }
+            set
+            {
+                if (Data.AttributesXml is null && value is null)
+                    return;
+
+                string xmlstring = ObjAttribute.ToXml(value);
+
+                if (xmlstring == "")
+                    xmlstring = null;
+
+                if (Data.AttributesXml != xmlstring)
                 {
-                    OnPropertyChanging(nameof(LastModified));
-                    _LastModified = value; 
-                    //Do not set DB action to changed because the server generates this
-                    OnPropertyChanged(nameof(LastModified));
+                    OnPropertyChanging("Attributes");
+
+                    Data.AttributesXml = xmlstring;
+                    _Attributes = null;
+
+                    //Refresh the tags
+                    SetDBActionForChange();
+                    OnPropertyChanged("Attributes");
                 }
             }
         }
 
-        private ConcurrentObservableAttributeSet _Attributes { get; set; }
-        public ReadOnlyObservableCollection<ObjAttribute> Attributes => _Attributes.ReadOnlyObservable;
+        ulong ILocationReadOnly.ID => (ulong)this.ID;
 
-        ulong ILocationReadOnly.ID => (ulong)ID;
+        ulong ILocationReadOnly.ParentID => (ulong)this.ParentID;
 
-        ulong ILocationReadOnly.ParentID => (ulong)ParentID;
+        bool ILocationReadOnly.Terminal => this.Terminal;
 
-        bool ILocationReadOnly.IsVericosityCap => VericosityCap;
+        bool ILocationReadOnly.OffEdge => this.OffEdge;
 
-        bool ILocationReadOnly.IsUntraceable => Untraceable;
+        bool ILocationReadOnly.IsVericosityCap => this.VericosityCap;
 
-        IReadOnlyDictionary<string, string> ILocationReadOnly.Attributes =>
-            _Attributes.ReadOnlyObservable.ToDictionary(o => o.Name, o => o.Value);
+        bool ILocationReadOnly.IsUntraceable => this.Untraceable;
 
-        long ILocationReadOnly.UnscaledZ => (long)Z;
+        IDictionary<string, string> ILocationReadOnly.Attributes => this.Attributes.ToDictionary(i => i.Name, i => i.Value);
 
-        string ILocationReadOnly.MosaicGeometryWKT => MosaicShape?.ToWKT() ?? null;
+        long ILocationReadOnly.UnscaledZ => (long)this.Data.Position.Z;
 
-        string ILocationReadOnly.VolumeGeometryWKT => VolumeShape?.ToWKT() ?? null;
+        string ILocationReadOnly.TagsXml => this.Data.AttributesXml;
 
-        public Task<ObjAttribute[]> CopyAttributesAsync()
-        {
-            return _Attributes.CreateCopyAsync();
-        }
-         
-        internal Task SetAttributes(IEnumerable<ObjAttribute> attribs)
-        {
-            return _Attributes.SetAttributes(attribs);
-        }
+        LocationType ILocationReadOnly.TypeCode => this.TypeCode;
+
+        double ILocationReadOnly.Z => throw new NotImplementedException(); //Need to know scale of volume
+
+        SqlGeometry ILocationReadOnly.Geometry => this.VolumeShape;
 
         /// <summary>
         /// Add the specified name to the attributes if it does not exists, removes it 
         /// </summary>
         /// <param name="tag"></param>
-        public Task<bool> ToggleAttribute(string tag, string value = null)
+        public bool ToggleAttribute(string tag, string value = null)
         {
-            return _Attributes.ToggleAttribute(tag, value);
+            ObjAttribute attrib = new(tag, value);
+            List<ObjAttribute> listAttributes = [.. this.Attributes];
+            bool InList = listAttributes.ToggleAttribute(tag, value);
+            this.Attributes = listAttributes;
+            return InList;
         }
 
-        /// <summary>
-        /// Allows LocationLinkStore to adjust the client after a link is created
-        /// </summary>
-        /// <param name="ID"></param>
-        public Task AddAttributeAsync(ObjAttribute attribute)
+        public LocationObj()
         {
-            return _Attributes.AddAsync(attribute);
+            Data = new Location();
         }
 
-        /// <summary>
-        /// Adjust the client after a link is removed
-        /// </summary>
-        /// <param name="ID"></param>
-        public Task RemoveAttributeAsync(ObjAttribute attribute)
+        public LocationObj(Location obj)
         {
-            return _Attributes.RemoveAsync(attribute);
-        }
-
-        public LocationObj(long id)
-        {
-            _ID = id;
-        }
-
-        public LocationObj(long id, long parentid)
-        {
-            _ID = id;
-            ParentID = parentid;
+            Data = obj;
         }
 
         public LocationObj(StructureObj parent,
                            int SectionNumber, LocationType shapeType)
         {
-            this.DBAction = DBACTION.INSERT;
-            //this._ID = Store.Locations.NextKey();
-            this.TypeCode = shapeType;
+            this.Data = new Location
+            {
+                DBAction = AnnotationService.Types.DBACTION.INSERT,
+                ID = Store.Locations.GetTempKey(),
+                TypeCode = (short)shapeType
+            };
 
             if (shapeType == LocationType.CIRCLE)
-                this._Radius = 16;
+                this.Data.Radius = 16;
 
             if (shapeType == LocationType.POINT)
-                this._Radius = 16;
-              
-            this.Section = SectionNumber;
+                this.Data.Radius = 16;
+
+            this.Data.Links = null;
+
+            //this.Data.MosaicShape = mosaicShape.ToDbGeometry();
+            //this.Data.VolumeShape = volumeShape.ToDbGeometry();
+
+            this.Data.Section = SectionNumber;
 
             if (parent != null)
             {
-                this.ParentID = parent.ID;
-            } 
+                this.Data.ParentID = parent.ID;
+            }
+
+            //          CallOnCreate(); 
         }
 
         public LocationObj(StructureObj parent,
-                           IShape2D mosaicShape, IShape2D volumeShape,
+                            Microsoft.SqlServer.Types.SqlGeometry mosaicShape, Microsoft.SqlServer.Types.SqlGeometry volumeShape,
                            int SectionNumber, LocationType shapeType) : this(parent, SectionNumber, shapeType)
         {
             //this.Data.MosaicShape = mosaicShape.ToDbGeometry();
             //this.Data.VolumeShape = volumeShape.ToDbGeometry();
 
-            this._VolumeShape = mosaicShape;
-            this._MosaicShape = volumeShape; 
+            this.Data.MosaicShapeWKB = mosaicShape.AsBinary();
+            this.Data.VolumeShapeWKB = volumeShape.AsBinary();
         }
 
-        /// <summary>
-        /// Creates an instance but does not send change events
-        /// </summary>
-        /// <param name="newData"></param>
-        /// <returns></returns>
-        internal static async Task<LocationObj> CreateFromServerAsync(ILocation newData)
-        {
-            LocationObj obj = new LocationObj(newData.ID)
-            {
-                ParentID = newData.ParentID,
-                _Attributes = new ConcurrentObservableAttributeSet(ObjAttributeParser.ParseAttributes(newData.Attributes)),
-                _DBAction = DBACTION.NONE,
-                Width = newData.Width,
-                _Radius = newData.Radius,
-                _MosaicPosition = newData.MosaicPosition.XY(),
-                _VolumePosition = newData.VolumePosition.XY(),
-                Username = newData.Username,
-                OffEdge = newData.OffEdge,
-                Terminal = newData.Terminal,
-                Section = newData.SectionNumber,
-                _Links = new ConcurrentObservableSet<long>(newData.Links)
-            };
-
-            foreach (long link in newData.Links)
-            {
-                await obj._Links.AddAsync(link);
-            }
-
-            Debug.Assert(false, "Unfinished LocationObj creation");
-
-            return obj;
-        }
 
         /// <summary>
         /// Override and write each property individually so we send specific property changed events
         /// </summary>
         /// <param name="newdata"></param>
-        internal override async Task Update(ILocation newdata)
+        internal override void Update(Location newdata)
         {
-            Debug.Assert(this.ID == newdata.ID);
-            this.DBAction = Viking.AnnotationServiceTypes.Interfaces.DBACTION.NONE;
-            this.TypeCode = newdata.TypeCode;
-            this._Radius = newdata.Radius;
-            this.Section = newdata.SectionNumber;
-            this.Terminal = newdata.Terminal;
-            this.OffEdge = newdata.OffEdge;
-            this.ParentID = newdata.ParentID;
-            this.Username = newdata.Username;
-            this.LastModified = newdata.LastModified;
-            await _Attributes.ClearAsync();
-            foreach (var a in ObjAttributeParser.ParseAttributes(newdata.Attributes))
-            {
-                await _Attributes.AddAsync(a);
-            }
-
-            this.VolumeShape = newdata.VolumeGeometryWKT.ToShape2D();
-            this.MosaicShape = newdata.MosaicGeometryWKT.ToShape2D();
-            await this._Links.ClearAsync();
-            foreach (long link in newdata.Links)
-            {
-                await AddLinkAsync(link);
-            }
-
-            return;
+            Debug.Assert(this.Data.ID == newdata.ID);
+            this.Data.DBAction = AnnotationService.Types.DBACTION.NONE;
+            this.Data.Closed = newdata.Closed;
+            this.Data.TypeCode = newdata.TypeCode;
+            this.Data.Position = newdata.Position;
+            this.Data.VolumePosition = newdata.VolumePosition;
+            this.Data.Radius = newdata.Radius;
+            this.Data.Section = newdata.Section;
+            this.Data.Terminal = newdata.Terminal;
+            this.Data.OffEdge = newdata.OffEdge;
+            this.Data.ParentID = newdata.ParentID;
+            this.Data.Username = newdata.Username;
+            this.Data.LastModified = newdata.LastModified;
+            this.Data.Links = newdata.Links;
+            this._Attributes = null;
+            this._VolumeShape = null;
+            this._MosaicShape = null;
+            this._VolumePosition = default;
+            this._MosaicPosition = default;
+            this.Data.VolumeShapeWKB = newdata.VolumeShapeWKB;
+            this.Data.MosaicShapeWKB = newdata.MosaicShapeWKB;
         }
-         
+
+
+        /*
+        public override void Delete()
+        {
+            DBACTION originalAction = this.DBAction; 
+            this.DBAction = DBACTION.DELETE;
+
+            bool success = Store.Locations.Save();
+            if(!success)
+            {
+                //Write straight to data since we have an assert to check whether an object is being deleted, but
+                //in this case we know it is ok
+                this.Data.DBAction = originalAction;
+            }
+
+
+            if (this.ParentID.HasValue)
+                Store.Structures.CheckForOrphan(this.ParentID.Value);
+        }
+        */
+
         protected static event EventHandler OnCreate;
-        protected void CallOnCreate()
-        {
-            if (OnCreate != null)
-            {
-                //Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null });
-                OnCreate(this, null);
-            }
-        }
+        protected void CallOnCreate() =>
+            //Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null });
+            OnCreate?.Invoke(this, null);
 
-        public override bool Equals(object obj)
-        {
-            if (obj is LocationObj other)
-                return Equals(other);
-
-            return base.Equals(obj);
-        }
-
-        public bool Equals(LocationObj other)
+        bool IEquatable<ILocationReadOnly>.Equals(ILocationReadOnly other)
         {
             if (other is null)
                 return false;
 
-            return ID.Equals(other.ID);
+            return other.ID == (ulong)this.ID;
         }
 
-        bool IEquatable<ILocationReadOnly>.Equals(ILocationReadOnly other)
-        {
-            throw new NotImplementedException();
-        }
-
-        /*
         public static event EventHandler Create
         {
-            add { OnCreate += value; }
-            remove { OnCreate -= value; }
-        }*/
+            add => OnCreate += value;
+            remove => OnCreate -= value;
+        }
     }
 }

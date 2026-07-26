@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -6,19 +6,49 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace WebAnnotationModel.Objects
+namespace WebAnnotationModel
 {
-    public static class ObjAttributeParser
-    { 
-        public static string ToXml(this IEnumerable<ObjAttribute> attributes)
+
+    public class ObjAttribute : Object, IComparable<ObjAttribute>, IComparable<String>, IEquatable<String>
+    {
+        public string Name { get; set; }
+        public string Value { get; set; }
+
+        public ObjAttribute()
         {
-            if (attributes == null)
-                return null;
+            this.Name = "";
+            this.Value = "";
+        }
 
-            if (!attributes.Any())
-                return null;
+        public ObjAttribute(string Name, string Value)
+        {
+            this.Name = Name;
+            this.Value = Value;
+        }
 
-            StringBuilder sbuilder = new StringBuilder();
+        public override string ToString()
+        {
+            string Name = this.Name.Trim();
+
+            if (null == this.Value)
+                return Name;
+
+            string Value = this.Value.Trim();
+
+            if (this.Value.Trim().Length == 0)
+                return Name;
+
+            return Name + ": " + Value;
+        }
+
+        public static string ToXml(IEnumerable<ObjAttribute> attributes)
+        {
+            if (attributes.Count() == 0)
+            {
+                return null;
+            }
+
+            StringBuilder sbuilder = new();
             using (System.Xml.XmlWriter xwriter = XmlWriter.Create(sbuilder))
             {
                 xwriter.WriteStartElement("Structure");
@@ -46,22 +76,22 @@ namespace WebAnnotationModel.Objects
         }
 
         /// <summary>
-        /// Selects whether to use legacy parser or xml to understand attribute string
+        /// The legacy version of this function returned semicolon delimited strings.  The new version returns XML.
         /// </summary>
         /// <param name="serverXml"></param>
         /// <returns></returns>
-        public static List<ObjAttribute> ParseAttributes(this string attributes)
+        public static List<ObjAttribute> Parse(string serverXml)
         {
-            if (attributes == null)
-                return new List<ObjAttribute>();
+            if (serverXml is null)
+                return [];
 
-            if (attributes.StartsWith("<"))
+            if (serverXml.StartsWith("<"))
             {
-                return FromXml(attributes);
+                return ObjAttribute.FromXml(serverXml);
             }
             else
             {
-                return TagStringsToList(attributes.Split(';'));
+                return ObjAttribute.TagStringsToList(serverXml.Split(';'));
             }
 
         }
@@ -71,22 +101,32 @@ namespace WebAnnotationModel.Objects
             System.Xml.Linq.XDocument doc = System.Xml.Linq.XDocument.Load(new StringReader(XMLString));
 
             XElement structureElem = doc.Element("Structure");
-            if (structureElem == null)
-                return new List<ObjAttribute>();
+            if (structureElem is null)
+                return [];
 
-            return ElementToAttribs(structureElem);
+            return ObjAttribute.ElementToAttribs(structureElem);
 
         }
 
         private static List<ObjAttribute> ElementToAttribs(XElement structureElem)
         {
-            List<ObjAttribute> listAttrib = new List<ObjAttribute>();
+            List<ObjAttribute> listAttrib = [];
             foreach (XElement attribElem in structureElem.Elements("Attrib"))
             {
-                var name = attribElem.Attribute("Name")?.Value ?? "";
-                var value = attribElem.Attribute("Value")?.Value ?? "";
+                XAttribute nameAttr = attribElem.Attribute("Name");
+                if (nameAttr is null || string.IsNullOrEmpty(nameAttr.Value))
+                    continue;
 
-                listAttrib.Add(new ObjAttribute(name, value));
+                ObjAttribute a = new()
+                {
+                    Name = nameAttr.Value
+                };
+                if (attribElem.Attribute("Value") != null)
+                {
+                    a.Value = attribElem.Attribute("Value").Value;
+                }
+
+                listAttrib.Add(a);
             }
 
             listAttrib.Sort();
@@ -94,15 +134,16 @@ namespace WebAnnotationModel.Objects
             return listAttrib;
         }
 
-        private static List<ObjAttribute> TagStringsToList(IEnumerable<string> tags)
+        public static List<ObjAttribute> TagStringsToList(IEnumerable<string> tags)
         {
-            if (tags == null)
-                return new List<ObjAttribute>();
+            if (tags is null)
+                return [];
 
-            List<ObjAttribute> listTags = new List<ObjAttribute>();
+            List<ObjAttribute> listTags = [];
 
             foreach (string tagString in tags)
             {
+                ObjAttribute tag = new();
                 string trimmedTag = tagString.Trim();
                 string key = trimmedTag;
 
@@ -114,39 +155,25 @@ namespace WebAnnotationModel.Objects
                 int iEquals = trimmedTag.IndexOf("=");
                 if (iEquals >= 0)
                 {
-                    key = trimmedTag.Substring(0, iEquals).Trim();
-                    value = trimmedTag.Substring(iEquals + 1).Trim();
+                    key = trimmedTag.Substring(0, iEquals);
+                    value = trimmedTag.Substring(iEquals + 1);
+
+                    tag.Name = key.Trim();
+                    tag.Value = value.Trim();
+                }
+                else
+                {
+                    tag.Name = key;
+                    tag.Value = value;
                 }
 
-                listTags.Add(new ObjAttribute(key, value));
+                listTags.Add(tag);
             }
 
             listTags.Sort();
 
             return listTags;
         }
-    }
-
-    public class ObjAttribute : Object, IComparable<ObjAttribute>, IEquatable<ObjAttribute>, IComparable<String>, IEquatable<String>
-    {
-        public string Name { get; }
-        public string Value { get; set; }
-         
-
-        public ObjAttribute(string Name, string Value)
-        {
-            this.Name = Name;
-            this.Value = Value;
-        }
-
-        public override string ToString()
-        {  
-            if (string.IsNullOrWhiteSpace(Value))
-                return Name.Trim();
-            
-            return $"{Name.Trim()}: {Value.Trim()}";
-        }
-
 
         public int CompareTo(ObjAttribute other)
         {
@@ -157,15 +184,12 @@ namespace WebAnnotationModel.Objects
                 return compval;
         }
 
-        public int CompareTo(string other)
-        {
-            return String.Compare(this.Name, other);
-        }
+        public int CompareTo(string other) => String.Compare(this.Name, other);
 
         public static bool operator ==(ObjAttribute A, ObjAttribute B)
         {
-            bool ANull = object.ReferenceEquals(null, A);
-            bool BNull = object.ReferenceEquals(null, B);
+            bool ANull = A is null;
+            bool BNull = B is null;
             if (ANull && BNull)
                 return true;
             if (ANull || BNull)
@@ -176,8 +200,8 @@ namespace WebAnnotationModel.Objects
 
         public static bool operator !=(ObjAttribute A, ObjAttribute B)
         {
-            bool ANull = object.ReferenceEquals(null, A);
-            bool BNull = object.ReferenceEquals(null, B);
+            bool ANull = A is null;
+            bool BNull = B is null;
             if (ANull && BNull)
                 return false;
             if (ANull || BNull)
@@ -188,29 +212,18 @@ namespace WebAnnotationModel.Objects
 
         public override bool Equals(object obj)
         {
-            if (obj is string s)
-                return Equals(s);
+            if (obj is String s)
+                return this.Name == s;
 
-            if (obj is ObjAttribute o)
-                return Equals(o);
+            if (obj is not ObjAttribute Other)
+                return false;
 
-            return base.Equals(obj);
+            return Other.Name == this.Name;
         }
 
-        public bool Equals(string other)
-        {
-            return this.Name == other;
-        }
+        public bool Equals(string other) => this.Name == other;
 
-        public bool Equals(ObjAttribute other)
-        {
-            return this.Name == other.Name;
-        }
-
-        public override int GetHashCode()
-        {
-            return this.Name.GetHashCode();
-        }
+        public override int GetHashCode() => this.Name.GetHashCode();
     }
 
 }
