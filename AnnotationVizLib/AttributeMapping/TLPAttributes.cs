@@ -159,24 +159,24 @@ namespace AnnotationVizLib
 
         public static SortedDictionary<string, string> DefaultForAttribute = new()
         {
-            {"viewColor", string.Format("\"{0}\" \"{0}\"", ColorMap["grey"], ColorMap["grey"])},
+            {"viewColor", $"\"{ColorMap["grey"]}\" \"{ColorMap["grey"]}\""},
             {"viewSelection", " \"false\" \"false\""},
             {"viewLabel", " \"\" \"\""},
             //{"viewLayout", " \"()\" \"()\""}, 
             {"viewSize", " \"(1,1,1)\" \"(0.5,0.5,0.5)\""},
-            {"viewBorderColor", string.Format("\"{0}\" \"{0}\"", ColorMap["clear"], ColorMap["clear"]) },
-            {"viewShape", string.Format(" \"0\" \"{0}\"", IntForEdgeShape(EdgeShapes.BezierCurve))},
+            {"viewBorderColor", $"\"{ColorMap["clear"]}\" \"{ColorMap["clear"]}\"" },
+            {"viewShape", $" \"0\" \"{IntForEdgeShape(EdgeShapes.BezierCurve)}\""},
         };
 
         public static SortedDictionary<string, string> DefaultForMorphologyAttribute = new()
         {
-            {"viewColor", string.Format("\"{0}\" \"{0}\"", ColorMap["grey"], ColorMap["grey"])},
+            {"viewColor", $"\"{ColorMap["grey"]}\" \"{ColorMap["grey"]}\""},
             {"viewSelection", " \"false\" \"false\""},
             {"viewLabel", " \"\" \"\""},
             //{"viewLayout", " \"()\" \"()\""}, 
             {"viewSize", " \"(1,1,1)\" \"(1,1,1)\""},
-            {"viewBorderColor", string.Format("\"{0}\" \"{0}\"", ColorMap["clear"], ColorMap["clear"]) },
-            {"viewShape", string.Format(" \"{0}\" \"{1}\"", IntForShape(NodeShapes.Cylinder), IntForEdgeShape(EdgeShapes.Polyline))}
+            {"viewBorderColor", $"\"{ColorMap["clear"]}\" \"{ColorMap["clear"]}\"" },
+            {"viewShape", $" \"{IntForShape(NodeShapes.Cylinder)}\" \"{IntForEdgeShape(EdgeShapes.Polyline)}\""}
         };
 
         public static string IntForShape(NodeShapes type) => ((int)type).ToString();

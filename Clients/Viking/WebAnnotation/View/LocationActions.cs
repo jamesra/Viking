@@ -12,6 +12,7 @@ using Viking.Services.Grpc;
 using WebAnnotation.UI.Commands;
 using WebAnnotation.UI.Commands.Segmentation;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation
 {

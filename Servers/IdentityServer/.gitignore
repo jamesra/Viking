@@ -19,16 +19,6 @@ TestResults
 # Secrets files
 secrets.json
 
-# Environment and local TLS (use *.example templates; root .gitignore also covers .env)
-omnidebug.env
-
-# Generated keys and logs (do not commit)
-IdentityServerStandalone/DataProtectionKeys/*.xml
-certs/*.pem
-certs/*.pfx
-logs/
-**/logs/
-
 # Build results
 build
 [Dd]ebug/

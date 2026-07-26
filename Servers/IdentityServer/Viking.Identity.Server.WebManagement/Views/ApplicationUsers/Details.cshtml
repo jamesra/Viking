@@ -21,11 +21,19 @@
                 <i class="bi bi-pencil"></i> Edit
             </a>
         }
+        @if (this.User.IsInRole(Special.Roles.Admin))
+        {
+            <a asp-action="SetPassword" asp-route-id="@Model.Id" class="btn btn-warning">
+                <i class="bi bi-key"></i> Set Password
+            </a>
+        }
         <a asp-action="Index" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Back to List
         </a>
     </div>
 </div>
+
+@await Html.PartialAsync("~/Views/Manage/_StatusMessage.cshtml", TempData["StatusMessage"] as string)
 
 <!-- Tab Navigation -->
 <ul class="nav nav-tabs mb-4" id="userTabs" role="tablist">
@@ -128,6 +136,12 @@
                         else
                         {
                             <span class="badge bg-success"><i class="bi bi-check-circle"></i> Active</span>
+                        }
+                        @if (this.User.IsInRole(Special.Roles.Admin))
+                        {
+                            <a asp-action="SetPassword" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-warning ms-2">
+                                <i class="bi bi-key"></i> Set Password
+                            </a>
                         }
                     </dd>
                     

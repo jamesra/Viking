@@ -1,86 +1,102 @@
-using System;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
-    /// <summary>
-    /// Static class that holds references to store singletons
-    ///
-    /// The initialization is super goofy and needs to be moved to dependency injection
-    /// </summary>
+    public interface IAnnotationStores
+    {
+        ILocationStore Locations { get; }
+    
+        IStructureStore Structures { get; }
+
+        IStructureTypeStore StructureTypes { get; }
+    
+        IStructureLinkStore StructureLinks { get; }
+
+        ILocationLinkStore LocationLinks { get; }
+
+        IPermittedStructureLinkStore PermittedStructureLinks { get; }
+
+        IRegionLoader<LocationObj> LocationsByRegion { get; }
+
+        //IRegionLoader<StructureObj> StructuresByRegion { get; }
+    }
+
     public class Store
     {
-        public static void Init() => Nested.Init();
+        public readonly ILocationStore Locations;
 
-        public static LocationStore Locations => Nested.Locations;
+        public readonly IStructureStore Structures;
 
-        public static StructureStore Structures => Nested.Structures;
+        public readonly IStructureTypeStore StructureTypes;
 
-        public static StructureTypeStore StructureTypes => Nested.StructureTypes;
+        public readonly IStructureLinkStore StructureLinks;
 
-        public static StructureLinkStore StructureLinks => Nested.StructureLinks;
+        public readonly ILocationLinkStore LocationLinks;
 
-        public static LocationLinkStore LocationLinks => Nested.LocationLinks;
+        public readonly IPermittedStructureLinkStore PermittedStructureLinks;
 
-        public static PermittedStructureLinkStore PermittedStructureLinks => Nested.PermittedStructureLinks;
+        public readonly IRegionLoader<LocationObj> LocationsByRegion;
 
-        public static RegionLoader<long, LocationObj> LocationsByRegion => Nested.RegionLocationsLoader;
+        public Store(IStructureTypeStore structureTypes,
+            IStructureStore structures,
+            ILocationStore locations)
+        {
 
-        public static RegionLoader<long, StructureObj> StructuresByRegion => Nested.RegionStructuresLoader;
+        }
+         
+    }
+    
+    /*
+    /// <summary>
+    /// Static class that holds references to store singletons
+    /// </summary>
+    public static class Store
+    {
+        
+        public static ILocationStore Locations => Nested.Locations;
 
+        public static IStructureStore Structures => Nested.Structures;
+
+        public static IStructureTypeStore StructureTypes => Nested.StructureTypes;
+
+        public static IStructureLinkStore StructureLinks => Nested.StructureLinks;
+
+        public static ILocationLinkStore LocationLinks => Nested.LocationLinks;
+
+        public static IPermittedStructureLinkStore PermittedStructureLinks => Nested.PermittedStructureLinks;
+
+        public static IRegionLoader<LocationObj> LocationsByRegion => Nested.RegionLocationsLoader;
+
+        //public static RegionLoader<long, StructureObj> StructuresByRegion => Nested.RegionStructuresLoader;
+        
+        /*
         class Nested
         {
-            private static bool Initialized = false;
             static Nested()
             {
-                Init();
+                StructureTypes.Init();
+                Structures.Init();
+                Locations.Init();
+                StructureLinks.Init();
+                LocationLinks.Init();
+                PermittedStructureLinks.Init();
 
                 RegionLocationsLoader = new RegionLoader<long, LocationObj>(Store.Locations);
-                RegionStructuresLoader = new RegionLoader<long, StructureObj>(Store.Structures);
+                //RegionStructuresLoader = new RegionLoader<long, StructureObj>(Store.Structures);
             }
 
-            public static void Init()
-            {
-                if (Initialized)
-                    return;
-
-                Initialized = true;
-
-                try
-                {
-                    StructureTypes.Init();
-                    Structures.Init();
-                    Locations.Init();
-                    StructureLinks.Init();
-                    LocationLinks.Init();
-                    PermittedStructureLinks.Init();
-                }
-                catch (System.ServiceModel.Security.MessageSecurityException securityException)
-                {
-                    throw new Exception("It is possible the user password is incorrect", securityException);
-                }
-                catch (System.ServiceModel.Security.SecurityAccessDeniedException accessDeniedException)
-                {
-                    throw new Exception(
-                        "Access to the Annotation Service was denied. For anonymous users, ensure you are logged in and that the Bearer token is set (Viking.Tokens.TokenInjector.BearerToken). For named users, ensure your account has the required permissions.",
-                        accessDeniedException);
-                }
-                catch (System.ServiceModel.FaultException faultException)
-                {
-                    throw new Exception(
-                        "It is possible there is no network connection or the user account is locked if an incorrect password was used repeatedly.  Contact an administrator to unlock the account.",
-                        faultException);
-                }
-            }
-
-            internal static readonly StructureTypeStore StructureTypes = [];
-            internal static readonly StructureStore Structures = [];
-            internal static readonly LocationStore Locations = [];
-            internal static readonly StructureLinkStore StructureLinks = [];
-            internal static readonly LocationLinkStore LocationLinks = [];
-            internal static readonly PermittedStructureLinkStore PermittedStructureLinks = [];
+            internal static readonly IStructureTypeStore StructureTypes = new StructureTypeStore();
+            internal static readonly IStructureStore Structures = new StructureStore();
+            internal static readonly ILocationStore Locations = new LocationStore();
+            internal static readonly IStructureLinkStore StructureLinks = new StructureLinkStore();
+            internal static readonly ILocationLinkStore LocationLinks = new LocationLinkStore();
+            internal static readonly IPermittedStructureLinkStore PermittedStructureLinks = new PermittedStructureLinkStore();
 
             internal static readonly RegionLoader<long, LocationObj> RegionLocationsLoader;
             internal static readonly RegionLoader<long, StructureObj> RegionStructuresLoader;
         }
+        
     }
+    */
 }

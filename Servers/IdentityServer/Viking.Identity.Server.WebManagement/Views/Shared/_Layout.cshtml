@@ -74,13 +74,15 @@
                                 <i class="bi bi-diagram-3"></i> Segmentation Services
                             </a>
                         </li>
-                        @if (this.User.IsInRole("Admin"))
+                        @if (this.User.IsInRole(Special.Roles.Admin))
                         {
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="bi bi-gear"></i> Administration
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                                    <li><a class="dropdown-item" asp-area="" asp-controller="CollaboratorOnboarding" asp-action="Index"><i class="bi bi-magic"></i> Collaborator Volume Wizard</a></li>
+                                    <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" asp-area="" asp-controller="ResourceTypes" asp-action="Index"><i class="bi bi-tags"></i> Resource Types</a></li>
                                     <li><a class="dropdown-item" asp-area="" asp-controller="ApplicationRoles" asp-action="Index"><i class="bi bi-key"></i> Application Roles</a></li>
                                     <li><hr class="dropdown-divider"></li>

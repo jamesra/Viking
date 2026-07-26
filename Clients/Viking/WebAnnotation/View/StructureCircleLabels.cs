@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using System;
 using VikingXNAGraphics;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.View
 {

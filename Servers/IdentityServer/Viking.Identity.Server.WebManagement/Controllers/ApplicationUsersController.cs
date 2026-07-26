@@ -2,8 +2,10 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
 using Viking.Identity.Server.Authorization;
@@ -11,19 +13,29 @@ using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 
 namespace Viking.Identity.Server.WebManagement.Controllers
 {
+    [Authorize]
     [Route("[controller]/[action]")]
     public class ApplicationUsersController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly IAuthorizationService _authorizationService;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ILogger<ApplicationUsersController> _logger;
 
-        public ApplicationUsersController(ApplicationDbContext context, IAuthorizationService authorizationService)
+        public ApplicationUsersController(
+            ApplicationDbContext context,
+            IAuthorizationService authorizationService,
+            UserManager<ApplicationUser> userManager,
+            ILogger<ApplicationUsersController> logger)
         {
             _context = context;
             _authorizationService = authorizationService;
+            _userManager = userManager;
+            _logger = logger;
         }
 
         // GET: ApplicationUsers
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> Index()
         {
             return View(await _context.ApplicationUser.Include("GroupAssignments").ToListAsync());
@@ -35,6 +47,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         }
 
         // GET: ApplicationUsers/Details/5
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> Details(string id)
         {
             if (id == null)
@@ -114,6 +127,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             {
                 return NotFound();
             }
+
+            ViewBag.IsAdmin = User.IsInRole(Special.Roles.Admin);
             return View(applicationUser);
         }
 
@@ -171,16 +186,20 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 currentUser.FamilyName = applicationUser.FamilyName;
                 currentUser.GivenName = applicationUser.GivenName;
                 currentUser.UserName = applicationUser.UserName;
-                currentUser.NormalizedUserName = applicationUser.NormalizedUserName;
                 currentUser.Email = applicationUser.Email;
                 currentUser.NormalizedEmail = applicationUser.NormalizedEmail;
-                currentUser.EmailConfirmed = applicationUser.EmailConfirmed;
                 currentUser.PhoneNumber = applicationUser.PhoneNumber;
-                currentUser.PhoneNumberConfirmed = applicationUser.PhoneNumberConfirmed;
-                currentUser.TwoFactorEnabled = applicationUser.TwoFactorEnabled;
-                currentUser.LockoutEnd = applicationUser.LockoutEnd;
-                currentUser.LockoutEnabled = applicationUser.LockoutEnabled;
-                currentUser.AccessFailedCount = applicationUser.AccessFailedCount;
+
+                if (User.IsInRole(Special.Roles.Admin))
+                {
+                    currentUser.NormalizedUserName = applicationUser.NormalizedUserName;
+                    currentUser.EmailConfirmed = applicationUser.EmailConfirmed;
+                    currentUser.PhoneNumberConfirmed = applicationUser.PhoneNumberConfirmed;
+                    currentUser.TwoFactorEnabled = applicationUser.TwoFactorEnabled;
+                    currentUser.LockoutEnd = applicationUser.LockoutEnd;
+                    currentUser.LockoutEnabled = applicationUser.LockoutEnabled;
+                    currentUser.AccessFailedCount = applicationUser.AccessFailedCount;
+                }
                 
                 try
                 {
@@ -312,6 +331,74 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             return View(user);
         }
 
+        [Authorize(Roles = Special.Roles.Admin)]
+        public async Task<IActionResult> SetPassword(string id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var model = new AdminSetPasswordViewModel
+            {
+                UserId = user.Id,
+                UserName = user.UserName
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = Special.Roles.Admin)]
+        public async Task<IActionResult> SetPassword(string id, AdminSetPasswordViewModel model)
+        {
+            if (id != model.UserId)
+            {
+                return NotFound();
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            IdentityResult result;
+            if (await _userManager.HasPasswordAsync(user))
+            {
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+            }
+            else
+            {
+                result = await _userManager.AddPasswordAsync(user, model.NewPassword);
+            }
+
+            if (!result.Succeeded)
+            {
+                AddErrors(result);
+                return View(model);
+            }
+
+            _logger.LogInformation("Administrator {AdminUser} set password for user {TargetUserId} ({TargetUserName}).",
+                User.Identity?.Name, user.Id, user.UserName);
+
+            TempData["StatusMessage"] = "Password has been set successfully.";
+            return RedirectToAction(nameof(Details), new { id = user.Id });
+        }
+
         // GET: ApplicationUsers/Delete/5
         public async Task<IActionResult> Delete(string id)
         {
@@ -345,6 +432,14 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         private bool ApplicationUserExists(string id)
         {
             return _context.ApplicationUser.Any(e => e.Id == id);
+        }
+
+        private void AddErrors(IdentityResult result)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
         }
     }
 }

@@ -16,5 +16,21 @@ namespace Viking.Identity.Server.Services
             return emailSender.SendEmailAsync(emails, "Viking User registration",
                 $"Please confirm your account by clicking this link:");
         }
+
+        public static Task SendCollaboratorInviteAsync(
+            this IEmailSender emailSender,
+            string email,
+            string orgName,
+            string volumeName,
+            string registrationLink)
+        {
+            var encodedLink = HtmlEncoder.Default.Encode(registrationLink);
+            return emailSender.SendEmailAsync(
+                new[] { email },
+                $"Viking access invitation for {orgName}",
+                $"You have been invited to administer the organization <strong>{HtmlEncoder.Default.Encode(orgName)}</strong> " +
+                $"and access the volume <strong>{HtmlEncoder.Default.Encode(volumeName)}</strong>.<br/><br/>" +
+                $"Create your account using this link: <a href='{encodedLink}'>{encodedLink}</a>");
+        }
     }
 }

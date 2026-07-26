@@ -301,7 +301,10 @@ namespace Viking.Identity.Server.Standalone
             Log.Information("Adding remaining services...");
             builder.AddInMemoryCaching()
                 .AddAspNetIdentity<ApplicationUser>()
+                .AddExtensionGrantValidator<VikingUserTokenGrantValidator>()
                 .AddDefaultEndpoints();
+
+            services.AddTransient<Duende.IdentityServer.Validation.ICustomTokenRequestValidator, Viking.Identity.Server.WebManagement.Extensions.UserScopeTokenRequestValidator>();
 
             Log.Information("=== END IDENTITYSERVER CONFIGURATION DEBUG ===");
 
@@ -365,14 +368,17 @@ namespace Viking.Identity.Server.Standalone
 
         private static void ConfigureDataProtection(IServiceCollection services, X509Certificate2 sslCert)
         {
-            // Configure Data Protection with Docker-compatible settings
-            var dataProtectionKeysPath = @"./DataProtectionKeys/";
+            // In Docker, use the shared volume path so the same key ring is used across restarts and
+            // matches the keys that protect IdentityServer signing keys in the operational store.
+            // Otherwise the app would use ./DataProtectionKeys (relative to CWD) and get a different
+            // key ring, causing "Error unprotecting the IdentityServer signing key" (key not available).
+            var isDockerEnvironment = Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") == "Docker";
+            var dataProtectionKeysPath = isDockerEnvironment
+                ? "/app/DataProtectionKeys"
+                : @"./DataProtectionKeys/";
             var dataProtectionBuilder = services.AddDataProtection()
                 .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
                 .SetApplicationName("VikingIdentityServer");
-
-            // Only use certificate-based key encryption if not in Docker environment
-            var isDockerEnvironment = Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") == "Docker";
 
             if (!isDockerEnvironment)
             {

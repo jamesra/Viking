@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
 using Viking.Identity.Server.Authorization;
+using Viking.Identity.Server.Extensions.Services;
+using Viking.Identity.Server.WebManagement.Helpers;
 using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 
 namespace Viking.Identity.Server.WebManagement.Controllers
@@ -16,12 +18,20 @@ namespace Viking.Identity.Server.WebManagement.Controllers
     public class OrganizationalUnitsController : Controller
     {
         private readonly ApplicationDbContext _context;
-        IAuthorizationService _authorization;
+        private readonly IAuthorizationService _authorization;
+        private readonly ResourceProvisioningService _provisioning;
+        private readonly CollaboratorOnboardingService _onboarding;
 
-        public OrganizationalUnitsController(ApplicationDbContext context, IAuthorizationService authorization)
+        public OrganizationalUnitsController(
+            ApplicationDbContext context,
+            IAuthorizationService authorization,
+            ResourceProvisioningService provisioning,
+            CollaboratorOnboardingService onboarding)
         {
             _authorization = authorization;
             _context = context;
+            _provisioning = provisioning;
+            _onboarding = onboarding;
         }
 
         // GET: OrganizationalUnits
@@ -96,7 +106,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 viewmodel.ParentId = parentOrgId.Value;
             }
 
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), viewmodel.ParentId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, viewmodel.ParentId);
             return View(viewmodel);
         }
 
@@ -105,7 +115,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         {
             //Continues creation after user selects a resource type
             model.ResourceTypeId = nameof(OrganizationalUnit);
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), model.ParentId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, model.ParentId);
             return View(nameof(Create), new CreateOrgUnitViewModel(model));
         }
 
@@ -118,45 +128,27 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         {
             if (ModelState.IsValid)
             {
-                 
-                OrganizationalUnit ou = new OrganizationalUnit()
+                var authProbe = new OrganizationalUnit
                 {
                     Name = model.Name,
                     Description = model.Description,
                     ResourceTypeId = nameof(OrganizationalUnit),
-                    ParentID = model.ParentId
+                    ParentID = model.ParentId == 0 ? null : model.ParentId
                 };
 
-                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, ou))
+                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, authProbe))
                 {
                     return Unauthorized();
                 }
 
-                _context.OrgUnit.Add(ou);
-                _context.Add(ou);
-
-                await _context.SaveChangesAsync();
-
-                // Grant Administrator permission to all users with ASP.NET Administrator role
-                var adminUsers = await _context.GetUsersInAdminRole().ToListAsync();
-                foreach (var adminUser in adminUsers)
-                {
-                    var permission = new GrantedUserPermission
-                    {
-                        ResourceId = ou.Id,
-                        UserId = adminUser.Id,
-                        PermissionId = Special.Permissions.OrgUnit.Admin
-                    };
-                    _context.GrantedUserPermissions.Add(permission);
-                }
-
-                await _context.SaveChangesAsync();
+                var ou = await _provisioning.CreateOrganizationalUnitAsync(model.Name, model.Description, model.ParentId);
+                await _provisioning.GrantSiteAdminsOrgUnitAdminAsync(ou.Id);
 
                 // Redirect to permissions management UI for fine-tuning
                 return RedirectToAction(nameof(GrantedPermissionsController.Index), "GrantedPermissions", new { id = ou.Id });
             }
 
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), model.ParentId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, model.ParentId);
             return View(model);
         }
 
@@ -246,11 +238,17 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         public async Task<IActionResult> DeleteConfirmed(long id)
         {   
             var organizationalUnit = await _context.OrgUnit.FindAsync(id);
+            if (organizationalUnit == null)
+            {
+                return NotFound();
+            }
+
             if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, organizationalUnit))
             {
                 return Unauthorized();
             }
 
+            await _onboarding.DeleteInvitesForOrganizationalUnitAsync(id);
             _context.OrgUnit.Remove(organizationalUnit);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));

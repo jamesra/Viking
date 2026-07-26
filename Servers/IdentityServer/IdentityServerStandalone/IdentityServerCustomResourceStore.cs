@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
@@ -16,8 +17,15 @@ namespace Viking.Identity
 {
     public class IdentityServerCustomResourceStore : IResourceStore
     {
+        private static readonly string[] ApiFacingResourceTypeIds =
+        {
+            nameof(Volume),
+            nameof(SegmentationService)
+        };
+
         private readonly ApplicationDbContext _context;
         private readonly Secret _Secret;
+        private readonly ILogger<IdentityServerCustomResourceStore> _logger;
 
         internal static ApiScope[] StandardScopes = new ApiScope[]
         {  
@@ -36,11 +44,15 @@ namespace Viking.Identity
         };
 
 
-        public IdentityServerCustomResourceStore(ApplicationDbContext context, IOptions<VikingIdentityServerOptions> serverOptions)
+        public IdentityServerCustomResourceStore(
+            ApplicationDbContext context,
+            IOptions<VikingIdentityServerOptions> serverOptions,
+            ILogger<IdentityServerCustomResourceStore> logger)
         {
             var options = serverOptions.Value;
             _Secret = new Secret(options.Secret.Sha256());
             _context = context;
+            _logger = logger;
 
             StandardResources = new ApiResource[]
             {
@@ -53,11 +65,37 @@ namespace Viking.Identity
             };
         }
 
+        private static bool IsApiFacingResource(Resource r) =>
+            ApiFacingResourceTypeIds.Contains(r.ResourceTypeId);
+
+        /// <summary>
+        /// Keeps only Volume/SegmentationService rows and collapses duplicate names so Duende discovery stays valid.
+        /// </summary>
+        private List<Resource> SelectUniqueApiFacingResources(IEnumerable<Resource> resources)
+        {
+            var apiFacing = resources.Where(IsApiFacingResource).ToList();
+            var duplicates = apiFacing
+                .GroupBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                .Where(g => g.Count() > 1)
+                .ToList();
+
+            foreach (var group in duplicates)
+            {
+                _logger.LogWarning(
+                    "Duplicate API-facing resource name {ResourceName} found for ids {ResourceIds}; using first entry only",
+                    group.Key,
+                    string.Join(", ", group.Select(r => r.Id)));
+            }
+
+            return apiFacing
+                .GroupBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.OrderBy(r => r.Id).First())
+                .ToList();
+        }
+
         /// <summary>
         /// Converts a Resource to an ApiResource
         /// </summary>
-        /// <param name="r"></param>
-        /// <returns></returns>
         private ApiResource ResourceToResourceApi(Resource r)
         {
             return new ApiResource()
@@ -71,29 +109,24 @@ namespace Viking.Identity
         }
 
         /// <summary>
-        /// Converts an IEnumerable<Resource> to an IEnumerable<ApiResource>
+        /// Converts an IEnumerable of Resources to ApiResources
         /// </summary>
-        /// <param name="resources"></param>
-        /// <returns></returns>
         private IEnumerable<ApiResource> ResourceToResourceApi(IEnumerable<Resource> resources)
         {
-            return resources.Select(r => ResourceToResourceApi(r));
+            return SelectUniqueApiFacingResources(resources).Select(ResourceToResourceApi);
         }
 
         /// <summary>
         /// This is a bit ambiguous, it expects only the resource name as it appears in the database column "Name".
         /// It does not work for apiscope names such as RC1.Annotate
         /// </summary>
-        /// <param name="apiResourceNames"></param>
-        /// <returns></returns>
         private async Task<IEnumerable<ApiResource>> FindApiResourcesByNameOnlyAsync(IEnumerable<string> apiResourceNames)
         {
             var resources = await _context.Resource.Include(r => r.ResourceType).ThenInclude(rt => rt.Permissions)
-                .Where(r => apiResourceNames.Contains(r.Name)).ToListAsync();
+                .Where(r => ApiFacingResourceTypeIds.Contains(r.ResourceTypeId) && apiResourceNames.Contains(r.Name))
+                .ToListAsync();
 
-            var results = ResourceToResourceApi(resources);
-
-            return results;
+            return ResourceToResourceApi(resources);
         }
 
         public async Task<IEnumerable<ApiResource>> FindApiResourcesByNameAsync(IEnumerable<string> apiResourceNames)
@@ -102,18 +135,15 @@ namespace Viking.Identity
 
             var standard_resources = StandardResources.Where(r => apiResourceNames.Contains(r.Name)).ToList(); 
             
-            var remaining_resource_names = apiResourceNames.Where(s => standard_resources.Any(stand => stand.Name == s) == false).ToList();
-
             var resource_scopes = ParseScopeNames(apiResourceNames).Where(r => r.ResourceName != null);
 
             var resource_names = resource_scopes.Select(r => r.ResourceName).ToList();
 
             var resources = await _context.Resource.Include(r => r.ResourceType).ThenInclude(rt => rt.Permissions)
-                .Where(r => resource_names.Contains(r.Name)).ToListAsync();
+                .Where(r => ApiFacingResourceTypeIds.Contains(r.ResourceTypeId) && resource_names.Contains(r.Name))
+                .ToListAsync();
 
-            var results = ResourceToResourceApi(resources);
-
-            standard_resources.AddRange(results);
+            standard_resources.AddRange(ResourceToResourceApi(resources));
             return standard_resources;
         }
 
@@ -126,14 +156,6 @@ namespace Viking.Identity
             var remaining_scopes = scopeNames.Where(scope_name => standard_resources.Any(stand => stand.Scopes.Any(s => s == scope_name) == false)).ToList();
 
             var resourceNames = ParseScopeNames(remaining_scopes).Where(r => r.ResourceName != null).Select(r => r.ResourceName);
-             
-            /*
-            var resourceTypes = scopeNames.SelectMany(scope => _context.Permissions.Where(perm => perm.PermissionId == scope).Select(p => p.ResourceTypeId).Distinct());
-
-            var resources = _context.Resource.Where(r => resourceTypes.Contains(r.ResourceTypeId)).Select(r => r.Name);
-
-            return FindApiResourcesByNameAsync(resources);
-            */
 
             var resources = await FindApiResourcesByNameOnlyAsync(resourceNames);
 
@@ -146,17 +168,21 @@ namespace Viking.Identity
         {
             if (scopeNames == null) throw new ArgumentNullException(nameof(scopeNames));
 
-            var standard_scopes = StandardScopes.Where(s => scopeNames.Contains(s.Name)).ToList();
+            var scopeNameList = scopeNames.ToList();
+            var standard_scopes = StandardScopes.Where(s => scopeNameList.Contains(s.Name)).ToList();
 
-            var resource_scope = ParseScopeNames(scopeNames).Where(r => r.ResourceName != null);
+            var resource_scope = ParseScopeNames(scopeNameList)
+                .Where(r => r.ResourceName != null && !string.Equals(r.ResourceName, "Viking", StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
-            var resourceTypes = resource_scope.SelectMany(scope => _context.Permissions.Where(perm => perm.PermissionId == scope.ScopeName).Select(p => p.ResourceTypeId).Distinct());
+            if (resource_scope.Count == 0)
+                return standard_scopes;
 
-            var resources = _context.Resource.Where(r => resourceTypes.Contains(r.ResourceTypeId)).Select(r => r.Name);
+            var resourceNames = resource_scope.Select(r => r.ResourceName).Distinct().ToList();
+            var api_resources = await FindApiResourcesByNameOnlyAsync(resourceNames);
 
-            var api_resources = await FindApiResourcesByNameOnlyAsync(resources);
-
-            var resource_api_scopes = api_resources.SelectMany(r => r.Scopes.Where(s => scopeNames.Contains(s)).Select(s => new ApiScope(s)));
+            var resource_api_scopes = api_resources
+                .SelectMany(r => r.Scopes.Where(s => scopeNameList.Contains(s)).Select(s => new ApiScope(s)));
 
             standard_scopes.AddRange(resource_api_scopes);
             return standard_scopes;
@@ -197,9 +223,12 @@ namespace Viking.Identity
         {
             var resources = await _context.Resource
                                 .Include(r => r.ResourceType).ThenInclude(rt => rt.Permissions)
+                                .Where(r => ApiFacingResourceTypeIds.Contains(r.ResourceTypeId))
                                 .ToListAsync();
 
-            var results = resources.Select(r => new
+            var uniqueResources = SelectUniqueApiFacingResources(resources);
+
+            var results = uniqueResources.Select(r => new
             {
                 ApiResource = ResourceToResourceApi(r),
                 ApiScopes = r.AvailablePermissions.Select(p => new ApiScope()

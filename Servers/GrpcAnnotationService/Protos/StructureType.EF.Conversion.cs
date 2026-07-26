@@ -1,4 +1,4 @@
-namespace gRPCAnnotationService.Protos
+﻿namespace gRPCAnnotationService.Protos
 {
     public static class StructureTypeEFExtensions
     {
@@ -12,12 +12,12 @@ namespace gRPCAnnotationService.Protos
                 LastModified = src.LastModified.ToDateTime(),
                 Notes = src.Notes,
                 Username = src.Username,
-                Tags = src.Attributes ?? string.Empty,
+                Tags = src.Attributes,
                 Abstract = src.Abstract,
                 Code = src.Code,
-                Color = src.Color,
+                Color = (int)src.Color,
                 Name = src.Name,
-                StructureTags = src.StructureAttributes ?? string.Empty,
+                StructureTags = src.StructureAttributes,
                 //MarkupType = src.M
             }; 
 
@@ -41,12 +41,12 @@ namespace gRPCAnnotationService.Protos
                 converted.LastModified = src.LastModified.ToDateTime();
                 converted.Notes = src.Notes;
                 converted.Username = src.Username;
-                converted.Tags = src.Attributes ?? string.Empty;
+                converted.Tags = src.Attributes;
                 converted.Abstract = src.Abstract;
                 converted.Code = src.Code;
-                converted.Color = src.Color;
+                converted.Color = (int)src.Color;
                 converted.Name = src.Name;
-                converted.StructureTags = src.StructureAttributes ?? string.Empty;
+                converted.StructureTags = src.StructureAttributes;
                 //MarkupType = src.M 
         }
 
@@ -64,12 +64,12 @@ namespace gRPCAnnotationService.Protos
                 LastModified = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(src.LastModified),
                 Notes = src.Notes,
                 Username = src.Username,
-                Attributes = src.Tags ?? string.Empty,
+                Attributes = src.Tags,
                 Abstract = src.Abstract,
                 Code = src.Code,
-                Color = src.Color,
+                Color = (uint)src.Color,
                 Name = src.Name,
-                StructureAttributes = src.StructureTags ?? string.Empty,
+                StructureAttributes = src.StructureTags,
                 //Markuptype = src.MarkupType
             };
 

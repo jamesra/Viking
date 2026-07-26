@@ -1,4 +1,4 @@
-﻿@using Viking.Identity.Server.Authorization
+@using Viking.Identity.Server.Authorization
 @model Viking.Identity.Models.OrganizationalUnit
 
 @{
@@ -243,9 +243,10 @@
             <div class="row">
                 @foreach (var volume in volumes.OrderBy(v => v.Name))
                 {
+                    var canManageVolume = (await AuthorizationService.IsParentOrgUnitAdminAsync(User, volume));
                     <div class="col-md-6 col-lg-4 mb-3">
                         <div class="card card-modern card-volume h-100">
-                            <div class="card-body">
+                            <div class="card-body d-flex flex-column">
                                 <h6 class="card-title">
                                     <i class="bi bi-hdd entity-icon-volume"></i> @volume.Name
                                 </h6>
@@ -285,6 +286,12 @@
                                         <a href="@volume.Endpoint" target="_blank" class="btn btn-sm btn-success">
                                             <i class="bi bi-box-arrow-up-right"></i> Access Volume
                                         </a>
+                                        <a asp-controller="VikingLaunch" asp-action="CreateCode" asp-route-volume="@(volume.Endpoint?.ToString())" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-box-arrow-up-right"></i> Open in Viking
+                                        </a>
+                                        <a href="https://websvc.codepharm.net/Software/Viking/Viking-win-Setup.exe" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary" title="Download Viking if not installed">
+                                            <i class="bi bi-download"></i> Install Viking
+                                        </a>
                                     </div>
                                 }
                                 
@@ -292,13 +299,23 @@
                                     <a asp-controller="Volumes" asp-action="Details" asp-route-id="@volume.Id" class="btn btn-outline-info">
                                         <i class="bi bi-info-circle"></i> Details
                                     </a>
-                                    @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, volume)))
+                                    @if (canManageVolume)
                                     {
                                         <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@volume.Id" class="btn btn-outline-primary">
                                             <i class="bi bi-shield-check"></i> Permissions
                                         </a>
                                     }
                                 </div>
+
+                                @if (canManageVolume)
+                                {
+                                    <div class="mt-auto pt-3 d-flex justify-content-end">
+                                        <a asp-controller="Volumes" asp-action="Delete" asp-route-id="@volume.Id"
+                                           class="btn btn-sm btn-outline-danger" title="Delete volume">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                }
                             </div>
                         </div>
                     </div>
@@ -435,14 +452,14 @@
                                     @if ((await AuthorizationService.AuthorizeAsync(User, group, Operations.GroupAccessManager)).Succeeded ||
                                          (await AuthorizationService.IsParentOrgUnitAdminAsync(User, group)))
                                     {
-                                        @if (group.Id != Special.Groups.Everyone.Id)
+                                        @if (group.Id != Special.Groups.Everyone.Id && group.Id != Special.Groups.Anonymous.Id)
                                         {
                                             <a asp-controller="Groups" asp-action="Edit" asp-route-id="@group.Id" class="btn btn-outline-primary">
                                                 <i class="bi bi-pencil"></i> Edit
                                             </a>
                                         }
                                     }
-                                    @if (group.Id == Special.Groups.Everyone.Id)
+                                    @if (group.Id == Special.Groups.Everyone.Id || group.Id == Special.Groups.Anonymous.Id)
                                     {
                                         <span class="badge bg-warning text-dark ms-1" title="Special system group - cannot be edited">
                                             <i class="bi bi-shield-lock"></i> System

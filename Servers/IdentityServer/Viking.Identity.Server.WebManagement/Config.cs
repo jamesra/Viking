@@ -10,7 +10,7 @@ namespace Viking.Identity.Server.WebManagement
     {
         //internal const string Secret = "CorrectHorseBatteryStaple"; 
 
-        public const string AuthenticationSchemes = "Bearer, Introspection, Cookies, idsrv";
+        public const string AuthenticationSchemes = "Bearer, Introspection, Identity.Application";
          
         // scopes define the resources in your system
         public static IEnumerable<IdentityResource> GetIdentityResources()

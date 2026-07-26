@@ -4,7 +4,7 @@ namespace AnnotationVizLib
 {
     public interface IGeometry
     {
-        Microsoft.SqlServer.Types.SqlGeometry Geometry { get; set; }
+        IShape2D Geometry { get; set; }
 
         double Z { get; }
 

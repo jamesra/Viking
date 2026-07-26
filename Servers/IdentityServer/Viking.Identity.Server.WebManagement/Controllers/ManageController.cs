@@ -9,11 +9,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
 using Viking.Identity.Server.WebManagement.Extensions;
 using Viking.Identity.Server.WebManagement.Models.ManageViewModels;
 using Viking.Identity.Server.WebManagement.Models.UserViewModels;
+using Viking.Identity.Server;
 using Viking.Identity.Server.Services;
 
 namespace Viking.Identity.Server.WebManagement.Controllers
@@ -28,6 +30,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         private readonly ILogger _logger;
         private readonly UrlEncoder _urlEncoder;
         private readonly ApplicationDbContext _context;
+        private readonly VikingIdentityServerOptions _identityServerOptions;
 
         private const string AuthenticatorUriFormat = "otpauth://totp/{0}:{1}?secret={2}&issuer={0}&digits=6";
         private const string RecoveryCodesKey = nameof(RecoveryCodesKey);
@@ -38,7 +41,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
           IEmailSender emailSender,
           ApplicationDbContext context,
           ILogger<ManageController> logger,
-          UrlEncoder urlEncoder)
+          UrlEncoder urlEncoder,
+          IOptions<VikingIdentityServerOptions> identityServerOptions)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -46,6 +50,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             _logger = logger;
             _urlEncoder = urlEncoder;
             _context = context;
+            _identityServerOptions = identityServerOptions?.Value;
         }
 
         [TempData]
@@ -245,7 +250,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             }
 
             var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme);
+            var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme, _identityServerOptions?.Authority);
             var email = user.Email;
             await _emailSender.SendEmailConfirmationAsync(email, callbackUrl);
 

@@ -52,7 +52,7 @@ namespace gRPCAnnotationService
 
         }
 
-        public override async Task<GetStructureTypesResponse> GetStructureTypes(GetStructureTypesRequest request, ServerCallContext context)
+        public override Task<GetStructureTypesResponse> GetStructureTypes(GetStructureTypesRequest request, ServerCallContext context)
         {
             try
             {
@@ -60,7 +60,7 @@ namespace gRPCAnnotationService
 
                 response.Results.AddRange(_context.StructureTypes.Select(t => t.ToProtobufMessage()));
 
-                return response;
+                return Task.FromResult(response);
             }
             catch (System.Exception e)
             {  
@@ -69,10 +69,10 @@ namespace gRPCAnnotationService
             }
         }
 
-        public override async Task<GetStructureTypesByIDsResponse> GetStructureTypesByIDs(GetStructureTypesByIDsRequest request, ServerCallContext context)
+        public override Task<GetStructureTypesByIDsResponse> GetStructureTypesByIDs(GetStructureTypesByIDsRequest request, ServerCallContext context)
         {
             GetStructureTypesByIDsResponse response = new GetStructureTypesByIDsResponse();
-            foreach (var chunk in request.Id.ToArray().Chunk())
+            foreach (var chunk in request.Ids.ToArray().Chunk())
             {
                 try
                 {
@@ -86,7 +86,7 @@ namespace gRPCAnnotationService
                 }
             }
 
-            return response;
+            return Task.FromResult(response);
         }
 
         public override async Task<UpdateStructureTypesResponse> Update(UpdateStructureTypesRequest request, ServerCallContext context)
@@ -99,45 +99,28 @@ namespace gRPCAnnotationService
 
                 foreach (var req in request.Objs)
                 {
-                    var ef_obj = req.Result.ToStructureType();
+                    //var EF_Result = req..ToStructureType();
 
-                    StructureTypeChangeResponse row_response = new StructureTypeChangeResponse() { Action = req.Action };
+                    StructureTypeChangeResponse row_response = new StructureTypeChangeResponse();
 
-                    switch (req.Action)
+                    switch (req.ActionCase)
                     {
-                        case DBAction.None:
-                            row_response.Sucess = true;
+                         
+                        case StructureTypeChangeRequest.ActionOneofCase.Create:
+                            var insert_result = await _context.StructureTypes.AddAsync(req.Create.ToStructureType());
+                            row_response.Success = insert_result.State == Microsoft.EntityFrameworkCore.EntityState.Added;
+                            row_response.Created = row_response.Success ? insert_result.Entity.ToProtobufMessage() : null;
                             break;
-                        case DBAction.Insert:
-                            var insertResult = await _context.StructureTypes.AddAsync(ef_obj);
-                            row_response.Sucess = true;
-                            row_response.Result = insertResult.Entity.ToProtobufMessage();
+                        case StructureTypeChangeRequest.ActionOneofCase.Update:
+                            var update_result = _context.StructureTypes.Update(req.Update.ToStructureType());
+                            row_response.Success = update_result.State == Microsoft.EntityFrameworkCore.EntityState.Modified;
+                            row_response.Updated = update_result.Entity.ToProtobufMessage();
                             break;
-                        case DBAction.Update:
-                            var obj = _context.StructureTypes.FirstOrDefault(t => t.Id == ef_obj.Id);
-                            if (obj != null)
-                            {
-                                req.Result.Sync(ref obj);
-                                var EF_Result = _context.StructureTypes.Update(obj);
-                                row_response.Sucess = true;
-                                row_response.Result = EF_Result.Entity.ToProtobufMessage();
-                            }
-                            else
-                            {
-                                row_response.Sucess = false;
-                            }
-                            break;
-                        case DBAction.Delete:
-                            var EF_remove_row = _context.StructureTypes.FirstOrDefault(t => t.Id == ef_obj.Id);
-                            if (EF_remove_row != null)
-                            {
-                                _context.StructureTypes.Remove(EF_remove_row);
-                                row_response.Sucess = true;
-                            }
-                            else
-                            {
-                                row_response.Sucess = false;
-                            }
+                        case StructureTypeChangeRequest.ActionOneofCase.Delete:
+                            var del_row = await _context.StructureTypes.FindAsync(req.Delete);
+                            var remove_result = _context.StructureTypes.Remove(del_row);
+                            row_response.Success = remove_result.State == Microsoft.EntityFrameworkCore.EntityState.Deleted;
+                            row_response.DeletedId = req.Delete;
                             break;
                     }
 
@@ -150,8 +133,9 @@ namespace gRPCAnnotationService
             }
             catch (System.Exception e)
             {
+                //This means there was no row with that ID; 
                 _logger.LogInformation($"{nameof(Update)}: {e}");
-                throw new Grpc.Core.RpcException(new Status(StatusCode.Unknown, nameof(Update), e));
+                throw new Grpc.Core.RpcException(new Status(StatusCode.Unknown, nameof(Update), e)); 
             }
         }
     }

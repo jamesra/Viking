@@ -11,6 +11,7 @@ using VikingXNAGraphics;
 using VikingXNAWinForms;
 using WebAnnotation.View;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -250,7 +251,7 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
                     return;
                 }
 
-                listCurves.OrderBy(c => c.Distance);
+                listCurves = listCurves.OrderBy(c => c.Distance).ToList();
 
                 LocationOpenCurveView curveToCopy = listCurves.First().obj as LocationOpenCurveView;
                 OriginalVolumeControlPoints = curveToCopy.VolumeControlPoints;

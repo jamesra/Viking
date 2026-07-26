@@ -2,6 +2,7 @@
 using System.Linq;
 using Viking.AnnotationServiceTypes;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Actions
 {

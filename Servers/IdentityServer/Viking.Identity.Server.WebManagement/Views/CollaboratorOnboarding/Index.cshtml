@@ -1,0 +1,101 @@
+@model Viking.Identity.Server.WebManagement.Models.UserViewModels.CollaboratorOnboardingViewModel
+
+@{
+    ViewData["Title"] = "Collaborator Volume Wizard";
+    ViewData["Breadcrumbs"] = new List<(string Text, string Url)>
+    {
+        ("Dashboard", Url.Action("Index", "Home")),
+        ("Collaborator Volume Wizard", null)
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-magic"></i> Collaborator Volume Wizard</h2>
+</div>
+
+<form method="post" id="onboardingForm">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <div class="card card-modern mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-file-earmark-code"></i> VikingXML Source</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label asp-for="VikingXmlUrl" class="form-label"></label>
+                <div class="input-group">
+                    <input asp-for="VikingXmlUrl" class="form-control" placeholder="https://example.com/Volume.VikingXML" />
+                    <button type="submit" formaction="@Url.Action("Preview")" class="btn btn-outline-primary">
+                        <i class="bi bi-search"></i> Preview
+                    </button>
+                </div>
+                <span asp-validation-for="VikingXmlUrl" class="text-danger"></span>
+                <small class="form-text text-muted">Fetch volume name and notes from the first section of the VikingXML.</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="card card-modern mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="bi bi-building"></i> Organization</h5>
+        </div>
+        <div class="card-body">
+            <input type="hidden" name="Org.ResourceTypeId" value="@nameof(OrganizationalUnit)" />
+            <partial name="~/Views/Shared/_CreateResourceBasicsPartialForm.cshtml" for="Org" />
+        </div>
+    </div>
+
+    <div class="card card-modern mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="bi bi-hdd-stack"></i> Volume</h5>
+        </div>
+        <div class="card-body">
+            <input type="hidden" name="Volume.ResourceTypeId" value="@nameof(Volume)" />
+            <div class="mb-3">
+                <label asp-for="Volume.Name" class="form-label"></label>
+                <input asp-for="Volume.Name" class="form-control" />
+                <span asp-validation-for="Volume.Name" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Volume.Description" class="form-label"></label>
+                <textarea asp-for="Volume.Description" class="form-control" rows="4"></textarea>
+                <span asp-validation-for="Volume.Description" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Volume.URL" class="form-label"></label>
+                <input asp-for="Volume.URL" class="form-control" readonly />
+                <span asp-validation-for="Volume.URL" class="text-danger"></span>
+                <small class="form-text text-muted">Set from the VikingXML URL above.</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="card card-modern mb-4">
+        <div class="card-header bg-warning">
+            <h5 class="mb-0"><i class="bi bi-person-plus"></i> Collaborator</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label asp-for="CollaboratorEmail" class="form-label"></label>
+                <input asp-for="CollaboratorEmail" class="form-control" placeholder="collaborator@example.com" />
+                <span asp-validation-for="CollaboratorEmail" class="text-danger"></span>
+                <small class="form-text text-muted">
+                    An invite email will be sent. If email fails, you will receive a URL to share manually.
+                    If the user already exists, they are granted access immediately.
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-group mb-5">
+        <button type="submit" formaction="@Url.Action("Create")" class="btn btn-primary btn-lg">
+            <i class="bi bi-check-circle"></i> Create Org, Volume &amp; Invite
+        </button>
+        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary btn-lg ms-2">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

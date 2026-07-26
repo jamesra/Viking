@@ -29,6 +29,7 @@ using Viking.Identity.Data;
 using Viking.Identity.Models;
 using Viking.Identity.Server;
 using Viking.Identity.Server.Authorization;
+using Viking.Identity.Server.Extensions.Services;
 using Viking.Identity.Server.Services;
 using Viking.Identity.Server.WebManagement.Extensions;
 using Viking.SSL;
@@ -157,6 +158,9 @@ public class Program
             // Configure Identity Server Data Context
             builder.Services.ConfigureIdentityServerDataContext(builder.Configuration);
 
+            builder.Services.Configure<VikingIdentityServerOptions>(
+                builder.Configuration.GetSection(nameof(VikingIdentityServerOptions)));
+
             var vikingConfig = builder.Configuration.GetSection("VikingIdentityServerOptions").Get<VikingIdentityServerOptions>();
 
             // Configure Authentication
@@ -170,7 +174,15 @@ public class Program
                     options.EnableCaching = true;
                 });
 
-            // Configure Authorization
+            // Configure Authorization — require bearer token on all endpoints unless [AllowAnonymous]
+            builder.Services.AddAuthorization(options =>
+            {
+                options.FallbackPolicy = new AuthorizationPolicyBuilder()
+                    .AddAuthenticationSchemes(OAuth2IntrospectionDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser()
+                    .Build();
+            });
+
             builder.Services.AddTransient<Duende.IdentityServer.Validation.ICustomTokenRequestValidator, Viking.Identity.Server.WebManagement.Extensions.UserScopeTokenRequestValidator>();
             builder.Services.AddScoped<IAuthorizationHandler, ResourceIdPermissionsAuthorizationHandler>();
             builder.Services.AddScoped<IAuthorizationHandler, ResourcePermissionsAuthorizationHandler>();
@@ -185,6 +197,15 @@ public class Program
 
             builder.Services.AddTransient<IEmailSender, EmailSender>();
 
+            builder.Services.AddScoped<Viking.Identity.Server.Extensions.Services.IPermissionService, Viking.Identity.Server.Extensions.Services.PermissionService>();
+            builder.Services.AddScoped<Viking.Identity.Server.Extensions.Services.IAuthenticationService, Viking.Identity.Server.Extensions.Services.AuthenticationService>();
+            builder.Services.Configure<DebugLoggingOptions>(builder.Configuration.GetSection("DebugLogging"));
+            builder.Services.AddSingleton<IDebugLoggingService, DebugLoggingService>();
+
+            builder.Services.AddHttpClient();
+
+            builder.Services.AddHealthChecks();
+
             // Configure Swagger/OpenAPI
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
@@ -197,7 +218,7 @@ public class Program
             var app = builder.Build();
 
             // Configure the HTTP request pipeline
-            if (app.Environment.IsDevelopment() || Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") == "Docker")
+            if (app.Environment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
@@ -212,6 +233,7 @@ public class Program
             app.UseAuthentication();
             app.UseAuthorization();
 
+            app.MapHealthChecks("/health");
             app.MapControllers();
             app.MapRazorPages();
             app.MapDefaultControllerRoute();

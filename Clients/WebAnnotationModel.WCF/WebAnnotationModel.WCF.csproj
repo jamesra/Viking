@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{71B8A587-DA18-4472-8873-64C56DD274AD}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>WebAnnotationModel.WCF</RootNamespace>
+    <AssemblyName>WebAnnotationModel.WCF</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Extensions.cs" />
+    <Compile Include="GetObjectBySectionCallbackState.cs" />
+    <Compile Include="LocationLinkStore.cs" />
+    <Compile Include="LocationStore.cs" />
+    <Compile Include="MixedLocalAndRemoteQueryResults.cs" />
+    <Compile Include="PermittedStructureLinkStore.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="State.cs" />
+    <Compile Include="StoreBase.cs" />
+    <Compile Include="StoreBaseWithIndexKey.cs" />
+    <Compile Include="StoreBaseWithIndexKeyAndParent.cs" />
+    <Compile Include="StoreBaseWithKey.cs" />
+    <Compile Include="StructureLinkStore.cs" />
+    <Compile Include="StructureStore.cs" />
+    <Compile Include="StructureTypeStore.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj">
+      <Project>{660256d5-ae05-48cf-9821-4e5c00131410}</Project>
+      <Name>AnnotationInterfaces</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj">
+      <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
+      <Name>AnnotationServiceTypes.WCF</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Geometry\Geometry.csproj">
+      <Project>{eacb87e8-a5e3-417e-a9ef-b80c2a68c020}</Project>
+      <Name>Geometry</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\RTree\RTree.csproj">
+      <Project>{4085ba67-60d7-4679-886e-457aaf37ec7b}</Project>
+      <Name>RTree</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\WebAnnotationModel\WebAnnotationModel.csproj">
+      <Project>{8e5713fd-d55a-4abb-bffb-799df53ba313}</Project>
+      <Name>WebAnnotationModel</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

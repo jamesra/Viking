@@ -7,7 +7,7 @@ namespace Geometry
     /// Stores a quadtree 
     /// </summary>
     public class QuadTreeTemplatePoint<TPoint, TValue>
-         where TPoint : struct, IPoint
+         where TPoint : struct, IPoint2D
     {
         //GridVector2[] _points;
         QuadTreeNodeTemplatePoint<TPoint, TValue> Root;

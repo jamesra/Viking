@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Security.Policy;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -88,11 +88,7 @@ namespace Viking.Identity.Data
             builder.Entity<GrantedGroupPermission>().HasOne(oa => oa.PermittedGroup).WithMany(nameof(Models.Group.PermissionsHeld)).HasForeignKey(oa => oa.GroupId).OnDelete(DeleteBehavior.ClientCascade);
             builder.Entity<GrantedGroupPermission>().HasOne(oa => oa.Resource).WithMany(nameof(Models.Resource.GroupsWithPermissions)).HasForeignKey(oa => oa.ResourceId);
 
-            // Cascade delete at the DB level so removing an ApplicationUser also removes its
-            // granted permissions. This is safe because AspNetUsers and Resource are independent
-            // principal tables (no multi-cascade-path diamond into GrantedUserPermissions on
-            // SQL Server). Mirrors the pattern already used for UserToGroupAssignment.UserId.
-            builder.Entity<GrantedUserPermission>().HasOne(oa => oa.PermittedUser).WithMany(nameof(Models.ApplicationUser.PermissionsHeld)).HasForeignKey(oa => oa.UserId).OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<GrantedUserPermission>().HasOne(oa => oa.PermittedUser).WithMany(nameof(Models.ApplicationUser.PermissionsHeld)).HasForeignKey(oa => oa.UserId).OnDelete(DeleteBehavior.ClientCascade);
             builder.Entity<GrantedUserPermission>().HasOne(oa => oa.Resource).WithMany(nameof(Models.Resource.UsersWithPermissions)).HasForeignKey(oa => oa.ResourceId);
 
             builder.Entity<Resource>().HasOne(oa => oa.Parent)
@@ -120,7 +116,27 @@ namespace Viking.Identity.Data
                 .Property(s => s.Endpoint)
                 .HasColumnName("Endpoint")
                 .HasConversion(uriConverter);
-                 
+
+            builder.Entity<VikingLaunchCode>()
+                .ToTable("VikingLaunchCodes")
+                .HasIndex(c => c.ExpiresAtUtc);
+
+            builder.Entity<CollaboratorInvite>()
+                .ToTable("CollaboratorInvites")
+                .HasIndex(c => c.ExpiresAtUtc);
+
+            builder.Entity<CollaboratorInvite>()
+                .HasOne(c => c.OrganizationalUnit)
+                .WithMany()
+                .HasForeignKey(c => c.OrganizationalUnitId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<CollaboratorInvite>()
+                .HasOne(c => c.Volume)
+                .WithMany()
+                .HasForeignKey(c => c.VolumeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             InitialPopulationOfDatabase(builder);
         }
 
@@ -161,11 +177,14 @@ namespace Viking.Identity.Data
             //////////////////////////
             /// Create standard groups 
             var EveryoneGroup = new Group { Id = Special.Groups.Everyone, Name = Special.Groups.Everyone };
+            var AnonymousGroup = new Group { Id = Special.Groups.Anonymous, Name = Special.Groups.Anonymous };
             builder.Entity<Group>().HasData(new Group[] {
-               EveryoneGroup
+               EveryoneGroup,
+               AnonymousGroup
             });
 
             // Note: UserToGroupAssignment for Everyone group will be created when first user registers
+            // Anonymous group has virtual membership (no UserToGroupAssignment rows)
         }
 
 
@@ -244,5 +263,9 @@ namespace Viking.Identity.Data
         public DbSet<GrantedGroupPermission> GrantedGroupPermissions { get; set; }
 
         public DbSet<GrantedUserPermission> GrantedUserPermissions { get; set; }
+
+        public DbSet<VikingLaunchCode> VikingLaunchCodes { get; set; }
+
+        public DbSet<CollaboratorInvite> CollaboratorInvites { get; set; }
     }
 }

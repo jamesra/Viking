@@ -76,10 +76,9 @@ SQL_SERVER_IDENTITY_DB=IdentityViking
 SQL_SERVER_CONFIG_DB=IdentityConfig
 SQL_SERVER_GRANTS_DB=IdentityPersistedGrants
 
-# SSL Certificate Paths (optional)
+# SSL Certificate Paths (optional, PEM)
 SSL_CERT_PATH=/path/to/certificate.crt
 SSL_KEY_PATH=/path/to/private.key
-SSL_CERT_PFX_PATH=/path/to/certificate.pfx
 
 # Duende License (optional)
 DUENDE_KEY_PATH=/path/to/Duende_License.key

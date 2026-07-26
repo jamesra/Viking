@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31829.152
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "AnnotationDatabase", "AnnotationDatabase.sqlproj", "{4DD9167C-1FD9-4E9A-AF23-0F6D376B16F6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationDatabaseTest", "AnnotationDatabaseTest\AnnotationDatabaseTest.csproj", "{42BB87F0-ADB6-46F4-9F7D-D294127F5994}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4DD9167C-1FD9-4E9A-AF23-0F6D376B16F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4DD9167C-1FD9-4E9A-AF23-0F6D376B16F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4DD9167C-1FD9-4E9A-AF23-0F6D376B16F6}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{4DD9167C-1FD9-4E9A-AF23-0F6D376B16F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4DD9167C-1FD9-4E9A-AF23-0F6D376B16F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4DD9167C-1FD9-4E9A-AF23-0F6D376B16F6}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{42BB87F0-ADB6-46F4-9F7D-D294127F5994}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{42BB87F0-ADB6-46F4-9F7D-D294127F5994}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{42BB87F0-ADB6-46F4-9F7D-D294127F5994}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{42BB87F0-ADB6-46F4-9F7D-D294127F5994}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B13FABF4-288F-427E-8C85-D2CB9EF04F05}
+	EndGlobalSection
+EndGlobal

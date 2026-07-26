@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package gRPCSegmentAnything;
+
+service Segmentation {
+    rpc SegmentByPoints (SegmentByPointsRequest) returns (SegmentationResponse);
+}
+
+// The request message containing the image data and points for segmentation.
+message SegmentByPointsRequest {
+    bytes imageData = 1;
+    repeated Point points = 2;
+}
+
+//Labels matching the indicies of the points passed in a SegmentImageSubsetRequest
+message SegmentationResponse {
+    int labeledImageData = 1;
+}
+
+message Point {
+    double x = 1;
+    double y = 2;
+}

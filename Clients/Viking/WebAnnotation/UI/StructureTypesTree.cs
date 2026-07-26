@@ -6,6 +6,7 @@ using Viking.Common;
 using Viking.UI.Controls;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI
 {
@@ -35,7 +36,7 @@ namespace WebAnnotation.UI
         }
 
         protected void UpdateNodeChildren(StructureType obj)
-        {
+        { 
             GenericTreeNode[] Nodes = Tree.GetNodesForObject(obj);
             foreach (GenericTreeNode node in Nodes)
             {

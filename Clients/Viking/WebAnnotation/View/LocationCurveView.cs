@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework;
 using System.Linq;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.View
 {

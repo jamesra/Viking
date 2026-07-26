@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -23,6 +23,7 @@ using Viking.Identity.Models;
 using Viking.Identity.Server.Authorization;
 using Viking.Identity.Server.WebManagement.Extensions;
 using Viking.Identity.Server.Services;
+using Viking.Identity.Server.Extensions.Services;
 using Viking.SSL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -30,7 +31,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.FileProviders;
 using Viking.Identity;
 using DotNetEnv;
 using ConfigurationSubstitution;
@@ -207,7 +207,7 @@ namespace Viking.Identity.Server.WebManagement
             services.AddScoped<IAuthorizationHandler, ResourcePermissionsAuthorizationHandler>();
 
             // Configure SSL and HTTPS redirection 
-            var https_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT", 4001); 
+            var https_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT", 443); 
             services.AddHttpsRedirection(options =>
             {
                 options.RedirectStatusCode = StatusCodes.Status308PermanentRedirect;
@@ -225,6 +225,13 @@ namespace Viking.Identity.Server.WebManagement
             // Add application services
             services.AddTransient<IEmailSender, EmailSender>();
             services.AddTransient<IPermissionsViewModelHelper, PermissionsViewModelHelper>();
+            services.AddScoped<ResourceProvisioningService>();
+            services.AddScoped<CollaboratorOnboardingService>();
+            services.AddHttpClient<VikingXmlMetadataService>()
+                .ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.HttpClientHandler
+                {
+                    AllowAutoRedirect = false
+                });
 
             // Add HTTP context accessor
             services.AddHttpContextAccessor();
@@ -257,19 +264,6 @@ namespace Viking.Identity.Server.WebManagement
 
             // Configure Email options
             services.Configure<Viking.Identity.Server.Services.EmailOptions>(configuration.GetSection("Email"));
-
-            // Configure access token management
-            services.AddAccessTokenManagement(options =>
-            {
-                // client config is inferred from OpenID Connect settings
-            });
-
-            // Configure HttpClient for calling the WebAPI
-            services.AddHttpClient("IdentityApi", client =>
-            {
-                var webApiOptions = configuration.GetSection(nameof(WebApiOptions)).Get<WebApiOptions>();
-                client.BaseAddress = new Uri(webApiOptions.BaseUrl);
-            });
         }
 
         private static void ConfigureKestrel(IWebHostBuilder webHostBuilder, IConfiguration configuration)
@@ -278,8 +272,8 @@ namespace Viking.Identity.Server.WebManagement
             {
                 // Configure HTTPS with custom certificate
                 var sslOptions = configuration.GetSection("SSL").Get<SSLOptions>();
-                var http_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTP_PORT", 4000);
-                var https_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT", 4001);
+                var http_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTP_PORT", 80);
+                var https_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT", 443);
 
                 Log.Information("Configuring Kestrel to listen on HTTP port {HttpPort} and HTTPS port {HttpsPort}", http_port, https_port);
 
@@ -336,26 +330,6 @@ namespace Viking.Identity.Server.WebManagement
             Console.WriteLine(" Configuring middleware...");
             app.UseSerilogRequestLogging();
             Console.WriteLine(" Serilog request logging configured");
-
-            // ACME HTTP-01 challenge tokens are extensionless files under
-            // /.well-known/acme-challenge and must be served over plain HTTP.
-            var webRootPath = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
-            var acmeChallengePath = Path.Combine(webRootPath, ".well-known", "acme-challenge");
-            if (Directory.Exists(acmeChallengePath))
-            {
-                app.UseStaticFiles(new StaticFileOptions
-                {
-                    FileProvider = new PhysicalFileProvider(acmeChallengePath),
-                    RequestPath = "/.well-known/acme-challenge",
-                    ServeUnknownFileTypes = true,
-                    DefaultContentType = "text/plain"
-                });
-                Console.WriteLine($" ACME challenge static files configured from: {acmeChallengePath}");
-            }
-            else
-            {
-                Console.WriteLine($" WARNING: ACME challenge path not found: {acmeChallengePath}");
-            }
 
             app.UseHttpsRedirection();
             Console.WriteLine(" HTTPS redirection configured");

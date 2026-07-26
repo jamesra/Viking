@@ -133,18 +133,22 @@ namespace Viking.Identity.Server.WebManagement.ApiControllers
             if (userId is null)
             {
                 throw new ArgumentNullException(nameof(userId));
-            } 
+            }
 
-            Resource resourceObj = null;
+            ApplicationUser caller;
             try
             {
-                long rId = System.Convert.ToInt64(resourceId);
-                resourceObj = await _context.Resource.FirstOrDefaultAsync(r => r.Id == rId);
+                caller = await GetApplicationUser();
             }
-            catch (FormatException)
+            catch (UnexpectedResultException)
             {
-                resourceObj = await _context.Resource.FirstOrDefaultAsync(r => r.Name == resourceId);
+                throw;
             }
+
+            if (caller.Id != userId && !User.IsInRole(Special.Roles.Admin))
+                return Forbid();
+
+            var resourceObj = await _context.FindApiFacingResourceAsync(resourceId);
 
             if (resourceObj == null)
             {
@@ -155,25 +159,6 @@ namespace Viking.Identity.Server.WebManagement.ApiControllers
 
             var resultList = await result.ToListAsync();
             return resultList;
-
-            /*string[] resourceTypes = Array.Empty<string>();
-            if (resourceTypeId != null)
-                resourceTypes = new string[] { resourceTypeId };
-
-            //var result = await _context.UserResourcePermissions(resourceObj.Id, appUser.Id, resourceTypes);
-            //return result;
-
-            var userPermittedResources = await _context.UserResourcePermissions(appUser.Id, resourceTypes);
-
-            var resourceMap = from r in await _context.Resource.Include(nameof(Volume)).ToListAsync()
-                join upr in userPermittedResources.Keys on r.Id equals upr
-                select new { r.Id, r.Name, permissions = userPermittedResources[upr] };
-
-            //return Json(new {Resources = resourceMap.ToDictionary(r => r.Id, r => r.Name), Permissions = userPermittedResources });
-
-            //return Json(resourceMap.ToDictionary(r => r.Id, r => r));
-            return resourceMap.ToDictionary(r => r.Id, r => (object)r);
-            */
         }
 
         /// <summary>
@@ -194,16 +179,7 @@ namespace Viking.Identity.Server.WebManagement.ApiControllers
                 throw new ArgumentNullException(nameof(user));
             } 
 
-            Resource resourceObj = null;
-            try
-            {
-                long rId = System.Convert.ToInt64(resourceId);
-                resourceObj = await _context.Resource.FirstOrDefaultAsync(r => r.Id == rId);
-            }
-            catch (FormatException)
-            {
-                resourceObj = await _context.Resource.FirstOrDefaultAsync(r => r.Name == resourceId);
-            }
+            var resourceObj = await _context.FindApiFacingResourceAsync(resourceId);
 
             if (resourceObj == null)
             {

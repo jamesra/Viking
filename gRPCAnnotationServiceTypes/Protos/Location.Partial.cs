@@ -7,84 +7,100 @@ using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
 {
-    public partial class Location : ILocationReadOnly, IChangeAction
+    public partial class Location : ILocation, IChangeAction
     {
-        // ILocationReadOnly interface implementation
-        ulong ILocationReadOnly.ID => (ulong)this.Id;
+        long? ILocation.ParentID { get => this.HasParentId ? this.ParentId : new long?();
+            set {
+                if (value.HasValue)
+                    this.ParentId = value.Value;
+                else
+                    this.ClearParentId();
+            }
+        } 
 
-        ulong ILocationReadOnly.ParentID => this.HasParentId ? (ulong)this.ParentId : 0;
+        string ILocation.Attributes { get => this.Attributes; set => this.Attributes = value; }
 
-        bool ILocationReadOnly.Terminal => this.Terminal;
+        long ILocation.SectionNumber { get => this.Section; set => Section = value; }
+        string ILocation.TagsXml { get => this.Attributes; set => this.Attributes = value;}
+        LocationType ILocation.TypeCode { get => (LocationType)(int)this.TypeCode; set => TypeCode = (Viking.AnnotationServiceTypes.gRPC.V1.Protos.AnnotationType)(int)value;}
 
-        bool ILocationReadOnly.OffEdge => this.OffEdge;
+        GridVector3 ILocation.VolumePosition { get => this.VolumePosition; }
 
-        // These properties don't exist in the protobuf, so return default values
-        bool ILocationReadOnly.IsVericosityCap => false;
+        GridVector3 ILocation.MosaicPosition { get => this.MosaicPosition; }
 
-        bool ILocationReadOnly.IsUntraceable => false;
+        DateTime ILocation.Created { get => Created.ToDateTime(); }
 
-        IDictionary<string, string> ILocationReadOnly.Attributes => 
-            string.IsNullOrEmpty(this.Attributes) ? new Dictionary<string, string>() : 
-            ParseAttributesFromString(this.Attributes);
+        DateTime ILocation.LastModified { get => LastModified.ToDateTime(); }
 
-        // This property doesn't exist in the protobuf, so calculate from section
-        long ILocationReadOnly.UnscaledZ => this.Section;
+        IList<long> ILocation.Links { get => this.Links; }
+         
+        long IDataObjectWithKey<long>.ID { get => this.Id; set => Id = value; }
 
-        // This property doesn't exist in the protobuf, use attributes instead
-        string ILocationReadOnly.TagsXml => this.Attributes ?? string.Empty;
-
-        LocationType ILocationReadOnly.TypeCode => (LocationType)(int)this.TypeCode;
-
-        // This property doesn't exist in the protobuf, use section as fallback
-        double ILocationReadOnly.Z => this.Section;
-
-        Microsoft.SqlServer.Types.SqlGeometry ILocationReadOnly.Geometry => 
-            this.VolumeShape?.Text != null ? 
-            Microsoft.SqlServer.Types.SqlGeometry.Parse(this.VolumeShape.Text) :
-            Microsoft.SqlServer.Types.SqlGeometry.Null;
-
-        // IChangeAction implementation
         DBACTION _DBAction = DBACTION.NONE;
         DBACTION IChangeAction.DBAction { get => _DBAction; set => _DBAction = value; }
 
-        // IEquatable implementation
-        bool IEquatable<ILocationReadOnly>.Equals(ILocationReadOnly other)
+        string ILocation.MosaicGeometryWKT
+        {
+            get => ToWKT(MosaicShape) ?? this.ToMosaicCircleWKT();
+            set => this.MosaicShape.Text = value;
+        }
+
+        string ILocation.VolumeGeometryWKT { get => ToWKT(VolumeShape) ?? this.ToVolumeCircleWKT(); set => this.VolumeShape.Text = value; }
+
+        private string ToWKT(Geometry g)
+        {
+            switch (g.EncodingCase)
+            {
+                case Geometry.EncodingOneofCase.None:
+                    return null;
+                case Geometry.EncodingOneofCase.Text:
+                    return g.Text;
+                case Geometry.EncodingOneofCase.Binary:
+                {
+                    var r = new NetTopologySuite.IO.WKBReader();
+                    var rdr = new NetTopologySuite.IO.WKBReader
+                    {
+                        HandleOrdinates = NetTopologySuite.Geometries.Ordinates.AllOrdinates,
+                        HandleSRID = false
+                    };
+
+                    var ptAUR = rdr.Read(g.Binary.ToByteArray());
+                    return ptAUR.ToText();
+                }
+            }
+
+            throw new NotImplementedException("Unexpected geometry encoding");
+        }
+
+        bool IEquatable<ILocation>.Equals(ILocation other)
         {
             if (ReferenceEquals(this, other))
                 return true;
 
-            if (ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
-            return this.Id == (long)other.ID;
+            return this.Id == other.ID;
         }
 
-        // Helper method to parse attributes string to dictionary
-        private static IDictionary<string, string> ParseAttributesFromString(string attributes)
+        public static explicit operator LocationChangeRequest(Location src)
         {
-            var result = new Dictionary<string, string>();
-            if (string.IsNullOrEmpty(attributes))
-                return result;
-
-            try
+            var value = new LocationChangeRequest();
+            switch (src._DBAction)
             {
-                // Try to parse as simple key=value pairs separated by semicolons
-                var pairs = attributes.Split(';');
-                foreach (var pair in pairs)
-                {
-                    var keyValue = pair.Split('=');
-                    if (keyValue.Length == 2)
-                    {
-                        result[keyValue[0].Trim()] = keyValue[1].Trim();
-                    }
-                }
+                case DBACTION.NONE:
+                    return null;
+                case DBACTION.INSERT:
+                    value.Create = src;
+                    break;
+                case DBACTION.UPDATE:
+                    value.Update = src;
+                    break;
+                case DBACTION.DELETE:
+                    value.Delete = src.Id;
+                    break;
             }
-            catch
-            {
-                // If parsing fails, return empty dictionary
-            }
-
-            return result;
+            return value;
         }
     }
 }

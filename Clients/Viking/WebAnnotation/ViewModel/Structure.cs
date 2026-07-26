@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using Viking.Common;
 using Viking.Common.UI;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.ViewModel
 {

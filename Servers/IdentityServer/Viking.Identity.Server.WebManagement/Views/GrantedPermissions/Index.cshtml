@@ -1,0 +1,73 @@
+@model Viking.Identity.Server.WebManagement.Models.UserViewModels.ResourcePermissionsEditGridViewModel
+
+@{
+    ViewData["Title"] = "Permissions Granted";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var resourceId = ViewBag.ResourceId as long?;
+    var resourceName = ViewBag.ResourceName as string ?? "Resource";
+    var resourceType = ViewBag.ResourceType as string ?? "Resource";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-shield-check"></i> Permissions: @resourceName</h2>
+    <div>
+        @if (resourceId.HasValue)
+        {
+            <a asp-action="Edit" asp-route-id="@resourceId.Value" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> Edit Permissions
+            </a>
+        }
+        <a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle"></i> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="alert alert-info mb-3">
+    <i class="bi bi-info-circle"></i> <strong>Viewing permissions:</strong> This is a read-only view of the current permissions. Click "Edit Permissions" to make changes.
+</div>
+
+<div class="permissions-readonly">
+    <partial name="~/Views/Shared/_ResourcePermissionsGridViewPartialView.cshtml" for="@Model"/>
+</div>
+
+@if (resourceId.HasValue)
+{
+    <div class="form-group mt-4">
+        <a asp-action="Edit" asp-route-id="@resourceId.Value" class="btn btn-primary btn-lg">
+            <i class="bi bi-pencil"></i> Edit Permissions
+        </a>
+        <a href="javascript:history.back()" class="btn btn-outline-secondary btn-lg ms-2">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        // Disable all checkboxes in read-only view
+        $(document).ready(function() {
+            $('.permissions-readonly .permission-checkbox').prop('disabled', true);
+            $('.permissions-readonly .permission-checkbox').css('cursor', 'not-allowed');
+            
+            // Auto-hide success message after 5 seconds
+            var successAlert = $('.alert-success');
+            if (successAlert.length) {
+                setTimeout(function() {
+                    successAlert.fadeOut();
+                }, 5000);
+            }
+        });
+    </script>
+}
+
+
+

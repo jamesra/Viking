@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Duende.IdentityServer.Validation;
 using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
+using Viking.Identity.Models;
 
 namespace Viking.Identity.Server.WebManagement.Extensions
 {
@@ -31,17 +32,17 @@ namespace Viking.Identity.Server.WebManagement.Extensions
                 ResourceName = parts[0];
                 ScopeName = parts[1];
 
-                //The scope name should match a permissionId 
-                var resource = await _context.Resource.FirstOrDefaultAsync(r => r.Name == ResourceName);
-                if (resource == null)
+                // Prefer Volume/SegmentationService when names collide with Group/OrgUnit (e.g. "Yiu").
+                var resource = await _context.FindApiFacingResourceAsync(ResourceName);
+                if (resource == null || (resource.ResourceTypeId != nameof(Volume) && resource.ResourceTypeId != nameof(SegmentationService)))
                     continue;
 
                 var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == context.Result.ValidatedRequest.UserName);
                 if (user == null)
                 {
-                    //Not sure how this happens because User should be authenticated first
                     context.Result.IsError = true;
-                    context.Result.Error = $"{user.UserName} not found";
+                    context.Result.Error = "user not found";
+                    return;
                 }
 
                 if(false == await _context.IsUserPermitted(resource.Id, user.Id, ScopeName))

@@ -14,6 +14,7 @@ namespace Viking.Identity.Data
     {
         public ApplicationDbContext CreateDbContext(string[] args)
         {
+            // Build configuration from appsettings.json, user secrets, and environment variables
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false)
@@ -21,24 +22,15 @@ namespace Viking.Identity.Data
                 .AddEnvironmentVariables()
                 .Build();
 
+            // Get connection string
             var connectionString = configuration.GetConnectionString("IdentityConnection");
-
-            if (string.IsNullOrWhiteSpace(connectionString))
+            
+            if (string.IsNullOrEmpty(connectionString))
             {
                 throw new InvalidOperationException(
-                    "Connection string 'IdentityConnection' is missing or empty. " +
-                    "For EF Core tools (e.g. dotnet ef database update), provide the full SQL Server connection string via user secrets or an environment variable (not only appsettings.json if it is templated). " +
-                    "User secrets: dotnet user-secrets set \"ConnectionStrings:IdentityConnection\" \"<connection string>\" --project <path to Identity.DataContext.csproj>. " +
-                    "Environment variable: ConnectionStrings__IdentityConnection=<connection string>. " +
-                    "If AddJsonFile fails to find appsettings.json, run the command with the project directory as the current directory or use --project so tooling resolves the project folder.");
-            }
-
-            if (connectionString.Contains("${", StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException(
-                    "Connection string 'IdentityConnection' still contains '${...}' placeholders. " +
-                    ".NET configuration does not substitute those; appsettings.json is only a template. " +
-                    "Set the full connection string in user secrets (ConnectionStrings:IdentityConnection) or environment variable ConnectionStrings__IdentityConnection.");
+                    "Connection string 'IdentityConnection' not found. " +
+                    "Please ensure appsettings.json exists in the Identity.DataContext project " +
+                    "and contains the IdentityConnection connection string, or set it in user secrets or environment variables.");
             }
 
             // Create DbContext options

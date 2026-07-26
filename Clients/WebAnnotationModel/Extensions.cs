@@ -1,19 +1,16 @@
-using Viking.AnnotationServiceTypes.Interfaces;
-using Geometry;
-using Microsoft.SqlServer.Types;
-using SqlGeometryUtils;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Geometry; 
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
     public static class Extensions
-    {
-        public static AnnotationService.Types.BoundingRectangle ToBoundingRectangle(this GridRectangle rect) => new AnnotationService.Types.BoundingRectangle() { XMin = rect.Left, XMax = rect.Right, YMin = rect.Bottom, YMax = rect.Top };
-
-        public static GridRectangle ToGridRectangle(this AnnotationService.Types.BoundingRectangle bbox) => new GridRectangle(bbox.XMin, bbox.XMax, bbox.YMin, bbox.YMax);
-
+    {  
+        /*
         public static SqlGeometry ToGeometry(GridVector2[] points, double Z, double radius, LocationType type)
         {
             if (points is null)
@@ -34,6 +31,7 @@ namespace WebAnnotationModel
 
             throw new ArgumentException(string.Format("Unknown location type {0}", type));
         }
+        */
 
         /// <summary>
         /// A helper function to raise events on the UI thread if needed. 
@@ -43,23 +41,22 @@ namespace WebAnnotationModel
         /// <param name="args"></param>
         public static void RaiseEventOnUIThread(this Delegate theEvent, object[] args)
         {
-            if (theEvent is null)
+            if (theEvent == null)
                 return;
 
             foreach (Delegate d in theEvent.GetInvocationList())
             {
-                if (d.Target is ISynchronizeInvoke syncer)
-                {
-                    syncer.BeginInvoke(d, args);  // cleanup omitted
-                }
-                else
-                {
-                    d.DynamicInvoke(args);
-                }
+                if (d.Target is ISynchronizeInvoke s) 
+                    s.BeginInvoke(d, args);  // cleanup omitted 
+                else 
+                    d.DynamicInvoke(args); 
             }
         }
 
-        public static void RaiseEventOnUIThread(this PropertyChangedEventHandler theEvent, PropertyChangedEventArgs args) => theEvent.RaiseEventOnUIThread([args]);
+        public static void RaiseEventOnUIThread(this PropertyChangedEventHandler theEvent, PropertyChangedEventArgs args)
+        {
+            theEvent.RaiseEventOnUIThread(new object[] { args });
+        }
     }
 
 
@@ -72,28 +69,38 @@ namespace WebAnnotationModel
         /// <param name="tag"></param>
         /// <param name="value"></param>
         /// <returns>True if the tag exists in the attributes after the function has completed.</returns>
-        public static bool ToggleAttribute(this List<WebAnnotationModel.ObjAttribute> listAttributes, string tag, string value = null)
+        public static bool ToggleAttribute(this ICollection<ObjAttribute> listAttributes, string tag, string value = null)
         {
-            if (listAttributes.Contains(tag))
+            var existing = listAttributes.FirstOrDefault(a => a.Equals(tag));
+            bool FoundExisting = null != existing;
+            if (FoundExisting)
             {
-                listAttributes.RemoveAll(tag);
+                while (null != existing)
+                {
+                    listAttributes.Remove(existing);
+                    existing = listAttributes.FirstOrDefault(a => a.Equals(tag));
+                }
+
                 return false;
             }
-            else
-            {
-                ObjAttribute attrib = new(tag, value);
+            else{
+                var attrib = new ObjAttribute(tag, value);
                 listAttributes.Add(attrib);
                 return true;
             }
         }
 
-        public static bool Contains(this List<WebAnnotationModel.ObjAttribute> listAttributes, string tag) =>
+        public static bool Contains(this List<ObjAttribute> listAttributes, string tag)
+        {
             //We cannot use the built-in contains function because ObjAttribute equality comparer also checks the value of the attribute
-            listAttributes.Exists(a => a.Name == tag);
+            return listAttributes.Exists(a => a.Name == tag);
+        }
 
-        public static int RemoveAll(this List<WebAnnotationModel.ObjAttribute> listAttributes, string tag) =>
+        public static int RemoveAll(this List<ObjAttribute> listAttributes, string tag)
+        {
             //We cannot use the built-in contains function because ObjAttribute equality comparer also checks the value of the attribute
-            listAttributes.RemoveAll(a => a.Name == tag);
+            return listAttributes.RemoveAll(a => a.Name == tag);
+        }
     }
 
 }

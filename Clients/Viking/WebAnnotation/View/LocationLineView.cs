@@ -11,6 +11,7 @@ using VikingXNAGraphics;
 using WebAnnotation.UI;
 using WebAnnotation.UI.Actions;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.View
 {

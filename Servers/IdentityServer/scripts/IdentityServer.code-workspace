@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../../../../../DockerContainerData/Identity"
+		}
+	],
+	"settings": {
+		"dotnet.defaultSolution": "IdentityServer.sln"
+	}
+}

@@ -21,7 +21,6 @@ namespace Viking.Identity.Models
 
         [Required(AllowEmptyStrings = false)]
         [MaxLength(128)]
-        //[Remote(action: "VerifyUniqueName", controller: "Resources", AdditionalFields ="Id")]
         [Display(Name = "Name", Description = "Name of the group")]
         public string Name { get; set; }
 

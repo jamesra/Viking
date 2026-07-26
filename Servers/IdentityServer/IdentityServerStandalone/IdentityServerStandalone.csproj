@@ -60,6 +60,7 @@
     <ProjectReference Include="../../Identity.DataContext/Identity.DataContext.csproj" />
     <ProjectReference Include="../../Identity.Models/Identity.Models.csproj" />
     <ProjectReference Include="../Identity.Configuration/Identity.Configuration.csproj" />
+    <ProjectReference Include="../Viking.Identity.Server.Extensions/Viking.Identity.Server.Extensions.csproj" />
   </ItemGroup>
 
 	<!-- Debug configuration -->

@@ -17,38 +17,41 @@ service AnnotateLocations {
   rpc GetLastModifiedLocation (GetLastModifiedLocationRequest) returns (GetLastModifiedLocationResponse);
   rpc GetLinkedLocations (GetLinkedLocationsRequest) returns (GetLinkedLocationsResponse);
   rpc GetLocationsForSection (GetLocationsForSectionRequest) returns (GetLocationsForSectionResponse);
-  rpc GetLocationsForStructure (GetLocationsForStructureRequest) returns (GetLocationsForStructureResponse);
   rpc GetLocationChangesInMosaicRegion (GetLocationChangesInMosaicRegionRequest) returns (GetLocationChangesInMosaicRegionResponse);
   rpc GetAnnotationsInMosaicRegion (GetAnnotationsInMosaicRegionRequest) returns (GetAnnotationsInMosaicRegionResponse);
   rpc GetLocationChanges (GetLocationChangesRequest) returns (GetLocationChangesResponse);
-  rpc Update (UpdateLocationRequest) returns (UpdateLocationResponse);
+  rpc Update (UpdateLocationsRequest) returns (UpdateLocationsResponse);
   rpc CreateLocationLink (CreateLocationLinkRequest) returns (CreateLocationLinkResponse);
   rpc DeleteLocationLink (DeleteLocationLinkRequest) returns (DeleteLocationLinkResponse);
   rpc GetLocationLinksForSection (GetLocationLinksForSectionRequest) returns (GetLocationLinksForSectionResponse);
   rpc GetLocationLinksForSectionInMosaicRegion (GetLocationLinksForSectionInMosaicRegionRequest) returns (GetLocationLinksForSectionInMosaicRegionResponse);
   rpc GetLocationChangeLog (GetLocationChangeLogRequest) returns (GetLocationChangeLogResponse);
+  rpc GetStructureLocations (GetStructureLocationsRequest) returns (GetStructureLocationsResponse);
 }
  
-message LocationChange {
-		DBAction action = 1;
-		Location result = 2;
+message LocationChangeRequest {
+		oneof action {
+			Location create = 1;
+			Location update = 2;
+			int64 delete = 3;
+		}
 }
 
 message LocationChangeResponse {
-		DBAction action = 1; //The change that was performed
-		bool Sucess = 2;     //True if the change was applied
-		optional Location result = 3; //The updated row from the database
+		bool success = 1;     //True if the change was applied
+		oneof Action {
+			Location created = 2;
+			Location updated = 3;
+			int64 deletedId = 4;
+		}
 }
 
 message CreateLocationRequest {
-
-  Location obj = 1;
-  repeated int64 linked_ids = 2;
+  Location obj = 1; 
 }
 
 
 message GetLocationByIDRequest {
-
   int64 id = 1;
 }
 
@@ -73,16 +76,12 @@ message GetLocationsForSectionRequest {
 }
 
 
-message GetLocationsForStructureRequest {
-
-  int64 structure_id = 1;
-}
 
 
 message GetLocationChangesInMosaicRegionRequest {
 
-  int64 section = 1;
-  BoundingRectangle bbox = 2;
+  int64 z = 1;
+  Geometry region = 2;
   double min_radius = 3;
   optional google.protobuf.Timestamp modified_after_this_utc_time = 4;
 }
@@ -90,8 +89,8 @@ message GetLocationChangesInMosaicRegionRequest {
 
 message GetAnnotationsInMosaicRegionRequest {
 
-  int64 section = 1;
-  BoundingRectangle bbox = 2;
+  int64 z = 1;
+  Geometry region = 2;
   double min_radius = 3;
   optional google.protobuf.Timestamp modified_after_this_utc_time = 4;
 }
@@ -104,9 +103,9 @@ message GetLocationChangesRequest {
 }
 
 
-message UpdateLocationRequest {
+message UpdateLocationsRequest {
 
-  repeated LocationChange locations = 1;
+  repeated LocationChangeRequest locations = 1;
 }
 
 
@@ -152,52 +151,47 @@ message GetLocationChangeLogRequest {
 }
 
 
-message CreateLocationResponse {
-
-  Location value = 1;
+message CreateLocationResponse { 
+  Location result = 1;
 }
 
 
 message GetLocationByIDResponse {
 
-  Location value = 1;
+  Location result = 1;
 }
 
 
 message GetLocationsByIDResponse {
 
-  repeated Location values = 1;
+  repeated Location results = 1;
 }
 
 
 message GetLastModifiedLocationResponse {
 
-  Location value = 1;
+  Location result = 1;
 }
 
 
 message GetLinkedLocationsResponse {
 
-  repeated int64 values = 1;
+  repeated int64 results = 1;
 }
 
 
 message GetLocationsForSectionResponse {
 
-  repeated Location values = 1; 
+  repeated Location results = 1; 
   google.protobuf.Timestamp query_executed_time = 2;
 }
 
 
-message GetLocationsForStructureResponse {
-
-  repeated Location values = 1;
-}
 
 
 message GetLocationChangesInMosaicRegionResponse {
 
-  repeated Location values = 1;
+  repeated Location results = 1;
   repeated int64 deleted_ids = 2;
   google.protobuf.Timestamp query_executed_time = 3;
 }
@@ -205,7 +199,7 @@ message GetLocationChangesInMosaicRegionResponse {
 
 message GetAnnotationsInMosaicRegionResponse {
 
-  AnnotationSet value = 1;
+  AnnotationSet result = 1;
   repeated int64 deleted_ids = 2;
   google.protobuf.Timestamp query_executed_time = 3;
 }
@@ -213,16 +207,16 @@ message GetAnnotationsInMosaicRegionResponse {
 
 message GetLocationChangesResponse {
 
-  repeated Location values = 1;
+  repeated Location results = 1;
   repeated int64 deleted_ids = 2;
   google.protobuf.Timestamp query_executed_time = 3;
 }
 
 
 
-message UpdateLocationResponse {
+message UpdateLocationsResponse {
 
-  repeated LocationChangeResponse values = 1;
+  repeated LocationChangeResponse results = 1;
 }
  
 message CreateLocationLinkResponse { }
@@ -231,23 +225,22 @@ message DeleteLocationLinkResponse { }
 
 message GetLocationLinksForSectionResponse {
 
-  repeated LocationLink values = 1; 
+  repeated LocationLink results = 1; 
   repeated LocationLink deleted = 2;
   google.protobuf.Timestamp query_executed_time = 3;
 }
  
 message GetLocationLinksForSectionInMosaicRegionResponse {
 
-  repeated LocationLink values = 1;
+  repeated LocationLink results = 1;
 }
  
 message GetLocationChangeLogResponse {
 
-  repeated LocationHistory values = 1;
+  repeated LocationHistory results = 1;
 }
   
-message AnnotationSet {
-
+message AnnotationSet { 
   repeated Structure structures = 1;
   repeated Location locations = 2;
 }
@@ -255,4 +248,14 @@ message AnnotationSet {
 message LocationHistory {
 
   int64 changed_column_mask = 1;
+} 
+
+message GetStructureLocationsRequest {
+
+	int64 structure_id = 1;
+}
+ 
+message GetStructureLocationsResponse {
+
+	repeated Location results = 1;
 }

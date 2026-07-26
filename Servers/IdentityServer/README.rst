@@ -453,7 +453,6 @@ The ``docker-compose-all.yml`` file provides a complete all-in-one deployment co
         secrets:
           - ssl_cert
           - ssl_key
-          - ssl_cert_pfx
         networks:
           - identity-network
         healthcheck:
@@ -468,8 +467,6 @@ The ``docker-compose-all.yml`` file provides a complete all-in-one deployment co
         file: ${SSL_CERT_PATH}
       ssl_key:
         file: ${SSL_KEY_PATH}
-      ssl_cert_pfx:
-        file: ${SSL_CERT_PFX_PATH}
       duende_key:
         file: ${DUENDE_KEY_PATH}
 
@@ -550,7 +547,6 @@ The system uses environment files to configure Docker deployments. Create these 
     # SSL Certificate Configuration
     SSL_CERT_PATH=/path/to/certificate.crt
     SSL_KEY_PATH=/path/to/private.key
-    SSL_CERT_PFX_PATH=/path/to/certificate.pfx
 
     # Authority URL (IdentityServerStandalone endpoint)
     AUTHORITY=https://your-domain.com:6001/
@@ -620,7 +616,6 @@ For running services separately, use ``docker-compose.yml`` which defines indivi
         image: identity-standalone
         secrets:
           - ssl_cert
-          - ssl_cert_pfx 
           - ssl_key
         environment:
           - ASPNETCORE_URLS=http://+:80;https://+:443
@@ -928,6 +923,10 @@ Common Issues
     - Check Authority URL in WebApi configuration matches IdentityServerStandalone URL
     - Ensure both services can communicate (same Docker network or accessible URLs)
     - Verify client secrets match between client and server configurations
+
+**Identity Server signing key / Data Protection "key not found in key ring" (Docker)**
+    - This occurs when the Data Protection key ring used to protect Identity Server signing keys is not available (e.g. the ``DataProtectionKeys`` volume was empty or from another environment). The all-in-one image now seeds the volume from the image when it is empty on startup.
+    - If the error persists, the persisted signing key was created with a different key ring. Delete that key so Identity Server can create a new one: in the **persisted-grant database** (connection ``PersistedGrantConnection`` / ``SQL_SERVER_GRANTS_DB``), run: ``DELETE FROM Keys WHERE Id = '<kid from the log>';`` (e.g. ``Id = '789096348DD6F6B9228A5B84437D5A73'``). Then restart the container.
 
 Useful Commands
 ---------------

@@ -64,3 +64,6 @@ cleanup-list.txt
 debug-*.log
 *.mp3
 /mgcb Clients/
+
+# Signing certificates and key stores
+*.pfx

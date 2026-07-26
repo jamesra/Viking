@@ -19,8 +19,8 @@ namespace gRPC_Tests
             var reply = client.GetLocationByID(new GetLocationByIDRequest() { Id = Id });
 
             Assert.IsNotNull(reply);
-            Assert.IsNotNull(reply.Value);
-            Assert.AreEqual(reply.Value.Id, Id);
+            Assert.IsNotNull(reply.Result);
+            Assert.AreEqual(reply.Result.Id, Id);
         }
 
         private string GetDebuggerDisplay()
