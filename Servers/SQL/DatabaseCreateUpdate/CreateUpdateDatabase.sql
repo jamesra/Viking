@@ -7546,9 +7546,9 @@ BEGIN TRANSACTION main
 	if(not(exists(select (1) from DBVersion where DBVersionID = 79)))
 	begin
      print N'Move a subset of functions to mem_integer_list to get path finding to work'
-	 BEGIN TRANSACTION seventyeight
+	 BEGIN TRANSACTION seventynine
 
-	EXEC('CREATE FUNCTION [dbo].[ufnLinkedToLocations] 
+	EXEC('CREATE OR ALTER FUNCTION [dbo].[ufnLinkedToLocations] 
 	(	
 		-- Add the parameters for the function here
 		 @SourceLocIDs mem_integer_list READONLY --The location IDs we are starting from
@@ -7580,7 +7580,7 @@ BEGIN TRANSACTION main
 		   RETURN
 		 end 
 
-	EXEC('CREATE FUNCTION [dbo].[MorphologyPaths]
+	EXEC('CREATE OR ALTER FUNCTION [dbo].[MorphologyPaths]
 	(
 		-- Add the parameters for the function here
 		@SourceID bigint,
@@ -7856,7 +7856,7 @@ BEGIN TRANSACTION main
 		 end
 
 	 EXEC('
-		CREATE FUNCTION [dbo].[ufnDistance3D] 
+		CREATE OR ALTER FUNCTION [dbo].[ufnDistance3D] 
 		(
 			-- Add the parameters for the function here
 			@AX float,
@@ -7887,7 +7887,7 @@ BEGIN TRANSACTION main
 		   RETURN
 		 end
 
-	INSERT INTO DBVersion values (81, 
+	INSERT INTO DBVersion values (80, 
 		      N'Add functions to list all location links and calculate distance in 3D',getDate(),User_ID())
 	 COMMIT TRANSACTION eighty
 	end
@@ -7897,7 +7897,7 @@ BEGIN TRANSACTION main
      print N'Add functions to find weighted centroid for structures'  
 	 BEGIN TRANSACTION eightyone
 		
-	 EXEC('CREATE FUNCTION [dbo].[WeightedStructureCenters3D](
+	 EXEC('CREATE OR ALTER FUNCTION [dbo].[WeightedStructureCenters3D](
 				@StructureIDs mem_integer_list READONLY
 			) --The Structure IDs we are calculating, NULL causes us to get all rows
 			RETURNS @Result TABLE (
@@ -7978,7 +7978,7 @@ BEGIN TRANSACTION main
 		 end
 
 	 EXEC('
-		CREATE FUNCTION [dbo].[ufnWeightedStructureCentroidXY]
+		CREATE OR ALTER FUNCTION [dbo].[ufnWeightedStructureCentroidXY]
 	(
 		@StructureID bigint
 	)
@@ -8053,7 +8053,7 @@ BEGIN TRANSACTION main
 		   RETURN
 		 end
 
-	EXEC('CREATE FUNCTION [dbo].[ufnWeightedStructureCentroidZ]
+	EXEC('CREATE OR ALTER FUNCTION [dbo].[ufnWeightedStructureCentroidZ]
 		(
 			@StructureID bigint
 		)
@@ -8121,15 +8121,20 @@ BEGIN TRANSACTION main
 		 end
 
 	INSERT INTO DBVersion values (81, 
-		      N'Add functions to list all location links and calculate distance in 3D',getDate(),User_ID())
+		      N'Add functions to find weighted centroid for structures',getDate(),User_ID())
 	 COMMIT TRANSACTION eightyone
 	end
 
-	
-	INSERT INTO DBVersion values (82, 
-		      N'Enable Query Store',getDate(),User_ID())
-	 COMMIT TRANSACTION eightytwo
-	end 
+	if(not(exists(select (1) from DBVersion where DBVersionID = 82)))
+	begin
+     print N'Enable Query Store'
+
+	-- ALTER DATABASE is never allowed while @@TRANCOUNT > 0, even inside a
+	-- nested/named transaction (naming BEGIN/COMMIT TRANSACTION does not create
+	-- a real savepoint here, since SAVE TRANSACTION was never used). "main" must
+	-- be fully committed before this statement runs, then reopened afterwards so
+	-- the remaining version blocks stay wrapped exactly as before.
+	COMMIT TRANSACTION main
 
 	EXEC('
 	-- Enable Query Store on your database
@@ -8143,29 +8148,29 @@ BEGIN TRANSACTION main
 );
 	')
 
-	 if(@@error <> 0)
+	DECLARE @QueryStoreError int = @@error
+
+	BEGIN TRANSACTION main
+
+	 if(@QueryStoreError <> 0)
 		 begin
-		   ROLLBACK TRANSACTION 
 		   RETURN
 		 end
 
 	INSERT INTO DBVersion values (82, 
 		      N'Enable Query Store',getDate(),User_ID())
-	 COMMIT TRANSACTION eightytwo
 	end
 
-	
-	INSERT INTO DBVersion values (83, 
-		      N'Improve SelectSectionLocationsAndLinksInMosaicBounds',getDate(),User_ID())
-	 COMMIT TRANSACTION eightythree
-	end 
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 83)))
+	begin
+     print N'Improve SelectSectionLocationsAndLinksInMosaicBounds'
+	 BEGIN TRANSACTION eightythree
+
+	SET ANSI_NULLS ON
+	SET QUOTED_IDENTIFIER ON
 
 	EXEC('
-	SET ANSI_NULLS ON
-	GO
-	SET QUOTED_IDENTIFIER ON
-	GO
-
 	ALTER PROCEDURE [dbo].[SelectSectionLocationsAndLinksInMosaicBounds]
 					-- Add the parameters for the stored procedure here
 					@Z float,
@@ -8224,9 +8229,7 @@ BEGIN TRANSACTION main
 						FROM LocationLink LL
 						WHERE EXISTS (SELECT 1 FROM @LocationIDsInBounds IDs WHERE IDs.ID = LL.A)
 						OR EXISTS (SELECT 1 FROM @LocationIDsInBounds IDs WHERE IDs.ID = LL.B);
-								END 
-);
-	')
+								END')
 
 	 if(@@error <> 0)
 		 begin
@@ -8234,12 +8237,10 @@ BEGIN TRANSACTION main
 		   RETURN
 		 end
 
-	EXEC('
 	SET ANSI_NULLS ON
-	GO
 	SET QUOTED_IDENTIFIER ON
-	GO
 
+	EXEC('
 				ALTER PROCEDURE [dbo].[SelectSectionLocationsAndLinksInVolumeBounds]
 					-- Add the parameters for the stored procedure here
 					@Z float,
@@ -8298,9 +8299,7 @@ BEGIN TRANSACTION main
 						FROM LocationLink LL
 						WHERE EXISTS (SELECT 1 FROM @LocationIDsInBounds IDs WHERE IDs.ID = LL.A)
 						OR EXISTS (SELECT 1 FROM @LocationIDsInBounds IDs WHERE IDs.ID = LL.B);
-								END 
-);
-	')
+								END')
 
 	 if(@@error <> 0)
 		 begin
@@ -8311,6 +8310,121 @@ BEGIN TRANSACTION main
 	INSERT INTO DBVersion values (83, 
 		      N'Improve SelectSectionLocationsAndLinksInMosaicBounds',getDate(),User_ID())
 	 COMMIT TRANSACTION eightythree
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 84)))
+	begin
+     print N'Optimize SelectSectionAnnotationsInMosaicBounds with Z index hint'
+	 BEGIN TRANSACTION eightyfour
+		 
+	 EXEC('ALTER PROCEDURE [dbo].[SelectSectionAnnotationsInMosaicBounds]
+				-- Add the parameters for the stored procedure here
+				@Z bigint,
+				@BBox geometry,
+				@MinRadius float,
+				@QueryDate datetime
+			AS
+			BEGIN
+				-- SET NOCOUNT ON added to prevent extra result sets from
+				-- interfering with SELECT statements.
+				SET NOCOUNT ON;
+
+				DECLARE @LocationsInBounds [dbo].[udtParentChildIDMap]
+				DECLARE @ModifiedStructuresInBounds mem_integer_list
+				DECLARE @SectionStructureIDsInBounds mem_integer_list
+				DECLARE @ModifiedLocationsInBounds mem_integer_list
+				 
+				--Selecting all columns once into LocationsInBounds and then selecting the temp table is a huge time saver.  3-4 seconds instead of 20.
+
+				INSERT into @LocationsInBounds (ParentID, ID) SELECT L.ParentID, L.ID FROM Location AS L WITH (INDEX (Z))
+					WHERE Z = @Z 
+					AND Radius >= @MinRadius 
+					AND (MosaicShape.STIntersects(@BBox) = 1) 
+				order by ID
+					
+
+				INSERT INTO @SectionStructureIDsInBounds (ID) 
+					select distinct L.ParentID as ID from @LocationsInBounds L
+								 
+				IF @QueryDate IS NOT NULL
+					BEGIN
+						--Grab all structures who have had a link or location in the region updated. 
+						--This ensures each location in the region has a structure
+						INSERT INTO @ModifiedStructuresInBounds (ID) 
+	  					  select SIB.ID from (
+							select S.ID as ID from Structure S
+								inner join @SectionStructureIDsInBounds SIB ON SIB.ID  = S.ID
+									where S.LastModified >= @QueryDate
+							union
+							select S.ID as ID from @SectionStructureIDsInBounds S
+								inner join StructureLink SLS ON SLS.SourceID = S.ID
+								where SLS.LastModified >= @QueryDate
+							union 
+							select S.ID as ID from @SectionStructureIDsInBounds S
+								inner join StructureLink SLT ON SLT.TargetID = S.ID
+								where SLT.LastModified >= @QueryDate ) SIB
+
+
+						select S.* from Structure S
+							inner join @ModifiedStructuresInBounds Modified ON Modified.ID = S.ID
+
+						Select * from StructureLink L
+							where (L.TargetID in (Select ID from @ModifiedStructuresInBounds))
+								OR (L.SourceID in (Select ID from @ModifiedStructuresInBounds)) 
+
+						INSERT INTO @ModifiedLocationsInBounds (ID)
+  						  select ML.ID from (
+							select L.ID from @LocationsInBounds LIB
+								inner join Location L ON L.ID = LIB.ID
+								where L.LastModified >= @QueryDate
+							UNION
+							select L.ID from @LocationsInBounds L
+								inner join LocationLink LL ON LL.A = L.ID
+									where LL.Created >= @QueryDate
+							UNION
+							select L.ID from @LocationsInBounds L
+								inner join LocationLink LL ON LL.B = L.ID
+									where LL.Created >= @QueryDate
+						) ML
+
+						Select L.* from Location L	
+							inner join @ModifiedLocationsInBounds MLIB ON MLIB.ID = L.ID 
+
+						Select * from LocationLink
+							WHERE ((A in (select ID from @ModifiedLocationsInBounds))
+								OR	
+								   (B in (select ID from @ModifiedLocationsInBounds)))
+								    
+					END
+				ELSE
+					BEGIN
+						select S.* from Structure S
+							inner join @SectionStructureIDsInBounds SIB ON SIB.ID = S.ID
+
+						Select * from StructureLink L
+							where (L.TargetID in (Select ID from @SectionStructureIDsInBounds))
+								OR (L.SourceID in (Select ID from @SectionStructureIDsInBounds)) 
+
+						Select L.* from Location L 
+							inner join @LocationsInBounds LIB ON LIB.ID = L.ID
+
+						Select * from LocationLink
+							WHERE ((A in (select ID from @LocationsInBounds))
+								OR	
+								   (B in (select ID from @LocationsInBounds)))
+					END
+	  
+			END')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end 
+		   
+	INSERT INTO DBVersion values (84, 
+		      N'Optimize SelectSectionAnnotationsInMosaicBounds with Z index hint' ,getDate(),User_ID())
+	 COMMIT TRANSACTION eightyfour
 	end
 		   
 COMMIT TRANSACTION main
