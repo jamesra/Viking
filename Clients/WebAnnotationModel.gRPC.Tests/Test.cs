@@ -1203,6 +1203,140 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         [Test]
+        public async Task DeleteLocation_AppearsInLocationChangesDeletedIds()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var locationsClient = new AnnotateLocations.AnnotateLocationsClient(channel);
+            var structuresClient = new AnnotateStructures.AnnotateStructuresClient(channel);
+            var typesClient = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+            var createdType = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
+            {
+                Obj = new StructureType
+                {
+                    Name = $"DelLog-{Guid.NewGuid():N}".Substring(0, 32),
+                    Code = "DL",
+                    Color = 0x1A2B3C,
+                    Created = now,
+                    LastModified = now,
+                    Username = _userIdentity.UserName,
+                }
+            });
+
+            long? structureId = null;
+            long? locationId = null;
+            try
+            {
+                var structure = await structuresClient.CreateStructureAsync(new CreateStructureRequest
+                {
+                    NewStructure = new Structure
+                    {
+                        TypeId = createdType.Result.Id,
+                        Label = "del-log",
+                        Confidence = 0.5,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    }
+                });
+                structureId = structure.NewStructure.Id;
+
+                var created = await locationsClient.CreateLocationAsync(new CreateLocationRequest
+                {
+                    Obj = new Location
+                    {
+                        ParentId = structureId.Value,
+                        Section = 13,
+                        MosaicPosition = new AnnotationPoint { X = 8, Y = 9 },
+                        VolumePosition = new AnnotationPoint { X = 8, Y = 9 },
+                        MosaicShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (8 9)" },
+                        VolumeShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (8 9)" },
+                        TypeCode = AnnotationType.Circle,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    }
+                });
+                locationId = created.Result.Id;
+
+                var beforeDelete = Timestamp.FromDateTime(DateTime.UtcNow.AddSeconds(-1));
+                var delete = await locationsClient.UpdateAsync(new UpdateLocationsRequest
+                {
+                    Locations = { new LocationChangeRequest { Delete = locationId.Value } }
+                });
+                Assert.That(delete.Results[0].Success, Is.True);
+                var deletedId = locationId.Value;
+                locationId = null;
+
+                var changes = await locationsClient.GetLocationChangesAsync(new GetLocationChangesRequest
+                {
+                    Section = 13,
+                    ModifiedAfterThisUtcTime = beforeDelete
+                });
+                Assert.That(changes.DeletedIds, Does.Contain(deletedId));
+            }
+            finally
+            {
+                if (locationId.HasValue)
+                {
+                    try
+                    {
+                        await locationsClient.UpdateAsync(new UpdateLocationsRequest
+                        {
+                            Locations = { new LocationChangeRequest { Delete = locationId.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                if (structureId.HasValue)
+                {
+                    try
+                    {
+                        await structuresClient.UpdateAsync(new UpdateStructuresRequest
+                        {
+                            Objs = { new StructureChangeRequest { Delete = structureId.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                try
+                {
+                    await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                    {
+                        Objs = { new StructureTypeChangeRequest { Delete = createdType.Result.Id } }
+                    });
+                }
+                catch (RpcException) { }
+            }
+        }
+
+        [Test]
+        public async Task GetAnnotationsInMosaicRegion_Unary_ReturnsSeed()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var client = new AnnotateLocations.AnnotateLocationsClient(channel);
+
+            var reply = await client.GetAnnotationsInMosaicRegionAsync(new GetAnnotationsInMosaicRegionRequest
+            {
+                Z = 1,
+                MinRadius = 0,
+                Region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
+                {
+                    Text = "POLYGON((0 0, 200 0, 200 300, 0 300, 0 0))"
+                }
+            });
+
+            Assert.That(reply.Result, Is.Not.Null);
+            Assert.That(reply.Result.Locations, Has.Some.Matches<Location>(l => l.Id == 1));
+            Assert.That(reply.Result.Structures, Has.Some.Matches<Structure>(s => s.Id == 1));
+        }
+
+        [Test]
         public async Task GetLocationsForSection_AndLocationChanges_ReturnSeed()
         {
             var accessToken = await RequestAccessTokenAsync();

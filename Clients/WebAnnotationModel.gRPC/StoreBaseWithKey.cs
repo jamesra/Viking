@@ -59,7 +59,7 @@ namespace WebAnnotationModel.gRPC
             OnOBJECTPropertyChangedEventHandler = new System.ComponentModel.PropertyChangedEventHandler(OnObjectPropertyChanged);
         }
 
-        protected void OnObjectPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        protected virtual void OnObjectPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (sender is IChangeAction changeObj && sender is OBJECT obj && e.PropertyName == nameof(IChangeAction.DBAction))
             {

@@ -422,6 +422,20 @@ namespace gRPCAnnotationService
                             var attached = await _context.LocationLinks
                                 .Where(link => link.A == toDelete.Id || link.B == toDelete.Id).ToListAsync();
                             _context.LocationLinks.RemoveRange(attached);
+
+                            // Record the delete so incremental GetLocationChanges* calls can
+                            // tell clients to drop the ID from their local cache.
+                            var alreadyLogged = await _context.DeletedLocations
+                                .AnyAsync(d => d.Id == toDelete.Id);
+                            if (!alreadyLogged)
+                            {
+                                await _context.DeletedLocations.AddAsync(new DeletedLocation
+                                {
+                                    Id = toDelete.Id,
+                                    DeletedOn = DateTime.UtcNow
+                                });
+                            }
+
                             _context.Locations.Remove(toDelete);
                             rowResponse.Success = true;
                             rowResponse.DeletedId = change.Delete;

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -96,7 +97,31 @@ namespace WebAnnotationModel.gRPC
         }
 
         private void TouchSectionQueryTime(long sectionNumber) =>
-            LastQueryForSection.AddOrUpdate(sectionNumber, DateTime.UtcNow, (_, __) => DateTime.UtcNow); 
+            LastQueryForSection.AddOrUpdate(sectionNumber, DateTime.UtcNow, (_, __) => DateTime.UtcNow);
+
+        /// <summary>
+        /// When a cached location moves between sections, keep the section index coherent.
+        /// </summary>
+        protected override void OnObjectPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            base.OnObjectPropertyChanged(sender, e);
+
+            var loc = sender as LocationObj;
+            if (loc == null)
+                return;
+
+            if (e.PropertyName != nameof(LocationObj.Section) && e.PropertyName != nameof(LocationObj.Z))
+                return;
+
+            // Rebuild membership from the live Section value: remove from every map, then re-add.
+            foreach (var map in SectionToLocations.Values)
+                map.TryRemove(loc.ID, out _);
+
+            foreach (var empty in SectionToLocations.Where(kv => kv.Value.IsEmpty).Select(kv => kv.Key).ToArray())
+                SectionToLocations.TryRemove(empty, out _);
+
+            TryAddToSectionIndex(loc);
+        } 
 
         /// <summary>
         /// Queries the server for locations on the given section whose mosaic-space bounding box intersects
