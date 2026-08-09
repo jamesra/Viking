@@ -53,6 +53,38 @@ namespace WebAnnotationModel.gRPC
             var deleted = Remove(key).Result;
             return deleted != null;
         }
-         
+
+        /// <summary>
+        /// Location-link UpdateAsync is a no-op (links have no mutable fields). Route INSERT/DELETE
+        /// through the dedicated create/delete RPCs so a deferred Save() still hits the server.
+        /// </summary>
+        protected override async Task<bool> Save(List<LocationLinkObj> changedObjects, CancellationToken token)
+        {
+            if (changedObjects.Count == 0)
+                return true;
+
+            var client = ClientFactory.GetOrCreate();
+            foreach (var obj in changedObjects)
+            {
+                switch (obj.DBAction)
+                {
+                    case DBACTION.DELETE:
+                        await client.Delete(obj.ID, token).ConfigureAwait(false);
+                        break;
+                    case DBACTION.INSERT:
+                        await client.Create(obj, token).ConfigureAwait(false);
+                        break;
+                    case DBACTION.UPDATE:
+                    case DBACTION.NONE:
+                        break;
+                    default:
+                        throw new NotSupportedException($"Unexpected location-link DBAction {obj.DBAction}");
+                }
+
+                obj.DBAction = DBACTION.NONE;
+            }
+
+            return true;
+        }
     }
 }

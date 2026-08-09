@@ -75,10 +75,17 @@ namespace gRPCAnnotationService
                             row_response.Sucess = true;
                             break;
                         case DBAction.Insert:
-                            await _context.PermittedStructureLinks.AddAsync(r.Result.ToPermittedStructureLink());
+                            var inserted = await _context.PermittedStructureLinks.AddAsync(r.Result.ToPermittedStructureLink());
+                            row_response.Sucess = true;
+                            row_response.Result = inserted.Entity.ToProtobufMessage();
                             break;
                         case DBAction.Update:
                             var psl = _context.PermittedStructureLinks.FirstOrDefault(psl => psl.SourceTypeId == r.Result.SourceTypeId && psl.TargetTypeId == r.Result.TargetTypeId);
+                            if (psl == null)
+                            {
+                                row_response.Sucess = false;
+                                break;
+                            }
                             psl.Bidirectional = r.Result.Bidirectional;
                             var EF_Result = _context.PermittedStructureLinks.Update(psl);
                             row_response.Sucess = true;
@@ -86,8 +93,15 @@ namespace gRPCAnnotationService
                             break;
                         case DBAction.Delete:
                             var EF_remove_row = _context.PermittedStructureLinks.FirstOrDefault(psl => psl.SourceTypeId == r.Result.SourceTypeId && psl.TargetTypeId == r.Result.TargetTypeId);
+                            if (EF_remove_row == null)
+                            {
+                                row_response.Sucess = false;
+                                break;
+                            }
                             _context.PermittedStructureLinks.Remove(EF_remove_row);
                             row_response.Sucess = true;
+                            // Echo the request key so clients can reconcile DeletedIDs without a row read.
+                            row_response.Result = r.Result;
                             break;
                     }
 

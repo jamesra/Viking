@@ -3062,7 +3062,7 @@ namespace WebAnnotationModel.gRPC.Tests
                 Assert.That(all.PermittedLinks, Has.Some.Matches<PermittedStructureLink>(p =>
                     p.SourceTypeId == sourceTypeId.Value && p.TargetTypeId == targetTypeId.Value));
 
-                await permittedClient.UpdatePermittedStructureLinksAsync(new UpdatePermittedStructureLinksRequest
+                var deleted = await permittedClient.UpdatePermittedStructureLinksAsync(new UpdatePermittedStructureLinksRequest
                 {
                     Changes =
                     {
@@ -3078,6 +3078,13 @@ namespace WebAnnotationModel.gRPC.Tests
                         }
                     }
                 });
+                Assert.That(deleted.Changes, Has.Count.EqualTo(1));
+                Assert.That(deleted.Changes[0].Sucess, Is.True);
+                Assert.That(deleted.Changes[0].Action, Is.EqualTo(DBAction.Delete));
+
+                var afterDelete = await permittedClient.GetPermittedStructureLinksAsync(new GetPermittedStructureLinksRequest());
+                Assert.That(afterDelete.PermittedLinks, Has.None.Matches<PermittedStructureLink>(p =>
+                    p.SourceTypeId == sourceTypeId.Value && p.TargetTypeId == targetTypeId.Value));
             }
             finally
             {

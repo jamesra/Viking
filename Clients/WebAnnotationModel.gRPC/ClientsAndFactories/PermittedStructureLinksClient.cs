@@ -71,10 +71,20 @@ namespace WebAnnotationModel.gRPC
             return response.Result;
         }
 
-        public Task<PermittedStructureLinkKey?> Delete(PermittedStructureLinkKey key, CancellationToken token)
+        public async Task<PermittedStructureLinkKey?> Delete(PermittedStructureLinkKey key, CancellationToken token)
         {
-            //Deletes flow through UpdateAsync using DBACTION.DELETE, matching the base store's Save() pathway.
-            return Task.FromResult<PermittedStructureLinkKey?>(null);
+            var proto = new PermittedStructureLink
+            {
+                SourceTypeId = key.SourceTypeID,
+                TargetTypeId = key.TargetTypeID,
+                Bidirectional = key.Bidirectional
+            };
+            ((IChangeAction)proto).DBAction = DBACTION.DELETE;
+
+            var results = await UpdateAsync(proto, token).ConfigureAwait(false);
+            if (results.DeletedIDs != null && results.DeletedIDs.Length > 0)
+                return key;
+            return null;
         }
 
         public async Task<IPermittedStructureLink> GetAsync(PermittedStructureLinkKey key, CancellationToken token)
@@ -109,12 +119,51 @@ namespace WebAnnotationModel.gRPC
         public async Task<UpdateResults<PermittedStructureLinkKey, IPermittedStructureLink>> UpdateAsync(IEnumerable<IPermittedStructureLink> objs, CancellationToken token)
         {
             var request = new UpdatePermittedStructureLinksRequest();
-            request.Changes.AddRange(objs.OfType<PermittedStructureLink>().Select(o => (PermittedStructureLinkChange)o).Where(c => c != null));
+            foreach (var obj in objs)
+            {
+                var change = ToChange(obj);
+                if (change != null)
+                    request.Changes.Add(change);
+            }
+
+            if (request.Changes.Count == 0)
+                return new UpdateResults<PermittedStructureLinkKey, IPermittedStructureLink>();
 
             var response = await Client.UpdatePermittedStructureLinksAsync(request, cancellationToken: token);
 
-            var updated = response.Changes.Where(c => c.Sucess && c.Result != null).Select(c => (IPermittedStructureLink)c.Result).ToArray();
-            return new UpdateResults<PermittedStructureLinkKey, IPermittedStructureLink>(updated: updated);
+            var updated = new List<IPermittedStructureLink>();
+            var deleted = new List<PermittedStructureLinkKey>();
+            foreach (var change in response.Changes)
+            {
+                if (!change.Sucess)
+                    continue;
+                if (change.Action == DBAction.Delete && change.Result != null)
+                    deleted.Add(new PermittedStructureLinkKey(change.Result.SourceTypeId, change.Result.TargetTypeId, change.Result.Bidirectional));
+                else if (change.Result != null)
+                    updated.Add(change.Result);
+            }
+
+            return new UpdateResults<PermittedStructureLinkKey, IPermittedStructureLink>(
+                updated: updated.ToArray(), deleted: deleted.ToArray());
+        }
+
+        private static PermittedStructureLinkChange ToChange(IPermittedStructureLink obj)
+        {
+            if (obj is PermittedStructureLink concrete)
+                return (PermittedStructureLinkChange)concrete;
+
+            if (obj is PermittedStructureLinkObj clientObj)
+                return (PermittedStructureLinkChange)ToProto(clientObj);
+
+            var proto = new PermittedStructureLink
+            {
+                SourceTypeId = (long)obj.SourceTypeID,
+                TargetTypeId = (long)obj.TargetTypeID,
+                Bidirectional = !obj.Directional
+            };
+            if (obj is IChangeAction changeAction)
+                ((IChangeAction)proto).DBAction = changeAction.DBAction;
+            return (PermittedStructureLinkChange)proto;
         }
     }
 }
