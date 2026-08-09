@@ -23,6 +23,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Commands\SegmentationCommandTests.cs" />
+    <Compile Include="DialogSmokeTests.cs" />
     <Compile Include="DummyCanvas.cs" />
     <Compile Include="LocationActionTests.cs" />
     <Compile Include="MouseActionSupportTests.cs" />
@@ -32,6 +33,7 @@
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="FlaUI.UIA3" Version="4.0.0" />
     <PackageReference Include="MSTest.TestAdapter" Version="3.9.3" />
     <PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
   </ItemGroup>
