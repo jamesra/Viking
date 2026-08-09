@@ -25,7 +25,7 @@ namespace WebAnnotationModel.gRPC.Converters
                     DBAction = DBACTION.NONE,
                     Name = src.Name,
                     Notes = src.Notes,
-                    ParentID = src.ParentId,
+                    ParentID = src.HasParentId ? (long?)src.ParentId : (long?)null,
                 };
 
             obj.SetAttributes(src.Attributes.ParseAttributes()).Wait();
@@ -64,16 +64,17 @@ namespace WebAnnotationModel.gRPC.Converters
                 new StructureType
                 {
                     Id = src.ID,
-                    Name = src.Name,
-                    Notes = src.Notes,
-                    Code = src.Code,
+                    Name = src.Name ?? string.Empty,
+                    Notes = src.Notes ?? string.Empty,
+                    Code = src.Code ?? string.Empty,
                     Color = src.Color,
+                    Attributes = src.Attributes?.ToXml() ?? string.Empty,
                 };
 
             if (src.ParentID.HasValue)
                 obj.ParentId = src.ParentID.Value;
 
-            obj.Attributes = src.Attributes.ToXml();
+            ((IChangeAction)obj).DBAction = src.DBAction;
 
             return obj;
         }
@@ -98,7 +99,7 @@ namespace WebAnnotationModel.gRPC.Converters
                 obj.Color = update.Color;
                 obj.Name = update.Name;
                 obj.Notes = update.Notes;
-                obj.ParentID = update.ParentId;
+                obj.ParentID = update.HasParentId ? (long?)update.ParentId : (long?)null;
                 await obj.SetAttributes(update.Attributes.ParseAttributes());
             }
             finally

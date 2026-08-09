@@ -85,6 +85,26 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         [Test]
+        public void StructureTypeClientToServerConverter_PreservesDbAction()
+        {
+            var src = new StructureTypeObj(3)
+            {
+                Name = "typed",
+                Code = "T",
+                Color = 0x112233,
+                DBAction = DBACTION.UPDATE,
+            };
+
+            var converted = new StructureTypeClientToServerConverter().Convert(src);
+            Assert.That(((IChangeAction)converted).DBAction, Is.EqualTo(DBACTION.UPDATE));
+
+            var change = (StructureTypeChangeRequest)converted;
+            Assert.That(change.Update, Is.Not.Null);
+            Assert.That(change.Update.Id, Is.EqualTo(3));
+            Assert.That(change.Update.Name, Is.EqualTo("typed"));
+        }
+
+        [Test]
         public async Task GetLastModifiedLocation_WithDevTestToken_ReturnsLocation()
         {
             var accessToken = await RequestAccessTokenAsync();

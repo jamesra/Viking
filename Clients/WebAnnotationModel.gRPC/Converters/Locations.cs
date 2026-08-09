@@ -123,17 +123,29 @@ namespace WebAnnotationModel.gRPC.Converters
                     Terminal = src.Terminal,
                     OffEdge = src.OffEdge,
                     Width = src.Width,
-                    Section = src.Section
+                    Section = src.Section,
+                    Username = src.Username ?? string.Empty,
+                    Attributes = LocationAttributesXml(src),
                 };
 
             if (src.ParentID.HasValue)
                 obj.ParentId = src.ParentID.Value;
 
-            obj.Attributes = src.Attributes.ToXml();
-
             ((IChangeAction)obj).DBAction = src.DBAction;
 
             return obj;
+        }
+
+        private static string LocationAttributesXml(LocationObj src)
+        {
+            try
+            {
+                return src.Attributes.ToXml() ?? string.Empty;
+            }
+            catch (NullReferenceException)
+            {
+                return string.Empty;
+            }
         }
 
         ILocation IObjectConverter<LocationObj, ILocation>.Convert(LocationObj src) => Convert(src);
