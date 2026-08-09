@@ -91,8 +91,10 @@ namespace WebAnnotationModel.gRPC
 
             var client = StructureClientFactory.GetOrCreate();
             var result = await client.GetAll();
-            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(DateTime.UtcNow, result, Array.Empty<long>()));
+            var queryTime = DateTime.UtcNow;
+            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(queryTime, result, Array.Empty<long>()));
             CallOnCollectionChanged(changes);
+            await OnServerObjectsLoaded(result, queryTime);
             return changes.ObjectsInStore;
         }
 
@@ -195,8 +197,10 @@ namespace WebAnnotationModel.gRPC
         {
             var client = StructureClientFactory.GetOrCreate();
             var result = await client.GetChildStructures(ID);
-            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(DateTime.UtcNow, result, Array.Empty<long>()));
+            var queryTime = DateTime.UtcNow;
+            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(queryTime, result, Array.Empty<long>()));
             CallOnCollectionChanged(changes);
+            await OnServerObjectsLoaded(result, queryTime);
             return changes.ObjectsInStore;
         }
 
@@ -247,8 +251,10 @@ namespace WebAnnotationModel.gRPC
         {
             var client = StructureClientFactory.GetOrCreate();
             var result = await client.GetStructuresOfType(StructureTypeID);
-            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(DateTime.UtcNow, result, Array.Empty<long>()));
+            var queryTime = DateTime.UtcNow;
+            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(queryTime, result, Array.Empty<long>()));
             CallOnCollectionChanged(changes);
+            await OnServerObjectsLoaded(result, queryTime);
             return changes.ObjectsInStore;
         }
 
@@ -275,11 +281,18 @@ namespace WebAnnotationModel.gRPC
                 .ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(update.QueryTime, update.NewOrUpdated, update.DeletedIDs))
                 .GetAwaiter().GetResult();
             CallOnCollectionChanged(changes);
-            StructureLinkStore.MergeServerLinksAsync(
-                    update.NewOrUpdated.SelectMany(s => s.Links ?? Array.Empty<IStructureLink>()),
-                    update.QueryTime)
-                .GetAwaiter().GetResult();
+            OnServerObjectsLoaded(update.NewOrUpdated, update.QueryTime).GetAwaiter().GetResult();
             return Task.FromResult<ICollection<StructureObj>>(changes.ObjectsInStore);
+        }
+
+        /// <summary>
+        /// Hydrate StructureLinkStore from Structure.Links embedded on section/region/by-ID responses.
+        /// </summary>
+        protected override Task OnServerObjectsLoaded(IEnumerable<IStructure> objs, DateTime queryTime)
+        {
+            return StructureLinkStore.MergeServerLinksAsync(
+                objs.Where(s => s != null).SelectMany(s => s.Links ?? Array.Empty<IStructureLink>()),
+                queryTime);
         }
 
         /// <summary>

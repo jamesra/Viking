@@ -356,11 +356,22 @@ namespace WebAnnotationModel.gRPC
                 obj = default;
             }
 
+            var queryTime = DateTime.UtcNow;
             var inventory = await ServerQueryResultsHandler.ProcessServerUpdate(
-                new ServerUpdate<KEY, SERVER_OBJECT>(DateTime.UtcNow, obj, Array.Empty<KEY>()));
+                new ServerUpdate<KEY, SERVER_OBJECT>(queryTime, obj, Array.Empty<KEY>()));
+
+            if (obj != null)
+                await OnServerObjectsLoaded(new[] { obj }, queryTime);
 
             return inventory.AddedObjects.Union(inventory.UpdatedObjects).First();
         }
+
+        /// <summary>
+        /// Hook for stores that need to hydrate related collections from embedded server payloads
+        /// (e.g. Structure.Links → StructureLinkStore).
+        /// </summary>
+        protected virtual Task OnServerObjectsLoaded(IEnumerable<SERVER_OBJECT> objs, DateTime queryTime) =>
+            Task.CompletedTask;
          
 
         /// <summary>
@@ -415,8 +426,12 @@ namespace WebAnnotationModel.gRPC
                 return new ChangeInventory<OBJECT>();
             }
 
+            var queryTime = DateTime.UtcNow;
+            var serverArray = listServerObjs.ToArray();
             var changes = await ServerQueryResultsHandler.ProcessServerUpdate(
-                new ServerUpdate<KEY, SERVER_OBJECT[]>(DateTime.UtcNow, listServerObjs.ToArray(), Array.Empty<KEY>()));
+                new ServerUpdate<KEY, SERVER_OBJECT[]>(queryTime, serverArray, Array.Empty<KEY>()));
+
+            await OnServerObjectsLoaded(serverArray, queryTime);
             
             changes.UnchangedObjects.AddRange(listLocalObjs);
 
