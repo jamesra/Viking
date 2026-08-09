@@ -145,7 +145,28 @@ namespace WebAnnotationModel.gRPC
             return first_response.DeletedId;
         }
 
-        public async Task<ServerUpdate<long, ILocation[]>> GetAsync(long Z, string geometryWellKnownText, double screenPixelSizeInVolume,  DateTime? modifiedAfter, CancellationToken token)
+        /// <summary>
+        /// Region load. Optional <paramref name="onChunk"/> is awaited per stream batch for progressive UI merge.
+        /// </summary>
+        public Task<ServerUpdate<long, ILocation[]>> GetAsync(
+            long Z,
+            string geometryWellKnownText,
+            double screenPixelSizeInVolume,
+            DateTime? modifiedAfter,
+            CancellationToken token,
+            Func<ServerUpdate<long, ILocation[]>, Task> onChunk) =>
+            GetRegionAsync(Z, geometryWellKnownText, screenPixelSizeInVolume, modifiedAfter, token, onChunk);
+
+        public Task<ServerUpdate<long, ILocation[]>> GetAsync(long Z, string geometryWellKnownText, double screenPixelSizeInVolume, DateTime? modifiedAfter, CancellationToken token) =>
+            GetRegionAsync(Z, geometryWellKnownText, screenPixelSizeInVolume, modifiedAfter, token, onChunk: null);
+
+        private async Task<ServerUpdate<long, ILocation[]>> GetRegionAsync(
+            long Z,
+            string geometryWellKnownText,
+            double screenPixelSizeInVolume,
+            DateTime? modifiedAfter,
+            CancellationToken token,
+            Func<ServerUpdate<long, ILocation[]>, Task> onChunk)
         {
             var region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
             {
@@ -174,8 +195,15 @@ namespace WebAnnotationModel.gRPC
                         var chunk = call.ResponseStream.Current;
                         if (chunk.QueryExecutedTime != null)
                             queryTime = chunk.QueryExecutedTime.ToDateTime();
-                        locations.AddRange(chunk.Locations.Cast<ILocation>());
-                        deletedIds.AddRange(chunk.DeletedIds);
+
+                        var chunkLocations = chunk.Locations.Cast<ILocation>().ToArray();
+                        var chunkDeleted = chunk.DeletedIds.ToArray();
+                        locations.AddRange(chunkLocations);
+                        deletedIds.AddRange(chunkDeleted);
+
+                        onChunk?.Invoke(new ServerUpdate<long, ILocation[]>(
+                            queryTime ?? DateTime.UtcNow, chunkLocations, chunkDeleted));
+
                         if (chunk.IsLast)
                             sawLast = true;
                     }
@@ -190,8 +218,10 @@ namespace WebAnnotationModel.gRPC
             catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)
             {
                 var response = await Client.GetLocationChangesInMosaicRegionAsync(request, cancellationToken: token);
-                return new ServerUpdate<long, ILocation[]>(
+                var update = new ServerUpdate<long, ILocation[]>(
                     response.QueryExecutedTime.ToDateTime(), response.Results.Cast<ILocation>().ToArray(), response.DeletedIds.ToArray());
+                onChunk?.Invoke(update);
+                return update;
             }
         }
 

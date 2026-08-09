@@ -71,12 +71,44 @@ namespace WebAnnotationModel.gRPC
 
             var client = _spatialClientFactory.GetOrCreate();
             string regionWKT = ToWktPolygon(VolumeBounds);
-            var response = await client.GetAsync(SectionNumber, regionWKT, ScreenPixelSizeInVolume, null, token);
+            var progressiveResults = new List<LocationObj>();
+
+            // Prefer progressive merge when the concrete gRPC client is available.
+            if (client is LocationsClient locationsClient)
+            {
+                var response = await locationsClient.GetAsync(
+                    SectionNumber, regionWKT, ScreenPixelSizeInVolume, null, token,
+                    onChunk: update =>
+                    {
+                        if (token.IsCancellationRequested)
+                            return;
+                        var chunkChanges = ServerQueryResultsHandler
+                            .ProcessServerUpdate(update.NewOrUpdated, update.DeletedIDs)
+                            .GetAwaiter().GetResult();
+                        CallOnCollectionChanged(chunkChanges).GetAwaiter().GetResult();
+                        var chunkObjs = chunkChanges.ObjectsInStore
+                            .Where(l => VolumeBounds.Contains(l.Position)).ToList();
+                        progressiveResults.AddRange(chunkObjs);
+                        foundObjectCallback?.Invoke(chunkObjs);
+                    });
+
+                if (token.IsCancellationRequested)
+                    return new List<LocationObj>();
+
+                return progressiveResults.Count > 0
+                    ? progressiveResults.Distinct().ToList()
+                    : response.NewOrUpdated
+                        .Select(l => ServerObjConverter.Convert(l))
+                        .Where(l => VolumeBounds.Contains(l.Position))
+                        .ToList();
+            }
+
+            var unary = await client.GetAsync(SectionNumber, regionWKT, ScreenPixelSizeInVolume, null, token);
 
             if (token.IsCancellationRequested)
                 return new List<LocationObj>();
 
-            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(response.NewOrUpdated, response.DeletedIDs);
+            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(unary.NewOrUpdated, unary.DeletedIDs);
             await CallOnCollectionChanged(changes);
 
             List<LocationObj> results = changes.ObjectsInStore
