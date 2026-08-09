@@ -3779,6 +3779,10 @@ namespace WebAnnotationModel.gRPC.Tests
                 Assert.That(regionSync.Results.First(s => s.Id == aId.Value).Links, Has.Some.Matches<StructureLink>(l =>
                     l.SourceId == aId.Value && l.TargetId == bId.Value));
 
+                var all = await structuresClient.GetStructuresAsync(new GetStructuresRequest());
+                Assert.That(all.Results.First(s => s.Id == aId.Value).Links, Has.Some.Matches<StructureLink>(l =>
+                    l.SourceId == aId.Value && l.TargetId == bId.Value));
+
                 var byId = await structuresClient.GetStructureByIDAsync(new GetStructureByIDRequest
                 {
                     Id = aId.Value
