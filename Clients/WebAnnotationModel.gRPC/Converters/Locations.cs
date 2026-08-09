@@ -12,6 +12,7 @@ using Geometry;
 using Google.Protobuf.WellKnownTypes;
 using Geometry = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry;
 using Microsoft.Extensions.DependencyInjection;
+using WebAnnotationModel;
 
 namespace WebAnnotationModel.gRPC.Converters
 { 
@@ -21,24 +22,26 @@ namespace WebAnnotationModel.gRPC.Converters
     {
         public LocationObj Convert(Location src)
         {
-            LocationObj obj =
-                new LocationObj(src.Id, src.ParentId)
-                {
-                    DBAction = DBACTION.NONE,
-                    Section = src.Section,
-                    MosaicShape = src.MosaicShape.Text.ParseWKT(),
-                    VolumeShape = src.VolumeShape.Text.ParseWKT(),
-                    TypeCode = (LocationType)src.TypeCode,
-                    Terminal = src.Terminal,
-                    OffEdge = src.OffEdge,
-                    Width = src.Width,
-                    Username = src.Username,
-                    LastModified = src.LastModified.ToDateTime(),
-                    
-                };
-            
-            obj.SetAttributes(src.Attributes.ParseAttributes()).Wait();
-            
+            // Prefer ILocation WKT accessors — MosaicShape may be Binary (WKB), not Text.
+            ILocation asIface = src;
+            var mosaicWkt = asIface.MosaicGeometryWKT;
+            var volumeWkt = asIface.VolumeGeometryWKT;
+
+            var obj = new LocationObj(src.Id, src.ParentId)
+            {
+                DBAction = DBACTION.NONE,
+                Section = src.Section,
+                MosaicShape = mosaicWkt.ParseWKT(),
+                VolumeShape = volumeWkt.ParseWKT(),
+                TypeCode = (LocationType)src.TypeCode,
+                Terminal = src.Terminal,
+                OffEdge = src.OffEdge,
+                Width = src.Width,
+                Username = src.Username,
+                LastModified = src.LastModified?.ToDateTime() ?? default,
+            };
+
+            obj.SetAttributes(ObjAttributeParser.ParseAttributes(src.Attributes ?? string.Empty)).Wait();
             return obj;
         }
 
@@ -47,23 +50,21 @@ namespace WebAnnotationModel.gRPC.Converters
             if (src is Location concrete)
                 return Convert(concrete);
 
-            LocationObj obj =
-                new LocationObj(src.ID, src.ParentID ?? 0)
-                {
-                    DBAction = DBACTION.NONE,
-                    Section = src.SectionNumber,
-                    MosaicShape = src.MosaicGeometryWKT.ParseWKT(),
-                    VolumeShape = src.VolumeGeometryWKT.ParseWKT(),
-                    TypeCode = src.TypeCode,
-                    Terminal = src.Terminal,
-                    OffEdge = src.OffEdge,
-                    Width = src.Width,
-                    Username = src.Username,
-                    LastModified = src.LastModified,
-                };
+            var obj = new LocationObj(src.ID, src.ParentID ?? 0)
+            {
+                DBAction = DBACTION.NONE,
+                Section = src.SectionNumber,
+                MosaicShape = src.MosaicGeometryWKT.ParseWKT(),
+                VolumeShape = src.VolumeGeometryWKT.ParseWKT(),
+                TypeCode = src.TypeCode,
+                Terminal = src.Terminal,
+                OffEdge = src.OffEdge,
+                Width = src.Width,
+                Username = src.Username,
+                LastModified = src.LastModified,
+            };
 
-            obj.SetAttributes(src.TagsXml.ParseAttributes()).Wait();
-
+            obj.SetAttributes(ObjAttributeParser.ParseAttributes(src.TagsXml ?? string.Empty)).Wait();
             return obj;
         }
     }

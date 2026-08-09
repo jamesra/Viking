@@ -9,6 +9,7 @@ using Viking.AnnotationServiceTypes.Interfaces;
 using System.ComponentModel;
 using System.Data.Common;
 using Microsoft.Extensions.DependencyInjection;
+using WebAnnotationModel;
 
 namespace WebAnnotationModel.gRPC.Converters
 {
@@ -27,12 +28,11 @@ namespace WebAnnotationModel.gRPC.Converters
                     Confidence = src.Confidence, 
                     Username = src.Username, 
                     Verified = src.Verified,
-                    LastModified = src.LastModified.ToDateTime(),
-                    Created = src.Created.ToDateTime()
+                    LastModified = src.LastModified?.ToDateTime() ?? default,
+                    Created = src.Created?.ToDateTime() ?? default,
                 };
-            
-            obj.SetAttributes(src.Attributes.ParseAttributes()).Wait();
-            
+
+            obj.SetAttributes(ObjAttributeParser.ParseAttributes(src.Attributes ?? string.Empty)).Wait();
             return obj;
         }
 
@@ -48,8 +48,7 @@ namespace WebAnnotationModel.gRPC.Converters
                     Label = src.Label,
                 };
 
-            obj.SetAttributes(src.Attributes.ParseAttributes()).Wait();
-
+            obj.SetAttributes(ObjAttributeParser.ParseAttributes(src.Attributes ?? string.Empty)).Wait();
             return obj;
         }
     }
@@ -85,8 +84,18 @@ namespace WebAnnotationModel.gRPC.Converters
         IStructure IObjectConverter<StructureObj, IStructure>.Convert(StructureObj src) => Convert(src);
     }
 
-    public class StructureServerToClientUpdater : IObjectUpdater<StructureObj, Structure>
+    public class StructureServerToClientUpdater : IObjectUpdater<StructureObj, Structure>,
+        IObjectUpdater<StructureObj, IStructure>
     {
+        public Task<bool> Update(StructureObj obj, IStructure update)
+        {
+            if (update is Structure proto)
+                return Update(obj, proto);
+            throw new ArgumentException(
+                $"Expected {nameof(Structure)}, got {update?.GetType().FullName ?? "null"}",
+                nameof(update));
+        }
+
         public async Task<bool> Update(StructureObj obj, Structure update)
         {
             bool updated = false;

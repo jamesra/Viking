@@ -49,7 +49,11 @@ namespace Microsoft.Extensions.DependencyInjection
             service.AddSingleton<IObjectConverter<IStructure, StructureObj>, StructureServerToClientConverter>();
             service.AddSingleton<IObjectConverter<StructureObj, Structure>, StructureClientToServerConverter>();
             service.AddSingleton<IObjectConverter<StructureObj, IStructure>, StructureClientToServerConverter>();
-            service.AddTransient<IObjectUpdater<StructureObj, Structure>, StructureServerToClientUpdater>();
+            service.AddTransient<StructureServerToClientUpdater>();
+            service.AddTransient<IObjectUpdater<StructureObj, Structure>>(sp =>
+                sp.GetRequiredService<StructureServerToClientUpdater>());
+            service.AddTransient<IObjectUpdater<StructureObj, IStructure>>(sp =>
+                sp.GetRequiredService<StructureServerToClientUpdater>());
             return service;
         }
 

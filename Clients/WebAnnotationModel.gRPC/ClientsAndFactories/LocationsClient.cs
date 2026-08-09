@@ -30,7 +30,10 @@ namespace Microsoft.Extensions.DependencyInjection
             //var _channel = GrpcChannel.ForAddress(endpointUri, channelOptions.Value);
             //service.AddSingleton<GrpcChannel>((_) => GrpcChannel.ForAddress(endpointUri, channelOptions.Value));
             service.AddSingleton<IServerAnnotationsClientFactory<ILocationsClient>, LocationsClientFactory>();
+            service.AddSingleton<IServerAnnotationsClientFactory<IServerAnnotationsClient<long, ILocation, ILocation, ILocation>>, LocationsClientFactory>();
             service.AddSingleton<IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, ILocation>>, LocationsClientFactory>();
+            service.AddSingleton<IServerAnnotationsClientFactory<IServerAnnotationsBySectionClient<long, ILocation[]>>, LocationsClientFactory>();
+            service.AddSingleton<IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, AnnotationSet>>, LocationsClientFactory>();
             service.AddSingleton<IServerSpatialAnnotationsClient<long, ILocation>, LocationsClient>();
             service.AddSingleton<IServerAnnotationsBySectionClient<long, ILocation[]>, LocationsClient>();
             service.AddSingleton<IServerAnnotationsClient<long, ILocation, ILocation, ILocation>, LocationsClient>();
