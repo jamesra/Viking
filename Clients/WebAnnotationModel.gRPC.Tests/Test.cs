@@ -2,6 +2,7 @@ using IdentityModel.Client;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Net;
@@ -362,10 +363,132 @@ namespace WebAnnotationModel.gRPC.Tests
                 Assert.That(linked.Results, Has.Some.Matches<StructureLink>(l =>
                     (l.SourceId == aId.Value && l.TargetId == bId.Value) ||
                     (l.SourceId == bId.Value && l.TargetId == aId.Value)));
+
+                await structuresClient.DeleteStructureLinkAsync(new DeleteStructureLinkRequest
+                {
+                    SourceId = aId.Value,
+                    TargetId = bId.Value
+                });
+                var afterDelete = await structuresClient.GetLinkedStructuresAsync(new GetLinkedStructuresRequest
+                {
+                    Id = aId.Value
+                });
+                Assert.That(afterDelete.Results, Has.None.Matches<StructureLink>(l =>
+                    l.SourceId == aId.Value && l.TargetId == bId.Value));
             }
             finally
             {
                 foreach (var id in new[] { aId, bId })
+                {
+                    if (!id.HasValue) continue;
+                    try
+                    {
+                        await structuresClient.UpdateAsync(new UpdateStructuresRequest
+                        {
+                            Objs = { new StructureChangeRequest { Delete = id.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                try
+                {
+                    await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                    {
+                        Objs = { new StructureTypeChangeRequest { Delete = createdType.Result.Id } }
+                    });
+                }
+                catch (RpcException) { }
+            }
+        }
+
+        [Test]
+        public async Task GetNetworkedStructures_OneHopViaChildLinks()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var structuresClient = new AnnotateStructures.AnnotateStructuresClient(channel);
+            var typesClient = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+            var createdType = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
+            {
+                Obj = new StructureType
+                {
+                    Name = $"NetType-{Guid.NewGuid():N}".Substring(0, 32),
+                    Code = "NT",
+                    Color = 0x00FF00,
+                    Created = now,
+                    LastModified = now,
+                    Username = _userIdentity.UserName,
+                }
+            });
+
+            long? parentA = null, parentB = null, childA = null, childB = null;
+            try
+            {
+                async Task<long> CreateStructure(string label, long? parentId = null)
+                {
+                    var structure = new Structure
+                    {
+                        TypeId = createdType.Result.Id,
+                        Label = label,
+                        Confidence = 0.5,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    };
+                    if (parentId.HasValue)
+                        structure.ParentId = parentId.Value;
+
+                    var created = await structuresClient.CreateStructureAsync(new CreateStructureRequest
+                    {
+                        NewStructure = structure
+                    });
+                    return created.NewStructure.Id;
+                }
+
+                parentA = await CreateStructure("net-parent-a");
+                parentB = await CreateStructure("net-parent-b");
+                childA = await CreateStructure("net-child-a", parentA);
+                childB = await CreateStructure("net-child-b", parentB);
+
+                await structuresClient.CreateStructureLinkAsync(new CreateStructureLinkRequest
+                {
+                    NewLink = new StructureLink
+                    {
+                        SourceId = childA.Value,
+                        TargetId = childB.Value,
+                        Bidirectional = true,
+                    }
+                });
+
+                var network = await structuresClient.GetNetworkedStructuresAsync(new GetNetworkedStructuresRequest
+                {
+                    Ids = { parentA.Value },
+                    NumHops = 1
+                });
+                Assert.That(network.Results, Does.Contain(parentA.Value));
+                Assert.That(network.Results, Does.Contain(parentB.Value));
+
+                var links = await structuresClient.GetStructureLinksInNetworkAsync(new GetStructureLinksInNetworkRequest
+                {
+                    Ids = { parentA.Value },
+                    NumHops = 1
+                });
+                Assert.That(links.Results, Has.Some.Matches<StructureLink>(l =>
+                    l.SourceId == childA.Value && l.TargetId == childB.Value));
+
+                var children = await structuresClient.GetChildStructuresInNetworkAsync(new GetChildStructuresInNetworkRequest
+                {
+                    Ids = { parentA.Value },
+                    NumHops = 1
+                });
+                Assert.That(children.Results.Select(s => s.Id), Is.SupersetOf(new[] { childA.Value, childB.Value }));
+            }
+            finally
+            {
+                foreach (var id in new[] { childA, childB, parentA, parentB })
                 {
                     if (!id.HasValue) continue;
                     try

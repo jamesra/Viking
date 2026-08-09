@@ -459,6 +459,24 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw Failure(nameof(UpdateLinks), e); }
         }
 
+        public override async Task<DeleteStructureLinkResponse> DeleteStructureLink(DeleteStructureLinkRequest request, ServerCallContext context)
+        {
+            try
+            {
+                var existing = await _context.StructureLinks.FirstOrDefaultAsync(
+                    l => l.SourceId == request.SourceId && l.TargetId == request.TargetId);
+                if (existing == null)
+                    throw new RpcException(new Status(StatusCode.NotFound,
+                        $"StructureLink {request.SourceId}->{request.TargetId} not found"));
+
+                _context.StructureLinks.Remove(existing);
+                await _context.SaveChangesAsync();
+                return new DeleteStructureLinkResponse();
+            }
+            catch (RpcException) { throw; }
+            catch (Exception e) { throw Failure(nameof(DeleteStructureLink), e); }
+        }
+
         public override async Task<MergeResponse> Merge(MergeRequest request, ServerCallContext context)
         {
             try

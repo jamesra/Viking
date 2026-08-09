@@ -19,7 +19,8 @@ service AnnotateStructures {
   rpc GetStructuresInVolumeRegion (GetStructuresInVolumeRegionRequest) returns (GetStructuresInVolumeRegionResponse);
   rpc GetStructureByID (GetStructureByIDRequest) returns (GetStructureByIDResponse);
   rpc GetStructuresByID (GetStructuresByIDRequest) returns (GetStructuresByIDResponse);
-  rpc CreateStructureLink (CreateStructureLinkRequest) returns (CreateStructureLinkResponse); 
+  rpc CreateStructureLink (CreateStructureLinkRequest) returns (CreateStructureLinkResponse);
+  rpc DeleteStructureLink (DeleteStructureLinkRequest) returns (DeleteStructureLinkResponse);
   rpc GetLinkedStructures (GetLinkedStructuresRequest) returns (GetLinkedStructuresResponse);
   rpc GetNetworkedStructures (GetNetworkedStructuresRequest) returns (GetNetworkedStructuresResponse); 
   rpc GetChildStructuresInNetwork (GetChildStructuresInNetworkRequest) returns (GetChildStructuresInNetworkResponse);
@@ -143,7 +144,15 @@ message CreateStructureLinkRequest {
 message CreateStructureLinkResponse {
 	StructureLink result = 1;
 }
-  
+
+message DeleteStructureLinkRequest {
+  int64 source_id = 1;
+  int64 target_id = 2;
+}
+
+message DeleteStructureLinkResponse {
+}
+
 message GetLinkedStructuresRequest {
 
   int64 id = 1;

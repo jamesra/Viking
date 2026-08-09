@@ -424,6 +424,152 @@ IF OBJECT_ID(N'dbo.ZScaleUnits', N'FN') IS NULL
     EXEC(N'CREATE FUNCTION dbo.ZScaleUnits() RETURNS varchar(MAX) AS BEGIN RETURN ''nm'' END');
 GO
 
+-- Network hop queries (TVF + procs) used by StructureService.GetNetworked*.
+IF TYPE_ID(N'dbo.integer_list') IS NULL
+    CREATE TYPE [dbo].[integer_list] AS TABLE (
+        [ID] BIGINT NOT NULL,
+        PRIMARY KEY CLUSTERED ([ID] ASC));
+GO
+
+IF OBJECT_ID(N'dbo.NetworkStructureIDs', N'TF') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE FUNCTION dbo.NetworkStructureIDs
+    (
+        @IDs integer_list READONLY,
+        @Hops int
+    )
+    RETURNS @CellsInNetwork TABLE
+    (
+        ID bigint PRIMARY KEY
+    )
+    AS
+    BEGIN
+        DECLARE @HopSeedCells integer_list;
+
+        INSERT INTO @HopSeedCells SELECT ID FROM @IDs;
+        INSERT INTO @CellsInNetwork SELECT ID FROM @IDs;
+
+        WHILE @Hops > 0
+        BEGIN
+            DECLARE @HopSeedCellsChildStructures integer_list;
+            DECLARE @ChildStructurePartners integer_list;
+            DECLARE @HopCellsFound integer_list;
+
+            INSERT INTO @HopSeedCellsChildStructures
+                SELECT DISTINCT Child.ID FROM dbo.Structure Parent
+                    INNER JOIN dbo.Structure Child ON Child.ParentID = Parent.ID
+                    INNER JOIN @HopSeedCells Cells ON Cells.ID = Parent.ID;
+
+            INSERT INTO @ChildStructurePartners
+                SELECT DISTINCT SL.TargetID FROM dbo.StructureLink SL
+                    INNER JOIN @HopSeedCellsChildStructures C ON C.ID = SL.SourceID
+                UNION
+                SELECT DISTINCT SL.SourceID FROM dbo.StructureLink SL
+                    INNER JOIN @HopSeedCellsChildStructures C ON C.ID = SL.TargetID;
+
+            INSERT INTO @HopCellsFound
+                SELECT DISTINCT Parent.ID FROM dbo.Structure Parent
+                    INNER JOIN dbo.Structure Child ON Child.ParentID = Parent.ID
+                    INNER JOIN @ChildStructurePartners Partners ON Partners.ID = Child.ID
+                WHERE Parent.ID NOT IN (SELECT ID FROM @CellsInNetwork UNION SELECT ID FROM @HopSeedCells);
+
+            DELETE S FROM @HopSeedCells S;
+
+            INSERT INTO @HopSeedCells
+                SELECT ID FROM @HopCellsFound
+                WHERE ID NOT IN (SELECT ID FROM @CellsInNetwork);
+
+            INSERT INTO @CellsInNetwork
+                SELECT ID FROM @HopCellsFound
+                WHERE ID NOT IN (SELECT ID FROM @CellsInNetwork);
+
+            DELETE FROM @ChildStructurePartners;
+            DELETE FROM @HopCellsFound;
+
+            SET @Hops = @Hops - 1;
+        END
+
+        RETURN;
+    END');
+END
+GO
+
+IF OBJECT_ID(N'dbo.NetworkChildStructureIDs', N'TF') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE FUNCTION dbo.NetworkChildStructureIDs
+    (
+        @IDs integer_list READONLY,
+        @Hops int
+    )
+    RETURNS @ChildStructuresInNetwork TABLE
+    (
+        ID bigint PRIMARY KEY
+    )
+    AS
+    BEGIN
+        DECLARE @ChildIDsInNetwork integer_list;
+
+        INSERT INTO @ChildIDsInNetwork
+            SELECT ChildStruct.ID FROM dbo.Structure S
+            INNER JOIN dbo.NetworkStructureIDs(@IDs, @Hops) N ON S.ID = N.ID
+            INNER JOIN dbo.Structure ChildStruct ON ChildStruct.ParentID = N.ID;
+
+        INSERT INTO @ChildStructuresInNetwork
+            SELECT SL.SourceID AS ID FROM dbo.StructureLink SL
+                WHERE SL.SourceID IN (SELECT ID FROM @ChildIDsInNetwork)
+            UNION
+            SELECT SL.TargetID AS ID FROM dbo.StructureLink SL
+                WHERE SL.TargetID IN (SELECT ID FROM @ChildIDsInNetwork);
+
+        RETURN;
+    END');
+END
+GO
+
+IF OBJECT_ID(N'dbo.SelectNetworkStructureIDs', N'P') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE PROCEDURE dbo.SelectNetworkStructureIDs
+        @IDs integer_list READONLY,
+        @Hops int
+    AS
+    BEGIN
+        SELECT N.ID AS ID FROM dbo.NetworkStructureIDs(@IDs, @Hops) N;
+    END');
+END
+GO
+
+IF OBJECT_ID(N'dbo.SelectNetworkChildStructures', N'P') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE PROCEDURE dbo.SelectNetworkChildStructures
+        @IDs integer_list READONLY,
+        @Hops int
+    AS
+    BEGIN
+        SELECT S.* FROM dbo.Structure S
+            INNER JOIN dbo.NetworkChildStructureIDs(@IDs, @Hops) N ON N.ID = S.ID;
+    END');
+END
+GO
+
+IF OBJECT_ID(N'dbo.SelectNetworkStructureLinks', N'P') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE PROCEDURE dbo.SelectNetworkStructureLinks
+        @IDs integer_list READONLY,
+        @Hops int
+    AS
+    BEGIN
+        SELECT SL.* FROM dbo.StructureLink SL
+            WHERE SL.SourceID IN (SELECT ID FROM dbo.NetworkChildStructureIDs(@IDs, @Hops))
+               OR SL.TargetID IN (SELECT ID FROM dbo.NetworkChildStructureIDs(@IDs, @Hops));
+    END');
+END
+GO
+
 -- Seed one StructureType → Structure → Location when the DB is empty (ids become 1).
 IF NOT EXISTS (SELECT 1 FROM dbo.StructureType)
 BEGIN

@@ -1,3 +1,4 @@
+using Grpc.Core;
 using Grpc.Net.Client;
 using System;
 using System.Collections.Generic;
@@ -84,14 +85,19 @@ namespace WebAnnotationModel.gRPC
             return response.Result;
         }
 
-        /// <summary>
-        /// The AnnotateStructures service has no dedicated delete RPC for structure links today
-        /// (they are removed as a side effect of deleting a structure). Report "not found" rather
-        /// than throwing so callers that speculatively try to delete do not crash.
-        /// </summary>
-        public Task<StructureLinkKey?> Delete(StructureLinkKey key, CancellationToken token)
+        public async Task<StructureLinkKey?> Delete(StructureLinkKey key, CancellationToken token)
         {
-            return Task.FromResult<StructureLinkKey?>(null);
+            try
+            {
+                await Client.DeleteStructureLinkAsync(
+                    new DeleteStructureLinkRequest { SourceId = key.SourceID, TargetId = key.TargetID },
+                    cancellationToken: token);
+                return key;
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+            {
+                return null;
+            }
         }
 
         public async Task<IStructureLink> GetAsync(StructureLinkKey key, CancellationToken token)
