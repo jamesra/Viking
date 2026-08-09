@@ -120,6 +120,32 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         [Test]
+        public async Task GetLocationChangeLog_ReturnsUnimplemented()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var client = new AnnotateLocations.AnnotateLocationsClient(channel);
+
+            var ex = Assert.ThrowsAsync<RpcException>(async () =>
+                await client.GetLocationChangeLogAsync(new GetLocationChangeLogRequest { StructureId = 1 }));
+
+            Assert.That(ex.StatusCode, Is.EqualTo(StatusCode.Unimplemented));
+        }
+
+        [Test]
+        public async Task GetStructureChangeLog_ReturnsUnimplemented()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var client = new AnnotateStructures.AnnotateStructuresClient(channel);
+
+            var ex = Assert.ThrowsAsync<RpcException>(async () =>
+                await client.GetStructureChangeLogAsync(new GetStructureChangeLogRequest { StructureId = 1 }));
+
+            Assert.That(ex.StatusCode, Is.EqualTo(StatusCode.Unimplemented));
+        }
+
+        [Test]
         public async Task GetLocationByID_SeedLocation_ReturnsId1()
         {
             var accessToken = await RequestAccessTokenAsync();
@@ -3081,6 +3107,9 @@ namespace WebAnnotationModel.gRPC.Tests
                 Assert.That(deleted.Changes, Has.Count.EqualTo(1));
                 Assert.That(deleted.Changes[0].Sucess, Is.True);
                 Assert.That(deleted.Changes[0].Action, Is.EqualTo(DBAction.Delete));
+                Assert.That(deleted.Changes[0].Result, Is.Not.Null);
+                Assert.That(deleted.Changes[0].Result.SourceTypeId, Is.EqualTo(sourceTypeId.Value));
+                Assert.That(deleted.Changes[0].Result.TargetTypeId, Is.EqualTo(targetTypeId.Value));
 
                 var afterDelete = await permittedClient.GetPermittedStructureLinksAsync(new GetPermittedStructureLinksRequest());
                 Assert.That(afterDelete.PermittedLinks, Has.None.Matches<PermittedStructureLink>(p =>
