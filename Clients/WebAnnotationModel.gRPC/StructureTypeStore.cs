@@ -76,7 +76,7 @@ namespace WebAnnotationModel.gRPC
             {
                 var response = await client.GetAll();
                 var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructureType[]>(DateTime.UtcNow, response.ToArray(), Array.Empty<long>()));
-                CallOnCollectionChanged(changes);
+                await CallOnCollectionChanged(changes).ConfigureAwait(false);
                 return changes.ObjectsInStore;
             }
             catch (Exception e)
