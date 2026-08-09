@@ -123,6 +123,7 @@ namespace gRPCAnnotationService
 
                 var response = new GetStructureLocationsResponse();
                 response.Results.AddRange(rows.Select(l => l.ToProtobufMessage()));
+                await AttachLocationLinksAsync(response.Results, context.CancellationToken);
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetStructureLocations), e); }

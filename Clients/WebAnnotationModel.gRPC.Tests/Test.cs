@@ -2013,6 +2013,13 @@ namespace WebAnnotationModel.gRPC.Tests
                 });
                 Assert.That(byIdA.Result.Links, Does.Contain(locB.Value));
 
+                var structureLocs = await locationsClient.GetStructureLocationsAsync(new GetStructureLocationsRequest
+                {
+                    StructureId = structureId.Value
+                });
+                Assert.That(structureLocs.Results.First(l => l.Id == locA.Value).Links, Does.Contain(locB.Value));
+                Assert.That(structureLocs.Results.First(l => l.Id == locB.Value).Links, Does.Contain(locA.Value));
+
                 await locationsClient.DeleteLocationLinkAsync(new DeleteLocationLinkRequest
                 {
                     SourceId = locA.Value,
