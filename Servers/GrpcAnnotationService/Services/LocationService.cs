@@ -309,9 +309,14 @@ namespace gRPCAnnotationService
             try
             {
                 var queryStart = DateTime.UtcNow;
-                var links = await LinksTouchingSection(request.Section)
-                    .Where(link => link.Created > DateTime.FromBinary(request.ModifiedAfterThisTime))
-                    .ToListAsync();
+                // Clients pass 0 (or other pre-SQL dates) to mean "no lower bound". SqlDateTime
+                // cannot represent DateTime.FromBinary(0), so skip the filter in that case.
+                var modifiedAfter = ModifiedAfterOrNull(request.ModifiedAfterThisTime);
+                var query = LinksTouchingSection(request.Section);
+                if (modifiedAfter.HasValue)
+                    query = query.Where(link => link.Created > modifiedAfter.Value);
+
+                var links = await query.ToListAsync();
 
                 var response = new GetLocationLinksForSectionResponse
                 {
@@ -498,6 +503,27 @@ namespace gRPCAnnotationService
 
         private static string CallerName(ServerCallContext context) =>
             context.GetHttpContext()?.User?.Identity?.Name ?? "unknown";
+
+        /// <summary>
+        /// Decode a DateTime.ToBinary tick payload used by older WCF clients. Zero / values
+        /// outside SQL datetime range mean "no lower bound".
+        /// </summary>
+        private static DateTime? ModifiedAfterOrNull(long binaryTime)
+        {
+            if (binaryTime == 0)
+                return null;
+
+            try
+            {
+                var value = DateTime.FromBinary(binaryTime);
+                var sqlMin = (DateTime)System.Data.SqlTypes.SqlDateTime.MinValue;
+                return value < sqlMin ? null : value;
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+        }
 
         /// <summary>Location links are stored with the lower ID first, so callers may pass either order.</summary>
         private static (long A, long B) Ordered(long x, long y) => x < y ? (x, y) : (y, x);
