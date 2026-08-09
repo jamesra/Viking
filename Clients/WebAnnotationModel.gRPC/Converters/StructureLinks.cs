@@ -52,25 +52,9 @@ namespace WebAnnotationModel.gRPC.Converters
     {
         public Task<bool> Update(StructureLinkObj obj, StructureLink update)
         {
-            //Structure links currently have no properties that can be updated so we always return false
+            // Endpoints are the identity; Bidirectional is immutable on StructureLinkObj
+            // (flip/bidirectional UI deletes and recreates the link instead).
             return Task.FromResult(false);
-            /*
-
-            bool updated = false;
-            void OnPropertyChanged(object s, PropertyChangedEventArgs e) => updated = true;
-            try
-            {
-                obj.PropertyChanged += OnPropertyChanged; //Record change events so we know if an update occurred.
-
-                obj.Bidirectional = update.Bidirectional; 
-            }
-            finally
-            {
-                obj.PropertyChanged -= OnPropertyChanged;
-            }
-
-            return updated;
-            */
         }
     }
 }

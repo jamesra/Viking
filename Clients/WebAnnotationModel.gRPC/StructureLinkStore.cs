@@ -43,14 +43,49 @@ namespace WebAnnotationModel.gRPC
 
         /// <summary>
         /// Synchronous wrapper so exceptions surface to the caller's try/catch, matching legacy WCF-store semantics.
-        /// Creates the link on the server immediately rather than deferring to Save(), since there is no
-        /// dedicated delete RPC to reconcile against on a later save.
+        /// Creates the link on the server immediately (UI flip/delete paths also call Save for deletes).
         /// </summary>
         public StructureLinkObj Create(StructureLinkObj obj)
         {
             var client = ClientFactory.GetOrCreate();
             var serverResult = client.Create(obj, CancellationToken.None).Result;
             return Add(ServerObjConverter.Convert(serverResult)).Result;
+        }
+
+        /// <summary>
+        /// Structure-link RPCs are create / update-upsert / delete — not a single batched Update that
+        /// understands DBACTION. Route each pending change to the matching RPC so Remove()+Save()
+        /// (used by Viking's structure-link context menu) actually deletes on the server.
+        /// </summary>
+        protected override async Task<bool> Save(List<StructureLinkObj> changedObjects, CancellationToken token)
+        {
+            if (changedObjects.Count == 0)
+                return true;
+
+            var client = ClientFactory.GetOrCreate();
+            foreach (var obj in changedObjects)
+            {
+                switch (obj.DBAction)
+                {
+                    case DBACTION.DELETE:
+                        await client.Delete(obj.ID, token).ConfigureAwait(false);
+                        break;
+                    case DBACTION.INSERT:
+                        await client.Create(obj, token).ConfigureAwait(false);
+                        break;
+                    case DBACTION.UPDATE:
+                        await client.UpdateAsync(ClientObjConverter.Convert(obj), token).ConfigureAwait(false);
+                        break;
+                    case DBACTION.NONE:
+                        break;
+                    default:
+                        throw new NotSupportedException($"Unexpected structure-link DBAction {obj.DBAction}");
+                }
+
+                obj.DBAction = DBACTION.NONE;
+            }
+
+            return true;
         }
     }
 }
