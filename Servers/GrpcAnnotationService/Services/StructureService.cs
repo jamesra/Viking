@@ -74,6 +74,7 @@ namespace gRPCAnnotationService
                 var rows = await _context.Structures.AsNoTracking().ToListAsync();
                 var response = new GetStructuresResponse();
                 response.Results.AddRange(rows.Select(s => s.ToProtobufMessage()));
+                await AttachStructureLinksAsync(response.Results, context.CancellationToken);
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetStructures), e); }

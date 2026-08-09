@@ -1148,11 +1148,16 @@ namespace WebAnnotationModel.gRPC.Tests
                     }
                 });
                 locationId = created.Result.Id;
-                // Watermark from the create row itself; SQL DATETIME has coarse precision, so
-                // QueryExecutedTime can round equal to LastModified and miss the next write.
-                var afterCreate = created.Result.LastModified;
-
+                // Watermark from a post-create query stamp (not the row LastModified). SQL DATETIME
+                // rounding can make LastModified equal the next write's stamp under `> modifiedAfter`.
                 await Task.Delay(1100);
+                var settled = await locationsClient.GetLocationChangesAsync(new GetLocationChangesRequest
+                {
+                    Section = section
+                });
+                var afterCreate = settled.QueryExecutedTime;
+
+                await Task.Delay(200);
 
                 var update = await locationsClient.UpdateAsync(new UpdateLocationsRequest
                 {
