@@ -1203,6 +1203,120 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         [Test]
+        public async Task Scale_ReturnsConfiguredUnits()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var client = new AnnotateMetaData.AnnotateMetaDataClient(channel);
+
+            var reply = await client.ScaleAsync(new ScaleRequest());
+
+            Assert.That(reply.Scale, Is.Not.Null);
+            Assert.That(reply.Scale.X, Is.Not.Null);
+            Assert.That(reply.Scale.X.Units, Is.EqualTo("nm"));
+            Assert.That(reply.Scale.X.Value, Is.EqualTo(2.176).Within(0.001));
+            Assert.That(reply.Scale.Z, Is.Not.Null);
+            Assert.That(reply.Scale.Z.Value, Is.EqualTo(90.0).Within(0.001));
+        }
+
+        [Test]
+        public async Task CreateUpdateStructureType_WithParent_Roundtrip()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var typesClient = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+            var parent = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
+            {
+                Obj = new StructureType
+                {
+                    Name = $"ParentT-{Guid.NewGuid():N}".Substring(0, 32),
+                    Code = "PT",
+                    Color = 0x111111,
+                    Created = now,
+                    LastModified = now,
+                    Username = _userIdentity.UserName,
+                }
+            });
+
+            long? childId = null;
+            try
+            {
+                var child = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
+                {
+                    Obj = new StructureType
+                    {
+                        Name = $"ChildT-{Guid.NewGuid():N}".Substring(0, 32),
+                        Code = "CT",
+                        Color = 0x222222,
+                        ParentId = parent.Result.Id,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    }
+                });
+                childId = child.Result.Id;
+                Assert.That(child.Result.ParentId, Is.EqualTo(parent.Result.Id));
+
+                var renamed = $"Renamed-{Guid.NewGuid():N}".Substring(0, 32);
+                var update = await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                {
+                    Objs =
+                    {
+                        new StructureTypeChangeRequest
+                        {
+                            Update = new StructureType
+                            {
+                                Id = childId.Value,
+                                Name = renamed,
+                                Code = "CT",
+                                Color = 0x333333,
+                                ParentId = parent.Result.Id,
+                                Created = now,
+                                LastModified = Timestamp.FromDateTime(DateTime.UtcNow),
+                                Username = _userIdentity.UserName,
+                            }
+                        }
+                    }
+                });
+                Assert.That(update.Results, Has.Count.EqualTo(1));
+                Assert.That(update.Results[0].Success, Is.True);
+                Assert.That(update.Results[0].Updated.Name.Trim(), Is.EqualTo(renamed.Trim()));
+
+                var fetched = await typesClient.GetStructureTypeByIDAsync(new GetStructureTypeByIDRequest
+                {
+                    Id = childId.Value
+                });
+                Assert.That(fetched.Result.ParentId, Is.EqualTo(parent.Result.Id));
+                Assert.That(fetched.Result.Name.Trim(), Is.EqualTo(renamed.Trim()));
+            }
+            finally
+            {
+                if (childId.HasValue)
+                {
+                    try
+                    {
+                        await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                        {
+                            Objs = { new StructureTypeChangeRequest { Delete = childId.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                try
+                {
+                    await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                    {
+                        Objs = { new StructureTypeChangeRequest { Delete = parent.Result.Id } }
+                    });
+                }
+                catch (RpcException) { }
+            }
+        }
+
+        [Test]
         public async Task GetStructuresForSection_AndMosaicRegion_ReturnSeed()
         {
             var accessToken = await RequestAccessTokenAsync();

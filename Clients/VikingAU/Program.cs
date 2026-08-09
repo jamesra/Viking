@@ -2,12 +2,15 @@ using Viking.AnnotationServiceTypes.Interfaces;
 using CommandLine;
 using CommandLine.Text;
 using Geometry;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -15,6 +18,8 @@ using System.Threading.Tasks;
 using Viking.VolumeModel;
 using Viking.Tokens;
 using WebAnnotationModel;
+using WebAnnotationModel.gRPC;
+using WebAnnotationModel.Objects;
 using Viking.Common;
 using System.Xml.Linq;
 
@@ -226,7 +231,9 @@ namespace Viking.AU
 
             int numThreads = options.NumThreads ?? System.Environment.ProcessorCount + 1;
 
+#if NETFRAMEWORK
             System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=16.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
+#endif
             SqlServerTypesLoader.Loader.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
 
             var credentials = new NetworkCredential(options.Username, options.Password);
@@ -274,10 +281,11 @@ namespace Viking.AU
 
             WebAnnotationModel.State.Endpoint = State.Volume.Endpoint.EndpointURL;
             WebAnnotationModel.State.UserCredentials = credentials;
+            InitializeAnnotationStores(WebAnnotationModel.State.Endpoint);
 
             //Preload all structures
             Console.WriteLine("Begin preload all structures");
-            Store.Structures.GetAllStructures();
+            await Store.Structures.GetAll();
             Console.WriteLine("Finished loading all structures");
 
             IList<long> SectionsToProcess = options.Sections.Count == 0
@@ -418,12 +426,16 @@ namespace Viking.AU
             return output;
         }
 
+        // Bounds large enough to cover any real volume's coordinate space when requesting every
+        // location on a section.  QueryTargets.Server always contacts the server for a full refresh.
+        private static readonly Geometry.GridRectangle WholeVolumeBounds = new(-1e9, 1e9, -1e9, 1e9);
+
         static async Task<string> UpdateSectionPositions(long SectionNumber, CancellationToken token)
         {
-            LocationStore threadLocationStore = [];
             int NumUpdated = 0;
 
-            var LocDict = threadLocationStore.GetObjectsForSection(SectionNumber);
+            List<LocationObj> LocDict = await Store.LocationsByRegion.GetObjectsInRegionAsync(
+                WholeVolumeBounds, 0, (int)SectionNumber, QueryTargets.Server, token, null);
 
             string feedback = null;
             if (LocDict.Count >= 0)
@@ -437,7 +449,7 @@ namespace Viking.AU
                 if (SectionTranslations.TryGetValue(SectionNumber, out var sectionTranslationData))
                     translationData = sectionTranslationData;
 
-                foreach (LocationObj loc in LocDict.Values)
+                foreach (LocationObj loc in LocDict)
                 {
                     try
                     {
@@ -462,15 +474,8 @@ namespace Viking.AU
             {
                 try
                 {
-                    if (threadLocationStore.Save() == false)
+                    if (await Store.Locations.Save() == false)
                         feedback += $"\nSection {SectionNumber} : Failed to apply updates";
-                }
-                catch (System.ServiceModel.FaultException e)
-                {
-                    throw;
-                    //Trace.WriteLine($"Exception saving volume locations:\n{e}");
-                    //feedback += $"\nSection {SectionNumber} : Failed to apply updates with error{e}";
-                    //Console.Write("...Locations updated");
                 }
                 catch (Exception e)
                 {
@@ -481,7 +486,9 @@ namespace Viking.AU
                 }
             }
 
-            threadLocationStore.RemoveSection((int)SectionNumber);
+            // TODO: Store.Locations is a shared, process-wide cache in the gRPC store model (unlike the old
+            // per-thread WCF LocationStore), so we no longer evict a single section's objects here.  Revisit
+            // if memory usage becomes a problem when processing many sections in parallel.
 
             return feedback;
         }
@@ -520,7 +527,7 @@ namespace Viking.AU
                 if (loc.LastModified < translation.Value.TranslateBefore)
                 {
                     updatedVolumeShape = updatedVolumeShape.Translate(translation.Value.Offset);
-                    loc.MosaicShape = mapper.TryMapShapeVolumeToSection(updatedVolumeShape);
+                    loc.MosaicShape = mapper.TryMapShapeVolumeToSection(updatedVolumeShape).ToShape2D();
                     Translated = true;
                 }
             }
@@ -535,9 +542,9 @@ namespace Viking.AU
             GridVector2[] UpdatedVolumeControlPoints = updatedVolumeShape.ToPoints();
 
             if (AnyPointsAreDifferent(OriginalVolumeControlPoints, UpdatedVolumeControlPoints) ||
-                updatedVolumeShape.GeometryType() != loc.VolumeShape.GeometryType())
+                updatedVolumeShape.GeometryType() != loc.VolumeShape.ToSqlGeometry().GeometryType())
             {
-                loc.VolumeShape = updatedVolumeShape;
+                loc.VolumeShape = updatedVolumeShape.ToShape2D();
                 return true;
             }
 
@@ -557,7 +564,7 @@ namespace Viking.AU
 
         static SqlGeometry VolumeShapeForLocation(LocationObj loc, MappingBase mapper)
         {
-            SqlGeometry UnsmoothedVolumeShape = mapper.TryMapShapeSectionToVolume(loc.MosaicShape);
+            SqlGeometry UnsmoothedVolumeShape = mapper.TryMapShapeSectionToVolume(loc.MosaicShape.ToSqlGeometry());
             if (UnsmoothedVolumeShape is null)
                 return null;
 
@@ -572,7 +579,7 @@ namespace Viking.AU
         /// <returns></returns>
         static bool IsLocationTypeValid(LocationObj loc)
         {
-            switch (loc.MosaicShape.GeometryType())
+            switch (loc.MosaicShape.ToSqlGeometry().GeometryType())
             {
                 case SupportedGeometryType.POINT:
                     if (loc.TypeCode != LocationType.POINT)
@@ -607,7 +614,7 @@ namespace Viking.AU
         /// <returns></returns>
         static bool TryRepairLocationType(LocationObj loc)
         {
-            switch (loc.MosaicShape.GeometryType())
+            switch (loc.MosaicShape.ToSqlGeometry().GeometryType())
             {
                 case SupportedGeometryType.POINT:
                     if (loc.TypeCode != LocationType.POINT)
@@ -636,7 +643,7 @@ namespace Viking.AU
                         SqlGeometry newShape = loc.MosaicShape.ToPoints().ToPolygon();
                         if (newShape.STIsValid().IsTrue)
                         {
-                            loc.MosaicShape = newShape;
+                            loc.MosaicShape = newShape.ToShape2D();
                             loc.Width = new long?();
                             return true;
                         }
@@ -651,7 +658,7 @@ namespace Viking.AU
                         SqlGeometry newShape = loc.MosaicShape.ToPoints().ToSqlGeometry();
                         if (newShape.STIsValid().IsTrue)
                         {
-                            loc.MosaicShape = newShape;
+                            loc.MosaicShape = newShape.ToShape2D();
                             loc.Width = 8;
                             return true;
                         }
@@ -735,6 +742,40 @@ namespace Viking.AU
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Compose gRPC-backed annotation stores and bind them to <see cref="Store"/>.
+        /// </summary>
+        static void InitializeAnnotationStores(Uri endpoint)
+        {
+            if (endpoint is null)
+                throw new ArgumentNullException(nameof(endpoint));
+
+            var services = new ServiceCollection();
+            services.AddSingleton<IAnnotationAccessTokenProvider, VikingAuAnnotationAccessTokenProvider>();
+            services.ConfigureAnnotationModel(
+                opts => opts.Endpoint = endpoint,
+                channelOpts =>
+                {
+#if NETFRAMEWORK
+                    channelOpts.HttpHandler = new WinHttpHandler();
+#else
+                    // Grpc.Net.Client default handler is fine on modern .NET.
+                    _ = channelOpts;
+#endif
+                });
+
+            var serviceProvider = services.BuildServiceProvider();
+            var grpcSettings = serviceProvider.GetRequiredService<IOptions<GrpcRepositorySettings>>();
+            grpcSettings.Value.Endpoint = endpoint;
+
+            Store.Initialize(serviceProvider.GetRequiredService<IAnnotationStores>());
+        }
+
+        private sealed class VikingAuAnnotationAccessTokenProvider : IAnnotationAccessTokenProvider
+        {
+            public string GetAccessToken() => TokenInjector.BearerToken?.AccessToken;
         }
     }
 }

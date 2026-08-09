@@ -396,6 +396,20 @@ BEGIN
 END
 GO
 
+-- Volume scale scalars used by AnnotateMetaData.Scale.
+IF OBJECT_ID(N'dbo.XYScale', N'FN') IS NULL
+    EXEC(N'CREATE FUNCTION dbo.XYScale() RETURNS float AS BEGIN RETURN 2.176 END');
+GO
+IF OBJECT_ID(N'dbo.ZScale', N'FN') IS NULL
+    EXEC(N'CREATE FUNCTION dbo.ZScale() RETURNS float AS BEGIN RETURN 90.0 END');
+GO
+IF OBJECT_ID(N'dbo.XYScaleUnits', N'FN') IS NULL
+    EXEC(N'CREATE FUNCTION dbo.XYScaleUnits() RETURNS varchar(MAX) AS BEGIN RETURN ''nm'' END');
+GO
+IF OBJECT_ID(N'dbo.ZScaleUnits', N'FN') IS NULL
+    EXEC(N'CREATE FUNCTION dbo.ZScaleUnits() RETURNS varchar(MAX) AS BEGIN RETURN ''nm'' END');
+GO
+
 -- Seed one StructureType → Structure → Location when the DB is empty (ids become 1).
 IF NOT EXISTS (SELECT 1 FROM dbo.StructureType)
 BEGIN
