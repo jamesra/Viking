@@ -59,7 +59,8 @@ namespace WebAnnotationModel.gRPC.Converters
     {
         public Task<bool> Update(LocationLinkObj obj, LocationLink update)
         {
-            throw new NotImplementedException();
+            // Location links are identity-only (A/B); nothing mutable to sync.
+            return Task.FromResult(false);
         }
     }
 }

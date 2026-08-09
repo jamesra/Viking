@@ -78,14 +78,13 @@ namespace WebAnnotationModel.gRPC
             {
                 var response = await locationsClient.GetAsync(
                     SectionNumber, regionWKT, ScreenPixelSizeInVolume, null, token,
-                    onChunk: update =>
+                    onChunk: async update =>
                     {
                         if (token.IsCancellationRequested)
                             return;
-                        var chunkChanges = ServerQueryResultsHandler
-                            .ProcessServerUpdate(update.NewOrUpdated, update.DeletedIDs)
-                            .GetAwaiter().GetResult();
-                        CallOnCollectionChanged(chunkChanges).GetAwaiter().GetResult();
+                        var chunkChanges = await ServerQueryResultsHandler
+                            .ProcessServerUpdate(update.NewOrUpdated, update.DeletedIDs);
+                        await CallOnCollectionChanged(chunkChanges);
                         var chunkObjs = chunkChanges.ObjectsInStore
                             .Where(l => VolumeBounds.Contains(l.Position)).ToList();
                         progressiveResults.AddRange(chunkObjs);
@@ -213,23 +212,9 @@ namespace WebAnnotationModel.gRPC
         
         public List<LocationObj> GetStructureLocationChangeLog(long structureid)
         {
-            /*
-            AnnotateLocations.AnnotateLocationsClient proxy = null;
-            List<LocationObj> listLocations = new List<LocationObj>();
-            using (proxy = CreateProxy())
-            {
-                LocationHistory[] history = proxy.GetLocationChangeLog(structureid, new DateTime?(), new DateTime?());
-
-                listLocations.Capacity = history.Length;
-                foreach (LocationHistory db_loc in history)
-                {
-                    listLocations.Add(new LocationObj(db_loc));
-                }
-            }
-
-            return listLocations;
-            */
-            throw new NotImplementedException();
+            // Server RPC is Unimplemented until audit tables are mapped in the EF model.
+            throw new InvalidOperationException(
+                "Location change log is not available from the gRPC annotation service yet (audit tables unmapped).");
         }
 
         public bool Contains(LocationObj o, Geometry.GridRectangle bounds)

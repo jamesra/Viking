@@ -281,6 +281,148 @@ namespace WebAnnotationModel.gRPC.Tests
             }
         }
 
+        [Test]
+        public async Task CreateLocationLink_Roundtrip()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var locationsClient = new AnnotateLocations.AnnotateLocationsClient(channel);
+            var structuresClient = new AnnotateStructures.AnnotateStructuresClient(channel);
+            var typesClient = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+            var createdType = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
+            {
+                Obj = new StructureType
+                {
+                    Name = $"LinkType-{Guid.NewGuid():N}".Substring(0, 32),
+                    Code = "LT",
+                    Color = 0x0000FF,
+                    Created = now,
+                    LastModified = now,
+                    Username = _userIdentity.UserName,
+                }
+            });
+
+            long? structureId = null;
+            long? locA = null;
+            long? locB = null;
+            try
+            {
+                var structure = await structuresClient.CreateStructureAsync(new CreateStructureRequest
+                {
+                    NewStructure = new Structure
+                    {
+                        TypeId = createdType.Result.Id,
+                        Label = "link-test",
+                        Confidence = 0.5,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    }
+                });
+                structureId = structure.NewStructure.Id;
+
+                async Task<long> CreatePoint(double x, double y)
+                {
+                    var created = await locationsClient.CreateLocationAsync(new CreateLocationRequest
+                    {
+                        Obj = new Location
+                        {
+                            ParentId = structureId.Value,
+                            Section = 3,
+                            MosaicPosition = new AnnotationPoint { X = x, Y = y },
+                            VolumePosition = new AnnotationPoint { X = x, Y = y },
+                            MosaicShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = $"POINT ({x} {y})" },
+                            VolumeShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = $"POINT ({x} {y})" },
+                            TypeCode = AnnotationType.Circle,
+                            Created = now,
+                            LastModified = now,
+                            Username = _userIdentity.UserName,
+                        }
+                    });
+                    return created.Result.Id;
+                }
+
+                locA = await CreatePoint(1, 1);
+                locB = await CreatePoint(2, 2);
+
+                var link = await locationsClient.CreateLocationLinkAsync(new CreateLocationLinkRequest
+                {
+                    SourceId = locA.Value,
+                    TargetId = locB.Value
+                });
+                Assert.That(link, Is.Not.Null);
+
+                var linkedFromA = await locationsClient.GetLinkedLocationsAsync(new GetLinkedLocationsRequest
+                {
+                    Id = locA.Value
+                });
+                Assert.That(linkedFromA.Results, Does.Contain(locB.Value));
+
+                await locationsClient.DeleteLocationLinkAsync(new DeleteLocationLinkRequest
+                {
+                    SourceId = locA.Value,
+                    TargetId = locB.Value
+                });
+
+                var linkedAfterDelete = await locationsClient.GetLinkedLocationsAsync(new GetLinkedLocationsRequest
+                {
+                    Id = locA.Value
+                });
+                Assert.That(linkedAfterDelete.Results, Does.Not.Contain(locB.Value));
+            }
+            finally
+            {
+                if (locA.HasValue && locB.HasValue)
+                {
+                    try
+                    {
+                        await locationsClient.DeleteLocationLinkAsync(new DeleteLocationLinkRequest
+                        {
+                            SourceId = locA.Value,
+                            TargetId = locB.Value
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                foreach (var id in new[] { locA, locB })
+                {
+                    if (!id.HasValue) continue;
+                    try
+                    {
+                        await locationsClient.UpdateAsync(new UpdateLocationsRequest
+                        {
+                            Locations = { new LocationChangeRequest { Delete = id.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                if (structureId.HasValue)
+                {
+                    try
+                    {
+                        await structuresClient.UpdateAsync(new UpdateStructuresRequest
+                        {
+                            Objs = { new StructureChangeRequest { Delete = structureId.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                try
+                {
+                    await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                    {
+                        Objs = { new StructureTypeChangeRequest { Delete = createdType.Result.Id } }
+                    });
+                }
+                catch (RpcException) { }
+            }
+        }
+
         private async Task<string> RequestAccessTokenAsync()
         {
             using var http = new HttpClient { BaseAddress = new Uri(_identityServerUrl) };

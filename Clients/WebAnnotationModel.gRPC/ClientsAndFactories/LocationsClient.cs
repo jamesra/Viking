@@ -201,8 +201,12 @@ namespace WebAnnotationModel.gRPC
                         locations.AddRange(chunkLocations);
                         deletedIds.AddRange(chunkDeleted);
 
-                        onChunk?.Invoke(new ServerUpdate<long, ILocation[]>(
-                            queryTime ?? DateTime.UtcNow, chunkLocations, chunkDeleted));
+                        if (onChunk != null)
+                        {
+                            await onChunk(new ServerUpdate<long, ILocation[]>(
+                                queryTime ?? DateTime.UtcNow, chunkLocations, chunkDeleted))
+                                .ConfigureAwait(false);
+                        }
 
                         if (chunk.IsLast)
                             sawLast = true;
@@ -220,7 +224,8 @@ namespace WebAnnotationModel.gRPC
                 var response = await Client.GetLocationChangesInMosaicRegionAsync(request, cancellationToken: token);
                 var update = new ServerUpdate<long, ILocation[]>(
                     response.QueryExecutedTime.ToDateTime(), response.Results.Cast<ILocation>().ToArray(), response.DeletedIds.ToArray());
-                onChunk?.Invoke(update);
+                if (onChunk != null)
+                    await onChunk(update).ConfigureAwait(false);
                 return update;
             }
         }

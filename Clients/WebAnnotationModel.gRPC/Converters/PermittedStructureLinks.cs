@@ -54,7 +54,8 @@ namespace WebAnnotationModel.gRPC.Converters
     {
         public Task<bool> Update(PermittedStructureLinkObj obj, PermittedStructureLink update)
         {
-            throw new NotImplementedException();
+            // Permitted links are identified by their key; client objects rebuild via Sync() on replace.
+            return Task.FromResult(false);
         }
     }
 }

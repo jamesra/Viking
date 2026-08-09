@@ -95,7 +95,10 @@ namespace WebAnnotationModel.gRPC
         public Task<System.Collections.Concurrent.ConcurrentDictionary<KEY, OBJECT>> GetObjectsForSectionAsync(
             long SectionNumber, QueryTargets targets)
         {
-            throw new NotImplementedException();
+            if (targets == QueryTargets.ClientCache)
+                return Task.FromResult(GetLocalObjectsForSection(SectionNumber));
+
+            return GetObjectsForSectionAsync(SectionNumber);
         }
 
         /// <summary>
