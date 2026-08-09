@@ -11,13 +11,13 @@ namespace gRPCAnnotationService.Protos
             { 
                 case global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry.EncodingOneofCase.Text:
                 {
-                    var reader = new NetTopologySuite.IO.WKBReader();
-                    return reader.Read(src.Binary.ToArray());
+                    var reader = new NetTopologySuite.IO.WKTReader();
+                    return reader.Read(src.Text);
                 }
                 case global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry.EncodingOneofCase.Binary:
                 {
-                    var reader = new NetTopologySuite.IO.WKTReader();
-                    return reader.Read(src.Text);
+                    var reader = new NetTopologySuite.IO.WKBReader();
+                    return reader.Read(src.Binary.ToArray());
                 }
                 default:
                     throw new ArgumentException($"Unexpected geometry message encoding: {src.EncodingCase}");

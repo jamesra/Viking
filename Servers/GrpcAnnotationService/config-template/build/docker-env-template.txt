@@ -1,0 +1,46 @@
+# Copy to D:\Docker\Builds\GrpcAnnotationService\.env.Docker and fill in real values.
+# (Renamed to .txt here because .env* is repo-gitignored/blocked; rename back to
+# ".env.Docker" once copied to D:\Docker\Builds\GrpcAnnotationService.)
+#
+# These are injected directly as container environment variables (docker-compose
+# `env_file:`), overriding appsettings.json via ASP.NET Core's double-underscore
+# configuration-key convention. Do not commit the filled-in copy.
+#
+# When using docker-compose.annotation-db.yml / Start-AnnotationTestStack.ps1,
+# the override file sets ConnectionStrings + IdentityServer for the local test
+# stack (annotation-sql service name + identity-devtest). Values below still
+# matter if you run grpc-annotation-service without that override.
+
+# --- SQL Server (annotation database) ---
+# SQL auth (not Windows/Trusted_Connection) because the container is Linux-based.
+#
+# Option A (local annotation-sql compose service — preferred for integration tests):
+# Use the compose service name when grpc-annotation-service is on viking-network
+# with annotation-sql (see docker-compose.annotation-db.yml). Password must match
+# D:\Docker\Builds\AnnotationSql\.env MSSQL_SA_PASSWORD.
+ConnectionStrings__AnnotationConnection=Server=annotation-sql,1433;Database=AnnotationTest;User ID=sa;Password=REPLACE_WITH_SA_PASSWORD;MultipleActiveResultSets=true;TrustServerCertificate=True
+#
+# Option B (SQL published on the Docker host, reachable via host.docker.internal):
+# ConnectionStrings__AnnotationConnection=Server=host.docker.internal,1433;Database=AnnotationTest;User ID=sa;Password=REPLACE_WITH_SA_PASSWORD;MultipleActiveResultSets=true;TrustServerCertificate=True
+#
+# Option C (external / lab SQL Server):
+# ConnectionStrings__AnnotationConnection=Server=192.168.0.110,1433;Database=REPLACE_WITH_ANNOTATION_DB;User ID=VikingDirect;Password=REPLACE_WITH_SQL_PASSWORD;MultipleActiveResultSets=true;TrustServerCertificate=True
+
+# --- Identity Server (token issuer/introspection) ---
+# Option A (default): throwaway test Identity Server, see
+# Servers/IdentityServer/DevTest/Config.cs. "host.docker.internal" is used
+# instead of "identity-devtest" so the issuer matches whether the token was
+# requested by a host-side test process (localhost:5020) or validated from
+# inside this container.
+IdentityServer__Endpoint=http://host.docker.internal:5020/
+IdentityServer__ClientId=grpc-annotation
+IdentityServer__ClientSecret=DevTestIntrospectionSecret
+IdentityServer__AllowHttpMetadata=true
+
+# Option B: real identity.codepharm.net instance. Needs a confidential client
+# registered there with introspection rights for Viking.Annotation (not the
+# same as an end-user password grant client like ro.viking).
+# IdentityServer__Endpoint=https://identity.codepharm.net:5001/
+# IdentityServer__ClientId=REPLACE_WITH_INTROSPECTION_CLIENT_ID
+# IdentityServer__ClientSecret=REPLACE_WITH_INTROSPECTION_CLIENT_SECRET
+# IdentityServer__AllowHttpMetadata=false

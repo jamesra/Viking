@@ -7,18 +7,20 @@ namespace gRPCAnnotationService.Protos
             var converted = new Viking.DataModel.Annotation.StructureType
             {
                 Id = src.Id,
-                ParentId = src.HasParentId ? src.ParentId : default,
+                // Ternary must use (long?)null — bare `default` promotes to 0L and breaks the FK.
+                ParentId = src.HasParentId ? src.ParentId : (long?)null,
                 Created = src.Created.ToDateTime(),
                 LastModified = src.LastModified.ToDateTime(),
                 Notes = src.Notes,
                 Username = src.Username,
-                Tags = src.Attributes ?? string.Empty,
+                Tags = string.IsNullOrWhiteSpace(src.Attributes) ? null : src.Attributes,
                 Abstract = src.Abstract,
                 Code = src.Code,
-                Color = src.Color,
+                Color = unchecked((int)src.Color),
                 Name = src.Name,
-                StructureTags = src.StructureAttributes ?? string.Empty,
-                //MarkupType = src.M
+                StructureTags = string.IsNullOrWhiteSpace(src.StructureAttributes) ? null : src.StructureAttributes,
+                MarkupType = "Point",
+                HotKey = "\0",
             }; 
 
             /*
@@ -36,18 +38,17 @@ namespace gRPCAnnotationService.Protos
           ref Viking.DataModel.Annotation.StructureType converted)
         {
                 converted.Id = src.Id;
-                converted.ParentId = src.HasParentId ? src.ParentId : default;
+                converted.ParentId = src.HasParentId ? src.ParentId : (long?)null;
                 converted.Created = src.Created.ToDateTime();
                 converted.LastModified = src.LastModified.ToDateTime();
                 converted.Notes = src.Notes;
                 converted.Username = src.Username;
-                converted.Tags = src.Attributes ?? string.Empty;
+                converted.Tags = string.IsNullOrWhiteSpace(src.Attributes) ? null : src.Attributes;
                 converted.Abstract = src.Abstract;
                 converted.Code = src.Code;
-                converted.Color = src.Color;
+                converted.Color = unchecked((int)src.Color);
                 converted.Name = src.Name;
-                converted.StructureTags = src.StructureAttributes ?? string.Empty;
-                //MarkupType = src.M 
+                converted.StructureTags = string.IsNullOrWhiteSpace(src.StructureAttributes) ? null : src.StructureAttributes;
         }
 
 
@@ -60,14 +61,14 @@ namespace gRPCAnnotationService.Protos
             {  
                 Id = src.Id,
                 ParentId = src.ParentId.HasValue ? src.ParentId.Value : 0,
-                Created = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(src.Created),
-                LastModified = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(src.LastModified),
+                Created = ToUtcTimestamp(src.Created),
+                LastModified = ToUtcTimestamp(src.LastModified),
                 Notes = src.Notes,
                 Username = src.Username,
                 Attributes = src.Tags ?? string.Empty,
                 Abstract = src.Abstract,
                 Code = src.Code,
-                Color = src.Color,
+                Color = unchecked((uint)src.Color),
                 Name = src.Name,
                 StructureAttributes = src.StructureTags ?? string.Empty,
                 //Markuptype = src.MarkupType
@@ -81,5 +82,8 @@ namespace gRPCAnnotationService.Protos
             return value;
         }
 
+        private static Google.Protobuf.WellKnownTypes.Timestamp ToUtcTimestamp(System.DateTime dateTime) =>
+            Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(
+                System.DateTime.SpecifyKind(dateTime, System.DateTimeKind.Utc));
     }
 }

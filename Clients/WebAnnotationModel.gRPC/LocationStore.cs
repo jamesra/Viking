@@ -16,7 +16,7 @@ using WebAnnotationModel.ServerInterface;
 namespace WebAnnotationModel.gRPC
 { 
 
-    public class LocationStore : StoreBaseWithKey<long, LocationObj, ILocation, LocationObj, ILocation>, ILocationStore
+    public class LocationStore : StoreBaseWithKey<long, LocationObj, ILocation, ILocation, ILocation>, ILocationStore, IRegionLoader<LocationObj>
     {
         /// <summary>
         /// Maps sections to a sorted list of locations on that section.
@@ -27,8 +27,8 @@ namespace WebAnnotationModel.gRPC
         private readonly IStructureStore _structureStore;
 
         private readonly IServerAnnotationsClientFactory<ILocationsClient> _locationClientFactory;
+        private readonly IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, ILocation>> _spatialClientFactory;
         private readonly IStoreEditor<long, LocationObj> _storeEditor;
-        private readonly IStoreServerQueryResultsHandler<long, LocationObj, ILocation> _queryResultsHandler;
 
 
         public LocationObj[] GetLocalObjectsForStructure(long StructureID)
@@ -36,19 +36,62 @@ namespace WebAnnotationModel.gRPC
             return IDToObject.Values.Where(l => l.ParentID.HasValue && l.ParentID.Value == StructureID).ToArray();
         }
           
-        public LocationStore(IServerAnnotationsClientFactory<IServerAnnotationsClient<long, ILocation, LocationObj, ILocation>> clientFactory,
+        public LocationStore(IServerAnnotationsClientFactory<IServerAnnotationsClient<long, ILocation, ILocation, ILocation>> clientFactory,
             IServerAnnotationsClientFactory<ILocationsClient> locationClientFactory,
-            IStoreServerQueryResultsHandler<long, LocationObj, ILocation> queryResultsHandler,
+            IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, ILocation>> spatialClientFactory,
             IObjectConverter<LocationObj, ILocation> objToServerObjConverter,
             IObjectConverter<ILocation, LocationObj> serverObjToObjConverter,
-            IStructureStore structureStore) : base(clientFactory, queryResultsHandler, objToServerObjConverter,
+            IStructureStore structureStore) : base(clientFactory, null, objToServerObjConverter,
             serverObjToObjConverter)
         {
             _structureStore = structureStore;
             _locationClientFactory = locationClientFactory;
-            _queryResultsHandler = queryResultsHandler;
+            _spatialClientFactory = spatialClientFactory;
             _storeEditor = this as IStoreEditor<long, LocationObj>;
         } 
+
+        /// <summary>
+        /// Queries the server for locations on the given section whose mosaic-space bounding box intersects
+        /// VolumeBounds, merges them into the local store, and invokes foundObjectCallback with the results.
+        /// </summary>
+        public async Task<List<LocationObj>> GetObjectsInRegionAsync(Geometry.GridRectangle VolumeBounds,
+            double ScreenPixelSizeInVolume,
+            int SectionNumber,
+            QueryTargets queryTargets,
+            CancellationToken token,
+            Action<ICollection<LocationObj>> foundObjectCallback)
+        {
+            if (queryTargets == QueryTargets.ClientCache)
+            {
+                var cached = GetLocalObjectsForSection(SectionNumber).Values
+                    .Where(l => VolumeBounds.Contains(l.Position)).ToList();
+                foundObjectCallback?.Invoke(cached);
+                return cached;
+            }
+
+            var client = _spatialClientFactory.GetOrCreate();
+            string regionWKT = ToWktPolygon(VolumeBounds);
+            var response = await client.GetAsync(SectionNumber, regionWKT, ScreenPixelSizeInVolume, null, token);
+
+            if (token.IsCancellationRequested)
+                return new List<LocationObj>();
+
+            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(response.NewOrUpdated, response.DeletedIDs);
+            await CallOnCollectionChanged(changes);
+
+            List<LocationObj> results = changes.ObjectsInStore
+                .Where(l => VolumeBounds.Contains(l.Position)).ToList();
+            foundObjectCallback?.Invoke(results);
+            return results;
+        }
+
+        private static string ToWktPolygon(Geometry.GridRectangle bounds)
+        {
+            System.Globalization.CultureInfo ci = System.Globalization.CultureInfo.InvariantCulture;
+            return string.Format(ci,
+                "POLYGON(({0} {1}, {2} {1}, {2} {3}, {0} {3}, {0} {1}))",
+                bounds.Left, bounds.Bottom, bounds.Right, bounds.Top);
+        }
          
         public async Task<LocationObj> GetLastModifiedLocation()
         {
@@ -66,7 +109,23 @@ namespace WebAnnotationModel.gRPC
         /// <returns></returns>
         public LocationObj Create(LocationObj new_location, long[] linked_locations = null)
         {
-            throw new NotImplementedException();
+            var client = ClientFactory.GetOrCreate();
+            var serverObj = ClientObjConverter.Convert(new_location);
+            var created = client.Create(serverObj, CancellationToken.None).Result;
+            if (created == null)
+                return null;
+
+            var created_location = GetOrAdd(created.ID, id => ServerObjConverter.Convert(created), out _);
+
+            if (linked_locations != null && linked_locations.Length > 0)
+            {
+                foreach (long linkedId in linked_locations)
+                {
+                    Store.LocationLinks.CreateLink(created_location.ID, linkedId);
+                }
+            }
+
+            return created_location;
         }
 
         public override Task<bool> Remove(LocationObj obj)
@@ -112,7 +171,7 @@ namespace WebAnnotationModel.gRPC
         {
             var client = _locationClientFactory.GetOrCreate();
             var response = await client.GetStructureLocations(structureID);
-            var changes = await _queryResultsHandler.ProcessServerUpdate(response, Array.Empty<long>());
+            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(response, Array.Empty<long>());
             CallOnCollectionChanged(changes);
             return changes.ObjectsInStore; 
         }
@@ -145,6 +204,37 @@ namespace WebAnnotationModel.gRPC
         {
             return bounds.Contains(o.Position);
         }
+
+        /// <summary>
+        /// Synchronous convenience wrapper over GetStructureLocations(structureID, QueryTargets.Server).
+        /// </summary>
+        public ICollection<LocationObj> GetLocationsForStructure(long StructureID)
+        {
+            return GetStructureLocations(StructureID, QueryTargets.Server).Result;
+        }
+
+        /// <summary>
+        /// Objects known locally to belong to the given section, without contacting the server.
+        /// </summary>
+        public ConcurrentDictionary<long, LocationObj> GetLocalObjectsForSection(long SectionNumber)
+        {
+            return SectionToLocations.TryGetValue(SectionNumber, out var sectionLocations)
+                ? sectionLocations
+                : new ConcurrentDictionary<long, LocationObj>();
+        }
+
+        /// <summary>
+        /// Instruct the store to evict cached sections beyond the given limits to save memory.
+        /// TODO: Port the full section eviction/cancellation logic from the WCF-era store (see SectionIndexedStore).
+        /// </summary>
+        public void FreeExcessSections(int LoadedSectionLimit, int LoadingSectionLimit)
+        {
+        }
+
+        /// <summary>
+        /// Check the local cache only, without contacting the server.
+        /// </summary>
+        public bool TryGetValue(long ID, out LocationObj obj) => IDToObject.TryGetValue(ID, out obj);
           
         #region Callbacks
 

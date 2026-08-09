@@ -33,10 +33,10 @@ message Scale {
 
 message BoundingRectangle {
 
-  double XMin = 1;
-  double YMin = 2;
-  double XMax = 3;
-  double YMax = 4;
+  double xmin = 1;
+  double ymin = 2;
+  double xmax = 3;
+  double ymax = 4;
 }
 
 enum AnnotationType
@@ -62,18 +62,18 @@ enum DBAction
 message StructureType {
   int64 id = 1;
   optional int64 parent_id = 2;
-  int64 type_id = 3;
   string name = 4;
   string notes = 5;
   string attributes = 7;
   string structure_attributes = 8;
   bool abstract = 9;
-  int32 color = 10;
+  uint32 color = 10;
   string code = 11;
   string username = 12;
   google.protobuf.Timestamp created = 15;
   google.protobuf.Timestamp last_modified = 16;
   int32 AllowedShapes = 17;
+  repeated PermittedStructureLink permitted_structure_links = 18;
 }
 
 message Structure {

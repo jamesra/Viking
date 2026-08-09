@@ -2,89 +2,85 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Collections.Generic;
-using System.Security.Claims;
-using Duende.IdentityServer;
 using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Test;
 
 namespace DevTest
 {
+    /// <summary>
+    /// Throwaway, in-memory Identity Server used only to run the gRPC annotation
+    /// integration tests locally, without touching the production identity.codepharm.net
+    /// instance. Not for any real deployment: secrets below are intentionally simple
+    /// and the token store is in-memory (nothing survives a restart).
+    /// </summary>
     public static class Config
     {
-        // scopes define the resources in your system
-        public static IEnumerable<IdentityResource> GetIdentityResources()
-        {
-            return new List<IdentityResource>
+        // Must match the introspection secret handed to GrpcAnnotationService via
+        // IdentityServer__ClientId / IdentityServer__ClientSecret (see
+        // Servers/GrpcAnnotationService/config-template/build/.env.Docker).
+        public const string GrpcAnnotationApiResourceName = "grpc-annotation";
+        public const string GrpcAnnotationApiSecret = "DevTestIntrospectionSecret";
+
+        // Must match Clients/WebAnnotationModel.gRPC.Tests appsettings.json (ro.viking / CorrectHorseBatteryStaple).
+        public const string ResourceOwnerClientId = "ro.viking";
+        public const string ResourceOwnerClientSecret = "CorrectHorseBatteryStaple";
+
+        // Must match Clients/WebAnnotationModel.gRPC.Tests secrets.json (TestIdentity section).
+        public const string TestUserName = "testuser";
+        public const string TestUserPassword = "Testing123!";
+
+        public static IEnumerable<IdentityResource> GetIdentityResources() =>
+            new List<IdentityResource>
             {
                 new IdentityResources.OpenId(),
                 new IdentityResources.Profile(),
             };
-        }
 
-        public static IEnumerable<ApiResource> GetApiResources()
-        {
-            return new List<ApiResource>
+        public static IEnumerable<ApiScope> GetApiScopes() =>
+            new List<ApiScope>
             {
-                new ApiResource("api1", "My API")
+                new ApiScope("Viking.Annotation", "Viking Annotation gRPC API"),
             };
-        }
 
-        // clients want to access resources (aka scopes)
-        public static IEnumerable<Client> GetClients()
-        {
-            // client credentials client
-            return new List<Client>
+        // The introspection endpoint authenticates callers using the API resource's
+        // own secret (not a client secret) - this is what GrpcAnnotationService's
+        // OAuth2Introspection ClientId/ClientSecret map to.
+        public static IEnumerable<ApiResource> GetApiResources() =>
+            new List<ApiResource>
             {
-                new Client
+                new ApiResource(GrpcAnnotationApiResourceName, "Viking Annotation gRPC Service")
                 {
-                    ClientId = "client",
-                    AllowedGrantTypes = GrantTypes.ClientCredentials,
-
-                    ClientSecrets =
-                    {
-                        new Secret("secret".Sha256())
-                    },
-                    AllowedScopes = { "api1" }
+                    ApiSecrets = { new Secret(GrpcAnnotationApiSecret.Sha256()) },
+                    Scopes = { "Viking.Annotation" },
                 },
+            };
 
-                // resource owner password grant client
+        public static IEnumerable<Client> GetClients() =>
+            new List<Client>
+            {
+                // Resource owner password grant client used by the test suites to
+                // mint tokens on behalf of TestUserName/TestUserPassword.
                 new Client
                 {
-                    ClientId = "ro.viking",
+                    ClientId = ResourceOwnerClientId,
                     AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
 
-                    ClientSecrets =
-                    {
-                        new Secret("secret".Sha256())
-                    },
-                    AllowedScopes = { "api1" }
+                    ClientSecrets = { new Secret(ResourceOwnerClientSecret.Sha256()) },
+
+                    AllowedScopes = { "openid", "profile", "Viking.Annotation" },
+                    AccessTokenType = AccessTokenType.Reference,
                 },
-
-                // OpenID Connect hybrid flow and client credentials client (MVC)
-                new Client
-                {
-                    ClientId = "mvc",
-                    ClientName = "MVC Client",
-                    AllowedGrantTypes = GrantTypes.HybridAndClientCredentials,
-
-                    RequireConsent = true,
-
-                    ClientSecrets =
-                    {
-                        new Secret("secret".Sha256())
-                    },
-
-                    RedirectUris = { "http://localhost:5002/signin-oidc" },
-                    PostLogoutRedirectUris = { "http://localhost:5002/signout-callback-oidc" },
-
-                    AllowedScopes =
-                    {
-                        IdentityServerConstants.StandardScopes.OpenId,
-                        IdentityServerConstants.StandardScopes.Profile,
-                        "api1"
-                    },
-                    AllowOfflineAccess = true
-                }
             };
-        }
+
+        public static List<TestUser> GetTestUsers() =>
+            new List<TestUser>
+            {
+                new TestUser
+                {
+                    SubjectId = "1",
+                    Username = TestUserName,
+                    Password = TestUserPassword,
+                },
+            };
     }
 }

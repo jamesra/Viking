@@ -6,18 +6,28 @@ using System.Threading.Tasks;
 using WebAnnotationModel.Objects;
 using WebAnnotationModel.ServerInterface;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace WebAnnotationModel.gRPC.Converters
 {
  
-    public class PermittedStructureLinkServerToClientConverter : IObjectConverter<PermittedStructureLink, PermittedStructureLinkObj>
+    public class PermittedStructureLinkServerToClientConverter : IObjectConverter<PermittedStructureLink, PermittedStructureLinkObj>,
+        IObjectConverter<IPermittedStructureLink, PermittedStructureLinkObj>
     {
         public PermittedStructureLinkObj Convert(PermittedStructureLink src)
         {
             PermittedStructureLinkObj obj =
                 new PermittedStructureLinkObj(src.SourceTypeId, src.TargetTypeId, src.Bidirectional);
             return obj;
+        }
+
+        public PermittedStructureLinkObj Convert(IPermittedStructureLink src)
+        {
+            if (src is PermittedStructureLink concrete)
+                return Convert(concrete);
+
+            return new PermittedStructureLinkObj((long)src.SourceTypeID, (long)src.TargetTypeID, !src.Directional);
         }
     }
 
@@ -33,6 +43,9 @@ namespace WebAnnotationModel.gRPC.Converters
                     TargetTypeId = src.TargetTypeID,
                     Bidirectional = src.Bidirectional
                 };
+
+            ((IChangeAction)obj).DBAction = src.DBAction;
+
             return obj;
         }
     }

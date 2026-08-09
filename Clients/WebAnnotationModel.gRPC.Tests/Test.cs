@@ -1,42 +1,18 @@
 using IdentityModel.Client;
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Net;
 using Grpc.Core;
 using Grpc.Net.Client;
-using NUnit;
 using NUnit.Framework;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Configuration;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
-using Viking.AnnotationServiceTypes.Interfaces;
-using WebAnnotationModel;
-using WebAnnotationModel.gRPC;
-using WebAnnotationModel.gRPC.Converters;
-using WebAnnotationModel.Objects;
-using WebAnnotationModel.ServerInterface;
-
+using Google.Protobuf.WellKnownTypes;
 
 namespace WebAnnotationModel.gRPC.Tests
 {
-    public static class ConfigurationExtensions
-    {
-        public static IConfigurationBuilder UseTestConfigurationBuilder(this IConfigurationBuilder builder)
-        {
-            builder
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json")
-                .AddUserSecrets<UserIdentity>()
-                .AddEnvironmentVariables();
-            return builder;
-        }
-    }
-
     public class IdentityClientSettings
     {
         public string ClientId { get; set; }
@@ -47,152 +23,294 @@ namespace WebAnnotationModel.gRPC.Tests
     public class UserIdentity
     {
         public string UserName { get; set; }
-        public string Password { get; set; } 
+        public string Password { get; set; }
     }
 
+    /// <summary>
+    /// Integration tests against identity-devtest (:5020) + grpc-annotation-service (:5011)
+    /// + AnnotationTest SQL. Start with:
+    ///   Servers/GrpcAnnotationService/scripts/Start-AnnotationTestStack.ps1 -ApplySchema -Build
+    /// Credentials match Servers/IdentityServer/DevTest/Config.cs (testuser / Testing123! / ro.viking).
+    /// </summary>
     public class Tests
     {
-        private IHost host;
-
-        private string IdentityServerURL;
-        private string GrpcServerURL;
-
-        private IdentityClientSettings IdentityClient;
-        private UserIdentity UserIdentity;
+        private string _identityServerUrl;
+        private string _grpcServerUrl;
+        private IdentityClientSettings _identityClient;
+        private UserIdentity _userIdentity;
 
         [SetUp]
         public void Setup()
         {
-            host = CreateHostBuilder().Build();
+            var config = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false)
+                .AddEnvironmentVariables()
+                .Build();
+
+            _identityServerUrl = config["IdentityServer:Endpoint"];
+            _grpcServerUrl = config["GrpcServer:Endpoint"];
+            _identityClient = config.GetSection("IdentityClient").Get<IdentityClientSettings>();
+            _userIdentity = config.GetSection("TestIdentity").Get<UserIdentity>();
+
+            Assert.That(_identityServerUrl, Is.Not.Null.And.Not.Empty);
+            Assert.That(_grpcServerUrl, Is.Not.Null.And.Not.Empty);
+            Assert.That(_identityClient, Is.Not.Null);
+            Assert.That(_userIdentity, Is.Not.Null);
+            Assert.That(_userIdentity.UserName, Is.EqualTo("testuser"));
         }
 
-        IHostBuilder CreateHostBuilder()
-        {  
-            return Host.CreateDefaultBuilder() 
-                .ConfigureAppConfiguration((appContext) => appContext.UseTestConfigurationBuilder())
-                .ConfigureServices((context, services) =>
-                    { 
-                        var config = context.Configuration;
-                        services.AddOptions<GrpcChannelOptions>()
-                            .Bind(config.GetSection(nameof(GrpcChannelOptions)));
-
-                        IdentityServerURL = config.GetValue<string>("IdentityServer:Endpoint");
-                        GrpcServerURL = config.GetValue<string>("GrpcServer:Endpoint");
-                        IdentityClient = config.GetValue<IdentityClientSettings>("IdentityClient");
-                        UserIdentity = config.GetValue<UserIdentity>("TestIdentity");
-
-                        services.AddGrpcChannelManager();
-
-                        services.AddOptions<GrpcRepositorySettings>()
-                            .Bind(config.GetSection(nameof(GrpcRepositorySettings)));
-
-                        _ = services.AddStandardStructureLinkConverters()
-                            .AddStandardLocationConverters()
-                            .AddStandardLocationLinkConverters()
-                            .AddStandardStructureConverters()
-                            .AddStandardStructureTypeConverters()
-                            .AddStandardPermittedStructureLinkConverters()
-                            .AddStandardQueryLogger()
-                            .AddStandardQueryConverters()
-                            .AddSingleton<IGrpcChannelManager, GrpcChannelManager>()
-                            .AddSingleton<ILocationStore, LocationStore>()
-                            .AddSingleton<IStructureStore, StructureStore>()
-                            .AddSingleton<IStructureTypeStore, StructureTypeStore>()
-                            .AddGrpcLocationRepository((o) => { return; })
-                            //.AddStructureServer(endpoint)
-                            //.AddStructureTypeServer(endpoint)
-                            .AddDefaultStructureLinkToStructureUpdater()
-                            .AddDefaultLocationLinkToLocationUpdater()
-                            .AddDefaultPermittedStructureLinkToStructureTypeUpdater();
-                    }
-                );
-        }
-          
         [Test]
-        public async Task TestGetLastModifiedLocation()
-        { 
-            HttpClient c = new HttpClient() { 
-                BaseAddress = new Uri(IdentityServerURL), 
-                DefaultRequestVersion = new Version(2,0)
-            };
-            
-            var disco_response = await c.GetDiscoveryDocumentAsync(IdentityServerURL);
-            Assert.False(disco_response.IsError);
+        public async Task GetLastModifiedLocation_WithDevTestToken_ReturnsLocation()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var client = new AnnotateLocations.AnnotateLocationsClient(channel);
 
-            PasswordTokenRequest request = new PasswordTokenRequest()
+            var reply = await client.GetLastModifiedLocationAsync(new GetLastModifiedLocationRequest());
+
+            Assert.That(reply, Is.Not.Null);
+            Assert.That(reply.Result, Is.Not.Null);
+            Assert.That(reply.Result.Id, Is.GreaterThan(0));
+            Assert.That(reply.Result.MosaicShape, Is.Not.Null);
+        }
+
+        [Test]
+        public async Task GetLocationByID_SeedLocation_ReturnsId1()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var client = new AnnotateLocations.AnnotateLocationsClient(channel);
+
+            const long seedId = 1;
+            var reply = await client.GetLocationByIDAsync(new GetLocationByIDRequest { Id = seedId });
+
+            Assert.That(reply.Result, Is.Not.Null);
+            Assert.That(reply.Result.Id, Is.EqualTo(seedId));
+            Assert.That(reply.Result.ParentId, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task GetStructures_ReturnsAtLeastSeedStructure()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var client = new AnnotateStructures.AnnotateStructuresClient(channel);
+
+            var reply = await client.GetStructuresAsync(new GetStructuresRequest());
+
+            Assert.That(reply.Results, Is.Not.Null);
+            Assert.That(reply.Results.Count, Is.GreaterThanOrEqualTo(1));
+            Assert.That(reply.Results, Has.Some.Matches<Structure>(s => s.Id == 1));
+        }
+
+        [Test]
+        public async Task GetStructureTypes_ReturnsAtLeastSeedType()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var client = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+
+            var reply = await client.GetStructureTypesAsync(new GetStructureTypesRequest());
+
+            Assert.That(reply.Results, Is.Not.Null);
+            Assert.That(reply.Results.Count, Is.GreaterThanOrEqualTo(1));
+            Assert.That(reply.Results, Has.Some.Matches<StructureType>(t => t.Id == 1));
+        }
+
+        [Test]
+        public async Task CreateGetDeleteLocation_Roundtrip()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var typesClient = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+            var structuresClient = new AnnotateStructures.AnnotateStructuresClient(channel);
+            var locationsClient = new AnnotateLocations.AnnotateLocationsClient(channel);
+
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+            var createdType = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
             {
-                Address = disco_response.TokenEndpoint,
-                UserName = "jamesan",
-                Password = "Wat>com3",
-                ClientId = "ro.viking",
-                ClientSecret = "CorrectHorseBatteryStaple",
-                Scope = "openid Viking.Annotation",
-            };
-
-            var token = await c.RequestPasswordTokenAsync(request);
-            Assert.NotNull(token, "No token returned");
-
-            using (HttpClient userInfoClient = new HttpClient())
-            {
-                var userInfo = await userInfoClient.GetUserInfoAsync(new UserInfoRequest()
+                Obj = new StructureType
                 {
-                    Address = disco_response.UserInfoEndpoint,
-                    Token = token.AccessToken
+                    Name = $"RoundtripType-{Guid.NewGuid():N}".Substring(0, 32),
+                    Code = "RT",
+                    Color = 0x00FF00,
+                    Created = now,
+                    LastModified = now,
+                    Username = _userIdentity.UserName,
+                }
+            });
+            Assert.That(createdType.Result.Id, Is.GreaterThan(0));
+
+            long? structureId = null;
+            long? locationId = null;
+            try
+            {
+                var createdStructure = await structuresClient.CreateStructureAsync(new CreateStructureRequest
+                {
+                    NewStructure = new Structure
+                    {
+                        TypeId = createdType.Result.Id,
+                        Label = "roundtrip",
+                        Confidence = 0.5,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    }
                 });
+                structureId = createdStructure.NewStructure.Id;
+                Assert.That(structureId, Is.GreaterThan(0));
 
-                if (userInfo.IsError)
+                var createLoc = await locationsClient.CreateLocationAsync(new CreateLocationRequest
                 {
-                    Console.WriteLine($"Error: {userInfo.Error}");
-                    return;
-                }
+                    Obj = new Location
+                    {
+                        ParentId = structureId.Value,
+                        Section = 2,
+                        MosaicPosition = new AnnotationPoint { X = 10.5, Y = 20.5 },
+                        VolumePosition = new AnnotationPoint { X = 10.5, Y = 20.5 },
+                        MosaicShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (10.5 20.5)" },
+                        VolumeShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (10.5 20.5)" },
+                        TypeCode = AnnotationType.Circle,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    }
+                });
+                locationId = createLoc.Result.Id;
+                Assert.That(locationId, Is.GreaterThan(0));
 
-                Trace.WriteLine("\nClaims");
-                foreach (var claim in userInfo.Claims)
+                var fetched = await locationsClient.GetLocationByIDAsync(new GetLocationByIDRequest
                 {
-                    Trace.WriteLine(claim.ToString());
-                }
+                    Id = locationId.Value
+                });
+                Assert.That(fetched.Result.Id, Is.EqualTo(locationId.Value));
+                Assert.That(fetched.Result.ParentId, Is.EqualTo(structureId.Value));
+                Assert.That(fetched.Result.Section, Is.EqualTo(2));
 
-                Trace.WriteLine("\n");
+                var deleteResponse = await locationsClient.UpdateAsync(new UpdateLocationsRequest
+                {
+                    Locations =
+                    {
+                        new LocationChangeRequest { Delete = locationId.Value }
+                    }
+                });
+                Assert.That(deleteResponse.Results, Has.Count.EqualTo(1));
+                Assert.That(deleteResponse.Results[0].Success, Is.True);
+                Assert.That(deleteResponse.Results[0].DeletedId, Is.EqualTo(locationId.Value));
+                locationId = null;
+
+                var ex = Assert.ThrowsAsync<RpcException>(async () =>
+                    await locationsClient.GetLocationByIDAsync(new GetLocationByIDRequest
+                    {
+                        Id = deleteResponse.Results[0].DeletedId
+                    }));
+                Assert.That(ex.StatusCode, Is.EqualTo(StatusCode.NotFound));
             }
-
-            HttpClient grpcClient = new HttpClient()
+            finally
             {
-                BaseAddress = new Uri(GrpcServerURL),
-                DefaultRequestVersion = new Version(2, 0)
-            };
-
-            grpcClient.SetBearerToken(token.IdentityToken);
-            grpcClient.SetToken("access_token", token.AccessToken);
-            grpcClient.SetToken("id_token", token.IdentityToken);
-
-            var credentials = CallCredentials.FromInterceptor((context, metadata) =>
-            {
-                if (!string.IsNullOrEmpty(token.AccessToken))
+                if (locationId.HasValue)
                 {
-                    metadata.Add("Authorization", $"Bearer {token.AccessToken}");
+                    try
+                    {
+                        await locationsClient.UpdateAsync(new UpdateLocationsRequest
+                        {
+                            Locations = { new LocationChangeRequest { Delete = locationId.Value } }
+                        });
+                    }
+                    catch (RpcException) { /* best-effort cleanup */ }
                 }
-                return Task.CompletedTask;
+
+                if (structureId.HasValue)
+                {
+                    try
+                    {
+                        await structuresClient.UpdateAsync(new UpdateStructuresRequest
+                        {
+                            Objs = { new StructureChangeRequest { Delete = structureId.Value } }
+                        });
+                    }
+                    catch (RpcException) { /* best-effort cleanup */ }
+                }
+
+                try
+                {
+                    await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                    {
+                        Objs = { new StructureTypeChangeRequest { Delete = createdType.Result.Id } }
+                    });
+                }
+                catch (RpcException) { /* best-effort cleanup */ }
+            }
+        }
+
+        private async Task<string> RequestAccessTokenAsync()
+        {
+            using var http = new HttpClient { BaseAddress = new Uri(_identityServerUrl) };
+            var disco = await http.GetDiscoveryDocumentAsync(new DiscoveryDocumentRequest
+            {
+                Address = _identityServerUrl,
+                Policy =
+                {
+                    RequireHttps = false,
+                    // DevTest IssuerUri is host.docker.internal; allow localhost aliases in CI.
+                    ValidateIssuerName = false
+                }
+            });
+            Assert.That(disco.IsError, Is.False, $"{disco.Error} ({disco.Exception?.Message})");
+
+            var token = await http.RequestPasswordTokenAsync(new PasswordTokenRequest
+            {
+                Address = disco.TokenEndpoint,
+                UserName = _userIdentity.UserName,
+                Password = _userIdentity.Password,
+                ClientId = _identityClient.ClientId,
+                ClientSecret = _identityClient.ClientSecret,
+                Scope = _identityClient.Scope,
             });
 
-            GrpcChannelManager channelManager =
-                new GrpcChannelManager(Options.Create<GrpcChannelOptions>(new GrpcChannelOptions()
+            Assert.That(token.IsError, Is.False, token.Error);
+            Assert.That(token.AccessToken, Is.Not.Null.And.Not.Empty);
+            return token.AccessToken;
+        }
+
+        private GrpcChannel CreateAuthenticatedChannel(string accessToken)
+        {
+            // Test stack serves h2c on :5010 (no TLS cert in the container).
+            AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+
+            var socketsHandler = new SocketsHttpHandler
+            {
+                EnableMultipleHttp2Connections = true,
+                SslOptions =
                 {
-                    HttpClient = grpcClient,
-                    Credentials = ChannelCredentials.Create(new SslCredentials(), credentials) 
-                }));
+                    RemoteCertificateValidationCallback = static (_, _, _, _) => true
+                }
+            };
 
-            IObjectConverter<ILocation, Location> locConverter = new LocationToLocationServerConverter();
+            // Inject Bearer on the HTTP layer so auth works with InsecureCredentials
+            // (CallCredentials cannot be composed with InsecureCredentials on older Grpc.Net.Client).
+            var handler = new BearerTokenHandler(accessToken) { InnerHandler = socketsHandler };
 
-            LocationsClientFactory clientFactory = new LocationsClientFactory(channelManager,  locConverter,
-                Options.Create<gRPC.GrpcRepositorySettings>(new GrpcRepositorySettings {Endpoint = new Uri(GrpcServerURL) }));
-            var client = clientFactory.GetOrCreate();
-            var loc = await client.GetLastModifiedLocation();
+            return GrpcChannel.ForAddress(_grpcServerUrl, new GrpcChannelOptions
+            {
+                HttpHandler = handler,
+                Credentials = ChannelCredentials.Insecure
+            });
+        }
 
-            var mwkt = loc.MosaicGeometryWKT;
-            Assert.NotNull(mwkt);
-            Assert.NotNull(loc);
-            
-            Assert.Pass();
+        private sealed class BearerTokenHandler : DelegatingHandler
+        {
+            private readonly string _accessToken;
+
+            public BearerTokenHandler(string accessToken) => _accessToken = accessToken;
+
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, System.Threading.CancellationToken cancellationToken)
+            {
+                request.Headers.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _accessToken);
+                return base.SendAsync(request, cancellationToken);
+            }
         }
     }
 }

@@ -95,8 +95,21 @@ namespace gRPCAnnotationService
                     options.Authority = authority;
                     options.ClientId = identityServer["ClientId"];
                     options.ClientSecret = identityServer["ClientSecret"];
-                    options.EnableCaching = true;
+                    // Caching is on by default (backed by HybridCache) as of Duende.AspNetCore.Authentication.OAuth2Introspection 7.x;
+                    // see options.SetCacheEntryFlags to tune or disable it.
                     options.SaveToken = true;
+
+                    // Local DevTest Identity is HTTP-only. Set the introspection endpoint
+                    // explicitly so Duende does not require HTTPS discovery metadata.
+                    var introspectionEndpoint = identityServer["IntrospectionEndpoint"];
+                    if (string.IsNullOrWhiteSpace(introspectionEndpoint) &&
+                        string.Equals(identityServer["AllowHttpMetadata"], "true", StringComparison.OrdinalIgnoreCase))
+                    {
+                        introspectionEndpoint = authority.TrimEnd('/') + "/connect/introspect";
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(introspectionEndpoint))
+                        options.IntrospectionEndpoint = introspectionEndpoint;
                 })
                 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
                 {
@@ -125,7 +138,12 @@ namespace gRPCAnnotationService
             if (env.IsDevelopment())
                 app.UseDeveloperExceptionPage();
 
-            app.UseHttpsRedirection();
+            // Skip HTTPS redirect when the service is deliberately HTTP (Docker test stack).
+            var allowHttp = string.Equals(Configuration["IdentityServer:AllowHttpMetadata"], "true",
+                StringComparison.OrdinalIgnoreCase);
+            if (!allowHttp)
+                app.UseHttpsRedirection();
+
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();

@@ -80,7 +80,7 @@ namespace gRPCAnnotationService
             try
             {
                 var queryStart = DateTime.UtcNow;
-                var modifiedAfter = request.ModifiedAfterThisTime?.ToDateTime();
+                var modifiedAfter = request.ModifiedAfterThisUtcTime?.ToDateTime();
 
                 var rows = await StructuresOnSection(request.Z, modifiedAfter).ToListAsync();
 
@@ -94,40 +94,40 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw Failure(nameof(GetStructuresForSection), e); }
         }
 
-        public override async Task<GetStructuresForSectionInMosaicRegionResponse> GetStructuresForSectionInMosaicRegion(GetStructuresForSectionInMosaicRegionRequest request, ServerCallContext context)
+        public override async Task<GetStructuresInMosaicRegionResponse> GetStructuresInMosaicRegion(GetStructuresInMosaicRegionRequest request, ServerCallContext context)
         {
             try
             {
                 var queryStart = DateTime.UtcNow;
                 var rows = await StructuresInRegion(request.Z, request.Region, request.MinRadius,
-                    request.ModifiedAfterThisTime?.ToDateTime(), useVolumeCoordinates: false);
+                    request.ModifiedAfterThisUtcTime?.ToDateTime(), useVolumeCoordinates: false);
 
-                var response = new GetStructuresForSectionInMosaicRegionResponse
+                var response = new GetStructuresInMosaicRegionResponse
                 {
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
                 response.Results.AddRange(rows.Select(s => s.ToProtobufMessage()));
                 return response;
             }
-            catch (Exception e) { throw Failure(nameof(GetStructuresForSectionInMosaicRegion), e); }
+            catch (Exception e) { throw Failure(nameof(GetStructuresInMosaicRegion), e); }
         }
 
-        public override async Task<GetStructuresForSectionInVolumeRegionResponse> GetStructuresForSectionInVolumeRegion(GetStructuresForSectionInVolumeRegionRequest request, ServerCallContext context)
+        public override async Task<GetStructuresInVolumeRegionResponse> GetStructuresInVolumeRegion(GetStructuresInVolumeRegionRequest request, ServerCallContext context)
         {
             try
             {
                 var queryStart = DateTime.UtcNow;
                 var rows = await StructuresInRegion(request.Z, request.Region, request.MinRadius,
-                    request.ModifiedAfterThisTime?.ToDateTime(), useVolumeCoordinates: true);
+                    request.ModifiedAfterThisUtcTime?.ToDateTime(), useVolumeCoordinates: true);
 
-                var response = new GetStructuresForSectionInVolumeRegionResponse
+                var response = new GetStructuresInVolumeRegionResponse
                 {
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
                 response.Results.AddRange(rows.Select(s => s.ToProtobufMessage()));
                 return response;
             }
-            catch (Exception e) { throw Failure(nameof(GetStructuresForSectionInVolumeRegion), e); }
+            catch (Exception e) { throw Failure(nameof(GetStructuresInVolumeRegion), e); }
         }
 
         public override async Task<GetStructuresOfTypeResponse> GetStructuresOfType(GetStructuresOfTypeRequest request, ServerCallContext context)
@@ -144,6 +144,20 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw Failure(nameof(GetStructuresOfType), e); }
         }
 
+        public override async Task<GetChildStructuresResponse> GetChildStructures(GetChildStructuresRequest request, ServerCallContext context)
+        {
+            try
+            {
+                var rows = await _context.Structures.AsNoTracking()
+                    .Where(s => s.ParentId == request.StructureId).ToListAsync();
+
+                var response = new GetChildStructuresResponse();
+                response.Results.AddRange(rows.Select(s => s.ToProtobufMessage()));
+                return response;
+            }
+            catch (Exception e) { throw Failure(nameof(GetChildStructures), e); }
+        }
+
         public override async Task<GetLinkedStructuresResponse> GetLinkedStructures(GetLinkedStructuresRequest request, ServerCallContext context)
         {
             try
@@ -158,15 +172,15 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw Failure(nameof(GetLinkedStructures), e); }
         }
 
-        public override async Task<NumberOfLocationsForStructureResponse> NumberOfLocationsForStructure(NumberOfLocationsForStructureRequest request, ServerCallContext context)
+        public override async Task<NumberOfLocationsResponse> NumberOfLocations(NumberOfLocationsRequest request, ServerCallContext context)
         {
             try
             {
                 var count = await _context.Locations.AsNoTracking()
                     .CountAsync(l => l.ParentId == request.Id);
-                return new NumberOfLocationsForStructureResponse { Result = count };
+                return new NumberOfLocationsResponse { Result = count };
             }
-            catch (Exception e) { throw Failure(nameof(NumberOfLocationsForStructure), e); }
+            catch (Exception e) { throw Failure(nameof(NumberOfLocations), e); }
         }
 
         public override async Task<GetNetworkedStructuresResponse> GetNetworkedStructures(GetNetworkedStructuresRequest request, ServerCallContext context)
@@ -315,51 +329,52 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw Failure(nameof(CreateStructure), e); }
         }
 
-        public override async Task<UpdateStructureResponse> Update(UpdateStructureRequest request, ServerCallContext context)
+        public override async Task<UpdateStructuresResponse> Update(UpdateStructuresRequest request, ServerCallContext context)
         {
             try
             {
-                var response = new UpdateStructureResponse();
+                var response = new UpdateStructuresResponse();
                 var username = CallerName(context);
 
                 foreach (var change in request.Objs)
                 {
-                    var rowResponse = new StructureChangeResponse { Action = change.Action };
+                    var rowResponse = new StructureChangeResponse();
 
-                    switch (change.Action)
+                    switch (change.ActionCase)
                     {
-                        case DBAction.None:
-                            rowResponse.Sucess = true;
-                            break;
-
-                        case DBAction.Insert:
-                            var toInsert = change.Result.ToStructure();
+                        case StructureChangeRequest.ActionOneofCase.Create:
+                            var toInsert = change.Create.ToStructure();
                             toInsert.Username = username;
                             toInsert.Created = DateTime.UtcNow;
                             toInsert.LastModified = toInsert.Created;
                             var inserted = await _context.Structures.AddAsync(toInsert);
-                            rowResponse.Sucess = true;
-                            rowResponse.Result = inserted.Entity.ToProtobufMessage();
+                            rowResponse.Success = true;
+                            rowResponse.Created = inserted.Entity.ToProtobufMessage();
                             break;
 
-                        case DBAction.Update:
-                            var existing = await _context.Structures.FirstOrDefaultAsync(s => s.Id == change.Result.Id);
+                        case StructureChangeRequest.ActionOneofCase.Update:
+                            var existing = await _context.Structures.FirstOrDefaultAsync(s => s.Id == change.Update.Id);
                             if (existing == null)
                             {
-                                rowResponse.Sucess = false;
+                                rowResponse.Success = false;
                                 break;
                             }
 
-                            ApplyUpdate(change.Result, existing, username);
-                            rowResponse.Sucess = true;
-                            rowResponse.Result = _context.Structures.Update(existing).Entity.ToProtobufMessage();
+                            ApplyUpdate(change.Update, existing, username);
+                            rowResponse.Success = true;
+                            rowResponse.Updated = _context.Structures.Update(existing).Entity.ToProtobufMessage();
                             break;
 
-                        case DBAction.Delete:
+                        case StructureChangeRequest.ActionOneofCase.Delete:
                             // DeepDeleteStructure removes the locations, links and child structures
                             // that would otherwise block the delete on a foreign key.
-                            await _context.Procedures.DeepDeleteStructureAsync(change.Result.Id);
-                            rowResponse.Sucess = true;
+                            await _context.Procedures.DeepDeleteStructureAsync(change.Delete);
+                            rowResponse.Success = true;
+                            rowResponse.DeletedId = change.Delete;
+                            break;
+
+                        default:
+                            rowResponse.Success = false;
                             break;
                     }
 

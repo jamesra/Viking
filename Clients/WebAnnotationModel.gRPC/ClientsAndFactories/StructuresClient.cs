@@ -1,29 +1,69 @@
-﻿using Grpc.Core;
-using WebAnnotationModel.ServerInterface;
+﻿using WebAnnotationModel.ServerInterface;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using WebAnnotationModel.Objects;
 using Grpc.Net.Client;
 using System.Threading.Tasks;
-using Geometry;
 using System;
 using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Viking.AnnotationServiceTypes.Interfaces;
+using WebAnnotationModel.gRPC;
 
-namespace WebAnnotationModel.gRPC
+namespace Microsoft.Extensions.DependencyInjection
 {
     public static class StructureConverterExtensions
     {
-        public static IServiceCollection AddStructureServer(this IServiceCollection service, string endpoint)
+        public static IServiceCollection AddStructureServer(this IServiceCollection service)
         {
-            service.AddSingleton<IServerSpatialAnnotationsClient<long, IStructure>, StructuresClient>();
-            service.AddSingleton<IServerAnnotationsBySectionClient<long, IStructure[]>, StructuresClient>();
-            service.AddSingleton<IStructureRepository, StructuresClient>();
-            service.AddSingleton<IServerAnnotationsClient<long, IStructure, ICreateStructureAndLocationRequestParameter, ICreateStructureResponseParameter>, StructuresClient>();
+            service.AddSingleton<IServerAnnotationsClientFactory<IStructureRepository>, StructuresClientFactory>();
+            service.AddSingleton<IServerAnnotationsClientFactory<IServerAnnotationsClient<long, IStructure, ICreateStructureAndLocationRequestParameter, ICreateStructureResponseParameter>>, StructuresClientFactory>();
             return service;
+        }
+    }
+}
+
+namespace WebAnnotationModel.gRPC
+{
+    public class StructuresClientFactory :
+        IServerAnnotationsClientFactory<IStructureRepository>,
+        IServerAnnotationsClientFactory<IServerAnnotationsClient<long, IStructure, ICreateStructureAndLocationRequestParameter, ICreateStructureResponseParameter>>
+    {
+        private readonly IGrpcChannelManager _channelManager;
+        private readonly GrpcRepositorySettings _config;
+        private readonly IObjectConverter<StructureObj, Structure> _structureConverter;
+        private readonly IObjectConverter<LocationObj, Location> _locationConverter;
+
+        public StructuresClientFactory(
+            IGrpcChannelManager channelManager,
+            IOptions<GrpcRepositorySettings> config,
+            IObjectConverter<StructureObj, Structure> structureConverter,
+            IObjectConverter<LocationObj, Location> locationConverter)
+        {
+            _channelManager = channelManager;
+            _config = config.Value;
+            _structureConverter = structureConverter;
+            _locationConverter = locationConverter;
+        }
+
+        public IStructureRepository GetOrCreate()
+        {
+            return CreateClient();
+        }
+
+        IServerAnnotationsClient<long, IStructure, ICreateStructureAndLocationRequestParameter, ICreateStructureResponseParameter>
+            IServerAnnotationsClientFactory<IServerAnnotationsClient<long, IStructure, ICreateStructureAndLocationRequestParameter, ICreateStructureResponseParameter>>.GetOrCreate()
+        {
+            return CreateClient();
+        }
+
+        private StructuresClient CreateClient()
+        {
+            var channel = _channelManager.GetOrCreate(_config.Endpoint);
+            return new StructuresClient(channel, _structureConverter, _locationConverter);
         }
     }
 
@@ -40,29 +80,28 @@ namespace WebAnnotationModel.gRPC
         Task<IStructure[]> GetChildStructures(long ID);
 
         Task<long> NumberOfLocations(long ID);
+
+        Task<long[]> GetUnfinishedLocations(long structureID);
+
+        /// <summary>
+        /// Returns unfinished branch location IDs. The current gRPC procedure result only
+        /// materializes IDs; position/radius are not available from the proto response.
+        /// </summary>
+        Task<long[]> GetUnfinishedLocationsWithPosition(long structureID);
     }
 
     public class StructuresClient : IStructureRepository, IServerAnnotationsBySectionClient<long, IStructure[]>, IServerSpatialAnnotationsClient<long, IStructure>
     {
         private readonly AnnotateStructures.AnnotateStructuresClient Client;
-        private readonly IObjectConverter<IStructureReadOnly, Structure> ClientReadOnlyObjObjConverter;
-        private readonly IObjectConverter<ILocationReadOnly, Location> ClientReadOnlyLocationObjConverter;
-        private readonly IObjectConverter<IStructure, Structure> ClientObjConverter; 
-        private readonly IStoreServerQueryResultsHandler<long, LocationObj, ILocation> LocationProcessor;
-        private IStoreServerQueryResultsHandler<long, StructureObj, IStructure> StructureProcessor;
+        private readonly IObjectConverter<StructureObj, Structure> StructureConverter;
+        private readonly IObjectConverter<LocationObj, Location> LocationConverter;
 
-        StructuresClient(GrpcChannel channel,
-            IStoreServerQueryResultsHandler<long, StructureObj, IStructure> structureProcessor,
-            IStoreServerQueryResultsHandler<long, LocationObj, ILocation> locationProcessor,
-            IObjectConverter<IStructureReadOnly, Structure> clientReadOnlyObjObjConverter,
-            IObjectConverter<ILocationReadOnly, Location> clientReadOnlyLocationObjConverter,
-            IObjectConverter<IStructure, Structure> clientObjConverter)
+        public StructuresClient(GrpcChannel channel,
+            IObjectConverter<StructureObj, Structure> structureConverter,
+            IObjectConverter<LocationObj, Location> locationConverter)
         {
-            StructureProcessor = structureProcessor;
-            LocationProcessor = locationProcessor;
-            ClientObjConverter = clientObjConverter;
-            ClientReadOnlyObjObjConverter = clientReadOnlyObjObjConverter;
-            ClientReadOnlyLocationObjConverter = clientReadOnlyLocationObjConverter;
+            StructureConverter = structureConverter;
+            LocationConverter = locationConverter;
             Client = new AnnotateStructures.AnnotateStructuresClient(channel);
         }
 
@@ -70,16 +109,9 @@ namespace WebAnnotationModel.gRPC
         {
             var result = await Client.CreateStructureAsync(new CreateStructureRequest()
             {
-                NewStructure = ClientReadOnlyObjObjConverter.Convert(obj.Structure),
-                NewAnnotation = ClientReadOnlyLocationObjConverter.Convert(obj.Location)
+                NewStructure = StructureConverter.Convert((StructureObj)obj.Structure),
+                NewAnnotation = LocationConverter.Convert((LocationObj)obj.Location)
             }, cancellationToken: token);
-
-            var structureChanges = await StructureProcessor.ProcessServerUpdate(new IStructure[] {result.NewStructure}, Array.Empty<long>());
-
-            var locationChanges = await LocationProcessor.ProcessServerUpdate(new ILocation[] { result.NewAnnotation }, Array.Empty<long>());
-
-            await StructureProcessor.EndBatch(structureChanges);
-            await LocationProcessor.EndBatch(locationChanges);
 
             return new CreateStructureResponseParameter(result.NewStructure, result.NewAnnotation);
         }
@@ -192,7 +224,7 @@ namespace WebAnnotationModel.gRPC
         public async Task<UpdateResults<long, IStructure>> UpdateAsync(IEnumerable<IStructure> objs, CancellationToken token)
         {
             UpdateStructuresRequest request = new UpdateStructuresRequest();
-            var serverObjs = objs.Select(o => ClientObjConverter.Convert(o));
+            var serverObjs = objs.Select(o => StructureConverter.Convert((StructureObj)o));
             request.Objs.AddRange(serverObjs.Select(o => (StructureChangeRequest)o).Where(o => o != null));
 
             var response = await Client.UpdateAsync(request, cancellationToken: token);
@@ -202,7 +234,9 @@ namespace WebAnnotationModel.gRPC
 
         private UpdateResults<long, IStructure> CollectResults(UpdateStructuresResponse response)
         {
-            var result = new UpdateResults<long, IStructure>();
+            var added = new List<IStructure>();
+            var updated = new List<IStructure>();
+            var deleted = new List<long>();
             foreach (var ro in response.Results)
             {
                 switch (ro.ActionCase)
@@ -210,18 +244,18 @@ namespace WebAnnotationModel.gRPC
                     case StructureChangeResponse.ActionOneofCase.None:
                         break;
                     case StructureChangeResponse.ActionOneofCase.Created:
-                        result.AddedObjects.Add(ro.Created);
+                        added.Add(ro.Created);
                         break;
                     case StructureChangeResponse.ActionOneofCase.Updated:
-                        result.UpdatedObjects.Add(ro.Updated);
+                        updated.Add(ro.Updated);
                         break;
                     case StructureChangeResponse.ActionOneofCase.DeletedId:
-                        result.DeletedIDs.Add(ro.DeletedId);
+                        deleted.Add(ro.DeletedId);
                         break;
                 }
             }
 
-            return result;
+            return new UpdateResults<long, IStructure>(added.ToArray(), updated.ToArray(), deleted.ToArray());
         }
 
         public async Task<IStructure[]> GetChildStructures(long ID)
@@ -236,6 +270,22 @@ namespace WebAnnotationModel.gRPC
             var request = new NumberOfLocationsRequest() { Id = ID };
             var response = await Client.NumberOfLocationsAsync(request);
             return response.Result;
+        }
+
+        public async Task<long[]> GetUnfinishedLocations(long structureID)
+        {
+            var request = new GetUnfinishedLocationsRequest { Id = structureID };
+            var response = await Client.GetUnfinishedLocationsAsync(request);
+            return response.Results.ToArray();
+        }
+
+        public async Task<long[]> GetUnfinishedLocationsWithPosition(long structureID)
+        {
+            // Proto GetUnfinishedLocationsWithPositionResponse currently only carries IDs
+            // (server selects position columns but does not map them into the response message).
+            var request = new GetUnfinishedLocationsWithPositionRequest { Id = structureID };
+            var response = await Client.GetUnfinishedLocationsWithPositionAsync(request);
+            return response.Results.ToArray();
         }
     }
 }

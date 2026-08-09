@@ -23,18 +23,35 @@ namespace WebAnnotationModel.gRPC
     { 
         public LocationLinkStore(
             IServerAnnotationsClientFactory<IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>> clientFactory,
-            IStoreServerQueryResultsHandler<LocationLinkKey, LocationLinkObj, ILocationLink> serverQueryResultsHandler,
             IObjectConverter<LocationLinkObj, ILocationLink> objToServerObjConverter,
             IObjectConverter<ILocationLink, LocationLinkObj> serverObjToObjConverter,
-            IQueryLogger log) : base(clientFactory, serverQueryResultsHandler, objToServerObjConverter, serverObjToObjConverter, log)
+            IQueryLogger log) : base(clientFactory, null, objToServerObjConverter, serverObjToObjConverter, log)
         {
         }
 
         protected override Task Init() => Task.CompletedTask;
-        
-        public Task<StructureLinkObj[]> GetLinks(long structureId)
+
+        /// <summary>
+        /// Synchronous wrapper so exceptions surface to the caller's try/catch, matching legacy WCF-store semantics.
+        /// </summary>
+        public LocationLinkObj CreateLink(long A, long B)
         {
-            throw new NotImplementedException();
+            var newLink = new LocationLinkObj(A, B);
+            var client = ClientFactory.GetOrCreate();
+            var serverResult = client.Create(newLink, CancellationToken.None).Result;
+            return Add(ServerObjConverter.Convert(serverResult)).Result;
+        }
+
+        /// <summary>
+        /// Synchronous wrapper so exceptions surface to the caller's try/catch, matching legacy WCF-store semantics.
+        /// </summary>
+        public bool DeleteLink(long A, long B)
+        {
+            var key = new LocationLinkKey(A, B);
+            var client = ClientFactory.GetOrCreate();
+            client.Delete(key, CancellationToken.None).Wait();
+            var deleted = Remove(key).Result;
+            return deleted != null;
         }
          
     }

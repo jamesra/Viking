@@ -13,6 +13,7 @@ using EfLocation = Viking.DataModel.Annotation.Location;
 using EfLocationLink = Viking.DataModel.Annotation.LocationLink;
 using ProtoLocation = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location;
 using ProtoLocationLink = Viking.AnnotationServiceTypes.gRPC.V1.Protos.LocationLink;
+using ProtoGeometry = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry;
 
 namespace gRPCAnnotationService
 {
@@ -41,7 +42,7 @@ namespace gRPCAnnotationService
             if (obj == null)
                 throw new RpcException(new Status(StatusCode.NotFound, $"Location ID {request.Id} not found"));
 
-            return new GetLocationByIDResponse { Value = obj.ToProtobufMessage() };
+            return new GetLocationByIDResponse { Result = obj.ToProtobufMessage() };
         }
 
         public override async Task<GetLocationsByIDResponse> GetLocationsByID(GetLocationsByIDRequest request, ServerCallContext context)
@@ -53,7 +54,7 @@ namespace gRPCAnnotationService
                 {
                     var rows = await _context.Locations.AsNoTracking()
                         .Where(l => chunk.Contains(l.Id)).ToListAsync();
-                    response.Values.AddRange(rows.Select(l => l.ToProtobufMessage()));
+                    response.Results.AddRange(rows.Select(l => l.ToProtobufMessage()));
                 }
 
                 return response;
@@ -71,7 +72,7 @@ namespace gRPCAnnotationService
                 if (obj == null)
                     throw new RpcException(new Status(StatusCode.NotFound, "The volume contains no locations"));
 
-                return new GetLastModifiedLocationResponse { Value = obj.ToProtobufMessage() };
+                return new GetLastModifiedLocationResponse { Result = obj.ToProtobufMessage() };
             }
             catch (RpcException) { throw; }
             catch (Exception e) { throw Failure(nameof(GetLastModifiedLocation), e); }
@@ -82,7 +83,7 @@ namespace gRPCAnnotationService
             try
             {
                 var response = new GetLinkedLocationsResponse();
-                response.Values.AddRange(await LinkedIdsOf(request.Id));
+                response.Results.AddRange(await LinkedIdsOf(request.Id));
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetLinkedLocations), e); }
@@ -103,24 +104,24 @@ namespace gRPCAnnotationService
                 {
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
-                response.Values.AddRange(rows.Select(l => l.ToProtobufMessage()));
+                response.Results.AddRange(rows.Select(l => l.ToProtobufMessage()));
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetLocationsForSection), e); }
         }
 
-        public override async Task<GetLocationsForStructureResponse> GetLocationsForStructure(GetLocationsForStructureRequest request, ServerCallContext context)
+        public override async Task<GetStructureLocationsResponse> GetStructureLocations(GetStructureLocationsRequest request, ServerCallContext context)
         {
             try
             {
                 var rows = await _context.Locations.AsNoTracking()
                     .Where(l => l.ParentId == request.StructureId).ToListAsync();
 
-                var response = new GetLocationsForStructureResponse();
-                response.Values.AddRange(rows.Select(l => l.ToProtobufMessage()));
+                var response = new GetStructureLocationsResponse();
+                response.Results.AddRange(rows.Select(l => l.ToProtobufMessage()));
                 return response;
             }
-            catch (Exception e) { throw Failure(nameof(GetLocationsForStructure), e); }
+            catch (Exception e) { throw Failure(nameof(GetStructureLocations), e); }
         }
 
         public override async Task<GetLocationChangesResponse> GetLocationChanges(GetLocationChangesRequest request, ServerCallContext context)
@@ -140,7 +141,7 @@ namespace gRPCAnnotationService
                 {
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
-                response.Values.AddRange(rows.Select(l => l.ToProtobufMessage()));
+                response.Results.AddRange(rows.Select(l => l.ToProtobufMessage()));
                 response.DeletedIds.AddRange(await DeletedIdsSince(request.Section, modifiedAfter));
                 return response;
             }
@@ -154,15 +155,15 @@ namespace gRPCAnnotationService
                 var queryStart = DateTime.UtcNow;
                 var modifiedAfter = request.ModifiedAfterThisUtcTime?.ToDateTime();
 
-                var rows = await MosaicRegionQuery(request.Section, request.Bbox, request.MinRadius, modifiedAfter)
+                var rows = await MosaicRegionQuery(request.Z, request.Region, request.MinRadius, modifiedAfter)
                     .ToListAsync();
 
                 var response = new GetLocationChangesInMosaicRegionResponse
                 {
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
-                response.Values.AddRange(rows.Select(l => l.ToProtobufMessage()));
-                response.DeletedIds.AddRange(await DeletedIdsSince(request.Section, modifiedAfter));
+                response.Results.AddRange(rows.Select(l => l.ToProtobufMessage()));
+                response.DeletedIds.AddRange(await DeletedIdsSince(request.Z, modifiedAfter));
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetLocationChangesInMosaicRegion), e); }
@@ -175,7 +176,7 @@ namespace gRPCAnnotationService
                 var queryStart = DateTime.UtcNow;
                 var modifiedAfter = request.ModifiedAfterThisUtcTime?.ToDateTime();
 
-                var locations = await MosaicRegionQuery(request.Section, request.Bbox, request.MinRadius, modifiedAfter)
+                var locations = await MosaicRegionQuery(request.Z, request.Region, request.MinRadius, modifiedAfter)
                     .ToListAsync();
 
                 var parentIds = locations.Select(l => l.ParentId).Distinct().ToArray();
@@ -191,10 +192,10 @@ namespace gRPCAnnotationService
 
                 var response = new GetAnnotationsInMosaicRegionResponse
                 {
-                    Value = set,
+                    Result = set,
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
-                response.DeletedIds.AddRange(await DeletedIdsSince(request.Section, modifiedAfter));
+                response.DeletedIds.AddRange(await DeletedIdsSince(request.Z, modifiedAfter));
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetAnnotationsInMosaicRegion), e); }
@@ -213,7 +214,7 @@ namespace gRPCAnnotationService
                 {
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
-                response.Values.AddRange(links.Select(ToProtobufMessage));
+                response.Results.AddRange(links.Select(ToProtobufMessage));
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetLocationLinksForSection), e); }
@@ -227,18 +228,18 @@ namespace gRPCAnnotationService
                 var links = await _context.LocationLinks.AsNoTracking()
                     .Where(link =>
                         (link.ANavigation.Z == request.Section &&
-                         link.ANavigation.X >= bbox.XMin && link.ANavigation.X <= bbox.XMax &&
-                         link.ANavigation.Y >= bbox.YMin && link.ANavigation.Y <= bbox.YMax &&
+                         link.ANavigation.X >= bbox.Xmin && link.ANavigation.X <= bbox.Xmax &&
+                         link.ANavigation.Y >= bbox.Ymin && link.ANavigation.Y <= bbox.Ymax &&
                          link.ANavigation.Radius >= request.MinRadius)
                         ||
                         (link.BNavigation.Z == request.Section &&
-                         link.BNavigation.X >= bbox.XMin && link.BNavigation.X <= bbox.XMax &&
-                         link.BNavigation.Y >= bbox.YMin && link.BNavigation.Y <= bbox.YMax &&
+                         link.BNavigation.X >= bbox.Xmin && link.BNavigation.X <= bbox.Xmax &&
+                         link.BNavigation.Y >= bbox.Ymin && link.BNavigation.Y <= bbox.Ymax &&
                          link.BNavigation.Radius >= request.MinRadius))
                     .ToListAsync();
 
                 var response = new GetLocationLinksForSectionInMosaicRegionResponse();
-                response.Values.AddRange(links.Select(ToProtobufMessage));
+                response.Results.AddRange(links.Select(ToProtobufMessage));
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetLocationLinksForSectionInMosaicRegion), e); }
@@ -260,62 +261,52 @@ namespace gRPCAnnotationService
                 var added = await _context.Locations.AddAsync(row);
                 await _context.SaveChangesAsync();
 
-                foreach (var linkedId in request.LinkedIds)
-                    await AddLinkIfMissing(added.Entity.Id, linkedId, row.Username);
-
-                if (request.LinkedIds.Count > 0)
-                    await _context.SaveChangesAsync();
-
-                return new CreateLocationResponse { Value = added.Entity.ToProtobufMessage() };
+                return new CreateLocationResponse { Result = added.Entity.ToProtobufMessage() };
             }
             catch (Exception e) { throw Failure(nameof(CreateLocation), e); }
         }
 
-        public override async Task<UpdateLocationResponse> Update(UpdateLocationRequest request, ServerCallContext context)
+        public override async Task<UpdateLocationsResponse> Update(UpdateLocationsRequest request, ServerCallContext context)
         {
             try
             {
-                var response = new UpdateLocationResponse();
+                var response = new UpdateLocationsResponse();
                 var username = CallerName(context);
 
                 foreach (var change in request.Locations)
                 {
-                    var rowResponse = new LocationChangeResponse { Action = change.Action };
+                    var rowResponse = new LocationChangeResponse();
 
-                    switch (change.Action)
+                    switch (change.ActionCase)
                     {
-                        case DBAction.None:
-                            rowResponse.Sucess = true;
-                            break;
-
-                        case DBAction.Insert:
-                            var toInsert = change.Result.ToLocation();
+                        case LocationChangeRequest.ActionOneofCase.Create:
+                            var toInsert = change.Create.ToLocation();
                             toInsert.Username = username;
                             toInsert.Created = DateTime.UtcNow;
                             toInsert.LastModified = toInsert.Created;
                             var inserted = await _context.Locations.AddAsync(toInsert);
-                            rowResponse.Sucess = true;
-                            rowResponse.Result = inserted.Entity.ToProtobufMessage();
+                            rowResponse.Success = true;
+                            rowResponse.Created = inserted.Entity.ToProtobufMessage();
                             break;
 
-                        case DBAction.Update:
-                            var existing = await _context.Locations.FirstOrDefaultAsync(l => l.Id == change.Result.Id);
+                        case LocationChangeRequest.ActionOneofCase.Update:
+                            var existing = await _context.Locations.FirstOrDefaultAsync(l => l.Id == change.Update.Id);
                             if (existing == null)
                             {
-                                rowResponse.Sucess = false;
+                                rowResponse.Success = false;
                                 break;
                             }
 
-                            ApplyUpdate(change.Result, existing, username);
-                            rowResponse.Sucess = true;
-                            rowResponse.Result = _context.Locations.Update(existing).Entity.ToProtobufMessage();
+                            ApplyUpdate(change.Update, existing, username);
+                            rowResponse.Success = true;
+                            rowResponse.Updated = _context.Locations.Update(existing).Entity.ToProtobufMessage();
                             break;
 
-                        case DBAction.Delete:
-                            var toDelete = await _context.Locations.FirstOrDefaultAsync(l => l.Id == change.Result.Id);
+                        case LocationChangeRequest.ActionOneofCase.Delete:
+                            var toDelete = await _context.Locations.FirstOrDefaultAsync(l => l.Id == change.Delete);
                             if (toDelete == null)
                             {
-                                rowResponse.Sucess = false;
+                                rowResponse.Success = false;
                                 break;
                             }
 
@@ -324,11 +315,16 @@ namespace gRPCAnnotationService
                                 .Where(link => link.A == toDelete.Id || link.B == toDelete.Id).ToListAsync();
                             _context.LocationLinks.RemoveRange(attached);
                             _context.Locations.Remove(toDelete);
-                            rowResponse.Sucess = true;
+                            rowResponse.Success = true;
+                            rowResponse.DeletedId = change.Delete;
+                            break;
+
+                        default:
+                            rowResponse.Success = false;
                             break;
                     }
 
-                    response.Values.Add(rowResponse);
+                    response.Results.Add(rowResponse);
                 }
 
                 await _context.SaveChangesAsync();
@@ -417,20 +413,36 @@ namespace gRPCAnnotationService
             _context.LocationLinks.AsNoTracking()
                 .Where(l => l.ANavigation.Z == section || l.BNavigation.Z == section);
 
-        private IQueryable<EfLocation> MosaicRegionQuery(long section, BoundingRectangle bbox, double minRadius, DateTime? modifiedAfter)
+        private IQueryable<EfLocation> MosaicRegionQuery(long z, ProtoGeometry region, double minRadius, DateTime? modifiedAfter)
         {
+            var bounds = BoundsOf(region);
+
             // Filter on the persisted centroid and radius columns rather than the geometry, so
             // the query stays translatable and never has to parse a CurvePolygon.
             var query = _context.Locations.AsNoTracking()
-                .Where(l => l.Z == section
+                .Where(l => l.Z == z
                             && l.Radius >= minRadius
-                            && l.X >= bbox.XMin && l.X <= bbox.XMax
-                            && l.Y >= bbox.YMin && l.Y <= bbox.YMax);
+                            && l.X >= bounds.MinX && l.X <= bounds.MaxX
+                            && l.Y >= bounds.MinY && l.Y <= bounds.MaxY);
 
             if (modifiedAfter.HasValue)
                 query = query.Where(l => l.LastModified > modifiedAfter.Value);
 
             return query;
+        }
+
+        /// <summary>
+        /// The region is sent as a general geometry (typically a polygon), so the caller's
+        /// bounding box is recovered here rather than requiring a dedicated bbox message.
+        /// </summary>
+        private static (double MinX, double MinY, double MaxX, double MaxY) BoundsOf(ProtoGeometry region)
+        {
+            var geometry = region?.ToNetTopologyGeometry();
+            if (geometry == null)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "A region is required"));
+
+            var envelope = geometry.EnvelopeInternal;
+            return (envelope.MinX, envelope.MinY, envelope.MaxX, envelope.MaxY);
         }
 
         private async Task<List<long>> DeletedIdsSince(long section, DateTime? modifiedAfter)

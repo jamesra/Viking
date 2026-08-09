@@ -23,19 +23,34 @@ namespace WebAnnotationModel.gRPC
     { 
         public StructureLinkStore(
             IServerAnnotationsClientFactory<IServerAnnotationsClient<StructureLinkKey, IStructureLink, StructureLinkObj, IStructureLink>> clientFactory,
-            IStoreServerQueryResultsHandler<StructureLinkKey, StructureLinkObj, IStructureLink> serverQueryResultsHandler,
             IObjectConverter<StructureLinkObj, IStructureLink> objToServerObjConverter,
             IObjectConverter<IStructureLink, StructureLinkObj> serverObjToObjConverter,
-            IObjectUpdater<StructureLinkObj, IStructureLink> objUpdater = null) : base(clientFactory, serverQueryResultsHandler, objToServerObjConverter, serverObjToObjConverter)
+            IObjectUpdater<StructureLinkObj, IStructureLink> objUpdater = null) : base(clientFactory, null, objToServerObjConverter, serverObjToObjConverter)
         {
         }
 
         protected override Task Init() => Task.CompletedTask;
         
-        public Task<StructureLinkObj[]> GetLinks(long structureId)
+        public async Task<StructureLinkObj[]> GetLinks(long structureId)
         {
-            throw new NotImplementedException();
+            var client = (StructureLinksClient)ClientFactory.GetOrCreate();
+            var serverLinks = await client.GetLinksForStructureAsync(structureId, CancellationToken.None);
+            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(
+                new ServerUpdate<StructureLinkKey, IStructureLink[]>(DateTime.UtcNow, serverLinks, Array.Empty<StructureLinkKey>()));
+            CallOnCollectionChanged(changes);
+            return changes.ObjectsInStore.ToArray();
         }
-         
+
+        /// <summary>
+        /// Synchronous wrapper so exceptions surface to the caller's try/catch, matching legacy WCF-store semantics.
+        /// Creates the link on the server immediately rather than deferring to Save(), since there is no
+        /// dedicated delete RPC to reconcile against on a later save.
+        /// </summary>
+        public StructureLinkObj Create(StructureLinkObj obj)
+        {
+            var client = ClientFactory.GetOrCreate();
+            var serverResult = client.Create(obj, CancellationToken.None).Result;
+            return Add(ServerObjConverter.Convert(serverResult)).Result;
+        }
     }
 }

@@ -20,10 +20,19 @@ namespace DevTest
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddIdentityServer()
+            services.AddIdentityServer(options =>
+                {
+                    // Fixed issuer so tokens validate the same whether requested via
+                    // localhost (host-side test clients) or host.docker.internal
+                    // (from inside the grpc-annotation-service container).
+                    options.IssuerUri = "http://host.docker.internal:5020";
+                })
                 .AddDeveloperSigningCredential()
+                .AddInMemoryIdentityResources(Config.GetIdentityResources())
+                .AddInMemoryApiScopes(Config.GetApiScopes())
                 .AddInMemoryApiResources(Config.GetApiResources())
-                .AddInMemoryClients(Config.GetClients());
+                .AddInMemoryClients(Config.GetClients())
+                .AddTestUsers(Config.GetTestUsers());
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

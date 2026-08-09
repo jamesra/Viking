@@ -12,7 +12,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace WebAnnotationModel.gRPC.Converters
 { 
-    public class StructureTypeServerToClientConverter : IObjectConverter<StructureType, StructureTypeObj>
+    public class StructureTypeServerToClientConverter : IObjectConverter<StructureType, StructureTypeObj>,
+        IObjectConverter<IStructureType, StructureTypeObj>
     {
         public StructureTypeObj Convert(StructureType src)
         {
@@ -25,6 +26,27 @@ namespace WebAnnotationModel.gRPC.Converters
                     Name = src.Name,
                     Notes = src.Notes,
                     ParentID = src.ParentId,
+                };
+
+            obj.SetAttributes(src.Attributes.ParseAttributes()).Wait();
+
+            return obj;
+        }
+
+        public StructureTypeObj Convert(IStructureType src)
+        {
+            if (src is StructureType concrete)
+                return Convert(concrete);
+
+            StructureTypeObj obj =
+                new StructureTypeObj((long)src.ID)
+                {
+                    Code = src.Code,
+                    Color = src.Color,
+                    DBAction = DBACTION.NONE,
+                    Name = src.Name,
+                    Notes = src.Notes,
+                    ParentID = src.ParentID,
                 };
 
             obj.SetAttributes(src.Attributes.ParseAttributes()).Wait();

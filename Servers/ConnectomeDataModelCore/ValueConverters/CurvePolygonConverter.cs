@@ -38,6 +38,20 @@ namespace Viking.DataModel.Annotation.ValueConverters
 
         protected static object DoConvertToProvider(object input)
         {
+            if (input is null)
+                return null;
+
+            if (input is Geometry geometry)
+                return geometry;
+
+            // Model properties are WKT strings; SQL provider side is Geometry (NetTopologySuite).
+            if (input is string wkt)
+            {
+                if (string.IsNullOrWhiteSpace(wkt))
+                    return null;
+                return new NetTopologySuite.IO.WKTReader().Read(wkt);
+            }
+
             return input as IN;
         }
 
@@ -53,6 +67,9 @@ namespace Viking.DataModel.Annotation.ValueConverters
             }
             else
             */
+            if (input is string alreadyWkt)
+                return alreadyWkt;
+
             if(input is Geometry shape)
             {
                 return shape.ToText();

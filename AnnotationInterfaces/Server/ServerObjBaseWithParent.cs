@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -7,7 +7,7 @@ using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace Viking.AnnotationServiceTypes
 {
-    public abstract class ServerObjBaseWithParent<KEY, T, THISTYPE> : ServerObjBaseWithKey<KEY, T>, System.Collections.Specialized.INotifyCollectionChanged
+    abstract public class ServerObjBaseWithParent<KEY, T, THISTYPE> : ServerObjBaseWithKey<KEY, T>, System.Collections.Specialized.INotifyCollectionChanged
         where KEY : struct, IEquatable<KEY>, IComparable<KEY>
         where T : IDataObjectWithParent<KEY>, IEquatable<T>, IChangeAction, new()
         where THISTYPE : ServerObjBaseWithParent<KEY, T, THISTYPE>, new()
@@ -25,7 +25,7 @@ namespace Viking.AnnotationServiceTypes
         {
             get
             {
-                if (_Parent is null && ParentID.HasValue)
+                if (_Parent == null && ParentID.HasValue)
                     _Parent = OnMissingParent();
 
                 return _Parent;
@@ -35,7 +35,7 @@ namespace Viking.AnnotationServiceTypes
                 //Do nothing if the parent isn't changed
                 if (_Parent == value)
                 {
-                    if (_Parent is null)
+                    if (_Parent == null)
                         return;
 
                     //When replacing a new object created in the database we can have deleted ourselves from the parent but need to add ourselves again.
@@ -59,7 +59,10 @@ namespace Viking.AnnotationServiceTypes
                 OnPropertyChanging(nameof(Parent));
 
                 //Remove ourselves from our old parent's list of children
-                _Parent?.RemoveChild(this as THISTYPE);
+                if (_Parent != null)
+                {
+                    _Parent.RemoveChild(this as THISTYPE);
+                }
 
                 _Parent = value;
 
@@ -67,7 +70,7 @@ namespace Viking.AnnotationServiceTypes
                 bool SetUpdateFlag = false;
                 if (_Parent != null)
                 {
-                    if (ParentID is null)
+                    if (ParentID == null)
                         SetUpdateFlag = true;
                     else if (!_Parent.ID.Equals(ParentID.Value))
                         SetUpdateFlag = true;
@@ -90,9 +93,12 @@ namespace Viking.AnnotationServiceTypes
             }
         }
 
-        readonly ObservableCollection<THISTYPE> _Children = [];
+        readonly ObservableCollection<THISTYPE> _Children = new ObservableCollection<THISTYPE>();
 
-        public THISTYPE[] Children => [.. _Children];
+        public THISTYPE[] Children
+        {
+            get { return _Children.ToArray(); }
+        }
 
         protected void AddChild(THISTYPE child)
         {
@@ -118,15 +124,21 @@ namespace Viking.AnnotationServiceTypes
 
         public event System.Collections.Specialized.NotifyCollectionChangedEventHandler ChildChanged
         {
-            add => _Children.CollectionChanged += value;
-            remove => _Children.CollectionChanged -= value;
+            add { _Children.CollectionChanged += value; }
+            remove { _Children.CollectionChanged -= value; }
         }
 
         public event NotifyCollectionChangedEventHandler CollectionChanged
         {
-            add => ((INotifyCollectionChanged)_Children).CollectionChanged += value;
+            add
+            {
+                ((INotifyCollectionChanged)_Children).CollectionChanged += value;
+            }
 
-            remove => ((INotifyCollectionChanged)_Children).CollectionChanged -= value;
+            remove
+            {
+                ((INotifyCollectionChanged)_Children).CollectionChanged -= value;
+            }
         }
 
         /// <summary>
@@ -137,11 +149,11 @@ namespace Viking.AnnotationServiceTypes
         {
             if (this.Data != null)
             {
-                if (false == newdata.ParentID.Equals(Data.ParentID))
+                if(false == newdata.ParentID.Equals(Data.ParentID))
                 {
                     this._Parent = null;
                 }
-
+                 
             }
 
             base.Synch(newdata);

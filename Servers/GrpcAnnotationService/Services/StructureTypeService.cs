@@ -88,7 +88,7 @@ namespace gRPCAnnotationService
         public override async Task<GetStructureTypesByIDsResponse> GetStructureTypesByIDs(GetStructureTypesByIDsRequest request, ServerCallContext context)
         {
             GetStructureTypesByIDsResponse response = new GetStructureTypesByIDsResponse();
-            foreach (var chunk in request.Id.ToArray().Chunk())
+            foreach (var chunk in request.Ids.ToArray().Chunk())
             {
                 try
                 {
@@ -115,45 +115,45 @@ namespace gRPCAnnotationService
 
                 foreach (var req in request.Objs)
                 {
-                    var ef_obj = req.Result.ToStructureType();
+                    StructureTypeChangeResponse row_response = new StructureTypeChangeResponse();
 
-                    StructureTypeChangeResponse row_response = new StructureTypeChangeResponse() { Action = req.Action };
-
-                    switch (req.Action)
+                    switch (req.ActionCase)
                     {
-                        case DBAction.None:
-                            row_response.Sucess = true;
-                            break;
-                        case DBAction.Insert:
+                        case StructureTypeChangeRequest.ActionOneofCase.Create:
+                            var ef_obj = req.Create.ToStructureType();
                             var insertResult = await _context.StructureTypes.AddAsync(ef_obj);
-                            row_response.Sucess = true;
-                            row_response.Result = insertResult.Entity.ToProtobufMessage();
+                            row_response.Success = true;
+                            row_response.Created = insertResult.Entity.ToProtobufMessage();
                             break;
-                        case DBAction.Update:
-                            var obj = _context.StructureTypes.FirstOrDefault(t => t.Id == ef_obj.Id);
+                        case StructureTypeChangeRequest.ActionOneofCase.Update:
+                            var obj = _context.StructureTypes.FirstOrDefault(t => t.Id == req.Update.Id);
                             if (obj != null)
                             {
-                                req.Result.Sync(ref obj);
+                                req.Update.Sync(ref obj);
                                 var EF_Result = _context.StructureTypes.Update(obj);
-                                row_response.Sucess = true;
-                                row_response.Result = EF_Result.Entity.ToProtobufMessage();
+                                row_response.Success = true;
+                                row_response.Updated = EF_Result.Entity.ToProtobufMessage();
                             }
                             else
                             {
-                                row_response.Sucess = false;
+                                row_response.Success = false;
                             }
                             break;
-                        case DBAction.Delete:
-                            var EF_remove_row = _context.StructureTypes.FirstOrDefault(t => t.Id == ef_obj.Id);
+                        case StructureTypeChangeRequest.ActionOneofCase.Delete:
+                            var EF_remove_row = _context.StructureTypes.FirstOrDefault(t => t.Id == req.Delete);
                             if (EF_remove_row != null)
                             {
                                 _context.StructureTypes.Remove(EF_remove_row);
-                                row_response.Sucess = true;
+                                row_response.Success = true;
+                                row_response.DeletedId = req.Delete;
                             }
                             else
                             {
-                                row_response.Sucess = false;
+                                row_response.Success = false;
                             }
+                            break;
+                        default:
+                            row_response.Success = false;
                             break;
                     }
 

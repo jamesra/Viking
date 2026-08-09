@@ -21,11 +21,9 @@ namespace WebAnnotationModel.gRPC
 
         public StructureTypeStore(IServerAnnotationsClientFactory<IServerAnnotationsClient<long, IStructureType, IStructureType, IStructureType>> clientFactory,
             IServerAnnotationsClientFactory<IStructureTypesRepository> structureTypeClientFactory,
-            IStoreServerQueryResultsHandler<long, StructureTypeObj,
-                IStructureType> queryResultsHandler,
             IObjectConverter<StructureTypeObj, IStructureType> objToServerObjConverter,
             IObjectConverter<IStructureType, StructureTypeObj> serverObjToObjConverter,
-            IObjectUpdater<StructureTypeObj, IStructureType> objUpdater = null) : base(clientFactory, queryResultsHandler, objToServerObjConverter, serverObjToObjConverter)
+            IObjectUpdater<StructureTypeObj, IStructureType> objUpdater = null) : base(clientFactory, null, objToServerObjConverter, serverObjToObjConverter)
         {
             _structureTypeClientFactory = structureTypeClientFactory;
         }
@@ -61,6 +59,11 @@ namespace WebAnnotationModel.gRPC
                 
             } 
         }
+
+        /// <summary>
+        /// Synchronous convenience overload equivalent to Create(new_type, CancellationToken.None).
+        /// </summary>
+        public StructureTypeObj Create(StructureTypeObj new_type) => Create(new_type, CancellationToken.None).Result;
 
         /// <summary>
         /// At startup we load the entire structure types table since it is fairly static

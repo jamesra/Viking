@@ -1,6 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using NetTopologySuite.Geometries;
-using Viking.DataModel.Annotation.ValueConverters;
 
 namespace Viking.DataModel.Annotation
 {
@@ -11,17 +9,18 @@ namespace Viking.DataModel.Annotation
     {
         partial void OnModelCreatingPartial(ModelBuilder modelBuilder)
         {
+            // Generated TVF/result types — must be keyless. This method lives in
+            // AnnotationContext.Functions.cs but was never wired into OnModelCreating.
+            OnModelCreatingGeneratedFunctions(modelBuilder);
+
             modelBuilder.Entity<Location>(entity =>
             {
-                var geometry_converter = new CurvePolygonConverter<Geometry, string>();
-
                 entity.Property(e => e.VolumeShape)
-                    .HasConversion(geometry_converter);
+                    .HasColumnType("geometry");
 
                 entity.Property(e => e.MosaicShape)
-                    .HasConversion(geometry_converter);
+                    .HasColumnType("geometry");
             });
         }
-        //Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter CurvePolyConverter;
     }
 }

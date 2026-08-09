@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes;
 using WebAnnotationModel.gRPC;
 using Geometry = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry;
 
@@ -29,10 +30,12 @@ namespace Microsoft.Extensions.DependencyInjection
             //var _channel = GrpcChannel.ForAddress(endpointUri, channelOptions.Value);
             //service.AddSingleton<GrpcChannel>((_) => GrpcChannel.ForAddress(endpointUri, channelOptions.Value));
             service.AddSingleton<IServerAnnotationsClientFactory<ILocationsClient>, LocationsClientFactory>();
+            service.AddSingleton<IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, ILocation>>, LocationsClientFactory>();
             service.AddSingleton<IServerSpatialAnnotationsClient<long, ILocation>, LocationsClient>();
             service.AddSingleton<IServerAnnotationsBySectionClient<long, ILocation[]>, LocationsClient>();
             service.AddSingleton<IServerAnnotationsClient<long, ILocation, ILocation, ILocation>, LocationsClient>();
             service.AddSingleton<IServerSpatialAnnotationsClient<long, AnnotationSet>, LocationsClient>();
+            service.AddSingleton<IServerAnnotationsClientFactory<IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>>, LocationsClientFactory>();
             return service;
         }
     }
@@ -43,40 +46,54 @@ namespace WebAnnotationModel.gRPC
     public class LocationsClientFactory : IServerAnnotationsClientFactory<ILocationsClient>,
         IServerAnnotationsClientFactory<IServerAnnotationsBySectionClient<long, ILocation[]>>,
         IServerAnnotationsClientFactory<IServerAnnotationsClient<long, ILocation, ILocation, ILocation>>,
-        IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, AnnotationSet>>
+        IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, AnnotationSet>>,
+        IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, ILocation>>,
+        IServerAnnotationsClientFactory<IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>>
     {
         private readonly IObjectConverter<ILocation, Location> _clientObjConverter;
         private readonly GrpcRepositorySettings _config;
-        private readonly GrpcChannel _channel;
+        private readonly IGrpcChannelManager _channelManager;
 
 
         public LocationsClientFactory(IGrpcChannelManager channelManager,
             IObjectConverter<ILocation, Location> clientObjConverter,
             IOptions<GrpcRepositorySettings> config)
         {
-            _channel = channelManager.GetOrCreate(config.Value.Endpoint);
+            _channelManager = channelManager;
             _clientObjConverter = clientObjConverter;
             _config = config.Value;
         }
 
+        private GrpcChannel Channel => _channelManager.GetOrCreate(_config.Endpoint);
+
         public ILocationsClient GetOrCreate()
         { 
-            return new LocationsClient(_channel, _clientObjConverter);
+            return new LocationsClient(Channel, _clientObjConverter);
         }
 
         IServerAnnotationsBySectionClient<long, ILocation[]> IServerAnnotationsClientFactory<IServerAnnotationsBySectionClient<long, ILocation[]>>.GetOrCreate()
         { 
-            return new LocationsClient(_channel, _clientObjConverter);
+            return new LocationsClient(Channel, _clientObjConverter);
         }
 
         IServerAnnotationsClient<long, ILocation, ILocation, ILocation> IServerAnnotationsClientFactory<IServerAnnotationsClient<long, ILocation, ILocation, ILocation>>.GetOrCreate()
         {
-            return new LocationsClient(_channel, _clientObjConverter);
+            return new LocationsClient(Channel, _clientObjConverter);
         }
 
         IServerSpatialAnnotationsClient<long, AnnotationSet> IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, AnnotationSet>>.GetOrCreate()
         {
-            return new LocationsClient(_channel, _clientObjConverter);
+            return new LocationsClient(Channel, _clientObjConverter);
+        }
+
+        IServerSpatialAnnotationsClient<long, ILocation> IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, ILocation>>.GetOrCreate()
+        {
+            return new LocationsClient(Channel, _clientObjConverter);
+        }
+
+        IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink> IServerAnnotationsClientFactory<IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>>.GetOrCreate()
+        {
+            return new LocationsClient(Channel, _clientObjConverter);
         }
     }
 
@@ -87,7 +104,8 @@ namespace WebAnnotationModel.gRPC
         Task<ILocation> GetLastModifiedLocation();
     }
 
-    public class LocationsClient : ILocationsClient, IServerSpatialAnnotationsClient<long, ILocation>, IServerAnnotationsBySectionClient<long, ILocation[]>, IServerAnnotationsClient<long, ILocation, ILocation, ILocation>, IServerSpatialAnnotationsClient<long, AnnotationSet>
+    public class LocationsClient : ILocationsClient, IServerSpatialAnnotationsClient<long, ILocation>, IServerAnnotationsBySectionClient<long, ILocation[]>, IServerAnnotationsClient<long, ILocation, ILocation, ILocation>, IServerSpatialAnnotationsClient<long, AnnotationSet>,
+        IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>
     {
         private readonly AnnotateLocations.AnnotateLocationsClient Client;
         private readonly IObjectConverter<ILocation, Location> ClientObjConverter;
@@ -208,7 +226,9 @@ namespace WebAnnotationModel.gRPC
 
         private UpdateResults<long, ILocation> CollectResults(UpdateLocationsResponse response)
         {
-            var result = new UpdateResults<long, ILocation>();
+            var added = new List<ILocation>();
+            var updated = new List<ILocation>();
+            var deleted = new List<long>();
             foreach (var ro in response.Results)
             {
                 switch (ro.ActionCase)
@@ -216,20 +236,20 @@ namespace WebAnnotationModel.gRPC
                     case LocationChangeResponse.ActionOneofCase.None:
                         break;
                     case LocationChangeResponse.ActionOneofCase.Created:
-                        result.AddedObjects.Add(ro.Created);
+                        added.Add(ro.Created);
                         break;
                     case LocationChangeResponse.ActionOneofCase.Updated:
-                        result.UpdatedObjects.Add(ro.Updated);
+                        updated.Add(ro.Updated);
                         break;
                     case LocationChangeResponse.ActionOneofCase.DeletedId:
-                        result.DeletedIDs.Add(ro.DeletedId);
+                        deleted.Add(ro.DeletedId);
                         break;
                     default:
                         throw new NotImplementedException();
                 }
             }
 
-            return result;
+            return new UpdateResults<long, ILocation>(added.ToArray(), updated.ToArray(), deleted.ToArray());
         }
           
         public async Task<ILocation> GetLastModifiedLocation()
@@ -244,6 +264,55 @@ namespace WebAnnotationModel.gRPC
             var request = new GetStructureLocationsRequest() { StructureId = structureID };
             var response = await Client.GetStructureLocationsAsync(request);
             return response.Results.ToArray();
+        }
+
+        async Task<ILocationLink> IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>.Create(ILocationLink obj, CancellationToken token)
+        {
+            var request = new CreateLocationLinkRequest { SourceId = (long)obj.A, TargetId = (long)obj.B };
+            await Client.CreateLocationLinkAsync(request, cancellationToken: token);
+            return new LocationLink { SourceId = (long)obj.A, TargetId = (long)obj.B };
+        }
+
+        async Task<LocationLinkKey?> IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>.Delete(LocationLinkKey key, CancellationToken token)
+        {
+            var request = new DeleteLocationLinkRequest { SourceId = key.A, TargetId = key.B };
+            await Client.DeleteLocationLinkAsync(request, cancellationToken: token);
+            return key;
+        }
+
+        async Task<ILocationLink> IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>.GetAsync(LocationLinkKey key, CancellationToken token)
+        {
+            var request = new GetLinkedLocationsRequest { Id = key.A };
+            var response = await Client.GetLinkedLocationsAsync(request, cancellationToken: token);
+            if (!response.Results.Contains(key.B))
+                return null;
+
+            return new LocationLink { SourceId = key.A, TargetId = key.B };
+        }
+
+        async Task<IList<ILocationLink>> IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>.GetAsync(IEnumerable<LocationLinkKey> keys, CancellationToken token)
+        {
+            var linkClient = (IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>)this;
+            var results = new List<ILocationLink>();
+            foreach (var key in keys)
+            {
+                var link = await linkClient.GetAsync(key, token);
+                if (link != null)
+                    results.Add(link);
+            }
+
+            return results;
+        }
+
+        Task<UpdateResults<LocationLinkKey, ILocationLink>> IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>.UpdateAsync(ILocationLink obj, CancellationToken token)
+        {
+            //Location links have no mutable properties beyond their endpoints; there is nothing to update once created.
+            return Task.FromResult(new UpdateResults<LocationLinkKey, ILocationLink>());
+        }
+
+        Task<UpdateResults<LocationLinkKey, ILocationLink>> IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>.UpdateAsync(IEnumerable<ILocationLink> objs, CancellationToken token)
+        {
+            return Task.FromResult(new UpdateResults<LocationLinkKey, ILocationLink>());
         }
     }
 }

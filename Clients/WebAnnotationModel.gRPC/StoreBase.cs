@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using WebAnnotationModel.Objects;
 using WebAnnotationModel;
@@ -46,6 +47,16 @@ namespace WebAnnotationModel.gRPC
         /// <param name="obj"></param>
         /// <returns></returns>
         public abstract Task<bool> Remove(OBJECT obj);
+
+        /// <summary>
+        /// Push every locally changed (added/updated/deleted) object in the store to the server.
+        /// </summary>
+        public abstract Task<bool> Save(CancellationToken token);
+
+        /// <summary>
+        /// Synchronous convenience overload equivalent to Save(CancellationToken.None).
+        /// </summary>
+        public Task<bool> Save() => Save(CancellationToken.None);
 
         #endregion
 

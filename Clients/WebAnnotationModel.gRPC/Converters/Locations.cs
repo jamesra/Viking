@@ -16,7 +16,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace WebAnnotationModel.gRPC.Converters
 { 
 
-    public class LocationServerToClientConverter : IObjectConverter<Location, LocationObj>
+    public class LocationServerToClientConverter : IObjectConverter<Location, LocationObj>,
+        IObjectConverter<ILocation, LocationObj>
     {
         public LocationObj Convert(Location src)
         {
@@ -38,6 +39,31 @@ namespace WebAnnotationModel.gRPC.Converters
             
             obj.SetAttributes(src.Attributes.ParseAttributes()).Wait();
             
+            return obj;
+        }
+
+        public LocationObj Convert(ILocation src)
+        {
+            if (src is Location concrete)
+                return Convert(concrete);
+
+            LocationObj obj =
+                new LocationObj(src.ID, src.ParentID ?? 0)
+                {
+                    DBAction = DBACTION.NONE,
+                    Section = src.SectionNumber,
+                    MosaicShape = src.MosaicGeometryWKT.ParseWKT(),
+                    VolumeShape = src.VolumeGeometryWKT.ParseWKT(),
+                    TypeCode = src.TypeCode,
+                    Terminal = src.Terminal,
+                    OffEdge = src.OffEdge,
+                    Width = src.Width,
+                    Username = src.Username,
+                    LastModified = src.LastModified,
+                };
+
+            obj.SetAttributes(src.TagsXml.ParseAttributes()).Wait();
+
             return obj;
         }
     }
@@ -76,7 +102,8 @@ namespace WebAnnotationModel.gRPC.Converters
         }
     }
 
-    public class LocationClientToServerConverter : IObjectConverter<LocationObj, Location>
+    public class LocationClientToServerConverter : IObjectConverter<LocationObj, Location>,
+        IObjectConverter<LocationObj, ILocation>
     {
         public Location Convert(LocationObj src)
         {
@@ -103,9 +130,13 @@ namespace WebAnnotationModel.gRPC.Converters
                 obj.ParentId = src.ParentID.Value;
 
             obj.Attributes = src.Attributes.ToXml();
-            
+
+            ((IChangeAction)obj).DBAction = src.DBAction;
+
             return obj;
         }
+
+        ILocation IObjectConverter<LocationObj, ILocation>.Convert(LocationObj src) => Convert(src);
     }
 
     public class LocationServerToClientUpdater : IObjectUpdater<LocationObj, Location>

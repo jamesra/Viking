@@ -1,79 +1,33 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using Geometry;
 
 namespace Viking.AnnotationServiceTypes.Interfaces
 {
-    /// <summary>
-    /// Represents the Type column in the SQL Locations table
-    /// </summary>
-    public enum LocationType
+    public interface ISectionIndex
     {
-        POINT = 0,
-        CIRCLE = 1,
-        ELLIPSE = 2,
-        POLYLINE = 3,
-        /// <summary>
-        /// Polygon, no smoothing of exterior verticies with curve fitting
-        /// </summary>
-        POLYGON = 4,
-        /// <summary>
-        /// Line segments with a line width, additional control points created using curve fitting function
-        /// </summary>
-        OPENCURVE = 5,
-        /// <summary>
-        /// Polygon whose outer and inner verticies are supplimented with a curve fitting function
-        /// </summary>
-        CURVEPOLYGON = 6,
-        /// <summary>
-        /// Ring of line segments with a line width
-        /// </summary>
-        CLOSEDCURVE = 7
-    };
+        long Section { get; }
+    }
 
-    /// <summary>
-    /// An interface to an annotation that marks a location in a structure.  Locations on the same section should not overlap.  Locations on adjacent structure physically connected should be linked.
-    /// </summary>
     public interface ILocationReadOnly : IEquatable<ILocationReadOnly>
     {
-        /// <summary>
-        /// Unique ID of the location
-        /// </summary>
         ulong ID { get; }
-
-        /// <summary>
-        /// The structure ID the annotation belongs to
-        /// </summary>
         ulong ParentID { get; }
 
-        /// <summary>
-        /// True if the location marks where a structure process ends as part of normal biology
-        /// </summary>
         bool Terminal { get; }
+        bool OffEdge { get; } 
 
-        /// <summary>
-        /// True if the location marks where a structure goes off the edge of a volume
-        /// </summary>
-        bool OffEdge { get; }
-
-        /// <summary>
-        /// True if the location is a vericosity cap, this terminates a process in a structure
-        /// </summary>
         bool IsVericosityCap { get; }
 
-        /// <summary>
-        /// True if the location indicates a boundary beyond which the structure cannot be traced
-        /// </summary>
         bool IsUntraceable { get; }
 
-        IDictionary<string, string> Attributes { get; }
-
-        long UnscaledZ { get; }
-
-        string TagsXml { get; }
+        IReadOnlyDictionary<string, string> Attributes { get; }
 
         /// <summary>
-        /// What type of shape is used to encode this annotation
+        /// Z as stored in the database, which is a section number
         /// </summary>
+        long UnscaledZ { get; }
+          
         LocationType TypeCode { get; }
 
         /// <summary>
@@ -81,10 +35,73 @@ namespace Viking.AnnotationServiceTypes.Interfaces
         /// </summary>
         double Z { get; }
 
+        double? Width { get; }
+
+
+        string MosaicGeometryWKT { get; }
         /// <summary>
         /// Volume space shape
         /// </summary>
-        Microsoft.SqlServer.Types.SqlGeometry Geometry { get; }
+        string VolumeGeometryWKT {get;} 
+    }
+
+    /// <summary>
+    /// The interface to our model object
+    /// </summary>
+    public interface ILocation : IDataObjectWithKey<Int64>, IEquatable<ILocation>, IChangeAction
+    {   
+        long? ParentID { get; set; }
+
+        bool Terminal { get; set; }
+        bool OffEdge { get; set; }
+
+        string Attributes { get; set; }
+        
+        /// <summary>
+        /// The section number the annotation was placed on (Unscaled Z)
+        /// </summary>
+        long SectionNumber { get; set; }
+
+        string TagsXml { get; set; }
+
+        bool Closed { get; }
+
+        string Username { get; }
+
+        /// <summary>
+        /// What type (geometric shape) of annotation is it?
+        /// </summary>
+        LocationType TypeCode { get; set; }
+          
+        GridVector3 VolumePosition { get; }
+
+        GridVector3 MosaicPosition { get; }
+         
+        DateTime LastModified { get; }
+
+        DateTime Created { get; }
+
+        /// <summary>
+        /// Computed column, the radius of a circle with equal area to the annotations geometry.
+        /// </summary>
+        double Radius { get; }
+
+        /// <summary>
+        /// If this is a 1-D geometry, how wide is the line/curve?
+        /// </summary>
+        double? Width { get; set; }
+
+        /// <summary>
+        /// List of location IDs linked to this location
+        /// </summary>
+        IList<long> Links { get; }
+
+        string MosaicGeometryWKT { get; set; }
+
+        /// <summary>
+        /// Volume space shape
+        /// </summary>
+        string VolumeGeometryWKT { get; set; }
 
     }
 }

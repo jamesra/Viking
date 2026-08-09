@@ -4,25 +4,65 @@ using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using WebAnnotationModel.Objects;
 using Grpc.Net.Client;
 using System.Threading.Tasks;
-using Geometry;
 using System;
 using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
-using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Viking.AnnotationServiceTypes.Interfaces;
+using WebAnnotationModel.gRPC;
 
-namespace WebAnnotationModel.gRPC
+namespace Microsoft.Extensions.DependencyInjection
 {
     public static class StructureTypeConverterExtensions
     {
-        public static IServiceCollection AddStructureTypeServer(this IServiceCollection service, string endpoint)
-        { 
-            service.AddSingleton<IServerAnnotationsClient<long, IStructureType, IStructureType, IStructureType>, StructureTypesClient>(); 
+        public static IServiceCollection AddStructureTypeServer(this IServiceCollection service)
+        {
+            service.AddSingleton<IServerAnnotationsClientFactory<IStructureTypesRepository>, StructureTypesClientFactory>();
+            service.AddSingleton<IServerAnnotationsClientFactory<IServerAnnotationsClient<long, IStructureType, IStructureType, IStructureType>>, StructureTypesClientFactory>();
             return service;
         }
-    } 
+    }
+}
+
+namespace WebAnnotationModel.gRPC
+{
+    public class StructureTypesClientFactory :
+        IServerAnnotationsClientFactory<IStructureTypesRepository>,
+        IServerAnnotationsClientFactory<IServerAnnotationsClient<long, IStructureType, IStructureType, IStructureType>>
+    {
+        private readonly IGrpcChannelManager _channelManager;
+        private readonly GrpcRepositorySettings _config;
+        private readonly IObjectConverter<StructureTypeObj, StructureType> _clientObjConverter;
+
+        public StructureTypesClientFactory(
+            IGrpcChannelManager channelManager,
+            IOptions<GrpcRepositorySettings> config,
+            IObjectConverter<StructureTypeObj, StructureType> clientObjConverter)
+        {
+            _channelManager = channelManager;
+            _config = config.Value;
+            _clientObjConverter = clientObjConverter;
+        }
+
+        public IStructureTypesRepository GetOrCreate()
+        {
+            return CreateClient();
+        }
+
+        IServerAnnotationsClient<long, IStructureType, IStructureType, IStructureType>
+            IServerAnnotationsClientFactory<IServerAnnotationsClient<long, IStructureType, IStructureType, IStructureType>>.GetOrCreate()
+        {
+            return CreateClient();
+        }
+
+        private StructureTypesClient CreateClient()
+        {
+            var channel = _channelManager.GetOrCreate(_config.Endpoint);
+            return new StructureTypesClient(channel, _clientObjConverter);
+        }
+    }
 
     public interface
         IStructureTypesRepository : IServerAnnotationsClient<long, IStructureType, IStructureType, IStructureType>
@@ -33,9 +73,9 @@ namespace WebAnnotationModel.gRPC
     public class StructureTypesClient : IStructureTypesRepository
     {
         private readonly AnnotateStructureTypes.AnnotateStructureTypesClient Client;
-        private IObjectConverter<IStructureType, StructureType> ClientObjConverter;
+        private readonly IObjectConverter<StructureTypeObj, StructureType> ClientObjConverter;
 
-        StructureTypesClient(GrpcChannel channel, IObjectConverter<IStructureType, StructureType> clientObjConverter)
+        public StructureTypesClient(GrpcChannel channel, IObjectConverter<StructureTypeObj, StructureType> clientObjConverter)
         {
             ClientObjConverter = clientObjConverter;
             Client = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
@@ -45,7 +85,7 @@ namespace WebAnnotationModel.gRPC
         {
             CreateStructureTypeRequest request = new CreateStructureTypeRequest()
             {
-                Obj = ClientObjConverter.Convert(obj)
+                Obj = ClientObjConverter.Convert((StructureTypeObj)obj)
             };
 
             var result = await Client.CreateStructureTypeAsync(request, cancellationToken: token);
@@ -108,7 +148,7 @@ namespace WebAnnotationModel.gRPC
         public async Task<UpdateResults<long, IStructureType>> UpdateAsync(IEnumerable<IStructureType> objs, CancellationToken token)
         {
             UpdateStructureTypesRequest request = new UpdateStructureTypesRequest();
-            var serverObjs = objs.Select(o => ClientObjConverter.Convert(o));
+            var serverObjs = objs.Select(o => ClientObjConverter.Convert((StructureTypeObj)o));
             request.Objs.AddRange(serverObjs.Select(o => (StructureTypeChangeRequest)o).Where(o => o != null));
 
             var response = await Client.UpdateAsync(request, cancellationToken: token);
@@ -118,7 +158,9 @@ namespace WebAnnotationModel.gRPC
 
         private UpdateResults<long, IStructureType> CollectResults(UpdateStructureTypesResponse response)
         {
-            var result = new UpdateResults<long, IStructureType>();
+            var added = new List<IStructureType>();
+            var updated = new List<IStructureType>();
+            var deleted = new List<long>();
             foreach (var ro in response.Results)
             {
                 switch (ro.ActionCase)
@@ -126,18 +168,18 @@ namespace WebAnnotationModel.gRPC
                     case StructureTypeChangeResponse.ActionOneofCase.None:
                         break;
                     case StructureTypeChangeResponse.ActionOneofCase.Created:
-                        result.AddedObjects.Add(ro.Created);
+                        added.Add(ro.Created);
                         break;
                     case StructureTypeChangeResponse.ActionOneofCase.Updated:
-                        result.UpdatedObjects.Add(ro.Updated);
+                        updated.Add(ro.Updated);
                         break;
                     case StructureTypeChangeResponse.ActionOneofCase.DeletedId:
-                        result.DeletedIDs.Add(ro.DeletedId);
+                        deleted.Add(ro.DeletedId);
                         break;
                 }
             }
 
-            return result;
+            return new UpdateResults<long, IStructureType>(added.ToArray(), updated.ToArray(), deleted.ToArray());
         }
 
         public async Task<IStructureType[]> GetAll()

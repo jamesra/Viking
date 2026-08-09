@@ -1,30 +1,39 @@
+# Local gRPC annotation test stack (Identity + SQL + gRPC):
+#   Servers/GrpcAnnotationService/scripts/Start-AnnotationTestStack.ps1 -ApplySchema -Build
+# Or:
+#   docker compose --env-file D:/Docker/Builds/AnnotationSql/.env \
+#     -f docker-compose.yml -f docker-compose.annotation-db.yml up --build \
+#     identity-devtest annotation-sql grpc-annotation-service
+# See Servers/AnnotationDatabase/config-template/README.md
+
 services:
+  # Throwaway Identity Server used only to run the gRPC annotation integration
+  # tests locally, so tests don't need to hit the production identity.codepharm.net
+  # instance. See Servers/IdentityServer/DevTest/Config.cs for scopes/clients/users.
+  identity-devtest:
+    build:
+      context: .
+      dockerfile: Servers/IdentityServer/DevTest/Dockerfile
+    ports:
+      - "5020:80"
+    networks:
+      - viking-network
+
   grpc-annotation-service:
     build:
       context: .
       dockerfile: Servers/GrpcAnnotationService/Dockerfile
+    # Real secrets/connection info live outside the repo, see
+    # Servers/GrpcAnnotationService/config-template/README.md for setup.
+    env_file:
+      - D:/Docker/Builds/GrpcAnnotationService/.env.Docker
     ports:
-      - "5001:80"
-      - "5002:443"
+      # 5000/5001 are already used by the identity-server stack on this host.
+      - "5010:80"
+      - "5011:443"
     volumes:
       - ./Servers/GrpcAnnotationService/appsettings.json:/app/appsettings.json:ro
       - ./Servers/GrpcAnnotationService/appsettings.Development.json:/app/appsettings.Development.json:ro
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:80;https://+:443
-    networks:
-      - viking-network
-
-  grpc-annotation:
-    build:
-      context: .
-      dockerfile: Servers/GrpcAnnotation/Dockerfile
-    ports:
-      - "5000:80"
-      - "5003:443"
-    volumes:
-      - ./Servers/GrpcAnnotation/appsettings.json:/app/appsettings.json:ro
-      - ./Servers/GrpcAnnotation/appsettings.Development.json:/app/appsettings.Development.json:ro
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80;https://+:443

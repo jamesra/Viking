@@ -13,10 +13,9 @@ namespace WebAnnotationModel.gRPC
     public class PermittedStructureLinkStore : StoreBaseWithKey<PermittedStructureLinkKey, PermittedStructureLinkObj, IPermittedStructureLink, PermittedStructureLinkObj, IPermittedStructureLink>, IPermittedStructureLinkStore
     {
         public PermittedStructureLinkStore(IServerAnnotationsClientFactory<IServerAnnotationsClient<PermittedStructureLinkKey, IPermittedStructureLink, PermittedStructureLinkObj, IPermittedStructureLink>> clientFactory,
-            IStoreServerQueryResultsHandler<PermittedStructureLinkKey, PermittedStructureLinkObj, IPermittedStructureLink> serverQueryResultsHandler,
             IObjectConverter<PermittedStructureLinkObj, IPermittedStructureLink> objToServerObjConverter,
             IObjectConverter<IPermittedStructureLink, PermittedStructureLinkObj> serverObjToObjConverter,
-            IQueryLogger log) : base(clientFactory, serverQueryResultsHandler, objToServerObjConverter, serverObjToObjConverter, log)
+            IQueryLogger log) : base(clientFactory, null, objToServerObjConverter, serverObjToObjConverter, log)
         {
         }
          

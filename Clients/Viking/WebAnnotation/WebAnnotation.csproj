@@ -111,6 +111,7 @@
 		<ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition="'$(TargetFramework)' == 'net48'" />
 		<ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationModel\WebAnnotationModel.csproj" />
+		<ProjectReference Include="..\..\WebAnnotationModel.gRPC\WebAnnotationModel.gRPC.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationViewModels\WebAnnotationViewModels.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationWPFControls\WebAnnotationWPFControls.csproj" />
 		<ProjectReference Include="..\NGVV\VikingCore.csproj" />
@@ -119,6 +120,8 @@
 	<ItemGroup>
 		<PackageReference Include="EntityFramework" Version="6.5.1" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+		<PackageReference Include="System.Net.Http.WinHttpHandler" Version="8.0.0" />
 		<PackageReference Include="log4net" Version="2.0.13" />
 		<PackageReference Include="MathNet.Numerics" Version="5.0.0" /> 
 		<PackageReference Include="NETStandard.Library" Version="2.0.3" />

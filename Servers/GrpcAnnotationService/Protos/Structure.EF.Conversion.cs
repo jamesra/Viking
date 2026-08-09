@@ -7,7 +7,7 @@ namespace gRPCAnnotationService.Protos
             var converted = new Viking.DataModel.Annotation.Structure
             {
                 Id = src.Id,
-                ParentId = src.HasParentId ? src.ParentId : default,
+                ParentId = src.HasParentId ? src.ParentId : (long?)null,
                 Confidence = src.Confidence,
                 Created = src.Created.ToDateTime(),
                 Label = src.Label,
@@ -40,9 +40,9 @@ namespace gRPCAnnotationService.Protos
                 Id = src.Id,
                 ParentId = src.ParentId.HasValue ? src.ParentId.Value : 0,
                 Confidence = src.Confidence,
-                Created = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(src.Created),
+                Created = ToUtcTimestamp(src.Created),
                 Label = src.Label,
-                LastModified = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(src.LastModified),
+                LastModified = ToUtcTimestamp(src.LastModified),
                 Notes = src.Notes,
                 TypeId = src.TypeId,
                 Verified = src.Verified,
@@ -57,5 +57,8 @@ namespace gRPCAnnotationService.Protos
             return value;
         }
 
+        private static Google.Protobuf.WellKnownTypes.Timestamp ToUtcTimestamp(System.DateTime dateTime) =>
+            Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(
+                System.DateTime.SpecifyKind(dateTime, System.DateTimeKind.Utc));
     }
 }

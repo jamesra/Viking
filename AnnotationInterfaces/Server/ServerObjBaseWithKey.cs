@@ -3,7 +3,7 @@ using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace Viking.AnnotationServiceTypes
 {
-    public abstract class ServerObjBaseWithKey<KEY, T> : ServerObjBase<T>, IEquatable<ServerObjBaseWithKey<KEY, T>>
+    abstract public class ServerObjBaseWithKey<KEY, T> : ServerObjBase<T>, IEquatable<ServerObjBaseWithKey<KEY, T>>
         where KEY : struct, IEquatable<KEY>, IComparable<KEY>
         where T : IDataObjectWithKey<KEY>, IChangeAction, IEquatable<T>, new()
     {
@@ -19,23 +19,18 @@ namespace Viking.AnnotationServiceTypes
 
         public override bool Equals(object obj)
         {
-            ServerObjBaseWithKey<KEY, T> locObj = obj as ServerObjBaseWithKey<KEY, T>;
-            if (locObj != null)
-            {
-                return this.Equals(locObj);
-            }
-            else
-                return base.Equals(obj);
+            if (obj is ServerObjBaseWithKey<KEY, T> locObj) 
+                return this.Equals(locObj); 
+            
+            return base.Equals(obj);
         }
 
         public static bool operator ==(ServerObjBaseWithKey<KEY, T> A, ServerObjBaseWithKey<KEY, T> B)
         {
-            if (System.Object.ReferenceEquals(A, B))
-            {
-                return true;
-            }
+            if (ReferenceEquals(A, B)) 
+                return true; 
 
-            if (A is not null)
+            if (A is object)
                 return A.Equals(B);
 
             return false;
@@ -48,7 +43,7 @@ namespace Viking.AnnotationServiceTypes
                 return false;
             }
 
-            if (A is not null)
+            if (A is object)
                 return !A.Equals(B);
 
             return true;

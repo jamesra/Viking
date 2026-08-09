@@ -46,12 +46,15 @@ namespace WebAnnotationModel.gRPC
                 IStoreServerQueryResultsHandler<KEY, OBJECT, SERVER_OBJECT> serverQueryResultsHandler,
                 IObjectConverter<OBJECT, SERVER_OBJECT> objToServerObjConverter,
                 IObjectConverter<SERVER_OBJECT, OBJECT> serverObjToObjConverter,
-                IQueryLogger queryLogger = null)
+                IQueryLogger queryLogger = null,
+                IObjectUpdater<OBJECT, SERVER_OBJECT> objUpdater = null)
         {
             ClientFactory = clientFactory;
             ClientObjConverter = objToServerObjConverter;
             ServerObjConverter = serverObjToObjConverter;
-            ServerQueryResultsHandler = serverQueryResultsHandler;
+            // When DI cannot supply a handler (circular store↔handler dependency), build one against this store.
+            ServerQueryResultsHandler = serverQueryResultsHandler
+                ?? new StoreServerQueryResultsHandler<KEY, OBJECT, SERVER_OBJECT>(this, serverObjToObjConverter, objUpdater);
             QueryLogger = queryLogger;
             OnOBJECTPropertyChangedEventHandler = new System.ComponentModel.PropertyChangedEventHandler(OnObjectPropertyChanged);
         }
@@ -87,11 +90,24 @@ namespace WebAnnotationModel.gRPC
             CallOnCollectionChanged(inventory);
             if (inventory.ObjectsInStore.Count > 0)
             {
-                return inventory.ObjectsInStore[0];
+                var added = inventory.ObjectsInStore[0];
+                TrackForSaveIfPending(added);
+                return added;
             }
 
             return default;
         } 
+
+        /// <summary>
+        /// Add() subscribes to PropertyChanged after the object already exists, so a DBAction assigned
+        /// during construction (e.g. DBACTION.INSERT) is never observed by OnObjectPropertyChanged.
+        /// Queue it for Save() explicitly here instead.
+        /// </summary>
+        private void TrackForSaveIfPending(OBJECT obj)
+        {
+            if (obj is IChangeAction changeObj && changeObj.DBAction != DBACTION.NONE)
+                ChangedObjects.TryAdd(obj.ID, obj);
+        }
 
         /// <summary>
         /// Add an item to the store and send notification events
@@ -106,6 +122,8 @@ namespace WebAnnotationModel.gRPC
             //Default implementation
             ChangeInventory<OBJECT> inventory = InternalAdd(objs.ToArray());
             CallOnCollectionChanged(inventory);
+            foreach (var added in inventory.ObjectsInStore)
+                TrackForSaveIfPending(added);
             return inventory.ObjectsInStore; 
         }
 
@@ -284,12 +302,20 @@ namespace WebAnnotationModel.gRPC
             return GetObjectByID(ID, true, false, token);
         }
 
-        /*
-        public OBJECT this[KEY index]
-        {
-            get { return IDToObject[index]; }
-        }
-        */
+        /// <summary>
+        /// Synchronous convenience accessor for legacy UI call sites.
+        /// </summary>
+        public OBJECT this[KEY index] => GetObjectByID(index, true, false, CancellationToken.None).Result;
+
+        /// <summary>
+        /// Synchronous convenience overload equivalent to this[ID].
+        /// </summary>
+        public OBJECT GetObjectByID(KEY ID) => this[ID];
+
+        /// <summary>
+        /// Synchronous convenience overload equivalent to GetObjectByID(ID, AskServer, ForceRefreshFromServer: false, CancellationToken.None).
+        /// </summary>
+        public OBJECT GetObjectByID(KEY ID, bool AskServer) => GetObjectByID(ID, AskServer, false, CancellationToken.None).Result;
 
         /// <summary>
         /// Gets the requested location, first checking locally, then asking the server
@@ -687,7 +713,7 @@ namespace WebAnnotationModel.gRPC
 
         #endregion
          
-        public virtual async Task<bool> Save(CancellationToken token)
+        public override async Task<bool> Save(CancellationToken token)
         {
             List<OBJECT> changed = new List<OBJECT>(ChangedObjects.Count);
 
@@ -1092,6 +1118,14 @@ namespace WebAnnotationModel.gRPC
         Task<List<OBJECT>> IStoreWithKey<KEY, OBJECT>.GetObjectsByIDs(ICollection<KEY> IDs, bool AskServer, CancellationToken token)
         {
             return GetObjectsByIDs(IDs, AskServer, token);
+        }
+
+        /// <summary>
+        /// Synchronous convenience overload equivalent to GetObjectsByIDs(IDs, AskServer, CancellationToken.None).
+        /// </summary>
+        ICollection<OBJECT> IStoreWithKey<KEY, OBJECT>.GetObjectsByIDs(ICollection<KEY> IDs, bool AskServer)
+        {
+            return GetObjectsByIDs(IDs, AskServer, CancellationToken.None).Result;
         }
 
         Task<OBJECT> IStoreWithKey<KEY, OBJECT>.Refresh(KEY key, CancellationToken token)

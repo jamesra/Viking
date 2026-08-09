@@ -12,20 +12,24 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using Grpc.Net.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Viking;
 using Viking.Common;
 using Viking.UI;
 using WebAnnotationModel;
-using WebAnnotationModel.Service;
+using WebAnnotationModel.gRPC;
 using System.Net.Http;
 using rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Utils;
 using Viking.DependencyInjection;
 using Viking.Services.Grpc;
 using VikingXNAGraphics;
+using WebAnnotation.Services;
 using WebAnnotation.View;
+using SegmentationGrpcChannelManager = Viking.Services.Grpc.IGrpcChannelManager;
 
 namespace WebAnnotation
 {
@@ -711,7 +715,7 @@ namespace WebAnnotation
             if (_userSettingsDoc is null)
                 return false;
 
-            WebAnnotationModel.LocationObj lastLoc = WebAnnotationModel.Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, false);
+            WebAnnotationModel.Objects.LocationObj lastLoc = WebAnnotationModel.Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, false);
             if (lastLoc is null)
                 return false;
 
@@ -753,6 +757,17 @@ namespace WebAnnotation
                 var appSettings = provider.GetService<ApplicationSettings>();
                 return new WebAnnotationGrpcServiceConfiguration(appSettings);
             });
+
+            services.AddSingleton<IAnnotationAccessTokenProvider, VikingAnnotationAccessTokenProvider>();
+
+            // Endpoint is populated from VikingXML in InitializeModule before stores are resolved.
+            services.ConfigureAnnotationModel(
+                opts => { },
+                channelOpts =>
+                {
+                    // Grpc.Net.Client on .NET Framework requires an HTTP/2-capable handler.
+                    channelOpts.HttpHandler = new WinHttpHandler();
+                });
         }
 
         Task IModuleInitializer.InitializeAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
@@ -764,11 +779,11 @@ namespace WebAnnotation
 
             ServiceLocator.RebuildServiceProvider(collection =>
             {
-                collection.RemoveAll<IGrpcChannelManager>();
-                collection.AddSingleton<IGrpcChannelManager>(sp =>
+                collection.RemoveAll<SegmentationGrpcChannelManager>();
+                collection.AddSingleton<SegmentationGrpcChannelManager>(sp =>
                 {
                     var configuration = sp.GetRequiredService<IGrpcServiceConfiguration>();
-                    return new GrpcChannelManager(configuration);
+                    return new Viking.Services.Grpc.GrpcChannelManager(configuration);
                 });
             });
 
@@ -804,7 +819,7 @@ namespace WebAnnotation
                 AnnotationSettings.SegmentationServiceUrl = applicationSettings.SegmentationURL;
             }
 
-            serviceProvider?.GetService<IGrpcChannelManager>();
+            serviceProvider?.GetService<SegmentationGrpcChannelManager>();
 
             if (GetEndpointFromXML(volume.VolumeElement))
             {
@@ -818,7 +833,21 @@ namespace WebAnnotation
                 {
                     Trace.WriteLine("LoadUserPreferences timed out during initialization.");
                 }
-                WebAnnotationModel.Store.Init();
+
+                if (serviceProvider?.GetService<IOptions<GrpcRepositorySettings>>() is IOptions<GrpcRepositorySettings> grpcSettings
+                    && WebAnnotationModel.State.Endpoint != null)
+                {
+                    grpcSettings.Value.Endpoint = WebAnnotationModel.State.Endpoint;
+                }
+
+                if (serviceProvider?.GetService<WebAnnotationModel.IAnnotationStores>() is WebAnnotationModel.IAnnotationStores annotationStores)
+                {
+                    WebAnnotationModel.Store.Initialize(annotationStores);
+                }
+                else
+                {
+                    Trace.WriteLine("WebAnnotationModel.IAnnotationStores is not registered with the service provider. Store.X will throw until the gRPC composition root is completed.", "WebAnnotation");
+                }
                 return true;
             }
 

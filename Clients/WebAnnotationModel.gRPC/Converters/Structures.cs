@@ -13,7 +13,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace WebAnnotationModel.gRPC.Converters
 {
 
-    public class StructureServerToClientConverter : IObjectConverter<Structure, StructureObj>
+    public class StructureServerToClientConverter : IObjectConverter<Structure, StructureObj>,
+        IObjectConverter<IStructure, StructureObj>
     {
         public StructureObj Convert(Structure src)
         {
@@ -34,9 +35,27 @@ namespace WebAnnotationModel.gRPC.Converters
             
             return obj;
         }
+
+        public StructureObj Convert(IStructure src)
+        {
+            if (src is Structure concrete)
+                return Convert(concrete);
+
+            StructureObj obj =
+                new StructureObj((long)src.ID, src.TypeID)
+                {
+                    DBAction = DBACTION.NONE,
+                    Label = src.Label,
+                };
+
+            obj.SetAttributes(src.Attributes.ParseAttributes()).Wait();
+
+            return obj;
+        }
     }
 
-    public class  StructureClientToServerConverter : IObjectConverter<StructureObj, Structure>
+    public class  StructureClientToServerConverter : IObjectConverter<StructureObj, Structure>,
+        IObjectConverter<StructureObj, IStructure>
     {
         public Structure Convert(StructureObj src)
         { 
@@ -54,9 +73,13 @@ namespace WebAnnotationModel.gRPC.Converters
                 obj.ParentId = src.ParentID.Value;
 
             obj.Attributes = src.Attributes.ToXml();
-            
+
+            ((IChangeAction)obj).DBAction = src.DBAction;
+
             return obj;
         }
+
+        IStructure IObjectConverter<StructureObj, IStructure>.Convert(StructureObj src) => Convert(src);
     }
 
     public class StructureServerToClientUpdater : IObjectUpdater<StructureObj, Structure>
