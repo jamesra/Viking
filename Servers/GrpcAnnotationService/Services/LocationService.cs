@@ -624,7 +624,10 @@ namespace gRPCAnnotationService
         {
             var updated = src.ToLocation();
 
-            dst.ParentId = updated.ParentId;
+            // Proto3 defaults missing ParentId to 0; keep the existing parent rather than
+            // writing an invalid FK.
+            if (updated.ParentId != 0)
+                dst.ParentId = updated.ParentId;
             dst.Z = updated.Z;
             dst.Closed = updated.Closed;
             dst.Tags = updated.Tags;

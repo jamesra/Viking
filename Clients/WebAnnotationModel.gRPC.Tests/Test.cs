@@ -2070,6 +2070,99 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         [Test]
+        public async Task UpdateStructure_OmittingTypeId_PreservesExistingType()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var structuresClient = new AnnotateStructures.AnnotateStructuresClient(channel);
+            var typesClient = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+            var createdType = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
+            {
+                Obj = new StructureType
+                {
+                    Name = $"KeepType-{Guid.NewGuid():N}".Substring(0, 32),
+                    Code = "KT",
+                    Color = 0x102030,
+                    Created = now,
+                    LastModified = now,
+                    Username = _userIdentity.UserName,
+                }
+            });
+
+            long? structureId = null;
+            try
+            {
+                var created = await structuresClient.CreateStructureAsync(new CreateStructureRequest
+                {
+                    NewStructure = new Structure
+                    {
+                        TypeId = createdType.Result.Id,
+                        Label = "keep-type",
+                        Confidence = 0.5,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    }
+                });
+                structureId = created.NewStructure.Id;
+
+                // Proto3 default TypeId=0 must not wipe the FK.
+                var update = await structuresClient.UpdateAsync(new UpdateStructuresRequest
+                {
+                    Objs =
+                    {
+                        new StructureChangeRequest
+                        {
+                            Update = new Structure
+                            {
+                                Id = structureId.Value,
+                                Label = "keep-type-updated",
+                                Confidence = 0.6,
+                                Created = now,
+                                LastModified = Timestamp.FromDateTime(DateTime.UtcNow),
+                                Username = _userIdentity.UserName,
+                            }
+                        }
+                    }
+                });
+                Assert.That(update.Results[0].Success, Is.True);
+                Assert.That(update.Results[0].Updated.TypeId, Is.EqualTo(createdType.Result.Id));
+                Assert.That(update.Results[0].Updated.Label, Is.EqualTo("keep-type-updated"));
+
+                var fetched = await structuresClient.GetStructureByIDAsync(new GetStructureByIDRequest
+                {
+                    Id = structureId.Value
+                });
+                Assert.That(fetched.Result.TypeId, Is.EqualTo(createdType.Result.Id));
+            }
+            finally
+            {
+                if (structureId.HasValue)
+                {
+                    try
+                    {
+                        await structuresClient.UpdateAsync(new UpdateStructuresRequest
+                        {
+                            Objs = { new StructureChangeRequest { Delete = structureId.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                try
+                {
+                    await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                    {
+                        Objs = { new StructureTypeChangeRequest { Delete = createdType.Result.Id } }
+                    });
+                }
+                catch (RpcException) { }
+            }
+        }
+
+        [Test]
         public async Task UpdateStructure_AndGetStructuresOfType_Roundtrip()
         {
             var accessToken = await RequestAccessTokenAsync();

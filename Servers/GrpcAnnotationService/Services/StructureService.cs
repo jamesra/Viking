@@ -594,7 +594,9 @@ namespace gRPCAnnotationService
         {
             var updated = src.ToStructure();
 
-            dst.TypeId = updated.TypeId;
+            // Proto3 defaults missing TypeId to 0; never clobber an existing FK with that.
+            if (updated.TypeId != 0)
+                dst.TypeId = updated.TypeId;
             dst.Notes = updated.Notes;
             dst.Verified = updated.Verified;
             dst.Tags = updated.Tags;
