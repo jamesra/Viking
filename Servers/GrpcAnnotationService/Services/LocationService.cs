@@ -109,6 +109,7 @@ namespace gRPCAnnotationService
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
                 response.Results.AddRange(rows.Select(l => l.ToProtobufMessage()));
+                await AttachLocationLinksAsync(response.Results, context.CancellationToken);
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetLocationsForSection), e); }
@@ -147,6 +148,7 @@ namespace gRPCAnnotationService
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
                 response.Results.AddRange(rows.Select(l => l.ToProtobufMessage()));
+                await AttachLocationLinksAsync(response.Results, context.CancellationToken);
                 response.DeletedIds.AddRange(await DeletedIdsSince(request.Section, modifiedAfter));
                 return response;
             }
@@ -168,6 +170,7 @@ namespace gRPCAnnotationService
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
                 response.Results.AddRange(rows.Select(l => l.ToProtobufMessage()));
+                await AttachLocationLinksAsync(response.Results, context.CancellationToken);
                 response.DeletedIds.AddRange(await DeletedIdsSince(request.Z, modifiedAfter));
                 return response;
             }
@@ -188,6 +191,7 @@ namespace gRPCAnnotationService
 
                 var set = new AnnotationSet();
                 set.Locations.AddRange(locations.Select(l => l.ToProtobufMessage()));
+                await AttachLocationLinksAsync(set.Locations, context.CancellationToken);
                 foreach (var chunk in parentIds.Chunk())
                 {
                     var structures = await _context.Structures.AsNoTracking()
@@ -237,6 +241,7 @@ namespace gRPCAnnotationService
                     }
 
                     chunk.Locations.AddRange(batch.Select(l => l.ToProtobufMessage()));
+                    await AttachLocationLinksAsync(chunk.Locations, ct);
                     await responseStream.WriteAsync(chunk);
                     batch.Clear();
                 }
@@ -245,6 +250,7 @@ namespace gRPCAnnotationService
                 if (isFirst)
                     final.QueryExecutedTime = queryExecutedTime;
                 final.Locations.AddRange(batch.Select(l => l.ToProtobufMessage()));
+                await AttachLocationLinksAsync(final.Locations, ct);
                 final.DeletedIds.AddRange(await DeletedIdsSince(request.Z, modifiedAfter));
                 await responseStream.WriteAsync(final);
             }
@@ -512,6 +518,7 @@ namespace gRPCAnnotationService
         {
             var set = new AnnotationSet();
             set.Locations.AddRange(locations.Select(l => l.ToProtobufMessage()));
+            await AttachLocationLinksAsync(set.Locations, ct);
 
             var parentIds = locations.Select(l => l.ParentId).Distinct().ToArray();
             foreach (var parentChunk in parentIds.Chunk())

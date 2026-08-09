@@ -3008,6 +3008,18 @@ namespace WebAnnotationModel.gRPC.Tests
                     (l.SourceId == locA.Value && l.TargetId == locB.Value) ||
                     (l.SourceId == locB.Value && l.TargetId == locA.Value)));
 
+                var sectionLocs = await locationsClient.GetLocationsForSectionAsync(new GetLocationsForSectionRequest
+                {
+                    Section = section
+                });
+                Assert.That(sectionLocs.Results.First(l => l.Id == locA.Value).Links, Does.Contain(locB.Value));
+
+                var changes = await locationsClient.GetLocationChangesAsync(new GetLocationChangesRequest
+                {
+                    Section = section
+                });
+                Assert.That(changes.Results.First(l => l.Id == locA.Value).Links, Does.Contain(locB.Value));
+
                 var regionLinks = await locationsClient.GetLocationLinksForSectionInMosaicRegionAsync(
                     new GetLocationLinksForSectionInMosaicRegionRequest
                     {
