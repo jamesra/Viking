@@ -80,7 +80,7 @@ namespace gRPCAnnotationService
             try
             {
                 var queryStart = DateTime.UtcNow;
-                var modifiedAfter = request.ModifiedAfterThisUtcTime?.ToDateTime();
+                var modifiedAfter = TimestampFilters.ModifiedAfterOrNull(request.ModifiedAfterThisUtcTime);
 
                 var rows = await StructuresOnSection(request.Z, modifiedAfter).ToListAsync();
 
@@ -100,7 +100,7 @@ namespace gRPCAnnotationService
             {
                 var queryStart = DateTime.UtcNow;
                 var rows = await StructuresInRegion(request.Z, request.Region, request.MinRadius,
-                    request.ModifiedAfterThisUtcTime?.ToDateTime(), useVolumeCoordinates: false);
+                    TimestampFilters.ModifiedAfterOrNull(request.ModifiedAfterThisUtcTime), useVolumeCoordinates: false);
 
                 var response = new GetStructuresInMosaicRegionResponse
                 {
@@ -118,7 +118,7 @@ namespace gRPCAnnotationService
             {
                 var queryStart = DateTime.UtcNow;
                 var rows = await StructuresInRegion(request.Z, request.Region, request.MinRadius,
-                    request.ModifiedAfterThisUtcTime?.ToDateTime(), useVolumeCoordinates: true);
+                    TimestampFilters.ModifiedAfterOrNull(request.ModifiedAfterThisUtcTime), useVolumeCoordinates: true);
 
                 var response = new GetStructuresInVolumeRegionResponse
                 {

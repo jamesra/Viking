@@ -144,7 +144,9 @@ namespace WebAnnotationModel.gRPC
                 Text = geometryWellKnownText
             };
 
-            var request = new GetStructuresInMosaicRegionRequest() { Region = region, ModifiedAfterThisUtcTime = Timestamp.FromDateTime(modifiedAfter ?? DateTime.MinValue), Z = Z};
+            var request = new GetStructuresInMosaicRegionRequest() { Region = region, Z = Z };
+            if (modifiedAfter.HasValue)
+                request.ModifiedAfterThisUtcTime = Timestamp.FromDateTime(DateTime.SpecifyKind(modifiedAfter.Value, DateTimeKind.Utc));
             var response = await Client.GetStructuresInMosaicRegionAsync(request, cancellationToken: token);
 
             return new ServerUpdate<long, IStructure[]>(response.QueryExecutedTime.ToDateTime(), response.Results.Cast<IStructure>().ToArray(), response.DeletedIds.ToArray());
@@ -152,10 +154,9 @@ namespace WebAnnotationModel.gRPC
          
         public async Task<ServerUpdate<long, IStructure[]>> GetAsync(long Z, DateTime? modifiedAfter, CancellationToken token)
         {
-            var request = new GetStructuresForSectionRequest() {
-                Z = Z,
-                ModifiedAfterThisUtcTime = (modifiedAfter ?? DateTime.MinValue).ToTimestamp()
-            };
+            var request = new GetStructuresForSectionRequest() { Z = Z };
+            if (modifiedAfter.HasValue)
+                request.ModifiedAfterThisUtcTime = Timestamp.FromDateTime(DateTime.SpecifyKind(modifiedAfter.Value, DateTimeKind.Utc));
 
             var response = await Client.GetStructuresForSectionAsync(request, cancellationToken: token);
 

@@ -130,7 +130,7 @@ namespace gRPCAnnotationService
             try
             {
                 var queryStart = DateTime.UtcNow;
-                var modifiedAfter = request.ModifiedAfterThisUtcTime?.ToDateTime();
+                var modifiedAfter = TimestampFilters.ModifiedAfterOrNull(request.ModifiedAfterThisUtcTime);
 
                 var query = _context.Locations.AsNoTracking().Where(l => l.Z == request.Section);
                 if (modifiedAfter.HasValue)
@@ -154,7 +154,7 @@ namespace gRPCAnnotationService
             try
             {
                 var queryStart = DateTime.UtcNow;
-                var modifiedAfter = request.ModifiedAfterThisUtcTime?.ToDateTime();
+                var modifiedAfter = TimestampFilters.ModifiedAfterOrNull(request.ModifiedAfterThisUtcTime);
 
                 var rows = await MosaicRegionQuery(request.Z, request.Region, request.MinRadius, modifiedAfter)
                     .ToListAsync();
@@ -175,7 +175,7 @@ namespace gRPCAnnotationService
             try
             {
                 var queryStart = DateTime.UtcNow;
-                var modifiedAfter = request.ModifiedAfterThisUtcTime?.ToDateTime();
+                var modifiedAfter = TimestampFilters.ModifiedAfterOrNull(request.ModifiedAfterThisUtcTime);
 
                 var locations = await MosaicRegionQuery(request.Z, request.Region, request.MinRadius, modifiedAfter)
                     .ToListAsync();
@@ -211,7 +211,7 @@ namespace gRPCAnnotationService
             {
                 var queryStart = DateTime.UtcNow;
                 var queryExecutedTime = Timestamp.FromDateTime(DateTime.SpecifyKind(queryStart, DateTimeKind.Utc));
-                var modifiedAfter = request.ModifiedAfterThisUtcTime?.ToDateTime();
+                var modifiedAfter = TimestampFilters.ModifiedAfterOrNull(request.ModifiedAfterThisUtcTime);
                 var ct = context.CancellationToken;
 
                 var batch = new List<EfLocation>(RegionStreamBatchSize);
@@ -258,7 +258,7 @@ namespace gRPCAnnotationService
             {
                 var queryStart = DateTime.UtcNow;
                 var queryExecutedTime = Timestamp.FromDateTime(DateTime.SpecifyKind(queryStart, DateTimeKind.Utc));
-                var modifiedAfter = request.ModifiedAfterThisUtcTime?.ToDateTime();
+                var modifiedAfter = TimestampFilters.ModifiedAfterOrNull(request.ModifiedAfterThisUtcTime);
                 var ct = context.CancellationToken;
 
                 var batch = new List<EfLocation>(RegionStreamBatchSize);

@@ -177,9 +177,10 @@ namespace WebAnnotationModel.gRPC
             {
                 MinRadius = screenPixelSizeInVolume,
                 Region = region,
-                ModifiedAfterThisUtcTime = Timestamp.FromDateTime(DateTime.SpecifyKind(modifiedAfter ?? DateTime.MinValue, DateTimeKind.Utc)),
                 Z = Z
             };
+            if (modifiedAfter.HasValue)
+                request.ModifiedAfterThisUtcTime = Timestamp.FromDateTime(DateTime.SpecifyKind(modifiedAfter.Value, DateTimeKind.Utc));
 
             try
             {
@@ -241,9 +242,10 @@ namespace WebAnnotationModel.gRPC
             {
                 MinRadius = screenPixelSizeInVolume,
                 Region = region,
-                ModifiedAfterThisUtcTime = Timestamp.FromDateTime(DateTime.SpecifyKind(modifiedAfter ?? DateTime.MinValue, DateTimeKind.Utc)),
                 Z = Z
             };
+            if (modifiedAfter.HasValue)
+                request.ModifiedAfterThisUtcTime = Timestamp.FromDateTime(DateTime.SpecifyKind(modifiedAfter.Value, DateTimeKind.Utc));
 
             try
             {
@@ -286,10 +288,9 @@ namespace WebAnnotationModel.gRPC
 
         public async Task<ServerUpdate<long, ILocation[]>> GetAsync(long Z, DateTime? modifiedAfter, CancellationToken token)
         {
-            var request = new GetLocationChangesRequest() {
-                Section = Z,
-                ModifiedAfterThisUtcTime = (modifiedAfter ?? DateTime.MinValue).ToTimestamp()
-            };
+            var request = new GetLocationChangesRequest() { Section = Z };
+            if (modifiedAfter.HasValue)
+                request.ModifiedAfterThisUtcTime = Timestamp.FromDateTime(DateTime.SpecifyKind(modifiedAfter.Value, DateTimeKind.Utc));
 
             var response = await Client.GetLocationChangesAsync(request, cancellationToken: token);
 

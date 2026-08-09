@@ -2252,6 +2252,14 @@ namespace WebAnnotationModel.gRPC.Tests
             Assert.That(bySection.Results, Has.Some.Matches<Structure>(s => s.Id == 1));
             Assert.That(bySection.QueryExecutedTime, Is.Not.Null);
 
+            // DateTime.MinValue must mean "unbounded", not a SQL DATETIME comparison.
+            var withMinValue = await client.GetStructuresForSectionAsync(new GetStructuresForSectionRequest
+            {
+                Z = 1,
+                ModifiedAfterThisUtcTime = Timestamp.FromDateTime(DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc))
+            });
+            Assert.That(withMinValue.Results, Has.Some.Matches<Structure>(s => s.Id == 1));
+
             var byRegion = await client.GetStructuresInMosaicRegionAsync(new GetStructuresInMosaicRegionRequest
             {
                 Z = 1,
@@ -2262,6 +2270,121 @@ namespace WebAnnotationModel.gRPC.Tests
                 }
             });
             Assert.That(byRegion.Results, Has.Some.Matches<Structure>(s => s.Id == 1));
+        }
+
+        [Test]
+        public async Task UpdateStructureLinks_UpdatesBidirectional()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var structuresClient = new AnnotateStructures.AnnotateStructuresClient(channel);
+            var typesClient = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+            var createdType = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
+            {
+                Obj = new StructureType
+                {
+                    Name = $"UpdLink-{Guid.NewGuid():N}".Substring(0, 32),
+                    Code = "UL",
+                    Color = 0x112233,
+                    Created = now,
+                    LastModified = now,
+                    Username = _userIdentity.UserName,
+                }
+            });
+
+            long? aId = null;
+            long? bId = null;
+            try
+            {
+                async Task<long> CreateStructure(string label)
+                {
+                    var created = await structuresClient.CreateStructureAsync(new CreateStructureRequest
+                    {
+                        NewStructure = new Structure
+                        {
+                            TypeId = createdType.Result.Id,
+                            Label = label,
+                            Confidence = 0.5,
+                            Created = now,
+                            LastModified = now,
+                            Username = _userIdentity.UserName,
+                        }
+                    });
+                    return created.NewStructure.Id;
+                }
+
+                aId = await CreateStructure("upd-a");
+                bId = await CreateStructure("upd-b");
+
+                await structuresClient.CreateStructureLinkAsync(new CreateStructureLinkRequest
+                {
+                    NewLink = new StructureLink
+                    {
+                        SourceId = aId.Value,
+                        TargetId = bId.Value,
+                        Bidirectional = false,
+                    }
+                });
+
+                await structuresClient.UpdateLinksAsync(new UpdateStructureLinksRequest
+                {
+                    Objs =
+                    {
+                        new StructureLink
+                        {
+                            SourceId = aId.Value,
+                            TargetId = bId.Value,
+                            Bidirectional = true,
+                        }
+                    }
+                });
+
+                var linked = await structuresClient.GetLinkedStructuresAsync(new GetLinkedStructuresRequest
+                {
+                    Id = aId.Value
+                });
+                Assert.That(linked.Results, Has.Some.Matches<StructureLink>(l =>
+                    l.SourceId == aId.Value && l.TargetId == bId.Value && l.Bidirectional));
+            }
+            finally
+            {
+                if (aId.HasValue && bId.HasValue)
+                {
+                    try
+                    {
+                        await structuresClient.DeleteStructureLinkAsync(new DeleteStructureLinkRequest
+                        {
+                            SourceId = aId.Value,
+                            TargetId = bId.Value
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                foreach (var id in new[] { aId, bId })
+                {
+                    if (!id.HasValue) continue;
+                    try
+                    {
+                        await structuresClient.UpdateAsync(new UpdateStructuresRequest
+                        {
+                            Objs = { new StructureChangeRequest { Delete = id.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                try
+                {
+                    await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                    {
+                        Objs = { new StructureTypeChangeRequest { Delete = createdType.Result.Id } }
+                    });
+                }
+                catch (RpcException) { }
+            }
         }
 
         [Test]
