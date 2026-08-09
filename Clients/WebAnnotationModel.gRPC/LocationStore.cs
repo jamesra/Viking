@@ -163,11 +163,16 @@ namespace WebAnnotationModel.gRPC
             string regionWKT = ToWktPolygon(VolumeBounds);
             var progressiveResults = new List<LocationObj>();
 
+            // Incremental refresh: pass prior section watermark so DeletedLocations / updates apply.
+            DateTime? modifiedAfter = null;
+            if (LastQueryForSection.TryGetValue(SectionNumber, out var lastQuery) && lastQuery > DateTime.MinValue)
+                modifiedAfter = lastQuery;
+
             // Prefer progressive merge when the concrete gRPC client is available.
             if (client is LocationsClient locationsClient)
             {
                 var response = await locationsClient.GetAsync(
-                    SectionNumber, regionWKT, ScreenPixelSizeInVolume, null, token,
+                    SectionNumber, regionWKT, ScreenPixelSizeInVolume, modifiedAfter, token,
                     onChunk: async update =>
                     {
                         if (token.IsCancellationRequested)
@@ -194,7 +199,7 @@ namespace WebAnnotationModel.gRPC
                         .ToList();
             }
 
-            var unary = await client.GetAsync(SectionNumber, regionWKT, ScreenPixelSizeInVolume, null, token);
+            var unary = await client.GetAsync(SectionNumber, regionWKT, ScreenPixelSizeInVolume, modifiedAfter, token);
 
             if (token.IsCancellationRequested)
                 return new List<LocationObj>();

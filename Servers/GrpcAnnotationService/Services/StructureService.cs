@@ -44,7 +44,9 @@ namespace gRPCAnnotationService
             if (obj == null)
                 throw new RpcException(new Status(StatusCode.NotFound, $"Structure ID {request.Id} not found"));
 
-            return new GetStructureByIDResponse { Result = obj.ToProtobufMessage() };
+            var result = obj.ToProtobufMessage();
+            await AttachStructureLinksAsync(new[] { result }, context.CancellationToken);
+            return new GetStructureByIDResponse { Result = result };
         }
 
         public override async Task<GetStructuresByIDResponse> GetStructuresByID(GetStructuresByIDRequest request, ServerCallContext context)
@@ -59,6 +61,7 @@ namespace gRPCAnnotationService
                     response.Results.AddRange(rows.Select(s => s.ToProtobufMessage()));
                 }
 
+                await AttachStructureLinksAsync(response.Results, context.CancellationToken);
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetStructuresByID), e); }
