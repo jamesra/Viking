@@ -117,6 +117,18 @@ namespace WebAnnotationModel.gRPC
         }
 
         /// <summary>
+        /// Hydrate LocationLinkStore from Location.Links peer IDs embedded on by-ID responses.
+        /// </summary>
+        protected override Task OnServerObjectsLoaded(IEnumerable<ILocation> objs, DateTime queryTime)
+        {
+            var links = objs
+                .Where(l => l != null && l.Links != null)
+                .SelectMany(l => l.Links.Select(peer => (ILocationLink)new LocationLinkObj(peer, l.ID)))
+                .ToArray();
+            return _locationLinkStore.MergeServerLinksAsync(links, queryTime);
+        }
+
+        /// <summary>
         /// When a cached location moves between sections, keep the section index coherent.
         /// </summary>
         protected override void OnObjectPropertyChanged(object sender, PropertyChangedEventArgs e)

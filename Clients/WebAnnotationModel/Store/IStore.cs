@@ -323,6 +323,11 @@ namespace WebAnnotationModel
         /// applying server-reported deletes. Optional on backends that do not support section sync.
         /// </summary>
         Task GetLinksForSectionAsync(long section, DateTime? modifiedAfter = null, CancellationToken token = default);
+
+        /// <summary>
+        /// Merge location links embedded on Location.Links (or equivalent) into the local store.
+        /// </summary>
+        Task MergeServerLinksAsync(IEnumerable<ILocationLink> links, DateTime? queryTime = null, CancellationToken token = default);
     }
 
     public interface IStructureStore : IStoreWithParent<long, StructureObj>

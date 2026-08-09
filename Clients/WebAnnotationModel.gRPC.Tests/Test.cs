@@ -2007,6 +2007,12 @@ namespace WebAnnotationModel.gRPC.Tests
                 });
                 Assert.That(linkedFromA.Results, Does.Contain(locB.Value));
 
+                var byIdA = await locationsClient.GetLocationByIDAsync(new GetLocationByIDRequest
+                {
+                    Id = locA.Value
+                });
+                Assert.That(byIdA.Result.Links, Does.Contain(locB.Value));
+
                 await locationsClient.DeleteLocationLinkAsync(new DeleteLocationLinkRequest
                 {
                     SourceId = locA.Value,

@@ -151,6 +151,7 @@ namespace gRPCAnnotationService
 
                 var response = new GetStructuresOfTypeResponse();
                 response.Results.AddRange(rows.Select(s => s.ToProtobufMessage()));
+                await AttachStructureLinksAsync(response.Results, context.CancellationToken);
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetStructuresOfType), e); }
@@ -165,6 +166,7 @@ namespace gRPCAnnotationService
 
                 var response = new GetChildStructuresResponse();
                 response.Results.AddRange(rows.Select(s => s.ToProtobufMessage()));
+                await AttachStructureLinksAsync(response.Results, context.CancellationToken);
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetChildStructures), e); }

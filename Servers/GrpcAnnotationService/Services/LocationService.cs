@@ -43,7 +43,9 @@ namespace gRPCAnnotationService
             if (obj == null)
                 throw new RpcException(new Status(StatusCode.NotFound, $"Location ID {request.Id} not found"));
 
-            return new GetLocationByIDResponse { Result = obj.ToProtobufMessage() };
+            var result = obj.ToProtobufMessage();
+            await AttachLocationLinksAsync(new[] { result }, context.CancellationToken);
+            return new GetLocationByIDResponse { Result = result };
         }
 
         public override async Task<GetLocationsByIDResponse> GetLocationsByID(GetLocationsByIDRequest request, ServerCallContext context)
@@ -58,6 +60,7 @@ namespace gRPCAnnotationService
                     response.Results.AddRange(rows.Select(l => l.ToProtobufMessage()));
                 }
 
+                await AttachLocationLinksAsync(response.Results, context.CancellationToken);
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetLocationsByID), e); }
@@ -550,6 +553,33 @@ namespace gRPCAnnotationService
 
         private static ProtoLocationLink ToProtobufMessage(EfLocationLink src) =>
             new ProtoLocationLink { SourceId = src.A, TargetId = src.B };
+
+        /// <summary>
+        /// FindAsync / AsNoTracking by-ID queries do not load LocationLink navigations.
+        /// Batch-fill Location.Links (peer IDs) so clients can hydrate LocationLinkStore.
+        /// </summary>
+        private async Task AttachLocationLinksAsync(IList<ProtoLocation> locations, CancellationToken ct)
+        {
+            if (locations.Count == 0)
+                return;
+
+            var ids = locations.Select(l => l.Id).ToArray();
+            var links = await _context.LocationLinks.AsNoTracking()
+                .Where(l => ids.Contains(l.A) || ids.Contains(l.B))
+                .ToListAsync(ct);
+
+            if (links.Count == 0)
+                return;
+
+            var byId = locations.ToDictionary(l => l.Id);
+            foreach (var link in links)
+            {
+                if (byId.TryGetValue(link.A, out var a) && !a.Links.Contains(link.B))
+                    a.Links.Add(link.B);
+                if (link.B != link.A && byId.TryGetValue(link.B, out var b) && !b.Links.Contains(link.A))
+                    b.Links.Add(link.A);
+            }
+        }
 
         private async Task AddLinkIfMissing(long source, long target, string username)
         {

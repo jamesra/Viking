@@ -106,5 +106,19 @@ namespace WebAnnotationModel.gRPC
                 .ConfigureAwait(false);
             await CallOnCollectionChanged(changes).ConfigureAwait(false);
         }
+
+        public async Task MergeServerLinksAsync(IEnumerable<ILocationLink> links, DateTime? queryTime = null, CancellationToken token = default)
+        {
+            var arr = links?.Where(l => l != null).ToArray() ?? Array.Empty<ILocationLink>();
+            if (arr.Length == 0)
+                return;
+
+            token.ThrowIfCancellationRequested();
+            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(
+                new ServerUpdate<LocationLinkKey, ILocationLink[]>(
+                    queryTime ?? DateTime.UtcNow, arr, Array.Empty<LocationLinkKey>()))
+                .ConfigureAwait(false);
+            await CallOnCollectionChanged(changes).ConfigureAwait(false);
+        }
     }
 }
