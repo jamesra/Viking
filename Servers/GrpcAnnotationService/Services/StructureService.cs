@@ -273,7 +273,12 @@ namespace gRPCAnnotationService
             {
                 var rows = await _context.Procedures.SelectUnfinishedStructureBranchesWithPositionAsync(request.Id);
                 var response = new GetUnfinishedLocationsWithPositionResponse();
-                response.Results.AddRange(rows.Select(r => r.ID));
+                response.Results.AddRange(rows.Select(r => new LocationPositionOnly
+                {
+                    Id = r.ID,
+                    Position = new AnnotationPoint { X = r.X, Y = r.Y, Z = r.Z },
+                    Radius = r.Radius ?? 0
+                }));
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetUnfinishedLocationsWithPosition), e); }

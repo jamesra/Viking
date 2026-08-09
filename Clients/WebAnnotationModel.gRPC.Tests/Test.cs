@@ -512,6 +512,282 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         [Test]
+        public async Task GetUnfinishedLocationsWithPosition_LinkedPair_ReturnsCoords()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var locationsClient = new AnnotateLocations.AnnotateLocationsClient(channel);
+            var structuresClient = new AnnotateStructures.AnnotateStructuresClient(channel);
+            var typesClient = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+            var createdType = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
+            {
+                Obj = new StructureType
+                {
+                    Name = $"UnfinPos-{Guid.NewGuid():N}".Substring(0, 32),
+                    Code = "UP",
+                    Color = 0x778899,
+                    Created = now,
+                    LastModified = now,
+                    Username = _userIdentity.UserName,
+                }
+            });
+
+            long? structureId = null;
+            long? locA = null;
+            long? locB = null;
+            try
+            {
+                var structure = await structuresClient.CreateStructureAsync(new CreateStructureRequest
+                {
+                    NewStructure = new Structure
+                    {
+                        TypeId = createdType.Result.Id,
+                        Label = "unfin-pos",
+                        Confidence = 0.5,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    }
+                });
+                structureId = structure.NewStructure.Id;
+
+                async Task<long> CreatePoint(double x, double y)
+                {
+                    var created = await locationsClient.CreateLocationAsync(new CreateLocationRequest
+                    {
+                        Obj = new Location
+                        {
+                            ParentId = structureId.Value,
+                            Section = 6,
+                            MosaicPosition = new AnnotationPoint { X = x, Y = y },
+                            VolumePosition = new AnnotationPoint { X = x, Y = y },
+                            MosaicShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = $"POINT ({x} {y})" },
+                            VolumeShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = $"POINT ({x} {y})" },
+                            TypeCode = AnnotationType.Circle,
+                            Created = now,
+                            LastModified = now,
+                            Username = _userIdentity.UserName,
+                        }
+                    });
+                    return created.Result.Id;
+                }
+
+                locA = await CreatePoint(70.5, 80.5);
+                locB = await CreatePoint(90.25, 100.75);
+                await locationsClient.CreateLocationLinkAsync(new CreateLocationLinkRequest
+                {
+                    SourceId = locA.Value,
+                    TargetId = locB.Value
+                });
+
+                var unfinished = await structuresClient.GetUnfinishedLocationsWithPositionAsync(
+                    new GetUnfinishedLocationsWithPositionRequest { Id = structureId.Value });
+
+                Assert.That(unfinished.Results, Has.Some.Matches<Viking.AnnotationServiceTypes.gRPC.V1.Protos.LocationPositionOnly>(t =>
+                    t.Id == locA.Value &&
+                    t.Position != null &&
+                    Math.Abs(t.Position.X - 70.5) < 0.01 &&
+                    Math.Abs(t.Position.Y - 80.5) < 0.01 &&
+                    t.Position.Z == 6));
+                Assert.That(unfinished.Results, Has.Some.Matches<Viking.AnnotationServiceTypes.gRPC.V1.Protos.LocationPositionOnly>(t =>
+                    t.Id == locB.Value &&
+                    t.Position != null &&
+                    Math.Abs(t.Position.X - 90.25) < 0.01 &&
+                    Math.Abs(t.Position.Y - 100.75) < 0.01));
+            }
+            finally
+            {
+                if (locA.HasValue && locB.HasValue)
+                {
+                    try
+                    {
+                        await locationsClient.DeleteLocationLinkAsync(new DeleteLocationLinkRequest
+                        {
+                            SourceId = locA.Value,
+                            TargetId = locB.Value
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                foreach (var id in new[] { locA, locB })
+                {
+                    if (!id.HasValue) continue;
+                    try
+                    {
+                        await locationsClient.UpdateAsync(new UpdateLocationsRequest
+                        {
+                            Locations = { new LocationChangeRequest { Delete = id.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                if (structureId.HasValue)
+                {
+                    try
+                    {
+                        await structuresClient.UpdateAsync(new UpdateStructuresRequest
+                        {
+                            Objs = { new StructureChangeRequest { Delete = structureId.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                try
+                {
+                    await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                    {
+                        Objs = { new StructureTypeChangeRequest { Delete = createdType.Result.Id } }
+                    });
+                }
+                catch (RpcException) { }
+            }
+        }
+
+        [Test]
+        public async Task UpdateLocation_AndNumberOfLocations_Roundtrip()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var locationsClient = new AnnotateLocations.AnnotateLocationsClient(channel);
+            var structuresClient = new AnnotateStructures.AnnotateStructuresClient(channel);
+            var typesClient = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+            var createdType = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
+            {
+                Obj = new StructureType
+                {
+                    Name = $"UpdLoc-{Guid.NewGuid():N}".Substring(0, 32),
+                    Code = "UL",
+                    Color = 0x99AABB,
+                    Created = now,
+                    LastModified = now,
+                    Username = _userIdentity.UserName,
+                }
+            });
+
+            long? structureId = null;
+            long? locationId = null;
+            try
+            {
+                var structure = await structuresClient.CreateStructureAsync(new CreateStructureRequest
+                {
+                    NewStructure = new Structure
+                    {
+                        TypeId = createdType.Result.Id,
+                        Label = "upd-loc",
+                        Confidence = 0.5,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    }
+                });
+                structureId = structure.NewStructure.Id;
+
+                var created = await locationsClient.CreateLocationAsync(new CreateLocationRequest
+                {
+                    Obj = new Location
+                    {
+                        ParentId = structureId.Value,
+                        Section = 7,
+                        MosaicPosition = new AnnotationPoint { X = 11, Y = 12 },
+                        VolumePosition = new AnnotationPoint { X = 11, Y = 12 },
+                        MosaicShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (11 12)" },
+                        VolumeShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (11 12)" },
+                        TypeCode = AnnotationType.Circle,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    }
+                });
+                locationId = created.Result.Id;
+
+                var countBefore = await structuresClient.NumberOfLocationsAsync(new NumberOfLocationsRequest
+                {
+                    Id = structureId.Value
+                });
+                Assert.That(countBefore.Result, Is.EqualTo(1));
+
+                var update = await locationsClient.UpdateAsync(new UpdateLocationsRequest
+                {
+                    Locations =
+                    {
+                        new LocationChangeRequest
+                        {
+                            Update = new Location
+                            {
+                                Id = locationId.Value,
+                                ParentId = structureId.Value,
+                                Section = 7,
+                                MosaicPosition = new AnnotationPoint { X = 21, Y = 22 },
+                                VolumePosition = new AnnotationPoint { X = 21, Y = 22 },
+                                MosaicShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (21 22)" },
+                                VolumeShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (21 22)" },
+                                TypeCode = AnnotationType.Circle,
+                                Terminal = true,
+                                Created = now,
+                                LastModified = Timestamp.FromDateTime(DateTime.UtcNow),
+                                Username = _userIdentity.UserName,
+                            }
+                        }
+                    }
+                });
+                Assert.That(update.Results, Has.Count.EqualTo(1));
+                Assert.That(update.Results[0].Success, Is.True);
+                Assert.That(update.Results[0].Updated, Is.Not.Null);
+                Assert.That(update.Results[0].Updated.Terminal, Is.True);
+
+                var fetched = await locationsClient.GetLocationByIDAsync(new GetLocationByIDRequest
+                {
+                    Id = locationId.Value
+                });
+                Assert.That(fetched.Result.Terminal, Is.True);
+                Assert.That(fetched.Result.MosaicPosition.X, Is.EqualTo(21).Within(0.01));
+                Assert.That(fetched.Result.MosaicPosition.Y, Is.EqualTo(22).Within(0.01));
+            }
+            finally
+            {
+                if (locationId.HasValue)
+                {
+                    try
+                    {
+                        await locationsClient.UpdateAsync(new UpdateLocationsRequest
+                        {
+                            Locations = { new LocationChangeRequest { Delete = locationId.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                if (structureId.HasValue)
+                {
+                    try
+                    {
+                        await structuresClient.UpdateAsync(new UpdateStructuresRequest
+                        {
+                            Objs = { new StructureChangeRequest { Delete = structureId.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                try
+                {
+                    await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                    {
+                        Objs = { new StructureTypeChangeRequest { Delete = createdType.Result.Id } }
+                    });
+                }
+                catch (RpcException) { }
+            }
+        }
+
+        [Test]
         public async Task GetUnfinishedLocations_LinkedPair_ReturnsBothEnds()
         {
             var accessToken = await RequestAccessTokenAsync();

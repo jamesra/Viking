@@ -84,10 +84,9 @@ namespace WebAnnotationModel.gRPC
         Task<long[]> GetUnfinishedLocations(long structureID);
 
         /// <summary>
-        /// Returns unfinished branch location IDs. The current gRPC procedure result only
-        /// materializes IDs; position/radius are not available from the proto response.
+        /// Returns unfinished branch tips with mosaic position and radius.
         /// </summary>
-        Task<long[]> GetUnfinishedLocationsWithPosition(long structureID);
+        Task<Viking.AnnotationServiceTypes.gRPC.V1.Protos.LocationPositionOnly[]> GetUnfinishedLocationsWithPosition(long structureID);
     }
 
     public class StructuresClient : IStructureRepository, IServerAnnotationsBySectionClient<long, IStructure[]>, IServerSpatialAnnotationsClient<long, IStructure>
@@ -279,10 +278,8 @@ namespace WebAnnotationModel.gRPC
             return response.Results.ToArray();
         }
 
-        public async Task<long[]> GetUnfinishedLocationsWithPosition(long structureID)
+        public async Task<Viking.AnnotationServiceTypes.gRPC.V1.Protos.LocationPositionOnly[]> GetUnfinishedLocationsWithPosition(long structureID)
         {
-            // Proto GetUnfinishedLocationsWithPositionResponse currently only carries IDs
-            // (server selects position columns but does not map them into the response message).
             var request = new GetUnfinishedLocationsWithPositionRequest { Id = structureID };
             var response = await Client.GetUnfinishedLocationsWithPositionAsync(request);
             return response.Results.ToArray();

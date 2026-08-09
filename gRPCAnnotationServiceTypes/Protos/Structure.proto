@@ -239,8 +239,15 @@ message GetUnfinishedLocationsWithPositionRequest {
   int64 id = 1;
 }
 
+// Lightweight unfinished-branch tip (matches SelectUnfinishedStructureBranchesWithPosition).
+message LocationPositionOnly {
+  int64 id = 1;
+  AnnotationPoint position = 2;
+  double radius = 3;
+}
+
 message GetUnfinishedLocationsWithPositionResponse {
-  repeated int64 results = 1;
+  repeated LocationPositionOnly results = 1;
 }
 
 

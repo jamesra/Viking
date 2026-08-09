@@ -12,6 +12,7 @@ using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 using WebAnnotationModel.ServerInterface;
+using ProtoLocationPositionOnly = Viking.AnnotationServiceTypes.gRPC.V1.Protos.LocationPositionOnly;
 
 namespace WebAnnotationModel.gRPC
 {
@@ -45,15 +46,20 @@ namespace WebAnnotationModel.gRPC
         }
 
         /// <summary>
-        /// Get unfinished branch location IDs. The gRPC response currently carries IDs only
-        /// (position/radius are not mapped from the SQL procedure into the proto), so Position
-        /// and Radius are default/zero.
+        /// Get unfinished branch tips with mosaic position and radius from the server.
         /// </summary>
-        public LocationPositionOnly[] GetUnfinishedBranchesWithPosition(long structureID)
+        public WebAnnotationModel.LocationPositionOnly[] GetUnfinishedBranchesWithPosition(long structureID)
         {
             var client = StructureClientFactory.GetOrCreate();
-            var ids = client.GetUnfinishedLocationsWithPosition(structureID).Result;
-            return ids.Select(id => new LocationPositionOnly(id, default, 0)).ToArray();
+            ProtoLocationPositionOnly[] tips = client.GetUnfinishedLocationsWithPosition(structureID).Result;
+            return tips.Select(t =>
+            {
+                var z = t.Position?.HasZ == true ? t.Position.Z : 0;
+                var pos = t.Position == null
+                    ? default
+                    : new GridVector3(t.Position.X, t.Position.Y, z);
+                return new WebAnnotationModel.LocationPositionOnly(t.Id, pos, t.Radius);
+            }).ToArray();
         }
 
         /// <summary>
