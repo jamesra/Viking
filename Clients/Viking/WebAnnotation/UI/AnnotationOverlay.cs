@@ -31,6 +31,7 @@ using WebAnnotation.UI.Commands.Segmentation;
 using WebAnnotation.View;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation
 {
@@ -211,7 +212,7 @@ namespace WebAnnotation
             }
 
             //Adjust downsample so the location fits nicely in the view
-            double downsample = (loc.MosaicShape.BoundingBox().Width / Viking.UI.State.ViewerForm.Width) * Global.DefaultLocationJumpDownsample;
+            double downsample = (loc.MosaicShape.BoundingBox.Width / Viking.UI.State.ViewerForm.Width) * Global.DefaultLocationJumpDownsample;
 
             //SectionViewerForm.Show(section);
             Viking.UI.State.ViewerForm.GoToLocation(new Microsoft.Xna.Framework.Vector2((float)loc.Position.X, (float)loc.Position.Y), (int)loc.Z, true, downsample);
@@ -305,7 +306,7 @@ namespace WebAnnotation
 
             Task task = new(() =>
             {
-                WebAnnotationModel.LocationObj lastLocation = WebAnnotationModel.Store.Locations.GetLastModifiedLocation();
+                WebAnnotationModel.Objects.LocationObj lastLocation = WebAnnotationModel.Store.Locations.GetLastModifiedLocation().Result;
                 if (lastLocation != null)
                 {
                     Viking.UI.State.MainThreadDispatcher.Invoke(() => AnnotationOverlay.GoToLocation(lastLocation));
@@ -489,9 +490,17 @@ namespace WebAnnotation
             // GetNearestLocation(WorldPosition, out distance);
             if (LastMouseOverObject is IMouseActionSupport loc)
             {
-                GridVector2 WorldPosition = LastMouseMoveVolumeCoords;
-                LocationAction action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, CurrentSectionNumber, Control.ModifierKeys, out long locID);
-                _Parent.Cursor = action.GetCursor();
+                try
+                {
+                    GridVector2 WorldPosition = LastMouseMoveVolumeCoords;
+                    LocationAction action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, CurrentSectionNumber, Control.ModifierKeys, out long locID);
+                    _Parent.Cursor = action.GetCursor();
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"{nameof(AnnotationOverlay)}.{nameof(UpdateMouseCursor)}: {ex}");
+                    _Parent.Cursor = Cursors.Default;
+                }
             }
             else
             {
@@ -505,9 +514,17 @@ namespace WebAnnotation
             // GetNearestLocation(WorldPosition, out distance);
             if (LastMouseOverObject is IPenActionSupport loc)
             {
-                GridVector2 WorldPosition = LastMouseMoveVolumeCoords;
-                LocationAction action = loc.GetPenContactActionForPositionOnAnnotation(WorldPosition, CurrentSectionNumber, Control.ModifierKeys, out long locID);
-                _Parent.Cursor = action.GetCursor();
+                try
+                {
+                    GridVector2 WorldPosition = LastMouseMoveVolumeCoords;
+                    LocationAction action = loc.GetPenContactActionForPositionOnAnnotation(WorldPosition, CurrentSectionNumber, Control.ModifierKeys, out long locID);
+                    _Parent.Cursor = action.GetCursor();
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"{nameof(AnnotationOverlay)}.{nameof(UpdatePenCursor)}: {ex}");
+                    _Parent.Cursor = Cursors.Default;
+                }
             }
             else
             {
@@ -626,15 +643,22 @@ namespace WebAnnotation
 
                     if (obj is IMouseActionSupport actionSupportedObj)
                     {
-                        LocationAction action =
-                            actionSupportedObj.GetMouseClickActionForPositionOnAnnotation(WorldPosition,
-                                CurrentSectionNumber, Control.ModifierKeys, out long LocationID);
-
-                        Viking.UI.Commands.Command command = action.CreateCommand(Parent,
-                            Store.Locations.GetObjectByID(LocationID), WorldPosition);
-                        if (command != null)
+                        try
                         {
-                            _Parent.CurrentCommand = command;
+                            LocationAction action =
+                                actionSupportedObj.GetMouseClickActionForPositionOnAnnotation(WorldPosition,
+                                    CurrentSectionNumber, Control.ModifierKeys, out long LocationID);
+
+                            Viking.UI.Commands.Command command = action.CreateCommand(Parent,
+                                Store.Locations.GetObjectByID(LocationID), WorldPosition);
+                            if (command != null)
+                            {
+                                _Parent.CurrentCommand = command;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Trace.WriteLine($"{nameof(AnnotationOverlay)}.OnMouseDown GetMouseClickActionForPositionOnAnnotation: {ex}");
                         }
                     }
                     else if (CanContinueLastTrace)
@@ -692,18 +716,25 @@ namespace WebAnnotation
 
                 if (obj is IPenActionSupport actionSupportedObj)
                 {
-                    LocationAction action = actionSupportedObj.GetPenContactActionForPositionOnAnnotation(WorldPosition,
-                        CurrentSectionNumber, Control.ModifierKeys, out long LocationID);
-
-                    if (actionSupportedObj is LocationCanvasView viewObj)
+                    try
                     {
-                        Viking.UI.Commands.Command command =
-                            action.CreateCommand(Parent, Store.Locations.GetObjectByID(LocationID), WorldPosition);
-                        if (command != null)
+                        LocationAction action = actionSupportedObj.GetPenContactActionForPositionOnAnnotation(WorldPosition,
+                            CurrentSectionNumber, Control.ModifierKeys, out long LocationID);
+
+                        if (actionSupportedObj is LocationCanvasView viewObj)
                         {
-                            _Parent.CurrentCommand = command;
-                            return;
+                            Viking.UI.Commands.Command command =
+                                action.CreateCommand(Parent, Store.Locations.GetObjectByID(LocationID), WorldPosition);
+                            if (command != null)
+                            {
+                                _Parent.CurrentCommand = command;
+                                return;
+                            }
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        Trace.WriteLine($"{nameof(AnnotationOverlay)}.OnPenContact GetPenContactActionForPositionOnAnnotation: {ex}");
                     }
                     //var command = new AnnotationPenFreeDrawCommand(Parent, viewObj, Color.Green, Global.DefaultClosedLineWidth * Parent.Downsample, null);
                     //Viking.UI.Commands.Command command = action.CreateCommand(Parent, Store.Locations.GetObjectByID(LocationID), WorldPosition);
@@ -1087,7 +1118,7 @@ break;
                                                                                 (float)loc.Position.Y),
                                                                                 (int)loc.Z,
                                                                                 true,
-                                                                                (double)((loc.VolumeShape.BoundingBox().Width) / Parent.Width) * 2);
+                                                                                (double)((loc.VolumeShape.BoundingBox.Width) / Parent.Width) * 2);
                         }
                     }
                     else
@@ -1655,9 +1686,9 @@ break;
                 for (int iObj = 0; iObj < listLocations.Count; iObj++)
                 {
                     LocationObj locNewObj = listLocations[iObj] as LocationObj;
-                    if (!changedSections.Contains(locNewObj.Section))
+                    if (!changedSections.Contains((int)locNewObj.Section))
                     {
-                        changedSections.Add(locNewObj.Section);
+                        changedSections.Add((int)locNewObj.Section);
                     }
                 }
             }
@@ -1705,14 +1736,14 @@ break;
                     LocationObj locA = Store.Locations.GetObjectByID(locLink.A, false);
                     LocationObj locB = Store.Locations.GetObjectByID(locLink.B, false);
 
-                    if (locA != null && !changedSections.Contains(locA.Section))
+                    if (locA != null && !changedSections.Contains((int)locA.Section))
                     {
-                        changedSections.Add(locA.Section);
+                        changedSections.Add((int)locA.Section);
                     }
 
-                    if (locB != null && !changedSections.Contains(locB.Section))
+                    if (locB != null && !changedSections.Contains((int)locB.Section))
                     {
-                        changedSections.Add(locB.Section);
+                        changedSections.Add((int)locB.Section);
                     }
                 }
             }

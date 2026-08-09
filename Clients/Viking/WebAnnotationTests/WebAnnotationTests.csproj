@@ -9,6 +9,7 @@
     <IsCodedUITest>false</IsCodedUITest>
     <TestProjectType>UnitTest</TestProjectType>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\GeometryTests\GeometryTests.csproj" />
@@ -23,6 +24,8 @@
   <ItemGroup>
     <Compile Include="Commands\SegmentationCommandTests.cs" />
     <Compile Include="DummyCanvas.cs" />
+    <Compile Include="LocationActionTests.cs" />
+    <Compile Include="MouseActionSupportTests.cs" />
     <Compile Include="PathAnnotationInteractionTests.cs" />
   </ItemGroup>
   <ItemGroup>
