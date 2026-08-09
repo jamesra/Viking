@@ -318,7 +318,7 @@ namespace WebAnnotationModel.gRPC
             var response = await client.GetStructureLocations(structureID);
             var queryTime = DateTime.UtcNow;
             var changes = await ServerQueryResultsHandler.ProcessServerUpdate(response, Array.Empty<long>());
-            CallOnCollectionChanged(changes);
+            await CallOnCollectionChanged(changes).ConfigureAwait(false);
             await OnServerObjectsLoaded(response, queryTime);
             return changes.ObjectsInStore; 
         }

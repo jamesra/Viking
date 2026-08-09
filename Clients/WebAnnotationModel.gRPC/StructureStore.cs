@@ -93,7 +93,7 @@ namespace WebAnnotationModel.gRPC
             var result = await client.GetAll();
             var queryTime = DateTime.UtcNow;
             var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(queryTime, result, Array.Empty<long>()));
-            CallOnCollectionChanged(changes);
+            await CallOnCollectionChanged(changes).ConfigureAwait(false);
             await OnServerObjectsLoaded(result, queryTime);
             return changes.ObjectsInStore;
         }
@@ -199,7 +199,7 @@ namespace WebAnnotationModel.gRPC
             var result = await client.GetChildStructures(ID);
             var queryTime = DateTime.UtcNow;
             var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(queryTime, result, Array.Empty<long>()));
-            CallOnCollectionChanged(changes);
+            await CallOnCollectionChanged(changes).ConfigureAwait(false);
             await OnServerObjectsLoaded(result, queryTime);
             return changes.ObjectsInStore;
         }
@@ -253,7 +253,7 @@ namespace WebAnnotationModel.gRPC
             var result = await client.GetStructuresOfType(StructureTypeID);
             var queryTime = DateTime.UtcNow;
             var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(queryTime, result, Array.Empty<long>()));
-            CallOnCollectionChanged(changes);
+            await CallOnCollectionChanged(changes).ConfigureAwait(false);
             await OnServerObjectsLoaded(result, queryTime);
             return changes.ObjectsInStore;
         }
@@ -280,7 +280,7 @@ namespace WebAnnotationModel.gRPC
             var changes = ServerQueryResultsHandler
                 .ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(update.QueryTime, update.NewOrUpdated, update.DeletedIDs))
                 .GetAwaiter().GetResult();
-            CallOnCollectionChanged(changes);
+            CallOnCollectionChanged(changes).GetAwaiter().GetResult();
             OnServerObjectsLoaded(update.NewOrUpdated, update.QueryTime).GetAwaiter().GetResult();
             return Task.FromResult<ICollection<StructureObj>>(changes.ObjectsInStore);
         }
