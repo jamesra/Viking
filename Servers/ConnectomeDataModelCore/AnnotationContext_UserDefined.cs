@@ -13,6 +13,12 @@ namespace Viking.DataModel.Annotation
             // AnnotationContext.Functions.cs but was never wired into OnModelCreating.
             OnModelCreatingGeneratedFunctions(modelBuilder);
 
+            // SQL has UNIQUE(SourceID, TargetID) but no PK; EF needs a key to track inserts.
+            modelBuilder.Entity<StructureLink>(entity =>
+            {
+                entity.HasKey(e => new { e.SourceId, e.TargetId });
+            });
+
             modelBuilder.Entity<Location>(entity =>
             {
                 entity.Property(e => e.VolumeShape)

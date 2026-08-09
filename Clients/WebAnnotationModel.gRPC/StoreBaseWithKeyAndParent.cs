@@ -366,7 +366,17 @@ namespace WebAnnotationModel.gRPC
 
         public KEY NextKey()
         {
-            throw new NotImplementedException();
+            // Temporary client-side IDs for unsaved objects. long keys use a shared negative counter;
+            // other key types are not supported for client-generated IDs.
+            if (typeof(KEY) == typeof(long))
+            {
+                long id = ((IKeyGenerator<long>)LongKeyGenerator).NextKey();
+                return (KEY)(object)id;
+            }
+
+            throw new NotSupportedException($"NextKey is not supported for key type {typeof(KEY).Name}.");
         }
+
+        private static readonly LongIndexGenerator LongKeyGenerator = new LongIndexGenerator();
     }
 }

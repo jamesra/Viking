@@ -9,7 +9,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Viking.DataModel.Annotation
 {
-    [Keyless]
     [Table("StructureLink")]
     [Index(nameof(SourceId), nameof(TargetId), Name = "source_target_unique", IsUnique = true)]
     public partial class StructureLink

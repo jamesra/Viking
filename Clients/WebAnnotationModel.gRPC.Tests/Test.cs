@@ -1,5 +1,6 @@
 using IdentityModel.Client;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -279,6 +280,146 @@ namespace WebAnnotationModel.gRPC.Tests
                 }
                 catch (RpcException) { /* best-effort cleanup */ }
             }
+        }
+
+        [Test]
+        public async Task GetStructureLocations_SeedStructure_ReturnsSeedLocation()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var client = new AnnotateLocations.AnnotateLocationsClient(channel);
+
+            var reply = await client.GetStructureLocationsAsync(new GetStructureLocationsRequest { StructureId = 1 });
+
+            Assert.That(reply.Results, Is.Not.Null);
+            Assert.That(reply.Results.Count, Is.GreaterThanOrEqualTo(1));
+            Assert.That(reply.Results, Has.Some.Matches<Location>(l => l.Id == 1 && l.ParentId == 1));
+        }
+
+        [Test]
+        public async Task CreateStructureLink_Roundtrip()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var structuresClient = new AnnotateStructures.AnnotateStructuresClient(channel);
+            var typesClient = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+            var createdType = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
+            {
+                Obj = new StructureType
+                {
+                    Name = $"SLinkType-{Guid.NewGuid():N}".Substring(0, 32),
+                    Code = "SL",
+                    Color = 0xFF00FF,
+                    Created = now,
+                    LastModified = now,
+                    Username = _userIdentity.UserName,
+                }
+            });
+
+            long? aId = null;
+            long? bId = null;
+            try
+            {
+                async Task<long> CreateStructure(string label)
+                {
+                    var created = await structuresClient.CreateStructureAsync(new CreateStructureRequest
+                    {
+                        NewStructure = new Structure
+                        {
+                            TypeId = createdType.Result.Id,
+                            Label = label,
+                            Confidence = 0.5,
+                            Created = now,
+                            LastModified = now,
+                            Username = _userIdentity.UserName,
+                        }
+                    });
+                    return created.NewStructure.Id;
+                }
+
+                aId = await CreateStructure("link-a");
+                bId = await CreateStructure("link-b");
+
+                var link = await structuresClient.CreateStructureLinkAsync(new CreateStructureLinkRequest
+                {
+                    NewLink = new StructureLink
+                    {
+                        SourceId = aId.Value,
+                        TargetId = bId.Value,
+                        Bidirectional = true,
+                    }
+                });
+                Assert.That(link.Result, Is.Not.Null);
+                Assert.That(link.Result.SourceId, Is.EqualTo(aId.Value));
+                Assert.That(link.Result.TargetId, Is.EqualTo(bId.Value));
+
+                var linked = await structuresClient.GetLinkedStructuresAsync(new GetLinkedStructuresRequest
+                {
+                    Id = aId.Value
+                });
+                Assert.That(linked.Results, Has.Some.Matches<StructureLink>(l =>
+                    (l.SourceId == aId.Value && l.TargetId == bId.Value) ||
+                    (l.SourceId == bId.Value && l.TargetId == aId.Value)));
+            }
+            finally
+            {
+                foreach (var id in new[] { aId, bId })
+                {
+                    if (!id.HasValue) continue;
+                    try
+                    {
+                        await structuresClient.UpdateAsync(new UpdateStructuresRequest
+                        {
+                            Objs = { new StructureChangeRequest { Delete = id.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                try
+                {
+                    await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                    {
+                        Objs = { new StructureTypeChangeRequest { Delete = createdType.Result.Id } }
+                    });
+                }
+                catch (RpcException) { }
+            }
+        }
+
+        [Test]
+        public async Task StreamAnnotationsInMosaicRegion_ReturnsSeedLocation()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var client = new AnnotateLocations.AnnotateLocationsClient(channel);
+
+            var request = new GetAnnotationsInMosaicRegionRequest
+            {
+                Z = 1,
+                MinRadius = 0,
+                Region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
+                {
+                    Text = "POLYGON((0 0, 200 0, 200 300, 0 300, 0 0))"
+                }
+            };
+
+            using var call = client.StreamAnnotationsInMosaicRegion(request);
+            var locations = new List<Location>();
+            var sawLast = false;
+            while (await call.ResponseStream.MoveNext())
+            {
+                var chunk = call.ResponseStream.Current;
+                if (chunk.Partial != null)
+                    locations.AddRange(chunk.Partial.Locations);
+                if (chunk.IsLast)
+                    sawLast = true;
+            }
+
+            Assert.That(sawLast, Is.True);
+            Assert.That(locations, Has.Some.Matches<Location>(l => l.Id == 1));
         }
 
         [Test]

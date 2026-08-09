@@ -853,8 +853,12 @@ namespace WebAnnotationModel.gRPC
 
             if (listUpdateObj.Count > 0)
             {
-                //changeInventory.UpdatedObjects.AddRange(InternalUpdate(listUpdateObj.ToArray()));
-                throw new NotImplementedException();
+                // Already cached — keep the existing instance (server payload already applied via GetOrAdd/Sync elsewhere).
+                foreach (var updateObj in listUpdateObj)
+                {
+                    if (IDToObject.TryGetValue(updateObj.ID, out var existing))
+                        changeInventory.UnchangedObjects.Add(existing);
+                }
             }
 
             return changeInventory;
@@ -1081,18 +1085,7 @@ namespace WebAnnotationModel.gRPC
          
         Task<OBJECT> IStoreWithKey<KEY, OBJECT>.GetOrAdd(KEY key, Func<KEY, OBJECT> createFunc, out bool added)
         {
-            throw new NotImplementedException();
-            var createFuncCalled = false;
-            var result =Task.FromResult(IDToObject.GetOrAdd(key, (k) =>
-            {
-                createFuncCalled = true;
-                var newobj = createFunc(k);
-                if (newobj is INotifyPropertyChanged notifyObj)
-                    newobj.PropertyChanged += this.OnOBJECTPropertyChangedEventHandler;
-                return newobj;
-            }));
-            added = createFuncCalled;
-            return result;
+            return Task.FromResult(GetOrAdd(key, createFunc, out added));
         }
 
         bool IStoreWithKey<KEY, OBJECT>.Contains(KEY key)
@@ -1102,7 +1095,7 @@ namespace WebAnnotationModel.gRPC
 
         Task<OBJECT> IStoreWithKey<KEY, OBJECT>.Remove(KEY key)
         {
-            throw new NotImplementedException();
+            return Remove(key);
         }
 
         Task<OBJECT> IStoreWithKey<KEY, OBJECT>.GetObjectByID(KEY ID, CancellationToken token)
