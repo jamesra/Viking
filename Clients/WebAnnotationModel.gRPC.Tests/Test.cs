@@ -1868,6 +1868,14 @@ namespace WebAnnotationModel.gRPC.Tests
                 Assert.That(sync.Deleted, Has.Some.Matches<LocationLink>(l =>
                     (l.SourceId == locA.Value && l.TargetId == locB.Value) ||
                     (l.SourceId == locB.Value && l.TargetId == locA.Value)));
+
+                // Repository wrapper maps Deleted → LocationLinkKey[] for the store.
+                var repo = new LocationsClient(channel, new LocationToLocationServerConverter());
+                var wrapped = await repo.GetLocationLinksForSectionAsync(
+                    16, DateTime.FromBinary(beforeDelete), default);
+                Assert.That(wrapped.DeletedIDs, Has.Some.Matches<LocationLinkKey>(k =>
+                    (k.A == locA.Value && k.B == locB.Value) ||
+                    (k.A == locB.Value && k.B == locA.Value)));
             }
             finally
             {

@@ -44,6 +44,25 @@ namespace WebAnnotationModel
         /// <param name="obj"></param>
         /// <returns></returns>
         Task<bool> Remove(OBJECT obj);
+
+        /// <summary>
+        /// Push every locally changed (added/updated/deleted) object in the store to the server.
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        Task<bool> Save(CancellationToken token);
+
+        /// <summary>
+        /// Synchronous convenience overload equivalent to Save(CancellationToken.None).
+        /// </summary>
+        Task<bool> Save();
+
+        /// <summary>
+        /// Fired when objects are added, removed or replaced in the store.
+        /// This mirrors <see cref="INotifyCollectionChanged.CollectionChanged"/> but is exposed
+        /// directly on the interface so callers do not need to cast to subscribe.
+        /// </summary>
+        event NotifyCollectionChangedEventHandler OnCollectionChanged;
     }
 
     /// <summary>
@@ -62,11 +81,30 @@ namespace WebAnnotationModel
 
         Task<OBJECT> GetObjectByID(KEY ID, CancellationToken token);
 
-        //Task<OBJECT> this[KEY index] { get; }
+        /// <summary>
+        /// Synchronous convenience accessor equivalent to GetObjectByID(ID, AskServer: true, ForceRefreshFromServer: false, CancellationToken.None).
+        /// Kept for the large amount of legacy UI call sites that expect synchronous access.
+        /// </summary>
+        OBJECT this[KEY index] { get; }
+
+        /// <summary>
+        /// Synchronous convenience overload equivalent to this[ID].
+        /// </summary>
+        OBJECT GetObjectByID(KEY ID);
+
+        /// <summary>
+        /// Synchronous convenience overload equivalent to GetObjectByID(ID, AskServer, ForceRefreshFromServer: false, CancellationToken.None).
+        /// </summary>
+        OBJECT GetObjectByID(KEY ID, bool AskServer);
 
         Task<OBJECT> GetObjectByID(KEY ID, bool AskServer, bool ForceRefreshFromServer, CancellationToken token);
 
         Task<List<OBJECT>> GetObjectsByIDs(ICollection<KEY> IDs, bool AskServer, CancellationToken token);
+
+        /// <summary>
+        /// Synchronous convenience overload equivalent to GetObjectsByIDs(IDs, AskServer, CancellationToken.None).
+        /// </summary>
+        ICollection<OBJECT> GetObjectsByIDs(ICollection<KEY> IDs, bool AskServer);
 
         /// <summary>
         /// Delete data for an object from the store and request the latest version from the server
@@ -234,11 +272,57 @@ namespace WebAnnotationModel
         Task<LocationObj> GetLastModifiedLocation();
 
         Task<ICollection<LocationObj>> GetStructureLocations(long structureId, QueryTargets targets);
+
+        /// <summary>
+        /// Synchronous convenience wrapper over GetStructureLocations(structureID, QueryTargets.Server).
+        /// </summary>
+        ICollection<LocationObj> GetLocationsForStructure(long StructureID);
+
+        /// <summary>
+        /// Create a new location on the server.  Add the location to the local store.
+        /// </summary>
+        LocationObj Create(LocationObj new_location, long[] linked_locations = null);
+
+        List<LocationObj> GetStructureLocationChangeLog(long structureid);
+
+        /// <summary>
+        /// Objects known locally to belong to the given section, without contacting the server.
+        /// </summary>
+        ConcurrentDictionary<long, LocationObj> GetLocalObjectsForSection(long SectionNumber);
+
+        /// <summary>
+        /// Objects known locally to belong to the given structure, without contacting the server.
+        /// </summary>
+        LocationObj[] GetLocalObjectsForStructure(long StructureID);
+
+        /// <summary>
+        /// Instruct the store to evict cached sections beyond the given limits to save memory.
+        /// </summary>
+        void FreeExcessSections(int LoadedSectionLimit, int LoadingSectionLimit);
+
+        /// <summary>
+        /// Check the local cache only, without contacting the server.
+        /// </summary>
+        bool TryGetValue(long ID, out LocationObj obj);
     }
 
     public interface ILocationLinkStore : IStoreWithKey<LocationLinkKey, LocationLinkObj>
     {
+        /// <summary>
+        /// Create a link between two locations on the server and add it to the local store.
+        /// </summary>
+        LocationLinkObj CreateLink(long A, long B);
 
+        /// <summary>
+        /// Delete a link between two locations on the server and remove it from the local store.
+        /// </summary>
+        bool DeleteLink(long A, long B);
+
+        /// <summary>
+        /// Load (or incrementally refresh) location links that touch <paramref name="section"/>,
+        /// applying server-reported deletes. Optional on backends that do not support section sync.
+        /// </summary>
+        Task GetLinksForSectionAsync(long section, DateTime? modifiedAfter = null, CancellationToken token = default);
     }
 
     public interface IStructureStore : IStoreWithParent<long, StructureObj>
@@ -247,11 +331,60 @@ namespace WebAnnotationModel
 
         Task<long> SplitStructureAtLocationLink(long KeepLocID, long SplitLocID);
 
+        /// <summary>
+        /// Synchronous convenience overload equivalent to SplitStructureAtLocationLink(KeepLocID, SplitLocID).
+        /// </summary>
+        long SplitAtLocationLink(long KeepLocID, long SplitLocID);
+
         Task<ICollection<StructureObj>> GetStructuresOfType(long StructureTypeID);
 
         Task<ICollection<StructureObj>> GetAll();
 
-        Task<ICollection<StructureObj>> GetChildStructures(long StructureID); 
+        Task<ICollection<StructureObj>> GetChildStructures(long StructureID);
+
+        /// <summary>
+        /// Create a new structure and its first location on the server.  Adds both to their local stores.
+        /// </summary>
+        Task<(StructureObj Structure, LocationObj Location)> Create(StructureObj newStruct, LocationObj newLocation);
+
+        Task<long> Merge(long KeepID, long MergeID);
+
+        /// <summary>
+        /// Fire-and-forget request to delete the structure on the server if it has no locations.
+        /// </summary>
+        Task CheckForOrphan(long ID);
+
+        /// <summary>
+        /// Synchronous convenience alias for GetChildStructures.
+        /// </summary>
+        ICollection<StructureObj> GetChildStructuresForStructure(long ID);
+
+        /// <summary>
+        /// Get the location IDs for branches that are incomplete.
+        /// </summary>
+        long[] GetUnfinishedBranches(long structureID);
+
+        /// <summary>
+        /// Get the location IDs and positions for branches that are incomplete.
+        /// </summary>
+        LocationPositionOnly[] GetUnfinishedBranchesWithPosition(long structureID);
+    }
+
+    /// <summary>
+    /// Lightweight, transport-agnostic replacement for the old WCF-era AnnotationService.Types.LocationPositionOnly.
+    /// </summary>
+    public readonly struct LocationPositionOnly
+    {
+        public readonly long ID;
+        public readonly Geometry.GridVector3 Position;
+        public readonly double Radius;
+
+        public LocationPositionOnly(long id, Geometry.GridVector3 position, double radius)
+        {
+            ID = id;
+            Position = position;
+            Radius = radius;
+        }
     }
       
     public interface IStructureLinkStore : IStoreWithKey<StructureLinkKey, StructureLinkObj>
@@ -261,12 +394,24 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="structureId"></param>
         /// <returns></returns>
-        Task<StructureLinkObj[]> GetLinks(long structureId); 
+        Task<StructureLinkObj[]> GetLinks(long structureId);
+
+        /// <summary>
+        /// Synchronous convenience wrapper over Add(obj).
+        /// </summary>
+        StructureLinkObj Create(StructureLinkObj obj);
     }
 
     public interface IStructureTypeStore : IStoreWithParent<long, StructureTypeObj>
     {
         Task<ICollection<StructureTypeObj>> GetAll();
+
+        Task<StructureTypeObj> Create(StructureTypeObj new_type, CancellationToken token);
+
+        /// <summary>
+        /// Synchronous convenience overload equivalent to Create(new_type, CancellationToken.None).
+        /// </summary>
+        StructureTypeObj Create(StructureTypeObj new_type);
     }
 
     public interface IPermittedStructureLinkStore : IStoreWithKey<PermittedStructureLinkKey, PermittedStructureLinkObj>

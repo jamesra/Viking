@@ -86,5 +86,25 @@ namespace WebAnnotationModel.gRPC
 
             return true;
         }
+
+        /// <summary>
+        /// Section sync via LocationsClient.GetLocationLinksForSection (results + deleted keys).
+        /// </summary>
+        public async Task GetLinksForSectionAsync(long section, DateTime? modifiedAfter = null, CancellationToken token = default)
+        {
+            var client = ClientFactory.GetOrCreate();
+            if (!(client is ILocationsClient locationsClient))
+                throw new NotSupportedException(
+                    $"{client.GetType().Name} does not implement {nameof(ILocationsClient)} section link sync.");
+
+            var update = await locationsClient
+                .GetLocationLinksForSectionAsync(section, modifiedAfter, token)
+                .ConfigureAwait(false);
+
+            var changes = await ServerQueryResultsHandler
+                .ProcessServerUpdate(update.NewOrUpdated, update.DeletedIDs)
+                .ConfigureAwait(false);
+            await CallOnCollectionChanged(changes).ConfigureAwait(false);
+        }
     }
 }

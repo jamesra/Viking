@@ -102,6 +102,13 @@ namespace WebAnnotationModel.gRPC
         Task<ILocation[]> GetStructureLocations(long structureID);
 
         Task<ILocation> GetLastModifiedLocation();
+
+        /// <summary>
+        /// Section location-link sync: new/updated links plus keys the server reports deleted since
+        /// <paramref name="modifiedAfter"/> (binary ticks of 0 / null = full section load).
+        /// </summary>
+        Task<ServerUpdate<LocationLinkKey, ILocationLink[]>> GetLocationLinksForSectionAsync(
+            long section, DateTime? modifiedAfter, CancellationToken token);
     }
 
     public class LocationsClient : ILocationsClient, IServerSpatialAnnotationsClient<long, ILocation>, IServerAnnotationsBySectionClient<long, ILocation[]>, IServerAnnotationsClient<long, ILocation, ILocation, ILocation>, IServerSpatialAnnotationsClient<long, AnnotationSet>,
@@ -369,6 +376,24 @@ namespace WebAnnotationModel.gRPC
             var request = new GetLastModifiedLocationRequest();
             var response = await Client.GetLastModifiedLocationAsync(request);
             return response.Result;
+        }
+
+        public async Task<ServerUpdate<LocationLinkKey, ILocationLink[]>> GetLocationLinksForSectionAsync(
+            long section, DateTime? modifiedAfter, CancellationToken token)
+        {
+            var request = new GetLocationLinksForSectionRequest { Section = section };
+            if (modifiedAfter.HasValue)
+                request.ModifiedAfterThisTime = modifiedAfter.Value.ToBinary();
+
+            var response = await Client.GetLocationLinksForSectionAsync(request, cancellationToken: token);
+
+            var links = response.Results.Cast<ILocationLink>().ToArray();
+            var deleted = response.Deleted
+                .Select(l => new LocationLinkKey(l.SourceId, l.TargetId))
+                .ToArray();
+
+            return new ServerUpdate<LocationLinkKey, ILocationLink[]>(
+                response.QueryExecutedTime.ToDateTime(), links, deleted);
         }
 
         public async Task<ILocation[]> GetStructureLocations(long structureID)
