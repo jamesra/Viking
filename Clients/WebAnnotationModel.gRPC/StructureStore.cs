@@ -182,10 +182,11 @@ namespace WebAnnotationModel.gRPC
             */
         }
 
-        public override async Task<bool> Remove(StructureObj obj)
+        public override Task<bool> Remove(StructureObj obj)
         {
-            obj.DBAction = DBACTION.DELETE;
-            return true;
+            // Match LocationStore / StoreBaseWithKey: mark DELETE, drop from the local index,
+            // and queue for Save() so DeepDeleteStructure runs on the next flush.
+            return base.Remove(obj);
         }
 
         public async Task<ICollection<StructureObj>> GetChildStructures(long ID)

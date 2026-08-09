@@ -356,7 +356,8 @@ namespace WebAnnotationModel.gRPC
                         deleted.Add(ro.DeletedId);
                         break;
                     default:
-                        throw new NotImplementedException();
+                        throw new NotImplementedException(
+                            $"Unexpected {nameof(LocationChangeResponse.ActionCase)} value {ro.ActionCase}");
                 }
             }
 

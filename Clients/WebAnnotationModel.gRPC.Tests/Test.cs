@@ -772,6 +772,151 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         [Test]
+        public async Task GetLocationChanges_ModifiedAfter_ReturnsOnlyUpdated()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var locationsClient = new AnnotateLocations.AnnotateLocationsClient(channel);
+            var structuresClient = new AnnotateStructures.AnnotateStructuresClient(channel);
+            var typesClient = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+            const long section = 17;
+            var createdType = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
+            {
+                Obj = new StructureType
+                {
+                    Name = $"ModAfter-{Guid.NewGuid():N}".Substring(0, 32),
+                    Code = "MA",
+                    Color = 0x445566,
+                    Created = now,
+                    LastModified = now,
+                    Username = _userIdentity.UserName,
+                }
+            });
+
+            long? structureId = null;
+            long? locationId = null;
+            try
+            {
+                var structure = await structuresClient.CreateStructureAsync(new CreateStructureRequest
+                {
+                    NewStructure = new Structure
+                    {
+                        TypeId = createdType.Result.Id,
+                        Label = "mod-after",
+                        Confidence = 0.5,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    }
+                });
+                structureId = structure.NewStructure.Id;
+
+                var created = await locationsClient.CreateLocationAsync(new CreateLocationRequest
+                {
+                    Obj = new Location
+                    {
+                        ParentId = structureId.Value,
+                        Section = section,
+                        MosaicPosition = new AnnotationPoint { X = 30, Y = 31 },
+                        VolumePosition = new AnnotationPoint { X = 30, Y = 31 },
+                        MosaicShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (30 31)" },
+                        VolumeShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (30 31)" },
+                        TypeCode = AnnotationType.Circle,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    }
+                });
+                locationId = created.Result.Id;
+                // Watermark from the create row itself; SQL DATETIME has coarse precision, so
+                // QueryExecutedTime can round equal to LastModified and miss the next write.
+                var afterCreate = created.Result.LastModified;
+
+                await Task.Delay(1100);
+
+                var update = await locationsClient.UpdateAsync(new UpdateLocationsRequest
+                {
+                    Locations =
+                    {
+                        new LocationChangeRequest
+                        {
+                            Update = new Location
+                            {
+                                Id = locationId.Value,
+                                ParentId = structureId.Value,
+                                Section = section,
+                                MosaicPosition = new AnnotationPoint { X = 40, Y = 41 },
+                                VolumePosition = new AnnotationPoint { X = 40, Y = 41 },
+                                MosaicShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (40 41)" },
+                                VolumeShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (40 41)" },
+                                TypeCode = AnnotationType.Circle,
+                                Terminal = true,
+                                Created = now,
+                                LastModified = Timestamp.FromDateTime(DateTime.UtcNow),
+                                Username = _userIdentity.UserName,
+                            }
+                        }
+                    }
+                });
+                Assert.That(update.Results, Has.Count.EqualTo(1));
+                Assert.That(update.Results[0].Success, Is.True);
+                Assert.That(update.Results[0].Updated.Terminal, Is.True);
+
+                var incremental = await locationsClient.GetLocationChangesAsync(new GetLocationChangesRequest
+                {
+                    Section = section,
+                    ModifiedAfterThisUtcTime = afterCreate
+                });
+                Assert.That(incremental.Results, Has.Some.Matches<Location>(l =>
+                    l.Id == locationId.Value && l.Terminal));
+
+                var farFuture = await locationsClient.GetLocationChangesAsync(new GetLocationChangesRequest
+                {
+                    Section = section,
+                    ModifiedAfterThisUtcTime = Timestamp.FromDateTime(DateTime.UtcNow.AddHours(1))
+                });
+                Assert.That(farFuture.Results, Has.None.Matches<Location>(l => l.Id == locationId.Value));
+            }
+            finally
+            {
+                if (locationId.HasValue)
+                {
+                    try
+                    {
+                        await locationsClient.UpdateAsync(new UpdateLocationsRequest
+                        {
+                            Locations = { new LocationChangeRequest { Delete = locationId.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                if (structureId.HasValue)
+                {
+                    try
+                    {
+                        await structuresClient.UpdateAsync(new UpdateStructuresRequest
+                        {
+                            Objs = { new StructureChangeRequest { Delete = structureId.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                try
+                {
+                    await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                    {
+                        Objs = { new StructureTypeChangeRequest { Delete = createdType.Result.Id } }
+                    });
+                }
+                catch (RpcException) { }
+            }
+        }
+
+        [Test]
         public async Task UpdateLocation_AndNumberOfLocations_Roundtrip()
         {
             var accessToken = await RequestAccessTokenAsync();
