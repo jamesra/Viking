@@ -192,6 +192,7 @@ namespace WebAnnotationModel.gRPC
                         var chunkChanges = await ServerQueryResultsHandler
                             .ProcessServerUpdate(update.NewOrUpdated, update.DeletedIDs);
                         await CallOnCollectionChanged(chunkChanges);
+                        await OnServerObjectsLoaded(update.NewOrUpdated, update.QueryTime);
                         var chunkObjs = chunkChanges.ObjectsInStore
                             .Where(l => VolumeBounds.Contains(l.Position)).ToList();
                         progressiveResults.AddRange(chunkObjs);
@@ -201,6 +202,7 @@ namespace WebAnnotationModel.gRPC
                 if (token.IsCancellationRequested)
                     return new List<LocationObj>();
 
+                await OnServerObjectsLoaded(response.NewOrUpdated, response.QueryTime);
                 await SyncLocationLinksForSectionAsync(SectionNumber, token);
                 TouchSectionQueryTime(SectionNumber);
                 return progressiveResults.Count > 0
@@ -218,6 +220,7 @@ namespace WebAnnotationModel.gRPC
 
             var changes = await ServerQueryResultsHandler.ProcessServerUpdate(unary.NewOrUpdated, unary.DeletedIDs);
             await CallOnCollectionChanged(changes);
+            await OnServerObjectsLoaded(unary.NewOrUpdated, unary.QueryTime);
             await SyncLocationLinksForSectionAsync(SectionNumber, token);
             TouchSectionQueryTime(SectionNumber);
 
@@ -313,8 +316,10 @@ namespace WebAnnotationModel.gRPC
         {
             var client = _locationClientFactory.GetOrCreate();
             var response = await client.GetStructureLocations(structureID);
+            var queryTime = DateTime.UtcNow;
             var changes = await ServerQueryResultsHandler.ProcessServerUpdate(response, Array.Empty<long>());
             CallOnCollectionChanged(changes);
+            await OnServerObjectsLoaded(response, queryTime);
             return changes.ObjectsInStore; 
         }
 
