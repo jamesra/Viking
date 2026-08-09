@@ -290,6 +290,112 @@ BEGIN
 END
 GO
 
+-- Lean SplitStructure: BFS via LocationLink within the keep structure, then
+-- clone the structure row and re-parent the split subgraph. Child-structure
+-- reassignment from the full SSDT proc is omitted (not needed for smoke tests).
+IF OBJECT_ID(N'dbo.SplitStructure', N'P') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE PROCEDURE dbo.SplitStructure
+        @LocationIDOfSplitStructure bigint,
+        @SplitStructureID bigint OUTPUT
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+        SET @SplitStructureID = 0;
+
+        DECLARE @KeepStructureID bigint =
+            (SELECT ParentID FROM dbo.Location WHERE ID = @LocationIDOfSplitStructure);
+        IF @KeepStructureID IS NULL
+            THROW 50000, N''Location not found'', 1;
+
+        IF OBJECT_ID(''tempdb..#LocationLinkPool'') IS NOT NULL DROP TABLE #LocationLinkPool;
+        IF OBJECT_ID(''tempdb..#LocationsInSplitSubGraph'') IS NOT NULL DROP TABLE #LocationsInSplitSubGraph;
+        IF OBJECT_ID(''tempdb..#LocationsInKeepSubGraph'') IS NOT NULL DROP TABLE #LocationsInKeepSubGraph;
+
+        SELECT LL.A, LL.B
+        INTO #LocationLinkPool
+        FROM dbo.LocationLink LL
+        INNER JOIN dbo.Location LA ON LA.ID = LL.A
+        INNER JOIN dbo.Location LB ON LB.ID = LL.B
+        WHERE LA.ParentID = @KeepStructureID AND LB.ParentID = @KeepStructureID;
+
+        CREATE TABLE #LocationsInSplitSubGraph (ID bigint PRIMARY KEY);
+        INSERT INTO #LocationsInSplitSubGraph (ID) VALUES (@LocationIDOfSplitStructure);
+
+        DECLARE @RowsAdded bigint = 1;
+        WHILE @RowsAdded > 0
+        BEGIN
+            INSERT INTO #LocationsInSplitSubGraph (ID)
+            SELECT DISTINCT Candidate.ID
+            FROM (
+                SELECT B AS ID FROM #LocationLinkPool WHERE A IN (SELECT ID FROM #LocationsInSplitSubGraph)
+                UNION
+                SELECT A AS ID FROM #LocationLinkPool WHERE B IN (SELECT ID FROM #LocationsInSplitSubGraph)
+            ) Candidate
+            WHERE Candidate.ID NOT IN (SELECT ID FROM #LocationsInSplitSubGraph);
+
+            SET @RowsAdded = @@ROWCOUNT;
+
+            DELETE LLP
+            FROM #LocationLinkPool LLP
+            INNER JOIN #LocationsInSplitSubGraph SA ON SA.ID = LLP.A
+            INNER JOIN #LocationsInSplitSubGraph SB ON SB.ID = LLP.B;
+        END
+
+        SELECT ID INTO #LocationsInKeepSubGraph
+        FROM dbo.Location
+        WHERE ParentID = @KeepStructureID
+          AND ID NOT IN (SELECT ID FROM #LocationsInSplitSubGraph);
+
+        IF (SELECT COUNT(*) FROM #LocationsInKeepSubGraph) = 0
+            THROW 50000, N''The split structure is connected to the entire keep cell. Break a location link to create two subgraphs and try again'', 1;
+
+        INSERT INTO dbo.Structure (TypeID, Notes, Verified, Tags, Confidence, ParentID, Created, Label, Username, LastModified)
+        SELECT TypeID, Notes, Verified, Tags, Confidence, ParentID, Created, Label, Username, LastModified
+        FROM dbo.Structure WHERE ID = @KeepStructureID;
+        SET @SplitStructureID = SCOPE_IDENTITY();
+
+        UPDATE L
+        SET ParentID = @SplitStructureID
+        FROM dbo.Location L
+        INNER JOIN #LocationsInSplitSubGraph S ON S.ID = L.ID;
+
+        IF OBJECT_ID(''tempdb..#LocationLinkPool'') IS NOT NULL DROP TABLE #LocationLinkPool;
+        IF OBJECT_ID(''tempdb..#LocationsInSplitSubGraph'') IS NOT NULL DROP TABLE #LocationsInSplitSubGraph;
+        IF OBJECT_ID(''tempdb..#LocationsInKeepSubGraph'') IS NOT NULL DROP TABLE #LocationsInKeepSubGraph;
+    END');
+END
+GO
+
+IF OBJECT_ID(N'dbo.SplitStructureAtLocationLink', N'P') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE PROCEDURE dbo.SplitStructureAtLocationLink
+        @LocationIDOfKeepStructure bigint,
+        @LocationIDOfSplitStructure bigint,
+        @SplitStructureID bigint OUTPUT
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+        SET @SplitStructureID = 0;
+
+        IF (0 = (SELECT COUNT(*) FROM dbo.LocationLink
+                 WHERE (A = @LocationIDOfKeepStructure AND B = @LocationIDOfSplitStructure)
+                    OR (B = @LocationIDOfKeepStructure AND A = @LocationIDOfSplitStructure)))
+            THROW 50000, N''The Split and Keep Location IDs must be linked'', 1;
+
+        BEGIN TRANSACTION split_at_link;
+            DELETE FROM dbo.LocationLink
+            WHERE (A = @LocationIDOfKeepStructure AND B = @LocationIDOfSplitStructure)
+               OR (B = @LocationIDOfKeepStructure AND A = @LocationIDOfSplitStructure);
+
+            EXEC dbo.SplitStructure @LocationIDOfSplitStructure, @SplitStructureID OUTPUT;
+        COMMIT TRANSACTION split_at_link;
+    END');
+END
+GO
+
 -- Seed one StructureType → Structure → Location when the DB is empty (ids become 1).
 IF NOT EXISTS (SELECT 1 FROM dbo.StructureType)
 BEGIN

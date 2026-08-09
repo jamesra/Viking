@@ -1,5 +1,6 @@
 using Grpc.Core;
 using gRPCAnnotationService.Protos;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Threading.Tasks;
@@ -22,26 +23,15 @@ namespace gRPCAnnotationService
         {
             try
             {
-                GetPermittedStructureLinksResponse response = new GetPermittedStructureLinksResponse()
-                {
-                };
-
-                response.PermittedLinks.AddRange(_context.PermittedStructureLinks.Select(p =>
-                    new Viking.AnnotationServiceTypes.gRPC.V1.Protos.PermittedStructureLink() {
-                        SourceTypeId = p.SourceTypeId,
-                        TargetTypeId = p.TargetTypeId,
-                        Bidirectional = p.Bidirectional,
-                    })
-                );
-
+                var rows = await _context.PermittedStructureLinks.AsNoTracking().ToListAsync();
+                var response = new GetPermittedStructureLinksResponse();
+                response.PermittedLinks.AddRange(rows.Select(p => p.ToProtobufMessage()));
                 return response;
             }
             catch (System.Exception e)
             {
-                //This means there was no row with that ID; 
                 _logger.LogInformation($"{nameof(GetPermittedStructureLinks)}: {e}");
                 throw new Grpc.Core.RpcException(new Status(StatusCode.Unknown, nameof(GetPermittedStructureLinks), e));
-
             }
         }
 
@@ -50,22 +40,18 @@ namespace gRPCAnnotationService
             try
             {
                 Viking.DataModel.Annotation.PermittedStructureLink new_obj = request.NewObj.ToPermittedStructureLink();
-
                 var ef_result = await _context.PermittedStructureLinks.AddAsync(new_obj);
+                await _context.SaveChangesAsync();
 
-                CreatePermittedStructureLinkResponse response = new CreatePermittedStructureLinkResponse()
+                return new CreatePermittedStructureLinkResponse
                 {
                     Result = ef_result.Entity.ToProtobufMessage()
                 };
-                  
-                return response;
             }
             catch (System.Exception e)
             {
-                //This means there was no row with that ID; 
-                _logger.LogInformation($"{nameof(GetPermittedStructureLinks)}: {e}");
-                throw new Grpc.Core.RpcException(new Status(StatusCode.Unknown, nameof(GetPermittedStructureLinks), e));
-
+                _logger.LogInformation($"{nameof(CreatePermittedStructureLink)}: {e}");
+                throw new Grpc.Core.RpcException(new Status(StatusCode.Unknown, nameof(CreatePermittedStructureLink), e));
             }
         }
 
