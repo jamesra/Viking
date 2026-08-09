@@ -1,86 +1,78 @@
-using System;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Viking.AnnotationServiceTypes.Interfaces;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
-    /// <summary>
-    /// Static class that holds references to store singletons
-    ///
-    /// The initialization is super goofy and needs to be moved to dependency injection
-    /// </summary>
-    public class Store
+    public interface IAnnotationStores
     {
-        public static void Init() => Nested.Init();
+        ILocationStore Locations { get; }
 
-        public static LocationStore Locations => Nested.Locations;
+        IStructureStore Structures { get; }
 
-        public static StructureStore Structures => Nested.Structures;
+        IStructureTypeStore StructureTypes { get; }
 
-        public static StructureTypeStore StructureTypes => Nested.StructureTypes;
+        IStructureLinkStore StructureLinks { get; }
 
-        public static StructureLinkStore StructureLinks => Nested.StructureLinks;
+        ILocationLinkStore LocationLinks { get; }
 
-        public static LocationLinkStore LocationLinks => Nested.LocationLinks;
+        IPermittedStructureLinkStore PermittedStructureLinks { get; }
 
-        public static PermittedStructureLinkStore PermittedStructureLinks => Nested.PermittedStructureLinks;
+        IRegionLoader<LocationObj> LocationsByRegion { get; }
 
-        public static RegionLoader<long, LocationObj> LocationsByRegion => Nested.RegionLocationsLoader;
+        //IRegionLoader<StructureObj> StructuresByRegion { get; }
 
-        public static RegionLoader<long, StructureObj> StructuresByRegion => Nested.RegionStructuresLoader;
+        /// <summary>
+        /// Warm static/slow-changing stores (structure types, permitted links, …) after the endpoint is known.
+        /// </summary>
+        Task InitializeAsync(CancellationToken token = default);
+    }
 
-        class Nested
+    /// <summary>
+    /// Static access point for the annotation stores used throughout the UI (Converters, Forms, Controls,
+    /// ViewModels that can't easily accept constructor-injected dependencies).
+    ///
+    /// The composition root (currently the gRPC client bootstrap in WebAnnotationModel.gRPC) is responsible
+    /// for building the concrete, DI-composed store instances and calling <see cref="Initialize(IAnnotationStores)"/>
+    /// once at application startup, before any UI code touches Store.X.
+    /// </summary>
+    public static class Store
+    {
+        private static IAnnotationStores _current;
+
+        /// <summary>
+        /// True once <see cref="Initialize(IAnnotationStores)"/> has been called.
+        /// </summary>
+        public static bool IsInitialized => _current != null;
+
+        /// <summary>
+        /// Called once by the composition root at application startup with the fully constructed,
+        /// gRPC-backed store implementations.
+        /// </summary>
+        public static void Initialize(IAnnotationStores stores)
         {
-            private static bool Initialized = false;
-            static Nested()
-            {
-                Init();
-
-                RegionLocationsLoader = new RegionLoader<long, LocationObj>(Store.Locations);
-                RegionStructuresLoader = new RegionLoader<long, StructureObj>(Store.Structures);
-            }
-
-            public static void Init()
-            {
-                if (Initialized)
-                    return;
-
-                Initialized = true;
-
-                try
-                {
-                    StructureTypes.Init();
-                    Structures.Init();
-                    Locations.Init();
-                    StructureLinks.Init();
-                    LocationLinks.Init();
-                    PermittedStructureLinks.Init();
-                }
-                catch (System.ServiceModel.Security.MessageSecurityException securityException)
-                {
-                    throw new Exception("It is possible the user password is incorrect", securityException);
-                }
-                catch (System.ServiceModel.Security.SecurityAccessDeniedException accessDeniedException)
-                {
-                    throw new Exception(
-                        "Access to the Annotation Service was denied. For anonymous users, ensure you are logged in and that the Bearer token is set (Viking.Tokens.TokenInjector.BearerToken). For named users, ensure your account has the required permissions.",
-                        accessDeniedException);
-                }
-                catch (System.ServiceModel.FaultException faultException)
-                {
-                    throw new Exception(
-                        "It is possible there is no network connection or the user account is locked if an incorrect password was used repeatedly.  Contact an administrator to unlock the account.",
-                        faultException);
-                }
-            }
-
-            internal static readonly StructureTypeStore StructureTypes = [];
-            internal static readonly StructureStore Structures = [];
-            internal static readonly LocationStore Locations = [];
-            internal static readonly StructureLinkStore StructureLinks = [];
-            internal static readonly LocationLinkStore LocationLinks = [];
-            internal static readonly PermittedStructureLinkStore PermittedStructureLinks = [];
-
-            internal static readonly RegionLoader<long, LocationObj> RegionLocationsLoader;
-            internal static readonly RegionLoader<long, StructureObj> RegionStructuresLoader;
+            _current = stores ?? throw new ArgumentNullException(nameof(stores));
+            stores.InitializeAsync().GetAwaiter().GetResult();
         }
+
+        private static IAnnotationStores Current =>
+            _current ?? throw new InvalidOperationException(
+                "WebAnnotationModel.Store has not been initialized. The application's composition root must call Store.Initialize(...) with the gRPC-backed stores before any UI code accesses Store.X.");
+
+        public static ILocationStore Locations => Current.Locations;
+
+        public static IStructureStore Structures => Current.Structures;
+
+        public static IStructureTypeStore StructureTypes => Current.StructureTypes;
+
+        public static IStructureLinkStore StructureLinks => Current.StructureLinks;
+
+        public static ILocationLinkStore LocationLinks => Current.LocationLinks;
+
+        public static IPermittedStructureLinkStore PermittedStructureLinks => Current.PermittedStructureLinks;
+
+        public static IRegionLoader<LocationObj> LocationsByRegion => Current.LocationsByRegion;
     }
 }

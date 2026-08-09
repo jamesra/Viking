@@ -324,8 +324,11 @@ namespace WebAnnotationModel.gRPC
         public List<LocationObj> GetStructureLocationChangeLog(long structureid)
         {
             // Server RPC is Unimplemented until audit tables are mapped in the EF model.
-            throw new InvalidOperationException(
-                "Location change log is not available from the gRPC annotation service yet (audit tables unmapped).");
+            // Return empty rather than throw so the property page can open without crashing.
+            Trace.WriteLine(
+                $"Location change log unavailable for structure {structureid} (gRPC audit tables unmapped).",
+                nameof(WebAnnotationModel));
+            return new List<LocationObj>();
         }
 
         public bool Contains(LocationObj o, Geometry.GridRectangle bounds)

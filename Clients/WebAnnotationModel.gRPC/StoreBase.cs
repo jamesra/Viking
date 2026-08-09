@@ -19,6 +19,11 @@ namespace WebAnnotationModel.gRPC
         //Perform any required initialization
         protected virtual Task Init() => Task.CompletedTask;
 
+        /// <summary>
+        /// Public entry point so the composition root can warm caches (structure types, permitted links, …).
+        /// </summary>
+        public Task InitializeAsync() => Init();
+
         #region Public Creation/Removal methods
         
         /// <summary>

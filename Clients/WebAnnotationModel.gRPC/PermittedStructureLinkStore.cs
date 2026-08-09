@@ -3,6 +3,7 @@ using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using Viking.AnnotationServiceTypes;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using WebAnnotationModel.Objects;
 using WebAnnotationModel.ServerInterface;
 using System.Threading.Tasks;
@@ -17,6 +18,27 @@ namespace WebAnnotationModel.gRPC
             IObjectConverter<IPermittedStructureLink, PermittedStructureLinkObj> serverObjToObjConverter,
             IQueryLogger log) : base(clientFactory, null, objToServerObjConverter, serverObjToObjConverter, log)
         {
+        }
+
+        /// <summary>
+        /// Load the full permitted-link table at startup (small, fairly static) so structure-type
+        /// UI has relation rules without an extra round-trip.
+        /// </summary>
+        protected override async Task Init()
+        {
+            var client = ClientFactory.GetOrCreate();
+            if (!(client is PermittedStructureLinksClient concrete))
+                return;
+
+            var all = await concrete.GetAllAsync(CancellationToken.None).ConfigureAwait(false);
+            if (all.Count == 0)
+                return;
+
+            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(
+                new ServerUpdate<PermittedStructureLinkKey, IPermittedStructureLink[]>(
+                    DateTime.UtcNow, all.Cast<IPermittedStructureLink>().ToArray(), Array.Empty<PermittedStructureLinkKey>()))
+                .ConfigureAwait(false);
+            await CallOnCollectionChanged(changes).ConfigureAwait(false);
         }
 
         /// <summary>

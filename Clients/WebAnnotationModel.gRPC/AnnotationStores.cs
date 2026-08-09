@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Threading.Tasks;
 using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel.Objects;
 
@@ -37,6 +39,23 @@ namespace WebAnnotationModel.gRPC
             LocationLinks = locationLinks;
             PermittedStructureLinks = permittedStructureLinks;
             LocationsByRegion = locations as IRegionLoader<LocationObj>;
+        }
+
+        public async Task InitializeAsync(CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+
+            // Types first so PermittedStructureLink → StructureType updater can attach links.
+            if (StructureTypes is StructureTypeStore structureTypeStore)
+                await structureTypeStore.InitializeAsync().ConfigureAwait(false);
+
+            token.ThrowIfCancellationRequested();
+            if (PermittedStructureLinks is PermittedStructureLinkStore permittedStore)
+                await permittedStore.InitializeAsync().ConfigureAwait(false);
+
+            token.ThrowIfCancellationRequested();
+            if (Structures is StructureStore structureStore)
+                await structureStore.InitializeAsync().ConfigureAwait(false);
         }
     }
 }

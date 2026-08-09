@@ -105,7 +105,7 @@ namespace WebAnnotationModel.gRPC
                 .Cast<IPermittedStructureLink>().ToList();
         }
 
-        private async Task<List<PermittedStructureLink>> GetAllAsync(CancellationToken token)
+        internal async Task<List<PermittedStructureLink>> GetAllAsync(CancellationToken token)
         {
             var response = await Client.GetPermittedStructureLinksAsync(new GetPermittedStructureLinksRequest(), cancellationToken: token);
             return response.PermittedLinks.ToList();
