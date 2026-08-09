@@ -32,6 +32,7 @@ namespace WebAnnotationModel.gRPC
         private readonly ConcurrentDictionary<long, DateTime> LastQueryForSection = new ConcurrentDictionary<long, DateTime>();
 
         private readonly IStructureStore _structureStore;
+        private readonly ILocationLinkStore _locationLinkStore;
 
         private readonly IServerAnnotationsClientFactory<ILocationsClient> _locationClientFactory;
         private readonly IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, ILocation>> _spatialClientFactory;
@@ -48,10 +49,12 @@ namespace WebAnnotationModel.gRPC
             IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<long, ILocation>> spatialClientFactory,
             IObjectConverter<LocationObj, ILocation> objToServerObjConverter,
             IObjectConverter<ILocation, LocationObj> serverObjToObjConverter,
-            IStructureStore structureStore) : base(clientFactory, null, objToServerObjConverter,
+            IStructureStore structureStore,
+            ILocationLinkStore locationLinkStore) : base(clientFactory, null, objToServerObjConverter,
             serverObjToObjConverter)
         {
             _structureStore = structureStore;
+            _locationLinkStore = locationLinkStore;
             _locationClientFactory = locationClientFactory;
             _spatialClientFactory = spatialClientFactory;
             _storeEditor = this as IStoreEditor<long, LocationObj>;
@@ -98,6 +101,20 @@ namespace WebAnnotationModel.gRPC
 
         private void TouchSectionQueryTime(long sectionNumber) =>
             LastQueryForSection.AddOrUpdate(sectionNumber, DateTime.UtcNow, (_, __) => DateTime.UtcNow);
+
+        /// <summary>
+        /// After locations for a section are refreshed, sync location links (including deletes)
+        /// using the prior section query watermark for incremental ModifiedAfter filtering.
+        /// </summary>
+        private async Task SyncLocationLinksForSectionAsync(long sectionNumber, CancellationToken token)
+        {
+            DateTime? modifiedAfter = null;
+            if (LastQueryForSection.TryGetValue(sectionNumber, out var last) && last > DateTime.MinValue)
+                modifiedAfter = last;
+
+            await _locationLinkStore.GetLinksForSectionAsync(sectionNumber, modifiedAfter, token)
+                .ConfigureAwait(false);
+        }
 
         /// <summary>
         /// When a cached location moves between sections, keep the section index coherent.
@@ -167,6 +184,7 @@ namespace WebAnnotationModel.gRPC
                 if (token.IsCancellationRequested)
                     return new List<LocationObj>();
 
+                await SyncLocationLinksForSectionAsync(SectionNumber, token);
                 TouchSectionQueryTime(SectionNumber);
                 return progressiveResults.Count > 0
                     ? progressiveResults.Distinct().ToList()
@@ -183,6 +201,7 @@ namespace WebAnnotationModel.gRPC
 
             var changes = await ServerQueryResultsHandler.ProcessServerUpdate(unary.NewOrUpdated, unary.DeletedIDs);
             await CallOnCollectionChanged(changes);
+            await SyncLocationLinksForSectionAsync(SectionNumber, token);
             TouchSectionQueryTime(SectionNumber);
 
             List<LocationObj> results = changes.ObjectsInStore
