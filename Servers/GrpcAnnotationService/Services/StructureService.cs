@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Viking.DataModel.Annotation;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
@@ -89,6 +90,7 @@ namespace gRPCAnnotationService
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
                 response.Results.AddRange(rows.Select(s => s.ToProtobufMessage()));
+                await AttachStructureLinksAsync(response.Results, context.CancellationToken);
                 response.DeletedIds.AddRange(await DeletedStructureIdsSince(modifiedAfter));
                 return response;
             }
@@ -109,6 +111,7 @@ namespace gRPCAnnotationService
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
                 response.Results.AddRange(rows.Select(s => s.ToProtobufMessage()));
+                await AttachStructureLinksAsync(response.Results, context.CancellationToken);
                 response.DeletedIds.AddRange(await DeletedStructureIdsSince(modifiedAfter));
                 return response;
             }
@@ -129,6 +132,7 @@ namespace gRPCAnnotationService
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
                 response.Results.AddRange(rows.Select(s => s.ToProtobufMessage()));
+                await AttachStructureLinksAsync(response.Results, context.CancellationToken);
                 response.DeletedIds.AddRange(await DeletedStructureIdsSince(modifiedAfter));
                 return response;
             }
@@ -542,6 +546,34 @@ namespace gRPCAnnotationService
             Tags = src.Tags ?? string.Empty,
             Username = src.Username ?? string.Empty
         };
+
+        /// <summary>
+        /// Section/region structure queries do not Include StructureLink navigations (the EF
+        /// Structure entity has none). Batch-load links touching the returned IDs so clients
+        /// can hydrate StructureLinkStore from Structure.Links.
+        /// </summary>
+        private async Task AttachStructureLinksAsync(IList<ProtoStructure> structures, CancellationToken ct)
+        {
+            if (structures.Count == 0)
+                return;
+
+            var ids = structures.Select(s => s.Id).ToArray();
+            var links = await _context.StructureLinks.AsNoTracking()
+                .Where(l => ids.Contains(l.SourceId) || ids.Contains(l.TargetId))
+                .ToListAsync(ct);
+
+            if (links.Count == 0)
+                return;
+
+            var byId = structures.ToDictionary(s => s.Id);
+            foreach (var link in links)
+            {
+                if (byId.TryGetValue(link.SourceId, out var source))
+                    source.Links.Add(ToProtobufMessage(link));
+                if (link.TargetId != link.SourceId && byId.TryGetValue(link.TargetId, out var target))
+                    target.Links.Add(ToProtobufMessage(link));
+            }
+        }
 
         /// <summary>Builds the [dbo].[integer_list] table valued parameter the network procedures take.</summary>
         private static DataTable IdTable(IEnumerable<long> ids)

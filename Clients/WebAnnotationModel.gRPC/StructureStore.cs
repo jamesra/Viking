@@ -28,11 +28,13 @@ namespace WebAnnotationModel.gRPC
                   IObjectConverter<StructureObj, IStructure> objToServerObjConverter,
                 IObjectConverter<IStructure, StructureObj> serverObjToObjConverter,
                 IObjectUpdater<StructureObj, IStructure> objUpdater,
-                IObjectConverter<ILocation, LocationObj> serverLocationObjToObjConverter)
+                IObjectConverter<ILocation, LocationObj> serverLocationObjToObjConverter,
+                IStructureLinkStore structureLinkStore)
             : base(clientFactory, null, objToServerObjConverter, serverObjToObjConverter)
         {
             StructureClientFactory = structureClientFactory;
             ServerLocationObjToObjConverter = serverLocationObjToObjConverter;
+            StructureLinkStore = structureLinkStore;
         }
 
         /// <summary>
@@ -273,6 +275,10 @@ namespace WebAnnotationModel.gRPC
                 .ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(update.QueryTime, update.NewOrUpdated, update.DeletedIDs))
                 .GetAwaiter().GetResult();
             CallOnCollectionChanged(changes);
+            StructureLinkStore.MergeServerLinksAsync(
+                    update.NewOrUpdated.SelectMany(s => s.Links ?? Array.Empty<IStructureLink>()),
+                    update.QueryTime)
+                .GetAwaiter().GetResult();
             return Task.FromResult<ICollection<StructureObj>>(changes.ObjectsInStore);
         }
 

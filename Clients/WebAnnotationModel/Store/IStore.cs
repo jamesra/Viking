@@ -397,6 +397,11 @@ namespace WebAnnotationModel
         Task<StructureLinkObj[]> GetLinks(long structureId);
 
         /// <summary>
+        /// Merge structure links embedded on section/region Structure responses into the local store.
+        /// </summary>
+        Task MergeServerLinksAsync(IEnumerable<IStructureLink> links, DateTime? queryTime = null, CancellationToken token = default);
+
+        /// <summary>
         /// Synchronous convenience wrapper over Add(obj).
         /// </summary>
         StructureLinkObj Create(StructureLinkObj obj);

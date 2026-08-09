@@ -41,6 +41,20 @@ namespace WebAnnotationModel.gRPC
             return changes.ObjectsInStore.ToArray();
         }
 
+        public async Task MergeServerLinksAsync(IEnumerable<IStructureLink> links, DateTime? queryTime = null, CancellationToken token = default)
+        {
+            var arr = links?.Where(l => l != null).ToArray() ?? Array.Empty<IStructureLink>();
+            if (arr.Length == 0)
+                return;
+
+            token.ThrowIfCancellationRequested();
+            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(
+                new ServerUpdate<StructureLinkKey, IStructureLink[]>(
+                    queryTime ?? DateTime.UtcNow, arr, Array.Empty<StructureLinkKey>()))
+                .ConfigureAwait(false);
+            await CallOnCollectionChanged(changes).ConfigureAwait(false);
+        }
+
         /// <summary>
         /// Synchronous wrapper so exceptions surface to the caller's try/catch, matching legacy WCF-store semantics.
         /// Creates the link on the server immediately (UI flip/delete paths also call Save for deletes).

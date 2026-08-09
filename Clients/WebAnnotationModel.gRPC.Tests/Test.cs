@@ -3651,6 +3651,156 @@ namespace WebAnnotationModel.gRPC.Tests
             }
         }
 
+        [Test]
+        public async Task GetStructuresForSection_IncludesEmbeddedStructureLinks()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var structuresClient = new AnnotateStructures.AnnotateStructuresClient(channel);
+            var locationsClient = new AnnotateLocations.AnnotateLocationsClient(channel);
+            var typesClient = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+            const long section = 17;
+            var createdType = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
+            {
+                Obj = new StructureType
+                {
+                    Name = $"SecLink-{Guid.NewGuid():N}".Substring(0, 32),
+                    Code = "SK",
+                    Color = 0x112233,
+                    Created = now,
+                    LastModified = now,
+                    Username = _userIdentity.UserName,
+                }
+            });
+
+            long? aId = null;
+            long? bId = null;
+            long? locA = null;
+            long? locB = null;
+            try
+            {
+                async Task<(long StructureId, long LocationId)> CreateWithPoint(string label, double x, double y)
+                {
+                    var created = await structuresClient.CreateStructureAsync(new CreateStructureRequest
+                    {
+                        NewStructure = new Structure
+                        {
+                            TypeId = createdType.Result.Id,
+                            Label = label,
+                            Confidence = 0.5,
+                            Created = now,
+                            LastModified = now,
+                            Username = _userIdentity.UserName,
+                        }
+                    });
+                    var loc = await locationsClient.CreateLocationAsync(new CreateLocationRequest
+                    {
+                        Obj = new Location
+                        {
+                            ParentId = created.NewStructure.Id,
+                            Section = section,
+                            MosaicPosition = new AnnotationPoint { X = x, Y = y },
+                            VolumePosition = new AnnotationPoint { X = x, Y = y },
+                            MosaicShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = $"POINT ({x} {y})" },
+                            VolumeShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = $"POINT ({x} {y})" },
+                            TypeCode = AnnotationType.Circle,
+                            Created = now,
+                            LastModified = now,
+                            Username = _userIdentity.UserName,
+                        }
+                    });
+                    return (created.NewStructure.Id, loc.Result.Id);
+                }
+
+                (aId, locA) = await CreateWithPoint("sec-link-a", 21, 21);
+                (bId, locB) = await CreateWithPoint("sec-link-b", 22, 22);
+                await structuresClient.CreateStructureLinkAsync(new CreateStructureLinkRequest
+                {
+                    NewLink = new StructureLink
+                    {
+                        SourceId = aId.Value,
+                        TargetId = bId.Value,
+                        Bidirectional = true,
+                    }
+                });
+
+                var sectionSync = await structuresClient.GetStructuresForSectionAsync(new GetStructuresForSectionRequest
+                {
+                    Z = section
+                });
+                var a = sectionSync.Results.First(s => s.Id == aId.Value);
+                var b = sectionSync.Results.First(s => s.Id == bId.Value);
+                Assert.That(a.Links, Has.Some.Matches<StructureLink>(l =>
+                    l.SourceId == aId.Value && l.TargetId == bId.Value));
+                Assert.That(b.Links, Has.Some.Matches<StructureLink>(l =>
+                    l.SourceId == aId.Value && l.TargetId == bId.Value));
+
+                var regionSync = await structuresClient.GetStructuresInMosaicRegionAsync(new GetStructuresInMosaicRegionRequest
+                {
+                    Z = section,
+                    MinRadius = 0,
+                    Region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
+                    {
+                        Text = "POLYGON((0 0, 40 0, 40 40, 0 40, 0 0))"
+                    }
+                });
+                Assert.That(regionSync.Results.First(s => s.Id == aId.Value).Links, Has.Some.Matches<StructureLink>(l =>
+                    l.SourceId == aId.Value && l.TargetId == bId.Value));
+            }
+            finally
+            {
+                if (aId.HasValue && bId.HasValue)
+                {
+                    try
+                    {
+                        await structuresClient.DeleteStructureLinkAsync(new DeleteStructureLinkRequest
+                        {
+                            SourceId = aId.Value,
+                            TargetId = bId.Value
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                foreach (var id in new[] { locA, locB })
+                {
+                    if (!id.HasValue) continue;
+                    try
+                    {
+                        await locationsClient.UpdateAsync(new UpdateLocationsRequest
+                        {
+                            Locations = { new LocationChangeRequest { Delete = id.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                foreach (var id in new[] { aId, bId })
+                {
+                    if (!id.HasValue) continue;
+                    try
+                    {
+                        await structuresClient.UpdateAsync(new UpdateStructuresRequest
+                        {
+                            Objs = { new StructureChangeRequest { Delete = id.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                try
+                {
+                    await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                    {
+                        Objs = { new StructureTypeChangeRequest { Delete = createdType.Result.Id } }
+                    });
+                }
+                catch (RpcException) { }
+            }
+        }
+
         private async Task<string> RequestAccessTokenAsync()
         {
             using var http = new HttpClient { BaseAddress = new Uri(_identityServerUrl) };
