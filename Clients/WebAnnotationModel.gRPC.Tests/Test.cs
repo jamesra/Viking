@@ -1203,6 +1203,33 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         [Test]
+        public async Task GetLocationsByID_AndStructuresInVolumeRegion_ReturnSeed()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var locationsClient = new AnnotateLocations.AnnotateLocationsClient(channel);
+            var structuresClient = new AnnotateStructures.AnnotateStructuresClient(channel);
+
+            var byIds = await locationsClient.GetLocationsByIDAsync(new GetLocationsByIDRequest
+            {
+                Ids = { 1 }
+            });
+            Assert.That(byIds.Results, Has.Some.Matches<Location>(l => l.Id == 1));
+
+            // Seed location uses the same mosaic/volume point (100, 200) on Z=1.
+            var byVolume = await structuresClient.GetStructuresInVolumeRegionAsync(new GetStructuresInVolumeRegionRequest
+            {
+                Z = 1,
+                MinRadius = 0,
+                Region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
+                {
+                    Text = "POLYGON((90 190, 110 190, 110 210, 90 210, 90 190))"
+                }
+            });
+            Assert.That(byVolume.Results, Has.Some.Matches<Structure>(s => s.Id == 1));
+        }
+
+        [Test]
         public async Task GetStructuresByID_ReturnsRequestedIds()
         {
             var accessToken = await RequestAccessTokenAsync();

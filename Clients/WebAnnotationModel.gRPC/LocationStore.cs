@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -23,6 +24,11 @@ namespace WebAnnotationModel.gRPC
         /// This collection is not guaranteed to match the ObjectToID collection.  Adding spin-locks to the Add/Remove functions could solve this if it becomes an issue.
         /// </summary>
         System.Collections.Concurrent.ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>> SectionToLocations = new ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>>();
+
+        /// <summary>
+        /// Last successful region/section query time per section, used by FreeExcessSections.
+        /// </summary>
+        private readonly ConcurrentDictionary<long, DateTime> LastQueryForSection = new ConcurrentDictionary<long, DateTime>();
 
         private readonly IStructureStore _structureStore;
 
@@ -48,7 +54,49 @@ namespace WebAnnotationModel.gRPC
             _locationClientFactory = locationClientFactory;
             _spatialClientFactory = spatialClientFactory;
             _storeEditor = this as IStoreEditor<long, LocationObj>;
-        } 
+            OnCollectionChanged += OnStoreCollectionChanged;
+        }
+
+        private void OnStoreCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+            {
+                foreach (var item in e.OldItems)
+                {
+                    if (item is LocationObj loc)
+                        TryRemoveFromSectionIndex(loc);
+                }
+            }
+
+            if (e.NewItems != null)
+            {
+                foreach (var item in e.NewItems)
+                {
+                    if (item is LocationObj loc)
+                        TryAddToSectionIndex(loc);
+                }
+            }
+        }
+
+        private void TryAddToSectionIndex(LocationObj loc)
+        {
+            var sectionMap = SectionToLocations.GetOrAdd(loc.Section,
+                _ => new ConcurrentDictionary<long, LocationObj>());
+            sectionMap.TryAdd(loc.ID, loc);
+        }
+
+        private void TryRemoveFromSectionIndex(LocationObj loc)
+        {
+            if (!SectionToLocations.TryGetValue(loc.Section, out var sectionMap))
+                return;
+
+            sectionMap.TryRemove(loc.ID, out _);
+            if (sectionMap.IsEmpty)
+                SectionToLocations.TryRemove(loc.Section, out _);
+        }
+
+        private void TouchSectionQueryTime(long sectionNumber) =>
+            LastQueryForSection.AddOrUpdate(sectionNumber, DateTime.UtcNow, (_, __) => DateTime.UtcNow); 
 
         /// <summary>
         /// Queries the server for locations on the given section whose mosaic-space bounding box intersects
@@ -94,6 +142,7 @@ namespace WebAnnotationModel.gRPC
                 if (token.IsCancellationRequested)
                     return new List<LocationObj>();
 
+                TouchSectionQueryTime(SectionNumber);
                 return progressiveResults.Count > 0
                     ? progressiveResults.Distinct().ToList()
                     : response.NewOrUpdated
@@ -109,6 +158,7 @@ namespace WebAnnotationModel.gRPC
 
             var changes = await ServerQueryResultsHandler.ProcessServerUpdate(unary.NewOrUpdated, unary.DeletedIDs);
             await CallOnCollectionChanged(changes);
+            TouchSectionQueryTime(SectionNumber);
 
             List<LocationObj> results = changes.ObjectsInStore
                 .Where(l => VolumeBounds.Contains(l.Position)).ToList();
@@ -241,11 +291,38 @@ namespace WebAnnotationModel.gRPC
         }
 
         /// <summary>
-        /// Instruct the store to evict cached sections beyond the given limits to save memory.
-        /// TODO: Port the full section eviction/cancellation logic from the WCF-era store (see SectionIndexedStore).
+        /// Drop cached locations for a section from the local store.
+        /// </summary>
+        public bool RemoveSection(long SectionNumber)
+        {
+            LastQueryForSection.TryRemove(SectionNumber, out _);
+            if (!SectionToLocations.TryRemove(SectionNumber, out var sectionObjects))
+                return true;
+
+            ForgetLocally(sectionObjects.Keys.ToArray());
+            sectionObjects.Clear();
+            return true;
+        }
+
+        /// <summary>
+        /// Evict least-recently-queried section caches when over <paramref name="LoadedSectionLimit"/>.
+        /// <paramref name="LoadingSectionLimit"/> is reserved for cancelling in-flight section loads
+        /// once those are wired through the gRPC region path.
         /// </summary>
         public void FreeExcessSections(int LoadedSectionLimit, int LoadingSectionLimit)
         {
+            _ = LoadingSectionLimit;
+
+            if (LoadedSectionLimit < 0 || LastQueryForSection.Count <= LoadedSectionLimit)
+                return;
+
+            var oldestFirst = LastQueryForSection.OrderBy(kv => kv.Value).ToList();
+            while (LastQueryForSection.Count > LoadedSectionLimit && oldestFirst.Count > 0)
+            {
+                var section = oldestFirst[0].Key;
+                oldestFirst.RemoveAt(0);
+                RemoveSection(section);
+            }
         }
 
         /// <summary>
