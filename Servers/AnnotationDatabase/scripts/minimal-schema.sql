@@ -186,6 +186,110 @@ BEGIN
 END
 GO
 
+-- MergeStructures (subset of full SSDT proc; enough for gRPC Merge RPC tests).
+IF OBJECT_ID(N'dbo.MergeStructures', N'P') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE PROCEDURE dbo.MergeStructures
+        @KeepStructureID bigint,
+        @MergeStructureID bigint
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+
+        DECLARE @MergeNotes nvarchar(max) =
+            (SELECT Notes FROM dbo.Structure WHERE ID = @MergeStructureID);
+
+        UPDATE dbo.Location
+        SET ParentID = @KeepStructureID
+        WHERE ParentID = @MergeStructureID;
+
+        UPDATE dbo.Structure
+        SET ParentID = @KeepStructureID
+        WHERE ParentID = @MergeStructureID;
+
+        IF NOT (@MergeNotes IS NULL OR @MergeNotes = N'''')
+        BEGIN
+            DECLARE @crlf nvarchar(2) = CHAR(13) + CHAR(10);
+            DECLARE @MergeHeader nvarchar(80) =
+                N''*****BEGIN MERGE FROM '' + CONVERT(nvarchar(80), @MergeStructureID) + N''*****'';
+            DECLARE @MergeFooter nvarchar(80) =
+                N''*****END MERGE FROM '' + CONVERT(nvarchar(80), @MergeStructureID) + N''*****'';
+
+            UPDATE dbo.Structure
+            SET Notes = ISNULL(Notes, N'''') + @crlf + @MergeHeader + @crlf + @MergeNotes + @crlf + @MergeFooter + @crlf
+            WHERE ID = @KeepStructureID;
+        END
+
+        DELETE FROM dbo.StructureLink
+        WHERE (SourceID = @KeepStructureID AND TargetID = @MergeStructureID)
+           OR (TargetID = @KeepStructureID AND SourceID = @MergeStructureID);
+
+        UPDATE dbo.StructureLink SET TargetID = @KeepStructureID WHERE TargetID = @MergeStructureID;
+        UPDATE dbo.StructureLink SET SourceID = @KeepStructureID WHERE SourceID = @MergeStructureID;
+
+        DELETE FROM dbo.Structure WHERE ID = @MergeStructureID;
+    END');
+END
+GO
+
+-- Unfinished branch queries used by StructureService.
+IF OBJECT_ID(N'dbo.SelectUnfinishedStructureBranches', N'P') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE PROCEDURE dbo.SelectUnfinishedStructureBranches
+        @StructureID bigint
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+
+        SELECT ID FROM
+            (SELECT LocationID, COUNT(LocationID) AS NumLinks FROM
+                (
+                    SELECT A AS LocationID FROM dbo.LocationLink
+                    WHERE A IN (SELECT L.ID FROM dbo.Location L WHERE L.ParentID = @StructureID)
+                    UNION ALL
+                    SELECT B AS LocationID FROM dbo.LocationLink
+                    WHERE B IN (SELECT L.ID FROM dbo.Location L WHERE L.ParentID = @StructureID)
+                ) AS LinkedIDs
+                GROUP BY LocationID) AS AllLocationLinks
+            INNER JOIN
+                (SELECT ID FROM dbo.Location WHERE Terminal = 0 AND OffEdge = 0) L
+            ON AllLocationLinks.LocationID = L.ID
+            WHERE AllLocationLinks.NumLinks <= 1
+            ORDER BY ID;
+    END');
+END
+GO
+
+IF OBJECT_ID(N'dbo.SelectUnfinishedStructureBranchesWithPosition', N'P') IS NULL
+BEGIN
+    EXEC(N'
+    CREATE PROCEDURE dbo.SelectUnfinishedStructureBranchesWithPosition
+        @StructureID bigint
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+
+        SELECT ID, X, Y, Z, Radius FROM
+            (SELECT LocationID, COUNT(LocationID) AS NumLinks FROM
+                (
+                    SELECT A AS LocationID FROM dbo.LocationLink
+                    WHERE A IN (SELECT L.ID FROM dbo.Location L WHERE L.ParentID = @StructureID)
+                    UNION ALL
+                    SELECT B AS LocationID FROM dbo.LocationLink
+                    WHERE B IN (SELECT L.ID FROM dbo.Location L WHERE L.ParentID = @StructureID)
+                ) AS LinkedIDs
+                GROUP BY LocationID) AS AllLocationLinks
+            INNER JOIN
+                (SELECT ID, X, Y, Z, Radius FROM dbo.Location WHERE Terminal = 0 AND OffEdge = 0) L
+            ON AllLocationLinks.LocationID = L.ID
+            WHERE AllLocationLinks.NumLinks <= 1
+            ORDER BY ID;
+    END');
+END
+GO
+
 -- Seed one StructureType → Structure → Location when the DB is empty (ids become 1).
 IF NOT EXISTS (SELECT 1 FROM dbo.StructureType)
 BEGIN
