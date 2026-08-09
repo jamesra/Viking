@@ -1,5 +1,6 @@
 ﻿using Grpc.Core;
 using gRPCAnnotationService.Protos;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Threading.Tasks;
@@ -72,14 +73,13 @@ namespace gRPCAnnotationService
         {
             try
             {
-                GetStructureTypesResponse response = new GetStructureTypesResponse();
-
-                response.Results.AddRange(_context.StructureTypes.Select(t => t.ToProtobufMessage()));
-
+                var rows = await _context.StructureTypes.AsNoTracking().ToListAsync();
+                var response = new GetStructureTypesResponse();
+                response.Results.AddRange(rows.Select(t => t.ToProtobufMessage()));
                 return response;
             }
             catch (System.Exception e)
-            {  
+            {
                 _logger.LogInformation($"{nameof(GetStructureTypes)}: {e}");
                 throw new Grpc.Core.RpcException(new Status(StatusCode.Unknown, nameof(GetStructureTypes), e));
             }
@@ -87,22 +87,23 @@ namespace gRPCAnnotationService
 
         public override async Task<GetStructureTypesByIDsResponse> GetStructureTypesByIDs(GetStructureTypesByIDsRequest request, ServerCallContext context)
         {
-            GetStructureTypesByIDsResponse response = new GetStructureTypesByIDsResponse();
-            foreach (var chunk in request.Ids.ToArray().Chunk())
+            try
             {
-                try
+                var response = new GetStructureTypesByIDsResponse();
+                foreach (var chunk in request.Ids.ToArray().Chunk())
                 {
-                    response.Results.AddRange(_context.StructureTypes.Where(t => chunk.Contains(t.Id)).Select(t => t.ToProtobufMessage()));
+                    var rows = await _context.StructureTypes.AsNoTracking()
+                        .Where(t => chunk.Contains(t.Id)).ToListAsync();
+                    response.Results.AddRange(rows.Select(t => t.ToProtobufMessage()));
+                }
 
-                }
-                catch (System.Exception e)
-                {
-                    _logger.LogInformation($"{nameof(GetStructureTypes)}: {e}");
-                    throw new Grpc.Core.RpcException(new Status(StatusCode.Unknown, nameof(GetStructureTypes), e));
-                }
+                return response;
             }
-
-            return response;
+            catch (System.Exception e)
+            {
+                _logger.LogInformation($"{nameof(GetStructureTypesByIDs)}: {e}");
+                throw new Grpc.Core.RpcException(new Status(StatusCode.Unknown, nameof(GetStructureTypesByIDs), e));
+            }
         }
 
         public override async Task<UpdateStructureTypesResponse> Update(UpdateStructureTypesRequest request, ServerCallContext context)

@@ -1203,6 +1203,71 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         [Test]
+        public async Task GetLocationsForSection_AndLocationChanges_ReturnSeed()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var client = new AnnotateLocations.AnnotateLocationsClient(channel);
+
+            var forSection = await client.GetLocationsForSectionAsync(new GetLocationsForSectionRequest
+            {
+                Section = 1
+            });
+            Assert.That(forSection.Results, Has.Some.Matches<Location>(l => l.Id == 1));
+            Assert.That(forSection.QueryExecutedTime, Is.Not.Null);
+
+            var changes = await client.GetLocationChangesAsync(new GetLocationChangesRequest
+            {
+                Section = 1
+            });
+            Assert.That(changes.Results, Has.Some.Matches<Location>(l => l.Id == 1));
+            Assert.That(changes.QueryExecutedTime, Is.Not.Null);
+        }
+
+        [Test]
+        public async Task GetStructureTypesByIDs_ReturnsSeedAndCreated()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var typesClient = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+            var created = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
+            {
+                Obj = new StructureType
+                {
+                    Name = $"ByIdsT-{Guid.NewGuid():N}".Substring(0, 32),
+                    Code = "BD",
+                    Color = 0x0D0E0F,
+                    Created = now,
+                    LastModified = now,
+                    Username = _userIdentity.UserName,
+                }
+            });
+
+            try
+            {
+                var batch = await typesClient.GetStructureTypesByIDsAsync(new GetStructureTypesByIDsRequest
+                {
+                    Ids = { 1, created.Result.Id }
+                });
+                Assert.That(batch.Results, Has.Some.Matches<StructureType>(t => t.Id == 1));
+                Assert.That(batch.Results, Has.Some.Matches<StructureType>(t => t.Id == created.Result.Id));
+            }
+            finally
+            {
+                try
+                {
+                    await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                    {
+                        Objs = { new StructureTypeChangeRequest { Delete = created.Result.Id } }
+                    });
+                }
+                catch (RpcException) { }
+            }
+        }
+
+        [Test]
         public async Task GetLocationsByID_AndStructuresInVolumeRegion_ReturnSeed()
         {
             var accessToken = await RequestAccessTokenAsync();

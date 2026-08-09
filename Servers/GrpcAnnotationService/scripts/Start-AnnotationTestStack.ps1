@@ -92,7 +92,7 @@ Write-Host @"
 
 Stack is up:
   Identity DevTest : http://localhost:5020
-  gRPC (HTTPS)     : https://localhost:5011
+  gRPC (HTTP/h2c)  : http://localhost:5010
   Annotation SQL   : localhost,1433  (database AnnotationTest)
 
 Run tests:
