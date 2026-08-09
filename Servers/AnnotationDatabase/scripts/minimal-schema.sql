@@ -148,42 +148,56 @@ BEGIN
 END
 GO
 
+-- EF Core DELETE uses OUTPUT, which cannot coexist with FOR DELETE triggers on
+-- Location. Audit DeletedLocations from DeepDeleteStructure / LocationService instead.
+IF OBJECT_ID(N'dbo.Location_delete', N'TR') IS NOT NULL
+    DROP TRIGGER dbo.Location_delete;
+GO
+
 -- Simplified DeepDeleteStructure (full SSDT version also clears children/links).
--- Required by StructureService.Update delete path.
-IF OBJECT_ID(N'dbo.DeepDeleteStructure', N'P') IS NULL
+-- Required by StructureService.Update delete path. Recreate so AnnotationTest picks
+-- up DeletedLocations logging even if an older lean proc already exists.
+IF OBJECT_ID(N'dbo.DeepDeleteStructure', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.DeepDeleteStructure;
+GO
+
+EXEC(N'
+CREATE PROCEDURE dbo.DeepDeleteStructure
+    @DeleteID bigint
+AS
 BEGIN
-    EXEC(N'
-    CREATE PROCEDURE dbo.DeepDeleteStructure
-        @DeleteID bigint
-    AS
-    BEGIN
-        SET NOCOUNT ON;
+    SET NOCOUNT ON;
 
-        IF OBJECT_ID(''tempdb..#StructuresToDelete'') IS NOT NULL
-            DROP TABLE #StructuresToDelete;
+    IF OBJECT_ID(''tempdb..#StructuresToDelete'') IS NOT NULL
+        DROP TABLE #StructuresToDelete;
 
-        SELECT ID INTO #StructuresToDelete
-        FROM dbo.Structure
-        WHERE ID = @DeleteID OR ParentID = @DeleteID;
+    SELECT ID INTO #StructuresToDelete
+    FROM dbo.Structure
+    WHERE ID = @DeleteID OR ParentID = @DeleteID;
 
-        DELETE FROM dbo.LocationLink
-        WHERE A IN (SELECT ID FROM dbo.Location WHERE ParentID IN (SELECT ID FROM #StructuresToDelete))
-           OR B IN (SELECT ID FROM dbo.Location WHERE ParentID IN (SELECT ID FROM #StructuresToDelete));
+    DELETE FROM dbo.LocationLink
+    WHERE A IN (SELECT ID FROM dbo.Location WHERE ParentID IN (SELECT ID FROM #StructuresToDelete))
+       OR B IN (SELECT ID FROM dbo.Location WHERE ParentID IN (SELECT ID FROM #StructuresToDelete));
 
-        DELETE FROM dbo.Location
-        WHERE ParentID IN (SELECT ID FROM #StructuresToDelete);
+    INSERT INTO dbo.DeletedLocations (ID)
+    SELECT L.ID
+    FROM dbo.Location L
+    WHERE L.ParentID IN (SELECT ID FROM #StructuresToDelete)
+      AND NOT EXISTS (SELECT 1 FROM dbo.DeletedLocations DL WHERE DL.ID = L.ID);
 
-        DELETE FROM dbo.StructureLink
-        WHERE SourceID IN (SELECT ID FROM #StructuresToDelete)
-           OR TargetID IN (SELECT ID FROM #StructuresToDelete);
+    DELETE FROM dbo.Location
+    WHERE ParentID IN (SELECT ID FROM #StructuresToDelete);
 
-        DELETE FROM dbo.Structure WHERE ParentID = @DeleteID;
-        DELETE FROM dbo.Structure WHERE ID = @DeleteID;
+    DELETE FROM dbo.StructureLink
+    WHERE SourceID IN (SELECT ID FROM #StructuresToDelete)
+       OR TargetID IN (SELECT ID FROM #StructuresToDelete);
 
-        IF OBJECT_ID(''tempdb..#StructuresToDelete'') IS NOT NULL
-            DROP TABLE #StructuresToDelete;
-    END');
-END
+    DELETE FROM dbo.Structure WHERE ParentID = @DeleteID;
+    DELETE FROM dbo.Structure WHERE ID = @DeleteID;
+
+    IF OBJECT_ID(''tempdb..#StructuresToDelete'') IS NOT NULL
+        DROP TABLE #StructuresToDelete;
+END');
 GO
 
 -- MergeStructures (subset of full SSDT proc; enough for gRPC Merge RPC tests).

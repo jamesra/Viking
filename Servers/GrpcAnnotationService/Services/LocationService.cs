@@ -424,7 +424,9 @@ namespace gRPCAnnotationService
                             _context.LocationLinks.RemoveRange(attached);
 
                             // Record the delete so incremental GetLocationChanges* calls can
-                            // tell clients to drop the ID from their local cache.
+                            // tell clients to drop the ID. (A FOR DELETE trigger cannot be used:
+                            // EF Core DELETE statements include OUTPUT, which SQL Server rejects
+                            // when the target table has triggers.)
                             var alreadyLogged = await _context.DeletedLocations
                                 .AnyAsync(d => d.Id == toDelete.Id);
                             if (!alreadyLogged)
