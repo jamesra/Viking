@@ -91,6 +91,43 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         [Test]
+        public async Task StreamLocationChangesInMosaicRegion_ReturnsSeedLocation()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var client = new AnnotateLocations.AnnotateLocationsClient(channel);
+
+            // Seed location from minimal-schema.sql: Z=1, POINT (100 200)
+            var request = new GetLocationChangesInMosaicRegionRequest
+            {
+                Z = 1,
+                MinRadius = 0,
+                Region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
+                {
+                    Text = "POLYGON((90 190, 110 190, 110 210, 90 210, 90 190))"
+                }
+            };
+
+            using var call = client.StreamLocationChangesInMosaicRegion(request);
+            var locations = new System.Collections.Generic.List<Location>();
+            var sawLast = false;
+            Timestamp queryTime = null;
+
+            await foreach (var chunk in call.ResponseStream.ReadAllAsync())
+            {
+                if (chunk.QueryExecutedTime != null)
+                    queryTime = chunk.QueryExecutedTime;
+                locations.AddRange(chunk.Locations);
+                if (chunk.IsLast)
+                    sawLast = true;
+            }
+
+            Assert.That(sawLast, Is.True);
+            Assert.That(queryTime, Is.Not.Null);
+            Assert.That(locations, Has.Some.Matches<Location>(l => l.Id == 1));
+        }
+
+        [Test]
         public async Task GetStructures_ReturnsAtLeastSeedStructure()
         {
             var accessToken = await RequestAccessTokenAsync();

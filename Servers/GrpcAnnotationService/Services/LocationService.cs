@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Viking.DataModel.Annotation;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
@@ -201,6 +202,108 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw Failure(nameof(GetAnnotationsInMosaicRegion), e); }
         }
 
+        public override async Task StreamLocationChangesInMosaicRegion(
+            GetLocationChangesInMosaicRegionRequest request,
+            IServerStreamWriter<LocationRegionChunk> responseStream,
+            ServerCallContext context)
+        {
+            try
+            {
+                var queryStart = DateTime.UtcNow;
+                var queryExecutedTime = Timestamp.FromDateTime(DateTime.SpecifyKind(queryStart, DateTimeKind.Utc));
+                var modifiedAfter = request.ModifiedAfterThisUtcTime?.ToDateTime();
+                var ct = context.CancellationToken;
+
+                var batch = new List<EfLocation>(RegionStreamBatchSize);
+                var isFirst = true;
+
+                await foreach (var location in MosaicRegionQuery(request.Z, request.Region, request.MinRadius, modifiedAfter)
+                                   .AsAsyncEnumerable()
+                                   .WithCancellation(ct))
+                {
+                    batch.Add(location);
+                    if (batch.Count < RegionStreamBatchSize)
+                        continue;
+
+                    var chunk = new LocationRegionChunk { IsLast = false };
+                    if (isFirst)
+                    {
+                        chunk.QueryExecutedTime = queryExecutedTime;
+                        isFirst = false;
+                    }
+
+                    chunk.Locations.AddRange(batch.Select(l => l.ToProtobufMessage()));
+                    await responseStream.WriteAsync(chunk);
+                    batch.Clear();
+                }
+
+                var final = new LocationRegionChunk { IsLast = true };
+                if (isFirst)
+                    final.QueryExecutedTime = queryExecutedTime;
+                final.Locations.AddRange(batch.Select(l => l.ToProtobufMessage()));
+                final.DeletedIds.AddRange(await DeletedIdsSince(request.Z, modifiedAfter));
+                await responseStream.WriteAsync(final);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (RpcException) { throw; }
+            catch (Exception e) { throw Failure(nameof(StreamLocationChangesInMosaicRegion), e); }
+        }
+
+        public override async Task StreamAnnotationsInMosaicRegion(
+            GetAnnotationsInMosaicRegionRequest request,
+            IServerStreamWriter<AnnotationRegionChunk> responseStream,
+            ServerCallContext context)
+        {
+            try
+            {
+                var queryStart = DateTime.UtcNow;
+                var queryExecutedTime = Timestamp.FromDateTime(DateTime.SpecifyKind(queryStart, DateTimeKind.Utc));
+                var modifiedAfter = request.ModifiedAfterThisUtcTime?.ToDateTime();
+                var ct = context.CancellationToken;
+
+                var batch = new List<EfLocation>(RegionStreamBatchSize);
+                var isFirst = true;
+
+                await foreach (var location in MosaicRegionQuery(request.Z, request.Region, request.MinRadius, modifiedAfter)
+                                   .AsAsyncEnumerable()
+                                   .WithCancellation(ct))
+                {
+                    batch.Add(location);
+                    if (batch.Count < RegionStreamBatchSize)
+                        continue;
+
+                    var chunk = new AnnotationRegionChunk
+                    {
+                        IsLast = false,
+                        Partial = await AnnotationSetForLocationBatch(batch, ct)
+                    };
+                    if (isFirst)
+                    {
+                        chunk.QueryExecutedTime = queryExecutedTime;
+                        isFirst = false;
+                    }
+
+                    await responseStream.WriteAsync(chunk);
+                    batch.Clear();
+                }
+
+                var final = new AnnotationRegionChunk
+                {
+                    IsLast = true,
+                    Partial = batch.Count > 0
+                        ? await AnnotationSetForLocationBatch(batch, ct)
+                        : new AnnotationSet()
+                };
+                if (isFirst)
+                    final.QueryExecutedTime = queryExecutedTime;
+                final.DeletedIds.AddRange(await DeletedIdsSince(request.Z, modifiedAfter));
+                await responseStream.WriteAsync(final);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (RpcException) { throw; }
+            catch (Exception e) { throw Failure(nameof(StreamAnnotationsInMosaicRegion), e); }
+        }
+
         public override async Task<GetLocationLinksForSectionResponse> GetLocationLinksForSection(GetLocationLinksForSectionRequest request, ServerCallContext context)
         {
             try
@@ -373,6 +476,25 @@ namespace gRPCAnnotationService
         }
 
         #region Helpers
+
+        private const int RegionStreamBatchSize = 128;
+
+        private async Task<AnnotationSet> AnnotationSetForLocationBatch(IReadOnlyList<EfLocation> locations, CancellationToken ct)
+        {
+            var set = new AnnotationSet();
+            set.Locations.AddRange(locations.Select(l => l.ToProtobufMessage()));
+
+            var parentIds = locations.Select(l => l.ParentId).Distinct().ToArray();
+            foreach (var parentChunk in parentIds.Chunk())
+            {
+                var structures = await _context.Structures.AsNoTracking()
+                    .Where(s => parentChunk.Contains(s.Id))
+                    .ToListAsync(ct);
+                set.Structures.AddRange(structures.Select(s => s.ToProtobufMessage()));
+            }
+
+            return set;
+        }
 
         private static string CallerName(ServerCallContext context) =>
             context.GetHttpContext()?.User?.Identity?.Name ?? "unknown";

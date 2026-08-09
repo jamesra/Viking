@@ -152,11 +152,47 @@ namespace WebAnnotationModel.gRPC
                 Text = geometryWellKnownText
             };
 
-            var request = new GetLocationChangesInMosaicRegionRequest() { MinRadius = screenPixelSizeInVolume, Region = region, ModifiedAfterThisUtcTime = Timestamp.FromDateTime(modifiedAfter ?? DateTime.MinValue), Z = Z};
-            var response = await Client.GetLocationChangesInMosaicRegionAsync(request, cancellationToken: token);
+            var request = new GetLocationChangesInMosaicRegionRequest()
+            {
+                MinRadius = screenPixelSizeInVolume,
+                Region = region,
+                ModifiedAfterThisUtcTime = Timestamp.FromDateTime(DateTime.SpecifyKind(modifiedAfter ?? DateTime.MinValue, DateTimeKind.Utc)),
+                Z = Z
+            };
 
-            return new ServerUpdate<long, ILocation[]>(
-                response.QueryExecutedTime.ToDateTime(), response.Results.Cast<ILocation>().ToArray(), response.DeletedIds.ToArray());
+            try
+            {
+                using (var call = Client.StreamLocationChangesInMosaicRegion(request, cancellationToken: token))
+                {
+                    DateTime? queryTime = null;
+                    var locations = new List<ILocation>();
+                    var deletedIds = new List<long>();
+                    var sawLast = false;
+
+                    while (await call.ResponseStream.MoveNext(token).ConfigureAwait(false))
+                    {
+                        var chunk = call.ResponseStream.Current;
+                        if (chunk.QueryExecutedTime != null)
+                            queryTime = chunk.QueryExecutedTime.ToDateTime();
+                        locations.AddRange(chunk.Locations.Cast<ILocation>());
+                        deletedIds.AddRange(chunk.DeletedIds);
+                        if (chunk.IsLast)
+                            sawLast = true;
+                    }
+
+                    if (!sawLast && queryTime == null)
+                        throw new RpcException(new Status(StatusCode.Internal, "Location region stream ended without chunks"));
+
+                    return new ServerUpdate<long, ILocation[]>(
+                        queryTime ?? DateTime.UtcNow, locations.ToArray(), deletedIds.ToArray());
+                }
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)
+            {
+                var response = await Client.GetLocationChangesInMosaicRegionAsync(request, cancellationToken: token);
+                return new ServerUpdate<long, ILocation[]>(
+                    response.QueryExecutedTime.ToDateTime(), response.Results.Cast<ILocation>().ToArray(), response.DeletedIds.ToArray());
+            }
         }
 
         async Task<ServerUpdate<long, AnnotationSet[]>> IServerSpatialAnnotationsClient<long, AnnotationSet>.GetAsync(long Z, string geometryWellKnownText, double screenPixelSizeInVolume, DateTime? modifiedAfter, CancellationToken token)
@@ -166,12 +202,51 @@ namespace WebAnnotationModel.gRPC
                 Text = geometryWellKnownText
             };
 
-            var request = new GetAnnotationsInMosaicRegionRequest() { MinRadius = screenPixelSizeInVolume, Region = region, ModifiedAfterThisUtcTime = Timestamp.FromDateTime(modifiedAfter ?? DateTime.MinValue), Z = Z};
-            var response = await Client.GetAnnotationsInMosaicRegionAsync(request, cancellationToken: token);
+            var request = new GetAnnotationsInMosaicRegionRequest()
+            {
+                MinRadius = screenPixelSizeInVolume,
+                Region = region,
+                ModifiedAfterThisUtcTime = Timestamp.FromDateTime(DateTime.SpecifyKind(modifiedAfter ?? DateTime.MinValue, DateTimeKind.Utc)),
+                Z = Z
+            };
 
-            return new ServerUpdate<long, AnnotationSet[]>(response.QueryExecutedTime.ToDateTime(), new AnnotationSet[] {response.Result},
-                response.DeletedIds.ToArray()
-                );
+            try
+            {
+                using (var call = Client.StreamAnnotationsInMosaicRegion(request, cancellationToken: token))
+                {
+                    DateTime? queryTime = null;
+                    var merged = new AnnotationSet();
+                    var deletedIds = new List<long>();
+                    var sawLast = false;
+
+                    while (await call.ResponseStream.MoveNext(token).ConfigureAwait(false))
+                    {
+                        var chunk = call.ResponseStream.Current;
+                        if (chunk.QueryExecutedTime != null)
+                            queryTime = chunk.QueryExecutedTime.ToDateTime();
+                        if (chunk.Partial != null)
+                        {
+                            merged.Locations.AddRange(chunk.Partial.Locations);
+                            merged.Structures.AddRange(chunk.Partial.Structures);
+                        }
+                        deletedIds.AddRange(chunk.DeletedIds);
+                        if (chunk.IsLast)
+                            sawLast = true;
+                    }
+
+                    if (!sawLast && queryTime == null)
+                        throw new RpcException(new Status(StatusCode.Internal, "Annotation region stream ended without chunks"));
+
+                    return new ServerUpdate<long, AnnotationSet[]>(
+                        queryTime ?? DateTime.UtcNow, new AnnotationSet[] { merged }, deletedIds.ToArray());
+                }
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)
+            {
+                var response = await Client.GetAnnotationsInMosaicRegionAsync(request, cancellationToken: token);
+                return new ServerUpdate<long, AnnotationSet[]>(response.QueryExecutedTime.ToDateTime(), new AnnotationSet[] { response.Result },
+                    response.DeletedIds.ToArray());
+            }
         }
 
         public async Task<ServerUpdate<long, ILocation[]>> GetAsync(long Z, DateTime? modifiedAfter, CancellationToken token)

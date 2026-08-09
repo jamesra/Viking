@@ -19,6 +19,8 @@ service AnnotateLocations {
   rpc GetLocationsForSection (GetLocationsForSectionRequest) returns (GetLocationsForSectionResponse);
   rpc GetLocationChangesInMosaicRegion (GetLocationChangesInMosaicRegionRequest) returns (GetLocationChangesInMosaicRegionResponse);
   rpc GetAnnotationsInMosaicRegion (GetAnnotationsInMosaicRegionRequest) returns (GetAnnotationsInMosaicRegionResponse);
+  rpc StreamLocationChangesInMosaicRegion (GetLocationChangesInMosaicRegionRequest) returns (stream LocationRegionChunk);
+  rpc StreamAnnotationsInMosaicRegion (GetAnnotationsInMosaicRegionRequest) returns (stream AnnotationRegionChunk);
   rpc GetLocationChanges (GetLocationChangesRequest) returns (GetLocationChangesResponse);
   rpc Update (UpdateLocationsRequest) returns (UpdateLocationsResponse);
   rpc CreateLocationLink (CreateLocationLinkRequest) returns (CreateLocationLinkResponse);
@@ -202,6 +204,22 @@ message GetAnnotationsInMosaicRegionResponse {
   AnnotationSet result = 1;
   repeated int64 deleted_ids = 2;
   google.protobuf.Timestamp query_executed_time = 3;
+}
+
+
+message LocationRegionChunk {
+  google.protobuf.Timestamp query_executed_time = 1; // set on first chunk
+  repeated Location locations = 2;
+  repeated int64 deleted_ids = 3; // preferably only on last chunk
+  bool is_last = 4;
+}
+
+
+message AnnotationRegionChunk {
+  google.protobuf.Timestamp query_executed_time = 1;
+  AnnotationSet partial = 2; // locations (+ structures for those parents) for this batch
+  repeated int64 deleted_ids = 3;
+  bool is_last = 4;
 }
 
 
