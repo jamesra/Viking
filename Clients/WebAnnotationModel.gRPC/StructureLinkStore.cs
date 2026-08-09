@@ -37,7 +37,7 @@ namespace WebAnnotationModel.gRPC
             var serverLinks = await client.GetLinksForStructureAsync(structureId, CancellationToken.None);
             var changes = await ServerQueryResultsHandler.ProcessServerUpdate(
                 new ServerUpdate<StructureLinkKey, IStructureLink[]>(DateTime.UtcNow, serverLinks, Array.Empty<StructureLinkKey>()));
-            CallOnCollectionChanged(changes);
+            await CallOnCollectionChanged(changes).ConfigureAwait(false);
             return changes.ObjectsInStore.ToArray();
         }
 
