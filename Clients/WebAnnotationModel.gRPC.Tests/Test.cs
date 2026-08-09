@@ -13,8 +13,10 @@ using Microsoft.Extensions.Configuration;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Google.Protobuf.WellKnownTypes;
+using WebAnnotationModel.gRPC;
 using WebAnnotationModel.gRPC.Converters;
 using WebAnnotationModel.Objects;
+using Viking.AnnotationServiceTypes;
 
 namespace WebAnnotationModel.gRPC.Tests
 {
@@ -102,6 +104,138 @@ namespace WebAnnotationModel.gRPC.Tests
             Assert.That(change.Update, Is.Not.Null);
             Assert.That(change.Update.Id, Is.EqualTo(3));
             Assert.That(change.Update.Name, Is.EqualTo("typed"));
+        }
+
+        /// <summary>
+        /// Store.Save converts StructureTypeObj → StructureType then calls UpdateAsync.
+        /// The repository client must accept the proto (not only StructureTypeObj).
+        /// </summary>
+        [Test]
+        public async Task StructureTypesClient_UpdateAsync_AcceptsProtoFromStoreSave()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var typesClient = new StructureTypesClient(channel, new StructureTypeClientToServerConverter());
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+
+            var created = (StructureType)await typesClient.Create(new StructureType
+            {
+                Name = $"RepoUpd-{Guid.NewGuid():N}".Substring(0, 32),
+                Code = "RU",
+                Color = 0xABCDEF,
+                Created = now,
+                LastModified = now,
+                Username = _userIdentity.UserName,
+            }, default);
+            Assert.That(created.Id, Is.GreaterThan(0));
+
+            try
+            {
+                var renamed = $"Renamed-{Guid.NewGuid():N}".Substring(0, 32);
+                var proto = new StructureType
+                {
+                    Id = created.Id,
+                    Name = renamed,
+                    Code = "RU",
+                    Color = 0xABCDEF,
+                    Created = now,
+                    LastModified = Timestamp.FromDateTime(DateTime.UtcNow),
+                    Username = _userIdentity.UserName,
+                };
+                ((IChangeAction)proto).DBAction = DBACTION.UPDATE;
+
+                var results = await typesClient.UpdateAsync(proto, default);
+                Assert.That(results.UpdatedObjects, Has.Length.EqualTo(1));
+                Assert.That(results.UpdatedObjects[0].Name.Trim(), Is.EqualTo(renamed.Trim()));
+
+                var fetched = await typesClient.GetAsync(created.Id, default);
+                Assert.That(fetched.Name.Trim(), Is.EqualTo(renamed.Trim()));
+            }
+            finally
+            {
+                try { await typesClient.Delete(created.Id, default); }
+                catch (RpcException) { }
+            }
+        }
+
+        /// <summary>
+        /// Store.Save converts StructureObj → Structure then calls UpdateAsync.
+        /// </summary>
+        [Test]
+        public async Task StructuresClient_UpdateAsync_AcceptsProtoFromStoreSave()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var structuresRepo = new StructuresClient(
+                channel,
+                new StructureClientToServerConverter(),
+                new LocationClientToServerConverter());
+            var structuresClient = new AnnotateStructures.AnnotateStructuresClient(channel);
+            var typesClient = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+
+            var type = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
+            {
+                Obj = new StructureType
+                {
+                    Name = $"RepoStr-{Guid.NewGuid():N}".Substring(0, 32),
+                    Code = "RS",
+                    Color = 0x101010,
+                    Created = now,
+                    LastModified = now,
+                    Username = _userIdentity.UserName,
+                }
+            });
+
+            long? structureId = null;
+            try
+            {
+                var created = await structuresClient.CreateStructureAsync(new CreateStructureRequest
+                {
+                    NewStructure = new Structure
+                    {
+                        TypeId = type.Result.Id,
+                        Label = "before",
+                        Confidence = 0.5,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    }
+                });
+                structureId = created.NewStructure.Id;
+
+                var proto = new Structure
+                {
+                    Id = structureId.Value,
+                    TypeId = type.Result.Id,
+                    Label = "after-store-save",
+                    Username = _userIdentity.UserName,
+                };
+                ((IChangeAction)proto).DBAction = DBACTION.UPDATE;
+
+                var results = await structuresRepo.UpdateAsync(proto, default);
+                Assert.That(results.UpdatedObjects, Has.Length.EqualTo(1));
+                Assert.That(results.UpdatedObjects[0].Label, Is.EqualTo("after-store-save"));
+
+                var fetched = await structuresRepo.GetAsync(structureId.Value, default);
+                Assert.That(fetched.Label, Is.EqualTo("after-store-save"));
+            }
+            finally
+            {
+                if (structureId.HasValue)
+                {
+                    try { await structuresRepo.Delete(structureId.Value, default); }
+                    catch (RpcException) { }
+                }
+                try
+                {
+                    await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                    {
+                        Objs = { new StructureTypeChangeRequest { Delete = type.Result.Id } }
+                    });
+                }
+                catch (RpcException) { }
+            }
         }
 
         [Test]

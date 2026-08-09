@@ -9,8 +9,9 @@ namespace gRPCAnnotationService.Protos
                 Id = src.Id,
                 // Ternary must use (long?)null — bare `default` promotes to 0L and breaks the FK.
                 ParentId = src.HasParentId ? src.ParentId : (long?)null,
-                Created = src.Created.ToDateTime(),
-                LastModified = src.LastModified.ToDateTime(),
+                // Store Save / Sync may omit timestamps.
+                Created = src.Created?.ToDateTime() ?? default,
+                LastModified = src.LastModified?.ToDateTime() ?? default,
                 Notes = src.Notes,
                 Username = src.Username,
                 Tags = string.IsNullOrWhiteSpace(src.Attributes) ? null : src.Attributes,
@@ -39,8 +40,12 @@ namespace gRPCAnnotationService.Protos
         {
                 converted.Id = src.Id;
                 converted.ParentId = src.HasParentId ? src.ParentId : (long?)null;
-                converted.Created = src.Created.ToDateTime();
-                converted.LastModified = src.LastModified.ToDateTime();
+                if (src.Created != null)
+                    converted.Created = src.Created.ToDateTime();
+                if (src.LastModified != null)
+                    converted.LastModified = src.LastModified.ToDateTime();
+                else
+                    converted.LastModified = System.DateTime.UtcNow;
                 converted.Notes = src.Notes;
                 converted.Username = src.Username;
                 converted.Tags = string.IsNullOrWhiteSpace(src.Attributes) ? null : src.Attributes;

@@ -29,7 +29,8 @@ namespace gRPCAnnotationService.Protos
                 OffEdge = src.OffEdge,
                 Width = src.Width,
                 TypeCode = (short)src.TypeCode,
-                LastModified = src.LastModified.ToDateTime(),
+                // Store Save omits LastModified; ApplyUpdate stamps UtcNow.
+                LastModified = src.LastModified?.ToDateTime() ?? default,
                 Username = src.Username,
             };
 

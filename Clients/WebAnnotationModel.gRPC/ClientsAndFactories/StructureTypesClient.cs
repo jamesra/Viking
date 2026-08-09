@@ -81,11 +81,23 @@ namespace WebAnnotationModel.gRPC
             Client = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
         }
 
+        private StructureType ToProto(IStructureType obj)
+        {
+            if (obj is StructureType concrete)
+                return concrete;
+            if (obj is StructureTypeObj clientObj)
+                return ClientObjConverter.Convert(clientObj);
+            throw new ArgumentException(
+                $"Unsupported {nameof(IStructureType)} implementation {obj?.GetType().FullName ?? "null"}",
+                nameof(obj));
+        }
+
         public async Task<IStructureType> Create(IStructureType obj, CancellationToken token)
         {
             CreateStructureTypeRequest request = new CreateStructureTypeRequest()
             {
-                Obj = ClientObjConverter.Convert((StructureTypeObj)obj)
+                // Store.Create converts StructureTypeObj → StructureType before calling here.
+                Obj = ToProto(obj)
             };
 
             var result = await Client.CreateStructureTypeAsync(request, cancellationToken: token);
@@ -148,8 +160,16 @@ namespace WebAnnotationModel.gRPC
         public async Task<UpdateResults<long, IStructureType>> UpdateAsync(IEnumerable<IStructureType> objs, CancellationToken token)
         {
             UpdateStructureTypesRequest request = new UpdateStructureTypesRequest();
-            var serverObjs = objs.Select(o => ClientObjConverter.Convert((StructureTypeObj)o));
-            request.Objs.AddRange(serverObjs.Select(o => (StructureTypeChangeRequest)o).Where(o => o != null));
+            // Store.Save converts client objs to protos first; accept either form.
+            foreach (var o in objs)
+            {
+                var change = (StructureTypeChangeRequest)ToProto(o);
+                if (change != null)
+                    request.Objs.Add(change);
+            }
+
+            if (request.Objs.Count == 0)
+                return new UpdateResults<long, IStructureType>();
 
             var response = await Client.UpdateAsync(request, cancellationToken: token);
 

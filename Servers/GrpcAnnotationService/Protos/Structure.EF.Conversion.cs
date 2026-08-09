@@ -9,9 +9,10 @@ namespace gRPCAnnotationService.Protos
                 Id = src.Id,
                 ParentId = src.HasParentId ? src.ParentId : (long?)null,
                 Confidence = src.Confidence,
-                Created = src.Created.ToDateTime(),
+                // Store Save omits timestamps; ApplyUpdate stamps LastModified itself.
+                Created = src.Created?.ToDateTime() ?? default,
                 Label = src.Label,
-                LastModified = src.LastModified.ToDateTime(),
+                LastModified = src.LastModified?.ToDateTime() ?? default,
                 Notes = src.Notes,
                 TypeId = src.TypeId, 
                 Verified = src.Verified,

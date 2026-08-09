@@ -221,11 +221,30 @@ namespace WebAnnotationModel.gRPC
             return UpdateAsync(new IStructure[] { obj }, token);
         }
 
+        private Structure ToProto(IStructure obj)
+        {
+            if (obj is Structure concrete)
+                return concrete;
+            if (obj is StructureObj clientObj)
+                return StructureConverter.Convert(clientObj);
+            throw new ArgumentException(
+                $"Unsupported {nameof(IStructure)} implementation {obj?.GetType().FullName ?? "null"}",
+                nameof(obj));
+        }
+
         public async Task<UpdateResults<long, IStructure>> UpdateAsync(IEnumerable<IStructure> objs, CancellationToken token)
         {
             UpdateStructuresRequest request = new UpdateStructuresRequest();
-            var serverObjs = objs.Select(o => StructureConverter.Convert((StructureObj)o));
-            request.Objs.AddRange(serverObjs.Select(o => (StructureChangeRequest)o).Where(o => o != null));
+            // Store.Save converts StructureObj → Structure before calling; accept either form.
+            foreach (var o in objs)
+            {
+                var change = (StructureChangeRequest)ToProto(o);
+                if (change != null)
+                    request.Objs.Add(change);
+            }
+
+            if (request.Objs.Count == 0)
+                return new UpdateResults<long, IStructure>();
 
             var response = await Client.UpdateAsync(request, cancellationToken: token);
 
