@@ -11,7 +11,10 @@ using Grpc.Net.Client;
 using NUnit.Framework;
 using Microsoft.Extensions.Configuration;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Google.Protobuf.WellKnownTypes;
+using WebAnnotationModel.gRPC.Converters;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel.gRPC.Tests
 {
@@ -60,6 +63,25 @@ namespace WebAnnotationModel.gRPC.Tests
             Assert.That(_identityClient, Is.Not.Null);
             Assert.That(_userIdentity, Is.Not.Null);
             Assert.That(_userIdentity.UserName, Is.EqualTo("testuser"));
+        }
+
+        [Test]
+        public void StructureClientToServerConverter_PreservesTypeId()
+        {
+            var src = new StructureObj(5, 9)
+            {
+                Label = "typed",
+                Confidence = 0.5,
+                DBAction = DBACTION.UPDATE,
+            };
+
+            var converted = new StructureClientToServerConverter().Convert(src);
+            Assert.That(converted.TypeId, Is.EqualTo(9));
+            Assert.That(converted.Label, Is.EqualTo("typed"));
+
+            var change = (StructureChangeRequest)converted;
+            Assert.That(change.Update, Is.Not.Null);
+            Assert.That(change.Update.TypeId, Is.EqualTo(9));
         }
 
         [Test]

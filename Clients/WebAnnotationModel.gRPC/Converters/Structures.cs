@@ -63,16 +63,19 @@ namespace WebAnnotationModel.gRPC.Converters
                 new Structure
                 {
                     Id = src.ID,
-                    Label = src.Label,
-                    Notes = src.Notes,
+                    TypeId = src.TypeID,
+                    Label = src.Label ?? string.Empty,
+                    Notes = src.Notes ?? string.Empty,
                     Confidence = src.Confidence,
-                    Verified = src.Verified, 
+                    Verified = src.Verified,
+                    Username = src.Username ?? string.Empty,
+                    Attributes = src._Attributes == null
+                        ? string.Empty
+                        : (src.Attributes.ToXml() ?? string.Empty),
                 };
 
             if (src.ParentID.HasValue)
                 obj.ParentId = src.ParentID.Value;
-
-            obj.Attributes = src.Attributes.ToXml();
 
             ((IChangeAction)obj).DBAction = src.DBAction;
 
@@ -96,7 +99,7 @@ namespace WebAnnotationModel.gRPC.Converters
                 obj.Username = update.Username;
                 obj.Label = update.Label;
                 obj.Notes = update.Notes;
-                obj.ParentID = update.ParentId;
+                obj.ParentID = update.HasParentId ? (long?)update.ParentId : (long?)null;
                 obj.LastModified = update.LastModified.ToDateTime();
                 obj.Created = update.Created.ToDateTime();
                 await obj.SetAttributes(update.Attributes.ParseAttributes());
