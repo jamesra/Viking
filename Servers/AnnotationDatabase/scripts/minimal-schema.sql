@@ -72,6 +72,16 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID(N'dbo.DeletedStructures', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[DeletedStructures] (
+        [ID]        BIGINT NOT NULL,
+        [DeletedOn] DATETIME CONSTRAINT [DF_DeletedStructures_DeletedOn] DEFAULT (getutcdate()) NOT NULL,
+        CONSTRAINT [PK_DeletedStructures] PRIMARY KEY CLUSTERED ([ID] ASC)
+    );
+END
+GO
+
 IF OBJECT_ID(N'dbo.Location', N'U') IS NULL
 BEGIN
     CREATE TABLE [dbo].[Location] (
@@ -185,6 +195,11 @@ BEGIN
     WHERE L.ParentID IN (SELECT ID FROM #StructuresToDelete)
       AND NOT EXISTS (SELECT 1 FROM dbo.DeletedLocations DL WHERE DL.ID = L.ID);
 
+    INSERT INTO dbo.DeletedStructures (ID)
+    SELECT S.ID
+    FROM #StructuresToDelete S
+    WHERE NOT EXISTS (SELECT 1 FROM dbo.DeletedStructures DS WHERE DS.ID = S.ID);
+
     DELETE FROM dbo.Location
     WHERE ParentID IN (SELECT ID FROM #StructuresToDelete);
 
@@ -201,50 +216,55 @@ END');
 GO
 
 -- MergeStructures (subset of full SSDT proc; enough for gRPC Merge RPC tests).
-IF OBJECT_ID(N'dbo.MergeStructures', N'P') IS NULL
+-- Recreate so AnnotationTest picks up DeletedStructures logging.
+IF OBJECT_ID(N'dbo.MergeStructures', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.MergeStructures;
+GO
+
+EXEC(N'
+CREATE PROCEDURE dbo.MergeStructures
+    @KeepStructureID bigint,
+    @MergeStructureID bigint
+AS
 BEGIN
-    EXEC(N'
-    CREATE PROCEDURE dbo.MergeStructures
-        @KeepStructureID bigint,
-        @MergeStructureID bigint
-    AS
+    SET NOCOUNT ON;
+
+    DECLARE @MergeNotes nvarchar(max) =
+        (SELECT Notes FROM dbo.Structure WHERE ID = @MergeStructureID);
+
+    UPDATE dbo.Location
+    SET ParentID = @KeepStructureID
+    WHERE ParentID = @MergeStructureID;
+
+    UPDATE dbo.Structure
+    SET ParentID = @KeepStructureID
+    WHERE ParentID = @MergeStructureID;
+
+    IF NOT (@MergeNotes IS NULL OR @MergeNotes = N'''')
     BEGIN
-        SET NOCOUNT ON;
-
-        DECLARE @MergeNotes nvarchar(max) =
-            (SELECT Notes FROM dbo.Structure WHERE ID = @MergeStructureID);
-
-        UPDATE dbo.Location
-        SET ParentID = @KeepStructureID
-        WHERE ParentID = @MergeStructureID;
+        DECLARE @crlf nvarchar(2) = CHAR(13) + CHAR(10);
+        DECLARE @MergeHeader nvarchar(80) =
+            N''*****BEGIN MERGE FROM '' + CONVERT(nvarchar(80), @MergeStructureID) + N''*****'';
+        DECLARE @MergeFooter nvarchar(80) =
+            N''*****END MERGE FROM '' + CONVERT(nvarchar(80), @MergeStructureID) + N''*****'';
 
         UPDATE dbo.Structure
-        SET ParentID = @KeepStructureID
-        WHERE ParentID = @MergeStructureID;
+        SET Notes = ISNULL(Notes, N'''') + @crlf + @MergeHeader + @crlf + @MergeNotes + @crlf + @MergeFooter + @crlf
+        WHERE ID = @KeepStructureID;
+    END
 
-        IF NOT (@MergeNotes IS NULL OR @MergeNotes = N'''')
-        BEGIN
-            DECLARE @crlf nvarchar(2) = CHAR(13) + CHAR(10);
-            DECLARE @MergeHeader nvarchar(80) =
-                N''*****BEGIN MERGE FROM '' + CONVERT(nvarchar(80), @MergeStructureID) + N''*****'';
-            DECLARE @MergeFooter nvarchar(80) =
-                N''*****END MERGE FROM '' + CONVERT(nvarchar(80), @MergeStructureID) + N''*****'';
+    DELETE FROM dbo.StructureLink
+    WHERE (SourceID = @KeepStructureID AND TargetID = @MergeStructureID)
+       OR (TargetID = @KeepStructureID AND SourceID = @MergeStructureID);
 
-            UPDATE dbo.Structure
-            SET Notes = ISNULL(Notes, N'''') + @crlf + @MergeHeader + @crlf + @MergeNotes + @crlf + @MergeFooter + @crlf
-            WHERE ID = @KeepStructureID;
-        END
+    UPDATE dbo.StructureLink SET TargetID = @KeepStructureID WHERE TargetID = @MergeStructureID;
+    UPDATE dbo.StructureLink SET SourceID = @KeepStructureID WHERE SourceID = @MergeStructureID;
 
-        DELETE FROM dbo.StructureLink
-        WHERE (SourceID = @KeepStructureID AND TargetID = @MergeStructureID)
-           OR (TargetID = @KeepStructureID AND SourceID = @MergeStructureID);
+    IF NOT EXISTS (SELECT 1 FROM dbo.DeletedStructures WHERE ID = @MergeStructureID)
+        INSERT INTO dbo.DeletedStructures (ID) VALUES (@MergeStructureID);
 
-        UPDATE dbo.StructureLink SET TargetID = @KeepStructureID WHERE TargetID = @MergeStructureID;
-        UPDATE dbo.StructureLink SET SourceID = @KeepStructureID WHERE SourceID = @MergeStructureID;
-
-        DELETE FROM dbo.Structure WHERE ID = @MergeStructureID;
-    END');
-END
+    DELETE FROM dbo.Structure WHERE ID = @MergeStructureID;
+END');
 GO
 
 -- Unfinished branch queries used by StructureService.

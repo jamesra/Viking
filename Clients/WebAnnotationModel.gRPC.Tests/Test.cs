@@ -1913,6 +1913,98 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         [Test]
+        public async Task DeleteStructure_AppearsInStructuresForSectionDeletedIds()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var structuresClient = new AnnotateStructures.AnnotateStructuresClient(channel);
+            var typesClient = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+            var createdType = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
+            {
+                Obj = new StructureType
+                {
+                    Name = $"DelStr-{Guid.NewGuid():N}".Substring(0, 32),
+                    Code = "DS",
+                    Color = 0x3C4D5E,
+                    Created = now,
+                    LastModified = now,
+                    Username = _userIdentity.UserName,
+                }
+            });
+
+            long? structureId = null;
+            try
+            {
+                var created = await structuresClient.CreateStructureAsync(new CreateStructureRequest
+                {
+                    NewStructure = new Structure
+                    {
+                        TypeId = createdType.Result.Id,
+                        Label = "del-struct-sync",
+                        Confidence = 0.5,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    },
+                    NewAnnotation = new Location
+                    {
+                        Section = 15,
+                        MosaicPosition = new AnnotationPoint { X = 22, Y = 23 },
+                        VolumePosition = new AnnotationPoint { X = 22, Y = 23 },
+                        MosaicShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (22 23)" },
+                        VolumeShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (22 23)" },
+                        TypeCode = AnnotationType.Circle,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    }
+                });
+                structureId = created.NewStructure.Id;
+
+                var beforeDelete = Timestamp.FromDateTime(DateTime.UtcNow.AddSeconds(-1));
+                var delete = await structuresClient.UpdateAsync(new UpdateStructuresRequest
+                {
+                    Objs = { new StructureChangeRequest { Delete = structureId.Value } }
+                });
+                Assert.That(delete.Results[0].Success, Is.True);
+                var deletedId = structureId.Value;
+                structureId = null;
+
+                var sectionSync = await structuresClient.GetStructuresForSectionAsync(new GetStructuresForSectionRequest
+                {
+                    Z = 15,
+                    ModifiedAfterThisUtcTime = beforeDelete
+                });
+                Assert.That(sectionSync.DeletedIds, Does.Contain(deletedId));
+            }
+            finally
+            {
+                if (structureId.HasValue)
+                {
+                    try
+                    {
+                        await structuresClient.UpdateAsync(new UpdateStructuresRequest
+                        {
+                            Objs = { new StructureChangeRequest { Delete = structureId.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+
+                try
+                {
+                    await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                    {
+                        Objs = { new StructureTypeChangeRequest { Delete = createdType.Result.Id } }
+                    });
+                }
+                catch (RpcException) { }
+            }
+        }
+
+        [Test]
         public async Task DeepDeleteStructure_LogsLocationInDeletedIds()
         {
             var accessToken = await RequestAccessTokenAsync();

@@ -19,6 +19,7 @@ namespace Viking.DataModel.Annotation
         }
 
         public virtual DbSet<DeletedLocation> DeletedLocations { get; set; }
+        public virtual DbSet<DeletedStructure> DeletedStructures { get; set; }
         public virtual DbSet<Location> Locations { get; set; }
         public virtual DbSet<LocationLink> LocationLinks { get; set; }
         public virtual DbSet<PermittedStructureLink> PermittedStructureLinks { get; set; }
@@ -36,6 +37,18 @@ namespace Viking.DataModel.Annotation
             modelBuilder.Entity<DeletedLocation>(entity =>
             {
                 entity.HasIndex(e => e.DeletedOn, "DeletedOn")
+                    .HasFillFactor((byte)90);
+
+                entity.Property(e => e.Id).ValueGeneratedNever();
+
+                entity.Property(e => e.DeletedOn).HasDefaultValueSql("(getutcdate())");
+            });
+
+            modelBuilder.Entity<DeletedStructure>(entity =>
+            {
+                entity.ToTable("DeletedStructures");
+
+                entity.HasIndex(e => e.DeletedOn, "DeletedStructures_DeletedOn")
                     .HasFillFactor((byte)90);
 
                 entity.Property(e => e.Id).ValueGeneratedNever();

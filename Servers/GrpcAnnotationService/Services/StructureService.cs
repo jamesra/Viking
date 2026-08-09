@@ -89,6 +89,7 @@ namespace gRPCAnnotationService
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
                 response.Results.AddRange(rows.Select(s => s.ToProtobufMessage()));
+                response.DeletedIds.AddRange(await DeletedStructureIdsSince(modifiedAfter));
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetStructuresForSection), e); }
@@ -99,14 +100,16 @@ namespace gRPCAnnotationService
             try
             {
                 var queryStart = DateTime.UtcNow;
+                var modifiedAfter = TimestampFilters.ModifiedAfterOrNull(request.ModifiedAfterThisUtcTime);
                 var rows = await StructuresInRegion(request.Z, request.Region, request.MinRadius,
-                    TimestampFilters.ModifiedAfterOrNull(request.ModifiedAfterThisUtcTime), useVolumeCoordinates: false);
+                    modifiedAfter, useVolumeCoordinates: false);
 
                 var response = new GetStructuresInMosaicRegionResponse
                 {
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
                 response.Results.AddRange(rows.Select(s => s.ToProtobufMessage()));
+                response.DeletedIds.AddRange(await DeletedStructureIdsSince(modifiedAfter));
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetStructuresInMosaicRegion), e); }
@@ -117,14 +120,16 @@ namespace gRPCAnnotationService
             try
             {
                 var queryStart = DateTime.UtcNow;
+                var modifiedAfter = TimestampFilters.ModifiedAfterOrNull(request.ModifiedAfterThisUtcTime);
                 var rows = await StructuresInRegion(request.Z, request.Region, request.MinRadius,
-                    TimestampFilters.ModifiedAfterOrNull(request.ModifiedAfterThisUtcTime), useVolumeCoordinates: true);
+                    modifiedAfter, useVolumeCoordinates: true);
 
                 var response = new GetStructuresInVolumeRegionResponse
                 {
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
                 response.Results.AddRange(rows.Select(s => s.ToProtobufMessage()));
+                response.DeletedIds.AddRange(await DeletedStructureIdsSince(modifiedAfter));
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetStructuresInVolumeRegion), e); }
@@ -546,6 +551,17 @@ namespace gRPCAnnotationService
             foreach (var id in ids)
                 table.Rows.Add(id);
             return table;
+        }
+
+        private async Task<List<long>> DeletedStructureIdsSince(DateTime? modifiedAfter)
+        {
+            if (modifiedAfter.HasValue == false)
+                return new List<long>();
+
+            return await _context.DeletedStructures.AsNoTracking()
+                .Where(d => d.DeletedOn > modifiedAfter.Value)
+                .Select(d => d.Id)
+                .ToListAsync();
         }
 
         private IQueryable<EfStructure> StructuresOnSection(long z, DateTime? modifiedAfter)
