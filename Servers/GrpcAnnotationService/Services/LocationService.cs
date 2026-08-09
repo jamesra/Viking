@@ -323,6 +323,7 @@ namespace gRPCAnnotationService
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
                 response.Results.AddRange(links.Select(ToProtobufMessage));
+                response.Deleted.AddRange(await DeletedLocationLinksSince(request.Section, modifiedAfter));
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetLocationLinksForSection), e); }
@@ -421,6 +422,8 @@ namespace gRPCAnnotationService
                             // The link rows reference the location, so they have to go first.
                             var attached = await _context.LocationLinks
                                 .Where(link => link.A == toDelete.Id || link.B == toDelete.Id).ToListAsync();
+                            foreach (var link in attached)
+                                await LogDeletedLocationLinkAsync(link.A, link.B);
                             _context.LocationLinks.RemoveRange(attached);
 
                             // Record the delete so incremental GetLocationChanges* calls can
@@ -478,6 +481,7 @@ namespace gRPCAnnotationService
                     throw new RpcException(new Status(StatusCode.NotFound,
                         $"No link between locations {request.SourceId} and {request.TargetId}"));
 
+                await LogDeletedLocationLinkAsync(a, b);
                 _context.LocationLinks.Remove(link);
                 await _context.SaveChangesAsync();
                 return new DeleteLocationLinkResponse();
@@ -618,6 +622,48 @@ namespace gRPCAnnotationService
                 .Where(d => d.DeletedOn > modifiedAfter.Value)
                 .Select(d => d.Id)
                 .ToListAsync();
+        }
+
+        private async Task LogDeletedLocationLinkAsync(long a, long b)
+        {
+            var (orderedA, orderedB) = Ordered(a, b);
+            var alreadyLogged = await _context.DeletedLocationLinks
+                .AnyAsync(d => d.A == orderedA && d.B == orderedB);
+            if (alreadyLogged)
+                return;
+
+            await _context.DeletedLocationLinks.AddAsync(new DeletedLocationLink
+            {
+                A = orderedA,
+                B = orderedB,
+                DeletedOn = DateTime.UtcNow
+            });
+        }
+
+        /// <summary>
+        /// Deleted links that touched the section (either endpoint lived on it at delete time is not
+        /// retained). Match WCF's eventual shape: any link deleted after <paramref name="modifiedAfter"/>
+        /// whose endpoints still have a section record, or simply all deleted links since the watermark
+        /// when we cannot recover section affinity. For the lean test schema we return all deletes
+        /// since the watermark; clients filter by known location IDs.
+        /// </summary>
+        private async Task<List<ProtoLocationLink>> DeletedLocationLinksSince(long section, DateTime? modifiedAfter)
+        {
+            if (modifiedAfter.HasValue == false)
+                return new List<ProtoLocationLink>();
+
+            // Section affinity is not retained on delete. Return all deletes since the watermark;
+            // the client store reconciles by key (same approach as DeletedLocations).
+            _ = section;
+            var rows = await _context.DeletedLocationLinks.AsNoTracking()
+                .Where(d => d.DeletedOn > modifiedAfter.Value)
+                .ToListAsync();
+
+            return rows.Select(d => new ProtoLocationLink
+            {
+                SourceId = d.A,
+                TargetId = d.B
+            }).ToList();
         }
 
         private static void ApplyUpdate(ProtoLocation src, EfLocation dst, string username)

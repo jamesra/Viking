@@ -82,6 +82,17 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID(N'dbo.DeletedLocationLinks', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[DeletedLocationLinks] (
+        [A]         BIGINT NOT NULL,
+        [B]         BIGINT NOT NULL,
+        [DeletedOn] DATETIME CONSTRAINT [DF_DeletedLocationLinks_DeletedOn] DEFAULT (getutcdate()) NOT NULL,
+        CONSTRAINT [PK_DeletedLocationLinks] PRIMARY KEY CLUSTERED ([A] ASC, [B] ASC)
+    );
+END
+GO
+
 IF OBJECT_ID(N'dbo.Location', N'U') IS NULL
 BEGIN
     CREATE TABLE [dbo].[Location] (
@@ -184,6 +195,13 @@ BEGIN
     SELECT ID INTO #StructuresToDelete
     FROM dbo.Structure
     WHERE ID = @DeleteID OR ParentID = @DeleteID;
+
+    INSERT INTO dbo.DeletedLocationLinks (A, B)
+    SELECT LL.A, LL.B
+    FROM dbo.LocationLink LL
+    WHERE (LL.A IN (SELECT ID FROM dbo.Location WHERE ParentID IN (SELECT ID FROM #StructuresToDelete))
+        OR LL.B IN (SELECT ID FROM dbo.Location WHERE ParentID IN (SELECT ID FROM #StructuresToDelete)))
+      AND NOT EXISTS (SELECT 1 FROM dbo.DeletedLocationLinks DL WHERE DL.A = LL.A AND DL.B = LL.B);
 
     DELETE FROM dbo.LocationLink
     WHERE A IN (SELECT ID FROM dbo.Location WHERE ParentID IN (SELECT ID FROM #StructuresToDelete))
