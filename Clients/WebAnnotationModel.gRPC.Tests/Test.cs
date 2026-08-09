@@ -159,6 +159,122 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         /// <summary>
+        /// Store.Save converts LocationObj → Location without LastModified; server must not NRE.
+        /// </summary>
+        [Test]
+        public async Task LocationsClient_UpdateAsync_AcceptsProtoOmittingLastModified()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var locationsRepo = new LocationsClient(channel, new LocationToLocationServerConverter());
+            var locationsClient = new AnnotateLocations.AnnotateLocationsClient(channel);
+            var structuresClient = new AnnotateStructures.AnnotateStructuresClient(channel);
+            var typesClient = new AnnotateStructureTypes.AnnotateStructureTypesClient(channel);
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+
+            var type = await typesClient.CreateStructureTypeAsync(new CreateStructureTypeRequest
+            {
+                Obj = new StructureType
+                {
+                    Name = $"LocSave-{Guid.NewGuid():N}".Substring(0, 32),
+                    Code = "LS",
+                    Color = 0x203040,
+                    Created = now,
+                    LastModified = now,
+                    Username = _userIdentity.UserName,
+                }
+            });
+
+            long? structureId = null;
+            long? locationId = null;
+            try
+            {
+                var created = await structuresClient.CreateStructureAsync(new CreateStructureRequest
+                {
+                    NewStructure = new Structure
+                    {
+                        TypeId = type.Result.Id,
+                        Label = "loc-save",
+                        Confidence = 0.5,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    },
+                    NewAnnotation = new Location
+                    {
+                        Section = 17,
+                        MosaicPosition = new AnnotationPoint { X = 33, Y = 34 },
+                        VolumePosition = new AnnotationPoint { X = 33, Y = 34 },
+                        MosaicShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (33 34)" },
+                        VolumeShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (33 34)" },
+                        TypeCode = AnnotationType.Circle,
+                        Created = now,
+                        LastModified = now,
+                        Username = _userIdentity.UserName,
+                    }
+                });
+                structureId = created.NewStructure.Id;
+                locationId = created.NewAnnotation.Id;
+
+                var proto = new Location
+                {
+                    Id = locationId.Value,
+                    ParentId = structureId.Value,
+                    Section = 17,
+                    Terminal = true,
+                    MosaicShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (35 36)" },
+                    VolumeShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = "POINT (35 36)" },
+                    TypeCode = AnnotationType.Circle,
+                    Username = _userIdentity.UserName,
+                };
+                ((IChangeAction)proto).DBAction = DBACTION.UPDATE;
+
+                var results = await locationsRepo.UpdateAsync(proto, default);
+                Assert.That(results.UpdatedObjects, Has.Length.EqualTo(1));
+                Assert.That(results.UpdatedObjects[0].Terminal, Is.True);
+
+                var fetched = await locationsClient.GetLocationByIDAsync(new GetLocationByIDRequest
+                {
+                    Id = locationId.Value
+                });
+                Assert.That(fetched.Result.Terminal, Is.True);
+            }
+            finally
+            {
+                if (locationId.HasValue)
+                {
+                    try
+                    {
+                        await locationsClient.UpdateAsync(new UpdateLocationsRequest
+                        {
+                            Locations = { new LocationChangeRequest { Delete = locationId.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+                if (structureId.HasValue)
+                {
+                    try
+                    {
+                        await structuresClient.UpdateAsync(new UpdateStructuresRequest
+                        {
+                            Objs = { new StructureChangeRequest { Delete = structureId.Value } }
+                        });
+                    }
+                    catch (RpcException) { }
+                }
+                try
+                {
+                    await typesClient.UpdateAsync(new UpdateStructureTypesRequest
+                    {
+                        Objs = { new StructureTypeChangeRequest { Delete = type.Result.Id } }
+                    });
+                }
+                catch (RpcException) { }
+            }
+        }
+
+        /// <summary>
         /// Store.Save converts StructureObj → Structure then calls UpdateAsync.
         /// </summary>
         [Test]
@@ -1579,6 +1695,7 @@ namespace WebAnnotationModel.gRPC.Tests
                 (keepId, keepLoc) = await CreateWithPoint("keep", 50, 50);
                 (mergeId, mergeLoc) = await CreateWithPoint("merge", 60, 60);
                 var deletedMergeId = mergeId.Value;
+                var beforeMerge = Timestamp.FromDateTime(DateTime.UtcNow.AddSeconds(-1));
 
                 var merge = await structuresClient.MergeAsync(new MergeRequest
                 {
@@ -1607,6 +1724,13 @@ namespace WebAnnotationModel.gRPC.Tests
                         Id = deletedMergeId
                     }));
                 Assert.That(mergeGone.StatusCode, Is.EqualTo(StatusCode.NotFound));
+
+                var sectionSync = await structuresClient.GetStructuresForSectionAsync(new GetStructuresForSectionRequest
+                {
+                    Z = 5,
+                    ModifiedAfterThisUtcTime = beforeMerge
+                });
+                Assert.That(sectionSync.DeletedIds, Does.Contain(deletedMergeId));
             }
             finally
             {
