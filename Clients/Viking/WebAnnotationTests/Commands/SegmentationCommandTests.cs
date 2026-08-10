@@ -243,13 +243,14 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void TestPolygonContainsPoint_Inside()
         {
-            // Arrange - Create a simple square polygon
+            // Arrange - Create a simple square polygon (closed ring)
             GridVector2[] vertices = new GridVector2[]
             {
                 new GridVector2(0, 0),
                 new GridVector2(10, 0),
                 new GridVector2(10, 10),
-                new GridVector2(0, 10)
+                new GridVector2(0, 10),
+                new GridVector2(0, 0)
             };
             GridPolygon polygon = new GridPolygon(vertices);
             GridVector2 testPoint = new GridVector2(5, 5); // Center point
@@ -264,13 +265,14 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void TestPolygonContainsPoint_Outside()
         {
-            // Arrange - Create a simple square polygon
+            // Arrange - Create a simple square polygon (closed ring)
             GridVector2[] vertices = new GridVector2[]
             {
                 new GridVector2(0, 0),
                 new GridVector2(10, 0),
                 new GridVector2(10, 10),
-                new GridVector2(0, 10)
+                new GridVector2(0, 10),
+                new GridVector2(0, 0)
             };
             GridPolygon polygon = new GridPolygon(vertices);
             GridVector2 testPoint = new GridVector2(15, 15); // Outside
@@ -285,13 +287,14 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void TestPolygonContainsPoint_OnEdge()
         {
-            // Arrange - Create a simple square polygon
+            // Arrange - Create a simple square polygon (closed ring)
             GridVector2[] vertices = new GridVector2[]
             {
                 new GridVector2(0, 0),
                 new GridVector2(10, 0),
                 new GridVector2(10, 10),
-                new GridVector2(0, 10)
+                new GridVector2(0, 10),
+                new GridVector2(0, 0)
             };
             GridPolygon polygon = new GridPolygon(vertices);
             GridVector2 testPoint = new GridVector2(5, 0); // On edge
