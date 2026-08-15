@@ -200,140 +200,95 @@ class TextureReaderV2 : IDisposable
         }
     }
 
-    internal async Task<Texture2D?> TryLoadingFromCacheOrServer(Uri textureUri, string CacheFilename, CancellationToken token)
+    /// <summary>
+    /// True when the cache path exists and has non-zero length. Used to prefer disk loads and bypass HTTP throttle.
+    /// </summary>
+    internal static bool HasUsableCacheFile(string? cacheFilename)
+    {
+        if (string.IsNullOrEmpty(cacheFilename))
+            return false;
+
+        try
+        {
+            var info = new FileInfo(cacheFilename);
+            return info.Exists && info.Length > 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Load texture bytes from the local cache only — no HTTP. Returns null if missing, empty, or corrupt.
+    /// </summary>
+    internal async Task<Texture2D?> TryLoadingFromDiskOnly(string cacheFilename, CancellationToken token)
     {
         try
         {
-            //First, check the cache to see if it is locally available
-            if (CacheFilename != null)
+            if (string.IsNullOrEmpty(cacheFilename))
+                return null;
+
+            FileInfo cacheFileInfo = new(cacheFilename);
+            if (cacheFileInfo.Directory?.Exists == false)
             {
-                FileInfo cacheFileInfo = new(CacheFilename);
-                if (cacheFileInfo.Directory.Exists == false)
-                {
-                    TryCreatingCacheDirectory(CacheFilename);
+                TryCreatingCacheDirectory(cacheFilename);
+                return null;
+            }
+
+            if (cacheFileInfo.Exists == false)
+                return null;
+
+            if (cacheFileInfo.Length == 0)
+            {
+                DeleteFileFromCache(cacheFilename);
+                return null;
+            }
+
+            if (token.IsCancellationRequested)
+                return null;
+
+            FileStream stream;
+            try
+            {
+                stream = new FileStream(cacheFilename, FileMode.Open, FileAccess.Read, FileShare.Read);
+            }
+            catch (IOException)
+            {
+                return null;
+            }
+
+            using (stream)
+            {
+                if (token.IsCancellationRequested)
                     return null;
-                }
 
-                if (cacheFileInfo.Exists == false)
-                {
-                    return null;
-                }
-
-                if (cacheFileInfo.Length == 0)
-                {
-                    DeleteFileFromCache(CacheFilename);
-                    return null;
-                }
-
-                if (textureUri is null)
-                {
-                    return null;
-                }
-
-                try
-                {
-                    HttpClient client = Global.HttpClient;
-                    {
-                        CancellationTokenSource stopReadingFromServerToken = new();
-
-                        //Allows the caller or us to stop reading data from the server if it is no longer needed
-                        CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, stopReadingFromServerToken.Token);
-
-                        var textureHeaders =
-                            await client.GetAsync(textureUri, HttpCompletionOption.ResponseHeadersRead, linkedTokenSource.Token)
-                                .ConfigureAwait(false);
-                        {
-                            if (token.IsCancellationRequested)
-                                return null;
-
-                            var textureLastModifiedValue = textureHeaders.Content.Headers.LastModified;
-                            if (textureLastModifiedValue.HasValue == false)
-                            {
-                                return await TryLoadingFromHttpClientResponse(textureHeaders, CacheFilename, token).ConfigureAwait(false);
-                            }
-
-                            var textureLastModifiedUtc = textureLastModifiedValue.Value.UtcDateTime;
-
-                            if (Global.TextureCache.ContainsKey(CacheFilename) == false || textureLastModifiedUtc > cacheFileInfo.LastWriteTimeUtc)
-                            {
-                                return await TryLoadingFromHttpClientResponse(textureHeaders, CacheFilename, token).ConfigureAwait(false);
-                            }
-                            else
-                            {
-                                using var stream = Global.TextureCache.Fetch(CacheFilename);
-                                //If something is wrong with the stream load from the server
-                                if (stream is null)
-                                {
-                                    return await TryLoadingFromHttpClientResponse(textureHeaders, CacheFilename, token).ConfigureAwait(false);
-                                }
-                                else
-                                {
-                                    if (token.IsCancellationRequested)
-                                        return null;
-
-                                    //Since we start thinking about what to do as soon as we get the header, cancel the read as soon as we know 
-                                    //we are loading from the cache
-                                    stopReadingFromServerToken.Cancel();
-
-                                    var texture = await GetTextureFromStreamAsync(graphicsDevice, stream)
-                                        .ConfigureAwait(false);
-
-                                    return texture;
-                                }
-                            }
-                        }
-                    }
-                }
-                catch (WebException e)
-                {
-                    //No online resource found, use the cached version
-                    Trace.WriteLine($"No online resource found at {textureUri}\nWeb Exception: {e.Status} - {e.Message}");
-                    return null;
-                }
-
-                /*
-                if (false == await CachedResourceIsValidAsync(cacheFileInfo, textureUri,token).ConfigureAwait(false))
-                {
-                    //Trace.WriteLine("Deleting stale cache file: " + CacheFilename, "TextureUse");
-                    await Task.Run(() => DeleteFileFromCache(CacheFilename)).ConfigureAwait(false);
-                    return null;
-                }
-                else
-                {
-                    return Global.TextureCache.Fetch(CacheFilename);
-                }*/
+                return await GetTextureFromStreamAsync(graphicsDevice, stream).ConfigureAwait(false);
             }
         }
         catch (ArgumentException e)
         {
-            //This exception seems to occur when a cached image file is not valid
-
-            //TODO: There is an interaction with aborting requests where an corrupt version of the image ends up in the cache and continues to be used.  I have to 
-            //figure out how to flush that bad image out of the cache if this occurs. Currently the workaround is to never cache images
-            HandleCachedFileException(e, CacheFilename);
+            HandleCachedFileException(e, cacheFilename);
             return null;
         }
         catch (InvalidOperationException e)
         {
-            //This exception seems to occur when a cached image file is not valid
-
-            //TODO: There is an interaction with aborting requests where an corrupt version of the image ends up in the cache and continues to be used.  I have to 
-            //figure out how to flush that bad image out of the cache if this occurs. Currently the workaround is to never cache images
-            HandleCachedFileException(e, CacheFilename);
-            return null;
-        }
-        catch (IOException e)
-        {
-            HandleCachedFileException(e, CacheFilename);
+            HandleCachedFileException(e, cacheFilename);
             return null;
         }
         catch (Exception e)
         {
-            HandleCachedFileException(e, CacheFilename);
-            return null;
+            HandleCachedFileException(e, cacheFilename);
+            throw;
         }
+    }
 
-        return null;
+    /// <summary>
+    /// Disk-first cache load (no HTTP). Network download is handled by TryLoadingFromServer.
+    /// </summary>
+    internal async Task<Texture2D?> TryLoadingFromCacheOrServer(Uri textureUri, string CacheFilename, CancellationToken token)
+    {
+        return await TryLoadingFromDiskOnly(CacheFilename, token).ConfigureAwait(false);
     }
 
     private async Task<Texture2D> TryLoadingFromServer(Uri textureUri, CancellationToken token)
@@ -671,7 +626,10 @@ class TextureReaderV2 : IDisposable
     {
         TextureRequestQueue.SetMaxWorkers(max);
     }
-    public async Task<Texture2D> LoadTexture()
+    /// <param name="allowNetwork">
+    /// When false, only attempt a disk cache read (no HTTP). Used by the disk fast-path so network work can take MaxWorkers separately.
+    /// </param>
+    public async Task<Texture2D> LoadTexture(bool allowNetwork = true)
     {
         CancellationToken token = this.CancelToken.Token;
         if (token.IsCancellationRequested)
@@ -699,8 +657,9 @@ class TextureReaderV2 : IDisposable
                 Texture2D texture = null;
                 try
                 {
-                    texture = await TryLoadingFromCacheOrServer(Filename, CacheFilename, token)
-                        ?? await TryLoadingFromServer(this.Filename, token);
+                    texture = await TryLoadingFromDiskOnly(CacheFilename, token).ConfigureAwait(false);
+                    if (texture is null && allowNetwork)
+                        texture = await TryLoadingFromServer(this.Filename, token).ConfigureAwait(false);
                 }
                 catch (OutOfMemoryException e)
                 {

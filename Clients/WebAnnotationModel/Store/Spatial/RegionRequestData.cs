@@ -17,6 +17,8 @@ namespace WebAnnotationModel
     {
         public DateTime? LastQuery { get; private set; } = DateTime.MinValue;
 
+        public void ClearLastQuery() => LastQuery = null;
+
         /// <summary>
         /// This lock should be taken by callers before calling public methods.
         /// Internally this lock should be taken by async Task methods
@@ -67,7 +69,6 @@ namespace WebAnnotationModel
         {
             Debug.Assert(QueryTask == null, $"{nameof(QueryTask)} should be null before setting a new task");
             this.QueryTask = queryTask;
-            this.LastQuery = DateTime.UtcNow;
             this.QueryCancellationToken = aToken;
 
 #if DEBUG

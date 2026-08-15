@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using System.Windows.Threading;
 using Geometry;
 using Microsoft.Xna.Framework.Graphics;
-using SharpDX.Direct3D9;
 using Viking.Properties;
 using Viking.UI;
 using Viking.UI.Controls;
@@ -19,7 +18,7 @@ namespace Viking
 {
     /// <summary>
     /// Queue of texture data ready to be turned into Texture2D on the main thread. All creation from decoded data is intended to go through this queue (via TextureReaderV2.GetTextureFromTextureDataAsync).
-    /// The main thread pump processes one item at a time; when the queue is empty a 16ms timer re-posts the pump, otherwise 40ms.
+    /// The main-thread pump runs while items are pending and pauses when the queue is empty; Enqueue wakes the pump.
     /// </summary>
     internal static class PendingTextureQueue
     {
@@ -49,9 +48,12 @@ namespace Viking
         /// <summary>Waiters for in-flight loads keyed by texture URL/path. Completed in EndLoadingFile.</summary>
         private static readonly Dictionary<string, TaskCompletionSource<Texture2D>> _inflightLoadsByFile = new();
         private static readonly ReaderWriterLockSlim _pendingLock = new();
-        private static DispatcherTimer? _emptyQueueTimer;
-        private static readonly object TimerLock = new();
         private static DispatcherTimer? _sortTimer;
+
+        /// <summary>
+        /// 1 when a ProcessQueue invocation is scheduled or running; 0 when the pump is paused.
+        /// </summary>
+        private static int _pumpScheduled;
 
         /// <summary>
         /// Claims the file for loading. Returns true if this call claimed it (caller may create TextureReaderV2); false if already loading (do not create another reader).
@@ -113,7 +115,7 @@ namespace Viking
         }
 
         /// <summary>
-        /// True if the queue has no pending texture items. Used to tune screen refresh interval (e.g. 16ms when empty, 40ms when busy).
+        /// True if the queue has no pending texture items.
         /// </summary>
         public static bool IsEmpty
         {
@@ -156,7 +158,7 @@ namespace Viking
         }
 
         /// <summary>
-        /// Enqueue a pending texture creation. Call from any thread. Posts the pump so the main thread will process.
+        /// Enqueue a pending texture creation. Call from any thread. Wakes the pump so the main thread will process.
         /// When tileView is non-null, ProcessQueue will call SetTextureFromQueue on it; when fileKey is non-null, ProcessQueue will call EndLoadingFile when the item is processed.
         /// </summary>
         public static void Enqueue(TextureData data, bool useMipMaps, TaskCompletionSource<Texture2D> tcs, TileView? tileView = null, string? fileKey = null)
@@ -176,20 +178,69 @@ namespace Viking
                 _pendingLock.ExitWriteLock();
             }
 
-            _ = PostPump(0);
+            EnsurePumpScheduled();
         }
 
         /// <summary>
-        /// Schedule the queue pump to run on the main thread.
+        /// Schedule the queue pump to run on the main thread if it is not already scheduled.
+        /// When the queue is empty the pump pauses until Enqueue or another PostPump wakes it.
         /// </summary>
-        public static async Task PostPump(int msDelay=0)
+        public static async Task PostPump(int msDelay = 0)
         {
-            if (State.MainThreadDispatcher is null)
+            if (Interlocked.CompareExchange(ref _pumpScheduled, 1, 0) != 0)
                 return;
-            if(msDelay > 0)
+
+            if (State.MainThreadDispatcher is null)
+            {
+                Interlocked.Exchange(ref _pumpScheduled, 0);
+                return;
+            }
+
+            if (msDelay > 0)
                 await Task.Delay(msDelay).ConfigureAwait(false);
 
             State.MainThreadDispatcher.BeginInvoke(new Action(ProcessQueue), priority: DispatcherPriority.Background);
+        }
+
+        /// <summary>
+        /// Wake the pump immediately if it is paused. No-op if already scheduled or running.
+        /// </summary>
+        private static void EnsurePumpScheduled()
+        {
+            if (Interlocked.CompareExchange(ref _pumpScheduled, 1, 0) != 0)
+                return;
+
+            if (State.MainThreadDispatcher is null)
+            {
+                Interlocked.Exchange(ref _pumpScheduled, 0);
+                return;
+            }
+
+            State.MainThreadDispatcher.BeginInvoke(new Action(ProcessQueue), priority: DispatcherPriority.Background);
+        }
+
+        /// <summary>
+        /// Re-post ProcessQueue while the pump remains marked scheduled (items still pending).
+        /// </summary>
+        private static void ContinuePump()
+        {
+            if (State.MainThreadDispatcher is null)
+            {
+                Interlocked.Exchange(ref _pumpScheduled, 0);
+                return;
+            }
+
+            State.MainThreadDispatcher.BeginInvoke(new Action(ProcessQueue), priority: DispatcherPriority.Background);
+        }
+
+        /// <summary>
+        /// Clear the scheduled flag; if items arrived during the clear, wake the pump again.
+        /// </summary>
+        private static void PausePumpUnlessWorkPending()
+        {
+            Interlocked.Exchange(ref _pumpScheduled, 0);
+            if (!IsEmpty)
+                EnsurePumpScheduled();
         }
 
         /// <summary>
@@ -237,15 +288,15 @@ namespace Viking
 
         /// <summary>
         /// Runs on the main thread. Dequeues and creates textures until both the
-        /// configured time and minimum texture count are met, then re-posts the pump.
-        /// If the queue is empty on entry the pump is re-posted after a 50ms delay.
+        /// configured time and minimum texture count are met, then re-posts the pump if work remains.
+        /// If the queue is empty the pump pauses until Enqueue wakes it.
         /// </summary>
         private static void ProcessQueue()
         {
             const int msSliceTime = 50;
-            if (PendingTextureQueue.IsEmpty)
+            if (IsEmpty)
             {
-                PostPump(msSliceTime);
+                PausePumpUnlessWorkPending();
                 return;
             }
 
@@ -297,7 +348,7 @@ namespace Viking
                             _pendingLock.ExitWriteLock();
                         }
                         requeuedForDevice = true;
-                        PostPump(msSliceTime);
+                        ContinuePump();
                         return;
                     }
 
@@ -339,17 +390,25 @@ namespace Viking
                 }
             }
 
+            bool empty;
             _pendingLock.EnterReadLock();
             try
             {
-                if (_items.Count == 0)
-                    QueueBecameEmpty?.Invoke();
+                empty = _items.Count == 0;
             }
             finally
             {
                 _pendingLock.ExitReadLock();
             }
-            PostPump();
+
+            if (empty)
+            {
+                QueueBecameEmpty?.Invoke();
+                PausePumpUnlessWorkPending();
+                return;
+            }
+
+            ContinuePump();
         }
 
         /// <summary>
@@ -362,7 +421,7 @@ namespace Viking
             _pendingLock.EnterWriteLock();
             try
             {
-                if (_items.Count < 2)
+                if (_items.Count < TextureRequestQueue.MaxWorkers)
                     return;
 
                 var sorted = _items

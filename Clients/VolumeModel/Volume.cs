@@ -739,14 +739,14 @@ namespace Viking.VolumeModel
                 List<Task<Section>> ListSectionLoadingTasks = new(NumSections);
                 List<Task<LoadStosResult>> ListStosLoadingTasks = new(NumStosFiles);
 
-                bool HaveStosZip = false;
+                bool HaveVolumeStosZip = false;
                 try
                 {
-                    if (VolumeElement.HasAttributeCaseInsensitive("StosZip") != null)
+                    if (VolumeElement.HasAttributeCaseInsensitive("StosZip"))
                     {
                         string StosZipFileName = VolumeElement.GetAttributeCaseInsensitive("StosZip").Value;
                         workerThread?.Report(new ProgressInfo($"Loading compressed transform file {StosZipFileName}", 0));
-                        HaveStosZip = await FetchStosZip(new Uri($"{Host}/{StosZipFileName}"), this.UserCredentials, this.Paths.ServerStosCachePath).ConfigureAwait(false);
+                        HaveVolumeStosZip = await FetchStosZip(new Uri($"{Host}/{StosZipFileName}"), this.UserCredentials, this.Paths.ServerStosCachePath).ConfigureAwait(false);
                     }
                 }
                 catch (XMLMissingDataException e)
@@ -756,7 +756,7 @@ namespace Viking.VolumeModel
                 catch (Exception e)
                 {
                     Trace.WriteLine($"FetchStosZip failed, falling back to normal STOS loading: {e.Message}");
-                    HaveStosZip = false;
+                    HaveVolumeStosZip = false;
                 }
 
                 int countStos = 0;
@@ -778,31 +778,20 @@ namespace Viking.VolumeModel
                     //Fetch the name if we know it
                     switch (elem.Name.LocalName.ToLower())
                     {
+                        case "stosgroup":
+                            countStos = await QueueStosGroupAsync(elem, ListStosLoadingTasks, NumStosFiles, countStos, workerThread).ConfigureAwait(false);
+                            break;
                         case "stos":
-
-                            string stosFileName = elem.GetAttributeCaseInsensitive("path").Value;
-                            Uri stosPath = new(this.Host + System.IO.Path.DirectorySeparatorChar + stosFileName);
-                            //      int pixelSpacing = System.Convert.ToInt32(GetAttributeCaseInsensitive(elem,"pixelSpacing").Value);
-                            int ProgressPercent = (countStos * 100) / NumStosFiles;
-                            countStos++;
-                            workerThread?.Report(new ProgressInfo($"Loading {stosFileName}", ProgressPercent));
-
-                            ListStosLoadingTasks.Add(LoadStos(elem, HaveStosZip));
-
+                            QueueStosLoad(elem, HaveVolumeStosZip, stosGroupName: null, ListStosLoadingTasks, NumStosFiles, ref countStos, workerThread);
+                            break;
+                        case "sections":
+                            foreach (XElement sectionElem in elem.Elements().Where(e => string.Equals(e.Name.LocalName, "Section", StringComparison.OrdinalIgnoreCase)))
+                            {
+                                QueueSectionLoad(sectionElem, ListSectionLoadingTasks, NumSections, ref countSections, workerThread, token);
+                            }
                             break;
                         case "section":
-                            //string SectionPath = VolumePath + '/' + GetAttributeCaseInsensitive(elem,"path").Value;
-                            string SectionPath = elem.HasAttributeCaseInsensitive("path") ? elem.GetAttributeCaseInsensitive("path").Value : "";
-
-                            ProgressPercent = NumSections > 0 ? (countSections * 100) / NumSections : 100;
-
-                            countSections++;
-                            workerThread?.Report(new ProgressInfo($"Queueing {SectionPath}", ProgressPercent));
-
-                            Section newSection = new(this, SectionPath, elem);
-                            var task = newSection.InitializeFromXML(elem, token);
-                            ListSectionLoadingTasks.Add(task);
-                            //await task;
+                            QueueSectionLoad(elem, ListSectionLoadingTasks, NumSections, ref countSections, workerThread, token);
                             break;
                         case "ocptileserver":
                             TileServerInfo info = TileServerInfo.CreateFromElement(elem);
@@ -835,7 +824,68 @@ namespace Viking.VolumeModel
             }
         }
 
-        private async Task<LoadStosResult> LoadStos(XElement elem, bool HaveStosCache)
+        private async Task<int> QueueStosGroupAsync(
+            XElement stosGroupElem,
+            List<Task<LoadStosResult>> listStosLoadingTasks,
+            int numStosFiles,
+            int countStos,
+            IProgress<ProgressInfo> workerThread)
+        {
+            string groupName = stosGroupElem.GetAttributeCaseInsensitive("Name").Value;
+
+            bool haveGroupZip = false;
+            if (stosGroupElem.HasAttributeCaseInsensitive("zip"))
+            {
+                string zipFileName = stosGroupElem.GetAttributeCaseInsensitive("zip").Value;
+                workerThread?.Report(new ProgressInfo($"Loading compressed transform file {zipFileName}", 0));
+                haveGroupZip = await FetchStosZip(
+                    new Uri($"{Host}/{zipFileName}"),
+                    this.UserCredentials,
+                    this.Paths.ServerStosCachePath).ConfigureAwait(false);
+            }
+
+            foreach (XElement stosElem in stosGroupElem.Elements().Where(e => string.Equals(e.Name.LocalName, "stos", StringComparison.OrdinalIgnoreCase)))
+            {
+                QueueStosLoad(stosElem, haveGroupZip, groupName, listStosLoadingTasks, numStosFiles, ref countStos, workerThread);
+            }
+
+            return countStos;
+        }
+
+        private void QueueStosLoad(
+            XElement elem,
+            bool haveStosCache,
+            string stosGroupName,
+            List<Task<LoadStosResult>> listStosLoadingTasks,
+            int numStosFiles,
+            ref int countStos,
+            IProgress<ProgressInfo> workerThread)
+        {
+            string stosFileName = elem.GetAttributeCaseInsensitive("path").Value;
+            int progressPercent = numStosFiles > 0 ? (countStos * 100) / numStosFiles : 100;
+            countStos++;
+            workerThread?.Report(new ProgressInfo($"Loading {stosFileName}", progressPercent));
+            listStosLoadingTasks.Add(LoadStos(elem, haveStosCache, stosGroupName));
+        }
+
+        private void QueueSectionLoad(
+            XElement elem,
+            List<Task<Section>> listSectionLoadingTasks,
+            int numSections,
+            ref int countSections,
+            IProgress<ProgressInfo> workerThread,
+            CancellationToken token)
+        {
+            string sectionPath = elem.HasAttributeCaseInsensitive("path") ? elem.GetAttributeCaseInsensitive("path").Value : "";
+            int progressPercent = numSections > 0 ? (countSections * 100) / numSections : 100;
+            countSections++;
+            workerThread?.Report(new ProgressInfo($"Queueing {sectionPath}", progressPercent));
+
+            Section newSection = new(this, sectionPath, elem);
+            listSectionLoadingTasks.Add(newSection.InitializeFromXML(elem, token));
+        }
+
+        private async Task<LoadStosResult> LoadStos(XElement elem, bool HaveStosCache, string stosGroupName = null)
         {
             LoadStosResult result = null;
             string stosFileName = elem.GetAttributeCaseInsensitive("path").Value;
@@ -885,7 +935,7 @@ namespace Viking.VolumeModel
             {
                 try
                 {
-                    await OnStosTransformLoadComplete(result.Transform, result.element).ConfigureAwait(false);
+                    await OnStosTransformLoadComplete(result.Transform, result.element, stosGroupName).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -896,20 +946,28 @@ namespace Viking.VolumeModel
         }
 
         private readonly SemaphoreSlim StosTransformLoadSemaphore = new(1);
-        private async Task OnStosTransformLoadComplete(ITransform Transform, XElement element)
+        private async Task OnStosTransformLoadComplete(ITransform Transform, XElement element, string stosGroupName = null)
         {
             try
             {
                 await StosTransformLoadSemaphore.WaitAsync().ConfigureAwait(false);
-                int pixelSpacing =
-                    System.Convert.ToInt32(element.GetAttributeCaseInsensitive("pixelSpacing").Value);
-                string type = element.GetAttributeCaseInsensitive("type").Value;
-                string groupName = $"{type} {pixelSpacing}";
-
-                XAttribute GroupNameAttribute = element.Attribute("GroupName");
-                if (GroupNameAttribute != null)
+                string groupName;
+                if (!string.IsNullOrEmpty(stosGroupName))
                 {
-                    groupName = GroupNameAttribute.Value;
+                    groupName = stosGroupName;
+                }
+                else
+                {
+                    int pixelSpacing =
+                        System.Convert.ToInt32(element.GetAttributeCaseInsensitive("pixelSpacing").Value);
+                    string type = element.GetAttributeCaseInsensitive("type").Value;
+                    groupName = $"{type} {pixelSpacing}";
+
+                    XAttribute GroupNameAttribute = element.Attribute("GroupName");
+                    if (GroupNameAttribute != null)
+                    {
+                        groupName = GroupNameAttribute.Value;
+                    }
                 }
 
                 if (false == VolumeTransformNames.Contains(groupName))

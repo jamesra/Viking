@@ -12,6 +12,7 @@ using VikingXNA;
 using VikingXNAGraphics;
 using WebAnnotation.View;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.ViewModel
 {
@@ -137,53 +138,122 @@ namespace WebAnnotation.ViewModel
 
         protected IVolumeTransformProvider mapProvider;
 
+        /// <summary>
+        /// Create a link view when both endpoints map into volume space. Returns false without throwing if either point is unmappable.
+        /// </summary>
+        public static bool TryCreate(LocationLinkKey key, int Z, IVolumeTransformProvider mapProvider, out LocationLinkView? view)
+        {
+            view = null;
+            if (mapProvider is null)
+                return false;
+
+            if (!Store.Locations.TryGetValue(key.A, out LocationObj locA) ||
+                !Store.Locations.TryGetValue(key.B, out LocationObj locB))
+            {
+                return false;
+            }
+
+            if (!TryMapEndpointPositions(locA, locB, Z, mapProvider,
+                    out GridCircle circleA, out GridCircle circleB,
+                    out int minSection, out int maxSection, out Color color))
+            {
+                return false;
+            }
+
+            view = new LocationLinkView(key, Z, mapProvider, circleA, circleB, minSection, maxSection, color);
+            return true;
+        }
+
         public LocationLinkView(LocationLinkKey key, int Z, IVolumeTransformProvider mapProvider)
         {
             Key = key;
             this.Z = Z;
             this.mapProvider = mapProvider;
-            UpdatePropertiesFromLocations(mapProvider);
-
-            //ContextMenuGenerator = LocationLink_CanvasContextMenuView.ContextMenuGenerator;
+            if (!UpdatePropertiesFromLocations(mapProvider))
+            {
+                throw new ArgumentOutOfRangeException(nameof(key),
+                    $"Could not map location link {key} to volume");
+            }
 
             lineView = CreateView();
         }
 
-        public LocationLinkView(LocationObj LocOne, LocationObj LocTwo, int Z, IVolumeTransformProvider mapProvider) : this(new LocationLinkKey(LocOne.ID, LocTwo.ID), Z, mapProvider)
+        public LocationLinkView(LocationObj LocOne, LocationObj LocTwo, int Z, IVolumeTransformProvider mapProvider)
+            : this(new LocationLinkKey(
+                (LocOne ?? throw new ArgumentNullException(nameof(LocOne))).ID,
+                (LocTwo ?? throw new ArgumentNullException(nameof(LocTwo))).ID), Z, mapProvider)
         {
-            if (LocOne is null)
-            {
-                throw new ArgumentNullException("LocOne");
-            }
+        }
 
-            if (LocTwo is null)
-            {
-                throw new ArgumentNullException("LocTwo");
-            }
-
-            UpdatePropertiesFromLocations(mapProvider);
-
+        private LocationLinkView(LocationLinkKey key, int Z, IVolumeTransformProvider mapProvider,
+            GridCircle circleA, GridCircle circleB, int minSection, int maxSection, Color color)
+        {
+            Key = key;
+            this.Z = Z;
+            this.mapProvider = mapProvider;
+            A = circleA;
+            B = circleB;
+            MinSection = minSection;
+            MaxSection = maxSection;
+            Color = color;
             lineView = CreateView();
         }
 
         private readonly bool _LocationsOverlapped;
 
-        private void UpdatePropertiesFromLocations(IVolumeTransformProvider mapProvider)
+        /// <summary>
+        /// Maps both link endpoints into volume space. Returns false if either point cannot be mapped.
+        /// </summary>
+        private bool UpdatePropertiesFromLocations(IVolumeTransformProvider mapProvider)
         {
-            LocationObj A = Store.Locations[Key.A];
-            LocationObj B = Store.Locations[Key.B];
-            IVolumeToSectionTransform sourceMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(A.Z));
-            IVolumeToSectionTransform targetMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(B.Z));
-            GridVector2 AVolumePosition = sourceMapper.SectionToVolume(A.Position);
-            GridVector2 BVolumePosition = targetMapper.SectionToVolume(B.Position);
+            if (!Store.Locations.TryGetValue(Key.A, out LocationObj locA) ||
+                !Store.Locations.TryGetValue(Key.B, out LocationObj locB))
+            {
+                return false;
+            }
 
-            this.A = new GridCircle(AVolumePosition, A.Radius * (Z == A.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
-            this.B = new GridCircle(BVolumePosition, B.Radius * (Z == B.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
+            if (!TryMapEndpointPositions(locA, locB, Z, mapProvider,
+                    out GridCircle circleA, out GridCircle circleB,
+                    out int minSection, out int maxSection, out Color color))
+            {
+                return false;
+            }
 
-            MinSection = (int)Math.Round(A.Z < B.Z ? A.Z : B.Z);
-            MaxSection = (int)Math.Round(A.Z < B.Z ? B.Z : A.Z);
+            A = circleA;
+            B = circleB;
+            MinSection = minSection;
+            MaxSection = maxSection;
+            Color = color;
+            return true;
+        }
 
-            Color = GetLocationLinkColor(A.Parent.Type.Color.ToXNAColor(), MaxSection - MinSection, MinSection < Z ? -1 : 1, false);
+        private static bool TryMapEndpointPositions(
+            LocationObj locA, LocationObj locB, int displayZ, IVolumeTransformProvider mapProvider,
+            out GridCircle circleA, out GridCircle circleB,
+            out int minSection, out int maxSection, out Color color)
+        {
+            circleA = default;
+            circleB = default;
+            minSection = 0;
+            maxSection = 0;
+            color = default;
+
+            IVolumeToSectionTransform sourceMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(locA.Z));
+            IVolumeToSectionTransform targetMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(locB.Z));
+
+            if (!sourceMapper.TrySectionToVolume(locA.Position, out GridVector2 aVolumePosition))
+                return false;
+            if (!targetMapper.TrySectionToVolume(locB.Position, out GridVector2 bVolumePosition))
+                return false;
+
+            circleA = new GridCircle(aVolumePosition, locA.Radius * (displayZ == locA.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
+            circleB = new GridCircle(bVolumePosition, locB.Radius * (displayZ == locB.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
+
+            minSection = (int)Math.Round(locA.Z < locB.Z ? locA.Z : locB.Z);
+            maxSection = (int)Math.Round(locA.Z < locB.Z ? locB.Z : locA.Z);
+
+            color = GetLocationLinkColor(locA.Parent.Type.Color.ToXNAColor(), maxSection - minSection, minSection < displayZ ? -1 : 1, false);
+            return true;
         }
 
         public void GetCanvasViews(LocationLinkKey key, IVolumeTransformProvider mapProvider, out LocationCanvasView AView, out LocationCanvasView BView)
@@ -221,7 +291,7 @@ namespace WebAnnotation.ViewModel
         /// <param name="section_span_distance">Number of sections the location link crosses</param>
         /// <param name="direction">Direction the link is in from the current section</param>
         /// <returns></returns>
-        private Microsoft.Xna.Framework.Color GetLocationLinkColor(Color structure_type_color, int section_span_distance, double direction, bool IsMouseOver)
+        private static Microsoft.Xna.Framework.Color GetLocationLinkColor(Color structure_type_color, int section_span_distance, double direction, bool IsMouseOver)
         {
             if (section_span_distance == 0)
             {

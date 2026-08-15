@@ -88,6 +88,11 @@ namespace Viking.UI.Controls
         private bool DrawCallSinceTileCacheCheckpoint = false;
 
         /// <summary>
+        /// Host form whose WindowState drives paint-timer pause while minimized.
+        /// </summary>
+        private Form? _hostForm;
+
+        /// <summary>
         /// When set to true Commands and ISectionOverlayExtension draw methods are called
         /// </summary>
         public bool ShowOverlays = true;
@@ -387,6 +392,12 @@ namespace Viking.UI.Controls
 
                 OnSectionChangedEventInvokeTask = Task.Run(() => OnSectionChanged?.Invoke(this, new SectionChangedEventArgs(_Section, OldSection), OnSectionChangedEventCancellationTokenSource.Token), OnSectionChangedEventCancellationTokenSource.Token);
                 //OnSectionChanged?.(this, new SectionChangedEventArgs(_Section, OldSection));
+
+                if (this.Scene != null && _Section != null)
+                {
+                    TextureRequestQueue.SortByPriority(this.Scene.VisibleWorldBounds, _Section.Number);
+                    PendingTextureQueue.SortByVisibility(this.Scene.VisibleWorldBounds, _Section.Number);
+                }
                 }
             }
         }
@@ -464,6 +475,71 @@ namespace Viking.UI.Controls
             PendingTextureQueue.QueueBecameEmpty += this.OnPendingTextureQueueBecameEmpty;
         }
 
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            SubscribeHostForm();
+        }
+
+        protected override void OnHandleDestroyed(EventArgs e)
+        {
+            UnsubscribeHostForm();
+            base.OnHandleDestroyed(e);
+        }
+
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            SubscribeHostForm();
+        }
+
+        private void SubscribeHostForm()
+        {
+            Form? form = FindForm();
+            if (form == _hostForm)
+                return;
+
+            UnsubscribeHostForm();
+            _hostForm = form;
+            if (_hostForm != null)
+                _hostForm.Resize += OnHostFormResize;
+
+            UpdatePaintTimerForWindowState();
+        }
+
+        private void UnsubscribeHostForm()
+        {
+            if (_hostForm is null)
+                return;
+
+            _hostForm.Resize -= OnHostFormResize;
+            _hostForm = null;
+        }
+
+        private void OnHostFormResize(object? sender, EventArgs e) => UpdatePaintTimerForWindowState();
+
+        /// <summary>
+        /// Pause continuous repaint while minimized; resume and invalidate when restored.
+        /// </summary>
+        private void UpdatePaintTimerForWindowState()
+        {
+            Form? form = _hostForm ?? FindForm();
+            if (form is null)
+                return;
+
+            if (form.WindowState == FormWindowState.Minimized)
+            {
+                timer.Enabled = false;
+                return;
+            }
+
+            if (!timer.Enabled)
+            {
+                timer.Enabled = true;
+                Invalidate();
+            }
+        }
+
         /// <summary>
         /// Unsubscribe from events and cancel/dispose all section-related cancellation token sources. Call from Dispose to avoid callbacks after disposal.
         /// </summary>
@@ -473,6 +549,7 @@ namespace Viking.UI.Controls
             CommandQueue.OnCommandInjected -= this.OnCommandInjected;
             CommandQueue.OnQueueChanged -= this.OnCommandQueueChanged;
             PendingTextureQueue.QueueBecameEmpty -= this.OnPendingTextureQueueBecameEmpty;
+            UnsubscribeHostForm();
 
             OnSectionChangedEventCancellationTokenSource?.Cancel();
             OnSectionChangedEventCancellationTokenSource?.Dispose();
@@ -1913,8 +1990,7 @@ namespace Viking.UI.Controls
             graphicsDevice.BlendState = OriginalBlendState;
             DrawCallSinceTileCacheCheckpoint = true;
 
-            // Give the main thread more time to load textures when the queue has work
-            timer.Interval = Viking.PendingTextureQueue.IsEmpty ? 16 : 40;
+            timer.Interval = 25;
         }
 
         private void UpdateLumaTextureForOverlayEffects(Texture BackgroundLuma)
@@ -2671,6 +2747,13 @@ namespace Viking.UI.Controls
 
         private void timer_Tick(object sender, EventArgs e)
         {
+            Form? form = _hostForm ?? FindForm();
+            if (form?.WindowState == FormWindowState.Minimized)
+            {
+                timer.Enabled = false;
+                return;
+            }
+
             if (!HavePaintInQueue())
                 this.Invalidate();
         }

@@ -49,17 +49,27 @@ namespace Viking
 
             Splash.Close();
 
-            if (splashResult == DialogResult.Cancel)
+            if (Splash.TrackedTask.IsFaulted)
             {
-                Trace.WriteLine($"Viking launch cancelled by user");
+                Trace.WriteLine($"Viking launch cancelled after exception:\n {Splash.TrackedTask.Exception}");
+
+                Exception? rootCause = Splash.TrackedTask.Exception?.Flatten().InnerException
+                                       ?? Splash.TrackedTask.Exception;
+
+                string friendlyMessage =
+                    $"Could not load the volume from:\n{_settings.VolumeURL}\n\n" +
+                    $"Reason: {rootCause?.Message ?? "Unknown error"}\n\n" +
+                    "Please check that the server is reachable and the URL is correct.";
+
+                MessageBox.Show(friendlyMessage, "Volume Load Failed",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
                 ExitThread();
                 return;
             }
 
-            if (Splash.TrackedTask.IsFaulted)
+            if (splashResult == DialogResult.Cancel)
             {
-                Trace.WriteLine($"Viking launch cancelled after exception:\n {Splash.TrackedTask.Exception}");
-                MessageBox.Show($"Viking launch cancelled after exception:\n {Splash.TrackedTask.Exception}");
+                Trace.WriteLine($"Viking launch cancelled by user");
                 ExitThread();
                 return;
             }

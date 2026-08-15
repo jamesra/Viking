@@ -215,8 +215,8 @@ namespace WebAnnotationModel
 
             var localObjectKeys = SpatialSearch.Intersects(VolumeBounds);
             var localsObjects = await objectStore.GetObjectsByIDs(localObjectKeys, false, token);
-            if(foundObjectsCallback != null)
-                foundObjectsCallback(localObjects);
+            if (foundObjectsCallback != null)
+                foundObjectsCallback(localsObjects);
             return localsObjects;
         }
          
@@ -280,7 +280,10 @@ namespace WebAnnotationModel
             var serverResult = await client.GetAsync(sectionNumber, cell.Bounds.ToWKT(), level.MinRadius, cell.LastQuery, aToken);
             
             if (aToken.IsCancellationRequested)
+            {
+                cell.ClearLastQuery();
                 return;
+            }
 
             await ServerObjProcessor.ProcessServerResults(serverResult.QueryTime, serverResult.NewOrUpdated);
 

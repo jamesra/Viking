@@ -7,6 +7,7 @@ using Viking.AnnotationServiceTypes;
 using Viking.Common;
 using Viking.ViewModels;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.ViewModel
 {
@@ -75,33 +76,29 @@ namespace WebAnnotation.ViewModel
                 return;
             }
 
-            try
+            if (!LocationLinkView.TryCreate(key, Section.Number, Section.VolumeViewModel, out LocationLinkView? lv) || lv is null)
             {
-                KnownLinks.TryAdd(key, () =>
-                {
-                    LocationLinkView lv = new(key, Section.Number, Section.VolumeViewModel);
-                    bool added = LocationLinks.TryAdd(key, lv);
-                    Debug.Assert(added);
+                return;
+            }
 
-                    if (lv.LinksOverlap())
-                    {
-                        OverlappedLinkKeys.TryAdd(key, () =>
-                        {
-                            OverlappedAdjacentLocationIDs.AddRef(key.A);
-                            OverlappedAdjacentLocationIDs.AddRef(key.B);
-                        });
-                    }
-                    else
-                    {
-                        NonOverlappedLinksSearch.Add(lv.BoundingBox.ToRTreeRect(lv.Z), key);
-                    }
-                });
-            }
-            catch (System.ArgumentOutOfRangeException e)
+            KnownLinks.TryAdd(key, () =>
             {
-                //This can occur when the point cannot be mapped
-                System.Diagnostics.Trace.WriteLine($"Exception adding location link {key}\n{e}");
-            }
+                bool added = LocationLinks.TryAdd(key, lv);
+                Debug.Assert(added);
+
+                if (lv.LinksOverlap())
+                {
+                    OverlappedLinkKeys.TryAdd(key, () =>
+                    {
+                        OverlappedAdjacentLocationIDs.AddRef(key.A);
+                        OverlappedAdjacentLocationIDs.AddRef(key.B);
+                    });
+                }
+                else
+                {
+                    NonOverlappedLinksSearch.Add(lv.BoundingBox.ToRTreeRect(lv.Z), key);
+                }
+            });
 
         }
 

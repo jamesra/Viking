@@ -50,6 +50,13 @@ namespace Viking
         private static volatile bool _started;
 
         /// <summary>
+        /// Number of max workers configured on the semaphore.
+        /// </summary>
+        private static int _current_max_workers = DefaultMaxWorkers;
+
+        public static int MaxWorkers => _current_max_workers;
+
+        /// <summary>
         /// True if this TileView has a pending request in the queue (or being processed).
         /// Used by TileView to avoid duplicate loads and by callers of PendingTextureQueue.IsTileViewPending.
         /// </summary>
@@ -131,7 +138,7 @@ namespace Viking
         {
             lock (_lock)
             {
-                if (_requests.Count < 2)
+                if (_requests.Count < TextureRequestQueue.MaxWorkers)
                     return;
                 var sorted = _requests
                     .OrderBy(r => r.TileView.Bounds.Intersects(visibleBounds) ? 0 : 1)
@@ -150,6 +157,7 @@ namespace Viking
         {
             int clamped = Math.Max(1, Math.Min(max, 256));
             var prev = _throttle;
+            _current_max_workers = clamped;
             _throttle = new SemaphoreSlim(clamped, clamped);
             Trace.WriteLine($"TextureRequestQueue: Max workers set to {clamped}");
         }

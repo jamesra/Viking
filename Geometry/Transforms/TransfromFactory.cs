@@ -133,7 +133,14 @@ namespace Geometry.Transforms
 
             if (fileparts.Length >= 4)
             {
-                pixelSpacing = System.Convert.ToInt32(fileparts[3]);
+                try
+                {
+                    pixelSpacing = System.Convert.ToInt32(fileparts[3]);
+                }
+                catch (FormatException)
+                {
+                    //If the file is not formatted correctly, just ignore the value;
+                }
             }
 
             using Stream transformStream = File.OpenRead(stosfile);

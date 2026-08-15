@@ -11,9 +11,9 @@
     <SignAssembly>False</SignAssembly>
     <ProductName>Viking</ProductName>
     <PublisherName>Marc Lab</PublisherName>
-    <ApplicationVersion>1.2.57.0</ApplicationVersion>
-    <FileVersion>1.2.57.0</FileVersion>
-    <AssemblyVersion>1.2.57.0</AssemblyVersion>
+    <ApplicationVersion>1.2.59.0</ApplicationVersion>
+    <FileVersion>1.2.59.0</FileVersion>
+    <AssemblyVersion>1.2.59.0</AssemblyVersion>
     <Deterministic>True</Deterministic>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <NoWarn>$(NoWarn);CS0436;CA1014;CS3009</NoWarn>
