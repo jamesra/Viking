@@ -128,7 +128,7 @@ namespace WebAnnotation.View
             else if (modifierKeys.CtrlPressed())
             {
                 //Allow user to add a control point if the mouse is not over an existing control point
-                if (!polyLineView.ControlPoints.Select(p => new Circle(p, LineWidth / 2.0)).Any(c => c.Contains(WorldPosition)))
+                if (!polyLineView.ControlPoints.Select(p => new Circle(p, LineWidth / 2.0)).Any(c => c.Covers(WorldPosition)))
                 {
                     return LocationAction.ADDCONTROLPOINT;
                 }
@@ -187,7 +187,7 @@ namespace WebAnnotation.View
         protected bool PointIntersectsAnyControlPoint(Geometry.Vector2 WorldPosition)
         {
             Circle testCircle = new(WorldPosition, ControlPointRadius);
-            return VolumeControlPoints.Any(p => testCircle.Contains(p));
+            return VolumeControlPoints.Any(p => testCircle.Covers(p));
         }
 
         protected virtual bool PointIntersectsAnyLineSegment(Geometry.Vector2 WorldPosition)
@@ -337,7 +337,14 @@ namespace WebAnnotation.View
 
         public MultipleControlPointLocationCanvasViewBase(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {
-            MosaicControlPoints = obj.MosaicShape.ToPoints();
+            if (obj.MosaicShape is not IHasControlPoints controlPoints)
+            {
+                throw new ArgumentException(
+                    $"Location {obj.ID} mosaic shape {obj.MosaicShape?.ShapeType} does not expose control points.",
+                    nameof(obj));
+            }
+
+            MosaicControlPoints = [.. controlPoints.ControlPoints.Select(p => p.Convert())];
             VolumeControlPoints = mapper.SectionToVolume(MosaicControlPoints);
         }
     }

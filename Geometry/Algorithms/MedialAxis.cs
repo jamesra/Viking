@@ -18,7 +18,7 @@ namespace Geometry
 
     public class MedialAxisGraph : GraphLib.Graph<Vector2, MedialAxisVertex, MedialAxisEdge>
     {
-        public Vector2 FindStartForBoundarySearch(Polygon[] shapes) => Nodes.First(v => shapes.All(shape => !shape.Contains(v.Key))).Key;
+        public Vector2 FindStartForBoundarySearch(Polygon[] shapes) => Nodes.First(v => shapes.All(shape => !shape.Covers(v.Key))).Key;
 
         public LineSegment[] Segments => [.. this.Edges.Select(edge => edge.Value.Line)];
 

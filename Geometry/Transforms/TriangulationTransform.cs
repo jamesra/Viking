@@ -328,7 +328,7 @@ namespace Geometry.Transforms
             {
                 for (int i = 0; i < foundPoints.Count; i++)
                 {
-                    if (!gridRect.Contains(foundPoints[i].ControlPoint))
+                    if (!gridRect.Covers(foundPoints[i].ControlPoint))
                     {
                         foundPoints.RemoveAt(i);
                         i--;
@@ -346,7 +346,7 @@ namespace Geometry.Transforms
             {
                 for (int i = 0; i < foundPoints.Count; i++)
                 {
-                    if (!gridRect.Contains(foundPoints[i].MappedPoint))
+                    if (!gridRect.Covers(foundPoints[i].MappedPoint))
                     {
                         foundPoints.RemoveAt(i);
                         i--;
@@ -560,7 +560,7 @@ namespace Geometry.Transforms
 
             List<MappingVector2> MappingPointList = null;
 
-            if (gridRect.Contains(pointTreeWithUniqueValues.Border))
+            if (gridRect.Covers(pointTreeWithUniqueValues.Border))
             {
                 MappingPointList = [.. MapPoints];
                 return MappingPointList;

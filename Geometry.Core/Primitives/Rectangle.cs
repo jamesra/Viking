@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
@@ -8,7 +9,7 @@ namespace Geometry
     /// Double-precision axis-aligned rectangle. Distinct from <c>System.Drawing.Rectangle</c> (integer) and not a drop-in replacement.
     /// </summary>
     [Serializable]
-    public readonly struct Rectangle : IRectangle2D, ICloneable, IEquatable<IRectangle2D>, IEquatable<Rectangle>
+    public readonly struct Rectangle : IRectangle2D, IHasControlPoints, ICloneable, IEquatable<IRectangle2D>, IEquatable<Rectangle>
     {
         private enum Corner
         {
@@ -68,6 +69,8 @@ namespace Geometry
         public Rectangle BoundingBox => this;
 
         public ShapeType2D ShapeType => ShapeType2D.Rectangle;
+
+        IReadOnlyList<IPoint2D> IHasControlPoints.ControlPoints => [LowerLeft, UpperLeft, UpperRight, LowerRight];
 
         double IRectangle2D.Left => Left;
 
@@ -299,54 +302,35 @@ namespace Geometry
 
 
         /// <summary>
-        /// Returns true if the passed rectangle is entirely inside this rectangle
+        /// OGC Contains: <paramref name="rect"/> lies in this rectangle's interior (shared boundary is false).
         /// </summary>
-        /// <param name="rect"></param>
-        /// <returns></returns>
-        public bool Contains(in Rectangle rect)
-        {
-            //Find out if rect is inside this rectangle
-            if (rect.Right <= this.Right &&
-               rect.Top <= this.Top &&
-               rect.Left >= this.Left &&
-               rect.Bottom >= this.Bottom)
-                return true;
+        public bool Contains(in Rectangle rect) => GetRelation(rect).IsContains();
 
-            return false;
-        }
+        public bool Covers(in Rectangle rect) => GetRelation(rect).IsCovers();
 
-        public bool Contains(in IPoint2D pos)
+        public bool Contains(in IPoint2D pos) => GetRelation(pos).IsContains();
+
+        public bool Covers(in IPoint2D pos) => GetRelation(pos).IsCovers();
+
+        public ShapeRelation GetRelation(in IPoint2D pos)
         {
             if (pos is null)
                 throw new ArgumentNullException(nameof(pos));
 
-            if (pos.X >= this.Left &&
-               pos.Y >= this.Bottom &&
-               pos.X <= this.Right &&
-               pos.Y <= this.Top)
-                return true;
+            const double eps = Tolerance.Epsilon;
+            if (pos.X < Left - eps ||
+                pos.Y < Bottom - eps ||
+                pos.X > Right + eps ||
+                pos.Y > Top + eps)
+                return ShapeRelation.None;
 
-            return false;
-        }
-
-        public ShapeRelation GetRelation(in IPoint2D pos)
-        {
-            //Find out if the rectangles can't possibly intersect
-            if (pos.X >= this.Left &&
-               pos.Y >= this.Bottom &&
-               pos.X <= this.Right &&
-               pos.Y <= this.Top)
-            {
-                if (pos.X == this.Left ||
-                    pos.Y == this.Bottom ||
-                    pos.X == this.Right ||
-                    pos.Y == this.Top)
-                    return ShapeRelation.Touching;
-
+            if (pos.X > Left + eps &&
+                pos.Y > Bottom + eps &&
+                pos.X < Right - eps &&
+                pos.Y < Top - eps)
                 return ShapeRelation.Contained;
-            }
 
-            return ShapeRelation.None;
+            return ShapeRelation.Touching;
         }
 
         public ShapeRelation GetRelation(in ILineSegment2D line)
@@ -390,17 +374,23 @@ namespace Geometry
             return ShapeRelation.None;
         }
 
-        public bool Contains(in Vector2 pos, in double epsilon = Tolerance.Epsilon)
+        public bool Covers(in Vector2 pos, in double epsilon = Tolerance.Epsilon)
         {
-            //Find out if the rectangles can't possibly intersect
-            if (pos.X >= this.Left - epsilon &&
-               pos.Y >= this.Bottom - epsilon &&
-               pos.X <= this.Right + epsilon &&
-               pos.Y <= this.Top + epsilon)
+            if (pos.X >= Left - epsilon &&
+               pos.Y >= Bottom - epsilon &&
+               pos.X <= Right + epsilon &&
+               pos.Y <= Top + epsilon)
                 return true;
 
             return false;
         }
+
+        public bool Contains(in Vector2 pos, in double epsilon) =>
+            Covers(pos, epsilon) &&
+            pos.X > Left + epsilon &&
+            pos.Y > Bottom + epsilon &&
+            pos.X < Right - epsilon &&
+            pos.Y < Top - epsilon;
 
         public ShapeRelation GetRelation(in Rectangle rect)
         {

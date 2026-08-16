@@ -37,5 +37,15 @@ namespace GeometryTests
                 Prop.ForAll(CoreArbitraries.ArbRange(), CoreArbitraries.ArbScalar(), (range, value) =>
                     range.Contains(value) == (value >= range.Min && value <= range.Max)),
                 nameof(ContainsAgreesWithMinMax));
+
+        [TestMethod]
+        public void ClonePreservesMinAndMax() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbRange(), range =>
+                {
+                    Range clone = (Range)range.Clone();
+                    return clone.Min == range.Min && clone.Max == range.Max && clone.Equals(range);
+                }),
+                nameof(ClonePreservesMinAndMax));
     }
 }

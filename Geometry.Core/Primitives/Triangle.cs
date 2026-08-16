@@ -38,7 +38,7 @@ namespace Geometry
     /// </summary>
     /// 
     [Serializable]
-    public readonly struct Triangle : ICloneable, IShape2D, ITriangle2D, IEquatable<Triangle>, IEquatable<ITriangle2D>
+    public readonly struct Triangle : ICloneable, IShape2D, ITriangle2D, IHasControlPoints, IEquatable<Triangle>, IEquatable<ITriangle2D>
     {
         readonly Vector2[] _points;
 
@@ -223,35 +223,13 @@ namespace Geometry
         }
         */
 
-        /// <summary>
-        /// Returns true if the Point is inside the triangle
-        /// </summary>
-        /// <param name="test"></param>
-        /// <returns></returns>
-        public bool Contains(in IPoint2D point)
-        {
-            if (false == BoundingBox.Contains(point))
-            {
-                //False positives can happen in cases where the points have floating point precision issues.
-                //Particularly in GridTransforms.  This should be handled by rounding the transform results. 
-                //However it may be worth the computation cost to do Barycentric calculation instead.
-                return false;
-            }
+        public bool Contains(in IPoint2D point) => GetRelation(point).IsContains();
 
-            Vector2 uv = Barycentric(point);
-
-            if (uv.X >= 0 && uv.Y >= 0)
-            {
-                if (uv.X + uv.Y <= 1.0f)
-                    return true;
-            }
-
-            return false;
-        }
+        public bool Covers(in IPoint2D point) => GetRelation(point).IsCovers();
 
         public ShapeRelation GetRelation(in IPoint2D p)
         {
-            if (false == BoundingBox.Contains(p))
+            if (false == BoundingBox.Covers(p))
             {
                 //False positives can happen in cases where the points have floating point precision issues.
                 //Particularly in GridTransforms.  This should be handled by rounding the transform results. 
@@ -397,13 +375,13 @@ namespace Geometry
 
             foreach (Vector2 p in Points)
             {
-                if (other.Contains(p))
+                if (other.Covers(p))
                     return true;
             }
 
             foreach (Vector2 p in other.Points)
             {
-                if (this.Contains(p))
+                if (this.Covers(p))
                     return true;
             }
 
@@ -471,5 +449,7 @@ namespace Geometry
         }
 
         public ShapeType2D ShapeType => ShapeType2D.Triangle;
+
+        IReadOnlyList<IPoint2D> IHasControlPoints.ControlPoints => [P1, P2, P3];
     }
 }

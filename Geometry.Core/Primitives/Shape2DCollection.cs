@@ -43,6 +43,12 @@ namespace Geometry
             return _shapes.Any(s => s.Contains(pnt));
         }
 
+        public bool Covers(in IPoint2D p)
+        {
+            IPoint2D pnt = p;
+            return _shapes.Any(s => s.Covers(pnt));
+        }
+
         public ShapeRelation GetRelation(in IPoint2D p)
         {
             Trace.WriteLine("GetRelation on a Shape2DCollection is computationally expensive");

@@ -341,7 +341,7 @@ namespace Geometry
 
                 if (NeedTest)
                 {
-                    if (RequestRect.Contains(this.Point))
+                    if (RequestRect.Covers(this.Point))
                     {
                         Points.Add(this.Point);
                         Values.Add(this.Value);
@@ -368,7 +368,7 @@ namespace Geometry
                     if (Border.Intersects(RequestRect))
                     {
 
-                        if (RequestRect.Contains(Border))
+                        if (RequestRect.Covers(Border))
                         {
                             if (this.UpperLeft != null)
                             {

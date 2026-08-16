@@ -19,7 +19,7 @@ namespace Geometry
     /// Uses Counter-Clockwise winding order
     /// </summary>
     [Serializable()]
-    public class Polygon : ICloneable, IPolygon2D, IEquatable<Polygon>, IEquatable<IPolygon2D>
+    public class Polygon : ICloneable, IPolygon2D, IHasControlPoints, IEquatable<Polygon>, IEquatable<IPolygon2D>
     {
         /// <summary>
         /// Cached area of ExteriorRing, not subtracting any interior holes.
@@ -108,14 +108,14 @@ namespace Geometry
         {
             if (_ExteriorSegments.Length < 20)
             {
-                return _ExteriorSegments.Contains(segment);
+                return _ExteriorSegments.Any(s => s.EquivalentUndirected(segment));
             }
             else
             {
                 //No need to check in further detail because they should be identical GridLineSegments
                 //return ExteriorSegmentRTree.Intersects(segment.BoundingBox).Contains(segment);
                 //return SegmentRTree.Intersects(Rectangle.Pad(segment.BoundingBox, Tolerance.Epsilon)).Where(i => i.IsInner == false).Select(p => p.Segment(this)).Contains(segment);
-                return SegmentRTree.Intersects(Rectangle.Pad(segment.BoundingBox, Tolerance.Epsilon)).Any(i => i.IsInner == false && i.Segment(this) == segment);
+                return SegmentRTree.Intersects(Rectangle.Pad(segment.BoundingBox, Tolerance.Epsilon)).Any(i => i.IsInner == false && i.Segment(this).EquivalentUndirected(segment));
             }
         }
 
@@ -124,7 +124,7 @@ namespace Geometry
         /// </summary>
         /// <param name="segment"></param>
         /// <returns></returns>
-        public bool IsExteriorOrInteriorSegment(LineSegment segment) => SegmentRTree.Intersects(Rectangle.Pad(segment.BoundingBox, Tolerance.Epsilon)).Any(p => p.Segment(this) == segment);  //No need to check in further detail because they should be identical GridLineSegments
+        public bool IsExteriorOrInteriorSegment(LineSegment segment) => SegmentRTree.Intersects(Rectangle.Pad(segment.BoundingBox, Tolerance.Epsilon)).Any(p => p.Segment(this).EquivalentUndirected(segment));
 
         /// <summary>
         /// Cached centroid of the polygon
@@ -261,6 +261,8 @@ namespace Geometry
 
         IReadOnlyList<IPoint2D> IPolygon2D.ExteriorRing => [.. this.ExteriorRing.Select(p => p as IPoint2D)];
 
+        IReadOnlyList<IPoint2D> IHasControlPoints.ControlPoints => ((IPolygon2D)this).ExteriorRing;
+
         IReadOnlyList<IPoint2D[]> IPolygon2D.InteriorRings => [.. this.InteriorRings.Select(ir => ir.Select(p => p as IPoint2D).ToArray())];
 
         IReadOnlyList<IPolygon2D> IPolygon2D.InteriorPolygons => this._InteriorPolygons; //.Select(inner => inner as IPolygon2D).ToArray();
@@ -370,7 +372,7 @@ namespace Geometry
         {
             for (int iPoly = 0; iPoly < _InteriorPolygons.Count; iPoly++)
             {
-                if (_InteriorPolygons[iPoly].Contains(holePosition))
+                if (_InteriorPolygons[iPoly].Covers(holePosition))
                 {
                     _InteriorPolygons.RemoveAt(iPoly);
                     RemoveRingFromRTree(iPoly);
@@ -1112,7 +1114,7 @@ namespace Geometry
             Polygon externalPolyOnly = new(this.ExteriorRing);
 
             //Do a quick sanity check that all interior verticies are inside the external polygon
-            if (innerPoly.ExteriorRing.Any(v => externalPolyOnly.BoundingBox.Contains(v) == false))
+            if (innerPoly.ExteriorRing.Any(v => externalPolyOnly.BoundingBox.Covers(v) == false))
                 return false;
 
             if (innerPoly.ExteriorRing.Any(v => externalPolyOnly.Contains(v) == false))
@@ -1150,7 +1152,7 @@ namespace Geometry
         /// <returns></returns>
         public bool IsVertex(in Vector2 point)
         {
-            if (!this.BoundingBox.Contains(point))
+            if (!this.BoundingBox.Covers(point))
             {
                 return false;
             }
@@ -1160,7 +1162,7 @@ namespace Geometry
 
             foreach (Polygon inner in this.InteriorPolygons)
             {
-                if (!inner.BoundingBox.Contains(point))
+                if (!inner.BoundingBox.Covers(point))
                 {
                     continue;
                 }
@@ -1180,7 +1182,7 @@ namespace Geometry
         public bool TryGetIndex(in Vector2 point, out PolygonIndex index)
         {
 
-            if (!this.BoundingBox.Contains(point))
+            if (!this.BoundingBox.Covers(point))
             {
                 index = new PolygonIndex();
                 return false;
@@ -1196,7 +1198,7 @@ namespace Geometry
             for (int iInner = 0; iInner < InteriorPolygons.Count; iInner++)
             {
                 Polygon inner = InteriorPolygons[iInner];
-                if (!inner.BoundingBox.Contains(point))
+                if (!inner.BoundingBox.Covers(point))
                 {
                     continue;
                 }
@@ -1220,7 +1222,7 @@ namespace Geometry
         public List<PolygonIndex> TryGetIndices(ICollection<Vector2> points)
         {
             List<PolygonIndex> found = new(points.Count);
-            var candidates = points.Where(p => BoundingBox.Contains(p));
+            var candidates = points.Where(p => BoundingBox.Covers(p));
             List<Vector2> notExterior = new(points.Count);
 
             foreach (Vector2 point in points)
@@ -1235,7 +1237,7 @@ namespace Geometry
                 {
                     for (int iInner = 0; iInner < InteriorPolygons.Count; iInner++)
                     {
-                        if (InteriorPolygons[iInner].Contains(point) == false)
+                        if (InteriorPolygons[iInner].Covers(point) == false)
                             continue;
 
                         if (this.InteriorPolygons[iInner].TryGetIndex(point, out PolygonIndex innerIndex))
@@ -1450,11 +1452,13 @@ namespace Geometry
         }
 
 
-        public bool Contains(in IPoint2D point_param) => GetRelation(point_param) != ShapeRelation.None;
+        public bool Contains(in IPoint2D point_param) => GetRelation(point_param).IsContains();
+
+        public bool Covers(in IPoint2D point_param) => GetRelation(point_param).IsCovers();
 
         public ShapeRelation GetRelation(in IPoint2D point_param)
         {
-            if (!_BoundingRect.Contains(point_param))
+            if (!_BoundingRect.Covers(point_param))
                 return ShapeRelation.None;
 
             Vector2 p = new(point_param.X, point_param.Y);
@@ -1499,7 +1503,7 @@ namespace Geometry
         static Random random = new Random();
         public bool ContainsWithPolyRayTest(IPoint2D point_param)
         {
-            if (!_BoundingRect.Contains(point_param))
+            if (!_BoundingRect.Covers(point_param))
                 return false;
 
             Vector2 p = new Vector2(point_param.X, point_param.Y);
@@ -1553,32 +1557,9 @@ namespace Geometry
             return IsPointInsidePolygonByRayTest(segmentsToTest, test_line.Value);
         }*/
 
-        public bool Contains(in LineSegment line)
-        {
-            if (line.BoundingBox.GetRelation(this.BoundingBox) == ShapeRelation.None)
-                return false;
+        public bool Contains(in LineSegment line) => GetRelation(line).IsContains();
 
-            //Ensure both endpoints are inside and a point in the center.
-            //Test the center because if the line crosses a concave region with both endpoints exactly on the exterior ring we'd not have any intersections but the poly would not contain the line.
-            if (!(this.Contains(line.A) && this.Contains(line.B) && this.Contains(line.PointAlongLine(0.5))))
-                return false;
-
-            IEnumerable<LineSegment> segmentsToTest = _ExteriorSegments.Length > 32 || HasInteriorRings ? this.GetIntersectingSegments(line) : [.. _ExteriorSegments];
-            bool intersects = line.Intersects(segmentsToTest, true); //It is OK for endpoints to be on the exterior ring.
-            if (intersects)
-            {
-                //The line intersects some of the polygon segments, but was it just the endpoint?
-                return false; //Line is not entirely inside the polygon
-            }
-
-            foreach (Polygon innerPoly in this.InteriorPolygons)
-            {
-                if (innerPoly.Intersects(line) || innerPoly.Contains(line))
-                    return false;
-            }
-
-            return true;
-        }
+        public bool Covers(in LineSegment line) => GetRelation(line).IsCovers();
 
         ShapeRelation IShape2D.GetRelation(in ILineSegment2D line) => GetRelation(line.Convert());
 
@@ -1589,7 +1570,7 @@ namespace Geometry
 
             //Ensure both endpoints are inside and a point in the center.
             //Test the center because if the line crosses a concave region with both endpoints exactly on the exterior ring we'd not have any intersections but the poly would not contain the line.
-            if (!(this.Contains(line.A) && this.Contains(line.B) && this.Contains(line.PointAlongLine(0.5))))
+            if (!(this.Covers(line.A) && this.Covers(line.B) && this.Covers(line.PointAlongLine(0.5))))
                 return ShapeRelation.None;
 
             IEnumerable<LineSegment> segmentsToTest = _ExteriorSegments.Length > 32 || HasInteriorRings ? this.GetIntersectingSegments(line) : [.. _ExteriorSegments];
@@ -1618,37 +1599,9 @@ namespace Geometry
         /// </summary>
         /// <param name="other"></param>
         /// <returns></returns>
-        public bool Contains(Circle other)
-        {
-            Rectangle? overlap = BoundingBox.Intersection(other.BoundingBox);
-            if (!overlap.HasValue)
-                return false;
+        public bool Contains(Circle other) => GetRelation(other).IsContains();
 
-            //We cannot contain the other shape if the overlapping bounding box is not identical
-            if (overlap.Value != other.BoundingBox)
-                return false;
-
-            //We must contain the center of the circle
-            if (!this.Contains(other.Center))
-            {
-                return false;
-            }
-
-            //If our borders intersect we do not entirely contain the circle
-            if (CircleIntersectsBoundary(other))
-            {
-                return false;
-            }
-
-            //If we have an interior hole inside the circle we don't entirely contain the circle.
-            if (this.InteriorRings.Any(ir => other.Contains(ir[0])))
-            {
-                return false;
-            }
-
-            //Check case of line segment passing through a convex polygon or an interior polygon
-            return true;
-        }
+        public bool Covers(Circle other) => GetRelation(other).IsCovers();
 
         /// <summary>
         /// How this polygon relates to the circle: contained (disk is inside the polygon), intersecting, touching, or none.
@@ -1660,11 +1613,12 @@ namespace Geometry
                 return ShapeRelation.None;
 
             bool boundary = CircleIntersectsBoundary(circle);
-            bool centerInside = Contains(circle.Center);
+            ShapeRelation centerRel = GetRelation(circle.Center);
+            bool centerInside = centerRel.IsContains();
 
             if (centerInside && !boundary)
             {
-                if (InteriorRings.Any(ir => circle.Contains(ir[0])))
+                if (InteriorRings.Any(ir => circle.Covers(ir[0])))
                     return ShapeRelation.Intersecting;
 
                 foreach (Polygon inner in InteriorPolygons)
@@ -1687,7 +1641,7 @@ namespace Geometry
                 return ShapeRelation.Intersecting;
             }
 
-            if (circle.Contains(ExteriorRing[0]))
+            if (circle.Covers(ExteriorRing[0]))
                 return ShapeRelation.Intersecting;
 
             return ShapeRelation.None;
@@ -1709,57 +1663,65 @@ namespace Geometry
         /// </summary>
         /// <param name="poly"></param>
         /// <returns></returns>
-        public bool Contains(in Polygon other)
-        {
-            Rectangle? overlap = BoundingBox.Intersection(other.BoundingBox);
-            if (!overlap.HasValue)
-                return false;
+        public bool Contains(in Polygon other) => GetRelation(other).IsContains();
 
-            //We cannot contain the other shape if the overlapping bounding box is not identical
-            if (overlap.Value != other.BoundingBox)
-                return false;
-
-            bool HasInteriorVertex = this.Contains(other.ExteriorRing[0]);
-            bool HasSegmentIntersections = Polygon.SegmentsIntersect(this, other);
-            if (HasSegmentIntersections == false && HasInteriorVertex)
-                //return ShapeRelation.Intersecting;
-                return true;
-
-            return false;
-            /*
-            //Check case of interior polygon intersection
-            if (!other.ExteriorRing.All(p => this.Contains(p)))
-            {
-                return false;
-            }
-
-            //Check case of line segment passing through a convex polygon or an interior polygon
-            return !Polygon.SegmentsIntersect(this, other);
-            */
-        }
-
-
+        public bool Covers(in Polygon other) => GetRelation(other).IsCovers();
 
         /// <summary>
-        /// Return true if the polygon is completely inside the other
+        /// How <paramref name="other"/> relates to this polygon: nested interior, shared boundary, crossing, or disjoint.
         /// </summary>
-        /// <param name="poly"></param>
-        /// <returns></returns>
         public ShapeRelation GetRelation(in Polygon other)
         {
             Rectangle? overlap = BoundingBox.Intersection(other.BoundingBox);
             if (!overlap.HasValue)
                 return ShapeRelation.None;
 
-            bool HasSegmentIntersections = Polygon.SegmentsIntersect(this, other);
-            if (HasSegmentIntersections)
+            bool properCross = false;
+            bool boundaryContact = false;
+            List<LineSegment> candidates = GetIntersectingSegments(overlap.Value);
+            foreach (LineSegment candidate in candidates)
+            {
+                foreach (LineSegment otherSeg in other.GetIntersectingSegments(candidate.BoundingBox))
+                {
+                    ShapeRelation segRel = candidate.GetRelation(otherSeg, out IShape2D intersection);
+                    if (segRel == ShapeRelation.None)
+                        continue;
+
+                    if (segRel == ShapeRelation.Intersecting && intersection is Vector2)
+                        properCross = true;
+                    else
+                        boundaryContact = true;
+                }
+            }
+
+            if (properCross)
                 return ShapeRelation.Intersecting;
 
-            bool HasInteriorVertex = this.Contains(other.ExteriorRing[0]);
-            if (HasInteriorVertex)
-                return ShapeRelation.Contained;
+            bool anyContained = false;
+            bool anyTouching = false;
+            bool anyExterior = false;
+            int n = other.ExteriorRing.Length;
+            int last = n > 1 && other.ExteriorRing[0] == other.ExteriorRing[n - 1] ? n - 1 : n;
+            for (int i = 0; i < last; i++)
+            {
+                ShapeRelation vertRel = GetRelation((IPoint2D)other.ExteriorRing[i]);
+                if (vertRel == ShapeRelation.Contained)
+                    anyContained = true;
+                else if (vertRel == ShapeRelation.Touching)
+                    anyTouching = true;
+                else
+                    anyExterior = true;
+            }
 
-            //TODO: ShapeRelation.Touching is not implemented
+            if (GetRelation((IPoint2D)other.Centroid) == ShapeRelation.Contained)
+                anyContained = true;
+
+            if (anyContained && !anyExterior)
+                return anyTouching || boundaryContact ? ShapeRelation.Touching : ShapeRelation.Contained;
+
+            if (anyTouching || boundaryContact)
+                return ShapeRelation.Touching;
+
             return ShapeRelation.None;
         }
 
@@ -1768,13 +1730,13 @@ namespace Geometry
         public bool InteriorPolygonContains(in Vector2 p, out Polygon interiorPolygon)
         {
             interiorPolygon = null;
-            if (!_BoundingRect.Contains(p))
+            if (!_BoundingRect.Covers(p))
                 return false;
 
             //Check that our point is not inside an interior hole
             foreach (Polygon innerPoly in _InteriorPolygons)
             {
-                if (innerPoly.Contains(p))
+                if (innerPoly.Covers(p))
                 {
                     interiorPolygon = innerPoly;
                     return true;
@@ -2465,10 +2427,10 @@ namespace Geometry
                 return false;
 
             //Check the case of the other polygon entirely inside
-            if (this.Contains(other.ExteriorRing[0])) //If it is entirely inside then all other verts must be inside so only check one
+            if (this.Covers(other.ExteriorRing[0])) //If it is entirely inside then all other verts must be inside so only check one
                 return true;
 
-            if (other.Contains(this.ExteriorRing[0]))
+            if (other.Covers(this.ExteriorRing[0]))
                 return true;
 
             return SegmentsIntersect(this, other);
@@ -2502,6 +2464,8 @@ namespace Geometry
         }
 
         bool IShape2D.Contains(in IPoint2D p) => this.Contains(p.Convert());
+
+        bool IShape2D.Covers(in IPoint2D p) => this.Covers(p.Convert());
 
         IShape2D IShape2D.Translate(in IPoint2D offset)
         {
@@ -3000,7 +2964,7 @@ namespace Geometry
             for (int iRing = 0; iRing < originPolygon.InteriorRings.Count; iRing++)
             {
                 //We should be safe quickly testing a single point of each interior polygon because we test that the cut intersects the same ring only
-                if (output.Contains(originPolygon.InteriorRings[iRing].First()))
+                if (output.Covers(originPolygon.InteriorRings[iRing].First()))
                     output.AddInteriorRing(originPolygon.InteriorPolygons[iRing]);
             }
 

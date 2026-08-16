@@ -124,7 +124,7 @@ namespace Geometry
             };
         }
 
-        private static bool PointIntersects(IPoint2D point, IShape2D other) => other.Contains(point);
+        private static bool PointIntersects(IPoint2D point, IShape2D other) => other.Covers(point);
 
         internal static bool CircleIntersects(ICircle2D c, IShape2D other)
         {
@@ -137,7 +137,7 @@ namespace Geometry
             switch (other.ShapeType)
             {
                 case ShapeType2D.Point:
-                    return circle.Contains(other as IPoint2D);
+                    return circle.Covers(other as IPoint2D);
                 case ShapeType2D.Line:
                     return circle.Intersects(other as ILineSegment2D);
                 case ShapeType2D.Circle:
@@ -162,7 +162,7 @@ namespace Geometry
             switch (other.ShapeType)
             {
                 case ShapeType2D.Point:
-                    return rect.Contains(other as IPoint2D);
+                    return rect.Covers(other as IPoint2D);
                 case ShapeType2D.Line:
                     return rect.Intersects(other as ILineSegment2D);
                 case ShapeType2D.Circle:
@@ -187,7 +187,7 @@ namespace Geometry
             switch (other.ShapeType)
             {
                 case ShapeType2D.Point:
-                    return tri.Contains(other as IPoint2D);
+                    return tri.Covers(other as IPoint2D);
                 case ShapeType2D.Line:
                     return tri.Intersects(other as ILineSegment2D);
                 case ShapeType2D.Circle:
@@ -218,7 +218,7 @@ namespace Geometry
             switch (other.ShapeType)
             {
                 case ShapeType2D.Point:
-                    return line.Contains(other as IPoint2D);
+                    return line.Covers(other as IPoint2D);
                 case ShapeType2D.Line:
                     return line.Intersects(((ILineSegment2D)other).Convert());
                 case ShapeType2D.Circle:
@@ -256,33 +256,6 @@ namespace Geometry
                 _ => false,
             };
         }
-        /*
-        internal static ShapeRelation PolygonContainsExt(IPolygon2D p, IShape2D other)
-        {
-            Polygon poly = p.Convert();
-
-            switch (other.ShapeType)
-            {
-                case ShapeType2D.Point:
-                    return poly.GetRelation(other as IPoint2D);
-                case ShapeType2D.Line:
-                    return poly.GetRelation(other as ILineSegment2D);
-                case ShapeType2D.Circle:
-                    ICircle2D other_circle = other as ICircle2D;
-                    return poly.Intersects(new Circle(other_circle.Center, other_circle.Radius));
-                case ShapeType2D.Triangle:
-                    ITriangle2D other_tri = other as ITriangle2D;
-                    return poly.Intersects(other_tri.Convert());
-                case ShapeType2D.Polygon:
-                    return poly.Intersects(((IPolygon2D)other).Convert());
-                case ShapeType2D.Rectangle:
-                    return poly.Intersects(((Rectangle)other).Convert());
-                default:
-                    throw new NotImplementedException();
-            }
-        }
-        */
-
         internal static bool PolygonIntersects(in IPolygon2D p, in IShape2D other)
         {
             Polygon poly = p.Convert();
@@ -290,7 +263,7 @@ namespace Geometry
             switch (other.ShapeType)
             {
                 case ShapeType2D.Point:
-                    return poly.Contains(other as IPoint2D);
+                    return poly.Covers(other as IPoint2D);
                 case ShapeType2D.Line:
                     return poly.Intersects(other as ILineSegment2D);
                 case ShapeType2D.Circle:
@@ -343,7 +316,7 @@ namespace Geometry
             if (false == line.BoundingBox.Intersects(circle.BoundingBox))
                 return false;
 
-            if (circle.Contains(line.A) || circle.Contains(line.B))
+            if (circle.Covers(line.A) || circle.Covers(line.B))
                 return true;
 
             //TODO: I'm not sure we need the IsNearestPointWithinLineSegment check because the bounding boxes intersect.
@@ -363,12 +336,12 @@ namespace Geometry
                 return false;
             }
 
-            if (rect.Contains(circle.Center))
+            if (rect.Covers(circle.Center))
                 return true;
 
 
-            if (circle.Contains(rect.LowerLeft) || circle.Contains(rect.LowerRight) ||
-                circle.Contains(rect.UpperLeft) || circle.Contains(rect.UpperRight))
+            if (circle.Covers(rect.LowerLeft) || circle.Covers(rect.LowerRight) ||
+                circle.Covers(rect.UpperLeft) || circle.Covers(rect.UpperRight))
                 return true;
 
             foreach (LineSegment border in rect.Edges)
@@ -391,11 +364,11 @@ namespace Geometry
                 return false;
 
             //Do any triangle verts fall inside our circle?
-            if (circle.Contains(tri.P1) || circle.Contains(tri.P2) || circle.Contains(tri.P3))
+            if (circle.Covers(tri.P1) || circle.Covers(tri.P2) || circle.Covers(tri.P3))
                 return true;
 
             //Is the center of our circle inside the triangle?
-            if (tri.Contains(circle.Center))
+            if (tri.Covers(circle.Center))
                 return true;
 
             //Do any triangle line segments intersect our circle?
@@ -423,13 +396,13 @@ namespace Geometry
             //Do any triangle verts fall inside our circle? 
             foreach (Vector2 p in poly.ExteriorRing)
             {
-                if (circle.Contains(p))
+                if (circle.Covers(p))
                     return true;
             }
 
             //Is the center of our circle inside the triangle?
             //Todo: This contains test is inconsistent with the idea of an intersection.  I need to clarify when circles and all shapes are considered solid or traces. This old code is prevalent and I don't want to break things until I can fix all of these instances
-            if (poly.Contains(circle.Center))
+            if (poly.Covers(circle.Center))
                 return true;
 
             //Do any line segments intersect our circle?
@@ -445,36 +418,7 @@ namespace Geometry
             return false;
         }
 
-        /// <summary>
-        /// Returns true if the circle intersects the polygon without containing all of it
-        /// </summary>
-        /// <param name="circle"></param>
-        /// <param name="poly"></param>
-        /// <returns></returns>
-        public static ShapeRelation ContainsExt(in Circle circle, Polygon poly)
-        {
-            if (!circle.BoundingBox.Intersects(poly.BoundingBox))
-                return ShapeRelation.None;
-
-            bool allInside = true;
-            bool anyTouching = false;
-            foreach (Vector2 p in poly.ExteriorRing)
-            {
-                ShapeRelation rel = circle.ContainsExt(p);
-                if (rel == ShapeRelation.None)
-                    allInside = false;
-                else if (rel == ShapeRelation.Touching)
-                    anyTouching = true;
-            }
-
-            if (allInside)
-                return anyTouching ? ShapeRelation.Touching : ShapeRelation.Contained;
-
-            if (Intersects(circle, poly))
-                return ShapeRelation.Intersecting;
-
-            return ShapeRelation.None;
-        }
+        public static ShapeRelation GetRelation(in Circle circle, Polygon poly) => circle.GetRelation(poly);
     }
 
     public static class RectangleIntersectionExtensions
@@ -486,7 +430,7 @@ namespace Geometry
             if (false == line.BoundingBox.Intersects(rect))
                 return false;
 
-            if (rect.Contains(line.A) || rect.Contains(line.B))
+            if (rect.Covers(line.A) || rect.Covers(line.B))
                 return true;
 
             foreach (var rect_line in rect.Segments)
@@ -503,12 +447,12 @@ namespace Geometry
             if (false == tri.BoundingBox.Intersects(rect))
                 return false;
 
-            if (rect.Contains(tri.P1) || rect.Contains(tri.P2) || rect.Contains(tri.P3))
+            if (rect.Covers(tri.P1) || rect.Covers(tri.P2) || rect.Covers(tri.P3))
                 return true;
 
             //If even one point of the rectangle is inside the triangle then the rectangle is entirely contained in the triangle
             //or a line segment of the rectangle must intersect the triangle
-            if (tri.Contains(rect.Center))
+            if (tri.Covers(rect.Center))
                 return true;
 
             foreach (var tri_line in tri.Segments)
@@ -527,13 +471,13 @@ namespace Geometry
 
             foreach (Vector2 p in poly.ExteriorRing)
             {
-                if (rect.Contains(p))
+                if (rect.Covers(p))
                     return true;
             }
 
             foreach (Vector2 p in rect.Corners)
             {
-                if (poly.Contains(p))
+                if (poly.Covers(p))
                     return true;
             }
 
@@ -563,7 +507,7 @@ namespace Geometry
             if (false == tri.BoundingBox.Intersects(line.BoundingBox))
                 return false;
 
-            if (tri.Contains(line.A) || tri.Contains(line.B))
+            if (tri.Covers(line.A) || tri.Covers(line.B))
                 return true;
 
             foreach (LineSegment tri_line in tri.Segments)
@@ -582,13 +526,13 @@ namespace Geometry
 
             foreach (Vector2 p in poly.ExteriorRing)
             {
-                if (tri.Contains(p))
+                if (tri.Covers(p))
                     return true;
             }
 
             foreach (Vector2 p in tri.Points)
             {
-                if (poly.Contains(p))
+                if (poly.Covers(p))
                     return true;
             }
 
@@ -718,7 +662,7 @@ namespace Geometry
             }
 
             //Now check if the line is entirely inside the polygon without crossing a ring
-            return poly.Contains(line);
+            return poly.Covers(line);
         }
 
         /// <summary>

@@ -310,6 +310,6 @@ namespace VikingXNAGraphics
 
         public void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items) => SolidPolygonView.Draw(device, scene, Overlay, [.. items.Select(item => item as SolidPolygonView).Where(item => item != null)]);
 
-        public bool Contains(Geometry.Vector2 Position) => this.InputPolygon.Contains(Position);
+        public bool Contains(Geometry.Vector2 Position) => this.InputPolygon.Covers(Position);
     }
 }

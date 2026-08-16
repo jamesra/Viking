@@ -1153,7 +1153,7 @@ namespace Geometry
             }
 
             Circle testCircle = new(WorldPosition, ControlPointRadius);
-            if (polygon.ExteriorRing.Any(v => testCircle.Contains(v)))
+            if (polygon.ExteriorRing.Any(v => testCircle.Covers(v)))
             {
                 intersectingPoly = polygon;
                 return true;
@@ -1449,7 +1449,7 @@ namespace Geometry
         public static bool PaddedPolygonContains(Polygon polygon, double padding, Vector2 position)
         {
             Rectangle padded_bbox = polygon.BoundingBox + padding;
-            return padded_bbox.Contains(position);
+            return padded_bbox.Covers(position);
         }
 
         public static Rectangle BoundingBox(this IReadOnlyList<Polygon> polygons)

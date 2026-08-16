@@ -607,10 +607,25 @@ namespace Geometry
             return this.Segments.Any(line => line.Contains(pnt));
         }
 
+        bool IShape2D.Covers(in IPoint2D p)
+        {
+            IPoint2D pnt = p;
+            return this.Segments.Any(line => line.Covers(pnt));
+        }
+
         ShapeRelation IShape2D.GetRelation(in IPoint2D p)
         {
             IPoint2D pnt = p;
-            return this.Segments.Any(line => line.Contains(pnt)) ? ShapeRelation.Touching : ShapeRelation.None;
+            if (!this.Segments.Any(line => line.Covers(pnt)))
+                return ShapeRelation.None;
+
+            Vector2 v = pnt.Convert();
+            if (Points.Count > 0 &&
+                (Vector2.DistanceSquared(v, Points[0]) <= Tolerance.EpsilonSquared ||
+                 Vector2.DistanceSquared(v, Points[Points.Count - 1]) <= Tolerance.EpsilonSquared))
+                return ShapeRelation.Touching;
+
+            return ShapeRelation.Contained;
         }
 
         ShapeRelation IShape2D.GetRelation(in ILineSegment2D line)

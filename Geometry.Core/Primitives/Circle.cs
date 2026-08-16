@@ -6,7 +6,7 @@ using System.Linq;
 namespace Geometry
 {
     [Serializable]
-    public readonly struct Circle : IShape2D, ICircle2D, IEquatable<ICircle2D>
+    public readonly struct Circle : IShape2D, ICircle2D, IHasControlPoints, IEquatable<ICircle2D>
     {
         public readonly Vector2 Center;
         public readonly double Radius;
@@ -248,101 +248,123 @@ namespace Geometry
 
         IPoint2D ICircle2D.Center => this.Center;
 
+        IReadOnlyList<IPoint2D> IHasControlPoints.ControlPoints => [Center];
+
         double ICircle2D.Radius => this.Radius;
 
-        public bool Contains(in IPoint2D p)
+        public bool Contains(in IPoint2D p) => GetRelation(p).IsContains();
+
+        public bool Covers(in IPoint2D p) => GetRelation(p).IsCovers();
+
+        public bool Contains(in Vector2 p) => GetRelation(p).IsContains();
+
+        public bool Covers(in Vector2 p) => GetRelation(p).IsCovers();
+
+        public ShapeRelation GetRelation(in IPoint2D p) => GetRelation(p.Convert());
+
+        public ShapeRelation GetRelation(in Vector2 p)
         {
-            //return Vector2.Distance(p, this.Center) <= this.Radius;
-
-            double XDist = p.X - this.Center.X;
-            double YDist = p.Y - this.Center.Y;
-
-            return (XDist * XDist) + (YDist * YDist) <= this.RadiusSquared;
-        }
-
-        public bool Contains(in Vector2 p)
-        {
-            double XDist = p.X - this.Center.X;
-            double YDist = p.Y - this.Center.Y;
-
-            return (XDist * XDist) + (YDist * YDist) <= this.RadiusSquared;
-        }
-
-        public ShapeRelation GetRelation(in IPoint2D p) => ContainsExt(p.Convert());
-
-        public ShapeRelation ContainsExt(in Vector2 p)
-        {
-            double XDist = p.X - this.Center.X;
-            double YDist = p.Y - this.Center.Y;
-
-            double DistanceSquared = (XDist * XDist) + (YDist * YDist);
-            if (DistanceSquared < this.RadiusSquared)
-                return ShapeRelation.Contained;
-            if (DistanceSquared == this.RadiusSquared)
+            double xDist = p.X - Center.X;
+            double yDist = p.Y - Center.Y;
+            double distance = Math.Sqrt((xDist * xDist) + (yDist * yDist));
+            if (Math.Abs(distance - Radius) <= Tolerance.Epsilon)
                 return ShapeRelation.Touching;
-
+            if (distance < Radius)
+                return ShapeRelation.Contained;
             return ShapeRelation.None;
         }
 
-        /// <summary>
-        /// True if the circle contains all of the points in the polygon
-        /// </summary>
-        /// <param name="poly"></param>
-        /// <returns></returns>
-        public bool Contains(in Polygon poly)
+        public bool Contains(in Polygon poly) => GetRelation(poly).IsContains();
+
+        public bool Covers(in Polygon poly) => GetRelation(poly).IsCovers();
+
+        public bool Contains(in LineSegment line) => GetRelation(line).IsContains();
+
+        public bool Covers(in LineSegment line) => GetRelation(line).IsCovers();
+
+        ShapeRelation IShape2D.GetRelation(in ILineSegment2D line) => GetRelation(line.Convert());
+
+        public ShapeRelation GetRelation(in LineSegment line)
         {
-            //if (this.BoundingBox.GetRelation(poly.BoundingBox) == ShapeRelation.Contained)
-            //    return true;
-
-            foreach (Vector2 p in poly.ExteriorRing)
-            {
-                if (!this.Contains(p))
-                    return false;
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// True if the circle contains both endpoints of the line segment
-        /// </summary>
-        /// <param name="line"></param>
-        /// <returns></returns>
-        public bool Contains(in LineSegment line)
-        {
-            if (!this.Contains(line.A))
-                return false;
-
-            if (!this.Contains(line.B))
-                return false;
-
-            return true;
-        }
-
-        ShapeRelation IShape2D.GetRelation(in ILineSegment2D line) => ContainsExt(line.Convert());
-
-        public ShapeRelation ContainsExt(in LineSegment line)
-        {
-            ShapeRelation oA = this.ContainsExt(line.A);
-            ShapeRelation oB = this.ContainsExt(line.B);
-            bool aInside = oA != ShapeRelation.None;
-            bool bInside = oB != ShapeRelation.None;
-            if (aInside && bInside)
+            ShapeRelation oA = GetRelation(line.A);
+            ShapeRelation oB = GetRelation(line.B);
+            if (oA.IsCovers() && oB.IsCovers())
                 return ShapeRelation.Contained;
 
             double distance = line.DistanceToPoint(Center);
+            if (Math.Abs(distance - Radius) <= Tolerance.Epsilon)
+                return ShapeRelation.Touching;
             if (distance < Radius)
                 return ShapeRelation.Intersecting;
-            if (distance == Radius)
-                return ShapeRelation.Touching;
+
+            return ShapeRelation.None;
+        }
+
+        public ShapeRelation GetRelation(in Polygon poly)
+        {
+            if (!BoundingBox.Intersects(poly.BoundingBox))
+                return ShapeRelation.None;
+
+            bool allCovered = true;
+            bool anyContained = false;
+            foreach (Vector2 p in poly.ExteriorRing)
+            {
+                ShapeRelation rel = GetRelation(p);
+                if (rel == ShapeRelation.None)
+                    allCovered = false;
+                else if (rel == ShapeRelation.Contained)
+                    anyContained = true;
+            }
+
+            if (allCovered)
+                return GetRelation(poly.Centroid) == ShapeRelation.Contained || anyContained
+                    ? ShapeRelation.Contained
+                    : ShapeRelation.Touching;
+
+            if (CircleIntersectionExtensions.Intersects(this, poly))
+                return ShapeRelation.Intersecting;
+
+            return ShapeRelation.None;
+        }
+
+        public ShapeRelation GetRelation(in Rectangle rect) =>
+            ClassifyCoveredVertices(rect.Corners, rect.Center);
+
+        public ShapeRelation GetRelation(in Triangle tri) =>
+            ClassifyCoveredVertices(tri.Points, tri.Centroid);
+
+        ShapeRelation ClassifyCoveredVertices(IReadOnlyList<Vector2> vertices, Vector2 centroid)
+        {
+            bool allCovered = true;
+            bool anyContained = false;
+            foreach (Vector2 p in vertices)
+            {
+                ShapeRelation rel = GetRelation(p);
+                if (rel == ShapeRelation.None)
+                    allCovered = false;
+                else if (rel == ShapeRelation.Contained)
+                    anyContained = true;
+            }
+
+            if (allCovered)
+                return GetRelation(centroid) == ShapeRelation.Contained || anyContained
+                    ? ShapeRelation.Contained
+                    : ShapeRelation.Touching;
 
             return ShapeRelation.None;
         }
 
         /// <summary>
-        /// True when every point of <paramref name="shape"/> lies in this disk (boundary included).
+        /// OGC Contains: every point of <paramref name="shape"/> lies in this disk's interior.
         /// </summary>
-        public bool Contains(in IShape2D shape)
+        public bool Contains(in IShape2D shape) => RelationTo(shape).IsContains();
+
+        /// <summary>
+        /// OGC Covers: every point of <paramref name="shape"/> lies in this closed disk.
+        /// </summary>
+        public bool Covers(in IShape2D shape) => RelationTo(shape).IsCovers();
+
+        ShapeRelation RelationTo(in IShape2D shape)
         {
             if (shape is null)
                 throw new ArgumentNullException(nameof(shape));
@@ -350,49 +372,52 @@ namespace Geometry
             Circle self = this;
             return shape.ShapeType switch
             {
-                ShapeType2D.Point => self.Contains((IPoint2D)shape),
-                ShapeType2D.Circle => self.ContainsCircle((ICircle2D)shape),
-                ShapeType2D.Rectangle => self.ContainsRectangle(((IRectangle2D)shape).Convert()),
-                ShapeType2D.Triangle => self.ContainsPoints(((ITriangle2D)shape).Convert().Points),
-                ShapeType2D.Quad => self.ContainsQuad((Quad)shape),
-                ShapeType2D.Line => self.Contains(((ILineSegment2D)shape).Convert()),
-                ShapeType2D.Polyline => self.ContainsPoints(((IPolyLine2D)shape).Points),
-                ShapeType2D.Polygon => self.Contains(((IPolygon2D)shape).Convert()),
-                ShapeType2D.Collection => ((IShapeCollection2D)shape).Geometries.All(g => self.Contains(g)),
-                ShapeType2D.InfiniteLine => false,
-                _ => false,
+                ShapeType2D.Point => self.GetRelation((IPoint2D)shape),
+                ShapeType2D.Circle => self.RelationToCircle((ICircle2D)shape),
+                ShapeType2D.Rectangle => self.GetRelation(((IRectangle2D)shape).Convert()),
+                ShapeType2D.Triangle => self.GetRelation(((ITriangle2D)shape).Convert()),
+                ShapeType2D.Quad => self.ClassifyCoveredVertices(
+                    [((Quad)shape).BottomLeft, ((Quad)shape).BottomRight, ((Quad)shape).TopLeft, ((Quad)shape).TopRight],
+                    ((Quad)shape).BoundingBox.Center),
+                ShapeType2D.Line => self.GetRelation(((ILineSegment2D)shape).Convert()),
+                ShapeType2D.Polyline => self.ClassifyCoveredVertices(
+                    [.. ((IPolyLine2D)shape).Points.Select(p => p.Convert())],
+                    ((IPolyLine2D)shape).Points[0].Convert()),
+                ShapeType2D.Polygon => self.GetRelation(((IPolygon2D)shape).Convert()),
+                ShapeType2D.Collection => RelationToCollection((IShapeCollection2D)shape),
+                ShapeType2D.InfiniteLine => ShapeRelation.None,
+                _ => ShapeRelation.None,
             };
         }
 
-        bool ContainsCircle(ICircle2D other) =>
-            Vector2.Distance(Center, other.Center.Convert()) + other.Radius <= Radius;
-
-        bool ContainsRectangle(Rectangle rect) =>
-            Contains(rect.LowerLeft) && Contains(rect.LowerRight) && Contains(rect.UpperLeft) && Contains(rect.UpperRight);
-
-        bool ContainsQuad(Quad quad) =>
-            Contains(quad.BottomLeft) && Contains(quad.BottomRight) && Contains(quad.TopLeft) && Contains(quad.TopRight);
-
-        bool ContainsPoints(IEnumerable<Vector2> points)
+        ShapeRelation RelationToCircle(ICircle2D other)
         {
-            foreach (Vector2 p in points)
-            {
-                if (!Contains(p))
-                    return false;
-            }
-
-            return true;
+            double distance = Vector2.Distance(Center, other.Center.Convert());
+            double sum = distance + other.Radius;
+            if (Math.Abs(sum - Radius) <= Tolerance.Epsilon)
+                return ShapeRelation.Touching;
+            if (sum < Radius)
+                return ShapeRelation.Contained;
+            if (distance <= Radius + other.Radius)
+                return ShapeRelation.Intersecting;
+            return ShapeRelation.None;
         }
 
-        bool ContainsPoints(IReadOnlyList<IPoint2D> points)
+        ShapeRelation RelationToCollection(IShapeCollection2D collection)
         {
-            for (int i = 0; i < points.Count; i++)
+            ShapeRelation combined = ShapeRelation.Contained;
+            foreach (IShape2D g in collection.Geometries)
             {
-                if (!Contains(points[i]))
-                    return false;
+                ShapeRelation rel = RelationTo(g);
+                if (rel == ShapeRelation.None)
+                    return ShapeRelation.None;
+                if (rel == ShapeRelation.Intersecting)
+                    return ShapeRelation.Intersecting;
+                if (rel == ShapeRelation.Touching)
+                    combined = ShapeRelation.Touching;
             }
 
-            return true;
+            return combined;
         }
 
         /// <summary>

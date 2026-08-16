@@ -716,14 +716,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         private Polygon FindPolygonContainingPoint(Geometry.Vector2 worldPos) =>
             // Check each segment polygon to see if the point is inside
-            segmentPolygonViews.FirstOrDefault(polygonView => polygonView?.InputPolygon != null && polygonView.InputPolygon.Contains(worldPos))?.InputPolygon;
+            segmentPolygonViews.FirstOrDefault(polygonView => polygonView?.InputPolygon != null && polygonView.InputPolygon.Covers(worldPos))?.InputPolygon;
 
         /// <summary>
         /// Returns the point that contains the worldPos parameter.  Otherwise null
         /// </summary>
         /// <param name="worldPos"></param>
         /// <returns></returns>
-        private bool ForegroundPointsContain(Geometry.Vector2 worldPos) => foregroundPointsView.Points.Any(p => Circle.Contains(p, foregroundPointsView.PointRadius, worldPos) == ShapeRelation.Contained);
+        private bool ForegroundPointsContain(Geometry.Vector2 worldPos) => foregroundPointsView.Points.Any(p => new Circle(p, foregroundPointsView.PointRadius).Covers(worldPos));
         #endregion
 
         #region Color Generation

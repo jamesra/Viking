@@ -37,6 +37,35 @@ namespace SqlGeometryUtilsTest
         }
 
         [TestMethod]
+        public void IShape2D_Polyline_ToPoints_DoesNotUseSqlGeometry()
+        {
+            IShape2D shape = new Polyline([new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 1)]);
+            Vector2[] points = shape.ToPoints();
+            Assert.AreEqual(3, points.Length);
+            AssertPosition(points[0], new Vector2(0, 0));
+            AssertPosition(points[1], new Vector2(1, 0));
+            AssertPosition(points[2], new Vector2(1, 1));
+        }
+
+        [TestMethod]
+        public void IShape2D_Polygon_ToPoints_IsExteriorRing()
+        {
+            Vector2[] ring =
+            [
+                new(-10, -10),
+                new(-10, 10),
+                new(10, 10),
+                new(10, -10),
+                new(-10, -10)
+            ];
+            IShape2D shape = new Polygon(ring);
+            Vector2[] points = shape.ToPoints();
+            Assert.AreEqual(ring.Length, points.Length);
+            for (int i = 0; i < ring.Length; i++)
+                AssertPosition(points[i], ring[i]);
+        }
+
+        [TestMethod]
         public void TestTranslateLineGeometry()
         {
             Vector2[] points = [ new(-10,0),

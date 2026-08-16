@@ -6,7 +6,7 @@ using System.Linq;
 namespace Geometry
 {
     [Serializable]
-    public readonly struct LineSegment : IComparable, ICloneable, IComparer<LineSegment>, ILineSegment2D, IEquatable<LineSegment>, IEquatable<IPolyLine2D>, IEquatable<ILineSegment2D>
+    public readonly struct LineSegment : IComparable, ICloneable, IComparer<LineSegment>, ILineSegment2D, IHasControlPoints, IEquatable<LineSegment>, IEquatable<IPolyLine2D>, IEquatable<ILineSegment2D>
     {
         public readonly Vector2 A;
         public readonly Vector2 B;
@@ -300,7 +300,9 @@ namespace Geometry
         }
 
 
-        public bool Contains(in Vector2 p) => Math.Abs(this.DistanceToPoint(p)) < Tolerance.Epsilon;
+        public bool Contains(in Vector2 p) => GetRelation((IPoint2D)p).IsContains();
+
+        public bool Covers(in Vector2 p) => Math.Abs(DistanceToPoint(p)) < Tolerance.Epsilon;
 
         /// <summary>
         /// Project the point p onto the line
@@ -545,16 +547,16 @@ namespace Geometry
                 }
 
                 //If they perfectly overlap at least two endpoints must be on the line.
-                double[] distances = [overlapRect.Value.Contains(this.A) ? seg.DistanceToPoint(this.A) : double.MaxValue,
-                                      overlapRect.Value.Contains(this.B) ? seg.DistanceToPoint(this.B) : double.MaxValue,
-                                      overlapRect.Value.Contains(seg.A) ? this.DistanceToPoint(seg.A) : double.MaxValue,
-                                      overlapRect.Value.Contains(seg.B) ? this.DistanceToPoint(seg.B) : double.MaxValue];
+                double[] distances = [overlapRect.Value.Covers(this.A) ? seg.DistanceToPoint(this.A) : double.MaxValue,
+                                      overlapRect.Value.Covers(this.B) ? seg.DistanceToPoint(this.B) : double.MaxValue,
+                                      overlapRect.Value.Covers(seg.A) ? this.DistanceToPoint(seg.A) : double.MaxValue,
+                                      overlapRect.Value.Covers(seg.B) ? this.DistanceToPoint(seg.B) : double.MaxValue];
 
                 //If there are two points on the line, those are the intersecting points
                 if (distances.Count(d => d == 0) >= 2)
                 {
                     Vector2[] endpoints = [.. new Vector2[] { seg.A, seg.B, this.A, this.B }.Distinct()];
-                    Vector2[] endpointsOnLineCandidates = [.. endpoints.Where(e => overlapRect.Value.Contains(e) && seg.DistanceToPoint(e) < Tolerance.Epsilon)];
+                    Vector2[] endpointsOnLineCandidates = [.. endpoints.Where(e => overlapRect.Value.Covers(e) && seg.DistanceToPoint(e) < Tolerance.Epsilon)];
 
                     //Debug.Assert(endpointsOnLine.Length > 0, "Must have intersecting points if the bounding boxes overlap for parallel line intersection test");
                     if (endpointsOnLineCandidates.Length == 0)
@@ -688,11 +690,26 @@ namespace Geometry
 
         public ShapeType2D ShapeType => ShapeType2D.Line;
 
+        IReadOnlyList<IPoint2D> IHasControlPoints.ControlPoints => [A, B];
+
         public Line ToLine() => new(this.A, this.Direction);
 
-        public bool Contains(in IPoint2D p) => Contains(new Vector2(p.X, p.Y));
+        public bool Contains(in IPoint2D p) => GetRelation(p).IsContains();
 
-        public ShapeRelation GetRelation(in IPoint2D p) => Contains(new Vector2(p.X, p.Y)) ? ShapeRelation.Touching : ShapeRelation.None;
+        public bool Covers(in IPoint2D p) => GetRelation(p).IsCovers();
+
+        public ShapeRelation GetRelation(in IPoint2D p)
+        {
+            Vector2 v = new(p.X, p.Y);
+            if (!Covers(v))
+                return ShapeRelation.None;
+
+            if (Vector2.DistanceSquared(v, A) <= Tolerance.EpsilonSquared ||
+                Vector2.DistanceSquared(v, B) <= Tolerance.EpsilonSquared)
+                return ShapeRelation.Touching;
+
+            return ShapeRelation.Contained;
+        }
 
         public ShapeRelation GetRelation(in ILineSegment2D l) => GetRelation(l.Convert());
 

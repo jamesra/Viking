@@ -223,5 +223,21 @@ namespace GeometryTests
                     return count == n && first.Clone().Equals(first) && last.PreviousVertex == n - 2;
                 }),
                 nameof(PolylineIndexWalksAndOrders));
+
+        [TestMethod]
+        public void NextPreviousRoundTripAndReindexToInner() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbPolygonIndex(), idx =>
+                {
+                    PolygonIndex inner = idx.ReindexToInner(1);
+                    return idx.Next.Previous == idx &&
+                           idx.Previous.Next == idx &&
+                           ((PolygonIndex)idx.Clone()).Equals(idx) &&
+                           inner.IsInner &&
+                           inner.InnerShapeIndex == 1 &&
+                           inner.VertexIndex == idx.VertexIndex &&
+                           inner.NumUniqueInRing == idx.NumUniqueInRing;
+                }),
+                nameof(NextPreviousRoundTripAndReindexToInner));
     }
 }

@@ -77,8 +77,8 @@ namespace VikingXNAGraphics
 
         public bool Remove(Vector2 item)
         {
-            Circle[] remove = [.. Circles.Where(c => c.Contains(item))];
-            bool nRemoved = Circles.RemoveAll(c => c.Contains(item)) > 0;
+            Circle[] remove = [.. Circles.Where(c => c.Covers(item))];
+            bool nRemoved = Circles.RemoveAll(c => c.Covers(item)) > 0;
             if (CollectionChanged != null && remove.Length > 0)
             {
                 CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, remove));

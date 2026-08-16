@@ -101,6 +101,6 @@ namespace VikingXNAGraphics
             device.BlendState = originalState;
         }
 
-        public bool Contains(Geometry.Vector2 Position) => BoundingRect.Contains(Position);
+        public bool Contains(Geometry.Vector2 Position) => BoundingRect.Covers(Position);
     }
 }

@@ -302,9 +302,10 @@ namespace WebAnnotationTests.Commands
 
             // Act
             bool contains = polygon.Contains(testPoint);
+            bool covers = polygon.Covers(testPoint);
 
-            // Assert - Edge cases typically count as inside
-            Assert.IsTrue(contains, "Point on edge should be considered inside polygon");
+            Assert.IsFalse(contains, "Point on edge is not in the interior (OGC Contains)");
+            Assert.IsTrue(covers, "Point on edge is covered (OGC Covers)");
         }
 
         #endregion

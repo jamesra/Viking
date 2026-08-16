@@ -75,7 +75,7 @@ namespace WebAnnotation.UI.Commands
                 if (_CommandExpandsArea.HasValue == false)
                 {
                     //Check if the first point placed in the path is inside or outside the polygon.  Starting from the inside we can only draw a line that grows the area, and vice versa
-                    _CommandExpandsArea = OriginalVolumePolygon.Contains(PenInput.path.Points.First());
+                    _CommandExpandsArea = OriginalVolumePolygon.Covers(PenInput.path.Points.First());
                 }
 
                 return _CommandExpandsArea.Value;

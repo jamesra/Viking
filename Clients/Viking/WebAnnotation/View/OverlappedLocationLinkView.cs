@@ -67,7 +67,7 @@ namespace WebAnnotation.View
 
         public bool IsVisible(Scene scene) => circleView.IsVisible(scene);
 
-        public bool Contains(Geometry.Vector2 Position) => Circle.Contains(Position);
+        public bool Contains(Geometry.Vector2 Position) => Circle.Covers(Position);
 
         public bool Intersects(LineSegment line) => Circle.Intersects(line);
 

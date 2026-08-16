@@ -181,9 +181,9 @@ namespace Geometry
 
         object ICloneable.Clone() => this.MemberwiseClone();
 
-        public bool CanTransform(in Vector2 Point) => Mapped.Contains(Point);
+        public bool CanTransform(in Vector2 Point) => Mapped.Covers(Point);
 
-        public bool CanInverseTransform(in Vector2 Point) => Control.Contains(Point);
+        public bool CanInverseTransform(in Vector2 Point) => Control.Covers(Point);
 
         private static bool BarycentricCoordIsMappable(in Vector2 uv) =>
             uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0);

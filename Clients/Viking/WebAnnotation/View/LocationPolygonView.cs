@@ -415,7 +415,7 @@ namespace WebAnnotation.View
 
         public override bool Contains(Geometry.Vector2 Position)
         {
-            if (!BoundingBox.Contains(Position))
+            if (!BoundingBox.Covers(Position))
             {
                 return false;
             }
@@ -423,7 +423,7 @@ namespace WebAnnotation.View
             //Test if we are over a control point
             if (Global.PenMode == false)
             {
-                if (SmoothedVolumePolygon.ExteriorRing.Any(p => new Circle(p, lineWidth / 2.0).Contains(Position)))
+                if (SmoothedVolumePolygon.ExteriorRing.Any(p => new Circle(p, lineWidth / 2.0).Covers(Position)))
                 {
                     return true;
                 }
@@ -434,7 +434,7 @@ namespace WebAnnotation.View
                 return true;
             }
 
-            if (SmoothedVolumePolygon.Contains(Position))
+            if (SmoothedVolumePolygon.Covers(Position))
             {
                 return true;
             }
@@ -556,10 +556,10 @@ namespace WebAnnotation.View
             {
                 if (VisibleSectionNumber == (int)modelObj.Z)
                 {
-                    if (SmoothedVolumePolygon.Contains(WorldPosition))
+                    if (SmoothedVolumePolygon.Covers(WorldPosition))
                     {
                         Circle TranslateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
-                        if (TranslateTargetCircle.Contains(WorldPosition))
+                        if (TranslateTargetCircle.Covers(WorldPosition))
                         {
                             LocationID = ID;
                             return LocationAction.TRANSLATE;
@@ -572,7 +572,7 @@ namespace WebAnnotation.View
             else if (modifierKeys.CtrlPressed())
             {
                 //Check to see if we are on a line segment to add/remove control points.  Otherwise cut a hole
-                if (SmoothedVolumePolygon.Contains(WorldPosition))
+                if (SmoothedVolumePolygon.Covers(WorldPosition))
                 {
                     LocationID = ID;
                     return LocationAction.CUTHOLE;
@@ -599,7 +599,7 @@ namespace WebAnnotation.View
 
             if (modifierKeys.ShiftPressed())
             {
-                if (SmoothedVolumePolygon.Contains(WorldPosition))
+                if (SmoothedVolumePolygon.Covers(WorldPosition))
                 {
                     return LocationAction.TRANSLATE;
                 }
@@ -626,7 +626,7 @@ namespace WebAnnotation.View
                         return LocationAction.ADDCONTROLPOINT;
                     }
                 }
-                else if (SmoothedVolumePolygon.Contains(WorldPosition))
+                else if (SmoothedVolumePolygon.Covers(WorldPosition))
                 {
                     LocationID = ID;
                     return LocationAction.CUTHOLE;
@@ -645,10 +645,10 @@ namespace WebAnnotation.View
                     {
                         return LocationAction.ADJUST;
                     }
-                    else if (SmoothedVolumePolygon.Contains(WorldPosition))
+                    else if (SmoothedVolumePolygon.Covers(WorldPosition))
                     {
                         Circle TranslateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
-                        if (TranslateTargetCircle.Contains(WorldPosition))
+                        if (TranslateTargetCircle.Covers(WorldPosition))
                         {
                             LocationID = ID;
                             return LocationAction.TRANSLATE;
@@ -728,7 +728,7 @@ namespace WebAnnotation.View
 
         public override double DistanceFromCenterNormalized(Geometry.Vector2 Position)
         {
-            if (SmoothedVolumePolygon.Contains(Position))
+            if (SmoothedVolumePolygon.Covers(Position))
             {
                 return 0.5;
             }

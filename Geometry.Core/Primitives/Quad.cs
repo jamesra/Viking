@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Geometry
 {
@@ -7,7 +8,7 @@ namespace Geometry
     /// </summary>
     /// 
     [Serializable]
-    public readonly struct Quad : IShape2D, IEquatable<Quad>
+    public readonly struct Quad : IShape2D, IHasControlPoints, IEquatable<Quad>
     {
         readonly Triangle T0;
         readonly Triangle T1;
@@ -79,15 +80,9 @@ namespace Geometry
         }
         */
 
-        public bool Contains(in Vector2 p)
-        {
-            if (this.T0.Contains(p))
-                return true;
-            if (this.T1.Contains(p))
-                return true;
+        public bool Contains(in Vector2 p) => GetRelation((IPoint2D)p).IsContains();
 
-            return false;
-        }
+        public bool Covers(in Vector2 p) => GetRelation((IPoint2D)p).IsCovers();
 
         public bool Contains(in Rectangle R)
         {
@@ -105,12 +100,12 @@ namespace Geometry
             Vector2 v4 = R.TopLeft;
 
             //If any verticies are in the quad we return true 
-            if (T0.Contains(v1) || T0.Contains(v2) || T0.Contains(v3) || T0.Contains(v4) ||
-                T1.Contains(v1) || T1.Contains(v2) || T1.Contains(v3) || T1.Contains(v4))
+            if (T0.Covers(v1) || T0.Covers(v2) || T0.Covers(v3) || T0.Covers(v4) ||
+                T1.Covers(v1) || T1.Covers(v2) || T1.Covers(v3) || T1.Covers(v4))
                 return true;
 
-            if (R.T0.Contains(TopLeft) || R.T0.Contains(TopRight) || R.T0.Contains(BottomLeft) || R.T0.Contains(BottomRight) ||
-                R.T1.Contains(TopLeft) || R.T1.Contains(TopRight) || R.T1.Contains(BottomLeft) || R.T1.Contains(BottomRight))
+            if (R.T0.Covers(TopLeft) || R.T0.Covers(TopRight) || R.T0.Covers(BottomLeft) || R.T0.Covers(BottomRight) ||
+                R.T1.Covers(TopLeft) || R.T1.Covers(TopRight) || R.T1.Covers(BottomLeft) || R.T1.Covers(BottomRight))
                 return true;
 
             LineSegment RL1 = new(v1, v2);
@@ -144,12 +139,18 @@ namespace Geometry
 
         public ShapeType2D ShapeType => ShapeType2D.Quad;
 
-        public bool Contains(in IPoint2D p) => Contains(new Vector2(p.X, p.Y));
+        IReadOnlyList<IPoint2D> IHasControlPoints.ControlPoints => [BottomLeft, BottomRight, TopRight, TopLeft];
+
+        public bool Contains(in IPoint2D p) => GetRelation(p).IsContains();
+
+        public bool Covers(in IPoint2D p) => GetRelation(p).IsCovers();
 
         public ShapeRelation GetRelation(in IPoint2D p)
         {
             Vector2 v = new(p.X, p.Y);
-            if (!Contains(v))
+            ShapeRelation t0 = T0.GetRelation((IPoint2D)v);
+            ShapeRelation t1 = T1.GetRelation((IPoint2D)v);
+            if (t0 == ShapeRelation.None && t1 == ShapeRelation.None)
                 return ShapeRelation.None;
 
             LineSegment[] outer =
@@ -161,7 +162,7 @@ namespace Geometry
             ];
             foreach (LineSegment edge in outer)
             {
-                if (edge.Contains(v))
+                if (edge.Covers(v))
                     return ShapeRelation.Touching;
             }
 

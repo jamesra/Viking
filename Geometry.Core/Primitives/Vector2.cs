@@ -116,7 +116,7 @@ namespace Geometry
     /// Double-precision 2D point. Distinct from <c>System.Numerics.Vector2</c> (single-precision) and not a drop-in replacement.
     /// </summary>
     [Serializable]
-    public readonly struct Vector2 : IShape2D, IPoint2D, ICloneable, IComparable,
+    public readonly struct Vector2 : IShape2D, IHasControlPoints, IPoint2D, ICloneable, IComparable,
                                 IComparable<Vector2>, IEquatable<Vector2>,
                                 IComparable<IPoint2D>, IEquatable<IPoint2D>
     {
@@ -550,17 +550,19 @@ namespace Geometry
         }
 
         readonly bool IShape2D.Contains(in IPoint2D p) =>
-            ((IShape2D)this).GetRelation(p) != ShapeRelation.None;
+            ((IShape2D)this).GetRelation(p).IsContains();
+
+        readonly bool IShape2D.Covers(in IPoint2D p) =>
+            ((IShape2D)this).GetRelation(p).IsCovers();
 
         readonly ShapeRelation IShape2D.GetRelation(in Geometry.IPoint2D p)
         {
-            // A point occupies no area, so coincidence is Touching rather than Contained.
-            return p is not null && Equals(p) ? ShapeRelation.Touching : ShapeRelation.None;
+            return p is not null && Equals(p) ? ShapeRelation.Contained : ShapeRelation.None;
         }
 
         readonly ShapeRelation IShape2D.GetRelation(in Geometry.ILineSegment2D l) => l.GetRelation(this);
 
-        readonly bool IShape2D.Intersects(in IShape2D shape) => shape.Contains(this);
+        readonly bool IShape2D.Intersects(in IShape2D shape) => shape.Covers(this);
 
         readonly IShape2D IShape2D.Translate(in IPoint2D offset) => this + offset.Convert();
 
@@ -648,6 +650,8 @@ namespace Geometry
         readonly double IShape2D.Area => 0;
 
         readonly ShapeType2D IShape2D.ShapeType => ShapeType2D.Point;
+
+        readonly IReadOnlyList<IPoint2D> IHasControlPoints.ControlPoints => [this];
 
 
         #endregion

@@ -219,8 +219,8 @@ namespace MonogameTestbed
 
             if (APoly.ShapeIndex != BPoly.ShapeIndex)
             {
-                bool midInA = A.Contains(midpoint);
-                bool midInB = B.Contains(midpoint);
+                bool midInA = A.Covers(midpoint);
+                bool midInB = B.Covers(midpoint);
 
                 if (!midInA && !midInB) //Midpoing not in either polygon.  Passes through empty space that cannot be on the surface
                 {
@@ -251,8 +251,8 @@ namespace MonogameTestbed
 
             if (APoly.ShapeIndex != BPoly.ShapeIndex)
             {
-                bool midInA = A.Contains(midpoint);
-                bool midInB = B.Contains(midpoint);
+                bool midInA = A.Covers(midpoint);
+                bool midInB = B.Covers(midpoint);
 
                 //lineViews[i].Color = Color.Blue;
 
@@ -316,7 +316,7 @@ namespace MonogameTestbed
             }
             else if (APoly.ShapeIndex == BPoly.ShapeIndex)
             {
-                bool midInA = A.Contains(midpoint);
+                bool midInA = A.Covers(midpoint);
                 bool midInB = midInA;
 
                 if (PolygonIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.ShapeIndex]))
@@ -331,7 +331,7 @@ namespace MonogameTestbed
                 }
                 else
                 {
-                    bool LineIntersectsAnyOtherPoly = Polygons.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Contains(midpoint));
+                    bool LineIntersectsAnyOtherPoly = Polygons.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Covers(midpoint));
                     if (APoly.IsInner ^ BPoly.IsInner)
                     {
                         //Two options, the line is outside other shapes or inside other shapes.

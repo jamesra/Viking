@@ -542,25 +542,26 @@ namespace GeometryTests
             Assert.IsFalse(box.Contains(new Vector2(-15, 5)));
             Assert.IsTrue(box.Contains(new Vector2(-5, 5)));
             Assert.IsTrue(box.Contains(new Vector2(0, 0)));
-            Assert.IsTrue(box.Contains(new Vector2(-10, 0))); //Point exactly on the line
-            Assert.IsTrue(box.Contains(new Vector2(10, 0))); //Point exactly on the line
-            Assert.IsTrue(box.Contains(new Vector2(0, 10))); //Point exactly on the line
-            Assert.IsTrue(box.Contains(new Vector2(0, -10))); //Point exactly on the line
+            Assert.IsFalse(box.Contains(new Vector2(-10, 0)));
+            Assert.IsTrue(box.Covers(new Vector2(-10, 0)));
+            Assert.IsTrue(box.Covers(new Vector2(10, 0)));
+            Assert.IsTrue(box.Covers(new Vector2(0, 10)));
+            Assert.IsTrue(box.Covers(new Vector2(0, -10)));
 
             Polygon inner_box = Primitives.BoxPolygon(5);
             Assert.IsTrue(box.Contains(inner_box));
+            Assert.IsTrue(box.Covers(inner_box));
 
-            //OK, add an inner ring and make sure contains works
             box.AddInteriorRing(inner_box.ExteriorRing);
 
             Assert.IsFalse(box.Contains(new Vector2(-15, 5)));
             Assert.IsFalse(box.Contains(new Vector2(0, 0)));
 
-            //Test points exactly on the inner ring
-            Assert.IsTrue(box.Contains(new Vector2(-5, 0)));
-            Assert.IsTrue(box.Contains(new Vector2(5, 0)));
-            Assert.IsTrue(box.Contains(new Vector2(0, -5)));
-            Assert.IsTrue(box.Contains(new Vector2(0, 5)));
+            Assert.IsFalse(box.Contains(new Vector2(-5, 0)));
+            Assert.IsTrue(box.Covers(new Vector2(-5, 0)));
+            Assert.IsTrue(box.Covers(new Vector2(5, 0)));
+            Assert.IsTrue(box.Covers(new Vector2(0, -5)));
+            Assert.IsTrue(box.Covers(new Vector2(0, 5)));
         }
 
         [TestMethod]
@@ -613,8 +614,10 @@ namespace GeometryTests
             Assert.IsTrue(box.Contains(new Vector2(-6.6, -6.6)));
             Assert.IsFalse(box.Contains(new Vector2(0, 0)));
             Assert.IsFalse(box.Contains(new Vector2(20, 0)));
-            Assert.IsTrue(box.Contains(box.ExteriorRing.First()));
-            Assert.IsTrue(box.Contains(new Vector2(-7.5, 10)));
+            Assert.IsTrue(box.Covers(box.ExteriorRing.First()));
+            Assert.IsFalse(box.Contains(box.ExteriorRing.First()));
+            Assert.IsTrue(box.Covers(new Vector2(-7.5, 10)));
+            Assert.IsFalse(box.Contains(new Vector2(-7.5, 10)));
 
             Polygon outside = Primitives.UPolygon(1);
             Assert.IsFalse(box.Contains(outside));
@@ -642,8 +645,9 @@ namespace GeometryTests
             Polygon shape = new(Primitives.NotchedBoxVerticies(10));
 
             Assert.IsFalse(shape.Contains(new Vector2(0, 10)));
-            Assert.IsTrue(shape.Contains(new Vector2(-10, 10)));
-            Assert.IsTrue(shape.Contains(new Vector2(10, 10)));
+            Assert.IsFalse(shape.Contains(new Vector2(-10, 10)));
+            Assert.IsTrue(shape.Covers(new Vector2(-10, 10)));
+            Assert.IsTrue(shape.Covers(new Vector2(10, 10)));
         }
 
         [TestMethod]
@@ -1669,8 +1673,8 @@ namespace GeometryTests
 
         private static void ValidatePolygonCut(Polygon cut, Polygon expected_cut, Vector2 expected_start, Vector2 expected_end)
         {
-            Assert.IsTrue(cut.Contains(expected_start));
-            Assert.IsTrue(cut.Contains(expected_end));
+            Assert.IsTrue(cut.Covers(expected_start));
+            Assert.IsTrue(cut.Covers(expected_end));
 
             Assert.IsTrue(expected_cut.ExteriorRing.SequenceEqual(cut.ExteriorRing));
 

@@ -113,7 +113,7 @@ namespace Geometry
                 {
                     GridIndexTriangle tri = triangles[iTri];
                     Circle circle = tri.Circle;
-                    if (circle.Contains(in P))
+                    if (circle.Covers(in P))
                     {
                         Edges[iEdge++] = new IndexEdge(tri.i1, tri.i2);
                         Edges[iEdge++] = new IndexEdge(tri.i2, tri.i3);
@@ -175,7 +175,7 @@ namespace Geometry
 
 #if DEBUG
                     //Check to make sure the new triangle intersects the point.  This is a slow test.
-                    Debug.Assert(((Triangle)newTri).Contains(P));
+                    Debug.Assert(((Triangle)newTri).Covers(P));
 #endif
                 }
             }

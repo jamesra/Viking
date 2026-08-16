@@ -138,8 +138,8 @@ namespace MorphologyMesh
 
         public static EdgeType GetEdgeType(this Vector2 midpoint, Polygon A, Polygon B)
         {
-            bool midInA = A.Contains(midpoint);
-            bool midInB = B.Contains(midpoint);
+            bool midInA = A.Covers(midpoint);
+            bool midInB = B.Covers(midpoint);
 
             if (!(midInA ^ midInB)) //Midpoint in both or neither polygon. Line may be on exterior surface
             {
@@ -159,7 +159,7 @@ namespace MorphologyMesh
         public static EdgeType GetEdgeType(this LineSegment line, Polygon A, Polygon B)
         {
             Vector2 midpoint = line.PointAlongLine(0.5);
-            // bool midInA = A.Contains(midpoint);
+            // bool midInA = A.Covers(midpoint);
             // bool midInB = B.Contains(midpoint);
             bool lineCrossesA = line.Crosses(A);
             bool lineCrossesB = line.Crosses(B);
@@ -336,8 +336,8 @@ namespace MorphologyMesh
 
                 if (APoly.IsInner ^ BPoly.IsInner) //Spans from inner to outer ring
                 {
-                    bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Contains(midpoint));
-                    bool midInA = A.Contains(midpoint);
+                    bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Covers(midpoint));
+                    bool midInA = A.Covers(midpoint);
                     if (LineIntersectsAnyOtherPoly)
                     {
                         //Line passes over the other cell.
@@ -359,7 +359,7 @@ namespace MorphologyMesh
                     }
                     else //Edge spans from one inner polygon to another
                     {
-                        bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Contains(midpoint));
+                        bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Covers(midpoint));
                         if (LineIntersectsAnyOtherPoly)
                         {
                             return EdgeType.INVALID;
@@ -372,8 +372,8 @@ namespace MorphologyMesh
                 }
                 else //Both points are on outer ring of one polygon
                 {
-                    bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Contains(midpoint));
-                    bool midInA = A.Contains(midpoint);
+                    bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Covers(midpoint));
+                    bool midInA = A.Covers(midpoint);
 
                     if (midInA)
                     {

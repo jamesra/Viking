@@ -519,7 +519,7 @@ namespace MonogameTestbed
 
         private static int FindStartForBoundarySearch(Mesh3D mesh, Polygon[] shapes)
         {
-            IVertex3D vert = mesh.Vertices.First(v => shapes.All(shape => !shape.Contains(v.Position.XY())));
+            IVertex3D vert = mesh.Vertices.First(v => shapes.All(shape => !shape.Covers(v.Position.XY())));
             return vert.Index;
             //return mesh.Vertices.TIndexOf(vert);
         }
@@ -557,12 +557,12 @@ namespace MonogameTestbed
             {
                 if(!graph.Nodes.ContainsKey(line.A))
                 {
-                    graph.AddNode(new MedialAxisVertex(line.A, shapes.Any(shape => shape.Contains(line.A))));
+                    graph.AddNode(new MedialAxisVertex(line.A, shapes.Any(shape => shape.Covers(line.A))));
                 }
 
                 if(!graph.Nodes.ContainsKey(line.B))
                 {
-                    graph.AddNode(new MedialAxisVertex(line.B, shapes.Any(shape => shape.Contains(line.B))));
+                    graph.AddNode(new MedialAxisVertex(line.B, shapes.Any(shape => shape.Covers(line.B))));
                 }
 
                 graph.AddEdge(new MedialAxisEdge(line.A, line.B));

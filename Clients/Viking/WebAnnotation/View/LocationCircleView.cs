@@ -46,7 +46,7 @@ namespace WebAnnotation.View
         /// </summary>
         /// <param name="Position"></param>
         /// <returns></returns>
-        public override bool Contains(Geometry.Vector2 Position) => VolumeCircle.Contains(Position);
+        public override bool Contains(Geometry.Vector2 Position) => VolumeCircle.Covers(Position);
 
         /// <summary>
         /// True if the point is on or inside the circle
@@ -65,7 +65,7 @@ namespace WebAnnotation.View
                     return VolumeCircle.Intersects(circle);
                 case SupportedGeometryType.POINT:
                     Geometry.Vector2 point = new(shape.STX.Value, shape.STY.Value);
-                    return VolumeCircle.Contains(point);
+                    return VolumeCircle.Covers(point);
                 default:
                     return VolumeShapeAsRendered.STIntersects(shape).IsTrue;
             }
@@ -415,7 +415,7 @@ namespace WebAnnotation.View
                     ChangeToPolygonAction action = new(modelObj, closedpath);
                     listActions.Add(action);
 
-                    if (VolumeCircle.Contains(closedpath))
+                    if (VolumeCircle.Covers(closedpath))
                     {
                         CutHoleAction cutHoleAction = new(modelObj, closedpath);
                         listActions.Add(cutHoleAction);

@@ -293,13 +293,13 @@ namespace Geometry
                     if (LCircle.HasValue == false)
                         LCircle = Circle.CircleFromThreePoints(LOrigin.Position, ROrigin.Position, LeftCandidate.Position);
 
-                    if (LCircle.Value.Contains(RightCandidate.Position))
+                    if (LCircle.Value.Covers(RightCandidate.Position))
                     {
 
                         if (RCircle.HasValue == false)
                             RCircle = Circle.CircleFromThreePoints(ROrigin.Position, LOrigin.Position, RightCandidate.Position);
 
-                        if (RCircle.Value.Contains(LeftCandidate.Position) == false)
+                        if (RCircle.Value.Covers(LeftCandidate.Position) == false)
                         {
                             //The right candidate needs to be used
                             goto UseRight;
@@ -782,7 +782,7 @@ namespace Geometry
                     if (L_Origin_Candidates_IsLeft[i] <= 0)
                     {
                         LineSegment candidate_seg = mesh.ToLineSegment(L_Candidate, R.Index);
-                        if (candidate_seg.Contains(L.Position))
+                        if (candidate_seg.Covers(L.Position))
                         {
                             RejectedBaselinePairs.AddToSet(L_Candidate, R.Index); //Record that this baseline pairing does not work so we don't test it again
                             RejectedBaselinePairs.AddToSet(R.Index, L_Candidate); //Record that this baseline pairing does not work so we don't test it again
@@ -793,7 +793,7 @@ namespace Geometry
                     //For the case of a point on the line we use the closer point to the R origin
 
 
-                    if (LR_baseline_candidate.Contains(mesh[L_Candidate].Position))
+                    if (LR_baseline_candidate.Covers(mesh[L_Candidate].Position))
                     {
 #if TRACEDELAUNAY
                         Trace.WriteLine(string.Format("Reject Left Baseline: {0}-{1} for {2}", L.Index, R.Index, L_Candidate));
@@ -882,7 +882,7 @@ namespace Geometry
                     if (R_Origin_Candidates_IsLeft[i] <= 0)
                     {
                         LineSegment candidate_seg = mesh.ToLineSegment(L.Index, R_Candidate);
-                        if (candidate_seg.Contains(R.Position))
+                        if (candidate_seg.Covers(R.Position))
                         {
                             RejectedBaselinePairs.AddToSet(L.Index, R_Candidate); //Record that this baseline pairing does not work so we don't test it again
                             RejectedBaselinePairs.AddToSet(R_Candidate, L.Index); //Record that this baseline pairing does not work so we don't test it again
@@ -892,7 +892,7 @@ namespace Geometry
 
 
                     //For the case of a point on the line we use the closer point to the R origin 
-                    if (RL_baseline_candidate.Contains(mesh[R_Candidate].Position))
+                    if (RL_baseline_candidate.Covers(mesh[R_Candidate].Position))
                     {
 #if TRACEDELAUNAY
                         Trace.WriteLine(string.Format("Reject Right Baseline: {0}-{1} for {2}", L.Index, R.Index, R_Candidate));
@@ -1131,7 +1131,7 @@ namespace Geometry
                 EdgeAngle nextCandidate = sortedCandidates[1];
                 IVertex2D nextCandidateVert = mesh[nextCandidate.Target];
 
-                if (circle.Value.Contains(nextCandidateVert.Position))
+                if (circle.Value.Covers(nextCandidateVert.Position))
                 {
                     //Check edge case of a point exactly on the circle boundary
                     if (Vector2.Distance(nextCandidateVert.Position, circle.Value.Center) == circle.Value.Radius)

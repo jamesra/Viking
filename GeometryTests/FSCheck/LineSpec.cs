@@ -2,6 +2,7 @@ using FsCheck;
 using Geometry;
 using GeometryTests.FSCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 
 namespace GeometryTests
 {
@@ -28,7 +29,8 @@ namespace GeometryTests
                 Prop.ForAll(CoreArbitraries.ArbLine(), CoreArbitraries.ArbVector2(), (line, p) =>
                 {
                     ShapeRelation rel = line.GetRelation((IPoint2D)p);
-                    return line.Contains((IPoint2D)p) == (rel != ShapeRelation.None);
+                    return line.Contains((IPoint2D)p) == rel.IsContains() &&
+                           line.Covers((IPoint2D)p) == rel.IsCovers();
                 }),
                 nameof(GetRelationMatchesContainsForPoints));
 
@@ -53,5 +55,54 @@ namespace GeometryTests
             Assert.IsTrue(finite.Intersects(bbox), "AABB culling treats a NaN line box as intersecting every finite box.");
             Assert.IsFalse(bbox.Contains(new Vector2(0, 0)), "Contains on a NaN box is false.");
         }
+
+        [TestMethod]
+        public void PerpendicularPassesThroughOriginAndIsOrthogonal() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbLine(), line =>
+                {
+                    Line perp = line.Perpendicular();
+                    return perp.Origin == line.Origin &&
+                           Tolerance.AreClose(Vector2.Dot(line.Direction, perp.Direction), 0);
+                }),
+                nameof(PerpendicularPassesThroughOriginAndIsOrthogonal));
+
+        [TestMethod]
+        public void IsLeftAgreesWithCrossSignAwayFromLine() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbLine(), CoreArbitraries.ArbVector2(), (line, p) =>
+                {
+                    double cross = (line.Direction.X * (p.Y - line.Origin.Y)) -
+                                   (line.Direction.Y * (p.X - line.Origin.X));
+                    if (Math.Abs(cross) < 1e-6)
+                        return true;
+                    return Math.Sign(cross) == line.IsLeft(p);
+                }),
+                nameof(IsLeftAgreesWithCrossSignAwayFromLine));
+
+        [TestMethod]
+        public void ToLineStartsAtOriginWithRequestedLength() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbLine(), line =>
+                {
+                    LineSegment seg = line.ToLine(5);
+                    return seg.A == line.Origin && Tolerance.AreClose(seg.Length, 5);
+                }),
+                nameof(ToLineStartsAtOriginWithRequestedLength));
+
+        [TestMethod]
+        public void IntersectsRectangleWhenOriginIsCovered() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbLine(), CoreArbitraries.ArbRectangle(), (line, rect) =>
+                    !rect.Covers(line.Origin) || line.Intersects((IShape2D)rect)),
+                nameof(IntersectsRectangleWhenOriginIsCovered));
+
+        [TestMethod]
+        public void EqualsIsReflexiveAndAgreesWithOperator() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbLine(), line =>
+                    line.Equals(line) && line == new Line(line.Origin, line.Direction) &&
+                    line.GetHashCode() == new Line(line.Origin, line.Direction).GetHashCode()),
+                nameof(EqualsIsReflexiveAndAgreesWithOperator));
     }
 }

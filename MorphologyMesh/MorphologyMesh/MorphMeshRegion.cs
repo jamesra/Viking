@@ -280,7 +280,7 @@ namespace MorphologyMesh
         {
             Polygon[] AdjacentPolys = [.. mesh.Shapes.Where((p, i) => this.ZLevel.Contains(mesh.ShapeZ[i]) == false && p is Polygon).Cast<Polygon>()];
 
-            if (AdjacentPolys.Any(p => p.Contains(this.Polygon)))
+            if (AdjacentPolys.Any(p => p.Covers(this.Polygon)))
             {
                 return false;
             }
@@ -295,7 +295,7 @@ namespace MorphologyMesh
         public bool IsPartlyExposed(MorphRenderMesh mesh)
         {
             Polygon[] AdjacentPolys = [.. mesh.Shapes.Where((p, i) => this.ZLevel.Contains(mesh.ShapeZ[i]) == false).Cast<Polygon>()];
-            if (AdjacentPolys.Any(p => p.Intersects(this.Polygon) && !p.Contains(this.Polygon)))
+            if (AdjacentPolys.Any(p => p.Intersects(this.Polygon) && !p.Covers(this.Polygon)))
             {
                 return true;
             }

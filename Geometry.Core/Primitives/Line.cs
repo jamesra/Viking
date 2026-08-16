@@ -159,7 +159,7 @@ namespace Geometry
 
                 Intersection = new Vector2(x, y);
 
-                return seg.BoundingBox.Contains(Intersection);
+                return seg.BoundingBox.Covers(Intersection);
             }
         }
 
@@ -213,7 +213,7 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Infinite lines have no finite AABB. This is a NaN rectangle: AABB culling treats it as intersecting every finite box, while <see cref="Rectangle.Contains(in Vector2)"/> on that box is false.
+        /// Infinite lines have no finite AABB. This is a NaN rectangle: AABB culling treats it as intersecting every finite box, while <see cref="Rectangle.Covers(in IPoint2D)"/> on that box is false.
         /// </summary>
         public Rectangle BoundingBox => new(double.NaN, double.NaN, double.NaN, double.NaN);
 
@@ -225,15 +225,19 @@ namespace Geometry
 
         IPoint2D ILine2D.Direction => Direction;
 
-        public bool Contains(in IPoint2D p) => IsLeft(new Vector2(p.X, p.Y)) == 0;
+        public bool Contains(in IPoint2D p) => GetRelation(p).IsContains();
 
-        public ShapeRelation GetRelation(in IPoint2D p) => Contains(p) ? ShapeRelation.Touching : ShapeRelation.None;
+        public bool Covers(in IPoint2D p) => GetRelation(p).IsCovers();
+
+        public ShapeRelation GetRelation(in IPoint2D p) => ContainsOnLine(p) ? ShapeRelation.Contained : ShapeRelation.None;
+
+        bool ContainsOnLine(in IPoint2D p) => IsLeft(new Vector2(p.X, p.Y)) == 0;
 
         public ShapeRelation GetRelation(in ILineSegment2D line)
         {
             LineSegment seg = line.Convert();
-            bool aOn = Contains((IPoint2D)seg.A);
-            bool bOn = Contains((IPoint2D)seg.B);
+            bool aOn = Covers((IPoint2D)seg.A);
+            bool bOn = Covers((IPoint2D)seg.B);
             if (aOn && bOn)
                 return ShapeRelation.Contained;
             if (Intersects(seg, out _))
@@ -249,7 +253,7 @@ namespace Geometry
             Line self = this;
             return shape.ShapeType switch
             {
-                ShapeType2D.Point => self.Contains((IPoint2D)shape),
+                ShapeType2D.Point => self.Covers((IPoint2D)shape),
                 ShapeType2D.Line => self.Intersects(((ILineSegment2D)shape).Convert(), out _),
                 ShapeType2D.InfiniteLine => shape is Line otherLine && self.Intersects(otherLine, out _),
                 ShapeType2D.Circle => self.DistanceToPoint(((ICircle2D)shape).Center.Convert()) <= ((ICircle2D)shape).Radius,
@@ -294,6 +298,6 @@ namespace Geometry
             Intersects(new LineSegment(quad.BottomRight, quad.TopRight), out _) ||
             Intersects(new LineSegment(quad.TopRight, quad.TopLeft), out _) ||
             Intersects(new LineSegment(quad.TopLeft, quad.BottomLeft), out _) ||
-            quad.Contains(Origin);
+            quad.Covers(Origin);
     }
 }

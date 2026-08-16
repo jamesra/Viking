@@ -8,7 +8,7 @@ namespace Geometry
     /// <summary>
     /// Geometric polyline for predicates and intersection. Distinct from UI <c>Path</c> on the Geometry facade, which raises change events.
     /// </summary>
-    public class Polyline : IPolyLine2D, IEquatable<Polyline>, IEquatable<IPolyLine2D>, IEquatable<ILineSegment2D>
+    public class Polyline : IPolyLine2D, IHasControlPoints, IEquatable<Polyline>, IEquatable<IPolyLine2D>, IEquatable<ILineSegment2D>
     {
         protected readonly List<IPoint2D> _Points;
 
@@ -365,7 +365,7 @@ namespace Geometry
         public List<PolylineIndex> TryGetIndices(ICollection<Vector2> points)
         {
             List<PolylineIndex> found = new(points.Count);
-            var candidates = points.Where(p => BoundingBox.Contains(p));
+            var candidates = points.Where(p => BoundingBox.Covers(p));
             List<Vector2> notExterior = new(points.Count);
 
             foreach (Vector2 point in points)
@@ -421,21 +421,32 @@ namespace Geometry
             }
         }
 
-        IReadOnlyList<ILineSegment2D> IPolyLine2D.LineSegments => [.. _LineSegments.Cast<ILineSegment2D>()];
+        IReadOnlyList<ILineSegment2D> IPolyLine2D.LineSegments => [.. LineSegments.Cast<ILineSegment2D>()];
 
 
         public IReadOnlyList<IPoint2D> Points => this._Points;
 
-        public bool Contains(in IPoint2D p)
-        {
-            IPoint2D pnt = p;
-            return this.LineSegments.Any(line => line.Contains(in pnt));
-        }
+        IReadOnlyList<IPoint2D> IHasControlPoints.ControlPoints => _Points;
+
+        public bool Contains(in IPoint2D p) => GetRelation(p).IsContains();
+
+        public bool Covers(in IPoint2D p) => GetRelation(p).IsCovers();
 
         public ShapeRelation GetRelation(in IPoint2D p)
         {
-            IPoint2D pnt = p;
-            return this.LineSegments.Any(line => line.Contains(in pnt)) ? ShapeRelation.Touching : ShapeRelation.None;
+            if (_Points.Count == 0)
+                return ShapeRelation.None;
+
+            Vector2 v = new(p.X, p.Y);
+            if (!LineSegments.Any(line => line.Covers(v)))
+                return ShapeRelation.None;
+
+            bool atStart = Vector2.DistanceSquared(v, _Points[0]) <= Tolerance.EpsilonSquared;
+            bool atEnd = Vector2.DistanceSquared(v, _Points[_Points.Count - 1]) <= Tolerance.EpsilonSquared;
+            if (atStart || atEnd)
+                return ShapeRelation.Touching;
+
+            return ShapeRelation.Contained;
         }
 
         ShapeRelation IShape2D.GetRelation(in Geometry.ILineSegment2D line) => GetRelation(line.Convert());

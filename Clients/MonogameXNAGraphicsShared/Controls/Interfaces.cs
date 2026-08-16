@@ -85,6 +85,6 @@ namespace VikingXNAGraphics.Controls
 
         public Rectangle BoundingBox => Shape.BoundingBox;
 
-        public bool Contains(Vector2 Position) => Shape.Contains(Position);
+        public bool Contains(Vector2 Position) => Shape.Covers(Position);
     }
 }

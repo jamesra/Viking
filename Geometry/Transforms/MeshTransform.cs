@@ -134,7 +134,7 @@ namespace Geometry.Transforms
             //We just want to know if we are close enough to check with the more time consuming math
             double epsilon = 5;
 
-            if (!MappedBounds.Contains(Point, epsilon))
+            if (!MappedBounds.Covers(Point, epsilon))
                 return null;
 
             //Fetch a list of triangles from the nearest point
@@ -146,7 +146,7 @@ namespace Geometry.Transforms
 
             foreach (MappingTriangle t in triangles)
             {
-                if (!t.MappedBoundingBox.Contains(Point))
+                if (!t.MappedBoundingBox.Covers(Point))
                     continue;
 
                 if (t.CanTransform(Point))
@@ -169,7 +169,7 @@ namespace Geometry.Transforms
             //We just want to know if we are close enough to check with the more time consuming math
             double epsilon = 5;
 
-            if (!ControlBounds.Contains(Point, epsilon))
+            if (!ControlBounds.Covers(Point, epsilon))
                 return null;
 
             //Fetch a list of triangles from the nearest point
@@ -181,7 +181,7 @@ namespace Geometry.Transforms
 
             foreach (MappingTriangle t in triangles)
             {
-                if (!t.ControlBoundingBox.Contains(Point))
+                if (!t.ControlBoundingBox.Covers(Point))
                     continue;
 
                 if (t.CanInverseTransform(Point))

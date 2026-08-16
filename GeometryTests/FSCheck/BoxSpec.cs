@@ -33,5 +33,48 @@ namespace GeometryTests
                 Prop.ForAll(CoreArbitraries.ArbBox(), CoreArbitraries.ArbBox(),
                     (a, b) => a.Intersects(b) == b.Intersects(a)),
                 nameof(IntersectsIsSymmetric));
+
+        [TestMethod]
+        public void PadContainsOriginal() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbBox(), box =>
+                    box.Pad(1).Contains(box) && box.Pad(1).Contains(box.MinCorner) && box.Pad(1).Contains(box.MaxCorner)),
+                nameof(PadContainsOriginal));
+
+        [TestMethod]
+        public void ScaleAboutCenterLeavesCenterUnchanged() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbBox(), box =>
+                {
+                    Box scaled = box.Scale(2);
+                    return Vector3.Distance(scaled.CenterPoint, box.CenterPoint) < 0.01 &&
+                           Tolerance.AreClose(scaled.Volume, box.Volume * 8);
+                }),
+                nameof(ScaleAboutCenterLeavesCenterUnchanged));
+
+        [TestMethod]
+        public void UnionContainsBothBoxes() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbBox(), CoreArbitraries.ArbBox(), (a, b) =>
+                {
+                    Box u = a.Union(b, out _);
+                    return u.Contains(a) && u.Contains(b) &&
+                           u.Contains(a.MinCorner) && u.Contains(b.MaxCorner);
+                }),
+                nameof(UnionContainsBothBoxes));
+
+        [TestMethod]
+        public void ContainsNestedBox() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbBox(), box =>
+                    box.Contains(box) && box.Pad(1).Contains(box)),
+                nameof(ContainsNestedBox));
+
+        [TestMethod]
+        public void EqualsIsReflexiveAndAgreesWithOperator() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbBox(), box =>
+                    box.Equals(box) && box == box.Clone() && box.GetHashCode() == box.Clone().GetHashCode()),
+                nameof(EqualsIsReflexiveAndAgreesWithOperator));
     }
 }

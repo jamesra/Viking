@@ -211,7 +211,7 @@ namespace Geometry
                 rwLock.EnterUpgradeableReadLock();
                 */
             /*
-            if (Root.Border.Contains(point) == false)
+            if (Root.Border.Covers(point) == false)
             {
                 throw new ArgumentOutOfRangeException("point", "The passed point for insertion was out of range of the QuadTreeWithUniqueValues");
             }
@@ -736,7 +736,7 @@ namespace Geometry
                 rwLock.EnterUpgradeableReadLock();
                 */
             /*
-            if (Root.Border.Contains(point) == false)
+            if (Root.Border.Covers(point) == false)
             {
                 throw new ArgumentOutOfRangeException("point", "The passed point for insertion was out of range of the QuadTreeWithUniqueValues");
             }

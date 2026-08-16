@@ -86,7 +86,7 @@ namespace WebAnnotation.View
             }
         }
 #endif
-        public bool Contains(Vector2 Position) => SmoothedVolumePolygon.Contains(Position);
+        public bool Contains(Vector2 Position) => SmoothedVolumePolygon.Covers(Position);
 
         public double Distance(SqlGeometry Shape) => VolumeShapeAsRendered.STDistance(Shape).Value;
 

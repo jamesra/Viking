@@ -11,7 +11,9 @@ namespace Geometry
     }
 
     /// <summary>
-    /// Distinguishes outside, inside, boundary, and crossing. Contains/Intersects are wrappers over this.
+    /// Distinguishes outside, inside, boundary, and crossing.
+    /// <see cref="IShape2D.Contains"/>, <see cref="IShape2D.Covers"/>, and <see cref="IShape2D.Intersects"/>
+    /// are wrappers over this.
     /// </summary>
     [Flags]
     public enum ShapeRelation
@@ -20,6 +22,28 @@ namespace Geometry
         Contained = 0x01,
         Touching = 0x02,
         Intersecting = 0x04
+    }
+
+    /// <summary>
+    /// Maps <see cref="ShapeRelation"/> onto OGC Contains / Covers.
+    /// Crossing (<see cref="ShapeRelation.Intersecting"/>) is neither.
+    /// </summary>
+    public static class ShapeRelationExtensions
+    {
+        /// <summary>
+        /// OGC Contains: the other geometry's interior lies in this shape's interior.
+        /// Boundary-only contact is false.
+        /// </summary>
+        public static bool IsContains(this ShapeRelation relation) =>
+            (relation & ShapeRelation.Contained) != 0 &&
+            (relation & ShapeRelation.Intersecting) == 0;
+
+        /// <summary>
+        /// OGC Covers: no point of the other geometry is outside this shape (boundary counts).
+        /// </summary>
+        public static bool IsCovers(this ShapeRelation relation) =>
+            relation != ShapeRelation.None &&
+            (relation & ShapeRelation.Intersecting) == 0;
     }
 
     public enum ShapeType2D
@@ -102,12 +126,36 @@ namespace Geometry
     {
         Rectangle BoundingBox { get; }
         double Area { get; }
+
+        /// <summary>
+        /// OGC Contains: true when <paramref name="p"/> lies in this shape's interior.
+        /// Boundary points are false. Hit-testing, AABB culling, and Delaunay in-circle
+        /// should use <see cref="Covers"/>; use <see cref="GetRelation"/> when the caller
+        /// must distinguish interior, boundary, and exterior.
+        /// A line segment's endpoints are boundary; the open segment is interior.
+        /// An infinite line has empty boundary, so every on-line point is interior.
+        /// </summary>
         bool Contains(in IPoint2D p);
 
+        /// <summary>
+        /// OGC Covers / closed-set test: true when <paramref name="p"/> is in the interior
+        /// or on the boundary. Equivalent to <c>GetRelation(p) != ShapeRelation.None</c> for a point.
+        /// </summary>
+        bool Covers(in IPoint2D p);
+
+        /// <summary>
+        /// Classifies <paramref name="p"/> as outside (<see cref="ShapeRelation.None"/>),
+        /// interior (<see cref="ShapeRelation.Contained"/>), or boundary (<see cref="ShapeRelation.Touching"/>).
+        /// Source of truth for <see cref="Contains"/> and <see cref="Covers"/>.
+        /// </summary>
         ShapeRelation GetRelation(in IPoint2D p);
 
         ShapeRelation GetRelation(in ILineSegment2D line);
 
+        /// <summary>
+        /// True when this shape and <paramref name="shape"/> are not disjoint (interiors or boundaries meet).
+        /// Containment counts as intersecting.
+        /// </summary>
         bool Intersects(in IShape2D shape);
 
         ShapeType2D ShapeType { get; }
@@ -118,6 +166,16 @@ namespace Geometry
         /// <param name="offset"></param>
         /// <returns></returns>
         IShape2D Translate(in IPoint2D offset);
+    }
+
+    /// <summary>
+    /// Vertex list plus <see cref="IShape2D.ShapeType"/> so callers can
+    /// interpret control points without casting to ILineSegment2D / IPolyLine2D / IPolygon2D.
+    /// ControlPoints is the primary/exterior ring only; polygon holes stay on <see cref="IPolygon2D"/>.
+    /// </summary>
+    public interface IHasControlPoints : IShape2D
+    {
+        IReadOnlyList<IPoint2D> ControlPoints { get; }
     }
 
     public interface IPolygon2D : IShape2D, IEquatable<IPolygon2D>, ICentroid

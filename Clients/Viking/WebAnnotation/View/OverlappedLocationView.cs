@@ -71,7 +71,7 @@ namespace WebAnnotation.View
 
         public bool IsLabelVisible(VikingXNA.Scene scene) => label.IsVisible(scene);
 
-        public override bool Contains(Geometry.Vector2 Position) => Circle.Contains(Position);
+        public override bool Contains(Geometry.Vector2 Position) => Circle.Covers(Position);
 
         public override bool Intersects(LineSegment line) => Circle.Intersects(line);
 

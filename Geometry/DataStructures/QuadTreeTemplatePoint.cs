@@ -35,7 +35,7 @@ namespace Geometry
         /// <param name="value"></param>
         public void Add(TPoint point, TValue value)
         {
-            if (Root.Border.Contains(point) == false)
+            if (Root.Border.Covers(point) == false)
             {
                 throw new ArgumentOutOfRangeException(nameof(point), "The passed point for insertion was out of range of the QuadTreeWithUniqueValues");
             }

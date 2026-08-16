@@ -492,7 +492,7 @@ namespace MorphologyMesh
 
                     var MedialAxis = MedialAxisFinder.ApproximateMedialAxis(centeredPolygon);
                     MedialAxisVertex[] NewVerts = DeduplicateMedialAxisVerts([.. MedialAxis.Nodes.Values], (double)Global.Epsilon * 100.0);
-                    System.Diagnostics.Debug.Assert(NewVerts.All(v => centeredPolygon.Contains(v.Key)), "Interior points must be inside Face");
+                    System.Diagnostics.Debug.Assert(NewVerts.All(v => centeredPolygon.Covers(v.Key)), "Interior points must be inside Face");
 
                     //TODO: Split any edges with an existing face into two parts so we can better merge the medial axis with the existing shape
 

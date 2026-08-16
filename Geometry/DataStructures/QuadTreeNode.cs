@@ -167,7 +167,7 @@ namespace Geometry
             this.Value = value;
             this.HasValue = true;
 
-            Debug.Assert(this.Border.Contains(point));
+            Debug.Assert(this.Border.Covers(point));
         }
 
         /// <summary>
@@ -222,8 +222,8 @@ namespace Geometry
         public QuadTreeNode<T> Insert(Vector2 insertingPoint, T value)
         {
             //Trace.WriteLine($"Insert {insertingPoint} in {this}");
-            Debug.Assert((HasBorder && Border.Contains(insertingPoint)) || (this.IsRoot && this.HasValue == false), "QuadNode boundary must contain point for insert to succeed");
-            Debug.Assert((HasBorder && HasValue && Border.Contains(Point)) || !IsLeaf || (this.IsRoot && this.HasValue == false), "QuadNode must contain its own point for insert to succeed");
+            Debug.Assert((HasBorder && Border.Covers(insertingPoint)) || (this.IsRoot && this.HasValue == false), "QuadNode boundary must contain point for insert to succeed");
+            Debug.Assert((HasBorder && HasValue && Border.Covers(Point)) || !IsLeaf || (this.IsRoot && this.HasValue == false), "QuadNode must contain its own point for insert to succeed");
 
             //If we are a leaf node, we need to divide and create new leaf nodes
             if (this.IsLeaf)
@@ -309,7 +309,7 @@ namespace Geometry
         internal bool ExpandBorder(in Vector2 point, out QuadTreeNode<T> new_root)
         {
             new_root = null;
-            if (HasBorder && Border.Contains(point))
+            if (HasBorder && Border.Covers(point))
                 return false;
 
             if (this.HasBorder == false)
@@ -337,13 +337,13 @@ namespace Geometry
                     Rectangle Bounds = new(NewBoundsOrigin, NewBoundsOrigin + NewBoundsDims);
                     this.Border = Bounds;
 
-                    Debug.Assert(Bounds.Contains(this.Point), "The border specified must include the node's point");
-                    Debug.Assert(Bounds.Contains(point), "The border specified must include the new point");
-                    if (Bounds.Contains(this.Point) == false)
+                    Debug.Assert(Bounds.Covers(this.Point), "The border specified must include the node's point");
+                    Debug.Assert(Bounds.Covers(point), "The border specified must include the new point");
+                    if (Bounds.Covers(this.Point) == false)
                     {
                         throw new ArgumentException("The border specified must include the node's point");
                     }
-                    if (Bounds.Contains(point) == false)
+                    if (Bounds.Covers(point) == false)
                     {
                         throw new ArgumentException("The border specified must include the new point");
                     }
@@ -393,15 +393,15 @@ namespace Geometry
 
             if (new_parent.ExpandBorder(in point, out new_root))
             {
-                Debug.Assert((this.IsLeaf == false) || new_root.Border.Contains(Point), "New root node must include our point");
-                Debug.Assert(new_root.Border.Contains(point), "New root node must include new point");
+                Debug.Assert((this.IsLeaf == false) || new_root.Border.Covers(Point), "New root node must include our point");
+                Debug.Assert(new_root.Border.Covers(point), "New root node must include new point");
                 return true;
             }
             else
             {
                 new_root = new_parent;
-                Debug.Assert((this.IsLeaf == false) || new_root.Border.Contains(Point), "New root node must include our point");
-                Debug.Assert(new_root.Border.Contains(point), "New root node must include new point");
+                Debug.Assert((this.IsLeaf == false) || new_root.Border.Covers(Point), "New root node must include our point");
+                Debug.Assert(new_root.Border.Covers(point), "New root node must include new point");
                 return true;
             }
         }
@@ -704,7 +704,7 @@ namespace Geometry
 
                 if (NeedTest)
                 {
-                    if (RequestRect.Contains(Point))
+                    if (RequestRect.Covers(Point))
                     {
                         Points.Add(this.Point);
                         Values.Add(this.Value);
@@ -726,7 +726,7 @@ namespace Geometry
                     if (Border.Intersects(in RequestRect))
                     {
 
-                        if (RequestRect.Contains(Border))
+                        if (RequestRect.Covers(Border))
                         {
                             this.UpperLeft?.Intersect(in RequestRect, false, ref Points, ref Values);
                             this.UpperRight?.Intersect(in RequestRect, false, ref Points, ref Values);

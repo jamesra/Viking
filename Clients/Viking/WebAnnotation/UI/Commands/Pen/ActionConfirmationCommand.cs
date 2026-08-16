@@ -283,7 +283,7 @@ namespace WebAnnotation.UI.Commands
                 }
             }
             /*
-            if (VolumeShape.Contains(WorldPosition))
+            if (VolumeShape.Covers(WorldPosition))
             {
                 this.Execute();
             }
@@ -320,7 +320,7 @@ namespace WebAnnotation.UI.Commands
             }
 
             /*
-            if (BoundingBox.Contains(WorldPosition))
+            if (BoundingBox.Covers(WorldPosition))
             {
                 this.Execute();
             }

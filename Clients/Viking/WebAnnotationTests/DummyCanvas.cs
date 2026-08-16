@@ -24,7 +24,7 @@ namespace WebAnnotationTests
 
         public bool Contains(Vector2 Position)
         {
-            return Shape.Contains(Position);
+            return Shape.Covers(Position);
         }
 
         public double Distance(Vector2 Position)

@@ -67,7 +67,7 @@ namespace Geometry.Transforms
 
             Point = Point.Round(Global.TransformSignificantDigits);
 
-            if (!Bounds.Contains(Point, epsilon))
+            if (!Bounds.Covers(Point, epsilon))
                 return null;
 
             double OffsetX = Point.X - Bounds.Left;
@@ -262,7 +262,7 @@ namespace Geometry.Transforms
             //We just want to know if we are close enough to check with the more time consuming math
             double epsilon = 0;
 
-            if (!MappedBounds.Contains(Point, epsilon))
+            if (!MappedBounds.Covers(Point, epsilon))
                 return null;
 
             //Triangles are ordered from left to right, and then bottom to top
@@ -284,7 +284,7 @@ namespace Geometry.Transforms
 
             foreach (MappingTriangle t in triangles)
             {
-                if (!t.ControlBoundingBox.Contains(Point))
+                if (!t.ControlBoundingBox.Covers(Point))
                     continue;
 
                 if (t.CanInverseTransform(Point))

@@ -970,8 +970,8 @@ return;
 
                         /*
 
-                        bool NextContains = oppositePolygon.Contains(vPolyIndex.Next.Point(mesh.Polygons));
-                        bool PrevContains = oppositePolygon.Contains(vPolyIndex.Previous.Point(mesh.Polygons));
+                        bool NextContains = oppositePolygon.Covers(vPolyIndex.Next.Point(mesh.Polygons));
+                        bool PrevContains = oppositePolygon.Covers(vPolyIndex.Previous.Point(mesh.Polygons));
 
                         bool FlipContainsTest = vCorrespondingIndex.IsInner; // false;// vPolyIndex.IsInner ^ vCorrespondingIndex.IsInner;
 
@@ -1059,7 +1059,7 @@ return;
                 return false;
             }
 
-            contained_verts = [.. mesh.Vertices.Where(v => face.iVerts.Contains(v.Index) == false && tri.Contains(v.Position.XY()))];
+            contained_verts = [.. mesh.Vertices.Where(v => face.iVerts.Contains(v.Index) == false && tri.Covers(v.Position.XY()))];
             return contained_verts.Length > 0;
         }
 

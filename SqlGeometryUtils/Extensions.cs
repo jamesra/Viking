@@ -712,13 +712,9 @@ namespace SqlGeometryUtils
         public static Polygon ToPolygon(this IShape2D shape) => shape.ToSqlGeometry().ToPolygon();
 
         public static Vector2[] ToPoints(this IShape2D shape) =>
-            shape switch
-            {
-                LineSegment line => [line.A, line.B],
-                ILineSegment2D segment => [segment.A.Convert(), segment.B.Convert()],
-                IPolyLine2D poly => [.. poly.Points.Select(p => p.Convert())],
-                _ => shape.ToSqlGeometry().ToPoints()
-            };
+            shape is IHasControlPoints cps
+                ? [.. cps.ControlPoints.Select(p => p.Convert())]
+                : shape.ToSqlGeometry().ToPoints();
 
         public static Vector2 Centroid(this IShape2D shape) => shape.ToSqlGeometry().Centroid();
 

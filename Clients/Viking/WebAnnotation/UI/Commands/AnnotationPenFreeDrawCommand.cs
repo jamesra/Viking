@@ -81,7 +81,7 @@ namespace WebAnnotation.UI.Commands
                 throw new ArgumentException("Cannot possibly cut a hole if our path is not a loop.");
             }
             /*
-            List<LocationPolygonView> intersectedPolys = IntersectedPolygonsOnSection(Parent.Section.Number, newVolumePoly).Where(ip => ip.VolumeShapeAsRendered.ToPolygon().Contains(newVolumePoly)).ToList();
+            List<LocationPolygonView> intersectedPolys = IntersectedPolygonsOnSection(Parent.Section.Number, newVolumePoly).Where(ip => ip.VolumeShapeAsRendered.ToPolygon().Covers(newVolumePoly)).ToList();
             if (!intersectedPolys.Any())
             {
                 return false;
@@ -231,7 +231,7 @@ namespace WebAnnotation.UI.Commands
             return [.. listPolygons.Where(o =>
             {
                 Polygon poly = o.VolumeShapeAsRendered.ToPolygon();
-                return poly.Intersects(bounds) || poly.Contains(bounds);
+                return poly.Intersects(bounds) || poly.Covers(bounds);
             })];
         }
     }

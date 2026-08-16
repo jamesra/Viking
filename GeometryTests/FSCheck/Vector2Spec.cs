@@ -126,5 +126,33 @@ namespace GeometryTests
             Assert.IsFalse(new Vector2(double.PositiveInfinity, double.PositiveInfinity)
                 .Equals(new Vector2(double.PositiveInfinity, double.PositiveInfinity)));
         }
+
+        [TestMethod]
+        public void AsShapeContainsOnlyCoincidence() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbVector2(), CoreArbitraries.ArbVector2(), (a, b) =>
+                {
+                    IShape2D shape = a;
+                    ShapeRelation rel = shape.GetRelation((IPoint2D)b);
+                    bool coincidence = a.Equals(b);
+                    return coincidence
+                        ? rel == ShapeRelation.Contained && shape.Contains((IPoint2D)b) && shape.Covers((IPoint2D)b)
+                        : rel == ShapeRelation.None && !shape.Contains((IPoint2D)b) && !shape.Covers((IPoint2D)b);
+                }),
+                nameof(AsShapeContainsOnlyCoincidence));
+
+        [TestMethod]
+        public void AsShapeIntersectsViaOtherCovers() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbVector2(), CoreArbitraries.ArbCircle(), (p, c) =>
+                    ((IShape2D)p).Intersects(c) == c.Covers((IPoint2D)p)),
+                nameof(AsShapeIntersectsViaOtherCovers));
+
+        [TestMethod]
+        public void RotateIsInvertible() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbVector2(), a =>
+                    Vector2.Distance(a, a.Rotate(0.3).Rotate(-0.3)) < 1e-8),
+                nameof(RotateIsInvertible));
     }
 }

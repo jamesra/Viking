@@ -358,7 +358,7 @@ namespace Geometry.Meshing
             var interiorVerts = InteriorPoints is null ? System.Array.Empty<Vertex2D<int>>() : [.. InteriorPoints.Select((v, i) => new Vertex2D<int>(i + faceVerts.Length, v.Position - shapeCenter, v.Index))];
 
             Polygon centeredPoly = new(faceVerts.Select(v => v.Position).ToArray().EnsureClosedRing());
-            System.Diagnostics.Debug.Assert(interiorVerts.All(v => centeredPoly.Contains(v.Position)), "Interior points must be inside Face");
+            System.Diagnostics.Debug.Assert(interiorVerts.All(v => centeredPoly.Covers(v.Position)), "Interior points must be inside Face");
 
             var tri_mesh_verts = faceVerts.Union(interiorVerts).ToArray();
 
@@ -403,7 +403,7 @@ namespace Geometry.Meshing
             {
                 LineSegment line = new(tri_mesh_verts[key.A].Position, tri_mesh_verts[key.B].Position);// tri_mesh.ToLineSegment(key);
 
-                if (false == centeredPoly.Contains(line.Bisect()))
+                if (false == centeredPoly.Covers(line.Bisect()))
                 {
 #if TRACEMESH
                     Trace.WriteLine(string.Format("{0} exterior to poly", key));

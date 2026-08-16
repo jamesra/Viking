@@ -249,7 +249,7 @@ namespace WebAnnotation.UI.Actions
                 Polygon smooth_volume_polygon = smooth_volume_shape as Polygon;
                 Polygon smooth_exterior_polygon = new(smooth_volume_polygon.ExteriorRing);
                 Polygon closedpath = new(path.SimplifiedFirstLoop);
-                if (smooth_exterior_polygon.Contains(closedpath))
+                if (smooth_exterior_polygon.Covers(closedpath))
                 {
                     List<int> IntersectedInteriorPolygons = [];
                     for (int iPoly = 0; iPoly < smooth_volume_polygon.InteriorPolygons.Count; iPoly++)
@@ -261,7 +261,7 @@ namespace WebAnnotation.UI.Actions
                             IntersectedInteriorPolygons.Add(iPoly);
                         }
 
-                        if (interiorPoly.Contains(closedpath))
+                        if (interiorPoly.Covers(closedpath))
                         {
                             IntersectedInteriorPolygons.Clear();
                             IntersectedInteriorPolygons.Add(iPoly);

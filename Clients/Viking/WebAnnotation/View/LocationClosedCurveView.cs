@@ -153,7 +153,7 @@ namespace WebAnnotation.View
 
         public override bool Contains(Geometry.Vector2 Position)
         {
-            if (VolumeControlPoints.Any(p => new Circle(p, lineWidth / 2.0).Contains(Position)))
+            if (VolumeControlPoints.Any(p => new Circle(p, lineWidth / 2.0).Covers(Position)))
             {
                 return true;
             }
@@ -241,7 +241,7 @@ namespace WebAnnotation.View
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
             Circle TranslateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
-            if (TranslateTargetCircle.Contains(WorldPosition))
+            if (TranslateTargetCircle.Covers(WorldPosition))
             {
                 LocationID = ID;
                 return LocationAction.TRANSLATE;
