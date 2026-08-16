@@ -30,7 +30,8 @@ namespace WebAnnotationModel.gRPC
             IStructureTypeStore structureTypes,
             IStructureLinkStore structureLinks,
             ILocationLinkStore locationLinks,
-            IPermittedStructureLinkStore permittedStructureLinks)
+            IPermittedStructureLinkStore permittedStructureLinks,
+            LocationLinkToLocationUpdater locationLinkToLocationUpdater)
         {
             Locations = locations;
             Structures = structures;
@@ -39,6 +40,7 @@ namespace WebAnnotationModel.gRPC
             LocationLinks = locationLinks;
             PermittedStructureLinks = permittedStructureLinks;
             LocationsByRegion = locations as IRegionLoader<LocationObj>;
+            _ = locationLinkToLocationUpdater;
         }
 
         public async Task InitializeAsync(CancellationToken token = default)

@@ -1,62 +1,77 @@
-﻿using System.Windows.Controls;
+﻿using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using Jotunn.Controls;
+using VolumeVM = Viking.VolumeViewModel.VolumeViewModel;
 
 namespace Viking.VolumeView
 {
-    /// <summary>
-    /// Interaction logic for UserControl1.xaml
-    /// </summary>
     public partial class SectionGridControl : UserControl
     {
-        /*
-        private static RoutedUICommand incrementCenterIndexCommand;
-        private static RoutedUICommand decrementCenterIndexCommand;
-
-        /// <summary>
-        /// Increment the center number
-        /// </summary>
-        public static RoutedUICommand IncrementCommand
-        {
-            get { return incrementCenterIndexCommand; }
-        }
-
-        /// <summary>
-        /// Decrement the center number
-        /// </summary>
-        public static RoutedUICommand DecrementCommand
-        {
-            get { return decrementCenterIndexCommand; }
-        }
-        */
-
         public SectionGridControl()
         {
             InitializeComponent();
-
-            Viking.VolumeViewModel.VolumeViewModel volume = Microsoft.Practices.ServiceLocation.ServiceLocator.Current.GetInstance<Viking.VolumeViewModel.VolumeViewModel>();
-
-            this.DataContext = volume;
-            SectionsGrid.ItemsSource = volume.SectionViewModels.Values;
-
-            /*
-            incrementCenterIndexCommand = new RoutedUICommand("+", "IncrementCenterIndexCommand", typeof(SectionGridControl));
-            decrementCenterIndexCommand = new RoutedUICommand("-", "DecrementCenterIndexCommand", typeof(SectionGridControl));
-
-            CommandBinding cb = new CommandBinding(incrementCenterIndexCommand, OnIncrementSectionNumber);
-            this.CommandBindings.Add(cb);
-
-            GlobalCommands.IncrementSectionNumber.RegisterCommand(incrementCenterIndexCommand);
-             */
+            DataContextChanged += OnVolumeDataContextChanged;
+            Loaded += (_, _) =>
+            {
+                SceneHost.Grid = GridPanel;
+                Dispatcher.BeginInvoke(new Action(() => SceneHost.Grid = GridPanel), System.Windows.Threading.DispatcherPriority.Loaded);
+            };
+            LayoutUpdated += (_, _) =>
+            {
+                if (SceneHost.Grid == null)
+                    SceneHost.Grid = GridPanel;
+            };
         }
 
-        /*
-        /// <summary>
-        /// Tell this control to respond to the global hotkeys
-        /// </summary>
-        public void AttachToGlobalHotkeys()
-        { 
-            GlobalCommands.IncrementSectionNumber.RegisterCommand(VirtualizingGrid.IncrementCommand);
-            GlobalCommands.DecrementSectionNumber.RegisterCommand(VirtualizingGrid.DecrementCommand); 
+        public SectionSceneHost SceneHostControl => SceneHost;
+
+        public VirtualizingGrid GridPanel
+        {
+            get
+            {
+                if (SectionsGrid == null)
+                    return null;
+
+                SectionsGrid.ApplyTemplate();
+                ItemsPresenter presenter = FindVisualChild<ItemsPresenter>(SectionsGrid);
+                if (presenter == null)
+                    return null;
+
+                presenter.ApplyTemplate();
+                if (VisualTreeHelper.GetChildrenCount(presenter) == 0)
+                    return null;
+
+                return VisualTreeHelper.GetChild(presenter, 0) as VirtualizingGrid;
+            }
         }
-         */
+
+        private void OnVolumeDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            VolumeVM volume = e.NewValue as VolumeVM;
+            if (volume != null)
+                SectionsGrid.ItemsSource = volume.SectionViewModels.Values;
+        }
+
+        private static T FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            if (parent == null)
+                return null;
+
+            int count = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T match)
+                    return match;
+
+                T nested = FindVisualChild<T>(child);
+                if (nested != null)
+                    return nested;
+            }
+
+            return null;
+        }
     }
 }

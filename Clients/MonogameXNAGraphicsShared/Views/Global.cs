@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -272,7 +274,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        private static VertexPositionColorTexture[] CircleVerticies(GridVector2 Pos, float Radius, Microsoft.Xna.Framework.Color color)
+        private static VertexPositionColorTexture[] CircleVerticies(Geometry.Vector2 Pos, float Radius, Microsoft.Xna.Framework.Color color)
         {
             VertexPositionColorTexture[] verts = new VertexPositionColorTexture[GlobalPrimitives.SquareVerts.Length];
             GlobalPrimitives.SquareVerts.CopyTo(verts, 0);
@@ -294,7 +296,7 @@ namespace VikingXNAGraphics
 
         public static void DrawCircle(GraphicsDevice graphicsDevice,
                 BasicEffect basicEffect,
-                GridVector2 Pos,
+                Geometry.Vector2 Pos,
                 double Radius,
                 Microsoft.Xna.Framework.Color color)
         {
@@ -329,12 +331,12 @@ namespace VikingXNAGraphics
 
         public static void DrawPolyline(RoundLineCode.RoundLineManager LineManager,
                                    BasicEffect basicEffect,
-                                   IList<GridVector2> LineVerticies,
+                                   IList<Geometry.Vector2> LineVerticies,
                                    double LineWidth,
                                    Microsoft.Xna.Framework.Color color)
         {
             RoundLineCode.RoundLine[] drawn_lines = new RoundLineCode.RoundLine[LineVerticies.Count - 1];
-            GridVector2[] verts = [.. LineVerticies];
+            Geometry.Vector2[] verts = [.. LineVerticies];
             for (int i = 0; i < LineVerticies.Count - 1; i++)
             {
                 drawn_lines[i] = new RoundLineCode.RoundLine(new Microsoft.Xna.Framework.Vector2((float)verts[i].X, (float)verts[i].Y),
@@ -346,14 +348,14 @@ namespace VikingXNAGraphics
 
         public static void DrawPoints(RoundLineCode.RoundLineManager LineManager,
                                    BasicEffect basicEffect,
-                                   IList<GridVector2> Verticies,
+                                   IList<Geometry.Vector2> Vertices,
                                    double Radius,
                                    Microsoft.Xna.Framework.Color color)
         {
-            RoundLineCode.Disc[] points = new RoundLineCode.Disc[Verticies.Count - 1];
+            RoundLineCode.Disc[] points = new RoundLineCode.Disc[Vertices.Count - 1];
 
-            GridVector2[] verts = [.. Verticies];
-            for (int i = 0; i < Verticies.Count - 1; i++)
+            Geometry.Vector2[] verts = [.. Vertices];
+            for (int i = 0; i < Vertices.Count - 1; i++)
             {
                 points[i] = new RoundLineCode.Disc((float)verts[i].X, (float)verts[i].Y);
             }

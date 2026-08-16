@@ -18,9 +18,9 @@ namespace WebAnnotationModel
         /// <param name="location"></param>
         /// <param name="volumePoints"></param>
         /// <param name="volume_innerRingPoints"></param>
-        public static void SetShapeFromPointsInVolume(this LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, GridVector2[] volumePoints, ICollection<GridVector2[]> volume_innerRingPoints)
+        public static void SetShapeFromPointsInVolume(this LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Vector2[] volumePoints, ICollection<Vector2[]> volume_innerRingPoints)
         {
-            GridVector2[] mosaic_points = mapper.VolumeToSection(volumePoints);
+            Vector2[] mosaic_points = mapper.VolumeToSection(volumePoints);
 
             location.VolumeShape = location.TypeCode.GetSmoothedShape(volumePoints, volume_innerRingPoints);
             location.MosaicShape = location.TypeCode.GetShape(mosaic_points, VolumeInnerRingPointsToSection(mapper, volume_innerRingPoints));
@@ -35,9 +35,9 @@ namespace WebAnnotationModel
         /// <param name="location"></param>
         /// <param name="volumePoints"></param>
         /// <param name="volume_innerRingPoints"></param>
-        public static void SetShapeFromPointsInSection(this LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, GridVector2[] sectionPoints, ICollection<GridVector2[]> section_innerRingPoints)
+        public static void SetShapeFromPointsInSection(this LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Vector2[] sectionPoints, ICollection<Vector2[]> section_innerRingPoints)
         {
-            GridVector2[] volume_points = mapper.SectionToVolume(sectionPoints);
+            Vector2[] volume_points = mapper.SectionToVolume(sectionPoints);
 
             location.VolumeShape = location.TypeCode.GetSmoothedShape(volume_points, SectionInnerRingPointsToVolume(mapper, section_innerRingPoints));
             location.MosaicShape = location.TypeCode.GetShape(sectionPoints, section_innerRingPoints);
@@ -79,13 +79,13 @@ namespace WebAnnotationModel
             return;
         }
 
-        private static ICollection<GridVector2[]> VolumeInnerRingPointsToSection(Viking.VolumeModel.IVolumeToSectionTransform mapper, ICollection<GridVector2[]> volume_innerRingPoints)
+        private static ICollection<Vector2[]> VolumeInnerRingPointsToSection(Viking.VolumeModel.IVolumeToSectionTransform mapper, ICollection<Vector2[]> volume_innerRingPoints)
         {
             if (volume_innerRingPoints == null)
                 return null;
 
-            List<GridVector2[]> mosaic_innerRingPoints = new List<GridVector2[]>(volume_innerRingPoints.Count);
-            foreach (GridVector2[] volume_ring in volume_innerRingPoints)
+            List<Vector2[]> mosaic_innerRingPoints = new List<Vector2[]>(volume_innerRingPoints.Count);
+            foreach (Vector2[] volume_ring in volume_innerRingPoints)
             {
                 mosaic_innerRingPoints.Add(mapper.VolumeToSection(volume_ring));
             }
@@ -93,13 +93,13 @@ namespace WebAnnotationModel
             return mosaic_innerRingPoints;
         }
 
-        private static ICollection<GridVector2[]> SectionInnerRingPointsToVolume(Viking.VolumeModel.IVolumeToSectionTransform mapper, ICollection<GridVector2[]> section_innerRingPoints)
+        private static ICollection<Vector2[]> SectionInnerRingPointsToVolume(Viking.VolumeModel.IVolumeToSectionTransform mapper, ICollection<Vector2[]> section_innerRingPoints)
         {
             if (section_innerRingPoints == null)
                 return null;
 
-            List<GridVector2[]> volume_innerRingPoints = new List<GridVector2[]>(section_innerRingPoints.Count);
-            foreach (GridVector2[] volume_ring in section_innerRingPoints)
+            List<Vector2[]> volume_innerRingPoints = new List<Vector2[]>(section_innerRingPoints.Count);
+            foreach (Vector2[] volume_ring in section_innerRingPoints)
             {
                 volume_innerRingPoints.Add(mapper.SectionToVolume(volume_ring));
             }

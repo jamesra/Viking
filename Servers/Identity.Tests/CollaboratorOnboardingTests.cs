@@ -55,40 +55,6 @@ Experiment: Slice to volume</Notes>
         }
     }
 
-    /// <summary>
-    /// In-memory DB fixture so provisioning/onboarding tests run without SQL Server.
-    /// </summary>
-    public class InMemoryIdentityFixture : IDisposable
-    {
-        public ApplicationDbContext DataContext { get; }
-        public string AdminUserId { get; }
-
-        private readonly PasswordHasher<ApplicationUser> _hasher = new PasswordHasher<ApplicationUser>();
-
-        public InMemoryIdentityFixture()
-        {
-            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseInMemoryDatabase("OnboardingTests-" + Guid.NewGuid().ToString("N"))
-                .Options;
-
-            DataContext = new ApplicationDbContext(options, _hasher);
-            DataContext.Database.EnsureCreated();
-
-            AdminUserId = DataContext.CreateUser("admin", "AdminPass1!", "admin@example.com");
-            DataContext.UserRoles.Add(new IdentityUserRole<string>
-            {
-                UserId = AdminUserId,
-                RoleId = Special.Roles.AdminId
-            });
-            DataContext.SaveChanges();
-        }
-
-        public void Dispose()
-        {
-            DataContext?.Dispose();
-        }
-    }
-
     public class ResourceProvisioningServiceTests : IClassFixture<InMemoryIdentityFixture>
     {
         private readonly ApplicationDbContext _dbContext;

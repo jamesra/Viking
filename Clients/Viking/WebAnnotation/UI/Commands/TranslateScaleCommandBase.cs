@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Viking.Input;
 using Viking.UI;
 using VikingXNAWinForms;
 
@@ -36,26 +37,26 @@ namespace WebAnnotation.UI.Commands
 
         protected abstract void OnSizeScaleChanged();
 
-        protected GridVector2 OriginalVolumePosition;
-        protected GridVector2 VolumePositionDeltaSum = new(0, 0);
+        protected Vector2 OriginalVolumePosition;
+        protected Vector2 VolumePositionDeltaSum = new(0, 0);
 
         public abstract double AnnotationRadius { get; }
 
         /// <summary>
         /// Position of volume origin after applying this translation command
         /// </summary>
-        protected GridVector2 TranslatedVolumePosition
+        protected Vector2 TranslatedVolumePosition
         {
             get; private set;
         }
 
-        protected GridVector2 OriginalMosaicPosition;
-        protected GridVector2 MosaicPositionDeltaSum = new(0, 0);
+        protected Vector2 OriginalMosaicPosition;
+        protected Vector2 MosaicPositionDeltaSum = new(0, 0);
 
         /// <summary>
         /// Position of mosaic origin after applying this translation command
         /// </summary>
-        protected GridVector2 TranslatedMosaicPosition
+        protected Vector2 TranslatedMosaicPosition
         {
             get; private set;
         }
@@ -66,12 +67,12 @@ namespace WebAnnotation.UI.Commands
         /// Resets the command to have an origin at the given point
         /// </summary>
         /// <param name="VolumePoint"></param>
-        protected void ResetCommandVolumeOrigin(GridVector2 VolumePoint)
+        protected void ResetCommandVolumeOrigin(Vector2 VolumePoint)
         {
             OriginalVolumePosition = VolumePoint;
             OriginalMosaicPosition = mapping.VolumeToSection(VolumePoint);
-            VolumePositionDeltaSum = new GridVector2(0, 0);
-            MosaicPositionDeltaSum = new GridVector2(0, 0);
+            VolumePositionDeltaSum = new Vector2(0, 0);
+            MosaicPositionDeltaSum = new Vector2(0, 0);
             TranslatedVolumePosition = OriginalVolumePosition + VolumePositionDeltaSum;
             TranslatedMosaicPosition = OriginalMosaicPosition;
         }
@@ -80,12 +81,12 @@ namespace WebAnnotation.UI.Commands
         /// Resets the command to have an origin at the given point
         /// </summary>
         /// <param name="VolumePoint"></param>
-        protected void ResetCommandMosaicOrigin(GridVector2 MosaicPoint)
+        protected void ResetCommandMosaicOrigin(Vector2 MosaicPoint)
         {
             OriginalVolumePosition = mapping.SectionToVolume(MosaicPoint);
             OriginalMosaicPosition = MosaicPoint;
-            VolumePositionDeltaSum = new GridVector2(0, 0);
-            MosaicPositionDeltaSum = new GridVector2(0, 0);
+            VolumePositionDeltaSum = new Vector2(0, 0);
+            MosaicPositionDeltaSum = new Vector2(0, 0);
             TranslatedVolumePosition = OriginalVolumePosition + VolumePositionDeltaSum;
             TranslatedMosaicPosition = OriginalMosaicPosition;
         }
@@ -96,7 +97,7 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="parent"></param>
         /// <param name="OriginalVolumePosition">The point the command started, where the mouse cursor was, in mosaic space</param>
-        public TranslateScaleCommandBase(Viking.UI.Controls.SectionViewerControl parent, GridVector2 OriginalVolumePosition) : base(parent)
+        public TranslateScaleCommandBase(Viking.UI.Controls.SectionViewerControl parent, Vector2 OriginalVolumePosition) : base(parent)
         {
             parent.OnSectionChanged += OnSectionChanged;
             mapping = parent.Section.ActiveSectionToVolumeTransform;
@@ -153,7 +154,7 @@ namespace WebAnnotation.UI.Commands
         {
             Trace.WriteLine(e.Delta.ToString());
 
-            if (Control.ModifierKeys.ShiftPressed())
+            if (ModifierKeysConverter.FromWinFormsKeys((int)Control.ModifierKeys).ShiftPressed())
             {
                 scroll_delta_sum += (int)(e.Delta / 5.0);
             }
@@ -179,12 +180,12 @@ namespace WebAnnotation.UI.Commands
                 {
                     //Need to use last saved mouse position, because if a rotation or other non-translate command
                     //we don't want the mouse to jump
-                    GridVector2 LastVolumePosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
-                    GridVector2 NewVolumePosition = Parent.ScreenToWorld(e.X, e.Y);
+                    Vector2 LastVolumePosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
+                    Vector2 NewVolumePosition = Parent.ScreenToWorld(e.X, e.Y);
 
                     VolumePositionDeltaSum += NewVolumePosition - LastVolumePosition;
 
-                    GridVector2 NewMosaicPosition = mapping.VolumeToSection(OriginalVolumePosition + VolumePositionDeltaSum);
+                    Vector2 NewMosaicPosition = mapping.VolumeToSection(OriginalVolumePosition + VolumePositionDeltaSum);
 
                     MosaicPositionDeltaSum = NewMosaicPosition - OriginalMosaicPosition;
 
@@ -200,7 +201,7 @@ namespace WebAnnotation.UI.Commands
             base.OnMouseMove(sender, e);
         }
 
-        protected GridVector2 ScaleOrigin = GridVector2.Zero;
+        protected Vector2 ScaleOrigin = Vector2.Zero;
         private double LastSavedScalarValue = 1.0;
 
         protected override void OnPenContact(object sender, PenEventArgs e)
@@ -233,12 +234,12 @@ namespace WebAnnotation.UI.Commands
                 {
                     //Need to use last saved mouse position, because if a rotation or other non-translate command
                     //we don't want the mouse to jump
-                    GridVector2 LastVolumePosition = Parent.ScreenToWorld(oldPen.X, oldPen.Y);
-                    GridVector2 NewVolumePosition = Parent.ScreenToWorld(e.X, e.Y);
+                    Vector2 LastVolumePosition = Parent.ScreenToWorld(oldPen.X, oldPen.Y);
+                    Vector2 NewVolumePosition = Parent.ScreenToWorld(e.X, e.Y);
 
                     VolumePositionDeltaSum += NewVolumePosition - LastVolumePosition;
 
-                    GridVector2 NewMosaicPosition =
+                    Vector2 NewMosaicPosition =
                         mapping.VolumeToSection(OriginalVolumePosition + VolumePositionDeltaSum);
 
                     MosaicPositionDeltaSum = NewMosaicPosition - OriginalMosaicPosition;
@@ -250,11 +251,11 @@ namespace WebAnnotation.UI.Commands
                 {
                     //Need to use last saved mouse position, because if a rotation or other non-translate command
                     //we don't want the mouse to jump
-                    GridVector2 LastVolumePosition = ScaleOrigin;
-                    GridVector2 NewVolumePosition = Parent.ScreenToWorld(e.X, e.Y);
+                    Vector2 LastVolumePosition = ScaleOrigin;
+                    Vector2 NewVolumePosition = Parent.ScreenToWorld(e.X, e.Y);
 
 
-                    GridVector2 delta = NewVolumePosition - LastVolumePosition;
+                    Vector2 delta = NewVolumePosition - LastVolumePosition;
 
                     double BlockDistance = delta.X + delta.Y;
                     double scale = BlockDistance / AnnotationRadius;

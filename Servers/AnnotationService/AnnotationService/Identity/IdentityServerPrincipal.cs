@@ -60,6 +60,7 @@ namespace Annotation.Identity
             return validated;
         }
 
-        private string GetClaimRequired(string VolumeName, string permission) => $"{VolumeName}.{permission}";
+        private string GetClaimRequired(string VolumeName, string permission)
+            => $"{VolumeName?.Replace(' ', '-')}.{permission?.Replace(' ', '-')}";
     }
 }

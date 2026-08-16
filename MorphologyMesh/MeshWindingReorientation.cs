@@ -261,10 +261,10 @@ namespace MorphologyMesh
                 MorphMeshVertex[] verts = [.. mesh[f.iVerts]];
                 for (int i = 1; i + 1 < verts.Length; i++)
                 {
-                    GridVector3 a = verts[0].Position;
-                    GridVector3 b = verts[i].Position;
-                    GridVector3 c = verts[i + 1].Position;
-                    sixV += GridVector3.Dot(a, GridVector3.Cross(b, c));
+                    Vector3 a = verts[0].Position;
+                    Vector3 b = verts[i].Position;
+                    Vector3 c = verts[i + 1].Position;
+                    sixV += Vector3.Dot(a, Vector3.Cross(b, c));
                 }
             }
 

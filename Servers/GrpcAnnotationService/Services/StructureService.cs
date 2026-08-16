@@ -40,13 +40,18 @@ namespace gRPCAnnotationService
 
         public override async Task<GetStructureByIDResponse> GetStructureByID(GetStructureByIDRequest request, ServerCallContext context)
         {
-            var obj = await _context.Structures.FindAsync(request.Id);
-            if (obj == null)
-                throw new RpcException(new Status(StatusCode.NotFound, $"Structure ID {request.Id} not found"));
+            try
+            {
+                var obj = await _context.Structures.FindAsync(request.Id);
+                if (obj == null)
+                    throw new RpcException(new Status(StatusCode.NotFound, $"Structure ID {request.Id} not found"));
 
-            var result = obj.ToProtobufMessage();
-            await AttachStructureLinksAsync(new[] { result }, context.CancellationToken);
-            return new GetStructureByIDResponse { Result = result };
+                var result = obj.ToProtobufMessage();
+                await AttachStructureLinksAsync(new[] { result }, context.CancellationToken);
+                return new GetStructureByIDResponse { Result = result };
+            }
+            catch (RpcException) { throw; }
+            catch (Exception e) { throw Failure(nameof(GetStructureByID), e); }
         }
 
         public override async Task<GetStructuresByIDResponse> GetStructuresByID(GetStructuresByIDRequest request, ServerCallContext context)
@@ -335,6 +340,11 @@ namespace gRPCAnnotationService
                     addedLocation.LastModified = addedLocation.Created;
                     await _context.Locations.AddAsync(addedLocation);
                     await _context.SaveChangesAsync();
+                    if (request.NewAnnotation.TypeCode == AnnotationType.Circle)
+                    {
+                        var (mosaicWkt, volumeWkt) = request.NewAnnotation.CircleShapeWkt();
+                        await _context.PersistCircleShapesAsync(addedLocation, mosaicWkt, volumeWkt);
+                    }
                 }
 
                 var response = new CreateStructureResponse

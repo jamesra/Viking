@@ -103,12 +103,12 @@ namespace MorphologyMesh
 
         public IReadOnlyDictionary<ulong, StructureModel> ChildStructures => _ChildStructures as IReadOnlyDictionary<ulong, StructureModel>;
 
-        private GridVector3 _Translation;
+        private Vector3 _Translation;
 
         /// <summary>
         /// The translation vector required to place the model's bounding box center at 0,0,0
         /// </summary>
-        public GridVector3 Translation
+        public Vector3 Translation
         {
             get => _Translation;
             set => _Translation = value;

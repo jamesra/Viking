@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFramework>net48</TargetFramework>
+		<TargetFrameworks>net48;net10.0-windows</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
 		<RootNamespace>Annotation.ViewModels</RootNamespace>
 		<AssemblyName>Annotation.ViewModels</AssemblyName>
@@ -11,7 +11,6 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
-		<ProjectReference Include="..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
 		<ProjectReference Include="..\WebAnnotationModel\WebAnnotationModel.csproj" />
 	</ItemGroup>
 	<ItemGroup>

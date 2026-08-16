@@ -1,24 +1,34 @@
-<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFrameworks>net48;net10.0-windows</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <UseWPF>true</UseWPF>
-    <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>Viking.UI.WPF</AssemblyName>
     <RootNamespace>Viking.UI.WPF</RootNamespace>
+    <Nullable>disable</Nullable>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Common\Common.csproj" />
-    <ProjectReference Include="..\WCFTokenInjector\WCFTokenInjector.csproj" />
-    <ProjectReference Include="..\VolumeModel\VolumeModel.csproj" />
+    <Compile Remove="obj\**" />
+    <EmbeddedResource Remove="obj\**" />
+    <None Remove="obj\**" />
+    <Page Remove="obj\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Duende.IdentityModel" Version="7.0.0" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
-    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <ProjectReference Include="..\Common\Common.csproj" />
+    <ProjectReference Include="..\Viking.Tokens\Viking.Tokens.csproj" />
+    <ProjectReference Include="..\VolumeModel\VolumeModel.csproj" />
+    <ProjectReference Include="..\..\Geometry\Geometry.csproj" />
   </ItemGroup>
- 
+
+  <ItemGroup>
+    <PackageReference Include="Duende.IdentityModel" Version="7.1.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <PackageReference Include="System.Text.Json" Version="9.0.8" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.1" />
+  </ItemGroup>
+
 </Project>

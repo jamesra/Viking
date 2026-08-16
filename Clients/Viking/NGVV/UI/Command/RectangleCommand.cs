@@ -1,17 +1,20 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.ObjectModel;
 using System.Windows.Forms;
 using VikingXNAWinForms;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace Viking.UI.Commands
 {
     public class RectangleCommand(Viking.UI.Controls.SectionViewerControl parent) : DefaultCommand(parent), Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
-        protected GridVector2 Origin;
-        protected Geometry.GridRectangle MyRect;
+        protected Geometry.Vector2 Origin;
+        protected Geometry.Rectangle MyRect;
         protected Microsoft.Xna.Framework.Color Color;
 
         public override string[] HelpStrings => [
@@ -23,7 +26,7 @@ namespace Viking.UI.Commands
 
         protected override void OnMouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
         {
-            GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             //Figure out if we are starting a rectangle
             if (e.Button.Left() && false == this.CommandActive)
@@ -37,14 +40,14 @@ namespace Viking.UI.Commands
             base.OnMouseDown(sender, e);
         }
 
-        private bool TryUpdateMyRect(GridVector2 NewPosition)
+        private bool TryUpdateMyRect(Geometry.Vector2 NewPosition)
         {
             try
             {
                 if (NewPosition == Origin)
                     return false;
 
-                MyRect = new GridRectangle(NewPosition, Origin);
+                MyRect = new Rectangle(NewPosition, Origin);
                 return true;
             }
             catch (ArgumentException)
@@ -59,7 +62,7 @@ namespace Viking.UI.Commands
             //Figure out if we are starting a rectangle
             if (e.Button.Left() && this.CommandActive)
             {
-                GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+                Geometry.Vector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
 
                 if (TryUpdateMyRect(NewPosition))
                 {
@@ -77,7 +80,7 @@ namespace Viking.UI.Commands
             {
                 if (oldMouse.Button.Left() && this.CommandActive)
                 {
-                    GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+                    Geometry.Vector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
                     if (TryUpdateMyRect(NewPosition))
                     {
                         Execute();

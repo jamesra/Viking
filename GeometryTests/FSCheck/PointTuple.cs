@@ -4,9 +4,9 @@ using System.Collections.Generic;
 
 namespace GeometryTests.FSCheck
 {
-    internal class PointTuple(GridVector2 item1, int item2) : Tuple<GridVector2, int>(item1, item2), IEquatable<PointTuple>
+    internal class PointTuple(Vector2 item1, int item2) : Tuple<Vector2, int>(item1, item2), IEquatable<PointTuple>
     {
-        public GridVector2 Point => this.Item1;
+        public Vector2 Point => this.Item1;
         public int Value => this.Item2;
 
         public bool Equals(PointTuple other)
@@ -17,16 +17,16 @@ namespace GeometryTests.FSCheck
             return other.Point.Equals(this.Point) && other.Value.Equals(this.Value);
         }
 
-        public static implicit operator GridVector2(PointTuple t) => t.Point;
+        public static implicit operator Vector2(PointTuple t) => t.Point;
 
         public override string ToString() => $"{Point} : {Value}";
     }
 
-    internal class PointTupleComparer(AXIS axis) : IComparer<PointTuple>
+    internal class PointTupleComparer(Axis axis) : IComparer<PointTuple>
     {
-        public AXIS Axis = axis;
+        public Axis Axis = axis;
 
-        private readonly IComparer<GridVector2> Comparer = axis == AXIS.Y ? new GridVectorComparerYX() : new GridVectorComparerXY();
+        private readonly IComparer<Vector2> Comparer = axis == Axis.Y ? new Vector2ComparerYX() : new Vector2ComparerXY();
 
         public int Compare(PointTuple x, PointTuple y)
         {

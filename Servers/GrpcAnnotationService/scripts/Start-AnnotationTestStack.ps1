@@ -24,9 +24,10 @@ if (-not $RepoRoot) {
 $templateEnv = Join-Path $RepoRoot "Servers\AnnotationDatabase\config-template\build\env-template.txt"
 $composeBase = Join-Path $RepoRoot "docker-compose.yml"
 $composeOverride = Join-Path $RepoRoot "docker-compose.annotation-db.yml"
+$composeIdentityDevTest = Join-Path $RepoRoot "docker-compose.identity-devtest.yml"
 $applySchemaScript = Join-Path $RepoRoot "Servers\AnnotationDatabase\scripts\Apply-MinimalSchema.ps1"
 
-if (-not (Test-Path $composeBase) -or -not (Test-Path $composeOverride)) {
+if (-not (Test-Path $composeBase) -or -not (Test-Path $composeOverride) -or -not (Test-Path $composeIdentityDevTest)) {
     throw "Compose files not found under $RepoRoot"
 }
 
@@ -46,6 +47,7 @@ $composeArgs = @(
     "--env-file", $AnnotationSqlEnv,
     "-f", $composeBase,
     "-f", $composeOverride,
+    "-f", $composeIdentityDevTest,
     "up", "-d"
 )
 if ($Build) {
@@ -93,6 +95,7 @@ Write-Host @"
 Stack is up:
   Identity DevTest : http://localhost:5020
   gRPC (HTTP/h2c)  : http://localhost:5010
+  gRPC (HTTPS)     : https://localhost:5011  (Viking .NET 4.8)
   Annotation SQL   : localhost,1433  (database AnnotationTest)
 
 Run tests:

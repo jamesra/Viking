@@ -74,7 +74,7 @@ namespace Viking.Identity.Server.WebManagement
         {
             var apiFacing = resources.Where(IsApiFacingResource).ToList();
             var duplicates = apiFacing
-                .GroupBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                .GroupBy(r => ResourceScopeNames.ToScopePrefix(r.Name), StringComparer.OrdinalIgnoreCase)
                 .Where(g => g.Count() > 1)
                 .ToList();
 
@@ -87,7 +87,7 @@ namespace Viking.Identity.Server.WebManagement
             }
 
             return apiFacing
-                .GroupBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                .GroupBy(r => ResourceScopeNames.ToScopePrefix(r.Name), StringComparer.OrdinalIgnoreCase)
                 .Select(g => g.OrderBy(r => r.Id).First())
                 .ToList();
         }
@@ -96,10 +96,10 @@ namespace Viking.Identity.Server.WebManagement
         {
             return new ApiResource()
             {
-                Name = r.Name,
+                Name = ResourceScopeNames.ToScopePrefix(r.Name),
                 UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name },
                 Description = r.Description,
-                Scopes = r.AvailablePermissions.Select(permission => $"{r.Name}.{permission.PermissionId}").ToList(),
+                Scopes = r.AvailablePermissions.Select(permission => ResourceScopeNames.ToScope(r.Name, permission.PermissionId)).ToList(),
                 ApiSecrets = { _Secret }
             };
         }
@@ -115,8 +115,8 @@ namespace Viking.Identity.Server.WebManagement
         /// </summary>
         private async Task<IEnumerable<ApiResource>> FindApiResourcesByNameOnlyAsync(IEnumerable<string> apiResourceNames)
         {
-            var resources = await _context.Resource.Include(r => r.ResourceType).ThenInclude(rt => rt.Permissions)
-                .Where(r => ApiFacingResourceTypeIds.Contains(r.ResourceTypeId) && apiResourceNames.Contains(r.Name))
+            var resources = await _context.ApiFacingResourcesNamed(apiResourceNames)
+                .Include(r => r.ResourceType).ThenInclude(rt => rt.Permissions)
                 .ToListAsync();
 
             return ResourceToResourceApi(resources);
@@ -132,8 +132,8 @@ namespace Viking.Identity.Server.WebManagement
 
             var resource_names = resource_scopes.Select(r => r.ResourceName).ToList();
 
-            var resources = await _context.Resource.Include(r => r.ResourceType).ThenInclude(rt => rt.Permissions)
-                .Where(r => ApiFacingResourceTypeIds.Contains(r.ResourceTypeId) && resource_names.Contains(r.Name))
+            var resources = await _context.ApiFacingResourcesNamed(resource_names)
+                .Include(r => r.ResourceType).ThenInclude(rt => rt.Permissions)
                 .ToListAsync();
 
             standard_resources.AddRange(ResourceToResourceApi(resources));
@@ -196,19 +196,12 @@ namespace Viking.Identity.Server.WebManagement
         {
             return scopeNames.Select(scope =>
             {
-                var parts = scope.Split('.');
-                if (parts.Length == 2)
+                if (ResourceScopeNames.TryParse(scope, out var prefix, out var permission))
                 {
-                    return new ResourceScope() { ResourceName = parts[0], ScopeName = parts[1] };
+                    return new ResourceScope() { ResourceName = prefix, ScopeName = permission };
                 }
-                else if (parts.Length == 1)
-                {
-                    return new ResourceScope() { ScopeName = scope, ResourceName = null };
-                }
-                else
-                {
-                    return new ResourceScope() { ScopeName = null, ResourceName = null };
-                }
+
+                return new ResourceScope() { ScopeName = scope, ResourceName = null };
             });
         }
 
@@ -226,7 +219,7 @@ namespace Viking.Identity.Server.WebManagement
                 ApiResource = ResourceToResourceApi(r),
                 ApiScopes = r.AvailablePermissions.Select(p => new ApiScope()
                 {
-                    Name = $"{r.Name}.{p.PermissionId}",
+                    Name = ResourceScopeNames.ToScope(r.Name, p.PermissionId),
                     Description = p.Description,
                     UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name }
                 }).ToArray()

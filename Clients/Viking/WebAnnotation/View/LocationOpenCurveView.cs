@@ -14,7 +14,10 @@ using VikingXNAGraphics;
 using WebAnnotation.UI;
 using WebAnnotation.UI.Actions;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 using HorizontalAlignment = RoundCurve.HorizontalAlignment;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
@@ -22,11 +25,11 @@ namespace WebAnnotation.View
     {
         public static uint NumInterpolationPoints = Global.NumOpenCurveInterpolationPoints;
 
-        private GridVector2[] _MosaicCurveControlPoints;
+        private Geometry.Vector2[] _MosaicCurveControlPoints;
 
         private SqlGeometry _RenderedVolumeShape;
 
-        private GridVector2[] _VolumeCurveControlPoints;
+        private Geometry.Vector2[] _VolumeCurveControlPoints;
         public CurveLabel curveLabel;
         public CurveLabel curveParentLabel;
 
@@ -79,7 +82,7 @@ namespace WebAnnotation.View
             set => curveParentLabel.Alpha = value;
         }
 
-        public override GridVector2[] MosaicCurveControlPoints
+        public override Geometry.Vector2[] MosaicCurveControlPoints
         {
             get
             {
@@ -89,7 +92,7 @@ namespace WebAnnotation.View
             }
         }
 
-        public override GridVector2[] VolumeCurveControlPoints
+        public override Geometry.Vector2[] VolumeCurveControlPoints
         {
             get
             {
@@ -154,7 +157,7 @@ namespace WebAnnotation.View
             CurveLabel.Draw(device, scene, spriteBatch, font, curveManager, [curveLabel, curveParentLabel]);
         }
 
-        private void CreateLabelViews(GridVector2[] controlPoints, long? ParentID)
+        private void CreateLabelViews(Geometry.Vector2[] controlPoints, long? ParentID)
         {
             string LabelText = this.ParentID + " " + FullLabelText();
 
@@ -225,7 +228,7 @@ namespace WebAnnotation.View
             if (path.HasSelfIntersection == false)
             {
                 //If it is an open curve then offer to replace our curve with the new shape.
-                IAction changeContour = new Change1DContourAction(modelObj, new GridPolyline(path.SimplifiedPath));
+                IAction changeContour = new Change1DContourAction(modelObj, new Polyline(path.SimplifiedPath));
                 listActions.Add(changeContour);
             }
 

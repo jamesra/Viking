@@ -7,9 +7,9 @@ namespace Geometry
     /// Stores a quadtree 
     /// </summary>
     public class QuadTreeTemplatePoint<TPoint, TValue>
-         where TPoint : struct, IPoint
+         where TPoint : struct, IPoint2D
     {
-        //GridVector2[] _points;
+        //Vector2[] _points;
         QuadTreeNodeTemplatePoint<TPoint, TValue> Root;
 
         /// <summary>
@@ -17,13 +17,13 @@ namespace Geometry
         /// </summary>
         internal Dictionary<TValue, QuadTreeNodeTemplatePoint<TPoint, TValue>> ValueToNodeTable = [];
 
-        public QuadTreeTemplatePoint(GridRectangle border)
+        public QuadTreeTemplatePoint(Rectangle border)
         {
             //Create a root centered at 0,0
             this.Root = new QuadTreeNodeTemplatePoint<TPoint, TValue>(this, border);
         }
 
-        public QuadTreeTemplatePoint(TPoint[] keys, TValue[] values, GridRectangle border)
+        public QuadTreeTemplatePoint(TPoint[] keys, TValue[] values, Rectangle border)
         {
             CreateTree(keys, values, border);
         }
@@ -64,10 +64,10 @@ namespace Geometry
                 node.Parent.Remove(node);
         }
 
-        private void CreateTree(TPoint[] keys, TValue[] values, in GridRectangle border)
+        private void CreateTree(TPoint[] keys, TValue[] values, in Rectangle border)
         {
             //Create a node centered in the border
-            //this.Root = new QuadTreeNode<T>(this, new GridRectangle(double.MinValue, double.MaxValue, double.MinValue, double.MaxValue));
+            //this.Root = new QuadTreeNode<T>(this, new Rectangle(double.MinValue, double.MaxValue, double.MinValue, double.MaxValue));
             this.Root = new QuadTreeNodeTemplatePoint<TPoint, TValue>(this, border);
 
             for (int iPoint = 0; iPoint < keys.Length; iPoint++)
@@ -102,11 +102,11 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Return all points and values in the quadtree which fall inside the rectangle. Indicies correspond
+        /// Return all points and values in the quadtree which fall inside the rectangle. Indices correspond
         /// </summary>
         /// <param name="gridRect"></param>
         /// <returns></returns>
-        public void Intersect(in GridRectangle gridRect, out List<TPoint> outPoints, out List<TValue> outValues)
+        public void Intersect(in Rectangle gridRect, out List<TPoint> outPoints, out List<TValue> outValues)
         {
             this.Root.Intersect(in gridRect, true, out outPoints, out outValues);
             return;

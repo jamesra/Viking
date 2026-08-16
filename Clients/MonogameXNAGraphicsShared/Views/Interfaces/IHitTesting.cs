@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using System;
 using System.Threading.Tasks;
 
@@ -9,13 +10,13 @@ namespace VikingXNAGraphics
         /// <summary>
         /// The bounding box of the region we are interested in hit testing
         /// </summary>
-        GridRectangle BoundingBox { get; }
+        Geometry.Rectangle BoundingBox { get; }
 
         /// <summary>
         /// True if the passed point falls inside the view, a hit-testing function
         /// </summary>
         /// <param name="Position"></param>
         /// <returns></returns>
-        bool Contains(GridVector2 Position);
+        bool Contains(Vector2 Position);
     }
 }

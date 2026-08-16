@@ -1,9 +1,11 @@
 ﻿using Jotunn.Common;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace Jotunn.Controls
 {
@@ -141,7 +143,7 @@ namespace Jotunn.Controls
             VirtualizingGrid.CenterNumberProperty = DependencyProperty.Register("CenterNumber",
                                                                         typeof(int),
                                                                         typeof(VirtualizingGrid),
-                                                                        new FrameworkPropertyMetadata(1,
+                                                                        new FrameworkPropertyMetadata(0,
                                                                             FrameworkPropertyMetadataOptions.AffectsRender |
                                                                             FrameworkPropertyMetadataOptions.AffectsArrange |
                                                                             FrameworkPropertyMetadataOptions.AffectsMeasure));
@@ -152,7 +154,9 @@ namespace Jotunn.Controls
                                                                         new FrameworkPropertyMetadata(1,
                                                                             FrameworkPropertyMetadataOptions.AffectsRender |
                                                                             FrameworkPropertyMetadataOptions.AffectsArrange |
-                                                                            FrameworkPropertyMetadataOptions.AffectsMeasure));
+                                                                            FrameworkPropertyMetadataOptions.AffectsMeasure,
+                                                                            null,
+                                                                            CoerceGridDimension));
 
             VirtualizingGrid.NumColsProperty = DependencyProperty.Register("NumCols",
                                                                         typeof(int),
@@ -160,7 +164,9 @@ namespace Jotunn.Controls
                                                                         new FrameworkPropertyMetadata(1, 
                                                                             FrameworkPropertyMetadataOptions.AffectsRender |
                                                                             FrameworkPropertyMetadataOptions.AffectsArrange |
-                                                                            FrameworkPropertyMetadataOptions.AffectsMeasure));
+                                                                            FrameworkPropertyMetadataOptions.AffectsMeasure,
+                                                                            null,
+                                                                            CoerceGridDimension));
 
             VirtualizingGrid.VisibleRegionProperty = DependencyProperty.Register("VisibleRegion",
                                                                         typeof(VisibleRegionInfo),
@@ -168,36 +174,20 @@ namespace Jotunn.Controls
                                                                         new FrameworkPropertyMetadata(new VisibleRegionInfo(0, 0, 10000, 10000, 256), 
                                                                             FrameworkPropertyMetadataOptions.AffectsRender
                                                                             | FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
-            
-            InputGestureCollection IncrementInputs = new InputGestureCollection();
-            IncrementInputs.Add(new KeyGesture(Key.PageUp));
 
-            InputGestureCollection DecrementInputs = new InputGestureCollection();
-            DecrementInputs.Add(new KeyGesture(Key.PageDown));
+            incrementCenterIndexCommand = GlobalCommands.IncrementSectionNumber;
+            decrementCenterIndexCommand = GlobalCommands.DecrementSectionNumber;
+            addRowCommand = GlobalCommands.AddGridRowCommand;
+            removeRowCommand = GlobalCommands.RemoveGridRowCommand;
+            addColumnCommand = GlobalCommands.AddGridColumnCommand;
+            removeColumnCommand = GlobalCommands.RemoveGridColumnCommand;
 
-            InputGestureCollection AddRowInputs = new InputGestureCollection();
-            AddRowInputs.Add(new KeyGesture(Key.Up));
-
-            InputGestureCollection RemoveRowInputs = new InputGestureCollection();
-            RemoveRowInputs.Add(new KeyGesture(Key.Down));
-
-            InputGestureCollection AddColumnInputs = new InputGestureCollection();
-            AddColumnInputs.Add(new KeyGesture(Key.Right));
-
-            InputGestureCollection RemoveColumnInputs = new InputGestureCollection();
-            RemoveColumnInputs.Add(new KeyGesture(Key.Left));
-
-            InputGestureCollection IncreaseDownsampleInputs = new InputGestureCollection();
-            IncreaseDownsampleInputs.Add(new KeyGesture(Key.Add));
-            IncreaseDownsampleInputs.Add(new KeyGesture(Key.OemPlus));
-
-            incrementCenterIndexCommand = new RoutedUICommand("+", "IncrementCenterIndexCommand", typeof(VirtualizingGrid), IncrementInputs);
-            decrementCenterIndexCommand = new RoutedUICommand("-", "DecrementCenterIndexCommand", typeof(VirtualizingGrid), DecrementInputs);
-
-            addRowCommand = new RoutedUICommand("Add Row", "AddRowCommand", typeof(VirtualizingGrid), AddRowInputs);
-            removeRowCommand = new RoutedUICommand("Remove Row", "RemoveRowCommand", typeof(VirtualizingGrid), RemoveRowInputs);
-            addColumnCommand = new RoutedUICommand("Add Column", "AddColumnCommand", typeof(VirtualizingGrid), AddColumnInputs);
-            removeColumnCommand = new RoutedUICommand("Remove Column", "RemoveColumnCommand", typeof(VirtualizingGrid), RemoveColumnInputs);
+            CommandManager.RegisterClassCommandBinding(typeof(VirtualizingGrid), new CommandBinding(IncrementCommand, OnIncrementCommand));
+            CommandManager.RegisterClassCommandBinding(typeof(VirtualizingGrid), new CommandBinding(DecrementCommand, OnDecrementCommand));
+            CommandManager.RegisterClassCommandBinding(typeof(VirtualizingGrid), new CommandBinding(AddRowCommand, OnAddRowCommand));
+            CommandManager.RegisterClassCommandBinding(typeof(VirtualizingGrid), new CommandBinding(RemoveRowCommand, OnRemoveRowCommand, CanExecuteRemoveRowCommand));
+            CommandManager.RegisterClassCommandBinding(typeof(VirtualizingGrid), new CommandBinding(AddColumnCommand, OnAddColumnCommand));
+            CommandManager.RegisterClassCommandBinding(typeof(VirtualizingGrid), new CommandBinding(RemoveColumnCommand, OnRemoveColumnCommand, CanExecuteRemoveColumnCommand));
         }
 
         protected void MouseLeftButtonDownClassHandler(object o, RoutedEventArgs e)
@@ -207,39 +197,6 @@ namespace Jotunn.Controls
 
         public VirtualizingGrid()
         {
-            CommandManager.RegisterClassCommandBinding(typeof(VirtualizingGrid), new CommandBinding(VirtualizingGrid.IncrementCommand, OnIncrementCommand));
-            CommandManager.RegisterClassCommandBinding(typeof(VirtualizingGrid), new CommandBinding(VirtualizingGrid.DecrementCommand, OnDecrementCommand));
-            CommandManager.RegisterClassCommandBinding(typeof(VirtualizingGrid), new CommandBinding(VirtualizingGrid.AddRowCommand, OnAddRowCommand));
-            CommandManager.RegisterClassCommandBinding(typeof(VirtualizingGrid), new CommandBinding(VirtualizingGrid.RemoveRowCommand, OnRemoveRowCommand, CanExecuteRemoveRowCommand));
-            CommandManager.RegisterClassCommandBinding(typeof(VirtualizingGrid), new CommandBinding(VirtualizingGrid.AddColumnCommand, OnAddColumnCommand));
-            CommandManager.RegisterClassCommandBinding(typeof(VirtualizingGrid), new CommandBinding(VirtualizingGrid.RemoveColumnCommand, OnRemoveColumnCommand, CanExecuteRemoveColumnCommand));
-            //            CommandManager.RegisterClassCommandBinding(typeof(VirtualizingGrid), new CommandBinding(Jotunn.Common.GlobalCommands.IncrementSectionNumber, OnIncrementCommand));
-            //CommandManager.RegisterClassCommandBinding(typeof(VirtualizingGrid), new CommandBinding(Jotunn.Common.GlobalCommands.DecrementSectionNumber, OnDecrementCommand));
-
-            Prism.Commands.DelegateCommand incrementCommand = new Prism.Commands.DelegateCommand(() => CenterNumber++);
-            Prism.Commands.DelegateCommand decrementCommand = new Prism.Commands.DelegateCommand(() => CenterNumber--);
-
-            GlobalCommands.IncrementSectionNumber.RegisterCommand(incrementCommand);
-            GlobalCommands.DecrementSectionNumber.RegisterCommand(decrementCommand);
-
-            Prism.Commands.DelegateCommand addRowCommand = new Prism.Commands.DelegateCommand(AddRows);
-            Prism.Commands.DelegateCommand removeRowCommand = new Prism.Commands.DelegateCommand(RemoveRows, CanRemoveRows);
-
-            GlobalCommands.AddGridRowCommand.RegisterCommand(addRowCommand);
-            GlobalCommands.RemoveGridRowCommand.RegisterCommand(removeRowCommand);
-
-            Prism.Commands.DelegateCommand addColCommand = new Prism.Commands.DelegateCommand(AddColumns);
-            Prism.Commands.DelegateCommand removeColCommand = new Prism.Commands.DelegateCommand(RemoveColumns, CanRemoveColumns);
-
-            GlobalCommands.AddGridColumnCommand.RegisterCommand(addColCommand);
-            GlobalCommands.RemoveGridColumnCommand.RegisterCommand(removeColCommand);
-
-            CenterNumber = 10;
-            //GlobalCommands.IncrementSectionNumber.RegisterCommand(VirtualizingGrid.IncrementCommand);
-            //Need to do this so the mouse commands are handled
-            //  EventManager.RegisterClassHandler(typeof(ListBoxItem),
-            //                                  ListBoxItem.MouseLeftButtonDownEvent,
-            //                                new RoutedEventHandler(this.MouseLeftButtonDownClassHandler));
         }
                  
         /*
@@ -445,6 +402,39 @@ namespace Jotunn.Controls
             return finalSize;
         }
 
+        const int MaxGridDimension = 5;
+
+        static object CoerceGridDimension(DependencyObject d, object baseValue)
+        {
+            int value = (int)baseValue;
+            if (value < 1)
+                return 1;
+            if (value > MaxGridDimension)
+                return MaxGridDimension;
+            return value;
+        }
+
+        public IReadOnlyList<GridCellLayout> GetVisibleCells()
+        {
+            List<GridCellLayout> cells = new List<GridCellLayout>(Children.Count);
+            ItemContainerGenerator generator = ItemContainerGenerator as ItemContainerGenerator;
+            for (int i = 0; i < Children.Count; i++)
+            {
+                UIElement child = Children[i];
+                if (child == null)
+                    continue;
+
+                object item = generator?.ItemFromContainer(child);
+                GeneratorPosition pos = new GeneratorPosition(i, 0);
+                int itemIndex = ItemContainerGenerator.IndexFromGeneratorPosition(pos);
+                GeneralTransform transform = child.TransformToAncestor(this);
+                Rect bounds = transform.TransformBounds(new Rect(child.RenderSize));
+                cells.Add(new GridCellLayout(item, itemIndex, bounds));
+            }
+
+            return cells;
+        }
+
         private void CleanUpItems(int firstVisibleItemIndex, int lastVisibleItemIndex)
         {
 
@@ -477,44 +467,58 @@ namespace Jotunn.Controls
             }
         }
 
-        private void OnIncrementCommand(object sender, RoutedEventArgs e)
+        private static void OnIncrementCommand(object sender, ExecutedRoutedEventArgs e)
         {
-            CenterNumber++;
+            if (sender is VirtualizingGrid grid)
+                grid.CenterNumber++;
         }
 
-        private void OnDecrementCommand(object sender, RoutedEventArgs e)
+        private static void OnDecrementCommand(object sender, ExecutedRoutedEventArgs e)
         {
-            CenterNumber--;
+            if (sender is VirtualizingGrid grid)
+                grid.CenterNumber--;
         }
 
-        private void OnAddRowCommand(object sender, RoutedEventArgs e)
+        private static void OnAddRowCommand(object sender, ExecutedRoutedEventArgs e)
         {
-            NumRows += 2; 
+            if (sender is VirtualizingGrid grid)
+                grid.NumRows += 2;
         }
 
-        private void CanExecuteRemoveRowCommand(object sender, CanExecuteRoutedEventArgs e)
+        private static void CanExecuteRemoveRowCommand(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = NumRows > 2; 
+            e.CanExecute = sender is VirtualizingGrid grid && grid.NumRows > 1;
         }
 
-        private void OnRemoveRowCommand(object sender, RoutedEventArgs e)
+        private static void OnRemoveRowCommand(object sender, ExecutedRoutedEventArgs e)
         {
-            NumRows -= 2;
+            if (sender is VirtualizingGrid grid)
+            {
+                grid.NumRows -= 2;
+                if (grid.NumRows < 1)
+                    grid.NumRows = 1;
+            }
         }
 
-        private void OnAddColumnCommand(object sender, RoutedEventArgs e)
+        private static void OnAddColumnCommand(object sender, ExecutedRoutedEventArgs e)
         {
-            NumCols += 2;
+            if (sender is VirtualizingGrid grid)
+                grid.NumCols += 2;
         }
 
-        private void CanExecuteRemoveColumnCommand(object sender, CanExecuteRoutedEventArgs e)
+        private static void CanExecuteRemoveColumnCommand(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = NumCols > 2; 
+            e.CanExecute = sender is VirtualizingGrid grid && grid.NumCols > 1;
         }
 
-        private void OnRemoveColumnCommand(object sender, RoutedEventArgs e)
+        private static void OnRemoveColumnCommand(object sender, ExecutedRoutedEventArgs e)
         {
-            NumCols -= 2;
+            if (sender is VirtualizingGrid grid)
+            {
+                grid.NumCols -= 2;
+                if (grid.NumCols < 1)
+                    grid.NumCols = 1;
+            }
         }
 
         protected void AddRows()
@@ -550,7 +554,21 @@ namespace Jotunn.Controls
             if (NumCols < 1)
                 NumCols = 1;
         }
+    }
 
+    public sealed class GridCellLayout
+    {
+        public GridCellLayout(object item, int itemIndex, Rect bounds)
+        {
+            Item = item;
+            ItemIndex = itemIndex;
+            Bounds = bounds;
+        }
 
+        public object Item { get; }
+
+        public int ItemIndex { get; }
+
+        public Rect Bounds { get; }
     }
 }

@@ -35,9 +35,9 @@ namespace MorphologyMeshTest
             configuration.QuietOnSuccess = false;
             configuration.StartSize = 3;
 
-            Prop.ForAll<GridPolygon, GridPolygon>((A, B) =>
+            Prop.ForAll<Polygon, Polygon>((A, B) =>
             {
-                List<GridVector2> listMissingIntersections = [];
+                List<Vector2> listMissingIntersections = [];
 
                 bool PolysIntersect = A.Intersects(B);
 
@@ -51,11 +51,11 @@ namespace MorphologyMeshTest
 
                 var added_intersections = A.AddPointsAtIntersections(B);
 
-                bool polysContainAddedIntersections = GridPolygonTest.PolygonContainsIntersections(A, listMissingIntersections) && GridPolygonTest.PolygonContainsIntersections(B, listMissingIntersections);
+                bool polysContainAddedIntersections = PolygonTest.PolygonContainsIntersections(A, listMissingIntersections) && PolygonTest.PolygonContainsIntersections(B, listMissingIntersections);
                 var IntersectionsIncludingEndpoints = A.ExteriorSegments.Intersections(B.ExteriorSegments, false);
 
                 //Ensure all of our intersection points are endpoints, there is an edge case of perfectly overlapped exterior rings that must be handled.
-                var IntersectionsExcludingEndpoints = GridPolygonTest.GetPolygonIntersectionsExcludingEndpoings(A, B);
+                var IntersectionsExcludingEndpoints = PolygonTest.GetPolygonIntersectionsExcludingEndpoings(A, B);
 
                 bool polysOnlyIntersectAtEndpoints = IntersectionsExcludingEndpoints.Count == 0 && IntersectionsIncludingEndpoints.Count > 0;
                 bool pass = false == PolysIntersect || (polysContainAddedIntersections && polysOnlyIntersectAtEndpoints);
@@ -68,7 +68,7 @@ namespace MorphologyMeshTest
                            .Classify(!PolysIntersect, "Polygons did not intersect");
                 }
 
-                GridPolygon[] polys = [A, B];
+                Polygon[] polys = [A, B];
                 double[] ZLevels = [0, 100];
                 bool[] IsUpper = [false, true];
 

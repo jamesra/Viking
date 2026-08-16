@@ -1,10 +1,14 @@
 using Annotation.ViewModels.Commands;
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Windows;
+using Viking.AnnotationServiceTypes;
+using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 
@@ -30,7 +34,7 @@ namespace Annotation.ViewModels
                     return false;
                 }
 
-                obj = Store.StructureTypes.GetObjectByID(ID);
+                obj = Store.StructureTypes.GetObjectByID(ID, CancellationToken.None).Result;
             }
 
             if (obj is null)
@@ -55,7 +59,7 @@ namespace Annotation.ViewModels
                     return;
                 }
 
-                obj = Store.StructureTypes.GetObjectByID(ID);
+                obj = Store.StructureTypes.GetObjectByID(ID, CancellationToken.None).Result;
             }
 
             if (obj is null)
@@ -117,7 +121,7 @@ namespace Annotation.ViewModels
             ResetModelCommand = new DelegateCommand(RestoreModel, CanRestoreModel);
 
             Model = model;
-            Model.PermittedLinks.CollectionChanged += OnPermittedLinksCollectionChanged;
+            ((INotifyCollectionChanged)Model.PermittedLinks).CollectionChanged += OnPermittedLinksCollectionChanged;
             Model.PropertyChanged += Model_PropertyChanged;
         }
 
@@ -134,12 +138,12 @@ namespace Annotation.ViewModels
 
                 if (oldObj != null)
                 {
-                    oldObj.PermittedLinks.CollectionChanged -= viewmodel.OnPermittedLinksCollectionChanged;
+                    ((INotifyCollectionChanged)oldObj.PermittedLinks).CollectionChanged -= viewmodel.OnPermittedLinksCollectionChanged;
                 }
 
                 if (newObj != null)
                 {
-                    newObj.PermittedLinks.CollectionChanged += viewmodel.OnPermittedLinksCollectionChanged;
+                    ((INotifyCollectionChanged)newObj.PermittedLinks).CollectionChanged += viewmodel.OnPermittedLinksCollectionChanged;
                 }
             }
         }
@@ -218,7 +222,7 @@ namespace Annotation.ViewModels
 
             PermittedStructureLinkKey key = new(ID, Model.ID, false);
 
-            var obj = Store.PermittedStructureLinks.GetObjectByID(key, false);
+            var obj = Store.PermittedStructureLinks.GetObjectByID(key, AskServer: false, ForceRefreshFromServer: false, CancellationToken.None).Result;
             if (NewPermits.Contains(obj))
                 NewPermits.Remove(obj);
 
@@ -241,7 +245,7 @@ namespace Annotation.ViewModels
             }
 
             PermittedStructureLinkKey key = new(Model.ID, ID, false);
-            var obj = Store.PermittedStructureLinks.GetObjectByID(key, false);
+            var obj = Store.PermittedStructureLinks.GetObjectByID(key, AskServer: false, ForceRefreshFromServer: false, CancellationToken.None).Result;
             if (NewPermits.Contains(obj))
                 NewPermits.Remove(obj);
 
@@ -264,7 +268,7 @@ namespace Annotation.ViewModels
             }
 
             PermittedStructureLinkKey key = new(Model.ID, ID, true);
-            var obj = Store.PermittedStructureLinks.GetObjectByID(key, false);
+            var obj = Store.PermittedStructureLinks.GetObjectByID(key, AskServer: false, ForceRefreshFromServer: false, CancellationToken.None).Result;
             if (NewPermits.Contains(obj))
                 NewPermits.Remove(obj);
 
@@ -350,22 +354,21 @@ namespace Annotation.ViewModels
         private bool CanSaveModel(object item)
         {
             return true;
-            return Model.DBAction != AnnotationService.Types.DBACTION.NONE;
         }
 
         private void SaveModel(object item)
         {
-            Store.StructureTypes.Save();
+            Store.StructureTypes.Save(CancellationToken.None).Wait();
 
             foreach (PermittedStructureLinkObj newObj in NewPermits)
             {
                 //Store.PermittedStructureLinks.Create(newObj);
-                Store.PermittedStructureLinks.Save();
+                Store.PermittedStructureLinks.Save(CancellationToken.None).Wait();
             }
         }
 
-        private bool CanRestoreModel(object item) => Model.DBAction != AnnotationService.Types.DBACTION.NONE;
+        private bool CanRestoreModel(object item) => Model.DBAction != DBACTION.NONE;
 
-        private void RestoreModel(object item) => Store.StructureTypes.GetObjectByID(Model.ID, AskServer: true, ForceRefreshFromServer: true);
+        private void RestoreModel(object item) => Store.StructureTypes.GetObjectByID(Model.ID, AskServer: true, ForceRefreshFromServer: true, CancellationToken.None);
     }
 }

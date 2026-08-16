@@ -10,9 +10,9 @@ namespace WebAnnotation.UI.Commands
 {
     internal class CutHoleWithPenCommand : PlaceClosedCurveWithPenCommand
     {
-        private readonly GridPolygon OriginalMosaicPolygon;
-        private readonly GridPolygon OriginalVolumePolygon;
-        private readonly List<GridLineSegment> ExteriorSegments;
+        private readonly Polygon OriginalMosaicPolygon;
+        private readonly Polygon OriginalVolumePolygon;
+        private readonly List<LineSegment> ExteriorSegments;
         public override uint NumCurveInterpolations => Global.NumClosedCurveInterpolationPoints;
 
         private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
@@ -24,9 +24,9 @@ namespace WebAnnotation.UI.Commands
         /// <param name="VolumePolygon"></param>
 
         public CutHoleWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridPolygon mosaic_polygon,
+                                        Polygon mosaic_polygon,
                                         Microsoft.Xna.Framework.Color color,
-                                        GridVector2 origin,
+                                        Vector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : base(parent, color, origin, LineWidth, success_callback)
@@ -42,9 +42,9 @@ namespace WebAnnotation.UI.Commands
         }
 
         public CutHoleWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridPolygon mosaic_polygon,
+                                        Polygon mosaic_polygon,
                                         System.Drawing.Color color,
-                                        GridVector2 origin,
+                                        Vector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : base(parent, color.ToXNAColor(), origin, LineWidth, success_callback)
@@ -54,19 +54,19 @@ namespace WebAnnotation.UI.Commands
             OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
         }
 
-        protected override bool IsProposedClosedLoopValid(IReadOnlyCollection<GridVector2> proposed_curve)
+        protected override bool IsProposedClosedLoopValid(IReadOnlyCollection<Vector2> proposed_curve)
         {
-            GridPolygon proposed_hole = new(proposed_curve.ToArray().EnsureClosedRing());
-            return false == GridPolygon.SegmentsIntersect(OriginalVolumePolygon, proposed_hole);
+            Polygon proposed_hole = new(proposed_curve.ToArray().EnsureClosedRing());
+            return false == Polygon.SegmentsIntersect(OriginalVolumePolygon, proposed_hole);
         }
 
 
-        protected override void OnPenPathComplete(object sender, GridVector2[] Path)
+        protected override void OnPenPathComplete(object sender, Vector2[] Path)
         {
 
         }
 
-        protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
+        protected override void OnPenProposedNextSegmentChanged(object sender, LineSegment? segment)
         {
 
         }

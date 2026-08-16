@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Geometry; 
 using System;
 using System.Collections.Generic;
@@ -173,36 +173,33 @@ namespace WebAnnotationModel.Objects
             internal set;
         }
 
-        // private StructureObj _Parent;
+        private StructureObj _Parent;
+
+        /// <summary>
+        /// Structure this location belongs to. Resolved from <see cref="Store.Structures"/>
+        /// using <see cref="ParentID"/> when not already assigned (gRPC/WCF region loads
+        /// set ParentID but not this object).
+        /// </summary>
         public StructureObj Parent
         {
-            get;
-            /*
+            get
             {
-                //       if (_Parent != null)
-                //                    return _Parent;
+                if (_Parent != null)
+                    return _Parent;
 
                 if (ParentID.HasValue == false)
                     return null;
 
-                StructureObj _Parent = Store.Structures.GetObjectByID(ParentID.Value, false).Result;
-
-                //Queue a request for later
-                if (_Parent == null)
-                {
-                    Store.Structures.GetObjectByID(ParentID.Value);
-                    //Action<long> request = new Action<long>((ID) => Store.Structures.GetObjectByID(ID));
-                    //request.BeginInvoke(ParentID.Value, null, null); 
-                }
-
+                _Parent = Store.Structures.GetObjectByID(ParentID.Value, false);
                 return _Parent;
-            }*/
+            }
+            internal set => _Parent = value;
         }
 
 
-        private GridVector2? _MosaicPosition;
+        private Vector2? _MosaicPosition;
 
-        public GridVector2 Position
+        public Vector2 Position
         {
             get
             {
@@ -210,7 +207,7 @@ namespace WebAnnotationModel.Objects
                 if (!_MosaicPosition.HasValue)
                 {
                     _MosaicPosition = CenterOfLocationShape(this.MosaicShape);
-                    //_MosaicPosition = new GridVector2(Data.Position.X, Data.Position.Y);
+                    //_MosaicPosition = new Vector2(Data.Position.X, Data.Position.Y);
                 }
                 /*
 
@@ -227,13 +224,13 @@ namespace WebAnnotationModel.Objects
         }
 
 
-        private GridVector2? _VolumePosition;
+        private Vector2? _VolumePosition;
         /// <summary>
         /// VolumeX is the x position in volume space. It only exists to inform the database of an estimate of the locations position in volume space.
         /// We want the database to have this value so data processing tools don't need to implement the transforms
         /// It should not be used by the viewer since the viewer can calculate the value.*/
         /// </summary>
-        public GridVector2 VolumePosition
+        public Vector2 VolumePosition
         {
             get
             {
@@ -242,7 +239,7 @@ namespace WebAnnotationModel.Objects
                 {
                     _VolumePosition = CenterOfLocationShape(this.VolumeShape);
                     //_VolumePosition = Data.VolumeShape.Centroid();
-                    //_VolumePosition = new GridVector2(Data.VolumePosition.X, Data.VolumePosition.Y);
+                    //_VolumePosition = new Vector2(Data.VolumePosition.X, Data.VolumePosition.Y);
                 }
                 /*
                 if (!_VolumePosition.HasValue)
@@ -253,10 +250,10 @@ namespace WebAnnotationModel.Objects
 
         }
 
-        private static GridVector2 CenterOfLocationShape(IShape2D shape)
+        private static Vector2 CenterOfLocationShape(IShape2D shape)
         {
             if (shape is ICentroid c)
-                return c.Centroid.ToGridVector2();
+                return c.Centroid.ToVector2();
 
             return shape.BoundingBox.Center;
         }
@@ -284,7 +281,7 @@ namespace WebAnnotationModel.Objects
 
                 OnPropertyChanging(nameof(VolumePosition));
                 if (value is ICentroid c)
-                    _VolumePosition = c.Centroid.ToGridVector2();
+                    _VolumePosition = c.Centroid.ToVector2();
                 else
                     _VolumePosition = value.BoundingBox.Center;
                 OnPropertyChanged(nameof(VolumePosition));
@@ -315,7 +312,7 @@ namespace WebAnnotationModel.Objects
 
                 OnPropertyChanging(nameof(Position));
                 if (value is ICentroid c)
-                    _MosaicPosition = c.Centroid.ToGridVector2();
+                    _MosaicPosition = c.Centroid.ToVector2();
                 else
                     _MosaicPosition = value.BoundingBox.Center;
                 OnPropertyChanged(nameof(Position));
@@ -356,11 +353,11 @@ namespace WebAnnotationModel.Objects
             if (shape is ICircle2D circle)
                 return circle.Radius;
 
-            if (shape is IRectangle rect)
+            if (shape is IRectangle2D rect)
                 return Math.Sqrt(rect.Area);
 
             if (shape is ILineSegment2D line)
-                return GridVector2.Distance(line.A, line.B) / 2.0;
+                return Vector2.Distance(line.A, line.B) / 2.0;
 
             if (shape is IPoint2D point)
                 return 8;
@@ -492,6 +489,24 @@ namespace WebAnnotationModel.Objects
         /// we fire our own collection changed events with Add/Remove link calls.
         /// </summary>
         public ReadOnlyObservableCollection<long> Links => _Links.ReadOnlyObservable;
+
+        /// <summary>
+        /// Replace the local peer-ID set from a server location payload.
+        /// Used by gRPC converters so Location.Links survive hydration.
+        /// </summary>
+        internal async Task SetLinksFromServerAsync(IEnumerable<long> peers)
+        {
+            await _Links.ClearAsync();
+            if (peers == null)
+                return;
+
+            foreach (long peer in peers)
+            {
+                if (peer == ID)
+                    continue;
+                await _Links.AddAsync(peer);
+            }
+        }
 
         /// <summary>
         /// Allows LocationLinkStore to adjust the client after a link is created
@@ -670,6 +685,7 @@ namespace WebAnnotationModel.Objects
             if (parent != null)
             {
                 this.ParentID = parent.ID;
+                this.Parent = parent;
             } 
         }
 

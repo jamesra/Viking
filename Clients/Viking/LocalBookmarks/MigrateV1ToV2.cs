@@ -64,7 +64,7 @@ namespace LocalBookmarks
 
             Viking.VolumeModel.IVolumeToSectionTransform transform = Viking.UI.State.volume.GetSectionToVolumeTransform((int)newBookmark.Z);
 
-            if (transform.TryVolumeToSection(oldBookmark.Position.ToGridVector2(), out GridVector2 MosaicPosition))
+            if (transform.TryVolumeToSection(oldBookmark.Position.ToVector2(), out Vector2 MosaicPosition))
             {
                 newBookmark.MosaicPosition = new connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd.Point2D(MosaicPosition);
             }

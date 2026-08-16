@@ -24,7 +24,7 @@ namespace WebAnnotation.UI.Commands
 
         public PlaceClosedCurveWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
-                                        GridVector2 origin,
+                                        Vector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : base(parent, color, origin, LineWidth, success_callback)
@@ -33,7 +33,7 @@ namespace WebAnnotation.UI.Commands
 
         public PlaceClosedCurveWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         System.Drawing.Color color,
-                                        GridVector2 origin,
+                                        Vector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : base(parent, color, origin, LineWidth, success_callback)
@@ -54,16 +54,16 @@ namespace WebAnnotation.UI.Commands
 
 
 
-        protected virtual bool IsProposedClosedLoopValid(IReadOnlyCollection<GridVector2> proposed_curve) => true;
+        protected virtual bool IsProposedClosedLoopValid(IReadOnlyCollection<Vector2> proposed_curve) => true;
 
 
-        protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
+        protected override void OnPenProposedNextSegmentChanged(object sender, LineSegment? segment)
         {
 
         }
 
 
-        protected override void OnPenPathComplete(object sender, GridVector2[] Path)
+        protected override void OnPenPathComplete(object sender, Vector2[] Path)
         {
 
         }
@@ -101,7 +101,7 @@ namespace WebAnnotation.UI.Commands
 
         public PlaceOpenCurveWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
-                                        GridVector2 origin,
+                                        Vector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : base(parent, color, origin, LineWidth, success_callback)
@@ -110,7 +110,7 @@ namespace WebAnnotation.UI.Commands
 
         public PlaceOpenCurveWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         System.Drawing.Color color,
-                                        GridVector2 origin,
+                                        Vector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : base(parent, color, origin, LineWidth, success_callback)
@@ -143,12 +143,12 @@ namespace WebAnnotation.UI.Commands
             base.OnMouseUp(sender, e);
         }
 
-        protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
+        protected override void OnPenProposedNextSegmentChanged(object sender, LineSegment? segment)
         {
 
         }
 
-        protected override void OnPenPathComplete(object sender, GridVector2[] Path)
+        protected override void OnPenPathComplete(object sender, Vector2[] Path)
         {
         }
 
@@ -231,7 +231,7 @@ namespace WebAnnotation.UI.Commands
             "Home key: Round magnification to whole number"
             ];
 
-        //protected List<GridVector2> vert_stack = new List<GridVector2>();
+        //protected List<Vector2> vert_stack = new List<Vector2>();
         public Viking.UI.PenInputHelper PenInput;
 
         protected PolyLineView PathView;
@@ -268,14 +268,14 @@ namespace WebAnnotation.UI.Commands
         /// Used to initialize the path for the command
         /// </summary>
         /// <param name="path"></param>
-        public virtual void InitPath(IReadOnlyCollection<GridVector2> path)
+        public virtual void InitPath(IReadOnlyCollection<Vector2> path)
         {
             if (PenInput.path.Points.Count > 0)
             {
                 throw new ArgumentException("Path initialized with an existing path in place.");
             }
 
-            foreach (GridVector2 p in path)
+            foreach (Vector2 p in path)
             {
                 PenInput.Push(p);
                 PathView.Add(p);
@@ -284,7 +284,7 @@ namespace WebAnnotation.UI.Commands
 
         public PlaceGeometryWithPenCommandBase(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
-                                        GridVector2 origin,
+                                        Vector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : this(parent, color, LineWidth, success_callback)
@@ -295,7 +295,7 @@ namespace WebAnnotation.UI.Commands
 
         public PlaceGeometryWithPenCommandBase(Viking.UI.Controls.SectionViewerControl parent,
                                         System.Drawing.Color color,
-                                        GridVector2 origin,
+                                        Vector2 origin,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : this(parent,
@@ -342,7 +342,7 @@ namespace WebAnnotation.UI.Commands
                     PathView.Add(PenInput.Peek());
                     break;
                 case NotifyCollectionChangedAction.Reset:
-                    PathView.ControlPoints = new GridVector2[0];
+                    PathView.ControlPoints = new Vector2[0];
                     break;
                 default:
                     PathView.ControlPoints = PenInput.Points;
@@ -369,9 +369,9 @@ namespace WebAnnotation.UI.Commands
             base.OnCameraChanged(sender, e);
         }
 
-        protected abstract void OnPenPathComplete(object sender, GridVector2[] Path);
+        protected abstract void OnPenPathComplete(object sender, Vector2[] Path);
 
-        protected abstract void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment);
+        protected abstract void OnPenProposedNextSegmentChanged(object sender, LineSegment? segment);
 
         protected abstract void OnPathLoop(object sender, bool HasLoop);
 
@@ -393,7 +393,7 @@ namespace WebAnnotation.UI.Commands
             }
             else
             {
-                GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+                Vector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
                 Parent.StatusPosition = NewPosition;
                 SaveAsOldPenPosition(e);
             }

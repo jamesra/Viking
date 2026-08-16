@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 
@@ -16,38 +17,38 @@ namespace WebAnnotationTests.Commands
         public void TestFindPointWithinRadius_PointFound()
         {
             // Arrange
-            List<GridVector2> points = new List<GridVector2>
+            List<Vector2> points = new List<Vector2>
             {
-                new GridVector2(0, 0),
-                new GridVector2(10, 10),
-                new GridVector2(20, 20)
+                new Vector2(0, 0),
+                new Vector2(10, 10),
+                new Vector2(20, 20)
             };
-            GridVector2 searchPos = new GridVector2(10.5, 10.5); // Close to second point
+            Vector2 searchPos = new Vector2(10.5, 10.5); // Close to second point
             double radiusInPixels = 5.0;
 
             // Act
-            GridVector2? found = FindPointWithinRadiusHelper(points, searchPos, radiusInPixels);
+            Vector2? found = FindPointWithinRadiusHelper(points, searchPos, radiusInPixels);
 
             // Assert
             Assert.IsNotNull(found, "Should find point within radius");
-            Assert.AreEqual(new GridVector2(10, 10), found.Value);
+            Assert.AreEqual(new Vector2(10, 10), found.Value);
         }
 
         [TestMethod]
         public void TestFindPointWithinRadius_PointNotFound()
         {
             // Arrange
-            List<GridVector2> points = new List<GridVector2>
+            List<Vector2> points = new List<Vector2>
             {
-                new GridVector2(0, 0),
-                new GridVector2(10, 10),
-                new GridVector2(20, 20)
+                new Vector2(0, 0),
+                new Vector2(10, 10),
+                new Vector2(20, 20)
             };
-            GridVector2 searchPos = new GridVector2(50, 50); // Far from all points
+            Vector2 searchPos = new Vector2(50, 50); // Far from all points
             double radiusInPixels = 5.0;
 
             // Act
-            GridVector2? found = FindPointWithinRadiusHelper(points, searchPos, radiusInPixels);
+            Vector2? found = FindPointWithinRadiusHelper(points, searchPos, radiusInPixels);
 
             // Assert
             Assert.IsNull(found, "Should not find point outside radius");
@@ -57,12 +58,12 @@ namespace WebAnnotationTests.Commands
         public void TestFindPointWithinRadius_EmptyList()
         {
             // Arrange
-            List<GridVector2> points = new List<GridVector2>();
-            GridVector2 searchPos = new GridVector2(10, 10);
+            List<Vector2> points = new List<Vector2>();
+            Vector2 searchPos = new Vector2(10, 10);
             double radiusInPixels = 5.0;
 
             // Act
-            GridVector2? found = FindPointWithinRadiusHelper(points, searchPos, radiusInPixels);
+            Vector2? found = FindPointWithinRadiusHelper(points, searchPos, radiusInPixels);
 
             // Assert
             Assert.IsNull(found, "Should return null for empty list");
@@ -71,13 +72,13 @@ namespace WebAnnotationTests.Commands
         /// <summary>
         /// Helper method that simulates the FindPointWithinRadius logic from SegmentationCommand
         /// </summary>
-        private GridVector2? FindPointWithinRadiusHelper(List<GridVector2> points, GridVector2 searchPos, double radiusInPixels)
+        private Vector2? FindPointWithinRadiusHelper(List<Vector2> points, Vector2 searchPos, double radiusInPixels)
         {
             double radiusSquared = radiusInPixels * radiusInPixels;
 
             foreach (var pt in points)
             {
-                double distSq = GridVector2.DistanceSquared(pt, searchPos);
+                double distSq = Vector2.DistanceSquared(pt, searchPos);
                 if (distSq <= radiusSquared)
                 {
                     return pt;
@@ -95,16 +96,16 @@ namespace WebAnnotationTests.Commands
         public void TestWorldToViewport_BasicTransform()
         {
             // Arrange
-            GridRectangle viewportBounds = new GridRectangle(
-                new GridVector2(0, 0),
-                new GridVector2(100, 100)
+            Rectangle viewportBounds = new Rectangle(
+                new Vector2(0, 0),
+                new Vector2(100, 100)
             );
-            GridVector2 worldPos = new GridVector2(50, 50); // Center
+            Vector2 worldPos = new Vector2(50, 50); // Center
             int viewportWidth = 1000;
             int viewportHeight = 1000;
 
             // Act
-            GridVector2 result = WorldToViewportHelper(worldPos, viewportBounds, viewportWidth, viewportHeight);
+            Vector2 result = WorldToViewportHelper(worldPos, viewportBounds, viewportWidth, viewportHeight);
 
             // Assert
             Assert.AreEqual(500.0, result.X, 0.01, "X coordinate should be at center");
@@ -115,16 +116,16 @@ namespace WebAnnotationTests.Commands
         public void TestWorldToViewport_OriginTransform()
         {
             // Arrange
-            GridRectangle viewportBounds = new GridRectangle(
-                new GridVector2(0, 0),
-                new GridVector2(100, 100)
+            Rectangle viewportBounds = new Rectangle(
+                new Vector2(0, 0),
+                new Vector2(100, 100)
             );
-            GridVector2 worldPos = new GridVector2(0, 0); // Origin
+            Vector2 worldPos = new Vector2(0, 0); // Origin
             int viewportWidth = 1000;
             int viewportHeight = 1000;
 
             // Act
-            GridVector2 result = WorldToViewportHelper(worldPos, viewportBounds, viewportWidth, viewportHeight);
+            Vector2 result = WorldToViewportHelper(worldPos, viewportBounds, viewportWidth, viewportHeight);
 
             // Assert
             Assert.AreEqual(0.0, result.X, 0.01, "X coordinate should be at origin");
@@ -135,16 +136,16 @@ namespace WebAnnotationTests.Commands
         public void TestWorldToViewport_MaxBoundsTransform()
         {
             // Arrange
-            GridRectangle viewportBounds = new GridRectangle(
-                new GridVector2(0, 0),
-                new GridVector2(100, 100)
+            Rectangle viewportBounds = new Rectangle(
+                new Vector2(0, 0),
+                new Vector2(100, 100)
             );
-            GridVector2 worldPos = new GridVector2(100, 100); // Max bounds
+            Vector2 worldPos = new Vector2(100, 100); // Max bounds
             int viewportWidth = 1000;
             int viewportHeight = 1000;
 
             // Act
-            GridVector2 result = WorldToViewportHelper(worldPos, viewportBounds, viewportWidth, viewportHeight);
+            Vector2 result = WorldToViewportHelper(worldPos, viewportBounds, viewportWidth, viewportHeight);
 
             // Assert
             Assert.AreEqual(1000.0, result.X, 0.01, "X coordinate should be at max");
@@ -155,9 +156,9 @@ namespace WebAnnotationTests.Commands
         public void TestViewportToWorld_BasicTransform()
         {
             // Arrange
-            GridRectangle viewportBounds = new GridRectangle(
-                new GridVector2(0, 0),
-                new GridVector2(100, 100)
+            Rectangle viewportBounds = new Rectangle(
+                new Vector2(0, 0),
+                new Vector2(100, 100)
             );
             int pixelX = 500;
             int pixelY = 500;
@@ -165,7 +166,7 @@ namespace WebAnnotationTests.Commands
             int viewportHeight = 1000;
 
             // Act
-            GridVector2 result = ViewportToWorldHelper(pixelX, pixelY, viewportBounds, viewportWidth, viewportHeight);
+            Vector2 result = ViewportToWorldHelper(pixelX, pixelY, viewportBounds, viewportWidth, viewportHeight);
 
             // Assert
             Assert.AreEqual(50.0, result.X, 0.01, "X coordinate should be at center in world space");
@@ -176,17 +177,17 @@ namespace WebAnnotationTests.Commands
         public void TestViewportToWorld_RoundTrip()
         {
             // Arrange
-            GridRectangle viewportBounds = new GridRectangle(
-                new GridVector2(10, 20),
-                new GridVector2(110, 120)
+            Rectangle viewportBounds = new Rectangle(
+                new Vector2(10, 20),
+                new Vector2(110, 120)
             );
-            GridVector2 originalWorldPos = new GridVector2(60, 70); // Arbitrary point
+            Vector2 originalWorldPos = new Vector2(60, 70); // Arbitrary point
             int viewportWidth = 800;
             int viewportHeight = 600;
 
             // Act: Convert world -> viewport -> world
-            GridVector2 viewportPos = WorldToViewportHelper(originalWorldPos, viewportBounds, viewportWidth, viewportHeight);
-            GridVector2 roundTripWorldPos = ViewportToWorldHelper(
+            Vector2 viewportPos = WorldToViewportHelper(originalWorldPos, viewportBounds, viewportWidth, viewportHeight);
+            Vector2 roundTripWorldPos = ViewportToWorldHelper(
                 (int)viewportPos.X, 
                 (int)viewportPos.Y, 
                 viewportBounds, 
@@ -201,17 +202,17 @@ namespace WebAnnotationTests.Commands
         /// <summary>
         /// Helper method that simulates WorldToViewport logic from SegmentationCommand
         /// </summary>
-        private GridVector2 WorldToViewportHelper(GridVector2 worldPos, GridRectangle viewportBounds, int viewportWidth, int viewportHeight)
+        private Vector2 WorldToViewportHelper(Vector2 worldPos, Rectangle viewportBounds, int viewportWidth, int viewportHeight)
         {
-            GridVector2 boundsMin = viewportBounds.LowerLeft;
-            GridVector2 boundsMax = viewportBounds.UpperRight;
+            Vector2 boundsMin = viewportBounds.LowerLeft;
+            Vector2 boundsMax = viewportBounds.UpperRight;
 
             // Normalize to [0,1] range within viewport bounds
             double normalizedX = (worldPos.X - boundsMin.X) / (boundsMax.X - boundsMin.X);
             double normalizedY = (worldPos.Y - boundsMin.Y) / (boundsMax.Y - boundsMin.Y);
 
             // Scale to viewport pixel dimensions
-            return new GridVector2(
+            return new Vector2(
                 normalizedX * viewportWidth,
                 normalizedY * viewportHeight
             );
@@ -220,17 +221,17 @@ namespace WebAnnotationTests.Commands
         /// <summary>
         /// Helper method that simulates ViewportToWorld logic from SegmentationCommand
         /// </summary>
-        private GridVector2 ViewportToWorldHelper(int pixelX, int pixelY, GridRectangle viewportBounds, int viewportWidth, int viewportHeight)
+        private Vector2 ViewportToWorldHelper(int pixelX, int pixelY, Rectangle viewportBounds, int viewportWidth, int viewportHeight)
         {
             // Normalize from pixel coordinates to [0,1] range
             double normalizedX = (double)pixelX / viewportWidth;
             double normalizedY = (double)pixelY / viewportHeight;
 
-            GridVector2 boundsMin = viewportBounds.LowerLeft;
-            GridVector2 boundsMax = viewportBounds.UpperRight;
+            Vector2 boundsMin = viewportBounds.LowerLeft;
+            Vector2 boundsMax = viewportBounds.UpperRight;
 
             // Scale to world coordinates within viewport bounds
-            return new GridVector2(
+            return new Vector2(
                 boundsMin.X + normalizedX * (boundsMax.X - boundsMin.X),
                 boundsMin.Y + normalizedY * (boundsMax.Y - boundsMin.Y)
             );
@@ -244,16 +245,16 @@ namespace WebAnnotationTests.Commands
         public void TestPolygonContainsPoint_Inside()
         {
             // Arrange - Create a simple square polygon (closed ring)
-            GridVector2[] vertices = new GridVector2[]
+            Vector2[] vertices = new Vector2[]
             {
-                new GridVector2(0, 0),
-                new GridVector2(10, 0),
-                new GridVector2(10, 10),
-                new GridVector2(0, 10),
-                new GridVector2(0, 0)
+                new Vector2(0, 0),
+                new Vector2(10, 0),
+                new Vector2(10, 10),
+                new Vector2(0, 10),
+                new Vector2(0, 0)
             };
-            GridPolygon polygon = new GridPolygon(vertices);
-            GridVector2 testPoint = new GridVector2(5, 5); // Center point
+            Polygon polygon = new Polygon(vertices);
+            Vector2 testPoint = new Vector2(5, 5); // Center point
 
             // Act
             bool contains = polygon.Contains(testPoint);
@@ -266,16 +267,16 @@ namespace WebAnnotationTests.Commands
         public void TestPolygonContainsPoint_Outside()
         {
             // Arrange - Create a simple square polygon (closed ring)
-            GridVector2[] vertices = new GridVector2[]
+            Vector2[] vertices = new Vector2[]
             {
-                new GridVector2(0, 0),
-                new GridVector2(10, 0),
-                new GridVector2(10, 10),
-                new GridVector2(0, 10),
-                new GridVector2(0, 0)
+                new Vector2(0, 0),
+                new Vector2(10, 0),
+                new Vector2(10, 10),
+                new Vector2(0, 10),
+                new Vector2(0, 0)
             };
-            GridPolygon polygon = new GridPolygon(vertices);
-            GridVector2 testPoint = new GridVector2(15, 15); // Outside
+            Polygon polygon = new Polygon(vertices);
+            Vector2 testPoint = new Vector2(15, 15); // Outside
 
             // Act
             bool contains = polygon.Contains(testPoint);
@@ -288,16 +289,16 @@ namespace WebAnnotationTests.Commands
         public void TestPolygonContainsPoint_OnEdge()
         {
             // Arrange - Create a simple square polygon (closed ring)
-            GridVector2[] vertices = new GridVector2[]
+            Vector2[] vertices = new Vector2[]
             {
-                new GridVector2(0, 0),
-                new GridVector2(10, 0),
-                new GridVector2(10, 10),
-                new GridVector2(0, 10),
-                new GridVector2(0, 0)
+                new Vector2(0, 0),
+                new Vector2(10, 0),
+                new Vector2(10, 10),
+                new Vector2(0, 10),
+                new Vector2(0, 0)
             };
-            GridPolygon polygon = new GridPolygon(vertices);
-            GridVector2 testPoint = new GridVector2(5, 0); // On edge
+            Polygon polygon = new Polygon(vertices);
+            Vector2 testPoint = new Vector2(5, 0); // On edge
 
             // Act
             bool contains = polygon.Contains(testPoint);

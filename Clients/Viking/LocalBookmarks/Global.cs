@@ -344,7 +344,7 @@ namespace LocalBookmarks
             foreach (var bookmark in folder.Bookmarks)
             {
                 Viking.VolumeModel.IVolumeToSectionTransform transform = Viking.UI.State.volume.GetSectionToVolumeTransform((int)bookmark.Z);
-                if (transform.TrySectionToVolume(bookmark.MosaicPosition.ToGridVector2(), out GridVector2 sectionPosition))
+                if (transform.TrySectionToVolume(bookmark.MosaicPosition.ToVector2(), out Vector2 sectionPosition))
                 {
                     bookmark.VolumePosition = new Point2D(sectionPosition);
                 }

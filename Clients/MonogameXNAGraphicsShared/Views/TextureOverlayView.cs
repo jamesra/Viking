@@ -1,8 +1,11 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Linq;
 using VikingXNA;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -18,9 +21,9 @@ namespace VikingXNAGraphics
         public Texture2D Texture;
         //bool FlipTexture = false;
 
-        private GridRectangle _BoundingRect;
+        private Rectangle _BoundingRect;
 
-        public override GridRectangle BoundingRect
+        public override Rectangle BoundingRect
         {
             get => _BoundingRect;
             set
@@ -33,31 +36,31 @@ namespace VikingXNAGraphics
             }
         }
 
-        public override GridVector2 Position
+        public override Geometry.Vector2 Position
         {
             get => BoundingRect.Center;
 
             set
             {
-                GridVector2 Offset = BoundingRect.Center - BoundingRect.LowerLeft;
-                _BoundingRect = new GridRectangle(value - Offset, _BoundingRect.Width, _BoundingRect.Height);
+                Geometry.Vector2 Offset = BoundingRect.Center - BoundingRect.LowerLeft;
+                _BoundingRect = new Rectangle(value - Offset, _BoundingRect.Width, _BoundingRect.Height);
                 ClearCachedData();
             }
         }
 
         public override IShape2D Shape => BoundingRect;
 
-        public TextureOverlayView(Texture2D texture, GridVector2 Center, Color color) : base(color)
+        public TextureOverlayView(Texture2D texture, Geometry.Vector2 Center, Color color) : base(color)
         {
             this.Texture = texture;
             if (Texture is not null)
             {
-                GridVector2 offset = new(Texture.Width / 2.0, Texture.Height / 2.0);
-                this.BoundingRect = new GridRectangle(Center - offset, Center + offset);
+                Geometry.Vector2 offset = new(Texture.Width / 2.0, Texture.Height / 2.0);
+                this.BoundingRect = new Rectangle(Center - offset, Center + offset);
             }
         }
 
-        public TextureOverlayView(Texture2D texture, GridRectangle boundingRect, Color color) : base(color)
+        public TextureOverlayView(Texture2D texture, Rectangle boundingRect, Color color) : base(color)
         {
             this.Texture = texture;
             this.BoundingRect = boundingRect;

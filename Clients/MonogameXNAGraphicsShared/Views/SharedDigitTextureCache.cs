@@ -2,6 +2,8 @@ using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -48,7 +50,7 @@ namespace VikingXNAGraphics
                 {
                     _digitLabels[i] = new LabelView(
                         digit,
-                        GridVector2.Zero,
+                        Geometry.Vector2.Zero,
                         Color.White,
                         Alignment.CenterCenter,
                         Anchor.CenterCenter,
@@ -87,7 +89,7 @@ namespace VikingXNAGraphics
             if (label == null)
                 return;
             label.font = font;
-            label.Position = new GridVector2(centerPosition.X, centerPosition.Y);
+            label.Position = new Geometry.Vector2(centerPosition.X, centerPosition.Y);
             label.Color = color;
             label.DrawWithTexture(spriteBatch, font, device, centerPosition, drawScale);
         }

@@ -57,11 +57,11 @@ namespace GeometryTests
         [TestMethod]
         public void QuadTreeTestSimpleAddRemove()
         {
-            GridRectangle border = new(-10, 10, -10, 10);
+            Rectangle border = new(-10, 10, -10, 10);
             QuadTreeWithUniqueValues<int> tree = new(border);
             Assert.AreEqual(0, tree.Count);
 
-            GridVector2 p = new(0, 0);
+            Vector2 p = new(0, 0);
             int value = 0;
             tree.Add(p, value);
             Assert.AreEqual(1, tree.Count);
@@ -81,10 +81,10 @@ namespace GeometryTests
         [TestMethod]
         public void QuadTreeTestSimpleAddRemoveUpdate()
         {
-            GridRectangle border = new(-10, 10, -10, 10);
+            Rectangle border = new(-10, 10, -10, 10);
             QuadTreeWithUniqueValues<int> tree = new(border);
             Assert.AreEqual(0, tree.Count);
-            GridVector2 p = new(0, 0);
+            Vector2 p = new(0, 0);
             int value = 0;
             tree.Add(p, value);
             Assert.AreEqual(1, tree.Count);
@@ -97,7 +97,7 @@ namespace GeometryTests
             Assert.AreEqual(updated_value, tree[p]);
 
             int missing_value = 2;
-            GridVector2 missing_point = new(1, 1);
+            Vector2 missing_point = new(1, 1);
             try
             {
                 tree[missing_point] = missing_value;
@@ -119,7 +119,7 @@ namespace GeometryTests
             }
 
             int second_value = 3;
-            GridVector2 second_p = new(-1, 0);
+            Vector2 second_p = new(-1, 0);
 
             tree.Add(second_p, second_value);
 
@@ -141,7 +141,7 @@ namespace GeometryTests
         [TestMethod]
         public void QuadTreeTestOne()
         {
-            GridVector2[] points = [ new(0,0),
+            Vector2[] points = [ new(0,0),
                                                        new(1,1),
                                                        new(-10,-10),
                                                        new(-7.5, 2.5),
@@ -150,7 +150,7 @@ namespace GeometryTests
                                                        new(1.5, -8.5),
                                                        new(10, 10)];
             int[] values = [0, 1, 2, 3, 4, 5, 6, 7];
-            GridRectangle border = GridVector2.Border(points);
+            Rectangle border = Vector2.Border(points);
             QuadTreeWithUniqueValues<int> treeWithUniqueValues = new(points, values, border);
 
             //Start with a basic test ensuring we can find all the existing points
@@ -164,7 +164,7 @@ namespace GeometryTests
             }
 
             //Check to see if we can find nearby points
-            GridVector2[] nearpoints = [ new(.25,.25),
+            Vector2[] nearpoints = [ new(.25,.25),
                                                        new(.5,.51),
                                                        new(-7.5,-7.5),
                                                        new(-7.5, -1.5),
@@ -180,12 +180,12 @@ namespace GeometryTests
 
                 Assert.IsTrue(found);
                 Assert.AreEqual(i, retValue);
-                Assert.AreEqual(GridVector2.Distance(points[i], nearpoints[i]), distance);
+                Assert.AreEqual(Vector2.Distance(points[i], nearpoints[i]), distance);
             }
 
             //Check to see if we can return all points in a rectangle
-            GridRectangle gridRect = new(0, 15, 0, 15);
-            treeWithUniqueValues.Intersect(gridRect, out List<GridVector2> intersectPoints, out List<int> intersectValues);
+            Rectangle gridRect = new(0, 15, 0, 15);
+            treeWithUniqueValues.Intersect(gridRect, out List<Vector2> intersectPoints, out List<int> intersectValues);
             Assert.IsTrue(intersectValues.Contains(0));
             Assert.IsTrue(intersectValues.Contains(1));
             Assert.IsTrue(intersectValues.Contains(7));
@@ -206,14 +206,14 @@ namespace GeometryTests
             int seed = 0;
             System.Random RandGen = new(seed);
 
-            QuadTreeWithUniqueValues<int> treeWithUniqueValues = new(new GridRectangle(-BoundarySize, BoundarySize, -BoundarySize, BoundarySize));
+            QuadTreeWithUniqueValues<int> treeWithUniqueValues = new(new Rectangle(-BoundarySize, BoundarySize, -BoundarySize, BoundarySize));
 
-            GridVector2[] points = new GridVector2[numPoints];
+            Vector2[] points = new Vector2[numPoints];
 
             //Create the QuadTreeWithUniqueValues
             for (int i = 0; i < numPoints; i++)
             {
-                points[i] = new GridVector2(RandGen.NextDouble() * BoundarySize, RandGen.NextDouble() * BoundarySize);
+                points[i] = new Vector2(RandGen.NextDouble() * BoundarySize, RandGen.NextDouble() * BoundarySize);
                 treeWithUniqueValues.Add(points[i], i);
             }
 
@@ -289,7 +289,7 @@ namespace GeometryTests
             //Insert some points into the empty treeWithUniqueValues to make sure we still can 
             for (int i = 0; i < numPoints; i++)
             {
-                points[i] = new GridVector2(RandGen.NextDouble() * BoundarySize, RandGen.NextDouble() * BoundarySize);
+                points[i] = new Vector2(RandGen.NextDouble() * BoundarySize, RandGen.NextDouble() * BoundarySize);
                 treeWithUniqueValues.Add(points[i], i);
             }
 
@@ -303,10 +303,10 @@ namespace GeometryTests
                 Assert.AreEqual(iFound, i, "Could not find previously inserted point");
             }
 
-            List<DistanceToPoint<int>> foundPoints = treeWithUniqueValues.FindNearestPoints(new GridVector2(BoundarySize * -2, BoundarySize * -2), treeWithUniqueValues.Count * 2);
+            List<DistanceToPoint<int>> foundPoints = treeWithUniqueValues.FindNearestPoints(new Vector2(BoundarySize * -2, BoundarySize * -2), treeWithUniqueValues.Count * 2);
             Assert.AreEqual(treeWithUniqueValues.Count, foundPoints.Count);
 
-            foundPoints = treeWithUniqueValues.FindNearestPoints(GridVector2.Zero, treeWithUniqueValues.Count * 2);
+            foundPoints = treeWithUniqueValues.FindNearestPoints(Vector2.Zero, treeWithUniqueValues.Count * 2);
             Assert.AreEqual(treeWithUniqueValues.Count, foundPoints.Count);
 
             //The end 
@@ -325,7 +325,7 @@ namespace GeometryTests
             withUniqueValuesSpec.ToProperty().Check(config);
 
             /*
-            Prop.ForAll<GridVector2[]>(points =>
+            Prop.ForAll<Vector2[]>(points =>
             {
                 
                 QuadTreeWithUniqueValues<int> qTree = new QuadTreeWithUniqueValues<int>(points.BoundingBox());

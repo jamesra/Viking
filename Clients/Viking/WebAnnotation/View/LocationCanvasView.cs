@@ -5,19 +5,27 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+#if NETFRAMEWORK
 using System.Windows.Forms;
+#endif
 using Viking.Common;
 using VikingXNA;
 using WebAnnotation.UI;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.View
 {
+#if NETFRAMEWORK
     public delegate ContextMenuStrip ContextMenuGeneratorDelegate(IViewLocation locationID);
+#endif
 
     public abstract class LocationCanvasView(LocationObj obj) : IComparable<LocationCanvasView>, IUIObjectBasic, ICanvasGeometryView, IEquatable<LocationCanvasView>,
-                                               IMouseActionSupport, IPenActionSupport, IViewLocation, IHelpStrings, IContextMenu
+                                               IMouseActionSupport, IPenActionSupport, IViewLocation, IHelpStrings
+#if NETFRAMEWORK
+                                               , IContextMenu
+#endif
     {
         #region static
 
@@ -34,7 +42,7 @@ namespace WebAnnotation.View
         /// <param name="boundingBox">Bounding box in world coordinates</param>
         /// <param name="scene">Scene to check visibility against</param>
         /// <returns>True if the polygon would be visible</returns>
-        public static bool IsPolygonVisible(GridRectangle boundingBox, VikingXNA.Scene scene)
+        public static bool IsPolygonVisible(Rectangle boundingBox, VikingXNA.Scene scene)
         {
             // Check if bounding box intersects visible world bounds
             if (!scene.VisibleWorldBounds.Intersects(boundingBox))
@@ -59,7 +67,9 @@ namespace WebAnnotation.View
 
         public abstract SqlGeometry VolumeShapeAsRendered { get; }
 
+#if NETFRAMEWORK
         public readonly ContextMenuGeneratorDelegate ContextMenuGenerator = Location_CanvasContextMenuView.ContextMenuGenerator;
+#endif
 
         public int VisualHeight => ParentDepth;
 
@@ -113,9 +123,9 @@ namespace WebAnnotation.View
         }
 
 
-        public abstract LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID);
+        public abstract LocationAction GetMouseClickActionForPositionOnAnnotation(Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID);
 
-        public abstract LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID);
+        public abstract LocationAction GetPenContactActionForPositionOnAnnotation(Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID);
 
         public abstract List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber);
 
@@ -272,6 +282,7 @@ namespace WebAnnotation.View
 
         public long? ParentID => modelObj.ParentID;
 
+#if NETFRAMEWORK
         public ContextMenuStrip ContextMenu
         {
             get
@@ -284,6 +295,7 @@ namespace WebAnnotation.View
                 return null;
             }
         }
+#endif
 
         public string ToolTip => modelObj.Label;
 
@@ -351,7 +363,7 @@ namespace WebAnnotation.View
             }
         }
 
-        public abstract GridRectangle BoundingBox { get; }
+        public abstract Rectangle BoundingBox { get; }
         public abstract string[] HelpStrings { get; }
 
         internal virtual void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
@@ -382,24 +394,26 @@ namespace WebAnnotation.View
 
         public void ShowProperties()
         {
+#if NETFRAMEWORK
             Location_CanvasContextMenuView contextView = new(ID);
             contextView.ShowProperties();
+#endif
         }
 
         public void Save() => throw new NotImplementedException();
 
-        public virtual bool Contains(GridVector2 Position) => VolumeShapeAsRendered.Intersects(Position);
+        public virtual bool Contains(Vector2 Position) => VolumeShapeAsRendered.Intersects(Position);
 
-        public virtual bool Intersects(GridLineSegment line) => VolumeShapeAsRendered.Intersects(line);
+        public virtual bool Intersects(LineSegment line) => VolumeShapeAsRendered.Intersects(line);
 
         public virtual bool Intersects(SqlGeometry shape) => VolumeShapeAsRendered.STIntersects(shape).IsTrue;
 
-        public virtual double Distance(GridVector2 Position) => VolumeShapeAsRendered.Distance(Position);
+        public virtual double Distance(Vector2 Position) => VolumeShapeAsRendered.Distance(Position);
 
         public virtual double Distance(SqlGeometry Shape) => VolumeShapeAsRendered.STDistance(Shape).Value;
 
         public abstract bool IsVisible(Scene scene);
-        public abstract double DistanceFromCenterNormalized(GridVector2 Position);
+        public abstract double DistanceFromCenterNormalized(Vector2 Position);
 
         public bool Equals(LocationCanvasView other)
         {

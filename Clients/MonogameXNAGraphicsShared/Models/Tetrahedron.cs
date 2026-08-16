@@ -22,7 +22,7 @@ namespace VikingXNAGraphics.Models
 
             MeshModel<VertexPositionColor> model = new()
             {
-                Verticies = verts,
+                Vertices = verts,
                 Edges = edges
             };
 

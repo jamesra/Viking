@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using TriangleNet;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -40,8 +42,8 @@ namespace MonogameTestbed
             }
         }
 
-        private GridPolygon _Polygon;
-        public GridPolygon Polygon
+        private Polygon _Polygon;
+        public Polygon Polygon
         {
             get => _Polygon;
             set
@@ -69,15 +71,15 @@ namespace MonogameTestbed
             int[] indicies = mesh.IndiciesForPointsXY(Polygon.ExteriorRing);
 
             InteriorEdgeView = new LineSetView();
-            List<GridLineSegment> lines = mesh.ToLines();
+            List<LineSegment> lines = mesh.ToLines();
             InteriorEdgeView.LineViews = [.. lines.Where(l => !Polygon.ExteriorSegments.Contains(l)).Select(s => new LineView(s, this.width, this.Color, LineStyle.Ladder))];
 
             MedialAxisView = new LineSetView();
             var MedialAxis = MedialAxisFinder.ApproximateMedialAxisChordal(_Polygon, extendToApex: true);
-            GridLineSegment[] MedialAxisSegments = MedialAxis.Segments;
+            LineSegment[] MedialAxisSegments = MedialAxis.Segments;
             MedialAxisView.LineViews = [.. MedialAxisSegments.Select(s => new LineView(s, this.width, this.Color, LineStyle.Glow))];
             var NewVerts = MedialAxis.Nodes.Values.ToArray();
-            System.Diagnostics.Debug.Assert(NewVerts.All(v => _Polygon.GetRelation(v.Key) == ShapeRelation.CONTAINED), "Interior points must be inside Face");
+            System.Diagnostics.Debug.Assert(NewVerts.All(v => _Polygon.GetRelation(v.Key) == ShapeRelation.Contained), "Interior points must be inside Face");
 
         }
 
@@ -124,8 +126,8 @@ namespace MonogameTestbed
             }
         }
 
-        private GridPolygon _Polygon;
-        public GridPolygon Polygon
+        private Polygon _Polygon;
+        public Polygon Polygon
         {
             get => _Polygon;
             set
@@ -155,11 +157,11 @@ namespace MonogameTestbed
             int[] indicies = mesh.IndiciesForPointsXY(Polygon.ExteriorRing);
 
             InteriorEdgeView = new LineSetView();
-            List<GridLineSegment> lines = mesh.ToLines();
+            List<LineSegment> lines = mesh.ToLines();
             InteriorEdgeView.LineViews = [.. lines.Where(l => !Polygon.ExteriorSegments.Contains(l)).Select(s => new LineView(s, this.width, this.Color, LineStyle.Ladder))];
 
             MedialAxisView = new LineSetView();
-            GridLineSegment[] MedialAxis = MedialAxisFinder.ApproximateMedialAxisChordal(_Polygon, extendToApex: true).Segments;
+            LineSegment[] MedialAxis = MedialAxisFinder.ApproximateMedialAxisChordal(_Polygon, extendToApex: true).Segments;
             MedialAxisView.LineViews = [.. MedialAxis.Select(s => new LineView(s, this.width, this.Color, LineStyle.Glow))];
         }
 

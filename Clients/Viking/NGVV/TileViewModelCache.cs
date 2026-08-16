@@ -1,13 +1,12 @@
 using System;
 using System.Threading.Tasks;
 using Viking.Common;
-using Viking.UI;
 using Viking.ViewModels;
 using Viking.VolumeModel;
 
 namespace Viking
 {
-    internal class TileViewModelCacheEntry : CacheEntry<TileUniqueKey>
+    public class TileViewModelCacheEntry : CacheEntry<TileUniqueKey>
     {
         public TileView TileView;
 
@@ -29,7 +28,7 @@ namespace Viking
     /// This object manages construction of tile objects. 
     /// It first checks a cache for a tile matching the request.  If not found it creates a new tile object.
     /// </summary>
-    internal class TileViewModelCache : TimeQueueCache<TileUniqueKey, TileViewModelCacheEntry, TileView, TileView>
+    public class TileViewModelCache : TimeQueueCache<TileUniqueKey, TileViewModelCacheEntry, TileView, TileView>
     {
 
         public TileViewModelCache() : base()
@@ -144,7 +143,7 @@ namespace Viking
         protected override bool OnRemoveEntry(TileViewModelCacheEntry entry)
         {
             TileView tileView = entry.TileView;
-            System.Windows.Threading.Dispatcher dispatcher = State.MainThreadDispatcher;
+            System.Windows.Threading.Dispatcher dispatcher = TileLoadEnvironment.UiDispatcher;
 
             if (dispatcher != null && !dispatcher.CheckAccess())
             {

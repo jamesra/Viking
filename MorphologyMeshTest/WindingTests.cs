@@ -10,9 +10,9 @@ namespace MorphologyMeshTest
     [TestClass]
     public class WindingTests
     {
-        private static GridPolygon Square(double halfWidth)
+        private static Polygon Square(double halfWidth)
         {
-            return new GridPolygon(new GridVector2[]
+            return new Polygon(new Vector2[]
             {
                 new(-halfWidth, -halfWidth),
                 new(halfWidth, -halfWidth),
@@ -31,8 +31,8 @@ namespace MorphologyMeshTest
         [TestMethod]
         public void EnsureFacesHaveExternalNormals_StackedSquares_ConsistentWinding()
         {
-            GridPolygon lower = Square(10);
-            GridPolygon upper = Square(8);
+            Polygon lower = Square(10);
+            Polygon upper = Square(8);
 
             IShape2D[] shapes = [lower, upper];
             double[] zLevels = [0, 10];

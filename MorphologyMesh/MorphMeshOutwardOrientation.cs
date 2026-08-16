@@ -23,7 +23,7 @@ namespace MorphologyMesh
         {
             public IReadOnlyList<ShapeAtZ> ShapesAtZ { get; init; } = [];
 
-            /// <summary>Maps vertex ShapeIndex.iShape to upper/lower (local index on slice meshes, morph-node index on composite).</summary>
+            /// <summary>Maps vertex ShapeIndex.ShapeIndex to upper/lower (local index on slice meshes, morph-node index on composite).</summary>
             public IReadOnlyDictionary<int, bool> IsUpperByShapeIndex { get; init; } = new Dictionary<int, bool>();
 
             public static ShapeContext FromSliceTopology(SliceTopology topology) => new()
@@ -56,7 +56,7 @@ namespace MorphologyMesh
                 return list;
             }
 
-            /// <summary>Per-slice meshes use local polygon indices in ShapeIndex.iShape.</summary>
+            /// <summary>Per-slice meshes use local polygon indices in ShapeIndex.ShapeIndex.</summary>
             private static Dictionary<int, bool> BuildIsUpperMapLocal(SliceTopology topology)
             {
                 Dictionary<int, bool> map = [];
@@ -73,7 +73,7 @@ namespace MorphologyMesh
         public static bool FaceNeedsFlipForOutward(Mesh3D<MorphMeshVertex> mesh, IFace f, ShapeContext ctx)
         {
             MorphMeshVertex[] verts = [.. mesh[f.iVerts]];
-            GridVector3 n = mesh.Normal(f);
+            Vector3 n = mesh.Normal(f);
             double faceZ = verts.Average(v => v.Position.Z);
 
             if (Math.Abs(n.Z) < Global.Epsilon)
@@ -87,7 +87,7 @@ namespace MorphologyMesh
                 if (noncorresponding.ShapeIndex is null)
                     return false;
 
-                if (ctx.IsUpperByShapeIndex.TryGetValue(noncorresponding.ShapeIndex.iShape, out bool nonCorrespondingIsUpper) == false)
+                if (ctx.IsUpperByShapeIndex.TryGetValue(noncorresponding.ShapeIndex.ShapeIndex, out bool nonCorrespondingIsUpper) == false)
                     return false;
 
                 int iNonCorresponding = Array.IndexOf(verts, noncorresponding);
@@ -109,7 +109,7 @@ namespace MorphologyMesh
                 return noncorresponding.ShapeIndex.IsInner ? !output : output;
             }
 
-            GridVector2 faceCenter = mesh.GetCentroid(f);
+            Vector2 faceCenter = mesh.GetCentroid(f);
             double zTol = Math.Max(Global.Epsilon * 1000, 0.5);
 
             if (n.Z < 0)
@@ -117,7 +117,7 @@ namespace MorphologyMesh
                 IEnumerable<IShape2D> lowersAtZ = ctx.ShapesAtZ
                     .Where(s => s.IsUpper == false && Math.Abs(s.Z - faceZ) <= zTol)
                     .Select(s => s.Shape);
-                if (lowersAtZ.Any(p => p.GetRelation(faceCenter) == ShapeRelation.CONTAINED))
+                if (lowersAtZ.Any(p => p.GetRelation(faceCenter) == ShapeRelation.Contained))
                     return false;
                 return true;
             }
@@ -125,7 +125,7 @@ namespace MorphologyMesh
             IEnumerable<IShape2D> uppersAtZ = ctx.ShapesAtZ
                 .Where(s => s.IsUpper && Math.Abs(s.Z - faceZ) <= zTol)
                 .Select(s => s.Shape);
-            if (uppersAtZ.Any(p => p.GetRelation(faceCenter) == ShapeRelation.CONTAINED))
+            if (uppersAtZ.Any(p => p.GetRelation(faceCenter) == ShapeRelation.Contained))
                 return false;
             return true;
         }

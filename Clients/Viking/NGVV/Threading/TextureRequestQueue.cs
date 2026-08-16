@@ -6,9 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework.Graphics;
-using Viking.UI;
-using Viking.UI.Controls;
 using Viking.ViewModels;
 using VikingXNA;
 
@@ -134,7 +133,7 @@ namespace Viking
         /// Stable-sort the queue by visibility, then Downsample (highest first), then Z distance.
         /// Same keys as PendingTextureQueue.SortByVisibility. Called from the sort timer.
         /// </summary>
-        public static void SortByPriority(GridRectangle visibleBounds, int currentSectionZ)
+        public static void SortByPriority(Rectangle visibleBounds, int currentSectionZ)
         {
             lock (_lock)
             {
@@ -270,7 +269,7 @@ namespace Viking
                 }
             }
 
-            var volume = UI.State.volume;
+            var volume = TileLoadEnvironment.Volume;
             if (volume is null)
             {
                 PendingTextureQueue.EndLoadingFile(item.TileView.TextureFileName, null);
@@ -325,10 +324,10 @@ namespace Viking
                 return;
             sortTimer.Tick += (_, _) =>
             {
-                var viewer = UI.State.ViewerControl;
-                if (viewer?.Scene is null) return;
-                int currentZ = (viewer as SectionViewerControl)?.Section?.Number ?? 0;
-                SortByPriority(viewer.Scene.VisibleWorldBounds, currentZ);
+                var bounds = TileLoadEnvironment.GetVisibleWorldBounds?.Invoke();
+                if (bounds == null) return;
+                int currentZ = TileLoadEnvironment.GetSectionNumber?.Invoke() ?? 0;
+                SortByPriority(bounds.Value, currentZ);
             };
         }
     }

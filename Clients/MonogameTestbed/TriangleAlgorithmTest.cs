@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using TriangleNet;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 
 namespace MonogameTestbed
@@ -21,7 +23,7 @@ namespace MonogameTestbed
         readonly GamePadStateTracker Gamepad = new();
         readonly Cursor2DCameraManipulator CameraManipulator = new();
 
-        GridVector2 Cursor;
+        Geometry.Vector2 Cursor;
         CircleView cursorView;
         LabelView cursorLabel;
 
@@ -60,8 +62,8 @@ namespace MonogameTestbed
 
             if (state.ThumbSticks.Left != Vector2.Zero)
             {
-                Cursor += state.ThumbSticks.Left.ToGridVector2();
-                cursorView = new CircleView(new GridCircle(Cursor, PointRadius), Color.Gray);
+                Cursor += state.ThumbSticks.Left.ToVector2();
+                cursorView = new CircleView(new Circle(Cursor, PointRadius), Color.Gray);
                 cursorLabel = new LabelView(Cursor.ToLabel(), Cursor)
                 {
                     FontSize = 2,
@@ -71,8 +73,8 @@ namespace MonogameTestbed
 
             if (state.Buttons.RightStick == ButtonState.Pressed)
             {
-                Cursor = this.scene.Camera.LookAt.ToGridVector2();
-                cursorView = new CircleView(new GridCircle(Cursor, PointRadius), Color.Gray);
+                Cursor = this.scene.Camera.LookAt.ToVector2();
+                cursorView = new CircleView(new Circle(Cursor, PointRadius), Color.Gray);
                 cursorLabel = new LabelView(Cursor.ToLabel(), Cursor)
                 {
                     FontSize = 2,
@@ -122,7 +124,7 @@ namespace MonogameTestbed
             //Create a map of Vertex ID's to DRMesh ID's
             int[] IndexMap = mesh.Vertices.Select(v => v.ID).ToArray();
 
-            DRMesh.AddVertex(mesh.Vertices.Select(v => new Vertex<int>(new GridVector3(v.X, v.Y, 0), GridVector3.Zero, v.ID)).ToArray());
+            DRMesh.AddVertex(mesh.Vertices.Select(v => new Vertex<int>(new Geometry.Vector3(v.X, v.Y, 0), Geometry.Vector3.Zero, v.ID)).ToArray());
 
             foreach(TriangleNet.Topology.DCEL.Face f in mesh.Faces)
             {

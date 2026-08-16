@@ -19,6 +19,7 @@ Do **not** commit filled-in copies. Real env files live under `D:\Docker\Builds\
    ```powershell
    docker compose --env-file D:/Docker/Builds/AnnotationSql/.env `
      -f docker-compose.yml -f docker-compose.annotation-db.yml `
+     -f docker-compose.identity-devtest.yml `
      up --build -d identity-devtest annotation-sql grpc-annotation-service
    ```
 

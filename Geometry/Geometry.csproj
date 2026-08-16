@@ -22,17 +22,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Clients\Common\Common.csproj" />
+    <ProjectReference Include="..\Geometry.Core\Geometry.Core.csproj" />
     <ProjectReference Include="..\GraphLib\GraphLib.csproj" />
     <ProjectReference Include="..\RTree\RTree.csproj" />
-    <ProjectReference Include="..\UnitsAndScale\UnitsAndScale.csproj">
-      <Private>false</Private>
-    </ProjectReference>
     <ProjectReference Include="..\Utils\Utils.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Primitives\Enumerators\" />
-  </ItemGroup>
-
 </Project>

@@ -61,14 +61,40 @@ namespace Viking.Identity.Data
                 return await context.Resource.FirstOrDefaultAsync(r => r.Id == resourceId);
             }
 
-            return await context.Resource
+            var exactApiFacing = await context.Resource
                 .Where(r => r.Name == resourceIdOrName && ApiFacingResourceTypeIds.Contains(r.ResourceTypeId))
                 .OrderBy(r => r.Id)
-                .FirstOrDefaultAsync()
-                ?? await context.Resource
-                    .Where(r => r.Name == resourceIdOrName)
-                    .OrderBy(r => r.Id)
-                    .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync();
+            if (exactApiFacing != null)
+                return exactApiFacing;
+
+            var encodedApiFacing = await context.Resource
+                .Where(r => ApiFacingResourceTypeIds.Contains(r.ResourceTypeId)
+                            && r.Name.Replace(" ", "-") == resourceIdOrName)
+                .OrderBy(r => r.Id)
+                .FirstOrDefaultAsync();
+            if (encodedApiFacing != null)
+                return encodedApiFacing;
+
+            return await context.Resource
+                .Where(r => r.Name == resourceIdOrName)
+                .OrderBy(r => r.Id)
+                .FirstOrDefaultAsync();
+        }
+
+        /// <summary>
+        /// Volume/SegmentationService rows whose display name or encoded scope prefix is in <paramref name="names"/>.
+        /// </summary>
+        public static IQueryable<Resource> ApiFacingResourcesNamed(this ApplicationDbContext context, IEnumerable<string> names)
+        {
+            var nameList = names
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Distinct()
+                .ToList();
+
+            return context.Resource.Where(r =>
+                ApiFacingResourceTypeIds.Contains(r.ResourceTypeId) &&
+                (nameList.Contains(r.Name) || nameList.Contains(r.Name.Replace(" ", "-"))));
         }
 
         public static async Task<bool> IsUserPermitted(this ApplicationDbContext context, long ResourceId, string UserId, string PermissionId)
@@ -132,13 +158,13 @@ namespace Viking.Identity.Data
                         r => permissionsByType[r.ResourceTypeId]);
             }
 
-            var user_permissions = from gup in context.GrantedUserPermissions.Include(nameof(GrantedGroupPermission.Resource))
+            var user_permissions = from gup in context.GrantedUserPermissions.Include(gup => gup.Resource)
                 where gup.UserId == userId
                 select new { gup.ResourceId, gup.Resource.Name, gup.PermissionId, gup.Resource.ResourceTypeId};
             
             var group_memberships = (await context.RecursiveMemberOfGroups(userId)).Select(g => g.Id);
              
-            var group_permissions = from ggp in await context.GrantedGroupPermissions.Include(nameof(GrantedGroupPermission.Resource)).ToListAsync()
+            var group_permissions = from ggp in await context.GrantedGroupPermissions.Include(ggp => ggp.Resource).ToListAsync()
                 join groupMembership in group_memberships on ggp.GroupId equals groupMembership 
                 select new { ggp.ResourceId, ggp.Resource.Name, ggp.PermissionId, ggp.Resource.ResourceTypeId };
 
@@ -385,6 +411,14 @@ namespace Viking.Identity.Data
                 Results.Add(anonymousGroup);
             }
 
+            // Every authenticated user is also a member of Everyone (virtual membership).
+            // Explicit UserToGroupAssignment rows are still created on registration for UI/reporting.
+            var everyoneGroup = await context.Group.FindAsync(Special.Groups.Everyone.Id);
+            if (everyoneGroup != null && !Results.Any(g => g.Id == Special.Groups.Everyone.Id))
+            {
+                Results.Add(everyoneGroup);
+            }
+
             return Results.Distinct();
         }
 
@@ -533,9 +567,10 @@ namespace Viking.Identity.Data
                 return false;
             }
 
+            var encoded = ResourceScopeNames.ToScopePrefix(name);
             var query = context.Resource.Where(r =>
                 r.ResourceTypeId == resourceTypeId &&
-                r.Name == name);
+                (r.Name == name || r.Name.Replace(" ", "-") == encoded));
 
             if (excludeId.HasValue)
             {

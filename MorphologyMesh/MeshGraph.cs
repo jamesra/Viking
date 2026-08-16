@@ -14,10 +14,10 @@ namespace MorphologyMesh
 
     public class MeshEdge : GraphLib.Edge<ulong>
     {
-        public ConnectionVerticies SourcePort;
-        public ConnectionVerticies TargetPort;
+        public ConnectionVertices SourcePort;
+        public ConnectionVertices TargetPort;
 
-        public MeshEdge(ulong SourceNode, ulong TargetNode, ConnectionVerticies sourcePort, ConnectionVerticies targetPort) : base(SourceNode, TargetNode, false)
+        public MeshEdge(ulong SourceNode, ulong TargetNode, ConnectionVertices sourcePort, ConnectionVertices targetPort) : base(SourceNode, TargetNode, false)
         {
             this.SourcePort = sourcePort;
             this.TargetPort = targetPort;
@@ -29,7 +29,7 @@ namespace MorphologyMesh
             this.TargetPort = null;
         }
 
-        public ConnectionVerticies GetPortForNode(ulong NodeID)
+        public ConnectionVertices GetPortForNode(ulong NodeID)
         {
             if (NodeID == this.SourceNodeKey)
             {
@@ -44,7 +44,7 @@ namespace MorphologyMesh
             throw new ArgumentException("Node ID not part of edge");
         }
 
-        public ConnectionVerticies GetOppositePortForNode(ulong NodeID)
+        public ConnectionVertices GetOppositePortForNode(ulong NodeID)
         {
             if (NodeID == this.SourceNodeKey)
             {
@@ -70,11 +70,11 @@ namespace MorphologyMesh
         public bool UpperPortCapped = false; //True if faces have been generated
         public bool LowerPortCapped = false; //True if faces have been generated
 
-        public Dictionary<ulong, ConnectionVerticies> IDToCrossSection = [];
+        public Dictionary<ulong, ConnectionVertices> IDToCrossSection = [];
 
 
-        private ConnectionVerticies _CapPort;
-        public ConnectionVerticies CapPort
+        private ConnectionVertices _CapPort;
+        public ConnectionVertices CapPort
         {
             get => _CapPort;
             set
@@ -84,20 +84,20 @@ namespace MorphologyMesh
             }
         }
 
-        //public ConnectionVerticies CapPort;
+        //public ConnectionVertices CapPort;
 
         public bool AdjacentToPolygon = false;
 
 
-        //public GridVector3 UpperCentroid;
-        //public GridVector3 LowerCentroid;
+        //public Vector3 UpperCentroid;
+        //public Vector3 LowerCentroid;
 
         public MeshGraph MeshGraph
         {
             get; set;
         }
 
-        public GridBox BoundingBox => Mesh.BoundingBox;
+        public Box BoundingBox => Mesh.BoundingBox;
 
         public double Z => BoundingBox.CenterPoint.Z;
 
@@ -107,9 +107,9 @@ namespace MorphologyMesh
         public double CapPortZ;
 
         /*
-        private GridPolygon _ShapeAsPolygon;
+        private Polygon _ShapeAsPolygon;
 
-        public GridPolygon ShapeAsPolygon
+        public Polygon ShapeAsPolygon
         {
             get
             {

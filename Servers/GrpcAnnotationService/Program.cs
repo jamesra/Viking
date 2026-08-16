@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
 namespace gRPCAnnotationService
@@ -16,6 +18,24 @@ namespace gRPCAnnotationService
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
+                    webBuilder.ConfigureKestrel((context, options) =>
+                    {
+                        if (context.Configuration.GetValue("Kestrel:UseDockerPorts", false))
+                        {
+                            options.ListenAnyIP(80, listen => listen.Protocols = HttpProtocols.Http2);
+                            options.ListenAnyIP(443, listen =>
+                            {
+                                listen.Protocols = HttpProtocols.Http1AndHttp2;
+                                listen.UseHttps();
+                            });
+                            return;
+                        }
+
+                        options.ConfigureEndpointDefaults(listen =>
+                        {
+                            listen.Protocols = HttpProtocols.Http1AndHttp2;
+                        });
+                    });
                     webBuilder.UseStartup<Startup>();
                 });
     }

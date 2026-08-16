@@ -2,14 +2,20 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+#if NETFRAMEWORK
 using System.Windows.Forms;
+#endif
 using Viking.Common;
 using Viking.Common.UI;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.ViewModel
 {
-    public class Structure(StructureObj data) : Viking.Objects.UIObjBase, IEquatable<Structure>, IEqualityComparer<Structure>, IContextMenu
+    public class Structure(StructureObj data) : Viking.Objects.UIObjBase, IEquatable<Structure>, IEqualityComparer<Structure>
+#if NETFRAMEWORK
+        , IContextMenu
+#endif
     {
         public StructureObj modelObj = data;
 
@@ -84,7 +90,7 @@ namespace WebAnnotation.ViewModel
         public IEnumerable<ObjAttribute> Attributes
         {
             get => modelObj.Attributes;
-            set => modelObj.Attributes = [.. value];
+            set => modelObj.SetAttributes(value).Wait();
         }
 
         [Column("Notes")]
@@ -101,18 +107,7 @@ namespace WebAnnotation.ViewModel
 
         public static void ToggleAttribute(StructureObj structObj, string tag)
         {
-            ObjAttribute attrib = new(tag, null);
-            List<ObjAttribute> listAttributes = [.. structObj.Attributes];
-            if (listAttributes.Contains(attrib))
-            {
-                listAttributes.Remove(attrib);
-            }
-            else
-            {
-                listAttributes.Add(attrib);
-            }
-
-            structObj.Attributes = listAttributes;
+            structObj.ToggleAttribute(tag).Wait();
         }
 
         public LocationObj Center
@@ -144,18 +139,18 @@ namespace WebAnnotation.ViewModel
                     double meanY = (sumY) * Global.Scale.Y;
                     double meanZ = (sumZ) * Global.Scale.Z;
 
-                    Geometry.GridVector3 MeanPosition = new(meanX, meanY, meanZ);
+                    Geometry.Vector3 MeanPosition = new(meanX, meanY, meanZ);
 
                     //Find the location closest to the mean position
                     double minDistance = double.MaxValue;
                     int iClosest = 0;
                     for (int iLoc = 0; iLoc < locations.Length; iLoc++)
                     {
-                        Geometry.GridVector3 locPosition = new(locations[iLoc].VolumePosition.X * Global.Scale.X,
+                        Geometry.Vector3 locPosition = new(locations[iLoc].VolumePosition.X * Global.Scale.X,
                                                                                     locations[iLoc].VolumePosition.Y * Global.Scale.Y,
                                                                                     locations[iLoc].Z * Global.Scale.Z);
 
-                        double distance = Geometry.GridVector3.Distance(MeanPosition, locPosition);
+                        double distance = Geometry.Vector3.Distance(MeanPosition, locPosition);
                         if (distance < minDistance)
                         {
                             iClosest = iLoc;
@@ -178,6 +173,7 @@ namespace WebAnnotation.ViewModel
             remove => modelObj.PropertyChanged -= value;
         }
 
+#if NETFRAMEWORK
         public override ContextMenuStrip ContextMenu
         {
             get
@@ -202,6 +198,8 @@ namespace WebAnnotation.ViewModel
             }
         }
 
+#endif
+
         public override void Save()
         {
             try
@@ -210,12 +208,18 @@ namespace WebAnnotation.ViewModel
             }
             catch (System.ServiceModel.FaultException e)
             {
+#if NETFRAMEWORK
                 AnnotationOverlay.ShowFaultExceptionMsgBox(e);
+#else
+                System.Diagnostics.Trace.WriteLine(e);
+#endif
             }
 
         }
 
+#if NETFRAMEWORK
         public override Viking.UI.Controls.GenericTreeNode CreateNode() => new Viking.UI.Controls.GenericTreeNode(this);
+#endif
 
         public override Type[] AssignableParentTypes => [typeof(StructureObj)];
 
@@ -223,6 +227,7 @@ namespace WebAnnotation.ViewModel
 
         #endregion
 
+#if NETFRAMEWORK
         protected void ContextMenu_OnMorphology(object sender, EventArgs e) => Global.Export.OpenMorphology(ID);
 
 
@@ -259,9 +264,9 @@ namespace WebAnnotation.ViewModel
             //            long[] Loc_Ids = Store.Structures.GetUnfinishedBranches(this.ID);
             //            List<LocationObj> listLocations = Store.Locations.GetObjectsByIDs(Loc_Ids, true);
 
-            AnnotationService.Types.LocationPositionOnly[] LocationArray = Store.Structures.GetUnfinishedBranchesWithPosition(ID);
+            WebAnnotationModel.LocationPositionOnly[] LocationArray = Store.Structures.GetUnfinishedBranchesWithPosition(ID);
 
-            Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>> dictSectionToLocations = MapLocationsToSections(LocationArray);
+            Dictionary<double, List<WebAnnotationModel.LocationPositionOnly>> dictSectionToLocations = MapLocationsToSections(LocationArray);
 
             List<double> levels = [.. dictSectionToLocations.Keys];
             levels.Sort();
@@ -274,14 +279,14 @@ namespace WebAnnotation.ViewModel
             return levels.Count > 0;
         }
 
-        private string _LocationToString(AnnotationService.Types.LocationPositionOnly loc) => "Radius: " + loc.Radius.ToString("F1") + " X: " + loc.Position.X.ToString("F0") + " Y: " + loc.Position.Y.ToString("F0");
+        private string _LocationToString(WebAnnotationModel.LocationPositionOnly loc) => "Radius: " + loc.Radius.ToString("F1") + " X: " + loc.Position.X.ToString("F0") + " Y: " + loc.Position.Y.ToString("F0");
 
-        private ToolStripMenuItem BuildContextMenusForLevel(long level, List<AnnotationService.Types.LocationPositionOnly> listObjs)
+        private ToolStripMenuItem BuildContextMenusForLevel(long level, List<WebAnnotationModel.LocationPositionOnly> listObjs)
         {
             ToolStripMenuItem rootMenuItem = null;
             if (listObjs.Count == 1)
             {
-                AnnotationService.Types.LocationPositionOnly locObj = listObjs[0];
+                WebAnnotationModel.LocationPositionOnly locObj = listObjs[0];
                 //For a single item do not create a submenu
                 string locString = _LocationToString(locObj);
                 rootMenuItem = new ToolStripMenuItem(level.ToString("D4") + " - " + locString)
@@ -293,7 +298,7 @@ namespace WebAnnotation.ViewModel
             else
             {
                 rootMenuItem = new ToolStripMenuItem(level.ToString("D4"));
-                foreach (AnnotationService.Types.LocationPositionOnly locObj in listObjs)
+                foreach (WebAnnotationModel.LocationPositionOnly locObj in listObjs)
                 {
                     string locString = _LocationToString(locObj);
                     ToolStripMenuItem subItem = new(locString)
@@ -308,10 +313,10 @@ namespace WebAnnotation.ViewModel
             return rootMenuItem;
         }
 
-        private Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>> MapLocationsToSections(IEnumerable<AnnotationService.Types.LocationPositionOnly> locations)
+        private Dictionary<double, List<WebAnnotationModel.LocationPositionOnly>> MapLocationsToSections(IEnumerable<WebAnnotationModel.LocationPositionOnly> locations)
         {
-            Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>> dictSectionToLocations = [];
-            foreach (AnnotationService.Types.LocationPositionOnly loc in locations)
+            Dictionary<double, List<WebAnnotationModel.LocationPositionOnly>> dictSectionToLocations = [];
+            foreach (WebAnnotationModel.LocationPositionOnly loc in locations)
             {
                 if (!dictSectionToLocations.ContainsKey(loc.Position.Z))
                 {
@@ -333,6 +338,7 @@ namespace WebAnnotation.ViewModel
 
             AnnotationOverlay.GoToLocation(loc);
         }
+#endif
 
         public override void Delete() => Store.Structures.Remove(modelObj);/*
             Structure OriginalParent = this.Parent;

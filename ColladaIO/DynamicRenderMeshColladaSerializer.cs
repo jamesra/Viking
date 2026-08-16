@@ -180,7 +180,7 @@ namespace ColladaIO
                 translate_type translation = new()
                 {
                     sid = "translate",
-                    Text = model.Translation.coords
+                    Text = model.Translation.Coords
                 };
                 NodeItems.Add(translation);
             }
@@ -395,7 +395,7 @@ namespace ColladaIO
 
             translate_type translation = new()
             {
-                Text = model.Translation.coords
+                Text = model.Translation.Coords
             };
 
             instance_node_type node_instance = new()

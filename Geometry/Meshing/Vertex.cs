@@ -138,21 +138,21 @@ namespace Geometry.Meshing
     {
         public T Data { get; set; }
 
-        public Vertex3D(int index, GridVector3 p, GridVector3 n, T data) : base(index, p, n)
+        public Vertex3D(int index, Vector3 p, Vector3 n, T data) : base(index, p, n)
         {
             Data = data;
         }
 
-        public Vertex3D(GridVector3 p, GridVector3 n, T data) : base(p, n)
+        public Vertex3D(Vector3 p, Vector3 n, T data) : base(p, n)
         {
             Data = data;
         }
 
-        public Vertex3D(GridVector3 p, GridVector3 n) : base(p, n)
+        public Vertex3D(Vector3 p, Vector3 n) : base(p, n)
         {
         }
 
-        public Vertex3D(GridVector3 p, T data) : base(p)
+        public Vertex3D(Vector3 p, T data) : base(p)
         {
             Data = data;
         }
@@ -167,38 +167,38 @@ namespace Geometry.Meshing
     /// </summary>
     public class Vertex3D : VertexBase, IVertex3D
     {
-        private GridVector3 _Position;
+        private Vector3 _Position;
 
-        public GridVector3 Position
+        public Vector3 Position
         {
             get => _Position;
             set => _Position = value;
         }
 
-        public GridVector3 Normal { get; set; }
+        public Vector3 Normal { get; set; }
 
-        public Vertex3D(GridVector3 p, GridVector3 n) : base()
+        public Vertex3D(Vector3 p, Vector3 n) : base()
         {
             _Position = p;
             Normal = n;
         }
 
-        public Vertex3D(GridVector3 p) : base()
+        public Vertex3D(Vector3 p) : base()
         {
             _Position = p;
-            Normal = GridVector3.Zero;
+            Normal = Vector3.Zero;
         }
 
-        public Vertex3D(int index, GridVector3 p, GridVector3 n) : base(index)
+        public Vertex3D(int index, Vector3 p, Vector3 n) : base(index)
         {
             _Position = p;
             Normal = n;
         }
 
-        public Vertex3D(int index, GridVector3 p) : base(index)
+        public Vertex3D(int index, Vector3 p) : base(index)
         {
             _Position = p;
-            Normal = GridVector3.Zero;
+            Normal = Vector3.Zero;
         }
 
 
@@ -238,17 +238,17 @@ namespace Geometry.Meshing
     {
         public T Data { get; set; }
 
-        public Vertex2D(int index, GridVector2 p, T data, IComparer<IEdgeKey> edgeComparer = null) : base(index, p, edgeComparer)
+        public Vertex2D(int index, Vector2 p, T data, IComparer<IEdgeKey> edgeComparer = null) : base(index, p, edgeComparer)
         {
             Data = data;
         }
 
-        public Vertex2D(GridVector2 p, T data, IComparer<IEdgeKey> edgeComparer = null) : base(p, edgeComparer)
+        public Vertex2D(Vector2 p, T data, IComparer<IEdgeKey> edgeComparer = null) : base(p, edgeComparer)
         {
             Data = data;
         }
 
-        public Vertex2D(GridVector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(p, edgeComparer)
+        public Vertex2D(Vector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(p, edgeComparer)
         {
         }
 
@@ -264,15 +264,15 @@ namespace Geometry.Meshing
     /// </summary>
     public class Vertex2D : VertexBase, IVertex2D
     {
-        public GridVector2 Position { get; set; }
+        public Vector2 Position { get; set; }
 
 
-        public Vertex2D(GridVector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(edgeComparer)
+        public Vertex2D(Vector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(edgeComparer)
         {
             Position = p;
         }
 
-        public Vertex2D(int index, GridVector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(index, edgeComparer)
+        public Vertex2D(int index, Vector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(index, edgeComparer)
         {
             Position = p;
         }

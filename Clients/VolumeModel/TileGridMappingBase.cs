@@ -106,51 +106,51 @@ namespace Viking.VolumeModel
             }
         }
 
-        public override GridRectangle ControlBounds
+        public override Rectangle ControlBounds
         {
             get
             {
                 GridInfo Level = LevelToGridInfo[MinDownsample];
-                return new GridRectangle(0, Level.GridXDim * Level.Downsample * TileSizeX,
+                return new Rectangle(0, Level.GridXDim * Level.Downsample * TileSizeX,
                                          0, Level.GridYDim * Level.Downsample * TileSizeY);
             }
         }
 
-        public override GridRectangle? SectionBounds
+        public override Rectangle? SectionBounds
         {
             get
             {
                 GridInfo Level = LevelToGridInfo[MinDownsample];
-                return new GridRectangle(0, Level.GridXDim * Level.Downsample * TileSizeX,
+                return new Rectangle(0, Level.GridXDim * Level.Downsample * TileSizeX,
                                          0, Level.GridYDim * Level.Downsample * TileSizeY);
             }
         }
 
-        public override GridRectangle? VolumeBounds
+        public override Rectangle? VolumeBounds
         {
             get
             {
                 GridInfo Level = LevelToGridInfo[MinDownsample];
-                return new GridRectangle(0, Level.GridXDim * Level.Downsample * TileSizeX,
+                return new Rectangle(0, Level.GridXDim * Level.Downsample * TileSizeX,
                                          0, Level.GridYDim * Level.Downsample * TileSizeY);
             }
         }
 
         /*
-        public override bool TrySectionToVolume(GridVector2 P, out GridVector2 transformedP)
+        public override bool TrySectionToVolume(Vector2 P, out Vector2 transformedP)
         {
             transformedP = P;
             return true; 
         }
 
-        public override bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP)
+        public override bool TryVolumeToSection(Vector2 P, out Vector2 transformedP)
         {
             transformedP = P;
             return true; 
         }
-        public override GridVector2[] VolumeToSection(GridVector2[] P)
+        public override Vector2[] VolumeToSection(Vector2[] P)
         {
-            GridVector2[] transformedP = new GridVector2[P.Length];
+            Vector2[] transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
             return transformedP;
         }
@@ -161,9 +161,9 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TryVolumeToSection(GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TryVolumeToSection(Vector2[] P, out Vector2[] transformedP)
         {
-            transformedP = new GridVector2[P.Length];
+            transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
             return P.Select(p => { return true; }).ToArray();
         }
@@ -173,16 +173,16 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TrySectionToVolume(GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TrySectionToVolume(Vector2[] P, out Vector2[] transformedP)
         {
-            transformedP = new GridVector2[P.Length];
+            transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
             return P.Select(p => { return true; }).ToArray();
         }
 
-        public override GridVector2[] SectionToVolume(GridVector2[] P)
+        public override Vector2[] SectionToVolume(Vector2[] P)
         {
-            GridVector2[] transformedP = new GridVector2[P.Length];
+            Vector2[] transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
             return transformedP;
         }
@@ -292,27 +292,27 @@ namespace Viking.VolumeModel
         {
             PositionNormalTextureVertex[] verticies =
             [
-                new PositionNormalTextureVertex(new GridVector3(iX * this.TileSizeX * roundedDownsample, iY * this.TileSizeY * roundedDownsample, 0),
-                                                                   GridVector3.UnitZ,
-                                                               new GridVector2(0, 0)),
-                new PositionNormalTextureVertex(new GridVector3((iX + 1) * this.TileSizeX * roundedDownsample, iY * this.TileSizeY * roundedDownsample, 0),
-                                                                   GridVector3.UnitZ,
-                                                               new GridVector2(1, 0)),
-                new PositionNormalTextureVertex(new GridVector3(iX * this.TileSizeX * roundedDownsample, (iY + 1) * this.TileSizeY * roundedDownsample, 0),
-                                                                   GridVector3.UnitZ,
-                                                               new GridVector2(0, 1)),
-                new PositionNormalTextureVertex(new GridVector3((iX + 1) * this.TileSizeX * roundedDownsample, (iY + 1) * this.TileSizeY * roundedDownsample, 0),
-                                                                   GridVector3.UnitZ,
-                                                               new GridVector2(1, 1)),
+                new PositionNormalTextureVertex(new Vector3(iX * this.TileSizeX * roundedDownsample, iY * this.TileSizeY * roundedDownsample, 0),
+                                                                   Vector3.UnitZ,
+                                                               new Vector2(0, 0)),
+                new PositionNormalTextureVertex(new Vector3((iX + 1) * this.TileSizeX * roundedDownsample, iY * this.TileSizeY * roundedDownsample, 0),
+                                                                   Vector3.UnitZ,
+                                                               new Vector2(1, 0)),
+                new PositionNormalTextureVertex(new Vector3(iX * this.TileSizeX * roundedDownsample, (iY + 1) * this.TileSizeY * roundedDownsample, 0),
+                                                                   Vector3.UnitZ,
+                                                               new Vector2(0, 1)),
+                new PositionNormalTextureVertex(new Vector3((iX + 1) * this.TileSizeX * roundedDownsample, (iY + 1) * this.TileSizeY * roundedDownsample, 0),
+                                                                   Vector3.UnitZ,
+                                                               new Vector2(1, 1)),
             ];
             return verticies;
         }
 
         protected static readonly int[] TriangleEdges = [0, 1, 2, 1, 3, 2];
 
-        public override Task<TilePyramid> VisibleTilesAsync(GridRectangle VisibleBounds, double DownSample) => Task.Run(() => VisibleTiles(VisibleBounds, DownSample));
+        public override Task<TilePyramid> VisibleTilesAsync(Rectangle VisibleBounds, double DownSample) => Task.Run(() => VisibleTiles(VisibleBounds, DownSample));
 
-        public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
+        public override TilePyramid VisibleTiles(Rectangle VisibleBounds, double DownSample)
         {
             TilePyramid VisibleTiles = new(VisibleBounds);
 
@@ -353,7 +353,7 @@ namespace Viking.VolumeModel
         }
 
 
-        private List<TileViewModel> RecursiveVisibleTiles(GridRectangle VisibleBounds, int roundedDownsample)
+        private List<TileViewModel> RecursiveVisibleTiles(Rectangle VisibleBounds, int roundedDownsample)
         {
             GridInfo gridInfo = LevelToGridInfo[roundedDownsample];
 

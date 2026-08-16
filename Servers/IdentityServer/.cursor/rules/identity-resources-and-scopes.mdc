@@ -42,8 +42,12 @@ await context.FindApiFacingResourceAsync(name);
 ## OAuth scopes
 
 - Standard: `openid`, `profile`, `Viking.Annotation`
-- Per volume: `{VolumeName}.Read`, `{VolumeName}.Annotate`, `{VolumeName}.Review`
+- Per volume: `{EncodedVolumeName}.Read`, `{EncodedVolumeName}.Annotate`, `{EncodedVolumeName}.Review`
+- Spaces in `Resource.Name` are encoded as `-` in scopes and Permissions URL keys (`gRPC RC1 Test` → `gRPC-RC1-Test.Read`). Display names keep spaces.
+- `FindApiFacingResourceAsync` accepts the display name or the encoded prefix
+- `IsResourceNameTaken` treats encoded-prefix collisions as taken (`Foo Bar` vs `Foo-Bar`)
 - Do not treat `Viking.Annotation` as a Volume named `Viking` when parsing `resource.permission` scopes
+- Do not use `%20` inside OAuth scope tokens (form-urlencoded would decode it back to a space)
 
 ## Which process does what
 
@@ -54,6 +58,8 @@ await context.FindApiFacingResourceAsync(name);
 | WebApi | `:6001` | `/Permissions/*` (introspection / anonymous username endpoints) |
 
 MyAccess and management UIs should query `ApplicationDbContext` (or authenticated APIs) — never call WebApi `/Permissions/AccessibleVolumes` without a bearer token (returns `{}`).
+
+VikingXML `VolumeToEndpoint IdentityApi` (or `Authentication`) must reach **WebApi** (`:6001`). A public host with no port (`https://identity.codepharm.net/Permissions/...`) hits IdentityServerStandalone or nginx→WebManagement and returns an unhandled 404 (`[IS]` / `[MGMT]`, “middleware pipeline without being handled”). Clients rewrite same-host IdentityApi URLs that are not on 6000/6001 to the WebApi port (`IdentityEndpoints.ResolvePermissionsApiUrl`).
 
 ## Client AllowedScopes
 

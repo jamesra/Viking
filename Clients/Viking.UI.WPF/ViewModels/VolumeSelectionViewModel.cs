@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Duende.IdentityModel.Client;
+using Viking.Common;
 using Viking.Tokens;
 using Viking.UI.WPF.Models;
 
@@ -236,11 +237,7 @@ namespace Viking.UI.WPF.ViewModels
                     return;
                 }
 
-                // IdentityApiURL uses the same host but port 6001 instead of the Identity Server port
-                var identityApiUri = new UriBuilder(identityUri)
-                {
-                    Port = 6001
-                }.Uri;
+                var identityApiUri = IdentityEndpoints.FromIdentityServer(identityUri);
 
                 // Debug logging
                 Trace.WriteLine($"[VolumeSelection] Identity Server URL: {identityUri}");

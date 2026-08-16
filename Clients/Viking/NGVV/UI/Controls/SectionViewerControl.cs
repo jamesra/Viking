@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -21,6 +22,8 @@ using Viking.VolumeModel;
 using VikingXNA;
 using VikingXNAGraphics;
 using VikingXNAGraphics.Controls;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 
 namespace Viking.UI.Controls
@@ -141,9 +144,9 @@ namespace Viking.UI.Controls
         protected System.Windows.Forms.ToolStripItem tsMagnification;
         protected System.Windows.Forms.ToolStripItem tsChannels;
 
-        private GridVector2 _StatusPosition;
+        private Geometry.Vector2 _StatusPosition;
 
-        public GridVector2 StatusPosition
+        public Geometry.Vector2 StatusPosition
         {
             get => _StatusPosition;
             set
@@ -778,7 +781,7 @@ namespace Viking.UI.Controls
         private readonly struct SectionTextureCacheKey : IEquatable<SectionTextureCacheKey>
         {
             public readonly int SectionNumber;
-            public readonly GridRectangle VisibleWorldBounds;
+            public readonly Geometry.Rectangle VisibleWorldBounds;
             public readonly int ViewportWidth;
             public readonly int ViewportHeight;
             public readonly double CameraDownsample;
@@ -788,7 +791,7 @@ namespace Viking.UI.Controls
             public readonly bool ShowTileMesh;
             public readonly bool ShowStosMesh;
 
-            public SectionTextureCacheKey(int sectionNumber, GridRectangle visibleWorldBounds, int viewportWidth, int viewportHeight,
+            public SectionTextureCacheKey(int sectionNumber, Geometry.Rectangle visibleWorldBounds, int viewportWidth, int viewportHeight,
                 double cameraDownsample, string channelKey, string currentTransform, bool colorizeTiles, bool showTileMesh, bool showStosMesh)
             {
                 SectionNumber = sectionNumber;
@@ -1201,7 +1204,7 @@ namespace Viking.UI.Controls
             }
         }
 
-        public async Task ExportImage(string Filename, GridRectangle MyRect, int Z, double Downsample, bool IncludeOverlays)
+        public async Task ExportImage(string Filename, Geometry.Rectangle MyRect, int Z, double Downsample, bool IncludeOverlays)
         {
             Debug.Assert(MyRect.Left < MyRect.Right);
             Debug.Assert(MyRect.Bottom < MyRect.Top);
@@ -1728,7 +1731,7 @@ namespace Viking.UI.Controls
         {
             if (upSectionButton is null)
             {
-                TextureCircleView plusView = TextureCircleView.CreatePlusCircle(new GridCircle(GridVector2.Zero, 1.0),
+                TextureCircleView plusView = TextureCircleView.CreatePlusCircle(new Circle(Geometry.Vector2.Zero, 1.0),
                                                 Microsoft.Xna.Framework.Color.Goldenrod);
 
                 upSectionButton = new VikingXNAGraphics.Controls.CircularButton(plusView, this.OnUpSectionButtonClicked)
@@ -1739,7 +1742,7 @@ namespace Viking.UI.Controls
 
             if (downSectionButton is null)
             {
-                TextureCircleView minusView = TextureCircleView.CreateMinusCircle(new GridCircle(GridVector2.Zero, 1.0),
+                TextureCircleView minusView = TextureCircleView.CreateMinusCircle(new Circle(Geometry.Vector2.Zero, 1.0),
                                                 Microsoft.Xna.Framework.Color.Goldenrod);
 
                 downSectionButton = new VikingXNAGraphics.Controls.CircularButton(minusView)
@@ -1766,15 +1769,15 @@ namespace Viking.UI.Controls
             //TODO: These coordinates on the screen should be from 0 to 1 with a seperate worldviewproj matrix.  However to get this running I'm just
             //calculating in volume spce. 
 
-            GridVector2 TopLeft = scene.ScreenToWorld(0, scene.Viewport.Height);
-            GridVector2 BottomRight = scene.ScreenToWorld(scene.Viewport.Width, 0);
-            GridVector2 BottomLeft = scene.ScreenToWorld(0, 0);
+            Geometry.Vector2 TopLeft = scene.ScreenToWorld(0, scene.Viewport.Height);
+            Geometry.Vector2 BottomRight = scene.ScreenToWorld(scene.Viewport.Width, 0);
+            Geometry.Vector2 BottomLeft = scene.ScreenToWorld(0, 0);
 
-            GridVector2 Tenth = new(scene.VisibleWorldBounds.Width / 15.0, -scene.VisibleWorldBounds.Height / 15.0);
+            Geometry.Vector2 Tenth = new(scene.VisibleWorldBounds.Width / 15.0, -scene.VisibleWorldBounds.Height / 15.0);
 
             double radius = Math.Min(Tenth.X, -Tenth.Y);
-            upSectionButton.Circle = new GridCircle(BottomLeft + Tenth, radius);
-            downSectionButton.Circle = new GridCircle((BottomLeft + Tenth) + new GridVector2(0, Tenth.Y * 2.5), radius);
+            upSectionButton.Circle = new Circle(BottomLeft + Tenth, radius);
+            downSectionButton.Circle = new Circle((BottomLeft + Tenth) + new Geometry.Vector2(0, Tenth.Y * 2.5), radius);
 
             OverlayShaderEffect overlayEffect = VikingXNAGraphics.DeviceEffectsStore<OverlayShaderEffect>.TryGet(Device);
             overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleSingleColorTextureAlphaOverlayEffect;
@@ -1790,7 +1793,7 @@ namespace Viking.UI.Controls
 
             GraphicsDevice graphicsDevice = Device;
             RenderTargetBinding[] originalRenderTargets = Device.GetRenderTargets();
-            GridRectangle Bounds = scene.VisibleWorldBounds;
+            Geometry.Rectangle Bounds = scene.VisibleWorldBounds;
 
             basicEffect.Alpha = 1.0f;
             basicEffect.AmbientLightColor = new Microsoft.Xna.Framework.Vector3(1, 1, 1);
@@ -1801,8 +1804,8 @@ namespace Viking.UI.Controls
 
             double HalfWidth = Bounds.Width / 2;
             double HalfHeight = Bounds.Height / 2;
-            GridVector2 BotLeft = new(Bounds.Center.X - HalfWidth, Bounds.Center.Y + HalfHeight);
-            GridVector2 TopRight = new(Bounds.Center.X + HalfWidth, Bounds.Center.Y - HalfHeight);
+            Geometry.Vector2 BotLeft = new(Bounds.Center.X - HalfWidth, Bounds.Center.Y + HalfHeight);
+            Geometry.Vector2 TopRight = new(Bounds.Center.X + HalfWidth, Bounds.Center.Y - HalfHeight);
 
             VertexPositionNormalTexture[] visibleAreaMesh = [
                 new( new Vector3((float)BotLeft.X, (float)BotLeft.Y, 0), Vector3.UnitZ, new Vector2(0,0)),
@@ -2521,7 +2524,7 @@ namespace Viking.UI.Controls
                     //                                                                            channel.Color.A);
                     //}
 
-                    //                GridRectangle renderTargetBounds = scene.VisibleWorldBounds;
+                    //                Geometry.Rectangle renderTargetBounds = scene.VisibleWorldBounds;
 
                     var (renderTarget, channelAllTexturesReady) = DrawSection(graphicsDevice, sectionToDraw, channel.ChannelName, scene);
                     if (!channelAllTexturesReady)
@@ -2645,7 +2648,7 @@ namespace Viking.UI.Controls
                     return null;
                 }
 
-                //            GridRectangle renderTargetBounds = scene.VisibleWorldBounds;
+                //            Geometry.Rectangle renderTargetBounds = scene.VisibleWorldBounds;
 
                 //          Debug.Assert(graphicsDevice.Viewport.Width == ClientRectangle.Width); 
 
@@ -2653,11 +2656,11 @@ namespace Viking.UI.Controls
 
                 //  TopRight.X = System.Math.Ceiling(TopRight.X);
                 //  TopRight.Y = System.Math.Ceiling(TopRight.Y);
-                GridRectangle Bounds = scene.VisibleWorldBounds;
+                Geometry.Rectangle Bounds = scene.VisibleWorldBounds;
                 double HalfWidth = Bounds.Width / 2;
                 double HalfHeight = Bounds.Height / 2;
-                GridVector2 BotLeft = new(Bounds.Center.X - HalfWidth, Bounds.Center.Y + HalfHeight);
-                GridVector2 TopRight = new(Bounds.Center.X + HalfWidth, Bounds.Center.Y - HalfHeight);
+                Geometry.Vector2 BotLeft = new(Bounds.Center.X - HalfWidth, Bounds.Center.Y + HalfHeight);
+                Geometry.Vector2 TopRight = new(Bounds.Center.X + HalfWidth, Bounds.Center.Y - HalfHeight);
                 VertexPositionNormalTexture[] mesh = [
                            new( new Vector3((float)BotLeft.X, (float)BotLeft.Y, 0), Vector3.UnitZ, new Vector2(0,0)),
                            new( new Vector3((float)TopRight.X, (float)BotLeft.Y, 0), Vector3.UnitZ,  new Vector2(1,0)),
@@ -2785,7 +2788,7 @@ namespace Viking.UI.Controls
                             break;
 
                         //On Ctrl+C, copy current mouse position to keyboard
-                        GridVector2 Pos = StatusPosition;
+                        Geometry.Vector2 Pos = StatusPosition;
                         string PosText = Util.CoordinatesToCopyPaste(Pos.X, Pos.Y, Section.Number, Downsample);
                         Clipboard.SetText(PosText);
 
@@ -2850,7 +2853,7 @@ namespace Viking.UI.Controls
 
             if (e.Button == MouseButtons.Left)
             {
-                GridVector2 worldPosition = this.ScreenToWorld(e.X, e.Y);
+                Geometry.Vector2 worldPosition = this.ScreenToWorld(e.X, e.Y);
 
                 if (upSectionButton != null && upSectionButton.Contains(worldPosition))
                     upSectionButton.OnClick(upSectionButton, worldPosition, VikingXNAGraphics.Controls.InputDevice.Mouse, VikingXNAGraphics.Controls.MouseButton.LEFT);
@@ -2860,7 +2863,7 @@ namespace Viking.UI.Controls
             }
         }
 
-        private bool OnDownSectionButtonClicked(IClickable sender, GridVector2 position, VikingXNAGraphics.Controls.InputDevice source, object input_state)
+        private bool OnDownSectionButtonClicked(IClickable sender, Geometry.Vector2 position, VikingXNAGraphics.Controls.InputDevice source, object input_state)
         {
             if (source == VikingXNAGraphics.Controls.InputDevice.Mouse)
             {
@@ -2880,7 +2883,7 @@ namespace Viking.UI.Controls
             return false;
         }
 
-        private bool OnUpSectionButtonClicked(IClickable sender, GridVector2 position, VikingXNAGraphics.Controls.InputDevice source, object input_state)
+        private bool OnUpSectionButtonClicked(IClickable sender, Geometry.Vector2 position, VikingXNAGraphics.Controls.InputDevice source, object input_state)
         {
             if (source == VikingXNAGraphics.Controls.InputDevice.Mouse)
             {
@@ -3150,7 +3153,7 @@ namespace Viking.UI.Controls
                 MappingBase map = this.Section.VolumeViewModel.GetTileMapping(Volume.ActiveVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
                 if (map != null)
                 {
-                    bool Mapped = map.TrySectionToVolume(new GridVector2(location.X, location.Y), out GridVector2 TransformedPoint);
+                    bool Mapped = map.TrySectionToVolume(new Geometry.Vector2(location.X, location.Y), out Geometry.Vector2 TransformedPoint);
 
                     if (Mapped)
                     {
@@ -3167,7 +3170,7 @@ namespace Viking.UI.Controls
 
             this.Camera.LookAt = new Vector2(location.X, location.Y);
             this.Downsample = (float)newDownsample;
-            this.StatusPosition = new GridVector2(location.X, location.Y);
+            this.StatusPosition = new Geometry.Vector2(location.X, location.Y);
             this.StatusSection = this.Section.Number;
             this.StatusMagnification = newDownsample;
 

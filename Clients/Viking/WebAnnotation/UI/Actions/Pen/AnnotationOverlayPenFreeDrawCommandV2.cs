@@ -9,6 +9,8 @@ using System.Linq;
 using Viking.UI.Controls;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -28,7 +30,7 @@ namespace WebAnnotation.UI.Commands
         /// <summary>
         /// Look up the actions that were added when a given point was added to the path
         /// </summary>
-        Dictionary<GridVector2, IAction> ActionAtPoint = new Dictionary<GridVector2, IAction>();*/
+        Dictionary<Geometry.Vector2, IAction> ActionAtPoint = new Dictionary<Geometry.Vector2, IAction>();*/
 
         public Dictionary<ICanvasView, List<IAction>> ActionsForCanvasItem = [];
 
@@ -65,7 +67,7 @@ namespace WebAnnotation.UI.Commands
             InteractionsLogger.Log.OnLogChanged += OnInteractionLogChanged;
         }
 
-        public AnnotationOverlayPenFreeDrawCommandV2(SectionViewerControl parent, Color color, GridVector2 origin, double LineWidth, OnCommandSuccess success_callback) : base(parent, color, origin, LineWidth, success_callback)
+        public AnnotationOverlayPenFreeDrawCommandV2(SectionViewerControl parent, Color color, Geometry.Vector2 origin, double LineWidth, OnCommandSuccess success_callback) : base(parent, color, origin, LineWidth, success_callback)
         {
             InteractionsLogger = new PathInteractionLogger(base.PenInput.path, AnnotationOverlay.CurrentOverlay);
             InteractionsLogger.Log.OnLogChanged += OnInteractionLogChanged;
@@ -75,7 +77,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override bool CanCommandComplete() => true;
 
-        protected override void OnPenPathComplete(object sender, GridVector2[] Path)
+        protected override void OnPenPathComplete(object sender, Geometry.Vector2[] Path)
         {
             //TODO: Prompt the user to create an open curve type if there is no curve
             //If we draw from one annotation to another we either create a location link (different sections) or a structure link (same sections).
@@ -193,7 +195,7 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
+        protected override void OnPenProposedNextSegmentChanged(object sender, LineSegment? segment)
         {
             return;
         }

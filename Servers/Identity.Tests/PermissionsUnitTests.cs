@@ -203,113 +203,171 @@ namespace TestIdentityModel
         } 
     }
 
-    public class GroupPermissionsUnitTests : IClassFixture<CreateDropDatabaseFixture>
+    public class GroupPermissionsUnitTests : IClassFixture<InMemoryIdentityFixture>
     {
         private readonly ApplicationDbContext _dbContext;
-        private readonly IConfiguration _config;
-        private readonly ILogger<GroupPermissionsUnitTests> Log;
 
-        public GroupPermissionsUnitTests(CreateDropDatabaseFixture dbFixture, IConfiguration config, ILogger<GroupPermissionsUnitTests> log = null)
+        public GroupPermissionsUnitTests(InMemoryIdentityFixture fixture)
         {
-            _dbContext = dbFixture.DataContext;
-            _config = config;
-            Log = log;
+            _dbContext = fixture.DataContext;
         }
-         
+
         [Fact]
-        public async Task UserHasPermissionViaGroup()
+        public async Task UserHasPermissionViaDirectGroupMembership()
         {
-            var testUserId = _dbContext.CreateUser("Test", "None");
+            var unique = Guid.NewGuid().ToString("N").Substring(0, 8);
+            var testUserId = _dbContext.CreateUser($"grp-direct-{unique}", "None");
             await _dbContext.SaveChangesAsync();
 
-            var orgUnitResourceType = _dbContext.ResourceTypes.FirstOrDefault(t => t.Id == nameof(OrganizationalUnit));
-
-            var group = new Group()
-            {
-                Name = "A",
-                Parent = null,
-            };
-
+            var group = new Group { Name = $"GroupA-{unique}", Parent = null };
             _dbContext.Group.Add(group);
-              
-            var volumeResourceType = _dbContext.ResourceTypes.FirstOrDefault(t => t.Id == nameof(Volume));
 
-            var allowedVolume = new Volume()
-            {
-                Name = "Allowed Volume",
-                ParentID = null,
-            };
-
+            var allowedVolume = new Volume { Name = $"Allowed-{unique}", ParentID = null };
             _dbContext.Volume.Add(allowedVolume);
             await _dbContext.SaveChangesAsync();
 
-            var groupPermission = _dbContext.GrantedGroupPermissions.Add(new GrantedGroupPermission()
+            _dbContext.GrantedGroupPermissions.Add(new GrantedGroupPermission
             {
                 PermissionId = Special.Permissions.Volume.Review,
                 Resource = allowedVolume,
                 GroupId = group.Id
             });
-
             await _dbContext.SaveChangesAsync();
 
             Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.Volume.Review));
-            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.Volume.Read));
 
-            var groupAssignment = new UserToGroupAssignment()
+            var groupAssignment = new UserToGroupAssignment
             {
                 GroupId = group.Id,
                 UserId = testUserId
             };
-            
             _dbContext.UserToGroupAssignments.Add(groupAssignment);
-
-            await _dbContext.SaveChangesAsync(); 
+            await _dbContext.SaveChangesAsync();
 
             Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.Volume.Review));
             Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.Volume.Read));
 
             _dbContext.UserToGroupAssignments.Remove(groupAssignment);
-            await _dbContext.SaveChangesAsync(); 
-             
-            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.Volume.Review));
-            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.Volume.Read));
-             
-            _dbContext.Add(groupAssignment);
-
-            var childGroup = new Group()
-            {
-                Name = "Child",
-                ParentID = group.Id
-            };
-            
-            _dbContext.Group.Add(childGroup);
-             
-            var groupAssignmentToChild = new UserToGroupAssignment()
-            {
-                Group = childGroup,
-                UserId = testUserId
-            };
-            
-            _dbContext.UserToGroupAssignments.Add(groupAssignmentToChild);
-
             await _dbContext.SaveChangesAsync();
 
-            //See if we have access to the volume because we are members of a parent group that has access
+            Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.Volume.Review));
+        }
+
+        [Fact]
+        public async Task UserHasPermissionViaNestedGroupToGroupAssignment()
+        {
+            var unique = Guid.NewGuid().ToString("N").Substring(0, 8);
+            var testUserId = _dbContext.CreateUser($"grp-nested-{unique}", "None");
+            await _dbContext.SaveChangesAsync();
+
+            var parentGroup = new Group { Name = $"Parent-{unique}", Parent = null };
+            var childGroup = new Group { Name = $"Child-{unique}", Parent = null };
+            _dbContext.Group.Add(parentGroup);
+            _dbContext.Group.Add(childGroup);
+
+            var allowedVolume = new Volume { Name = $"NestedVol-{unique}", ParentID = null };
+            _dbContext.Volume.Add(allowedVolume);
+            await _dbContext.SaveChangesAsync();
+
+            // Permission is on the parent container group only.
+            _dbContext.GrantedGroupPermissions.Add(new GrantedGroupPermission
+            {
+                PermissionId = Special.Permissions.Volume.Review,
+                Resource = allowedVolume,
+                GroupId = parentGroup.Id
+            });
+
+            // Child is a member of parent via GroupToGroupAssignment (not ParentID).
+            _dbContext.GroupToGroupAssignments.Add(new GroupToGroupAssignment
+            {
+                ContainerGroupId = parentGroup.Id,
+                MemberGroupId = childGroup.Id
+            });
+
+            // User is a member of the child only — not the parent.
+            _dbContext.UserToGroupAssignments.Add(new UserToGroupAssignment
+            {
+                GroupId = childGroup.Id,
+                UserId = testUserId
+            });
+            await _dbContext.SaveChangesAsync();
+
             Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.Volume.Review));
             Assert.False(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.Volume.Read));
 
-            //Add a second volume and ensure the user does not have permissions there.
-            var deniedVolume = new Volume()
-            {
-                Name = "Denied Volume",
-                ParentID = null
-            };
+            var deniedVolume = new Volume { Name = $"DeniedNested-{unique}", ParentID = null };
             _dbContext.Volume.Add(deniedVolume);
             await _dbContext.SaveChangesAsync();
 
-            Assert.True(await _dbContext.IsUserPermitted(allowedVolume.Id, testUserId, Special.Permissions.Volume.Review));
             Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.Volume.Review));
-            Assert.False(await _dbContext.IsUserPermitted(deniedVolume.Id, testUserId, Special.Permissions.Volume.Read));
-        } 
+        }
+
+        [Fact]
+        public async Task UserDoesNotInheritPermissionFromOrgParentId()
+        {
+            var unique = Guid.NewGuid().ToString("N").Substring(0, 8);
+            var testUserId = _dbContext.CreateUser($"grp-parentid-{unique}", "None");
+            await _dbContext.SaveChangesAsync();
+
+            var parentGroup = new Group { Name = $"OrgParent-{unique}", Parent = null };
+            _dbContext.Group.Add(parentGroup);
+            await _dbContext.SaveChangesAsync();
+
+            // Child uses ParentID hierarchy only — no GroupToGroupAssignment.
+            var childGroup = new Group { Name = $"OrgChild-{unique}", ParentID = parentGroup.Id };
+            _dbContext.Group.Add(childGroup);
+
+            var volume = new Volume { Name = $"ParentIdVol-{unique}", ParentID = null };
+            _dbContext.Volume.Add(volume);
+            await _dbContext.SaveChangesAsync();
+
+            _dbContext.GrantedGroupPermissions.Add(new GrantedGroupPermission
+            {
+                PermissionId = Special.Permissions.Volume.Review,
+                Resource = volume,
+                GroupId = parentGroup.Id
+            });
+
+            _dbContext.UserToGroupAssignments.Add(new UserToGroupAssignment
+            {
+                GroupId = childGroup.Id,
+                UserId = testUserId
+            });
+            await _dbContext.SaveChangesAsync();
+
+            // ParentID alone must NOT confer parent group permissions.
+            Assert.False(await _dbContext.IsUserPermitted(volume.Id, testUserId, Special.Permissions.Volume.Review));
+        }
+
+        [Fact]
+        public async Task UserResourcePermissionsByType_IncludesGroupGrants()
+        {
+            var unique = Guid.NewGuid().ToString("N").Substring(0, 8);
+            var testUserId = _dbContext.CreateUser($"grp-bytype-{unique}", "None");
+            await _dbContext.SaveChangesAsync();
+
+            var group = new Group { Name = $"ByType-{unique}" };
+            var volume = new Volume { Name = $"ByTypeVol-{unique}" };
+            _dbContext.Group.Add(group);
+            _dbContext.Volume.Add(volume);
+            await _dbContext.SaveChangesAsync();
+
+            _dbContext.GrantedGroupPermissions.Add(new GrantedGroupPermission
+            {
+                PermissionId = Special.Permissions.Volume.Annotate,
+                Resource = volume,
+                GroupId = group.Id
+            });
+            _dbContext.UserToGroupAssignments.Add(new UserToGroupAssignment
+            {
+                GroupId = group.Id,
+                UserId = testUserId
+            });
+            await _dbContext.SaveChangesAsync();
+
+            var byType = await _dbContext.UserResourcePermissionsByType(testUserId, new[] { nameof(Volume) });
+            Assert.True(byType.ContainsKey(volume.Id));
+            Assert.Contains(Special.Permissions.Volume.Annotate, byType[volume.Id]);
+        }
     }
 }

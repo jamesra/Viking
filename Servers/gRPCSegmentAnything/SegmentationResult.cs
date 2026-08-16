@@ -7,7 +7,7 @@ namespace gRPCSegmentAnything
         /// <summary>
         /// Where the origin of the image is relative to the input image
         /// </summary>
-        GridVector2 ImageSpaceOrigin { get; set; }
+        Vector2 ImageSpaceOrigin { get; set; }
         
         
     }

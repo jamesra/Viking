@@ -33,14 +33,14 @@ namespace Viking.AU
         public DateTime? TranslateBefore { get; set; }
     }
 
-    public readonly struct SectionTranslation(long sectionNumber, GridVector2 offset, DateTime datecutoff)
+    public readonly struct SectionTranslation(long sectionNumber, Vector2 offset, DateTime datecutoff)
     {
         /// <summary>
         /// Section number to translate
         /// </summary>
         public readonly long SectionNumber = sectionNumber;
 
-        public readonly GridVector2 Offset = offset;
+        public readonly Vector2 Offset = offset;
 
         /// <summary>
         /// Only modify annotations before the specified date
@@ -106,7 +106,7 @@ namespace Viking.AU
             foreach (var kvp in input.Sections)
             {
                 SectionTranslation sectionData = new(kvp.Key,
-                                             new GridVector2(kvp.Value.X, kvp.Value.Y),
+                                             new Vector2(kvp.Value.X, kvp.Value.Y),
                                              kvp.Value.TranslateBefore ?? defaultCutoffDate);
 
                 this.Add(kvp.Key, sectionData);

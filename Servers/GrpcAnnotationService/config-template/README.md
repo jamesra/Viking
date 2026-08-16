@@ -19,10 +19,11 @@ the filled-in copy.
      .\Servers\GrpcAnnotationService\scripts\Start-AnnotationTestStack.ps1 -ApplySchema -Build
      ```
 
-     `docker-compose.annotation-db.yml` overrides `ConnectionStrings__AnnotationConnection`
-     to `Server=annotation-sql,1433;Database=AnnotationTest;...` and points Identity
-     at DevTest (`host.docker.internal:5020`). You can still put the same values in
-     `.env.Docker` for runs without the override.
+     `docker-compose.annotation-db.yml` points SQL at `annotation-sql`.
+     `docker-compose.identity-devtest.yml` (included by the start script) points
+     Identity at DevTest. Do not use the identity overlay when Viking is logged
+     in against identity.codepharm.net — that JWT's issuer will not match DevTest
+     and gRPC calls return HTTP 401.
 3. Without the annotation-db override, set the SQL connection string yourself:
    - `annotation-sql,1433` when the SQL container shares `viking-network`, or
    - `host.docker.internal,1433` when SQL is published on the host only, or
@@ -49,10 +50,17 @@ using ASP.NET Core's `__` (double-underscore) section-path convention. See
 
 ## Ports
 
-The compose file maps container ports 80/443 to host ports **5010/5011**
-(5000/5001 are already used by the identity-server stack on this host). If
-you change these, also update the test endpoints in `gRPC_Tests/LocationTests.cs`
-and `Clients/WebAnnotationModel.gRPC.Tests/appsettings.json`.
+The compose file maps:
+
+- container **80** → host **5010** (HTTP/2 cleartext, tests and .NET 5+)
+- container **443** → host **5011** (HTTPS with a localhost dev cert)
+
+Viking is .NET 4.8 and uses `WinHttpHandler`, which **cannot** do unencrypted
+HTTP/2. Point VikingXML `Endpoint` at `https://localhost:5011` (not `:5010`).
+(5000/5001 are already used by the identity-server stack on this host.) If
+you change the HTTP port, also update the test endpoints in
+`gRPC_Tests/LocationTests.cs` and
+`Clients/WebAnnotationModel.gRPC.Tests/appsettings.json`.
 
 Identity DevTest listens on host **5020**. Annotation SQL (override compose)
 publishes **1433**.

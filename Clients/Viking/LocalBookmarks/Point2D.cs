@@ -6,7 +6,7 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd
     partial class Point2D
     {
 
-        public Point2D(GridVector2 p)
+        public Point2D(Vector2 p)
         {
             this.X = p.X;
             this.Y = p.Y;
@@ -18,6 +18,6 @@ namespace connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd
             this.Y = Y;
         }
 
-        public GridVector2 ToGridVector2() => new GridVector2(this.X, this.Y);
+        public Vector2 ToVector2() => new Vector2(this.X, this.Y);
     }
 }

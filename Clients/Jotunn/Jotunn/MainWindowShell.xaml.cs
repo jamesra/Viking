@@ -1,126 +1,143 @@
 ﻿using Jotunn.Common;
+using Jotunn.Controls;
 using System;
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Viking.VolumeView;
+using WebAnnotation.UI.Controls;
+using WebAnnotationModel;
+using VolumeVM = Viking.VolumeViewModel.VolumeViewModel;
 
 namespace Jotunn
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window, IShellView
-	{
-        private static RoutedUICommand incrementCenterIndexCommand;
-        private static RoutedUICommand decrementCenterIndexCommand;
+    {
+        private SectionGridControl _sectionGrid;
 
-        /// <summary>
-        /// Increment the center number
-        /// </summary>
-        public static RoutedUICommand IncrementCommand
+        public MainWindow()
         {
-            get { return incrementCenterIndexCommand; }
-        }
-
-        /// <summary>
-        /// Decrement the center number
-        /// </summary>
-        public static RoutedUICommand DecrementCommand
-        {
-            get { return decrementCenterIndexCommand; }
-        }
-        
-
-		public MainWindow()
-		{
             SOTC_BindingErrorTracer.BindingErrorTraceListener.SetTrace();
-			this.InitializeComponent();
-            /*
-			// Insert code required on object creation below this point.
-            KeyBinding ib = new KeyBinding(
-                GlobalCommands.IncrementSectionNumber, new KeyGesture(Key.U, ModifierKeys.Control));
-            this.InputBindings.Add(ib);
-            */
-            /*
-             incrementCenterIndexCommand = new RoutedUICommand("Increments the section number", "IncrementCenterIndexCommand", typeof(MainWindow));
-             decrementCenterIndexCommand = new RoutedUICommand("Decrements the section number", "DecrementCenterIndexCommand", typeof(MainWindow));
+            InitializeComponent();
+            EventManager.RegisterClassHandler(typeof(Window), UIElement.PreviewKeyDownEvent, new KeyEventHandler(OnKeyDownPreview));
+        }
 
-             CommandBinding cb = new CommandBinding(incrementCenterIndexCommand, OnIncrementSectionNumber);
-             this.CommandBindings.Add(cb);
-
-             cb = new CommandBinding(decrementCenterIndexCommand, OnDecrementSectionNumber);
-             this.CommandBindings.Add(cb);
-             */
-
-            Prism.Commands.DelegateCommand incrementCommand = new Prism.Commands.DelegateCommand(IncrementSectionNumber);
-            Prism.Commands.DelegateCommand decrementCommand = new Prism.Commands.DelegateCommand(IncrementSectionNumber);
-
-            GlobalCommands.IncrementSectionNumber.RegisterCommand(incrementCommand);
-            GlobalCommands.DecrementSectionNumber.RegisterCommand(decrementCommand);
-            //GlobalCommands.IncrementSectionNumber.Execute(null);
-                 
-            OnStartup(null);
-		}
-
-        /// <summary>
-        /// This registers a class handlers for key-presses so we can use global hotkeys that work from anywhere in the application
-        /// </summary>
-        /// <param name="e"></param>
-        protected void OnStartup(StartupEventArgs e)
+        public void AttachVolume(VolumeVM volume)
         {
-            EventManager.RegisterClassHandler(typeof(Window), System.Windows.UIElement.PreviewKeyDownEvent, new KeyEventHandler(OnKeyDownPreview));
+            DataContext = volume;
+
+            _sectionGrid = new SectionGridControl { DataContext = volume };
+            ViewHost.Content = _sectionGrid;
+
+            NavigationHost.Items.Clear();
+            NavigationHost.Items.Add(new TabItem { Header = "Sections", Content = new SectionList { DataContext = volume } });
+
+            StatusHost.Content = new MousePositionStatus();
+
+            Viking.VolumeModel.Volume model = volume.Volume;
+            if (model != null)
+                _sectionGrid.SceneHostControl.Volume = model;
+
+            if (model != null && WebAnnotation.AnnotationBootstrap.TryInitialize(model, App.UserCredentials, App.SegmentationServiceUrl))
+            {
+                WebAnnotation.AnnotationScene scene = new(model);
+                _sectionGrid.SceneHostControl.Annotations = scene;
+                WebAnnotation.ViewportAnnotationController controller = new(_sectionGrid.SceneHostControl, scene);
+                controller.GoToRequested += (_, loc) =>
+                {
+                    if (loc == null || volume.VisibleRegion == null)
+                        return;
+                    System.Windows.Rect region = volume.VisibleRegion.VisibleRect;
+                    double width = Math.Max(region.Width, 1);
+                    double height = Math.Max(region.Height, 1);
+                    volume.VisibleRegion = new Jotunn.Common.VisibleRegionInfo(
+                        new System.Windows.Rect(loc.VolumePosition.X - width / 2, loc.VolumePosition.Y - height / 2, width, height),
+                        volume.VisibleRegion.Downsample);
+                    int z = (int)Math.Round(loc.Z);
+                    if (volume.SectionViewModels.ContainsKey(z))
+                        volume.CenterIndex = volume.SectionViewModels.IndexOfKey(z);
+                };
+                _sectionGrid.SceneHostControl.AnnotationController = controller;
+
+                if (Store.IsInitialized)
+                {
+                    StructureTypeTree typeTree = new();
+                    typeTree.StructureTypeSelected += (_, id) => controller.SelectedStructureTypeId = (long)id;
+                    NavigationHost.Items.Add(new TabItem { Header = "Types", Content = typeTree });
+                    if (Store.StructureTypes.RootObjects.Count > 0)
+                        controller.SelectedStructureTypeId = (long)Store.StructureTypes.RootObjects[0];
+                }
+            }
         }
 
         protected void OnKeyDownPreview(object sender, KeyEventArgs e)
         {
-            if(e.Key == Key.Insert)
+            if (e.Key == Key.Insert)
             {
-                GlobalCommands.IncrementSectionNumber.Execute(null);
+                GlobalCommands.IncrementSectionNumber.Execute(null, this);
                 e.Handled = true;
             }
             else if (e.Key == Key.Delete)
             {
-                GlobalCommands.DecrementSectionNumber.Execute(null);
+                GlobalCommands.DecrementSectionNumber.Execute(null, this);
                 e.Handled = true;
             }
-
-            e.Handled = false;
         }
-
-        #region IShellView Members
 
         private void OnIncrementSectionNumber(object sender, ExecutedRoutedEventArgs e)
         {
-            IncrementSectionNumber();
-        }
-
-        private void IncrementSectionNumber()
-        {
-            Trace.WriteLine("OnIncrementSectionNumber keys do sometimes work");
+            if (DataContext is VolumeVM volume)
+                volume.CenterIndex++;
         }
 
         private void OnDecrementSectionNumber(object sender, ExecutedRoutedEventArgs e)
         {
-            DecrementSectionNumber();
+            if (DataContext is VolumeVM volume)
+                volume.CenterIndex--;
         }
 
-        private void DecrementSectionNumber()
+        private void OnAddGridRow(object sender, ExecutedRoutedEventArgs e)
         {
-            Trace.WriteLine("OnDecrementSectionNumber keys do sometimes work");
+            VirtualizingGrid grid = FindSectionGrid();
+            if (grid != null)
+                grid.NumRows += 2;
+        }
+
+        private void OnRemoveGridRow(object sender, ExecutedRoutedEventArgs e)
+        {
+            VirtualizingGrid grid = FindSectionGrid();
+            if (grid != null && grid.NumRows > 1)
+                grid.NumRows = Math.Max(1, grid.NumRows - 2);
+        }
+
+        private void OnAddGridColumn(object sender, ExecutedRoutedEventArgs e)
+        {
+            VirtualizingGrid grid = FindSectionGrid();
+            if (grid != null)
+                grid.NumCols += 2;
+        }
+
+        private void OnRemoveGridColumn(object sender, ExecutedRoutedEventArgs e)
+        {
+            VirtualizingGrid grid = FindSectionGrid();
+            if (grid != null && grid.NumCols > 1)
+                grid.NumCols = Math.Max(1, grid.NumCols - 2);
+        }
+
+        private VirtualizingGrid FindSectionGrid()
+        {
+            return _sectionGrid?.GridPanel;
         }
 
         void IShellView.ShowView()
         {
-            this.Show(); 
+            Show();
         }
-
-        #endregion
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            this.Close(); 
+            Application.Current.Shutdown();
         }
 
         protected override GeometryHitTestResult HitTestCore(GeometryHitTestParameters hitTestParameters)
@@ -134,7 +151,6 @@ namespace Jotunn
                 return r;
 
             System.Diagnostics.Trace.WriteLine(control.Name + " was hit");
-
             return r;
         }
 
@@ -149,7 +165,6 @@ namespace Jotunn
                 return r;
 
             System.Diagnostics.Trace.WriteLine(control.Name + " was hit");
-
             return r;
         }
     }

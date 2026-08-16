@@ -12,6 +12,8 @@ using RoundCurve;
 using RoundLineCode;
 using Geometry;
 using System.Collections.Generic;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace Viewer
 {
@@ -349,7 +351,7 @@ namespace Viewer
                                            new Vector2((float)(50.0f * Math.Cos(CurveAngle)), (float)(50.0f * Math.Sin(CurveAngle)) + 50.0f));
             window.lineManager.Draw(new RoundLine[] { line }, 16, Color.Red, ViewProjMatrix, time, labelTexture);
 
-            GridVector2[] cps = CreateTestCurve2(CurveAngle, 100);
+            Geometry.Vector2[] cps = CreateTestCurve2(CurveAngle, 100);
             RoundCurve.RoundCurve curve = new RoundCurve.RoundCurve(cps, false);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { curve }, 16, Color.Blue, ViewProjMatrix, time, labelTexture);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { curve }, 16, Color.Blue, ViewProjMatrix, time, TechniqueName);
@@ -375,21 +377,21 @@ namespace Viewer
             return target;
         }
 
-        private static GridVector2[] CreateTestCurve(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-width,width),
-                                                   new GridVector2(-width * Math.Cos(angle), -width * Math.Sin(angle)),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            Geometry.Vector2[] cps = new Geometry.Vector2[] {new Geometry.Vector2(-width,width),
+                                                   new Geometry.Vector2(-width * Math.Cos(angle), -width * Math.Sin(angle)),
+                                                   new Geometry.Vector2(0,0),
+                                                   new Geometry.Vector2(width,0) };
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurve2(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve2(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
-                                                   new GridVector2(0, width),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            Geometry.Vector2[] cps = new Geometry.Vector2[] {new Geometry.Vector2(width,width),
+                                                   new Geometry.Vector2(0, width),
+                                                   new Geometry.Vector2(0,0),
+                                                   new Geometry.Vector2(width,0) };
             return Geometry.Lagrange.FitCurve(cps, 30);
         }
     }
@@ -403,7 +405,7 @@ namespace Viewer
 
         public void Init(MonoTestbed window)
         {
-            GridVector2[] cps = CreateTestCurve3(0, 100);
+            Geometry.Vector2[] cps = CreateTestCurve3(0, 100);
             curveView = new CurveView(cps, Color.Red, false);
             leftCurveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, false);
             rightCurveLabel = new CurveLabel("C 1485", cps, Color.PaleGoldenrod, false);
@@ -431,30 +433,30 @@ namespace Viewer
 
         }
 
-        private static GridVector2[] CreateTestCurve(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-width,width),
-                                                   new GridVector2(-width * Math.Cos(angle), -width * Math.Sin(angle)),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            Geometry.Vector2[] cps = new Geometry.Vector2[] {new Geometry.Vector2(-width,width),
+                                                   new Geometry.Vector2(-width * Math.Cos(angle), -width * Math.Sin(angle)),
+                                                   new Geometry.Vector2(0,0),
+                                                   new Geometry.Vector2(width,0) };
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurve2(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve2(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
-                                                   new GridVector2(0, width),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            Geometry.Vector2[] cps = new Geometry.Vector2[] {new Geometry.Vector2(width,width),
+                                                   new Geometry.Vector2(0, width),
+                                                   new Geometry.Vector2(0,0),
+                                                   new Geometry.Vector2(width,0) };
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurve3(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve3(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-100,100),
-                                                   new GridVector2(-50, 0),
-                                                   new GridVector2(0,100),
-                                                   new GridVector2(100,0) };
+            Geometry.Vector2[] cps = new Geometry.Vector2[] {new Geometry.Vector2(-100,100),
+                                                   new Geometry.Vector2(-50, 0),
+                                                   new Geometry.Vector2(0,100),
+                                                   new Geometry.Vector2(100,0) };
             return cps;
         }
     }
@@ -466,9 +468,9 @@ namespace Viewer
 
         public void Init(MonoTestbed window)
         {
-            GridVector2[] cps = CreateTestCurve3(0, 100);
+            Geometry.Vector2[] cps = CreateTestCurve3(0, 100);
             curveLabel = new CurveLabel("CurveLabel", cps, Color.Black, false);
-            labelView = new LabelView("LabelView", new GridVector2(0, 0));
+            labelView = new LabelView("LabelView", new Geometry.Vector2(0, 0));
         }
 
         public void ProcessGamepad()
@@ -491,29 +493,29 @@ namespace Viewer
             labelView.FontSize = (time * 8f) + 8f;
         }
 
-        private static GridVector2[] CreateTestCurve(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-width,width),
-                                                   new GridVector2(-width * Math.Cos(angle), -width * Math.Sin(angle)),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            Geometry.Vector2[] cps = new Geometry.Vector2[] {new Geometry.Vector2(-width,width),
+                                                   new Geometry.Vector2(-width * Math.Cos(angle), -width * Math.Sin(angle)),
+                                                   new Geometry.Vector2(0,0),
+                                                   new Geometry.Vector2(width,0) };
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurve2(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve2(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(width,width),
-                                                   new GridVector2(0, width),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width,0) };
+            Geometry.Vector2[] cps = new Geometry.Vector2[] {new Geometry.Vector2(width,width),
+                                                   new Geometry.Vector2(0, width),
+                                                   new Geometry.Vector2(0,0),
+                                                   new Geometry.Vector2(width,0) };
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurve3(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve3(double angle, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-50, 0),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(100,0) };
+            Geometry.Vector2[] cps = new Geometry.Vector2[] {new Geometry.Vector2(-50, 0),
+                                                   new Geometry.Vector2(0,0),
+                                                   new Geometry.Vector2(100,0) };
             return cps;
         }
     }
@@ -537,13 +539,13 @@ namespace Viewer
 
             foreach (LineStyle style in Enum.GetValues(typeof(LineStyle)))
             {
-                GridVector2 source = new GridVector2(MinX, Y);
-                GridVector2 dest = new GridVector2(MaxX, Y);
+                Geometry.Vector2 source = new Geometry.Vector2(MinX, Y);
+                Geometry.Vector2 dest = new Geometry.Vector2(MaxX, Y);
                 listLineViews.Add(new LineView(source, dest, YStep / 1.5, Color.Blue, style));
 
                 Y += YStep;
 
-                listLabelViews.Add(new LabelView(style.ToString(), source + new GridVector2(-25, 10)));
+                listLabelViews.Add(new LabelView(style.ToString(), source + new Geometry.Vector2(-25, 10)));
             }
         }
 
@@ -583,15 +585,15 @@ namespace Viewer
 
             foreach (LineStyle style in Enum.GetValues(typeof(LineStyle)))
             {
-                GridVector2 source = new GridVector2(MinX, Y);
-                GridVector2 mid = new GridVector2(MinX + (MaxX - MinX / 2.0), Y - 30);
-                GridVector2 dest = new GridVector2(MaxX, Y);
+                Geometry.Vector2 source = new Geometry.Vector2(MinX, Y);
+                Geometry.Vector2 mid = new Geometry.Vector2(MinX + (MaxX - MinX / 2.0), Y - 30);
+                Geometry.Vector2 dest = new Geometry.Vector2(MaxX, Y);
 
-                listLineViews.Add(new CurveView(new GridVector2[] { source, mid, dest }, Color.Blue, false, lineWidth: YStep / 1.5, lineStyle: style));
+                listLineViews.Add(new CurveView(new Geometry.Vector2[] { source, mid, dest }, Color.Blue, false, lineWidth: YStep / 1.5, lineStyle: style));
 
                 Y += YStep;
 
-                listLabelViews.Add(new LabelView(style.ToString(), source + new GridVector2(-25, 10)));
+                listLabelViews.Add(new LabelView(style.ToString(), source + new Geometry.Vector2(-25, 10)));
             }
         }
 
@@ -618,7 +620,7 @@ namespace Viewer
 
         public void Init(MonoTestbed window)
         {
-            GridVector2[] cps = CreateTestCurve(90, 190);
+            Geometry.Vector2[] cps = CreateTestCurve(90, 190);
             curveView = new CurveView(cps, Color.Red, true, null, lineWidth: 64, controlPointRadius: 16, lineStyle: LineStyle.HalfTube);
             curveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, true);
         }
@@ -640,14 +642,14 @@ namespace Viewer
 
         }
 
-        private static GridVector2[] CreateTestCurve(double height, double width)
+        private static Geometry.Vector2[] CreateTestCurve(double height, double width)
         {
-            GridVector2[] cps = new GridVector2[] {new GridVector2(-width,0),
-                                                   new GridVector2(-width / 2.0, -height/4),
-                                                   new GridVector2(0,0),
-                                                   new GridVector2(width / 2.0, height),
-                                                   new GridVector2(width,0),
-                                                   new GridVector2(0,-height)};
+            Geometry.Vector2[] cps = new Geometry.Vector2[] {new Geometry.Vector2(-width,0),
+                                                   new Geometry.Vector2(-width / 2.0, -height/4),
+                                                   new Geometry.Vector2(0,0),
+                                                   new Geometry.Vector2(width / 2.0, height),
+                                                   new Geometry.Vector2(width,0),
+                                                   new Geometry.Vector2(0,-height)};
             return cps;
         }
     }

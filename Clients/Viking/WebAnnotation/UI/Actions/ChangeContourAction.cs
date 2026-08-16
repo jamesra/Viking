@@ -5,6 +5,7 @@ using System.Diagnostics;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Actions
 {
@@ -20,22 +21,22 @@ namespace WebAnnotation.UI.Actions
         /// <summary>
         /// The mosaic space polygon we want to commit to the database
         /// </summary>
-        public readonly GridPolygon NewMosaicPolygon;
+        public readonly Polygon NewMosaicPolygon;
 
         /// <summary>
         /// The volume space polygon we want to add to the location
         /// </summary>
-        public readonly GridPolygon NewVolumePolygon;
+        public readonly Polygon NewVolumePolygon;
 
         /// <summary>
         /// The volume space polygon we want to add to the location
         /// </summary>
-        public readonly GridPolygon NewSmoothedVolumePolygon;
+        public readonly Polygon NewSmoothedVolumePolygon;
 
         /// <summary>
         /// The volume space polygon after smoothing
         /// </summary>
-        //public readonly GridPolygon NewSmoothVolumePolygon;
+        //public readonly Polygon NewSmoothVolumePolygon;
 
         public LocationAction Type => LocationAction.CHANGEBOUNDARY;
 
@@ -54,9 +55,9 @@ namespace WebAnnotation.UI.Actions
         internal bool ClockwiseContour = false;
 
         public BuiltinTexture Icon { get; set; } = BuiltinTexture.None;
-        public Change2DContourAction(long locationID, RetraceCommandAction retraceType, GridPolygon newMosaicPolygon, GridPolygon? newVolumePolygon = null, bool ClockwiseContour = false, IVolumeToSectionTransform? transform = null)
+        public Change2DContourAction(long locationID, RetraceCommandAction retraceType, Polygon newMosaicPolygon, Polygon? newVolumePolygon = null, bool ClockwiseContour = false, IVolumeToSectionTransform? transform = null)
         {
-            Debug.Assert(newMosaicPolygon.TotalUniqueVerticies < 1000, "This is a huge polygon, why?");
+            Debug.Assert(newMosaicPolygon.TotalUniqueVertices < 1000, "This is a huge polygon, why?");
 
             this.ClockwiseContour = ClockwiseContour;
             RetraceType = retraceType;
@@ -69,9 +70,9 @@ namespace WebAnnotation.UI.Actions
             NewSmoothedVolumePolygon = NewVolumePolygon;//newVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints); 
         }
 
-        public Change2DContourAction(LocationObj location, RetraceCommandAction retraceType, GridPolygon newMosaicPolygon, GridPolygon? newVolumePolygon = null, bool ClockwiseContour = false, IVolumeToSectionTransform? transform = null)
+        public Change2DContourAction(LocationObj location, RetraceCommandAction retraceType, Polygon newMosaicPolygon, Polygon? newVolumePolygon = null, bool ClockwiseContour = false, IVolumeToSectionTransform? transform = null)
         {
-            Debug.Assert(newMosaicPolygon.TotalUniqueVerticies < 1000, "This is a huge polygon, why?");
+            Debug.Assert(newMosaicPolygon.TotalUniqueVertices < 1000, "This is a huge polygon, why?");
 
             this.ClockwiseContour = ClockwiseContour;
             RetraceType = retraceType;
@@ -86,7 +87,7 @@ namespace WebAnnotation.UI.Actions
 
         public void OnExecute()
         {
-            Microsoft.SqlServer.Types.SqlGeometry original_mosaic_polygon = Location.MosaicShape;
+            Microsoft.SqlServer.Types.SqlGeometry original_mosaic_polygon = Location.MosaicShape.ToSqlGeometry();
             //var mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
             Location.SetShapeFromGeometryInSection(Transform, NewMosaicPolygon.ToSqlGeometry());
 
@@ -137,7 +138,7 @@ namespace WebAnnotation.UI.Actions
     /// <summary>
     /// Replace the exterior contour of an annotation with the passed contour
     /// </summary>
-    internal class Change1DContourAction(LocationObj location, GridPolyline newVolumePolyline, IVolumeToSectionTransform? transform = null) : IAction, IEquatable<Change1DContourAction>
+    internal class Change1DContourAction(LocationObj location, Polyline newVolumePolyline, IVolumeToSectionTransform? transform = null) : IAction, IEquatable<Change1DContourAction>
     {
         public readonly LocationObj Location = location;
         private readonly IVolumeToSectionTransform Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
@@ -145,12 +146,12 @@ namespace WebAnnotation.UI.Actions
         /// <summary>
         /// The volume space polygon we want to add to the location
         /// </summary>
-        public readonly GridPolyline NewVolumePolyline = newVolumePolyline;
+        public readonly Polyline NewVolumePolyline = newVolumePolyline;
 
         /// <summary>
         /// The volume space polygon after smoothing
         /// </summary>
-        public readonly GridPolyline NewSmoothVolumePolyline = newVolumePolyline.Smooth(Global.NumOpenCurveInterpolationPoints);
+        public readonly Polyline NewSmoothVolumePolyline = newVolumePolyline.Smooth(Global.NumOpenCurveInterpolationPoints);
 
         public LocationAction Type => LocationAction.CHANGEBOUNDARY;
 
@@ -163,7 +164,7 @@ namespace WebAnnotation.UI.Actions
 
         public void OnExecute()
         {
-            GridPolyline mosaic_shape = Transform.TryMapShapeVolumeToSection(NewVolumePolyline);
+            Polyline mosaic_shape = Transform.TryMapShapeVolumeToSection(NewVolumePolyline);
             Location.SetShapeFromGeometryInSection(Transform, mosaic_shape.ToSqlGeometry());
 
             Store.Locations.Save();

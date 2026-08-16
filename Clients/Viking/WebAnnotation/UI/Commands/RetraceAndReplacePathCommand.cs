@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
+using Viking.Input;
 using Viking.UI;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
@@ -25,12 +26,12 @@ namespace WebAnnotation.UI.Commands
         private readonly int WrongIntersectionPoint;
 
         //Original Polygons
-        private readonly GridPolygon OriginalMosaicPolygon;
-        private readonly GridPolygon OriginalVolumePolygon;
-        public GridPolygon OriginalSmoothedVolumePolygon;
+        private readonly Polygon OriginalMosaicPolygon;
+        private readonly Polygon OriginalVolumePolygon;
+        public Polygon OriginalSmoothedVolumePolygon;
 
         //Our original polygon plus the origin of retrace and replace and the origin point index
-        private readonly GridPolygon VolumePolygonPlusOrigin;
+        private readonly Polygon VolumePolygonPlusOrigin;
 
         public PolygonIndex OriginIndex;
 
@@ -41,17 +42,17 @@ namespace WebAnnotation.UI.Commands
         private PositionColorMeshModel? CounterClockwiseWalkMesh = null;
         private RetraceCommandAction CutAction = RetraceCommandAction.NONE;
         //Each of the cut pieces in polygon forms
-        private GridPolygon? CounterClockwiseCutPolygon = null;
-        private GridPolygon? ClockwiseCutPolygon = null;
+        private Polygon? CounterClockwiseCutPolygon = null;
+        private Polygon? ClockwiseCutPolygon = null;
 
         //The output polygons we create
-        public GridPolygon OutputMosaicPolygon;
-        public GridPolygon OutputVolumePolygon;
+        public Polygon OutputMosaicPolygon;
+        public Polygon OutputVolumePolygon;
 
         /// <summary>
         /// True if we want to use the opposite polygon as normal
         /// </summary>
-        protected bool SwitchSide => Control.ModifierKeys.CtrlPressed();
+        protected bool SwitchSide => ModifierKeysConverter.FromWinFormsKeys((int)Control.ModifierKeys).CtrlPressed();
 
         public bool IsCutComplete => PolyBeingCut.HasValue;
 
@@ -90,7 +91,7 @@ namespace WebAnnotation.UI.Commands
 
         //Replace and retrace constructor
         public RetraceAndReplacePathCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridPolygon mosaic_polygon,
+                                        Polygon mosaic_polygon,
                                         Microsoft.Xna.Framework.Color color,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
@@ -117,9 +118,9 @@ namespace WebAnnotation.UI.Commands
         }
 
         public RetraceAndReplacePathCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridPolygon mosaic_polygon,
+                                        Polygon mosaic_polygon,
                                         System.Drawing.Color color,
-                                        IReadOnlyList<GridVector2> path,
+                                        IReadOnlyList<Vector2> path,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : this(parent, mosaic_polygon, color.ToXNAColor(), LineWidth, success_callback)
@@ -130,9 +131,9 @@ namespace WebAnnotation.UI.Commands
         protected override void OnPathLoop(object sender, bool HasLoop)
         {
             //TODO: Create an interior hole in the polygon
-            GridPolygon proposed_hole = new(PenInput.SimplifiedFirstLoop.ToArray().EnsureClosedRing());
+            Polygon proposed_hole = new(PenInput.SimplifiedFirstLoop.ToArray().EnsureClosedRing());
 
-            GridPolygon original_copy = (GridPolygon)OriginalVolumePolygon.Clone();
+            Polygon original_copy = (Polygon)OriginalVolumePolygon.Clone();
             try
             {
                 original_copy.AddInteriorRing(proposed_hole);
@@ -158,7 +159,7 @@ namespace WebAnnotation.UI.Commands
             Execute();
 
 
-            //return false == GridPolygon.SegmentsIntersect(this.OriginalVolumePolygon, proposed_hole);
+            //return false == Polygon.SegmentsIntersect(this.OriginalVolumePolygon, proposed_hole);
             Deactivated = true;
             return;
         }
@@ -170,7 +171,7 @@ namespace WebAnnotation.UI.Commands
         /// <param name="e"></param>
         protected override void OnPenPathChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            //List<GridVector2> path = PenInput.Path.InflectionPointIndicies().Select(i => PenInput.Path[i]).ToList();
+            //List<Vector2> path = PenInput.Path.InflectionPointIndices().Select(i => PenInput.Path[i]).ToList();
             //Update our view of the pen path
             base.OnPenPathChanged(sender, e);
 
@@ -241,7 +242,7 @@ namespace WebAnnotation.UI.Commands
             base.OnPenLeaveRange(sender, e);
         }
 
-        private RetraceCommandAction GetRetraceActionForPath(IList<GridVector2> path, out GridPolygon clockwise_poly, out GridPolygon counter_clockwise_poly)
+        private RetraceCommandAction GetRetraceActionForPath(IList<Vector2> path, out Polygon clockwise_poly, out Polygon counter_clockwise_poly)
         {
             clockwise_poly = null;
             counter_clockwise_poly = null;
@@ -261,23 +262,23 @@ namespace WebAnnotation.UI.Commands
 
             PolygonIndex FirstIntersection = intersectedSegments.First().Value;
 
-            GridPolygon PolyToCut = OriginalVolumePolygon;
+            Polygon PolyToCut = OriginalVolumePolygon;
             if (FirstIntersection.IsInner)
             {
-                PolyToCut = OriginalVolumePolygon.InteriorPolygons[FirstIntersection.iInnerPoly.Value];
+                PolyToCut = OriginalVolumePolygon.InteriorPolygons[FirstIntersection.InnerShapeIndex.Value];
             }
 
             //Condition Check to make sure pen path exists and is valid
-            if (path is null || path.Count < 2 || OriginalVolumePolygon.TotalVerticies <= 3)
+            if (path is null || path.Count < 2 || OriginalVolumePolygon.TotalVertices <= 3)
             {
                 return RetraceCommandAction.NONE;
             }
 
             try
             {
-                clockwise_poly = GridPolygon.WalkPolygonCut(PolyToCut, RotationDirection.CLOCKWISE, path);
+                clockwise_poly = Polygon.WalkPolygonCut(PolyToCut, RotationDirection.Clockwise, path);
                 clockwise_poly.ExteriorRing = [.. CatmullRomControlPointSimplification.IdentifyControlPoints(clockwise_poly.ExteriorRing, 1.0, true)];
-                counter_clockwise_poly = GridPolygon.WalkPolygonCut(PolyToCut, RotationDirection.COUNTERCLOCKWISE, path);
+                counter_clockwise_poly = Polygon.WalkPolygonCut(PolyToCut, RotationDirection.Counterclockwise, path);
                 counter_clockwise_poly.ExteriorRing = [.. CatmullRomControlPointSimplification.IdentifyControlPoints(counter_clockwise_poly.ExteriorRing, 1.0, true)];
                 PolyBeingCut = FirstIntersection;
             }
@@ -297,9 +298,9 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        public GridPolygon? GenerateOutputVolumePolygon()
+        public Polygon? GenerateOutputVolumePolygon()
         {
-            GridPolygon output;
+            Polygon output;
 
             switch (CutAction)
             {
@@ -310,12 +311,12 @@ namespace WebAnnotation.UI.Commands
                 case RetraceCommandAction.SHRINK_EXTERIOR_RING:
                     return SwitchSide ? ClockwiseCutPolygon : CounterClockwiseCutPolygon;
                 case RetraceCommandAction.GROW_INTERNAL_RING:
-                    output = (GridPolygon)OriginalVolumePolygon.Clone();
-                    output.ReplaceInteriorRing(PolyBeingCut.Value.iInnerPoly.Value, CounterClockwiseCutPolygon.Area > ClockwiseCutPolygon.Area ? CounterClockwiseCutPolygon : ClockwiseCutPolygon);
+                    output = (Polygon)OriginalVolumePolygon.Clone();
+                    output.ReplaceInteriorRing(PolyBeingCut.Value.InnerShapeIndex.Value, CounterClockwiseCutPolygon.Area > ClockwiseCutPolygon.Area ? CounterClockwiseCutPolygon : ClockwiseCutPolygon);
                     return output;
                 case RetraceCommandAction.SHRINK_INTERNAL_RING:
-                    output = (GridPolygon)OriginalVolumePolygon.Clone();
-                    output.ReplaceInteriorRing(PolyBeingCut.Value.iInnerPoly.Value, SwitchSide ? ClockwiseCutPolygon : CounterClockwiseCutPolygon);
+                    output = (Polygon)OriginalVolumePolygon.Clone();
+                    output.ReplaceInteriorRing(PolyBeingCut.Value.InnerShapeIndex.Value, SwitchSide ? ClockwiseCutPolygon : CounterClockwiseCutPolygon);
                     return output;
             }
 
@@ -383,12 +384,12 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        protected override void OnPenPathComplete(object sender, GridVector2[] Path)
+        protected override void OnPenPathComplete(object sender, Vector2[] Path)
         {
 
         }
 
-        protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
+        protected override void OnPenProposedNextSegmentChanged(object sender, LineSegment? segment)
         {
 
         }
@@ -412,7 +413,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override bool ShapeIsValid() =>
             /*
-if (this.Verticies.Length < 3 || curve_verticies is null || this.curve_verticies.ControlPoints.Length < 3)
+if (this.Vertices.Length < 3 || curve_verticies is null || this.curve_verticies.ControlPoints.Length < 3)
 return false;
 
 try

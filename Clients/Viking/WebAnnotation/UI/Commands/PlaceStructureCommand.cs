@@ -1,10 +1,13 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Windows.Forms;
 using VikingXNAWinForms;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -64,11 +67,11 @@ namespace WebAnnotation.UI.Commands
                     return;
                 }
 
-                GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+                Geometry.Vector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
                 //Transform from volume space to section space if we need to
 
-                bool Transformed = mapping.TryVolumeToSection(WorldPos, out GridVector2 SectionPos);
+                bool Transformed = mapping.TryVolumeToSection(WorldPos, out Geometry.Vector2 SectionPos);
 
                 if (!Transformed)
                 {

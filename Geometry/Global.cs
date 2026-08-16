@@ -9,21 +9,21 @@ namespace Geometry
 {
     public class Global
     {
-        public const float Epsilon = 0.001f;
+        public const double Epsilon = Tolerance.Epsilon;
 
         /// <summary>
         /// Value used to round values.  Currently used to ensure points hash to the same value if they are
         /// within an epsilon distance.
         /// </summary>
-        public const int SignificantDigits = 3;
+        public const int SignificantDigits = Tolerance.SignificantDigits;
 
         /// <summary>
         /// Transformed points are rounded to a set number of significant digits.  This prevents floating point
         /// precision errors from causing errors in various geometric tests.
         /// </summary>
-        public const int TransformSignificantDigits = 3;
+        public const int TransformSignificantDigits = Tolerance.TransformSignificantDigits;
 
-        public const float EpsilonSquared = Global.Epsilon * Global.Epsilon;
+        public const double EpsilonSquared = Tolerance.EpsilonSquared;
 
         public static readonly Random Random = new();
 

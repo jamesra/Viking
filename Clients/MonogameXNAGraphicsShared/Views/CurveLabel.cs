@@ -7,6 +7,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using VikingXNA;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -70,7 +72,7 @@ namespace VikingXNAGraphics
         /// </summary>
         public float LabelEndDistance = 1.0f;
 
-        public GridVector2[] ControlPoints
+        public Geometry.Vector2[] ControlPoints
         {
             get => _CurveControlPoints.ControlPoints;
             set { _CurveControlPoints.ControlPoints = value; UpdateView(); }
@@ -149,7 +151,7 @@ namespace VikingXNAGraphics
         /// <param name="texture"></param>
         /// <param name="lineWidth"></param>
         /// <returns></returns>
-        public static CurveLabel CreateLineLabel(string label, GridLineSegment line, Microsoft.Xna.Framework.Color color,
+        public static CurveLabel CreateLineLabel(string label, LineSegment line, Microsoft.Xna.Framework.Color color,
                             Texture2D texture = null, double lineWidth = 16.0)
         {
             CurveLabel labelView = new(label, [line.A, line.B], color, false, texture: texture, lineWidth: lineWidth, numInterpolations: 0);
@@ -157,7 +159,7 @@ namespace VikingXNAGraphics
         }
 
 
-        public CurveLabel(string label, ICollection<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color,
+        public CurveLabel(string label, ICollection<Geometry.Vector2> controlPoints, Microsoft.Xna.Framework.Color color,
                             bool TryToClose, Texture2D texture = null, double lineWidth = 16.0, uint numInterpolations = 5)
         {
             this.Text = label;

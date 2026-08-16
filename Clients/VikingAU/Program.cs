@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Security;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -428,7 +429,7 @@ namespace Viking.AU
 
         // Bounds large enough to cover any real volume's coordinate space when requesting every
         // location on a section.  QueryTargets.Server always contacts the server for a full refresh.
-        private static readonly Geometry.GridRectangle WholeVolumeBounds = new(-1e9, 1e9, -1e9, 1e9);
+        private static readonly Geometry.Rectangle WholeVolumeBounds = new(-1e9, 1e9, -1e9, 1e9);
 
         static async Task<string> UpdateSectionPositions(long SectionNumber, CancellationToken token)
         {
@@ -538,8 +539,8 @@ namespace Viking.AU
                 return false;
             }
 
-            GridVector2[] OriginalVolumeControlPoints = loc.VolumeShape.ToPoints();
-            GridVector2[] UpdatedVolumeControlPoints = updatedVolumeShape.ToPoints();
+            Vector2[] OriginalVolumeControlPoints = loc.VolumeShape.ToPoints();
+            Vector2[] UpdatedVolumeControlPoints = updatedVolumeShape.ToPoints();
 
             if (AnyPointsAreDifferent(OriginalVolumeControlPoints, UpdatedVolumeControlPoints) ||
                 updatedVolumeShape.GeometryType() != loc.VolumeShape.ToSqlGeometry().GeometryType())
@@ -551,9 +552,9 @@ namespace Viking.AU
             return TypeUpdated || Translated;
         }
 
-        static GridVector2[] MosaicPointsForLocation(LocationObj loc)
+        static Vector2[] MosaicPointsForLocation(LocationObj loc)
         {
-            GridVector2[] mosaicPoints = loc.TypeCode switch
+            Vector2[] mosaicPoints = loc.TypeCode switch
             {
                 LocationType.POINT or LocationType.CIRCLE => [loc.Position],
                 LocationType.POLYGON or LocationType.POLYLINE or LocationType.OPENCURVE or LocationType.CLOSEDCURVE or LocationType.CURVEPOLYGON => loc.MosaicShape.ToPoints(),
@@ -712,14 +713,11 @@ namespace Viking.AU
                 }
             }
 
-            if (identityApiUrl is null && !string.IsNullOrEmpty(identityServerUrlFallback))
-            {
-                if (Uri.TryCreate(identityServerUrlFallback, UriKind.Absolute, out Uri baseUri))
-                {
-                    var uriBuilder = new UriBuilder(baseUri) { Port = 6001 };
-                    identityApiUrl = uriBuilder.Uri;
-                }
-            }
+            Uri identityServerUrl = null;
+            if (!string.IsNullOrEmpty(identityServerUrlFallback))
+                Uri.TryCreate(identityServerUrlFallback, UriKind.Absolute, out identityServerUrl);
+
+            identityApiUrl = IdentityEndpoints.ResolvePermissionsApiUrl(identityApiUrl, identityServerUrl);
 
             if (identityApiUrl is null)
                 throw new Exception("Could not determine Identity API URL from volume XML or --identity-server-url");
@@ -727,17 +725,17 @@ namespace Viking.AU
             return (volumeName, identityApiUrl);
         }
 
-        static bool AnyPointsAreDifferent(GridVector2[] Original, GridVector2[] New, double epsilonSquared = 0.25)
+        static bool AnyPointsAreDifferent(Vector2[] Original, Vector2[] New, double epsilonSquared = 0.25)
         {
             if (Original.Length != New.Length)
                 return true;
 
             //Any with index is not available in this language version, so we have to do it the wordy way
-            //return Original.Any((p, i) => GridVector2.DistanceSquared(p, New[i]) > epsilonSquared);
+            //return Original.Any((p, i) => Vector2.DistanceSquared(p, New[i]) > epsilonSquared);
 
             for (int i = 0; i < New.Length; i++)
             {
-                if (GridVector2.DistanceSquared(Original[i], New[i]) > epsilonSquared)
+                if (Vector2.DistanceSquared(Original[i], New[i]) > epsilonSquared)
                     return true;
             }
 
@@ -759,9 +757,8 @@ namespace Viking.AU
                 channelOpts =>
                 {
 #if NETFRAMEWORK
-                    channelOpts.HttpHandler = new WinHttpHandler();
+                    channelOpts.HttpHandler = CreateWinHttpHandler();
 #else
-                    // Grpc.Net.Client default handler is fine on modern .NET.
                     _ = channelOpts;
 #endif
                 });
@@ -772,6 +769,30 @@ namespace Viking.AU
 
             Store.Initialize(serviceProvider.GetRequiredService<IAnnotationStores>());
         }
+
+#if NETFRAMEWORK
+        /// <summary>
+        /// WinHttpHandler is required for Grpc.Net.Client on .NET Framework and only
+        /// supports gRPC over TLS. Accept the Docker localhost dev cert on loopback.
+        /// </summary>
+        static WinHttpHandler CreateWinHttpHandler()
+        {
+            return new WinHttpHandler
+            {
+                EnableMultipleHttp2Connections = true,
+                ServerCertificateValidationCallback = (request, certificate, chain, errors) =>
+                {
+                    if (errors == System.Net.Security.SslPolicyErrors.None)
+                        return true;
+
+                    var host = request?.RequestUri?.Host;
+                    return string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
+                        || host == "127.0.0.1"
+                        || host == "::1";
+                }
+            };
+        }
+#endif
 
         private sealed class VikingAuAnnotationAccessTokenProvider : IAnnotationAccessTokenProvider
         {

@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MorphologyMesh;
@@ -8,6 +9,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -550,7 +553,7 @@ namespace MonogameTestbed
         /// <summary>
         /// A mapping of all nodes to their bounding box
         /// </summary>
-        public Dictionary<ulong, GridBox> NodeBoundingBox = [];
+        public Dictionary<ulong, Box> NodeBoundingBox = [];
 
         private readonly ReaderWriterLockSlim ReadyModelLock = new();
         private readonly SortedSet<ulong> NodesThatFailedMeshing = [];
@@ -685,12 +688,12 @@ namespace MonogameTestbed
         private MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor> GenerateBoundingBoxMesh(IAssemblyPlannerNode node)
         {
             IAssemblyPlannerBranch branch = node as IAssemblyPlannerBranch;
-            if (NodeBoundingBox.TryGetValue(node.Key, out GridBox bbox))
+            if (NodeBoundingBox.TryGetValue(node.Key, out Box bbox))
             {
                 if (node.Depth > 0)
                 {
                     //For branches we scale the bounding box visual a bit to prevent overdrawing the leaf bounding box
-                    bbox = bbox.Scale(new GridVector3(1.02, 1.02, 1));
+                    bbox = bbox.Scale(new Geometry.Vector3(1.02, 1.02, 1));
                 }
 
                 //We have a bounding box from the cache, now build the mesh
@@ -710,14 +713,14 @@ namespace MonogameTestbed
         /// <param name="plan"></param>
         /// <param name="sliceGraph"></param>
         /// <returns></returns>
-        private GridBox? CalculateAllBoundingBoxes(MeshAssemblyPlanner plan, SliceGraph sliceGraph) => CalculateBoundingBox(plan.Root, sliceGraph); //Populate our bounding boxes from the root on down
+        private Box? CalculateAllBoundingBoxes(MeshAssemblyPlanner plan, SliceGraph sliceGraph) => CalculateBoundingBox(plan.Root, sliceGraph); //Populate our bounding boxes from the root on down
 
-        private GridBox? CalculateBoundingBox(IAssemblyPlannerNode node, SliceGraph sliceGraph)
+        private Box? CalculateBoundingBox(IAssemblyPlannerNode node, SliceGraph sliceGraph)
         {
             if (node is IAssemblyPlannerBranch branch)
             {
-                GridBox? lbox = default;
-                GridBox? rbox = default;
+                Box? lbox = default;
+                Box? rbox = default;
 
                 if (branch.Left != null)
                 {
@@ -729,7 +732,7 @@ namespace MonogameTestbed
                     rbox = CalculateBoundingBox(branch.Right, sliceGraph);
                 }
 
-                GridBox result = default;
+                Box result = default;
                 if (lbox.HasValue && rbox.HasValue)
                 {
                     result = lbox.Value.Union(rbox.Value, out _);
@@ -757,8 +760,8 @@ namespace MonogameTestbed
                 }
                 else
                 {
-                    GridRectangle boundingRect = topology.Shapes.BoundingBox().Translate(sliceGraph.BoundingBox.CenterPoint.XY());
-                    GridBox bbox = new(boundingRect, topology.ShapeZ.Min(), topology.ShapeZ.Max());
+                    Rectangle boundingRect = topology.Shapes.BoundingBox().Translate(sliceGraph.BoundingBox.CenterPoint.XY());
+                    Box bbox = new(boundingRect, topology.ShapeZ.Min(), topology.ShapeZ.Max());
                     NodeBoundingBox[node.Key] = bbox;
                     return bbox;
                 }

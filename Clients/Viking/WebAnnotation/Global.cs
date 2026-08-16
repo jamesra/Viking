@@ -18,22 +18,29 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Viking;
 using Viking.Common;
-using Viking.UI;
 using WebAnnotationModel;
 using WebAnnotationModel.gRPC;
 using System.Net.Http;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Utils;
+using VikingXNAGraphics;
+using WebAnnotation.View;
+#if NETFRAMEWORK
+using Viking.UI;
 using Viking.DependencyInjection;
 using Viking.Services.Grpc;
-using VikingXNAGraphics;
 using WebAnnotation.Services;
-using WebAnnotation.View;
 using SegmentationGrpcChannelManager = Viking.Services.Grpc.IGrpcChannelManager;
+#endif
 
 namespace WebAnnotation
 {
-    public class Global : IModuleServiceRegistrar, IModuleInitializer
+    public class Global
+#if NETFRAMEWORK
+        : IModuleServiceRegistrar, IModuleInitializer
+#endif
     {
         /// <summary>
         /// Jumping to a location causes it's diameter to occupy 1/8 the width of the screen
@@ -96,30 +103,30 @@ namespace WebAnnotation
             get
             {
                 if (_isSegmentationServiceAvailable.HasValue)
-                {
                     return _isSegmentationServiceAvailable.Value;
-                }
 
-                var segmentationService = ServiceLocator.ServiceProvider.GetRequiredService<IGrpcServiceConfiguration>();
-                if (segmentationService is null)
+                string serviceUrl = AnnotationSettings.SegmentationServiceUrl;
+#if NETFRAMEWORK
+                try
+                {
+                    IGrpcServiceConfiguration segmentationService = ServiceLocator.ServiceProvider?.GetService<IGrpcServiceConfiguration>();
+                    if (segmentationService != null)
+                        serviceUrl = segmentationService.Endpoint() ?? serviceUrl;
+                }
+                catch (Exception)
+                {
+                }
+#endif
+                if (string.IsNullOrWhiteSpace(serviceUrl))
                 {
                     _isSegmentationServiceAvailable = false;
                     return false;
                 }
 
-                var serviceUrl = segmentationService.Endpoint();
-                if (serviceUrl is null)
-                    return false;
-
-                // If no scheme is present, prepend http:// for validation (gRPC often uses host:port format)
                 string urlToValidate = serviceUrl.Contains("://") ? serviceUrl : $"http://{serviceUrl}";
-
-                // Use built-in Uri validation
-                bool isValid = Uri.TryCreate(urlToValidate, UriKind.Absolute, out Uri result) &&
-                               (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
-
-                _isSegmentationServiceAvailable = isValid;
-                return isValid;
+                _isSegmentationServiceAvailable = Uri.TryCreate(urlToValidate, UriKind.Absolute, out Uri result) &&
+                    (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
+                return _isSegmentationServiceAvailable.Value;
             }
         }
 
@@ -149,7 +156,9 @@ namespace WebAnnotation
 
         public static double MinRadius => AnnotationSettings.MinRadius;
 
+#if NETFRAMEWORK
         public static WebAnnotation.UI.Forms.PenAnnotationViewForm? PenAnnotationForm = null;
+#endif
 
         /// <summary>
         /// Wrapper class for annotation settings with validation
@@ -404,13 +413,11 @@ namespace WebAnnotation
                 {
                     Properties.Settings.Default.SegmentationServiceUrl = value;
                     Properties.Settings.Default.Save();
-                    // Clear cached availability check when URL changes
                     _isSegmentationServiceAvailable = null;
-                    // Reset the shared channel so it reconnects to the new URL
+#if NETFRAMEWORK
                     if (ServiceLocator.IsInitialized)
-                    {
                         ServiceLocator.GrpcChannelManager?.ResetChannel();
-                    }
+#endif
                 }
             }
 
@@ -541,8 +548,13 @@ namespace WebAnnotation
         /// <summary>
         /// This is hardcoded for now, but should be read from the VikingXML file
         /// </summary>
-        internal static Geometry.GridVector3 Scale;
-        private static readonly string WebAnnotationPath = Viking.UI.State.VolumeCachePath + System.IO.Path.DirectorySeparatorChar + "WebAnnotation";
+        internal static Geometry.Vector3 Scale;
+        private static readonly string WebAnnotationPath =
+#if NETFRAMEWORK
+            Viking.UI.State.VolumeCachePath + System.IO.Path.DirectorySeparatorChar + "WebAnnotation";
+#else
+            System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Viking", "Cache", "WebAnnotation");
+#endif
 
         /// <summary>
         /// Bookmark filename only
@@ -745,6 +757,7 @@ namespace WebAnnotation
         }
          */
 
+#if NETFRAMEWORK
         void IModuleServiceRegistrar.RegisterServices(IServiceCollection services)
         {
             if (services is null)
@@ -765,9 +778,32 @@ namespace WebAnnotation
                 opts => { },
                 channelOpts =>
                 {
-                    // Grpc.Net.Client on .NET Framework requires an HTTP/2-capable handler.
-                    channelOpts.HttpHandler = new WinHttpHandler();
+                    // Grpc.Net.Client on .NET Framework requires WinHttpHandler, which
+                    // only supports gRPC over TLS (https://localhost:5011, not h2c :5010).
+                    channelOpts.HttpHandler = CreateWinHttpHandler();
                 });
+        }
+
+        /// <summary>
+        /// WinHttpHandler is required for Grpc.Net.Client on .NET Framework and only
+        /// supports gRPC over TLS. Accept the Docker localhost dev cert on loopback.
+        /// </summary>
+        private static WinHttpHandler CreateWinHttpHandler()
+        {
+            return new WinHttpHandler
+            {
+                EnableMultipleHttp2Connections = true,
+                ServerCertificateValidationCallback = (request, certificate, chain, errors) =>
+                {
+                    if (errors == SslPolicyErrors.None)
+                        return true;
+
+                    var host = request?.RequestUri?.Host;
+                    return string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
+                        || host == "127.0.0.1"
+                        || host == "::1";
+                }
+            };
         }
 
         Task IModuleInitializer.InitializeAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
@@ -798,9 +834,7 @@ namespace WebAnnotation
         }
 
         private static bool InitializeModule(IServiceProvider serviceProvider)
-        {
-            AnnotationService.Types.Settings.PrepareSerializers();
-
+        {  
             //Find the server hosting the volume.  Look for an XML file mapping the volume to an endpoint.
             Viking.ViewModels.VolumeViewModel volume = Viking.UI.State.volume;
 
@@ -810,7 +844,7 @@ namespace WebAnnotation
             }
 
             //Section Thickness is hard-coded, should be pulled from server.
-            Scale = new Geometry.GridVector3(volume.DefaultXYScale.Value, volume.DefaultXYScale.Value, 90.0);
+            Scale = new Geometry.Vector3(volume.DefaultXYScale.Value, volume.DefaultXYScale.Value, 90.0);
 
             WebAnnotationModel.State.UserCredentials = Viking.UI.State.UserCredentials;
 
@@ -853,6 +887,7 @@ namespace WebAnnotation
 
             return false;
         }
+#endif
 
         private static XDocument GetAboutXML(Uri AboutURI)
         {
@@ -862,7 +897,13 @@ namespace WebAnnotation
 
         private static async Task<XDocument> GetAboutXMLAsync(Uri AboutURI)
         {
-            using HttpClient httpClient = HttpClientFactory.CreateClient(AboutURI, Viking.UI.State.UserCredentials);
+            using HttpClient httpClient = HttpClientFactory.CreateClient(AboutURI,
+#if NETFRAMEWORK
+                Viking.UI.State.UserCredentials
+#else
+                WebAnnotationModel.State.UserCredentials
+#endif
+                );
             try
             {
                 var response = await httpClient.GetAsync(AboutURI).ConfigureAwait(false);
@@ -1144,6 +1185,7 @@ namespace WebAnnotation
         #endregion
     }
 
+#if NETFRAMEWORK
     internal sealed class WebAnnotationGrpcServiceConfiguration(ApplicationSettings applicationSettings) : IGrpcServiceConfiguration
     {
         private readonly ApplicationSettings _applicationSettings = applicationSettings;
@@ -1164,4 +1206,5 @@ namespace WebAnnotation
             return Global.GetSegmentationServiceUrl();
         }
     }
+#endif
 }

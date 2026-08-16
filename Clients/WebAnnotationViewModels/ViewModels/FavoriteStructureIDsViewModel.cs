@@ -1,7 +1,9 @@
+using System;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Annotation.ViewModels.Commands;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Threading;
 using WebAnnotationModel;
 
 namespace Annotation.ViewModels
@@ -46,6 +48,14 @@ namespace Annotation.ViewModels
             AddFavoriteCommand = new DelegateCommand(AddFavorite, CanAddFavorite);
         }
 
+        public FavoriteStructureIDsViewModel(ObservableCollection<ulong> Favorites = null, ObservableCollection<ulong> root_types = null) : this()
+        {
+            if (root_types is null)
+                _RootStructureTypes = new ObservableCollection<IStructureTypeReadOnly>(Store.StructureTypes.GetObjectsByIDs(Store.StructureTypes.RootObjects, true, CancellationToken.None).Result);
+
+            FavoriteStructureTypeIDs = Favorites;
+        }
+
         public bool CanDeleteFavorite(object item)
         {
             if (item is IStructureTypeReadOnly TypeObj)
@@ -82,15 +92,6 @@ namespace Annotation.ViewModels
         {
             FavoriteStructureTypeIDs.Add(System.Convert.ToUInt64(item));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("FavoriteStructureTypeIDs"));
-        }
-
-
-        public FavoriteStructureIDsViewModel(ObservableCollection<ulong> Favorites = null, ObservableCollection<ulong> root_types = null) : this()
-        {
-            if (root_types is null)
-                _RootStructureTypes = new ObservableCollection<IStructureTypeReadOnly>(Store.StructureTypes.GetObjectsByIDs(Store.StructureTypes.RootObjects, true));
-
-            FavoriteStructureTypeIDs = Favorites;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

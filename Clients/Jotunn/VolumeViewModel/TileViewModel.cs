@@ -40,8 +40,8 @@ namespace Viking.VolumeViewModel
         /// <summary>
         /// Updated when the Mesh changes
         /// </summary>
-        GridRectangle _Bounds; 
-        public GridRectangle Bounds
+        Rectangle _Bounds; 
+        public Rectangle Bounds
         {
             get
             {
@@ -195,7 +195,7 @@ namespace Viking.VolumeViewModel
             //(Action)(() => { mesh = new MeshGeometry3D(); }));
             mesh = new MeshGeometry3D();
 
-            foreach(PositionNormalTextureVertex v in t.Verticies)
+            foreach(PositionNormalTextureVertex v in t.Vertices)
             {
                 mesh.Positions.Add(new Point3D(v.Position.X, v.Position.Y, v.Position.Z));
                 mesh.Normals.Add(new Vector3D(v.Normal.X, v.Normal.Y, v.Normal.Z));
@@ -364,10 +364,10 @@ namespace Viking.VolumeViewModel
         protected void MeshChanged(MeshGeometry3D newMesh)
         {
             if (newMesh == null)
-                _Bounds = new GridRectangle();
+                _Bounds = new Rectangle();
 
             Rect3D boundRect3D = newMesh.Bounds;
-            _Bounds = new GridRectangle();
+            _Bounds = new Rectangle();
         }
 
         #region IComparable<TileViewModel> Members

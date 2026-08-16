@@ -21,13 +21,13 @@ namespace Viking.VolumeModel
 
         private readonly SemaphoreSlim _InitializeSemaphore = new(1);
 
-        private GridRectangle _VolumeBounds;
-        public override GridRectangle ControlBounds => _VolumeBounds;
+        private Rectangle _VolumeBounds;
+        public override Rectangle ControlBounds => _VolumeBounds;
 
-        private GridRectangle _SectionBounds;
-        public override GridRectangle? SectionBounds => _SectionBounds;
+        private Rectangle _SectionBounds;
+        public override Rectangle? SectionBounds => _SectionBounds;
 
-        public override GridRectangle? VolumeBounds => _VolumeBounds;
+        public override Rectangle? VolumeBounds => _VolumeBounds;
 
         internal static HttpClient HttpClient => Viking.Common.SharedResources.HttpClient;
         /// <summary>
@@ -123,21 +123,21 @@ namespace Viking.VolumeModel
             }
         }
 
-        public override bool TrySectionToVolume(GridVector2 P, out GridVector2 transformedP)
+        public override bool TrySectionToVolume(Vector2 P, out Vector2 transformedP)
         {
             transformedP = P;
             return true;
         }
 
-        public override bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP)
+        public override bool TryVolumeToSection(Vector2 P, out Vector2 transformedP)
         {
             transformedP = P;
             return true;
         }
 
-        public override GridVector2[] VolumeToSection(GridVector2[] P)
+        public override Vector2[] VolumeToSection(Vector2[] P)
         {
-            GridVector2[] transformedP = new GridVector2[P.Length];
+            Vector2[] transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
             return transformedP;
         }
@@ -147,16 +147,16 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TryVolumeToSection(in GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TryVolumeToSection(in Vector2[] P, out Vector2[] transformedP)
         {
-            transformedP = new GridVector2[P.Length];
+            transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
             return [.. P.Select(p => true)];
         }
 
-        public override GridVector2[] SectionToVolume(GridVector2[] P)
+        public override Vector2[] SectionToVolume(Vector2[] P)
         {
-            GridVector2[] transformedP = new GridVector2[P.Length];
+            Vector2[] transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
             return transformedP;
         }
@@ -166,9 +166,9 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TrySectionToVolume(in GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TrySectionToVolume(in Vector2[] P, out Vector2[] transformedP)
         {
-            transformedP = new GridVector2[P.Length];
+            transformedP = new Vector2[P.Length];
             P.CopyTo(transformedP, 0);
             return [.. P.Select(p => true)];
         }
@@ -317,8 +317,8 @@ namespace Viking.VolumeModel
             return null;
         }
 
-        public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample) => base.VisibleTiles(VisibleBounds, null, DownSample);
+        public override TilePyramid VisibleTiles(Rectangle VisibleBounds, double DownSample) => base.VisibleTiles(VisibleBounds, null, DownSample);
 
-        public override System.Threading.Tasks.Task<TilePyramid> VisibleTilesAsync(GridRectangle VisibleBounds, double DownSample) => Task.Run(() => base.VisibleTiles(VisibleBounds, null, DownSample));
+        public override System.Threading.Tasks.Task<TilePyramid> VisibleTilesAsync(Rectangle VisibleBounds, double DownSample) => Task.Run(() => base.VisibleTiles(VisibleBounds, null, DownSample));
     }
 }

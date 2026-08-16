@@ -29,7 +29,7 @@ namespace Viking.UI.Forms
         /// <summary>
         /// Rectangle to be captured by the screenshot
         /// </summary>
-        public GridRectangle Rect;
+        public Rectangle Rect;
 
         /// <summary>
         /// Downsample level to use when capturing screenshot
@@ -58,7 +58,7 @@ namespace Viking.UI.Forms
 
         private readonly int _Z;
 
-        public ScreenshotForm(GridRectangle myRect, double Downsample, int Z)
+        public ScreenshotForm(Rectangle myRect, double Downsample, int Z)
         {
             this._Z = Z;
             this.Rect = myRect;
@@ -120,7 +120,7 @@ namespace Viking.UI.Forms
             double ROIWidth = (double)this.numWidth.Value * this.Downsample;
             double ROIHeight = (double)this.numHeight.Value * this.Downsample;
 
-            this.Rect = new GridRectangle(new GridVector2((double)this.numX.Value - ROIWidth / 2,
+            this.Rect = new Rectangle(new Vector2((double)this.numX.Value - ROIWidth / 2,
                                                           (double)this.numY.Value - ROIHeight / 2),
                                                           ROIWidth,
                                                           ROIHeight);

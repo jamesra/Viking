@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
 namespace gRPCAnnotationService
@@ -126,9 +127,28 @@ namespace gRPCAnnotationService
                         ValidateIssuer = true,
                         ValidateIssuerSigningKey = true,
                         ValidateTokenReplay = true,
-                        ValidAudience = AnnotationScope,
+                        ValidAudiences = new[] { AnnotationScope, "Viking.Annotation.API" },
                         NameClaimType = "name",
-                        ValidTypes = new[] { "at+jwt" }
+                        ValidTypes = new[] { "at+jwt", "JWT" }
+                    };
+
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnAuthenticationFailed = context =>
+                        {
+                            var logger = context.HttpContext.RequestServices.GetService<ILogger<Startup>>();
+                            logger?.LogWarning(context.Exception, "JWT authentication failed for gRPC request");
+                            return System.Threading.Tasks.Task.CompletedTask;
+                        },
+                        OnChallenge = context =>
+                        {
+                            var logger = context.HttpContext.RequestServices.GetService<ILogger<Startup>>();
+                            var hasBearer = context.Request.Headers.ContainsKey("Authorization");
+                            logger?.LogWarning(
+                                "JWT challenge on {Path}. Authorization header present: {HasBearer}",
+                                context.Request.Path, hasBearer);
+                            return System.Threading.Tasks.Task.CompletedTask;
+                        }
                     };
                 });
         }
@@ -138,11 +158,8 @@ namespace gRPCAnnotationService
             if (env.IsDevelopment())
                 app.UseDeveloperExceptionPage();
 
-            // Skip HTTPS redirect when the service is deliberately HTTP (Docker test stack).
-            var allowHttp = string.Equals(Configuration["IdentityServer:AllowHttpMetadata"], "true",
-                StringComparison.OrdinalIgnoreCase);
-            if (!allowHttp)
-                app.UseHttpsRedirection();
+            // gRPC clients do not follow HTTP redirects. Serve h2c (:80) and HTTPS (:443)
+            // as separate listeners; never redirect between them.
 
             app.UseRouting();
             app.UseAuthentication();

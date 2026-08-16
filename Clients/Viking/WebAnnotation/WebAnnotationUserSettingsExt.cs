@@ -2,12 +2,14 @@
 namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd
 {
     using System;
-    //using Xml.Schema.Linq;
+#if NETFRAMEWORK
     using System.Windows.Forms;
+#endif
 
 
     public partial class Hotkey
     {
+#if NETFRAMEWORK
         public System.Windows.Forms.Keys KeyCode
         {
             get
@@ -17,6 +19,7 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd
 
             }
         }
+#endif
     }
 
     public partial class Parameters

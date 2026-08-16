@@ -1,5 +1,6 @@
 using FsCheck;
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Geometry.JSON;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -13,6 +14,8 @@ using GeometryTests;
 using Newtonsoft.Json.Linq;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -23,7 +26,7 @@ namespace MonogameTestbed
         JSON_FILE
     }
 
-    public class PolygonGeneratorView(GridPolygon polygon)
+    public class PolygonGeneratorView(Polygon polygon)
     {
         readonly PolygonSetView PolygonsView = null;
 
@@ -70,13 +73,13 @@ namespace MonogameTestbed
         private static async Task PopulateTestTask()
         {
             /*
-            GridRectangle rect = new GridRectangle(GridVector2.Zero, 50);
-            GridVector2[] points = Array.Empty<GridVector2>();
+            Rectangle rect = new Rectangle(Geometry.Vector2.Zero, 50);
+            Geometry.Vector2[] points = Array.Empty<Geometry.Vector2>();
             int nLines = 0;
             if (TestType == PolygonGeneratorTestDataSource.FS_CHECK)
             {
                 TestTask = Task.Run(() => {
-                    GeometryTests.GridPolygonTest.TestPolygonGeneratorUnderpinnings(this.OnPolygonUpdate);
+                    GeometryTests.PolygonTest.TestPolygonGeneratorUnderpinnings(this.OnPolygonUpdate);
                 });
             }
             else if (TestType == PolygonGeneratorTestDataSource.JSON_FILE)
@@ -100,7 +103,7 @@ namespace MonogameTestbed
 
                 TestTask = Task.Run(() => {
                     polygonSetView = new PolygonIntersectionView(polygons);
-                    var result = GridPolygonTest.AssessPolygonGeneration(polygons[0], polygons[1], OnPolygonUpdate);
+                    var result = PolygonTest.AssessPolygonGeneration(polygons[0], polygons[1], OnPolygonUpdate);
                     result.VerboseCheckThrowOnFailure();
                 });
             }
@@ -116,7 +119,7 @@ namespace MonogameTestbed
 
         }
 
-        private void OnPolygonUpdate(GridPolygon[] polygons, List<GridVector2> found, List<GridVector2> expected) => polygonSetView = new PolygonIntersectionView(polygons);
+        private void OnPolygonUpdate(Polygon[] polygons, List<Geometry.Vector2> found, List<Geometry.Vector2> expected) => polygonSetView = new PolygonIntersectionView(polygons);
 
         public void UnloadContent(MonoTestbed window)
         {
@@ -125,11 +128,11 @@ namespace MonogameTestbed
 
         private static MeshModel<VertexPositionColor> BuildCircleConvexHull(ICircle2D circle) =>
             /*
-GridVector2[] verts2D = MorphologyMesh.ShapeMeshGenerator<Geometry.Meshing.IVertex3D<object>,object>.CreateVerticiesForCircle(circle, 0, 16, null, GridVector3.Zero).Select(v => new GridVector2(v.Position.X, v.Position.Y)).ToArray();
+Geometry.Vector2[] verts2D = MorphologyMesh.ShapeMeshGenerator<Geometry.Meshing.IVertex3D<object>,object>.CreateVerticiesForCircle(circle, 0, 16, null, Geometry.Vector3.Zero).Select(v => new Geometry.Vector2(v.Position.X, v.Position.Y)).ToArray();
 
-GridVector2[] cv_verticies = verts2D.ConvexHull(out int[] cv_idx);
+Geometry.Vector2[] cv_verticies = verts2D.ConvexHull(out int[] cv_idx);
 
-GridPolygon convex_hull_poly = new GridPolygon(cv_verticies);
+Polygon convex_hull_poly = new Polygon(cv_verticies);
 return TriangleNetExtensions.CreateMeshForPolygon2D(convex_hull_poly, Color.Blue);
 */
             throw new NotImplementedException();

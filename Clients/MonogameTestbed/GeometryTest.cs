@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using TriangleNet;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -32,19 +34,19 @@ namespace MonogameTestbed
 
         public void InitGeometry()
         {
-            GridLineSegment lineSegment;
-            GridTriangle triangle;
-            GridCircle circle;
-            GridPolygon polygon;
+            LineSegment lineSegment;
+            Triangle triangle;
+            Circle circle;
+            Polygon polygon;
 
-            lineSegment = new GridLineSegment(new GridVector2(0, 0), new GridVector2(5, 5));
-            circle = new GridCircle(new GridVector2(-10, -10), 4);
+            lineSegment = new LineSegment(new Geometry.Vector2(0, 0), new Geometry.Vector2(5, 5));
+            circle = new Circle(new Geometry.Vector2(-10, -10), 4);
 
             polygon = StandardGeometryModels.CreateTestPolygon(true);
 
-            triangle = new GridTriangle(new GridVector2(-10, 10),
-                                                new GridVector2(-12, 20),
-                                                 new GridVector2(-15, 10)
+            triangle = new Triangle(new Geometry.Vector2(-10, 10),
+                                                new Geometry.Vector2(-12, 20),
+                                                 new Geometry.Vector2(-15, 10)
                                                 );
 
 
@@ -77,21 +79,21 @@ namespace MonogameTestbed
             foreach (IShape2D shape in shapes)
             {
                 IColorView view = null;
-                if (shape is GridLineSegment lineSegment)
+                if (shape is LineSegment lineSegment)
                 {
                     view = new LineView(lineSegment.A, lineSegment.B, 1, Color.Red, LineStyle.Standard);
                 }
-                else if (shape is GridCircle circle)
+                else if (shape is Circle circle)
                 {
                     view = new CircleView(circle, Color.Red);
                 }
-                else if (shape is GridTriangle triangle)
+                else if (shape is Triangle triangle)
                 {
                     view = TriangleNetExtensions.CreateMeshForPolygon2D(triangle.Points, null, Color.Red);
                 }
                 else
                 {
-                    view = shape is GridPolygon polygon
+                    view = shape is Polygon polygon
                         ? (IColorView)TriangleNetExtensions.CreateMeshForPolygon2D(polygon, Color.Red)
                         : throw new ArgumentException("Unexpected shape type");
                 }
@@ -158,16 +160,16 @@ namespace MonogameTestbed
             {
                 IColorView shapeView = ShapeViews[iSelectedView];
                 IShape2D shape = shapes[iSelectedView];
-                shapes[iSelectedView] = shape.Translate(state.ThumbSticks.Left.ToGridVector2());
+                shapes[iSelectedView] = shape.Translate(state.ThumbSticks.Left.ToVector2());
                 if (shapeView is IViewPosition2D)
                 {
                     IViewPosition2D view = shapeView as IViewPosition2D;
-                    view.Position += state.ThumbSticks.Left.ToGridVector2();
+                    view.Position += state.ThumbSticks.Left.ToVector2();
                 }
                 else if (shapeView is IViewPosition3D)
                 {
                     IViewPosition3D view = shapeView as IViewPosition3D;
-                    view.Position += state.ThumbSticks.Left.ToGridVector3();
+                    view.Position += state.ThumbSticks.Left.ToVector3();
                 }
             }
 
@@ -219,12 +221,12 @@ namespace MonogameTestbed
         {
             foreach (IShape2D shape in shapes)
             {
-                if (shape is GridPolygon poly)
+                if (shape is Polygon poly)
                 {
-                    long FirstIndex = MorphologyMesh.SmoothMeshGenerator.FirstIndex(poly.ExteriorRing, out GridVector2 convexHullCentroid);
+                    long FirstIndex = MorphologyMesh.SmoothMeshGenerator.FirstIndex(poly.ExteriorRing, out Geometry.Vector2 convexHullCentroid);
 
-                    CircleView firstIndexView = new CircleView(new GridCircle(poly.ExteriorRing[FirstIndex], Math.Sqrt(poly.Area) / 10), Color.Black);
-                    CircleView centroidView = new CircleView(new GridCircle(poly.Centroid, Math.Sqrt(poly.Area) / 20), Color.Yellow);
+                    CircleView firstIndexView = new CircleView(new Circle(poly.ExteriorRing[FirstIndex], Math.Sqrt(poly.Area) / 10), Color.Black);
+                    CircleView centroidView = new CircleView(new Circle(poly.Centroid, Math.Sqrt(poly.Area) / 20), Color.Yellow);
                     CircleView.Draw(window.GraphicsDevice, window.Scene, OverlayStyle.Alpha, new CircleView[] { firstIndexView, centroidView });
                 }
             }

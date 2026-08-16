@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI
 {
@@ -13,7 +14,7 @@ namespace WebAnnotation.UI
     public partial class StructureLocationsChangeLogPropertiesPage : Viking.UI.BaseClasses.PropertyPageBase
     {
         private Structure Obj;
-        private readonly BindingList<WebAnnotationModel.ObjAttribute>? ListTags = null;
+        private readonly BindingList<WebAnnotationModel.Objects.ObjAttribute>? ListTags = null;
         private bool listLoaded = false;
 
         public StructureLocationsChangeLogPropertiesPage()

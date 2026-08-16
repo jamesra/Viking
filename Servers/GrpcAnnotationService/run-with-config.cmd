@@ -6,8 +6,8 @@ docker build -t grpc-annotation-service -f Servers/GrpcAnnotationService/Dockerf
 
 REM Run the container with volume mounts for appsettings.json
 docker run -it ^
-  -p 5001:80 ^
-  -p 5002:443 ^
+  -p 5010:80 ^
+  -p 5011:443 ^
   -v "%cd%/Servers/GrpcAnnotationService/appsettings.json:/app/appsettings.json:ro" ^
   -v "%cd%/Servers/GrpcAnnotationService/appsettings.Development.json:/app/appsettings.Development.json:ro" ^
   -e ASPNETCORE_ENVIRONMENT=Development ^
@@ -16,5 +16,5 @@ docker run -it ^
   grpc-annotation-service
 
 echo Container started. Access the service at:
-echo HTTP: http://localhost:5001
-echo HTTPS: https://localhost:5002
+echo HTTP  (h2c, tests):     http://localhost:5010
+echo HTTPS (Viking net48):   https://localhost:5011

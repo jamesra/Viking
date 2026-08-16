@@ -5,6 +5,8 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using Geometry;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {  
@@ -13,23 +15,23 @@ namespace VikingXNAGraphics
         public Texture2D Texture;
         bool FlipTexture = false;
 
-        public TextureCircleView(Texture2D texture, GridCircle circle, Color color) : base(circle, color)
+        public TextureCircleView(Texture2D texture, Circle circle, Color color) : base(circle, color)
         {
             this.Texture = texture;
         }
 
-        public static TextureCircleView CreateUpArrow(GridCircle circle, Color color)
+        public static TextureCircleView CreateUpArrow(Circle circle, Color color)
         {
             return new TextureCircleView(GlobalPrimitives.UpArrowTexture, circle, color);
         }
 
-        public static TextureCircleView CreateDownArrow(GridCircle circle, Color color)
+        public static TextureCircleView CreateDownArrow(Circle circle, Color color)
         {
             TextureCircleView view = new TextureCircleView(GlobalPrimitives.DownArrowTexture, circle, color);
             return view;
         }
 
-        public static TextureCircleView CreateCircle(GridCircle circle, Color color)
+        public static TextureCircleView CreateCircle(Circle circle, Color color)
         {
             TextureCircleView view = new TextureCircleView(GlobalPrimitives.CircleTexture, circle, color);
             return view;
@@ -120,8 +122,8 @@ namespace VikingXNAGraphics
 
         #endregion
 
-        private GridCircle _Circle;
-        public GridCircle Circle
+        private Circle _Circle;
+        public Circle Circle
         {
             get
             {
@@ -134,7 +136,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        public GridVector2 VolumePosition
+        public Geometry.Vector2 VolumePosition
         {
             get
             {
@@ -217,7 +219,7 @@ namespace VikingXNAGraphics
             return true;
         }
         
-        public CircleView(GridCircle circle, Color color)
+        public CircleView(Circle circle, Color color)
         {
             this.Circle = circle;
             this.Color = color; 
@@ -231,7 +233,7 @@ namespace VikingXNAGraphics
         /// <param name="circle"></param>
         /// <param name="Verts"></param>
         /// <returns></returns>
-        protected static VertexPositionColorTexture[] VerticiesForCircle(GridCircle circle)
+        protected static VertexPositionColorTexture[] VerticiesForCircle(Circle circle)
         {
             VertexPositionColorTexture[] Verts = new VertexPositionColorTexture[GlobalPrimitives.SquareVerts.Length];
             GlobalPrimitives.SquareVerts.CopyTo(Verts, 0);
@@ -288,7 +290,7 @@ namespace VikingXNAGraphics
             return 0.5f;
         }
 
-        public static Microsoft.Xna.Framework.Color AdjustHSLColorForStatus(Microsoft.Xna.Framework.Color HSLColor, GridRectangle VisibleBounds, double Radius, bool MouseOver, bool OnVisibleSection)
+        public static Microsoft.Xna.Framework.Color AdjustHSLColorForStatus(Microsoft.Xna.Framework.Color HSLColor, Rectangle VisibleBounds, double Radius, bool MouseOver, bool OnVisibleSection)
         {
 
             float SatScalar = BaseSaturationScalar(MouseOver, OnVisibleSection);//HSLColor.B / 255.0f;
@@ -310,7 +312,7 @@ namespace VikingXNAGraphics
         /// <param name="color"></param>
         public VertexPositionColorTexture[] GetCircleBackgroundVerts(Microsoft.Xna.Framework.Color HSLColor, out int[] indicies)
         {
-            //            GridVector2 Pos = this.VolumePosition;
+            //            Geometry.Vector2 Pos = this.VolumePosition;
 
             //Can't populate until we've referenced CircleVerts
             indicies = GlobalPrimitives.SquareIndicies;

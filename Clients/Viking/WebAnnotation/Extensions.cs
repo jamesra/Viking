@@ -7,6 +7,7 @@ using System.Linq;
 using rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation
 {
@@ -32,15 +33,14 @@ namespace WebAnnotation
 
     public static class KeysExtensions
     {
-        public static bool ShiftOrCtrlPressed(this System.Windows.Forms.Keys ModifierKeys)
-        {
-            return ModifierKeys == System.Windows.Forms.Keys.Control ||
-               ModifierKeys == System.Windows.Forms.Keys.Shift;
-        }
+#if NETFRAMEWORK
+        public static bool ShiftOrCtrlPressed(this System.Windows.Forms.Keys keys) =>
+            keys == System.Windows.Forms.Keys.Control || keys == System.Windows.Forms.Keys.Shift;
 
-        public static bool ShiftPressed(this System.Windows.Forms.Keys ModifierKeys) => ModifierKeys == System.Windows.Forms.Keys.Shift;
+        public static bool ShiftPressed(this System.Windows.Forms.Keys keys) => keys == System.Windows.Forms.Keys.Shift;
 
-        public static bool CtrlPressed(this System.Windows.Forms.Keys ModifierKeys) => ModifierKeys == System.Windows.Forms.Keys.Control;
+        public static bool CtrlPressed(this System.Windows.Forms.Keys keys) => keys == System.Windows.Forms.Keys.Control;
+#endif
     }
 
     public static class HitTestResultExtensions
@@ -110,7 +110,7 @@ namespace WebAnnotation
         /// <param name="listHitTestObjects"></param>
         /// <param name="WorldPos"></param>
         /// <returns></returns>
-        public static List<HitTestResult> ExpandICanvasViewContainers(this IEnumerable<HitTestResult> listHitTestObjects, GridVector2 WorldPos)
+        public static List<HitTestResult> ExpandICanvasViewContainers(this IEnumerable<HitTestResult> listHitTestObjects, Vector2 WorldPos)
         {
             List<HitTestResult> nestedContainers = [.. listHitTestObjects.Select(lc =>
                  {
@@ -139,18 +139,18 @@ namespace WebAnnotation
         }
     }
 
-    public static class GridRectangleExtensions
+    public static class RectangleExtensions
     {
-        public static GridRectangle ToMosaicSpace(this in GridRectangle volumeRect, Viking.VolumeModel.IVolumeToSectionTransform mapper)
+        public static Rectangle ToMosaicSpace(this in Rectangle volumeRect, Viking.VolumeModel.IVolumeToSectionTransform mapper)
         {
-            GridVector2[] MosaicCorners = mapper.VolumeToSection([volumeRect.LowerLeft, volumeRect.LowerRight, volumeRect.UpperLeft, volumeRect.UpperRight]);
+            Vector2[] MosaicCorners = mapper.VolumeToSection([volumeRect.LowerLeft, volumeRect.LowerRight, volumeRect.UpperLeft, volumeRect.UpperRight]);
 
             double MinX = MosaicCorners.Min(p => p.X);
             double MaxX = MosaicCorners.Max(p => p.X);
             double MinY = MosaicCorners.Min(p => p.Y);
             double MaxY = MosaicCorners.Max(p => p.Y);
 
-            return new GridRectangle(MinX, MaxX, MinY, MaxY);
+            return new Rectangle(MinX, MaxX, MinY, MaxY);
         }
     }
 
@@ -177,25 +177,25 @@ namespace WebAnnotation
 
         public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command) => StringToLocationType(command.AnnotationType);
 
-        public static void SubscribeToPropertyChangeEvents(this WebAnnotationModel.LocationObj loc, System.Windows.IWeakEventListener listener)
+        public static void SubscribeToPropertyChangeEvents(this WebAnnotationModel.Objects.LocationObj loc, System.Windows.IWeakEventListener listener)
         {
             WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.AddListener(loc, listener);
             WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.AddListener(loc, listener);
         }
 
-        public static void UnsubscribeToPropertyChangeEvents(this WebAnnotationModel.LocationObj loc, System.Windows.IWeakEventListener listener)
+        public static void UnsubscribeToPropertyChangeEvents(this WebAnnotationModel.Objects.LocationObj loc, System.Windows.IWeakEventListener listener)
         {
             WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.RemoveListener(loc, listener);
             WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.RemoveListener(loc, listener);
         }
 
-        public static void SubscribeToPropertyChangeEvents(this WebAnnotationModel.StructureObj s, System.Windows.IWeakEventListener listener)
+        public static void SubscribeToPropertyChangeEvents(this WebAnnotationModel.Objects.StructureObj s, System.Windows.IWeakEventListener listener)
         {
             WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.AddListener(s, listener);
             WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.AddListener(s, listener);
         }
 
-        public static void UnsubscribeToPropertyChangeEvents(this WebAnnotationModel.StructureObj s, System.Windows.IWeakEventListener listener)
+        public static void UnsubscribeToPropertyChangeEvents(this WebAnnotationModel.Objects.StructureObj s, System.Windows.IWeakEventListener listener)
         {
             WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.RemoveListener(s, listener);
             WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.RemoveListener(s, listener);
@@ -204,21 +204,26 @@ namespace WebAnnotation
 
     internal static class LocationObjExtensions
     {
-        public static double DistanceToPoint3D(this WebAnnotationModel.LocationObj l, GridVector3 origin)
+        public static double DistanceToPoint3D(this WebAnnotationModel.Objects.LocationObj l, Vector3 origin)
         {
-            Viking.VolumeModel.IVolumeToSectionTransform mapper = Viking.UI.State.volume.GetSectionToVolumeTransform((int)l.Z);
+            Viking.VolumeModel.IVolumeToSectionTransform mapper =
+                AnnotationBootstrap.Transforms?.GetSectionToVolumeTransform((int)l.Z)
+#if NETFRAMEWORK
+                ?? Viking.UI.State.volume.GetSectionToVolumeTransform((int)l.Z)
+#endif
+                ;
             if (mapper is null)
             {
                 return double.MaxValue;
             }
 
-            if (!mapper.TrySectionToVolume(l.Position, out GridVector2 vPos))
+            if (!mapper.TrySectionToVolume(l.Position, out Vector2 vPos))
             {
                 return double.MaxValue;
             }
 
-            GridVector3 p = new(vPos.X * Global.Scale.X, vPos.Y * Global.Scale.Y, l.Z * Global.Scale.Z);
-            return GridVector3.Distance(p, origin);
+            Vector3 p = new(vPos.X * Global.Scale.X, vPos.Y * Global.Scale.Y, l.Z * Global.Scale.Z);
+            return Vector3.Distance(p, origin);
         }
 
 
@@ -230,7 +235,7 @@ namespace WebAnnotation
         /// <param name="location"></param>
         /// <param name="volumePoints"></param>
         /// <param name="volume_innerRingPoints"></param>
-        public static void TrySetShapeFromGeometryInSectionShowErrorDialog(this WebAnnotationModel.LocationObj location, System.Windows.Window parent, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
+        public static void TrySetShapeFromGeometryInSectionShowErrorDialog(this WebAnnotationModel.Objects.LocationObj location, System.Windows.Window parent, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
             try
             {
@@ -242,7 +247,7 @@ namespace WebAnnotation
             }
         }
 
-        public static bool IsLastEditedAnnotation(this WebAnnotationModel.LocationObj loc)
+        public static bool IsLastEditedAnnotation(this WebAnnotationModel.Objects.LocationObj loc)
         {
             if (!Global.LastEditedAnnotationID.HasValue)
             {
@@ -265,18 +270,18 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="annotations">Annotations to extract points from</param>
         /// <returns>List of points in section/mosaic coordinates</returns>
-        public static IReadOnlyList<GridVector2> GetAnnotationRepresentativePoints(IEnumerable<LocationObj> annotations)
+        public static IReadOnlyList<Vector2> GetAnnotationRepresentativePoints(IEnumerable<LocationObj> annotations)
         {
             if (annotations is null)
                 return [];
 
-            List<GridVector2> result = [];
+            List<Vector2> result = [];
             foreach (LocationObj loc in annotations)
             {
                 if (loc?.MosaicShape is null)
                     continue;
 
-                SqlGeometry shape = loc.MosaicShape;
+                SqlGeometry shape = loc.MosaicShape.ToSqlGeometry();
                 LocationType typeCode = loc.TypeCode;
 
                 switch (typeCode)
@@ -284,13 +289,13 @@ namespace WebAnnotation
                     case LocationType.POLYGON:
                     case LocationType.CURVEPOLYGON:
                     case LocationType.CLOSEDCURVE:
-                        GridVector2? polygonPoint = TryGetPolygonRepresentativePoint(shape);
+                        Vector2? polygonPoint = TryGetPolygonRepresentativePoint(shape);
                         if (polygonPoint.HasValue)
                             result.Add(polygonPoint.Value);
                         break;
                     case LocationType.POLYLINE:
                     case LocationType.OPENCURVE:
-                        GridVector2[] linePoints = shape.ToPoints();
+                        Vector2[] linePoints = shape.ToPoints();
                         if (linePoints?.Length > 0)
                             result.AddRange(linePoints);
                         break;
@@ -308,15 +313,15 @@ namespace WebAnnotation
             return result;
         }
 
-        private static GridVector2? TryGetPolygonRepresentativePoint(SqlGeometry shape)
+        private static Vector2? TryGetPolygonRepresentativePoint(SqlGeometry shape)
         {
             try
             {
                 if (shape.GeometryType() != SupportedGeometryType.POLYGON && shape.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
                     return null;
 
-                GridPolygon polygon = shape.ToPolygon();
-                GridVector2 centroid = polygon.Centroid;
+                Polygon polygon = shape.ToPolygon();
+                Vector2 centroid = polygon.Centroid;
                 return polygon.Contains(centroid) ? centroid : null;
             }
             catch (ArgumentException)

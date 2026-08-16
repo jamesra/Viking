@@ -42,6 +42,13 @@ namespace Viking
 
     static class Program
     {
+        /// <summary>
+        /// Pre-filled on the login volume stage when no <c>-v</c> argument is given
+        /// (Viking No Args). Used by this branch to target the local gRPC test endpoint
+        /// declared in VolumeTest.xml.
+        /// </summary>
+        internal const string DefaultVolumeUrl = "http://rogue1.codepharm.net/RABBIT/VolumeTest.xml";
+
         static System.IO.StreamWriter? DebugLogFile = null;
         public static TextWriter? SynchronizedDebugWriter = null;
 
@@ -336,7 +343,7 @@ namespace Viking
         private static ApplicationSettings? ShowLoginWindow(string? volumePath, string? username = null, string? password = null)
         {
             LoginWindow wpfLoginWindow = new();
-            wpfLoginWindow.InitialVolumeUrl = string.IsNullOrWhiteSpace(volumePath) ? null : volumePath;
+            wpfLoginWindow.InitialVolumeUrl = string.IsNullOrWhiteSpace(volumePath) ? DefaultVolumeUrl : volumePath;
             return ShowLoginWindowFromDialog(wpfLoginWindow);
         }
 

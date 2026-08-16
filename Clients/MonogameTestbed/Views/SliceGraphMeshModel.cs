@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -76,12 +78,12 @@ namespace MonogameTestbed
             AccumulateSliceTopology(mesh.Topology);
 
             //Maps mesh vertex index to the global vertex index
-            int[] mesh_to_global = new int[mesh.Verticies.Count];
+            int[] mesh_to_global = new int[mesh.Vertices.Count];
 
-            List<VertexPositionNormalColor> modelVerts = new(mesh.Verticies.Count);
+            List<VertexPositionNormalColor> modelVerts = new(mesh.Vertices.Count);
 
             ///Add all new verticies to the mesh and populate a map for vertex indicies
-            for (int iVert = 0; iVert < mesh.Verticies.Count; iVert++)
+            for (int iVert = 0; iVert < mesh.Vertices.Count; iVert++)
             {
                 MorphMeshVertex vertex = mesh[iVert];
 
@@ -98,7 +100,7 @@ namespace MonogameTestbed
                 else
                 {
                     //Check if the PointIndex for this vertex already exists in the model
-                    ulong iShape = mesh.Topology.ShapeIndexToMorphNodeIndex[vertex.ShapeIndex.iShape];
+                    ulong iShape = mesh.Topology.ShapeIndexToMorphNodeIndex[vertex.ShapeIndex.ShapeIndex];
                     MorphMeshVertex composite_vertex = MorphMeshVertex.Reindex(vertex, (int)iShape);
 
                     if (false == ShapeIndexToVertex.TryGetValue(composite_vertex.ShapeIndex, out int iGlobalVert))
@@ -236,15 +238,15 @@ namespace MonogameTestbed
                 //Triangle index order must match reoriented composite faces or backface culling ignores the fix.
                 model.Edges = [.. composite.Faces.SelectMany(f => f.iVerts)];
 
-                for (int i = 0; i < composite.Verticies.Count && i < model.Verticies.Length; i++)
+                for (int i = 0; i < composite.Vertices.Count && i < model.Vertices.Length; i++)
                 {
-                    var v = model.Verticies[i];
+                    var v = model.Vertices[i];
                     v.Normal = composite[i].Normal.ToXNAVector3();
-                    model.Verticies[i] = v;
+                    model.Vertices[i] = v;
                 }
 
                 //In-place vertex edits do not mark buffers dirty; reassign to force GPU refresh.
-                model.Verticies = [.. model.Verticies];
+                model.Vertices = [.. model.Vertices];
             }
             finally
             {
@@ -261,7 +263,7 @@ namespace MonogameTestbed
         /// <summary>
         /// Update our mesh model with new verticies and edges from a merge or additional slice operation.  Thread safe.
         /// </summary>
-        /// <param name="verts">Verticies to append to our model</param>
+        /// <param name="verts">Vertices to append to our model</param>
         /// <param name="edges">Triangles to add to the model, expects sets of three indicating triangles.</param>
         /// <param name="mesh_to_global">The indicies of vertices whose normal needs to be updated using the composite mesh normal</param>
         private void UpdateModel(ICollection<VertexPositionNormalColor> modelVerts, int[] NewModelEdges, int[] mesh_to_global = null)
@@ -282,7 +284,7 @@ namespace MonogameTestbed
                 {
                     int iVert = mesh_to_global[i];
 
-                    model.Verticies[iVert].Normal = composite[iVert].Normal.ToXNAVector3();
+                    model.Vertices[iVert].Normal = composite[iVert].Normal.ToXNAVector3();
                 }
             }
             finally
@@ -311,12 +313,12 @@ namespace MonogameTestbed
             //position would risk welding distinct points and pinching the surface.
 
             //Maps mesh vertex index to the global vertex index
-            int[] mesh_to_global = new int[mesh.Verticies.Count];
+            int[] mesh_to_global = new int[mesh.Vertices.Count];
 
-            List<VertexPositionNormalColor> modelVerts = new(mesh.Verticies.Count);
+            List<VertexPositionNormalColor> modelVerts = new(mesh.Vertices.Count);
 
             ///Add all new verticies to the mesh and populate a map for vertex indicies
-            for (int iVert = 0; iVert < mesh.Verticies.Count; iVert++)
+            for (int iVert = 0; iVert < mesh.Vertices.Count; iVert++)
             {
                 MorphMeshVertex vertex = mesh[iVert];
                 MorphMeshVertex composite_vertex = MorphMeshVertex.Duplicate(vertex);

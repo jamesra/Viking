@@ -22,9 +22,9 @@ namespace Viking
 
         public static Defaults Default = new();
 
-        public static LocalTextureCache TextureCache = new();
+        public static LocalTextureCache TextureCache => TileLoadEnvironment.TextureCache;
 
-        public static TileViewModelCache TileViewModelCache = new();
+        public static TileViewModelCache TileViewModelCache => TileLoadEnvironment.TileViewModelCache;
 
         private static readonly Dictionary<int, string> AllocatedTextures = [];
 

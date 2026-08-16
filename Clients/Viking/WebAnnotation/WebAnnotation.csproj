@@ -1,14 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net48</TargetFramework>
+		<TargetFrameworks>net48;net10.0-windows</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 		<NoWarn>$(NoWarn);CS0436;CA1014;CS3009;CS3001;CS3002;CS3003;CS3008</NoWarn>
-		<UseWindowsForms>true</UseWindowsForms>
 		<UseWPF>true</UseWPF>
 		<GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
-		<!-- Disable default embedded resource items to avoid duplicates -->
 		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+		<UseWindowsForms>true</UseWindowsForms>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 		<DefineConstants>DEBUG;TRACE</DefineConstants>
@@ -31,7 +32,7 @@
 	
 	<!-- Post-build event to copy output to Modules folder -->
 		<!-- Post-build event to copy output to Modules folder -->
-	<Target Name="PostBuild" AfterTargets="Build">
+	<Target Name="PostBuild" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net48'">
 		<PropertyGroup>
 			<OutputDirectory>$(OutDir)</OutputDirectory>
 			<OutputDirectory Condition="'$(OutputDirectory)' == ''">$(OutputPath)</OutputDirectory>
@@ -48,7 +49,7 @@
 			<FilesToCopy Include="$(OutputDirectory)**\*.*" Exclude="$(OutputDirectory)**\*.pdb" />
 		</ItemGroup>
 		<Message Text="Copying from $(OutputDirectory) to $(ProjectModulesDir)\$(Configuration)\$(TargetFramework)\" Importance="high" />
-		<Message Text="Files to copy: @(FilesToCopy->Count())" Importance="normal" />
+		<Message Text="Files to copy: @(FilesToCopy-&gt;Count())" Importance="normal" />
 		
 		<Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(ProjectModulesDir)\$(Configuration)\$(TargetFramework)\%(RecursiveDir)" SkipUnchangedFiles="false" />
 	</Target>
@@ -97,7 +98,6 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
-		<ProjectReference Include="..\..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
 		<ProjectReference Include="..\..\..\RTree\RTree.csproj" />
 		<ProjectReference Include="..\..\..\SegmentationServiceTypes.gRPC\SegmentationServiceTypes.gRPC.csproj" />
 		<ProjectReference Include="..\..\..\SqlGeometryAnnotationExtensions\SqlGeometryAnnotationExtensions.csproj" />
@@ -107,15 +107,18 @@
 		<ProjectReference Include="..\..\..\Utils\Utils.csproj" />
 		<ProjectReference Include="..\..\Common\Common.csproj" />
 		<ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
-		<ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net9.0-windows'" />
+		<ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net10.0-windows'" />
 		<ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition="'$(TargetFramework)' == 'net48'" />
 		<ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationModel\WebAnnotationModel.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationModel.gRPC\WebAnnotationModel.gRPC.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationViewModels\WebAnnotationViewModels.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationWPFControls\WebAnnotationWPFControls.csproj" />
-		<ProjectReference Include="..\NGVV\VikingCore.csproj" />
-		<ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj" />
+		<ProjectReference Include="..\..\Viking.Input\Viking.Input.csproj" />
+		<ProjectReference Include="..\..\Viking.Scene\Viking.Scene.csproj" />
+		<ProjectReference Include="..\..\Viking.Tokens\Viking.Tokens.csproj" />
+		<ProjectReference Include="..\NGVV\VikingCore.csproj" Condition="'$(TargetFramework)' == 'net48'" />
+		<ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj" Condition="'$(TargetFramework)' == 'net48'" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="EntityFramework" Version="6.5.1" />
@@ -139,9 +142,9 @@
 		<PackageReference Include="System.ValueTuple" Version="4.6.1" />
 		<PackageReference Include="Thinktecture.IdentityModel.Client" Version="4.0.1" Condition="'$(TargetFramework)' == 'net48'" />
 		<PackageReference Include="LinqToXsd" Version="2.0.2" />
-		<PackageReference Include="SixLabors.ImageSharp" Version="2.1.6" />
 	</ItemGroup>
-	<ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+		<PackageReference Include="SixLabors.ImageSharp" Version="2.1.6" />
 		<Reference Include="WindowsBase" />
 		<Reference Include="System.Xml.Linq" />
 		<Reference Include="System.ComponentModel.DataAnnotations" />
@@ -153,13 +156,61 @@
 		<Reference Include="WindowsFormsIntegration">
 			<HintPath>C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WindowsFormsIntegration.dll</HintPath>
 		</Reference>
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+		<PackageReference Include="System.Drawing.Common" Version="9.0.8" />
+		<PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.8" />
+		<PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
+	</ItemGroup>
+	<ItemGroup>
+		<InternalsVisibleTo Include="Jotunn" />
+		<InternalsVisibleTo Include="VolumeView" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+		<Compile Remove="UI\AnnotationOverlay.cs" />
+		<Compile Remove="UI\AnnotationMenu.cs" />
+		<Compile Remove="UI\Commands\**" />
+		<Compile Remove="UI\Forms\**" />
+		<Compile Remove="UI\Controls\**" />
+		<Compile Remove="UI\Actions\Pen\AnnotationOverlayPenFreeDrawCommandV2.cs" />
+		<Compile Remove="UI\MergeStructuresForm.cs" />
+		<Compile Remove="UI\MergeStructuresForm.Designer.cs" />
+		<Compile Remove="UI\SplitStructuresForm.cs" />
+		<Compile Remove="UI\SplitStructuresForm.Designer.cs" />
+		<Compile Remove="UI\StructureChildStructuresPage.cs" />
+		<Compile Remove="UI\StructureChildStructuresPage.Designer.cs" />
+		<Compile Remove="UI\StructureExtendedPropertiesPage.cs" />
+		<Compile Remove="UI\StructureExtendedPropertiesPage.Designer.cs" />
+		<Compile Remove="UI\StructureGeneralPage.cs" />
+		<Compile Remove="UI\StructureGeneralPage.Designer.cs" />
+		<Compile Remove="UI\StructureLocationsChangeLogPropertiesPage.cs" />
+		<Compile Remove="UI\StructureLocationsChangeLogPropertiesPage.Designer.cs" />
+		<Compile Remove="UI\StructureLocationsPage.cs" />
+		<Compile Remove="UI\StructureLocationsPage.Designer.cs" />
+		<Compile Remove="UI\StructureNotesPage.cs" />
+		<Compile Remove="UI\StructureNotesPage.Designer.cs" />
+		<Compile Remove="UI\StructureTypeGeneralPage.cs" />
+		<Compile Remove="UI\StructureTypeGeneralPage.Designer.cs" />
+		<Compile Remove="UI\StructureTypesRelationsPage.cs" />
+		<Compile Remove="UI\StructureTypesRelationsPage.Designer.cs" />
+		<Compile Remove="UI\StructureTypesTree.cs" />
+		<Compile Remove="UI\StructureTypesTree.Designer.cs" />
+		<Compile Remove="UI\StructureTypeStructuresPage.cs" />
+		<Compile Remove="UI\StructureTypeStructuresPage.Designer.cs" />
+		<Compile Remove="View\*ContextMenuView.cs" />
+		<Compile Remove="ViewModel\Location_ViewModelBase.cs" />
+		<Compile Remove="ViewModel\Location_CanvasViewModel.cs" />
+		<Compile Remove="ViewModel\LocationLinksViewModel.cs" />
+		<Compile Remove="ViewModel\Location.cs" />
+		<Compile Remove="Services\**" />
+		<Compile Remove="Service References\**" />
+		<EmbeddedResource Remove="UI\**\*.resx" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
-		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
-	</ItemGroup>
-	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
-		<PackageReference Include="Duende.IdentityModel" Version="7.1.0" />
-		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+		<Compile Remove="Net10Compat.cs" />
+		<Compile Remove="Net10AnnotationOverlay.cs" />
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="bin\" />

@@ -28,7 +28,7 @@ namespace WebAnnotationModel.gRPC.Converters
                     ParentID = src.HasParentId ? (long?)src.ParentId : (long?)null,
                 };
 
-            obj.SetAttributes(src.Attributes.ParseAttributes()).Wait();
+            ApplyAttributes(obj, src.Attributes);
 
             return obj;
         }
@@ -49,9 +49,23 @@ namespace WebAnnotationModel.gRPC.Converters
                     ParentID = src.ParentID,
                 };
 
-            obj.SetAttributes(src.Attributes.ParseAttributes()).Wait();
+            ApplyAttributes(obj, src.Attributes);
 
             return obj;
+        }
+
+        private static void ApplyAttributes(StructureTypeObj obj, string attributes)
+        {
+            try
+            {
+                obj.SetAttributes(ObjAttributeParser.ParseAttributes(attributes ?? string.Empty)).Wait();
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Trace.WriteLine(
+                    $"Ignoring unparsable attributes on structure type {obj.ID}: {e.Message}",
+                    "WebAnnotation");
+            }
         }
     }
 

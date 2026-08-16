@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
 using Viking.Identity.Server.Authorization;
+using Viking.Identity.Server.Extensions.Services;
 using Viking.Identity.Server.WebManagement.Extensions;
 using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 
@@ -441,7 +443,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 Permissions = commonPermissions.Select(permissionId => new ItemSelectedViewModel<string>
                 {
                     Id = permissionId,
-                    Selected = allUserPermissions.Any(gup => gup.UserId == u.Id && gup.ResourceId == resourceIds.First() && gup.PermissionId == permissionId)
+                    // Union across selected resources: checked if ANY resource has the grant.
+                    Selected = allUserPermissions.Any(gup =>
+                        gup.UserId == u.Id
+                        && resourceIds.Contains(gup.ResourceId)
+                        && gup.PermissionId == permissionId)
                 }).ToList()
             }).ToList();
 
@@ -457,9 +463,18 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 Permissions = commonPermissions.Select(permissionId => new ItemSelectedViewModel<string>
                 {
                     Id = permissionId,
-                    Selected = allGroupPermissions.Any(gup => gup.GroupId == g.Id && gup.ResourceId == resourceIds.First() && gup.PermissionId == permissionId)
+                    Selected = allGroupPermissions.Any(gup =>
+                        gup.GroupId == g.Id
+                        && resourceIds.Contains(gup.ResourceId)
+                        && gup.PermissionId == permissionId)
                 }).ToList()
             }).ToList();
+
+            var existingGrants = allUserPermissions
+                .Select(g => new PermissionGrant(g.ResourceId, g.UserId, g.PermissionId, isUserGrant: true))
+                .Concat(allGroupPermissions.Select(g =>
+                    new PermissionGrant(g.ResourceId, g.GroupId.ToString(), g.PermissionId, isUserGrant: false)))
+                .ToList();
 
             var model = new BulkPermissionsEditViewModel
             {
@@ -476,7 +491,14 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 ReturnController = returnController,
                 AvailablePermissions = commonPermissions,
                 UserPermissions = users,
-                GroupPermissions = groups
+                GroupPermissions = groups,
+                InitialGrantsJson = JsonSerializer.Serialize(existingGrants.Select(g => new
+                {
+                    resourceId = g.ResourceId,
+                    granteeKey = g.GranteeKey,
+                    permissionId = g.PermissionId,
+                    isUserGrant = g.IsUserGrant
+                }))
             };
 
             ViewBag.ResourceController = returnController;
@@ -493,7 +515,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             string returnController)
             where TResource : Resource
         {
-            if (!model.SelectedResourceIds.Any())
+            if (model == null || model.SelectedResourceIds == null || !model.SelectedResourceIds.Any())
             {
                 TempData["ErrorMessage"] = $"No {resourceDisplayName.ToLower()} selected.";
                 return RedirectToAction("Index", returnController);
@@ -515,6 +537,56 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 }
             }
 
+            var existingGrants = await LoadExistingGrantsAsync(model.SelectedResourceIds);
+            var analysis = BulkPermissionsChangeAnalyzer.Analyze(
+                existingGrants,
+                model.SelectedResourceIds,
+                ToSubmittedUserPermissions(model.UserPermissions),
+                ToSubmittedGroupPermissions(model.GroupPermissions));
+
+            if (analysis.RequiresConfirmation && !model.ConfirmLargeRemoval)
+            {
+                if (model.AvailablePermissions == null || !model.AvailablePermissions.Any())
+                {
+                    var first = resources.First();
+                    model.AvailablePermissions = await _context.Permissions
+                        .Where(p => p.ResourceTypeId == first.ResourceTypeId)
+                        .Select(p => p.PermissionId)
+                        .ToListAsync();
+                }
+
+                model.Resources = resources.Select(r => new BulkPermissionsEditViewModel.ResourceInfo
+                {
+                    Id = r.Id,
+                    Name = r.Name,
+                    OrganizationName = r.Parent?.Name ?? "No Organization"
+                }).ToList();
+                model.ResourcePluralDisplayName = resourceDisplayName;
+                model.ResourceSingularDisplayName = resourceDisplayName.TrimEnd('s');
+                model.ReturnController = returnController;
+                model.InitialGrantsJson = JsonSerializer.Serialize(existingGrants.Select(g => new
+                {
+                    resourceId = g.ResourceId,
+                    granteeKey = g.GranteeKey,
+                    permissionId = g.PermissionId,
+                    isUserGrant = g.IsUserGrant
+                }));
+
+                ViewBag.ResourceController = returnController;
+                ViewBag.ResourceListTitle = resourceDisplayName;
+                ViewBag.ResourceBreadcrumb = resourceDisplayName;
+                ViewBag.FormAction = typeof(TResource) == typeof(SegmentationService)
+                    ? nameof(BulkEditSegmentation)
+                    : nameof(BulkEdit);
+                ViewBag.RequiresLargeRemovalConfirmation = true;
+                ViewBag.RemovalPercent = analysis.RemovalPercent;
+                ViewBag.GrantsToRemove = analysis.GrantsToRemove.Count;
+                ViewBag.TotalExistingGrants = analysis.TotalExistingGrants;
+                ViewBag.RemovesAllUserGrants = analysis.RemovesAllUserGrants;
+
+                return View("BulkEdit", model);
+            }
+
             int successCount = 0;
             foreach (var resource in resources)
             {
@@ -534,6 +606,56 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
             TempData["SuccessMessage"] = $"Permissions updated successfully for {successCount} {resourceDisplayName.ToLower()}.";
             return RedirectToAction("Index", returnController);
+        }
+
+        private async Task<List<PermissionGrant>> LoadExistingGrantsAsync(IEnumerable<long> resourceIds)
+        {
+            var ids = resourceIds.ToList();
+            var userGrants = await _context.GrantedUserPermissions
+                .Where(g => ids.Contains(g.ResourceId))
+                .Select(g => new { g.ResourceId, g.UserId, g.PermissionId })
+                .ToListAsync();
+
+            var groupGrants = await _context.GrantedGroupPermissions
+                .Where(g => ids.Contains(g.ResourceId))
+                .Select(g => new { g.ResourceId, g.GroupId, g.PermissionId })
+                .ToListAsync();
+
+            return userGrants
+                .Select(g => new PermissionGrant(g.ResourceId, g.UserId, g.PermissionId, isUserGrant: true))
+                .Concat(groupGrants.Select(g =>
+                    new PermissionGrant(g.ResourceId, g.GroupId.ToString(), g.PermissionId, isUserGrant: false)))
+                .ToList();
+        }
+
+        private static IEnumerable<SubmittedGranteePermissions> ToSubmittedUserPermissions(
+            IEnumerable<UserResourcePermissionsViewModel> users)
+        {
+            if (users == null)
+                return Enumerable.Empty<SubmittedGranteePermissions>();
+
+            return users.Select(u => new SubmittedGranteePermissions
+            {
+                GranteeKey = u.GranteeId,
+                Permissions = (u.Permissions ?? new List<ItemSelectedViewModel<string>>())
+                    .Select(p => (p.Id, p.Selected))
+                    .ToList()
+            });
+        }
+
+        private static IEnumerable<SubmittedGranteePermissions> ToSubmittedGroupPermissions(
+            IEnumerable<GroupResourcePermissionsViewModel> groups)
+        {
+            if (groups == null)
+                return Enumerable.Empty<SubmittedGranteePermissions>();
+
+            return groups.Select(g => new SubmittedGranteePermissions
+            {
+                GranteeKey = g.GranteeId.ToString(),
+                Permissions = (g.Permissions ?? new List<ItemSelectedViewModel<string>>())
+                    .Select(p => (p.Id, p.Selected))
+                    .ToList()
+            });
         }
     }
 }

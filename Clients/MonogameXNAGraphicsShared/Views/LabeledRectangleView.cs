@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -6,6 +7,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using VikingXNA;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -37,7 +40,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        public GridRectangle BoundingBox
+        public Rectangle BoundingBox
         {
             get => ((IHitTesting)BackgroundBox).BoundingBox;
             set
@@ -54,7 +57,7 @@ namespace VikingXNAGraphics
 
         public IColorView BackgroundColor => (IColorView)BackgroundBox;
 
-        public GridVector2 Position
+        public Geometry.Vector2 Position
         {
             get => BackgroundBox.Position;
             set
@@ -64,34 +67,34 @@ namespace VikingXNAGraphics
             }
         }
 
-        public LabeledRectangleView(string text, GridRectangle bbox, Alignment alignment = null, bool scaleFontWithScene = true, double fontSize = 16.0)
+        public LabeledRectangleView(string text, Rectangle bbox, Alignment alignment = null, bool scaleFontWithScene = true, double fontSize = 16.0)
         {
             Label = new LabelView(text, bbox.Center, alignment, Anchor.CenterCenter, scaleFontWithScene, fontSize: fontSize);
             Label.FontSize = Label.GetFontSizeToFitBounds(bbox);
             BackgroundBox = new RectangleView(bbox, Color.Gray);
         }
 
-        public LabeledRectangleView(string text, GridVector2 position, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double fontSize = 16.0)
+        public LabeledRectangleView(string text, Geometry.Vector2 position, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double fontSize = 16.0)
         {
             Label = new LabelView(text, position, alignment, anchor, scaleFontWithScene, fontSize: fontSize);
             BackgroundBox = new RectangleView(Label.BoundingRect, Color.Gray);
         }
 
-        public LabeledRectangleView(string text, GridRectangle bbox, Color foreground, Color background, Alignment alignment = null, bool scaleFontWithScene = true, double fontSize = 16.0)
+        public LabeledRectangleView(string text, Rectangle bbox, Color foreground, Color background, Alignment alignment = null, bool scaleFontWithScene = true, double fontSize = 16.0)
             : this(text, bbox, alignment, scaleFontWithScene, fontSize)
         {
             Label.Color = foreground;
             BackgroundBox.Color = background;
         }
 
-        public LabeledRectangleView(string text, GridVector2 position, Color foreground, Color background, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double fontSize = 16.0)
+        public LabeledRectangleView(string text, Geometry.Vector2 position, Color foreground, Color background, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double fontSize = 16.0)
             : this(text, position, alignment, anchor, scaleFontWithScene, fontSize)
         {
             Label.Color = foreground;
             BackgroundBox.Color = background;
         }
 
-        public bool Contains(GridVector2 Position) => ((IHitTesting)BackgroundBox).Contains(Position);
+        public bool Contains(Geometry.Vector2 Position) => ((IHitTesting)BackgroundBox).Contains(Position);
 
         public void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay)
         {

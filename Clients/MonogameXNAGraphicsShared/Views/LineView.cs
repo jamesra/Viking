@@ -3,6 +3,8 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Linq;
 using VikingXNA;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -12,15 +14,15 @@ namespace VikingXNAGraphics
         internal RoundLineCode.RoundLine line;
         public LineStyle Style;
 
-        public GridVector2 Source
+        public Geometry.Vector2 Source
         {
-            get => line.P0.ToGridVector2();
+            get => line.P0.ToVector2();
             set => line.P0 = value.ToXNAVector2();
         }
 
-        public GridVector2 Destination
+        public Geometry.Vector2 Destination
         {
-            get => line.P1.ToGridVector2();
+            get => line.P1.ToVector2();
             set => line.P1 = value.ToXNAVector2();
         }
 
@@ -64,17 +66,17 @@ namespace VikingXNAGraphics
         /// <summary>
         /// Returns Center of lineView
         /// </summary>
-        public GridVector2 Position
+        public Geometry.Vector2 Position
         {
             get
             {
                 Microsoft.Xna.Framework.Vector2 v = line.P0 + line.P1;
-                return new GridVector2(v.X / 2.0, v.Y / 2.0);
+                return new Geometry.Vector2(v.X / 2.0, v.Y / 2.0);
             }
 
             set
             {
-                GridVector2 offset = value - Position;
+                Geometry.Vector2 offset = value - Position;
                 line.P0 += offset.ToXNAVector2();
                 line.P1 += offset.ToXNAVector2();
             }
@@ -82,7 +84,7 @@ namespace VikingXNAGraphics
 
         protected Microsoft.Xna.Framework.Color _HSLColor;
 
-        public LineView(GridVector2 source, GridVector2 destination, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle)
+        public LineView(Geometry.Vector2 source, Geometry.Vector2 destination, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle)
         {
             line = new RoundLineCode.RoundLine(source.ToXNAVector2(), destination.ToXNAVector2());
             this.LineWidth = (float)width;
@@ -90,7 +92,7 @@ namespace VikingXNAGraphics
             this.Style = lineStyle;
         }
 
-        public LineView(GridLineSegment line, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle) : this(line.A, line.B, width, color, lineStyle)
+        public LineView(LineSegment line, double width, Microsoft.Xna.Framework.Color color, LineStyle lineStyle) : this(line.A, line.B, width, color, lineStyle)
         {
         }
 

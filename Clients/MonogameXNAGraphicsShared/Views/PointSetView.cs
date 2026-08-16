@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using VikingXNA;
 using Microsoft.Xna.Framework.Graphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -100,8 +102,8 @@ namespace VikingXNAGraphics
                 return;
             }
 
-            PointViews = [.. Points.Select(p => new CircleView(new GridCircle(p, PointRadius), Color))];
-            GridVector2[] point_array = [.. Points];
+            PointViews = [.. Points.Select(p => new CircleView(new Circle(p, PointRadius), Color))];
+            Geometry.Vector2[] point_array = [.. Points];
 
             if (!LabelIndex && !LabelPosition)
             {
@@ -111,8 +113,8 @@ namespace VikingXNAGraphics
             }
                 //Figure out if we have duplicate points and offset labels as needed
                 QuadTree<int> DuplicatePointsAddedCount = new(); //Track the number of times we've hit a specific duplicate point and move the label accordingly
-            List<GridVector2> KnownPoints = [];
-            foreach (GridVector2 p in point_array)
+            List<Geometry.Vector2> KnownPoints = [];
+            foreach (Geometry.Vector2 p in point_array)
             {
                 if (KnownPoints.Contains(p))
                 {
@@ -155,7 +157,7 @@ namespace VikingXNAGraphics
 
                     if (DuplicatePointsAddedCount.TryGetValue(point_array[i], out var count))
                     {
-                        //label.Position = label.Position + new GridVector2(0,PointRadius * (DuplicatePointsAddedCount[point_array[i]]-1));
+                        //label.Position = label.Position + new Geometry.Vector2(0,PointRadius * (DuplicatePointsAddedCount[point_array[i]]-1));
 
                         //label.Position = label.Position + label.
                         string prepended_newlines = "";
@@ -200,7 +202,7 @@ namespace VikingXNAGraphics
             {
                 LabelColor = Color.White,
                 PointRadius = 2,
-                Points = [.. mesh.Verticies.Select(p => p.Position)],
+                Points = [.. mesh.Vertices.Select(p => p.Position)],
                 LabelIndex = true,
                 LabelPosition = false
             };
@@ -215,7 +217,7 @@ namespace VikingXNAGraphics
             {
                 LabelColor = Color.White,
                 PointRadius = 2,
-                Points = [.. mesh.Verticies.Select(p => p.Position.XY())],
+                Points = [.. mesh.Vertices.Select(p => p.Position.XY())],
                 LabelIndex = true,
                 LabelPosition = false
             };

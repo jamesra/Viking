@@ -68,7 +68,7 @@ namespace Viking.UI.Commands
             return helpStrings.HelpStrings;
         }
 
-        protected object NearestObjectAtPositionAcrossAllExtensions(GridVector2 WorldPosition)
+        protected object NearestObjectAtPositionAcrossAllExtensions(Vector2 WorldPosition)
         {
             object nearest_obj = null;
             double distance = double.MaxValue;
@@ -90,7 +90,7 @@ namespace Viking.UI.Commands
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
             object NewLastNearestObject = NearestObjectAtPositionAcrossAllExtensions(WorldPosition);
 
             if (!object.Equals(NewLastNearestObject, LastNearestObject))
@@ -112,7 +112,7 @@ namespace Viking.UI.Commands
             //Middle mouse button is for Wacom Pen Support
             if (e.Button == MouseButtons.Right || e.Button == MouseButtons.Middle)
             {
-                GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+                Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
                 double distance = double.MaxValue;
                 object context_obj = null;
 

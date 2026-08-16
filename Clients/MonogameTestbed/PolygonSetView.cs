@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -27,7 +29,7 @@ namespace MonogameTestbed
         private LineView[] PolyRingViews = null;
         private LabelView[] PolyIndexLabels = [];
 
-        private readonly List<GridPolygon> _Polygons;
+        private readonly List<Polygon> _Polygons;
 
         public Color[] PolyLineColors;
         public Color[] PolyVertexColors;
@@ -100,17 +102,17 @@ namespace MonogameTestbed
             }
         }
 
-        private static List<LabelView> CreatePolyIndexLabels(List<GridPolygon> Polygons, double pointradius)
+        private static List<LabelView> CreatePolyIndexLabels(List<Polygon> Polygons, double pointradius)
         {
             List<LabelView> listPointLabels = [];
 
             //Figure out if we have duplicate points and offset labels as needed
             PolySetVertexEnum pointEnum = new(Polygons);
-            GridVector2[] point_array = [.. pointEnum.Select(i => i.Point(Polygons))];
+            Geometry.Vector2[] point_array = [.. pointEnum.Select(i => i.Point(Polygons))];
 
             QuadTree<int> DuplicatePointsAddedCount = new(); //Track the number of times we've hit a specific duplicate point and move the label accordingly
-            HashSet<GridVector2> KnownPoints = [];
-            foreach (GridVector2 p in point_array)
+            HashSet<Geometry.Vector2> KnownPoints = [];
+            foreach (Geometry.Vector2 p in point_array)
             {
                 if (KnownPoints.Contains(p))
                 {
@@ -124,8 +126,8 @@ namespace MonogameTestbed
 
             foreach (PolygonIndex pi in new PolySetVertexEnum(Polygons))
             {
-                GridVector2 point = pi.Point(Polygons);
-                GridVector2 offset_point = point - new GridVector2(0, (pointradius * 2));
+                Geometry.Vector2 point = pi.Point(Polygons);
+                Geometry.Vector2 offset_point = point - new Geometry.Vector2(0, (pointradius * 2));
                 LabelView label = new(pi.ToString(), offset_point);
                 listPointLabels.Add(label);
                 label.FontSize = pointradius * 2.0;
@@ -133,7 +135,7 @@ namespace MonogameTestbed
                 if (DuplicatePointsAddedCount.Contains(point))
                 {
                     //label.Position = label.Position + label.
-                    //label.Position = label.Position + new GridVector2(0, pointradius * (DuplicatePointsAddedCount[point]-1));
+                    //label.Position = label.Position + new Geometry.Vector2(0, pointradius * (DuplicatePointsAddedCount[point]-1));
 
                     string prepended_newlines = "";
                     for (int iLine = 0; iLine < DuplicatePointsAddedCount[point]; iLine++)
@@ -163,7 +165,7 @@ namespace MonogameTestbed
         /// <param name="polys"></param>
         /// <param name="colors">Colors can be null and does not need to match the length of the polys array.  If an entry does not exist a random color is selected.</param>
         /// <param name="PointRadius"></param>
-        public PolygonSetView(IEnumerable<GridPolygon> polys, IReadOnlyList<Color> colors = null, double PointRadius = 1.0)
+        public PolygonSetView(IEnumerable<Polygon> polys, IReadOnlyList<Color> colors = null, double PointRadius = 1.0)
         {
             this._PointRadius = PointRadius;
 
@@ -183,14 +185,14 @@ namespace MonogameTestbed
 
             for (int iPoly = 0; iPoly < _Polygons.Count; iPoly++)
             {
-                GridPolygon p = _Polygons[iPoly];
+                Polygon p = _Polygons[iPoly];
                 if (p is null)
                     continue;
 
                 PointSetView psv = new();
 
-                List<GridVector2> points = [.. p.ExteriorRing];
-                foreach (GridPolygon innerPoly in p.InteriorPolygons)
+                List<Geometry.Vector2> points = [.. p.ExteriorRing];
+                foreach (Polygon innerPoly in p.InteriorPolygons)
                 {
                     points.AddRange(innerPoly.ExteriorRing);
                 }

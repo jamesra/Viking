@@ -63,6 +63,9 @@ namespace WebAnnotationModel.gRPC
         {
             if (inventory is null)
                 inventory = new ChangeInventory<OBJECT>();
+
+            if (serverObjs is null || serverObjs.Length == 0)
+                return inventory;
               
             var results = new ProcessResult[serverObjs.Length];
             var tasks = new Task<OBJECT>[serverObjs.Length];
@@ -97,19 +100,22 @@ namespace WebAnnotationModel.gRPC
                 var j = i;
                 tasks[i] = Task.Run(async () => await GetOrAddTask(o, j));
             }
-             
+
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+
             for (int i = 0; i < serverObjs.Length; i++)
             {
+                var obj = await tasks[i].ConfigureAwait(false);
                 switch (results[i])
                 {
                     case ProcessResult.Add:
-                        inventory.AddedObjects.Add(await tasks[i]);
+                        inventory.AddedObjects.Add(obj);
                         break;
                     case ProcessResult.Update:
-                        inventory.UpdatedObjects.Add(await tasks[i]);
+                        inventory.UpdatedObjects.Add(obj);
                         break;
                     case ProcessResult.Unchanged:
-                        inventory.UnchangedObjects.Add(await tasks[i]);
+                        inventory.UnchangedObjects.Add(obj);
                         break;
                     default:
                         throw new NotImplementedException($"Unexpected result {results[i]}");

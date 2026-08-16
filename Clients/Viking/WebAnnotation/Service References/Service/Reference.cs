@@ -544,14 +544,14 @@ namespace WebAnnotation.Service {
         }
         
         [System.Runtime.Serialization.DataMemberAttribute()]
-        public WebAnnotation.Service.AnnotationPoint[] Verticies {
+        public WebAnnotation.Service.AnnotationPoint[] Vertices {
             get {
                 return this.VerticiesField;
             }
             set {
                 if ((object.ReferenceEquals(this.VerticiesField, value) != true)) {
                     this.VerticiesField = value;
-                    this.RaisePropertyChanged("Verticies");
+                    this.RaisePropertyChanged("Vertices");
                 }
             }
         }

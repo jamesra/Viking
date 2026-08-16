@@ -381,10 +381,10 @@ namespace WebAnnotationModel
     public readonly struct LocationPositionOnly
     {
         public readonly long ID;
-        public readonly Geometry.GridVector3 Position;
+        public readonly Geometry.Vector3 Position;
         public readonly double Radius;
 
-        public LocationPositionOnly(long id, Geometry.GridVector3 position, double radius)
+        public LocationPositionOnly(long id, Geometry.Vector3 position, double radius)
         {
             ID = id;
             Position = position;

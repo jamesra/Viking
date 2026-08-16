@@ -11,7 +11,7 @@ namespace MorphologyMesh
     public class MorphMeshVertex : Vertex3D, IVertex2D
     {
         /// <summary>
-        /// Verticies we add to close holes will not have a poly index.  The medial axis verticies must have faces added because at this point they will not autocomplete.
+        /// Vertices we add to close holes will not have a poly index.  The medial axis verticies must have faces added because at this point they will not autocomplete.
         /// </summary>
         public readonly IShapeIndex ShapeIndex;
 
@@ -45,33 +45,33 @@ namespace MorphologyMesh
             }
         }
 
-        GridVector2 IVertex2D.Position => this.Position.XY();
+        Vector2 IVertex2D.Position => this.Position.XY();
 
-        public MorphMeshVertex(IShapeIndex shapeIndex, GridVector3 p) : base(p)
+        public MorphMeshVertex(IShapeIndex shapeIndex, Vector3 p) : base(p)
         {
             ShapeIndex = shapeIndex;
         }
 
-        public MorphMeshVertex(IShapeIndex shapeIndex, GridVector3 p, GridVector3 n) : base(p, n)
+        public MorphMeshVertex(IShapeIndex shapeIndex, Vector3 p, Vector3 n) : base(p, n)
         {
             ShapeIndex = shapeIndex;
         }
 
-        protected MorphMeshVertex(int index, IShapeIndex shapeIndex, GridVector3 p, GridVector3 n) : base(index, p, n)
+        protected MorphMeshVertex(int index, IShapeIndex shapeIndex, Vector3 p, Vector3 n) : base(index, p, n)
         {
             ShapeIndex = shapeIndex;
         }
 
-        public MorphMeshVertex(MedialAxisIndex medialIndex, GridVector3 p) : base(p)
+        public MorphMeshVertex(MedialAxisIndex medialIndex, Vector3 p) : base(p)
         {
             MedialAxisIndex = medialIndex;
         }
 
-        public MorphMeshVertex(MedialAxisIndex medialIndex, GridVector3 p, GridVector3 n) : base(p, n)
+        public MorphMeshVertex(MedialAxisIndex medialIndex, Vector3 p, Vector3 n) : base(p, n)
         {
             MedialAxisIndex = medialIndex;
         }
-        protected MorphMeshVertex(int index, MedialAxisIndex medialIndex, GridVector3 p, GridVector3 n) : base(index, p, n)
+        protected MorphMeshVertex(int index, MedialAxisIndex medialIndex, Vector3 p, Vector3 n) : base(index, p, n)
         {
             MedialAxisIndex = medialIndex;
         }

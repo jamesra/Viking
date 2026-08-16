@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using VikingXNA;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -23,9 +25,9 @@ namespace VikingXNAGraphics
 
         public bool ShowControlPoints { get; set; } = true;
 
-        private List<GridVector2> _ControlPoints = null;
+        private List<Geometry.Vector2> _ControlPoints = null;
 
-        public IList<GridVector2> ControlPoints
+        public IList<Geometry.Vector2> ControlPoints
         {
             get => _ControlPoints;
             set
@@ -36,7 +38,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        public void SetPoint(int i, GridVector2 value)
+        public void SetPoint(int i, Geometry.Vector2 value)
         {
             _ControlPoints[i] = value;
             this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.LineWidth, this.Color, this.ControlPointTexture);
@@ -153,11 +155,11 @@ namespace VikingXNAGraphics
                             Texture2D texture = null,
                             double lineWidth = 16.0,
                             LineStyle lineStyle = LineStyle.Standard)
-            : this(null as GridVector2[], color, texture, lineWidth, lineStyle)
+            : this(null as Geometry.Vector2[], color, texture, lineWidth, lineStyle)
         {
         }
 
-        public PolyLineView(GridPolyline polyline,
+        public PolyLineView(Polyline polyline,
                             Microsoft.Xna.Framework.Color color,
                             Texture2D texture = null,
                             double lineWidth = 16.0,
@@ -166,7 +168,7 @@ namespace VikingXNAGraphics
         {
         }
 
-        public PolyLineView(IEnumerable<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, Texture2D texture = null, double lineWidth = 16.0, LineStyle lineStyle = LineStyle.Standard)
+        public PolyLineView(IEnumerable<Geometry.Vector2> controlPoints, Microsoft.Xna.Framework.Color color, Texture2D texture = null, double lineWidth = 16.0, LineStyle lineStyle = LineStyle.Standard)
         {
             this._ControlPointTexture = texture;
             this.LineWidth = lineWidth;
@@ -178,7 +180,7 @@ namespace VikingXNAGraphics
         }
 
         public PolyLineView(IEnumerable<IPoint2D> controlPoints, Microsoft.Xna.Framework.Color color, Texture2D texture = null, double lineWidth = 16.0, LineStyle lineStyle = LineStyle.Standard) :
-            this(controlPoints.Select(p => new GridVector2(p.X, p.Y)), color, texture, lineWidth, lineStyle)
+            this(controlPoints.Select(p => new Geometry.Vector2(p.X, p.Y)), color, texture, lineWidth, lineStyle)
         {
         }
 
@@ -186,7 +188,7 @@ namespace VikingXNAGraphics
         /// Add a single control point without recalculating all of the existing views
         /// </summary>
         /// <param name="p"></param>
-        public void Add(GridVector2 p)
+        public void Add(Geometry.Vector2 p)
         {
             if (this.ControlPoints is null)
             {
@@ -262,7 +264,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        private static CircleView[] CreateControlPointViews(IList<GridVector2> ControlPoints, double Radius, Microsoft.Xna.Framework.Color color, Texture2D texture)
+        private static CircleView[] CreateControlPointViews(IList<Geometry.Vector2> ControlPoints, double Radius, Microsoft.Xna.Framework.Color color, Texture2D texture)
         {
             if (ControlPoints is null)
             {
@@ -272,16 +274,16 @@ namespace VikingXNAGraphics
             return [.. ControlPoints.Select(cp => CreateControlPointView(cp, Radius, color, texture))];
         }
 
-        private static CircleView CreateControlPointView(GridVector2 ControlPoint, double Radius, Microsoft.Xna.Framework.Color color, Texture2D texture)
+        private static CircleView CreateControlPointView(Geometry.Vector2 ControlPoint, double Radius, Microsoft.Xna.Framework.Color color, Texture2D texture)
         {
             if (texture != null)
-                return new TextureCircleView(texture, new GridCircle(ControlPoint, Radius), color);
+                return new TextureCircleView(texture, new Circle(ControlPoint, Radius), color);
             else
-                return new CircleView(new GridCircle(ControlPoint, Radius), color);
+                return new CircleView(new Circle(ControlPoint, Radius), color);
         }
 
 
-        private static LineView[] CreateLineViews(IList<GridVector2> points, double LineWidth, Color color, LineStyle style)
+        private static LineView[] CreateLineViews(IList<Geometry.Vector2> points, double LineWidth, Color color, LineStyle style)
         {
             if (points is null || points.Count < 2)
             {

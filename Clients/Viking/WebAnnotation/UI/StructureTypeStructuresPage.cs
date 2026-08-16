@@ -4,6 +4,7 @@ using System.Diagnostics;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI
 {
@@ -39,7 +40,7 @@ namespace WebAnnotation.UI
             {
                 UseWaitCursor = true;
 
-                ICollection<StructureObj> structureObjs = Store.Structures.GetStructuresOfType(Obj.ID);
+                ICollection<StructureObj> structureObjs = Store.Structures.GetStructuresOfType(Obj.ID).Result;
 
                 List<Structure> structures = new(structureObjs.Count);
 

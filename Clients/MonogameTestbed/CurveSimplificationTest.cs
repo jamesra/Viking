@@ -6,6 +6,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -20,7 +22,7 @@ namespace MonogameTestbed
         readonly GamePadStateTracker Gamepad = new();
         readonly Cursor2DCameraManipulator CameraManipulator = new();
 
-        GridVector2 Cursor;
+        Geometry.Vector2 Cursor;
         CircleView cursorView;
         LabelView cursorLabel;
         readonly PolyLineView RawPolyLine = new(Color.Black.SetAlpha(0.25f));
@@ -36,7 +38,7 @@ namespace MonogameTestbed
 
         public double PointRadius = 2.0;
 
-        public List<GridVector2> path = [];
+        public List<Geometry.Vector2> path = [];
 
         bool IsClosed = false;
 
@@ -87,11 +89,11 @@ namespace MonogameTestbed
             {
                 RawPolyLine.ControlPoints = this.path;
 
-                int[] raw_inflectionPoints = path.InflectionPointIndicies();
+                int[] raw_inflectionPoints = path.InflectionPointIndices();
 
-                GridVector2[] inflectionPath = [.. raw_inflectionPoints.Select(i => path[i])];
+                Geometry.Vector2[] inflectionPath = [.. raw_inflectionPoints.Select(i => path[i])];
 
-                GridVector2[] curveFit = Geometry.CatmullRom.FitCurve(this.path, 5, IsClosed);
+                Geometry.Vector2[] curveFit = Geometry.CatmullRom.FitCurve(this.path, 5, IsClosed);
 
                 RawInflectionPolyLine.ControlPoints = inflectionPath;
                 CurvedRawInflectionPolyLine.ControlPoints = Geometry.CatmullRom.FitCurve(inflectionPath, 5, IsClosed);
@@ -100,8 +102,8 @@ namespace MonogameTestbed
                 CurvedPolyLine.ControlPoints = curveFit;
                 CurvedSimplifiedPolyLine.ControlPoints = curveFit.DouglasPeuckerReduction(15);
 
-                int[] inflectionIndicies = curveFit.InflectionPointIndicies();//curveFit.MeasureCurvature2().ApplyKernel(new double[] { 0.15, 0.70, 0.15 }).InflectionPointIndicies(); //curveFit.InflectionPointIndicies();
-                GridVector2[] inflectionPoints = [.. inflectionIndicies.Select(i => curveFit[i])];
+                int[] inflectionIndicies = curveFit.InflectionPointIndices();//curveFit.MeasureCurvature2().ApplyKernel(new double[] { 0.15, 0.70, 0.15 }).InflectionPointIndices(); //curveFit.InflectionPointIndices();
+                Geometry.Vector2[] inflectionPoints = [.. inflectionIndicies.Select(i => curveFit[i])];
                 CurvedInflectionsPolyLine.ControlPoints = inflectionPoints;
 
                 //CurvedSimplifiedWithInflectionsPolyLine.ControlPoints = inflectionPoints.DouglasPeuckerReduction(2);
@@ -126,8 +128,8 @@ namespace MonogameTestbed
 
             if (state.ThumbSticks.Left != Vector2.Zero)
             {
-                Cursor += state.ThumbSticks.Left.ToGridVector2();
-                cursorView = new CircleView(new GridCircle(Cursor, scene.Camera.Downsample < 1 ? 1.0 : scene.Camera.Downsample), Color.Gray);
+                Cursor += state.ThumbSticks.Left.ToVector2();
+                cursorView = new CircleView(new Circle(Cursor, scene.Camera.Downsample < 1 ? 1.0 : scene.Camera.Downsample), Color.Gray);
                 cursorLabel = new LabelView(Cursor.ToLabel(), Cursor)
                 {
                     FontSize = cursorView.Radius / 2.0,
@@ -165,7 +167,7 @@ namespace MonogameTestbed
 
             if (lastDownsample != scene.Camera.Downsample)
             {
-                cursorView = new CircleView(new GridCircle(Cursor, scene.Camera.Downsample < 1 ? 1.0 : scene.Camera.Downsample), Color.Gray);
+                cursorView = new CircleView(new Circle(Cursor, scene.Camera.Downsample < 1 ? 1.0 : scene.Camera.Downsample), Color.Gray);
                 cursorLabel = new LabelView(Cursor.ToLabel(), Cursor)
                 {
                     FontSize = cursorView.Radius / 2.0,
@@ -191,7 +193,7 @@ namespace MonogameTestbed
             }
         }
 
-        public bool TryAddPathPoint(GridVector2 p)
+        public bool TryAddPathPoint(Geometry.Vector2 p)
         {
             if (path.Count == 0)
             {
@@ -199,7 +201,7 @@ namespace MonogameTestbed
                 return true;
             }
 
-            double distance = GridVector2.Distance(path[^1], p);
+            double distance = Geometry.Vector2.Distance(path[^1], p);
             if (distance >= this.PointIntervalOnDrag)
             {
                 path.Add(p);
@@ -214,14 +216,14 @@ namespace MonogameTestbed
         /// </summary>
         /// <param name="p"></param>
         /// <returns></returns>
-        public bool TryRemovePathPoint(GridVector2 p)
+        public bool TryRemovePathPoint(Geometry.Vector2 p)
         {
             if (path.Count == 0)
             {
                 return false;
             }
 
-            double distance = GridVector2.Distance(path[^1], p);
+            double distance = Geometry.Vector2.Distance(path[^1], p);
             if (distance <= this.PointIntervalOnDrag)
             {
                 path.RemoveAt(path.Count - 1);

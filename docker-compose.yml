@@ -1,9 +1,10 @@
-# Local gRPC annotation test stack (Identity + SQL + gRPC):
+# Local gRPC annotation stack.
+# Integration tests (DevTest Identity + annotation-sql):
 #   Servers/GrpcAnnotationService/scripts/Start-AnnotationTestStack.ps1 -ApplySchema -Build
-# Or:
+# Viking against local gRPC + production Identity:
 #   docker compose --env-file D:/Docker/Builds/AnnotationSql/.env \
-#     -f docker-compose.yml -f docker-compose.annotation-db.yml up --build \
-#     identity-devtest annotation-sql grpc-annotation-service
+#     -f docker-compose.yml -f docker-compose.annotation-db.yml \
+#     up -d annotation-sql grpc-annotation-service
 # See Servers/AnnotationDatabase/config-template/README.md
 
 services:
@@ -29,6 +30,7 @@ services:
       - D:/Docker/Builds/GrpcAnnotationService/.env.Docker
     ports:
       # 5000/5001 are already used by the identity-server stack on this host.
+      # :5010 h2c for tests / modern .NET. :5011 HTTPS for Viking (.NET 4.8 WinHttpHandler).
       - "5010:80"
       - "5011:443"
     volumes:
@@ -36,7 +38,10 @@ services:
       - ./Servers/GrpcAnnotationService/appsettings.Development.json:/app/appsettings.Development.json:ro
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:80;https://+:443
+      - ASPNETCORE_URLS=
+      - ASPNETCORE_HTTP_PORTS=
+      - ASPNETCORE_HTTPS_PORTS=
+      - Kestrel__UseDockerPorts=true
     networks:
       - viking-network
 

@@ -8,7 +8,7 @@ namespace MorphologyMesh
         /// <summary>
         /// Geometric line segment of the chord
         /// </summary>
-        GridLineSegment Line { get; }
+        LineSegment Line { get; }
     }
 
     /// <summary>
@@ -16,14 +16,14 @@ namespace MorphologyMesh
     /// </summary>
     public class MeshChord(MorphRenderMesh mesh, int iO, int iT) : IEquatable<MeshChord>, ISliceChord
     {
-        public readonly GridLineSegment Line = new(mesh[iO].Position.XY(), mesh[iT].Position.XY());
+        public readonly LineSegment Line = new(mesh[iO].Position.XY(), mesh[iT].Position.XY());
 
         public readonly int iOrigin = iO; //The index of the vertex in the mesh at the origin of the chord
         public readonly int iTarget = iT; //The index of the vertex in the mesh at the target of the chord
 
         private readonly MorphRenderMesh mesh = mesh;
 
-        GridLineSegment ISliceChord.Line => this.Line;
+        LineSegment ISliceChord.Line => this.Line;
 
         public bool Equals(MeshChord other)
         {
@@ -50,7 +50,7 @@ namespace MorphologyMesh
         /// <summary>
         /// Geometric line segment of the chord
         /// </summary>
-        public readonly GridLineSegment Line;
+        public readonly LineSegment Line;
 
         public readonly IShapeIndex Origin; //The vertex originating the slice chord
         public readonly IShapeIndex Target; //The target vertex
@@ -60,7 +60,7 @@ namespace MorphologyMesh
             get; private set;
         }
 
-        GridLineSegment ISliceChord.Line => this.Line;
+        LineSegment ISliceChord.Line => this.Line;
 
 
         //public SliceChordTestType PassedTests; //Tests we know this chord has passed.
@@ -68,7 +68,7 @@ namespace MorphologyMesh
 
         public SliceChord(IShapeIndex O, IShapeIndex T, IShape2D[] shapes)
         {
-            this.Line = new GridLineSegment(O.Point(shapes), T.Point(shapes));
+            this.Line = new LineSegment(O.Point(shapes), T.Point(shapes));
             this.Origin = O;
             this.Target = T;
             this.Orientation = Origin.Orientation(Target, shapes);

@@ -76,17 +76,17 @@ namespace MorphologyMesh
             }
         }
 
-        private GridPolygon _Polygon = null;
+        private Polygon _Polygon = null;
 
-        public GridPolygon Polygon
+        public Polygon Polygon
         {
             get
             {
                 if (_Polygon != null)
                     return _Polygon;
 
-                List<GridVector2> poly_verts = [.. this.RegionPerimeter.Select(v => v.Position.XY())];
-                _Polygon = new GridPolygon(poly_verts.EnsureClosedRing().ToArray());
+                List<Vector2> poly_verts = [.. this.RegionPerimeter.Select(v => v.Position.XY())];
+                _Polygon = new Polygon(poly_verts.EnsureClosedRing().ToArray());
 
                 return _Polygon;
             }
@@ -104,7 +104,7 @@ namespace MorphologyMesh
                 if (_RegionPerimeter != null)
                     return _RegionPerimeter;
 
-                PolygonIndex[] polyIndicies = [.. Verticies.Select(v => ((MorphMeshVertex)ParentMesh.Verticies[v]).ShapeIndex).Where(v => v is PolygonIndex).Cast<PolygonIndex>()];
+                PolygonIndex[] polyIndicies = [.. Vertices.Select(v => ((MorphMeshVertex)ParentMesh.Vertices[v]).ShapeIndex).Where(v => v is PolygonIndex).Cast<PolygonIndex>()];
 
                 //var all_exterior_edges = this.Faces.SelectMany(f => f.Edges).Distinct().Where(e => this.ParentMesh[e].Faces.Count == 1).Select(e => ParentMesh[e]).ToList();
                 List<IEdgeKey> all_region_face_edges = [.. this.Faces.SelectMany(f => f.Edges)];
@@ -150,7 +150,7 @@ namespace MorphologyMesh
                     all_exterior_edges.Remove(connected_edge);
                 }
 
-                _RegionPerimeter = [.. OrderedBoundaryVerts.Select(i => (MorphMeshVertex)ParentMesh.Verticies[i])];
+                _RegionPerimeter = [.. OrderedBoundaryVerts.Select(i => (MorphMeshVertex)ParentMesh.Vertices[i])];
 
                 return _RegionPerimeter;
             }
@@ -171,7 +171,7 @@ namespace MorphologyMesh
             {
                 PolygonIndex lastCountourPoint = contour.Last();
                 PolygonIndex pi = polyIndicies[i];
-                //if (pi.iInnerPoly != lastCountourPoint.iInnerPoly || pi.iPoly != lastCountourPoint.iPoly)
+                //if (pi.InnerShapeIndex != lastCountourPoint.InnerShapeIndex || pi.ShapeIndex != lastCountourPoint.ShapeIndex)
                 if (!lastCountourPoint.AreAdjacent(pi))
                 {
                     listContours.Add([.. contour]);
@@ -209,7 +209,7 @@ namespace MorphologyMesh
             PolygonIndex[] lastContour = contours[0];
             AssembledContour.AddRange(lastContour);
 
-            GridVector2[] lastContourEndpoints = ContourEndpoints(lastContour, PolyIndexToMeshIndex);
+            Vector2[] lastContourEndpoints = ContourEndpoints(lastContour, PolyIndexToMeshIndex);
 
             for (int i = 1; i < contours.Count; i++)
             {
@@ -220,10 +220,10 @@ namespace MorphologyMesh
                 }
                 else
                 {
-                    GridVector2[] Endpoints = ContourEndpoints(Contour, PolyIndexToMeshIndex);
+                    Vector2[] Endpoints = ContourEndpoints(Contour, PolyIndexToMeshIndex);
 
-                    GridLineSegment B = new(lastContourEndpoints[1], Endpoints[0]);
-                    GridLineSegment A = new(lastContourEndpoints[0], Endpoints[1]);
+                    LineSegment B = new(lastContourEndpoints[1], Endpoints[0]);
+                    LineSegment A = new(lastContourEndpoints[0], Endpoints[1]);
 
                     //If the line crosses then we need to reverse the contour before adding it to the output
                     if (A.Intersects(B))
@@ -246,21 +246,21 @@ namespace MorphologyMesh
             return [.. AssembledContour];
         }
 
-        GridVector2[] ContourEndpoints(IReadOnlyList<PolygonIndex> contour, Dictionary<PolygonIndex, int> PolyIndexToMeshIndex)
+        Vector2[] ContourEndpoints(IReadOnlyList<PolygonIndex> contour, Dictionary<PolygonIndex, int> PolyIndexToMeshIndex)
         {
             int iStart = PolyIndexToMeshIndex[contour[0]];
             int iEnd = PolyIndexToMeshIndex[contour.Last()];
 
             return
-                [ this.ParentMesh.Verticies[iStart].Position.XY(),
-                  this.ParentMesh.Verticies[iEnd].Position.XY() ];
+                [ this.ParentMesh.Vertices[iStart].Position.XY(),
+                  this.ParentMesh.Vertices[iEnd].Position.XY() ];
         }
 
         private int[] _Verticies = null;
         /// <summary>
         /// Return region verticies in no particular order
         /// </summary>
-        public int[] Verticies
+        public int[] Vertices
         {
             get
             {
@@ -270,7 +270,7 @@ namespace MorphologyMesh
             }
         }
 
-        public GridVector3[] VertPositions => [.. Verticies.Select(v => ParentMesh.Verticies[v].Position)];
+        public Vector3[] VertPositions => [.. Vertices.Select(v => ParentMesh.Vertices[v].Position)];
 
         /// <summary>
         /// Return true if this regions polygons is entirely outside any polygons on the adjacent section
@@ -278,7 +278,7 @@ namespace MorphologyMesh
         /// <returns></returns>
         public bool IsExposed(MorphRenderMesh mesh)
         {
-            GridPolygon[] AdjacentPolys = [.. mesh.Shapes.Where((p, i) => this.ZLevel.Contains(mesh.ShapeZ[i]) == false && p is GridPolygon).Cast<GridPolygon>()];
+            Polygon[] AdjacentPolys = [.. mesh.Shapes.Where((p, i) => this.ZLevel.Contains(mesh.ShapeZ[i]) == false && p is Polygon).Cast<Polygon>()];
 
             if (AdjacentPolys.Any(p => p.Contains(this.Polygon)))
             {
@@ -294,7 +294,7 @@ namespace MorphologyMesh
         /// <returns></returns>
         public bool IsPartlyExposed(MorphRenderMesh mesh)
         {
-            GridPolygon[] AdjacentPolys = [.. mesh.Shapes.Where((p, i) => this.ZLevel.Contains(mesh.ShapeZ[i]) == false).Cast<GridPolygon>()];
+            Polygon[] AdjacentPolys = [.. mesh.Shapes.Where((p, i) => this.ZLevel.Contains(mesh.ShapeZ[i]) == false).Cast<Polygon>()];
             if (AdjacentPolys.Any(p => p.Intersects(this.Polygon) && !p.Contains(this.Polygon)))
             {
                 return true;

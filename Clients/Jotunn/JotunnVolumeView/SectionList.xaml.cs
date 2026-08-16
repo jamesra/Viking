@@ -1,20 +1,22 @@
-﻿using System.Windows.Controls;
+﻿using System.Windows;
+using System.Windows.Controls;
+using VolumeVM = Viking.VolumeViewModel.VolumeViewModel;
 
 namespace Viking.VolumeView
 {
-    /// <summary>
-    /// Interaction logic for SectionList.xaml
-    /// </summary>
     public partial class SectionList : TabItem
     {
         public SectionList()
         {
             InitializeComponent();
+            DataContextChanged += OnVolumeDataContextChanged;
+        }
 
-            Viking.VolumeViewModel.VolumeViewModel volume = Microsoft.Practices.ServiceLocation.ServiceLocator.Current.GetInstance<Viking.VolumeViewModel.VolumeViewModel>();
-            this.DataContext = volume;
-
-            this.SectionsList.ItemsSource = volume.SectionViewModels.Values;
+        private void OnVolumeDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            VolumeVM volume = e.NewValue as VolumeVM;
+            if (volume != null)
+                SectionsList.ItemsSource = volume.SectionViewModels.Values;
         }
     }
 }

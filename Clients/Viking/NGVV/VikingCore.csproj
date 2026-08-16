@@ -66,9 +66,10 @@
     <ProjectReference Include="..\..\Viking.UI.WPF\Viking.UI.WPF.csproj" Private="true" />
     <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition="'$(TargetFramework)' == 'net48'" />
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj" />
+    <ProjectReference Include="..\..\Viking.Scene\Viking.Scene.csproj" />
+    <ProjectReference Include="..\..\Viking.Input\Viking.Input.csproj" />
     <ProjectReference Include="..\..\WCFTokenInjector\WCFTokenInjector.csproj" />
     <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj" />
-    <ProjectReference Include="..\..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
   </ItemGroup>
   
   <!-- Include Windows Forms resource files with correct logical names -->
@@ -187,6 +188,16 @@
   <ItemGroup>
     <Content Include="Resources\ForkArrow_256.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="ViewModels\TileView.cs" />
+    <Compile Remove="TileViewModelCache.cs" />
+    <Compile Remove="TextureCache.cs" />
+    <Compile Remove="Threading\TextureReaderV2.cs" />
+    <Compile Remove="Threading\TextureRequestQueue.cs" />
+    <Compile Remove="Threading\PendingTextureQueue.cs" />
+    <Compile Remove="Threading\DisposeTextureThreadingObj.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <WCFMetadata Include="Service References\" />
   </ItemGroup> 

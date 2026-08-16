@@ -9,20 +9,20 @@ namespace MonogameTestbed
 {
     public static class StandardGeometryModels
     {
-        public static GridPolygon CreateBoxPolygon(GridRectangle rect)
+        public static Polygon CreateBoxPolygon(Rectangle rect)
         {
-            GridVector2[] points = new GridVector2[6];
+            Vector2[] points = new Vector2[6];
 
             Array.Copy(rect.Corners, points, 4);
             points[4] = rect.Center;
             points[5] = points[0];
 
-            return new GridPolygon(points);
+            return new Polygon(points);
         }
 
-        public static GridVector2[] CreateTestPolygonExteriorVerticies(GridVector2? offset = new GridVector2?())
+        public static Vector2[] CreateTestPolygonExteriorVerticies(Vector2? offset = new Vector2?())
         {
-            GridVector2[] output = [new(10,10),
+            Vector2[] output = [new(10,10),
                                       new(5, 20),
                                       new(15, 30),
                                       new(30, 30),
@@ -36,9 +36,9 @@ namespace MonogameTestbed
             return output;
         }
 
-        public static GridVector2[] CreateTestPolygonInteriorRingVerticies(GridVector2? offset = new GridVector2?())
+        public static Vector2[] CreateTestPolygonInteriorRingVerticies(Vector2? offset = new Vector2?())
         {
-            GridVector2[] output = [new(12.5,12.5),
+            Vector2[] output = [new(12.5,12.5),
                                       new(22.5, 12.5),
                                       new(24.5, 17.5),
                                       new(17.5, 25.5),
@@ -48,20 +48,20 @@ namespace MonogameTestbed
             return output;
         }
 
-        public static GridPolygon CreateTestPolygon(bool IncludeHole, GridVector2? offset = new GridVector2?())
+        public static Polygon CreateTestPolygon(bool IncludeHole, Vector2? offset = new Vector2?())
         {
-            GridVector2[] holy_cps = CreateTestPolygonExteriorVerticies();
-            List<GridVector2[]> listInnerRings = [];
+            Vector2[] holy_cps = CreateTestPolygonExteriorVerticies();
+            List<Vector2[]> listInnerRings = [];
 
             if (IncludeHole)
             {
-                GridVector2[] holy_hole = CreateTestPolygonInteriorRingVerticies();
+                Vector2[] holy_hole = CreateTestPolygonInteriorRingVerticies();
                 listInnerRings.Add(holy_hole);
             }
 
             //When I made this I did not center polygon on 0,0, so just recenter after creation for now
-            GridPolygon uncentered_poly = new(holy_cps, listInnerRings);
-            GridPolygon centered_poly = uncentered_poly.Translate(-uncentered_poly.Centroid);
+            Polygon uncentered_poly = new(holy_cps, listInnerRings);
+            Polygon centered_poly = uncentered_poly.Translate(-uncentered_poly.Centroid);
 
             if (offset.HasValue)
                 return centered_poly.Translate(offset.Value);

@@ -1,8 +1,10 @@
 using Viking.AnnotationServiceTypes.Interfaces;
 using System;
 using System.Globalization;
+using System.Threading;
 using System.Windows.Data;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.WPF.Converters
 {
@@ -10,10 +12,10 @@ namespace WebAnnotation.WPF.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is not IPermittedStructureLinkReadOnly link)
-                throw new ArgumentException(string.Format("Expected an IPermittedStructureLinkReadOnly, got {0}", value));
+            if (value is not IPermittedStructureLink link)
+                throw new ArgumentException(string.Format("Expected an IPermittedStructureLink, got {0}", value));
 
-            return Store.StructureTypes.GetObjectByID((long)link.SourceTypeID);
+            return Store.StructureTypes.GetObjectByID((long)link.SourceTypeID, CancellationToken.None).Result;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
@@ -23,10 +25,10 @@ namespace WebAnnotation.WPF.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is not IPermittedStructureLinkReadOnly link)
-                throw new ArgumentException(string.Format("Expected an IPermittedStructureLinkReadOnly, got {0}", value));
+            if (value is not IPermittedStructureLink link)
+                throw new ArgumentException(string.Format("Expected an IPermittedStructureLink, got {0}", value));
 
-            return Store.StructureTypes.GetObjectByID((long)link.TargetTypeID);
+            return Store.StructureTypes.GetObjectByID((long)link.TargetTypeID, CancellationToken.None).Result;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
@@ -36,12 +38,12 @@ namespace WebAnnotation.WPF.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is not IPermittedStructureLinkReadOnly link)
-                throw new ArgumentException(string.Format("Expected an IPermittedStructureLinkReadOnly, got {0}", value));
+            if (value is not IPermittedStructureLink link)
+                throw new ArgumentException(string.Format("Expected an IPermittedStructureLink, got {0}", value));
 
             ulong myTypeID = System.Convert.ToUInt64(parameter);
             ulong otherTypeID = link.SourceTypeID == myTypeID ? link.TargetTypeID : link.SourceTypeID;
-            return Store.StructureTypes.GetObjectByID((long)otherTypeID);
+            return Store.StructureTypes.GetObjectByID((long)otherTypeID, CancellationToken.None).Result;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
@@ -58,7 +60,7 @@ namespace WebAnnotation.WPF.Converters
             if (typeObj is null && (value is long || value is int || value is ulong || value is uint))
             {
                 long ID = System.Convert.ToInt64(value);
-                typeObj = Store.StructureTypes.GetObjectByID(ID, true);
+                typeObj = Store.StructureTypes.GetObjectByID(ID, AskServer: true, ForceRefreshFromServer: false, CancellationToken.None).Result;
             }
 
             if (typeObj is null)

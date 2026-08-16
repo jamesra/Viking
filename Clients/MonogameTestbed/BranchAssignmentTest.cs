@@ -14,6 +14,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 
 namespace MonogameTestbed
@@ -22,7 +24,7 @@ namespace MonogameTestbed
 
     class PolyBranchAssignmentView
     {
-        public GridPolygon[] Polygons = null;
+        public Polygon[] Polygons = null;
         public double[] PolyZ = null;
         public PointSetView[] PolyPointsView = null;
         public PointSetView MeshVertsView = null;
@@ -47,7 +49,7 @@ namespace MonogameTestbed
             set => TrianglesView.color = value;
         }
 
-        public PolyBranchAssignmentView(GridPolygon[] polys, double[] Z)
+        public PolyBranchAssignmentView(Polygon[] polys, double[] Z)
         {
             Polygons = polys;
             Polygons.AddPointsAtAllIntersections(Z);
@@ -65,12 +67,12 @@ namespace MonogameTestbed
 
             polyRingViews = [];
 
-            foreach (GridPolygon p in Polygons)
+            foreach (Polygon p in Polygons)
             {
                 PointSetView psv = new();
 
-                List<GridVector2> points = [.. p.ExteriorRing];
-                foreach (GridPolygon innerPoly in p.InteriorPolygons)
+                List<Geometry.Vector2> points = [.. p.ExteriorRing];
+                foreach (Polygon innerPoly in p.InteriorPolygons)
                 {
                     points.AddRange(innerPoly.ExteriorRing);
                 }
@@ -92,14 +94,14 @@ namespace MonogameTestbed
         }
 
         /*
-        private void BuildAPort(IMesh mesh, Dictionary<GridVector2, PolygonIndex> pointToPoly)
+        private void BuildAPort(IMesh mesh, Dictionary<Geometry.Vector2, PolygonIndex> pointToPoly)
         {
-            List<GridVector2> points = pointToPoly.Keys.ToList();
-            Debug.Assert(mesh.Vertices.Select(v => v.ToGridVector2()).SequenceEqual(points));
+            List<Geometry.Vector2> points = pointToPoly.Keys.ToList();
+            Debug.Assert(mesh.Vertices.Select(v => v.ToVector2()).SequenceEqual(points));
 
             Mesh3D<IVertex3D<PolygonIndex>> SearchMesh = new Mesh3D<IVertex3D<PolygonIndex>>();
 
-            SearchMesh.AddVerticies(pointToPoly.Keys.Select(v => new Vertex3D<PolygonIndex>(v.ToGridVector3(0), pointToPoly[v])).ToArray());
+            SearchMesh.AddVerticies(pointToPoly.Keys.Select(v => new Vertex3D<PolygonIndex>(v.ToVector3(0), pointToPoly[v])).ToArray());
             SearchMesh.AddFaces(mesh.Triangles.Select(t => new Face(t.GetVertexID(0), t.GetVertexID(1), t.GetVertexID(2)) as IFace).ToArray()); 
         }
         */
@@ -138,7 +140,7 @@ namespace MonogameTestbed
 
             mesh.ConvertAllFacesToTriangles();
 
-            model.Verticies = [.. mesh.Verticies.Select((v, i) => new VertexPositionColor(v.Position.XY().ToXNAVector3(), Color.Transparent))];
+            model.Vertices = [.. mesh.Vertices.Select((v, i) => new VertexPositionColor(v.Position.XY().ToXNAVector3(), Color.Transparent))];
 
             foreach (IFace face in mesh.Faces)
             {
@@ -147,7 +149,7 @@ namespace MonogameTestbed
                 Color regionColor = VikingXNAGraphics.ColorExtensions.Random();
                 foreach (int iVert in face.iVerts)
                 {
-                    model.Verticies[iVert].Color = regionColor;
+                    model.Vertices[iVert].Color = regionColor;
                 }
             }
 
@@ -166,7 +168,7 @@ namespace MonogameTestbed
 
             mesh.ConvertAllFacesToTriangles();
 
-            model.Verticies = [.. mesh.Verticies.Select((v, i) => new VertexPositionColor(v.Position.XY().ToXNAVector3(), Color.Transparent))];
+            model.Vertices = [.. mesh.Vertices.Select((v, i) => new VertexPositionColor(v.Position.XY().ToXNAVector3(), Color.Transparent))];
 
             foreach (MorphMeshRegion region in mesh.Regions)
             {
@@ -176,7 +178,7 @@ namespace MonogameTestbed
                 Color regionColor = region.Type.GetColor();
                 foreach (int iVert in edgeVerts)
                 {
-                    model.Verticies[iVert].Color = regionColor;
+                    model.Vertices[iVert].Color = regionColor;
                 }
             }
 
@@ -189,7 +191,7 @@ namespace MonogameTestbed
 
             foreach (MorphMeshRegion region in mesh.Regions)
             {
-                GridPolygon poly = region.Polygon;
+                Polygon poly = region.Polygon;
                 LineSetView lineView = new();
                 Color c = Color.Random();
                 c.A = 128;
@@ -222,7 +224,7 @@ namespace MonogameTestbed
         /*
         private static void ReclassifyMeshEdges(MorphRenderMesh mesh)
         {
-            GridPolygon[] Polygons = mesh.Polygons;
+            Polygon[] Polygons = mesh.Polygons;
 
             foreach (MorphMeshEdge edge in mesh.MorphEdges)
             {
@@ -266,7 +268,7 @@ namespace MonogameTestbed
                 if (edge.Type == EdgeType.CORRESPONDING) //Avoid creating perfectly vertical lines with the same start and end points
                     continue;
 
-                GridLineSegment segment = mesh.ToSegment(edgeKey);
+                LineSegment segment = mesh.ToSegment(edgeKey);
                 LineView lineView = new(segment, lineWidth, edge.Type.GetColor(), LineStyle.Standard);
                 lineViews.Add(lineView);
 
@@ -296,12 +298,12 @@ namespace MonogameTestbed
         */
 
 
-        private Color GetColorForLine(PolygonIndex APoly, PolygonIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint)
+        private Color GetColorForLine(PolygonIndex APoly, PolygonIndex BPoly, Polygon[] Polygons, Geometry.Vector2 midpoint)
         {
-            GridPolygon A = Polygons[APoly.iPoly];
-            GridPolygon B = Polygons[BPoly.iPoly];
+            Polygon A = Polygons[APoly.ShapeIndex];
+            Polygon B = Polygons[BPoly.ShapeIndex];
 
-            if (APoly.iPoly != BPoly.iPoly)
+            if (APoly.ShapeIndex != BPoly.ShapeIndex)
             {
                 bool midInA = A.Contains(midpoint);
                 bool midInB = B.Contains(midpoint);
@@ -366,14 +368,14 @@ namespace MonogameTestbed
                     }
                 }
             }
-            else if (APoly.iPoly == BPoly.iPoly)
+            else if (APoly.ShapeIndex == BPoly.ShapeIndex)
             {
                 bool midInA = A.Contains(midpoint);
                 bool midInB = midInA;
 
-                if (PolygonIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.iPoly]))
+                if (PolygonIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.ShapeIndex]))
                 {
-                    return PolyPointsView[APoly.iPoly].Color;
+                    return PolyPointsView[APoly.ShapeIndex].Color;
 
                 }
 
@@ -383,7 +385,7 @@ namespace MonogameTestbed
                 }
                 else
                 {
-                    bool LineIntersectsAnyOtherPoly = Polygons.Where((p, iP) => iP != APoly.iPoly).Any(p => p.Contains(midpoint));
+                    bool LineIntersectsAnyOtherPoly = Polygons.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Contains(midpoint));
                     if (APoly.IsInner ^ BPoly.IsInner)
                     {
                         //Two options, the line is outside other shapes or inside other shapes.
@@ -469,13 +471,13 @@ namespace MonogameTestbed
         static readonly string PolyD = "POLYGON ((39146.1054527359 32215.861979170746, 39155.760032425416 32221.28097992999, 39165.539247853769 32227.071088043427, 39175.4628795245 32233.096026487678, 39185.550707941089 32239.219518239352, 39195.822513607054 32245.305286275066, 39206.298077025895 32251.217053571425, 39216.997178701131 32256.818543105052, 39227.93959913624 32261.973477852538, 39239.145118834756 32266.54558079052, 39250.633518300179 32270.398574895607, 39264.276911185814 32273.406635093092, 39279.247663894537 32275.071230368692, 39295.100264772882 32275.759104192595, 39311.389202167426 32275.837000034971, 39327.668964424745 32275.671661365985, 39343.494039891419 32275.629831655824, 39358.418916913994 32276.078254374654, 39371.998083839055 32277.383672992652, 39383.786029013179 32279.912830979989, 39393.337240782937 32284.03247180687, 39398.261345911706 32287.299881576593, 39402.9920628379 32290.99276459937, 39407.426379981167 32295.042860774829, 39411.461285761157 32299.381910002616, 39414.993768597487 32303.941652182362, 39417.920816909842 32308.653827213711, 39420.139419117833 32313.450174996291, 39421.54656364111 32318.262435429755, 39422.039238899335 32323.022348413742, 39421.514433312142 32327.661653847877, 39416.462778197252 32335.810333982961, 39406.034824749433 32343.554039175964, 39391.395139452114 32351.123029560928, 39373.7082887886 32358.747565271846, 39354.138839242267 32366.65790644271, 39333.851357296466 32375.084313207535, 39314.010409434544 32384.257045700324, 39295.780562139858 32394.406364055048, 39280.326381895771 32405.76252840575, 39268.812435185617 32418.555798886417, 39260.417503199205 32433.829669425533, 39254.068503452305 32451.097290974751, 39249.4554054123 32469.921254968314, 39246.268178546561 32489.86415284047, 39244.196792322487 32510.488576025458, 39242.931216207442 32531.357115957515, 39242.161419668832 32552.032364070896, 39241.577372174012 32572.076911799842, 39240.869043190389 32591.05335057859, 39239.726402185326 32608.52427184139, 39238.661912492251 32620.951336266135, 39237.722476752147 32632.90125721386, 39236.927183120963 32644.45661339079, 39236.295119754715 32655.699983503193, 39235.845374809382 32666.713946257256, 39235.59703644093 32677.581080359258, 39235.569192805364 32688.383964515426, 39235.78093205866 32699.205177431984, 39236.251342356794 32710.127297815168, 39236.999511855764 32721.232904371234, 39238.117469471064 32732.543537966478, 39239.625799249094 32743.839523094342, 39241.458828486182 32755.123129713407, 39243.550884478682 32766.396627782247, 39245.836294522938 32777.662287259445, 39248.249385915267 32788.922378103583, 39250.724485952051 32800.179170273259, 39253.1959219296 32811.434933727047, 39255.59802114428 32822.69193842353, 39257.865110892417 32833.95245432129, 39260.045484109476 32845.224266425706, 39262.229038642472 32856.483232818311, 39264.422245875438 32867.73409136368, 39266.631577192406 32878.981579926418, 39268.863503977416 32890.230436371116, 39271.12449761451 32901.485398562334, 39273.421029487705 32912.751204364708, 39275.759570981048 32924.032591642805, 39278.146593478581 32935.334298261216, 39280.588568364336 32946.661062084546, 39283.098857988087 32958.286544921233, 39285.603666752555 32970.014515215487, 39288.123094788119 32981.807286658477, 39290.6772422251 32993.627172941364, 39293.286209193866 33005.436487755294, 39295.970095824778 33017.197544791437, 39298.749002248209 33028.872657740969, 39301.643028594473 33040.424140295021, 39304.672274993944 33051.814306144777, 39307.856841577006 33063.005468981391, 39311.347302599308 33073.575750435237, 39315.516898482529 33084.394679444136, 39320.1154875638 33095.313777161762, 39324.892928180278 33106.184564741743, 39329.599078669089 33116.858563337744, 39333.983797367393 33127.187294103416, 39337.7969426123 33137.022278192388, 39340.788372740972 33146.215036758324, 39342.70794609053 33154.61709095486, 39343.305520998161 33162.079961935669, 39343.161870687 33165.830851291495, 39342.870548229672 33169.477193017316, 39342.400433083327 33172.988002320184, 39341.720404705011 33176.332294407133, 39340.799342551858 33179.479084485225, 39339.606126080951 33182.397387761492, 39338.109634749395 33185.056219442988, 39336.278748014287 33187.424594736745, 39334.082345332725 33189.471528849834, 39331.489306161813 33191.166036989256, 39324.917650595169 33193.169601401467, 39316.230370356934 33193.55366283944, 39305.821649182821 33192.5692091896, 39294.085670808607 33190.467228338384, 39281.416618970004 33187.498708172221, 39268.208677402756 33183.91463657756, 39254.8560298426 33179.966001440807, 39241.752860025263 33175.903790648408, 39229.293351686516 33171.978992086813, 39217.871688562074 33168.44259364243, 39207.764510307774 33165.026524984569, 39197.921213175665 33161.085702593322, 39188.27463494207 33156.768303025456, 39178.757613383226 33152.222502837758, 39169.302986275456 33147.596478587016, 39159.843591394994 33143.038406830005, 39150.312266518136 33138.69646412351, 39140.64184942119 33134.718827024313, 39130.765177880392 33131.253672089209, 39120.615089672028 33128.449175874965, 39109.2992302797 33126.4880975912, 39097.04342307664 33125.477974851216, 39084.196323226191 33125.157452225947, 39071.106585891634 33125.265174286294, 39058.1228662363 33125.539785603221, 39045.593819423484 33125.719930747626, 39033.868100616513 33125.544254290457, 39023.294364978668 33124.751400802626, 39014.221267673274 33123.08001485507, 39006.997463863634 33120.268741018706, 39003.801144219018 33118.296711989788, 39000.735634701115 33116.051755916495, 38997.866752311995 33113.588469519949, 38995.260314053725 33110.961449521346, 38992.9821369284 33108.225292641815, 38991.098037938056 33105.434595602521, 38989.673834084766 33102.643955124615, 38988.775342370594 33099.907967929248, 38988.468379797625 33097.281230737586, 38988.818763367904 33094.818340270787, 38991.613692117855 33090.621392914138, 38997.166963825563 33086.480089929784, 39004.983888209106 33082.42032994028, 39014.569774986565 33078.468011568169, 39025.429933875974 33074.649033435991, 39037.069674595463 33070.989294166291, 39048.994306863038 33067.514692381606, 39060.709140396815 33064.251126704505, 39071.719484914844 33061.224495757509, 39081.530650135188 33058.460698163159, 39089.822027920913 33056.4624586044, 39098.274870214911 33055.084078628206, 39106.804235776865 33054.130864598679, 39115.325183366527 33053.40812287994, 39123.752771743559 33052.721159836081, 39132.0020596677 33051.8752818312, 39139.988105898636 33050.675795229407, 39147.62596919608 33048.92800639481, 39154.830708319751 33046.437221691507, 39161.517382029328 33043.008747483604, 39167.583155595457 33038.677945256677, 39173.288162448844 33033.531265099584, 39178.656083699942 33027.720495354079, 39183.710600459228 33021.397424361916, 39188.475393837209 33014.713840464879, 39192.974144944339 33007.82153200468, 39197.230534891125 33000.872287323109, 39201.268244788036 32994.017894761935, 39205.110955745571 32987.410142662891, 39208.782348874192 32981.200819367754, 39211.685978480928 32976.486330312473, 39214.500319457191 32972.027370610427, 39217.198673803934 32967.7271170233, 39219.754343522116 32963.488746312774, 39222.140630612746 32959.215435240549, 39224.33083707677 32954.810360568292, 39226.29826491516 32950.176699057709, 39228.016216128883 32945.217627470476, 39229.457992718941 32939.836322568292, 39230.596896686278 32933.935961112831, 39231.591788891164 32922.749821111371, 39231.439467641459 32910.087257477258, 39230.343313888254 32896.229760936018, 39228.506708582659 32881.458822213179, 39226.133032675767 32866.055932034258, 39223.425667118674 32850.30258112475, 39220.587992862485 32834.480260210214, 39217.823390858292 32818.870460016129, 39215.335242057205 32803.754671268049, 39213.32692741033 32789.414384691452, 39211.747246575804 32776.684244579483, 39210.149797760627 32764.04624162889, 39208.544118091355 32751.504111306764, 39206.939744694493 32739.061589080186, 39205.3462146966 32726.722410416241, 39203.773065224195 32714.490310782017, 39202.229833403813 32702.369025644592, 39200.726056362022 32690.362290471061, 39199.2712712253 32678.473840728482, 39197.875015120233 32666.707411883988, 39196.688335964383 32656.198732496166, 39195.592634492255 32645.929371078888, 39194.561790488071 32635.836962049296, 39193.569683736037 32625.859139824559, 39192.590194020362 32615.933538821806, 39191.597201125267 32605.997793458209, 39190.564584834952 32595.989538150898, 39189.46622493364 32585.84640731704, 39188.276001205551 32575.506035373775, 39186.967793434873 32564.906056738266, 39185.414524691041 32552.54712867926, 39183.836804650949 32539.744216027826, 39182.214176340371 32526.625718503736, 39180.526182785077 32513.320035826782, 39178.752367010879 32499.955567716748, 39176.872272043511 32486.660713893412, 39174.865440908776 32473.563874076561, 39172.711416632475 32460.79344798599, 39170.389742240353 32448.477835341473, 39167.879960758219 32436.7454358628, 39165.711394369 32427.640538391865, 39163.505443874288 32419.073184242861, 39161.237015037135 32410.896069018254, 39158.881013620536 32402.961888320486, 39156.412345387573 32395.123337752037, 39153.80591610125 32387.233112915335, 39151.036631524614 32379.143909412862, 39148.079397420683 32370.708422847059, 39144.9091195525 32361.779348820379, 39141.500703683123 32352.209382935296, 39134.9148395835 32335.620240907687, 39126.11524482206 32315.901818815, 39115.883005020456 32294.11779499783, 39104.999205800254 32271.331847796777, 39094.244932783084 32248.6076555524, 39084.401271590577 32227.008896605323, 39076.249307844315 32207.599249296094, 39070.570127165935 32191.442391965335, 39068.144815177016 32179.602002953605, 39069.754457499206 32173.141760601502, 39073.268697850457 32172.072503970889, 39078.400025190276 32173.210221513364, 39084.885436828961 32176.172404454624, 39092.461930076861 32180.57654402042, 39100.866502244295 32186.040131436461, 39109.8361506416 32192.180657928471, 39119.107872579072 32198.615614722181, 39128.418665367069 32204.962493043324, 39137.5055263159 32210.838784117597, 39146.1054527359 32215.861979170746))";
 
 
-        static readonly GridPolygon SimpleA = new([ new(0,0),
+        static readonly Polygon SimpleA = new([ new(0,0),
                                                                          new(10,0),
                                                                          new(10,10),
                                                                          new(0,10),
                                                                          new(0,0) ]);
 
-        static readonly GridPolygon SimpleB = new([ new(5,5),
+        static readonly Polygon SimpleB = new([ new(5,5),
                                                                          new(15,5),
                                                                          new(15,15),
                                                                          new(5,15),
@@ -539,8 +541,8 @@ namespace MonogameTestbed
         ];
         Scene scene;
         readonly GamePadStateTracker Gamepad = new();
-        readonly GridPolygon A;
-        readonly GridPolygon B;
+        readonly Polygon A;
+        readonly Polygon B;
         readonly PointSetViewCollection Points_A = new(Color.Blue, Color.BlueViolet, Color.PowderBlue);
         readonly PointSetViewCollection Points_B = new(Color.Red, Color.Pink, Color.Plum);
         readonly Cursor2DCameraManipulator CameraManipulator = new();
@@ -562,9 +564,9 @@ namespace MonogameTestbed
 
             AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(TroubleIDS, true, DataSource.EndpointMap[Endpoint.TEST]);
             AnnotationVizLib.MorphologyNode[] nodes = [.. graph.Nodes.Values];
-            GridPolygon[] Polygons = [.. nodes.Select(n => n.Geometry.ToPolygon())];
+            Polygon[] Polygons = [.. nodes.Select(n => n.Geometry.ToPolygon())];
 
-            //GridPolygon[] Polygons = new GridPolygon[] { SimpleA, SimpleB };
+            //Polygon[] Polygons = new Polygon[] { SimpleA, SimpleB };
 
             wrapView = new MonogameTestbed.PolyBranchAssignmentView(Polygons, [.. nodes.Select(n => n.Z)]);
             //wrapView = new MonogameTestbed.PolyBranchAssignmentView(Polygons, new double[] { 0, 10 });
@@ -575,7 +577,7 @@ namespace MonogameTestbed
             A = SqlGeometry.STPolyFromText(PolyA.ToSqlChars(), 0).ToPolygon();
             B = SqlGeometry.STPolyFromText(PolyB.ToSqlChars(), 0).ToPolygon();
 
-            GridVector2 Centroid = A.Centroid;
+            Geometry.Vector2 Centroid = A.Centroid;
             A = A.Translate(-Centroid);
             B = B.Translate(-Centroid);
 

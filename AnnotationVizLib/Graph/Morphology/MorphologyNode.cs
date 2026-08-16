@@ -30,7 +30,7 @@ namespace AnnotationVizLib
 }
 else
 {*/
-                _geometry ??= Location.Geometry;
+                _geometry ??= Location.Geometry();
 
                 return _geometry;
             }
@@ -42,25 +42,25 @@ else
 
         public override string ToString() => this.Key.ToString();
 
-        public GridBox BoundingBox
+        public Box BoundingBox
         {
             get
             {
-                GridRectangle rect = Geometry.BoundingBox();
-                GridVector3 botleft = new(rect.Left, rect.Bottom, Z - Graph.SectionThickness / 2.0);
-                GridVector3 topright = new(rect.Right, rect.Top, Z + Graph.SectionThickness / 2.0);
+                Rectangle rect = Geometry.BoundingBox();
+                Vector3 botleft = new(rect.Left, rect.Bottom, Z - Graph.SectionThickness / 2.0);
+                Vector3 topright = new(rect.Right, rect.Top, Z + Graph.SectionThickness / 2.0);
 
-                GridBox bbox = new(botleft, topright);
+                Box bbox = new(botleft, topright);
                 return bbox;
             }
         }
 
-        public GridVector3 Center
+        public Vector3 Center
         {
             get
             {
-                GridVector2 c = Geometry.Centroid();
-                return new GridVector3(c.X, c.Y, Z);
+                Vector2 c = Geometry.Centroid();
+                return new Vector3(c.X, c.Y, Z);
             }
         }
 

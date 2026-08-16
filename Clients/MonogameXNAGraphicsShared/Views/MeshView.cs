@@ -76,7 +76,7 @@ namespace VikingXNAGraphics
             //Find all of the models with something we can draw and group by characteristics
             var modelGroups = models.Where(m => m != null &&
                                                 m.Edges != null &&
-                                                m.Verticies != null &&
+                                                m.Vertices != null &&
                                                 m.Edges.Length != 0)
                                     .GroupBy(m => new { m.HasNormal, m.HasColor });
 
@@ -224,7 +224,7 @@ namespace VikingXNAGraphics
             Matrix sceneWorld = scene.World;
             var modelGroups = meshmodels.Where(m => m != null &&
                                                 m.Edges != null &&
-                                                m.Verticies != null &&
+                                                m.Vertices != null &&
                                                 m.Edges.Length != 0)
                                     .GroupBy(m => new { m.HasNormal, m.HasColor });
 

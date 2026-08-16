@@ -12,7 +12,7 @@ namespace Geometry.Meshing
     /// Closely related to the CompareAngle class.  In this version the vertex index can change and is determined by the 
     /// duplicate key in the compared IEdgeKeys
     /// </summary>
-    public class MeshEdgeAngleComparer<VERTEX>(IMesh2D<VERTEX> mesh, GridVector2 origin_line_vector, bool clockwise = false) : IComparer<IEdgeKey>
+    public class MeshEdgeAngleComparer<VERTEX>(IMesh2D<VERTEX> mesh, Vector2 origin_line_vector, bool clockwise = false) : IComparer<IEdgeKey>
         where VERTEX : IVertex2D
     {
         readonly IMesh2D<VERTEX> Mesh = mesh;
@@ -21,10 +21,10 @@ namespace Geometry.Meshing
         /// <summary>
         /// A vector originating from 0,0.  It determines which edge is the first in the rotation order.
         /// </summary>
-        readonly GridVector2 OriginVector = origin_line_vector;
+        readonly Vector2 OriginVector = origin_line_vector;
 
 
-        public MeshEdgeAngleComparer(IMesh2D<VERTEX> mesh, GridLine origin_line_vector, bool clockwise = false) :
+        public MeshEdgeAngleComparer(IMesh2D<VERTEX> mesh, Line origin_line_vector, bool clockwise = false) :
             this(mesh, origin_line_vector.Direction, clockwise)
         {
         }
@@ -35,11 +35,11 @@ namespace Geometry.Meshing
             int APoint = A.OppositeEnd(origin_vertex);
             int BPoint = B.OppositeEnd(origin_vertex);
 
-            GridVector2 Origin = Mesh[origin_vertex].Position;
-            GridVector2 ComparisonPoint = Origin + OriginVector;
+            Vector2 Origin = Mesh[origin_vertex].Position;
+            Vector2 ComparisonPoint = Origin + OriginVector;
 
-            double angleA = GridVector2.ArcAngle(in Origin, Mesh[APoint].Position, in ComparisonPoint);
-            double angleB = GridVector2.ArcAngle(in Origin, Mesh[BPoint].Position, in ComparisonPoint);
+            double angleA = Vector2.ArcAngle(in Origin, Mesh[APoint].Position, in ComparisonPoint);
+            double angleB = Vector2.ArcAngle(in Origin, Mesh[BPoint].Position, in ComparisonPoint);
 
             //We are measuring the angle from the line in one direction, so don't allow negative angles
             angleA = angleA < 0 ? angleA + (Math.PI * 2.0) : angleA;
@@ -63,30 +63,30 @@ namespace Geometry.Meshing
         /// <summary>
         /// A line originating from the vertex.  It determines which edge is the first in the rotation order.
         /// </summary>
-        readonly GridLine OriginLine;
+        readonly Line OriginLine;
 
         /// <summary>
         /// Precalculated comparison point used to compare angles
         /// </summary>
-        private readonly GridVector2 ComparisonPoint;
+        private readonly Vector2 ComparisonPoint;
 
         public MeshEdgeAngleComparerFixedIndex(IMesh<VERTEX> mesh, int origin_vertex, IEdgeKey origin_line, bool clockwise = false) :
-            this(mesh, origin_vertex, GridVector2.Normalize(mesh[origin_line.OppositeEnd(origin_vertex)].Position - mesh[origin_vertex].Position), clockwise)
+            this(mesh, origin_vertex, Vector2.Normalize(mesh[origin_line.OppositeEnd(origin_vertex)].Position - mesh[origin_vertex].Position), clockwise)
         {
         }
 
-        public MeshEdgeAngleComparerFixedIndex(IMesh<VERTEX> mesh, int origin_vertex, GridLine origin_line_vector, bool clockwise = false) :
+        public MeshEdgeAngleComparerFixedIndex(IMesh<VERTEX> mesh, int origin_vertex, Line origin_line_vector, bool clockwise = false) :
             this(mesh, origin_vertex, origin_line_vector.Direction, clockwise)
         {
         }
 
-        public MeshEdgeAngleComparerFixedIndex(IMesh<VERTEX> mesh, int origin_vertex, GridVector2 origin_line_vector, bool clockwise = false)
+        public MeshEdgeAngleComparerFixedIndex(IMesh<VERTEX> mesh, int origin_vertex, Vector2 origin_line_vector, bool clockwise = false)
         {
             Mesh = mesh;
             OriginVertex = origin_vertex;
 
-            GridVector2 Origin = mesh[origin_vertex].Position;
-            OriginLine = new GridLine(Origin, origin_line_vector);
+            Vector2 Origin = mesh[origin_vertex].Position;
+            OriginLine = new Line(Origin, origin_line_vector);
 
             ComparisonPoint = Origin + origin_line_vector;
 
@@ -103,7 +103,7 @@ namespace Geometry.Meshing
             int APoint = A.OppositeEnd(OriginVertex);
             return MeasureAngle(APoint);
             //We are measuring the angle from the line in one direction, so don't allow negative angles
-            //return GridVector2.AbsArcAngle(OriginLine.Origin, Mesh[APoint].Position, ComparisonPoint, ClockwiseOrder);            
+            //return Vector2.AbsArcAngle(OriginLine.Origin, Mesh[APoint].Position, ComparisonPoint, ClockwiseOrder);            
         }
 
         /// <summary>
@@ -113,15 +113,15 @@ namespace Geometry.Meshing
         /// <returns></returns>
         public double MeasureAngle(long APoint) =>
             //We are measuring the angle from the line in one direction, so don't allow negative angles
-            GridVector2.AbsArcAngle(OriginLine.Origin, Mesh[APoint].Position, ComparisonPoint, ClockwiseOrder);
+            Vector2.AbsArcAngle(OriginLine.Origin, Mesh[APoint].Position, ComparisonPoint, ClockwiseOrder);
 
         public int Compare(IEdgeKey A, IEdgeKey B)
         {
             int APoint = A.OppositeEnd(OriginVertex);
             int BPoint = B.OppositeEnd(OriginVertex);
             //We are measuring the angle from the line in one direction, so don't allow negative angles
-            double angleA = GridVector2.AbsArcAngle(OriginLine.Origin, Mesh[APoint].Position, ComparisonPoint);
-            double angleB = GridVector2.AbsArcAngle(OriginLine.Origin, Mesh[BPoint].Position, ComparisonPoint);
+            double angleA = Vector2.AbsArcAngle(OriginLine.Origin, Mesh[APoint].Position, ComparisonPoint);
+            double angleB = Vector2.AbsArcAngle(OriginLine.Origin, Mesh[BPoint].Position, ComparisonPoint);
 
             return ClockwiseOrder ? angleA.CompareTo(angleB) : angleB.CompareTo(angleA);
         }
@@ -129,11 +129,11 @@ namespace Geometry.Meshing
 
     public class TriangulationVertex : Vertex2D, IVertexSortEdgeByAngle
     {
-        public TriangulationVertex(GridVector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(p, edgeComparer)
+        public TriangulationVertex(Vector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(p, edgeComparer)
         {
         }
 
-        protected TriangulationVertex(int index, GridVector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(index, p, edgeComparer)
+        protected TriangulationVertex(int index, Vector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(index, p, edgeComparer)
         {
         }
 
@@ -198,12 +198,12 @@ namespace Geometry.Meshing
     {
         public T Data { get; set; }
 
-        public TriangulationVertex(int index, GridVector2 p, T data) : base(index, p)
+        public TriangulationVertex(int index, Vector2 p, T data) : base(index, p)
         {
             Data = data;
         }
 
-        public TriangulationVertex(int index, GridVector2 p) : base(index, p)
+        public TriangulationVertex(int index, Vector2 p) : base(index, p)
         {
         }
 
@@ -223,7 +223,7 @@ namespace Geometry.Meshing
     {
         private readonly IMesh<VERTEX> Mesh = mesh;
 
-        public int Compare(long A, long B) => GridVectorComparerXY.CompareXY(Mesh[A].Position, Mesh[B].Position);
+        public int Compare(long A, long B) => Vector2ComparerXY.CompareXY(Mesh[A].Position, Mesh[B].Position);
     }
 
     public class MeshVertexComparerYX<VERTEX>(IMesh<VERTEX> mesh) : IComparer<long>
@@ -231,7 +231,7 @@ namespace Geometry.Meshing
     {
         private readonly IMesh<VERTEX> Mesh = mesh;
 
-        public int Compare(long A, long B) => GridVectorComparerYX.CompareYX(Mesh[A].Position, Mesh[B].Position);
+        public int Compare(long A, long B) => Vector2ComparerYX.CompareYX(Mesh[A].Position, Mesh[B].Position);
     }
 
     public class ConstrainedEdge : Edge
@@ -491,8 +491,8 @@ namespace Geometry.Meshing
         public override int AddVertex(VERTEX vert)
         {
             int iNew = base.AddVertex(vert);
-            //_XSorted = this._Verticies.Select(v => v.Position).SortAndIndex(new GridVectorComparerXY());
-            //_YSorted = this._Verticies.Select(v => v.Position).SortAndIndex(new GridVectorComparerYX());
+            //_XSorted = this._Verticies.Select(v => v.Position).SortAndIndex(new Vector2ComparerXY());
+            //_YSorted = this._Verticies.Select(v => v.Position).SortAndIndex(new Vector2ComparerYX());
             _XSorted.Add(iNew);
             _YSorted.Add(iNew);
             _XSortedArrayCache = null;
@@ -505,8 +505,8 @@ namespace Geometry.Meshing
         public override int AddVerticies(IEnumerable<VERTEX> verts)
         {
             int iNew = base.AddVerticies(verts);
-            //_XSorted = this._Verticies.Select(v => v.Position).SortAndIndex(new GridVectorComparerXY());
-            //_YSorted = this._Verticies.Select(v => v.Position).SortAndIndex(new GridVectorComparerYX());
+            //_XSorted = this._Verticies.Select(v => v.Position).SortAndIndex(new Vector2ComparerXY());
+            //_YSorted = this._Verticies.Select(v => v.Position).SortAndIndex(new Vector2ComparerYX());
             _XSorted.UnionWith(verts.Select(v => (long)v.Index));
             _YSorted.UnionWith(verts.Select(v => (long)v.Index));
             _XSortedArrayCache = null;
@@ -526,7 +526,7 @@ namespace Geometry.Meshing
             if (this.Contains(e))
                 return;
 
-            GridLineSegment seg = this.ToGridLineSegment(e);
+            LineSegment seg = this.ToLineSegment(e);
 
 #if DEBUG
             try
@@ -548,7 +548,7 @@ namespace Geometry.Meshing
 #endif
 
             base.AddEdge(e);
-            EdgeRTree.Add(seg.BoundingBox, e);
+            EdgeRTree.Add(seg.BoundingBox.ToRTreeRect(0), e);
         }
 
         public override void RemoveEdge(IEdgeKey e)
@@ -562,7 +562,7 @@ namespace Geometry.Meshing
         {
             Debug.Assert(face.IsTriangle(), "Faces in TriangulationMesh must be triangles");
 #if DEBUG
-            GridTriangle tri = this.ToTriangle(face);
+            Triangle tri = this.ToTriangle(face);
             //Debug.Assert(tri.Area > 0, string.Format("Face {0} must have non-zero area", face));
             if (tri.Area == 0)
                 //return;
@@ -580,22 +580,22 @@ namespace Geometry.Meshing
                 throw new ArgumentException(string.Format("Face passed to IsTriangleDelaunay must be a triangle {0}", f));
             }
 
-            GridVector2[] verts = [.. this[f].Select(v => v.Position)];
+            Vector2[] verts = [.. this[f].Select(v => v.Position)];
 
-            GridCircle circle = GridCircle.CircleFromThreePoints(verts);
+            Circle circle = Circle.CircleFromThreePoints(verts);
 
             //Build a list of possible violations of the delaunay rule, and then remove the triangle verticies themselves.
-            long[] candidate_indicies = [.. this.rTree.Intersects(circle.BoundingBox).Where(c => f.iVerts.Contains((int)c) == false)];
-            GridVector2[] candidates = [.. this[candidate_indicies].Select(v => v.Position)];
+            long[] candidate_indicies = [.. this.rTree.Intersects(circle.BoundingBox.ToRTreeRect(0)).Where(c => f.iVerts.Contains((int)c) == false)];
+            Vector2[] candidates = [.. this[candidate_indicies].Select(v => v.Position)];
 
-            ShapeRelation[] results = GridCircle.Contains(verts, candidates);
+            ShapeRelation[] results = Circle.Contains(verts, candidates);
 
             for (int i = 0; i < results.Length; i++)
             {
-                if (results[i] == ShapeRelation.CONTAINED)
+                if (results[i] == ShapeRelation.Contained)
                 {
                     //If all points are equidistant then don't call this a failure
-                    double distanceSquared = GridVector2.DistanceSquared(in circle.Center, in candidates[i]);
+                    double distanceSquared = Vector2.DistanceSquared(in circle.Center, in candidates[i]);
                     if (Math.Abs(distanceSquared - circle.RadiusSquared) < Global.EpsilonSquared)
                     {
                         continue;
@@ -614,16 +614,16 @@ namespace Geometry.Meshing
 
         public void EdgeToVertAngle(IEdge e, IVertex2D p)
         {
-            GridLine line = ToGridLine(e);
+            Line line = ToLine(e);
         }
 
         public bool FindIntersectingEdges(IEdgeKey e, out List<IEdgeKey> foundEdges)
         {
             foundEdges = [];
 
-            GridLineSegment seg = this.ToGridLineSegment(e);
+            LineSegment seg = this.ToLineSegment(e);
 
-            var candidates = EdgeRTree.Intersects(seg.BoundingBox);
+            var candidates = EdgeRTree.Intersects(seg.BoundingBox.ToRTreeRect(0));
 
             foreach (var candidate in candidates)
             {
@@ -633,13 +633,13 @@ namespace Geometry.Meshing
                 if (candidate.Adjacent(e)) //If we share a vertex with the edge we won't count it as an intersection
                     continue;
 
-                GridLineSegment candidate_seg = this.ToGridLineSegment(candidate);
+                LineSegment candidate_seg = this.ToLineSegment(candidate);
 
                 if (candidate_seg.Intersects(in seg, false, out IShape2D intersection))
                 {
                     foundEdges.Add(candidate);
                     /*
-                    if (intersection.ShapeType == ShapeType2D.POINT)
+                    if (intersection.ShapeType == ShapeType2D.Point)
                     {
                         IPoint2D iPoint = intersection as IPoint2D;
                         if (candidate_seg.IsEndpoint(iPoint))
@@ -697,7 +697,7 @@ namespace Geometry.Meshing
                 }
             }
 
-            GridLineSegment ConstrainedEdge = this.ToGridLineSegment(constrained_edge);
+            LineSegment ConstrainedEdge = this.ToLineSegment(constrained_edge);
 
             List<IEdge> IntersectedEdges;
             try
@@ -791,12 +791,12 @@ namespace Geometry.Meshing
                 Face quad = new(quadVerts);
                 testedQuads.Add(quad);
 
-                GridPolygon poly = new(quadVerts.Select(v => this[v].Position).ToArray().EnsureClosedRing());
+                Polygon poly = new(quadVerts.Select(v => this[v].Position).ToArray().EnsureClosedRing());
 
                 //We cannot flip the edges if the polygon is not convex
                 Concavity[] concavity = [.. poly.VertexConcavity(out double[] angles)];
 
-                if (false == concavity.All(c => c == Concavity.CONVEX || c == Concavity.PARALLEL))
+                if (false == concavity.All(c => c == Concavity.Convex || c == Concavity.Parallel))
                 {
 
 #if TRACEDELAUNAY
@@ -813,7 +813,7 @@ namespace Geometry.Meshing
                     //Flip the edge, check if the new edge still intersects the ConstraintEdge
                     var NewFacesTuple = TriangleFace.Flip(edge);
 
-                    bool HasParallelEdges = concavity.Any(c => c == Concavity.PARALLEL);
+                    bool HasParallelEdges = concavity.Any(c => c == Concavity.Parallel);
                     if (HasParallelEdges)
                     {
                         double A_Area = this.ToTriangle(NewFacesTuple.Item1).Area;
@@ -851,7 +851,7 @@ namespace Geometry.Meshing
 
                     //If the new edge intersects the constrained line, add it to the list of edges to check, 
                     //otherwise add it to the list of CreatedEdges
-                    GridLineSegment newEdgeSeg = this.ToGridLineSegment(newEdge);
+                    LineSegment newEdgeSeg = this.ToLineSegment(newEdge);
                     if (newEdge == constrained_edge)
                     {
 #if TRACEDELAUNAY
@@ -903,15 +903,15 @@ namespace Geometry.Meshing
 
                 int[] oppVerts = [A.OppositeVertex(edge), B.OppositeVertex(edge)];
                 int checkVert = oppVerts.Single(v => A.iVerts.Contains(v) == false);
-                if (GridCircle.Contains([.. this[A.iVerts].Select(v => v.Position)], this[checkVert].Position) == ShapeRelation.CONTAINED)
+                if (Circle.Contains([.. this[A.iVerts].Select(v => v.Position)], this[checkVert].Position) == ShapeRelation.Contained)
                 {
 
                     //We need to ensure that the edge we are flippig is convex.  We cannot flip a concave quad along the interior edge or we get overlapping edges
                     int[] quad = edge.FacesBoundary();
-                    List<GridVector2> positionList = [.. this[quad].Select(v => v.Position)];
+                    List<Vector2> positionList = [.. this[quad].Select(v => v.Position)];
                     positionList.Add(positionList.First());
 
-                    GridPolygon quadPoly = new(positionList);
+                    Polygon quadPoly = new(positionList);
                     if (false == quadPoly.IsConvex())
                     {
 #if TRACEDELAUNAY
@@ -939,7 +939,7 @@ namespace Geometry.Meshing
 
                     ReportProgress?.Invoke(this);
 
-                    GridLineSegment newEdgeSeg = this.ToGridLineSegment(newEdge);
+                    LineSegment newEdgeSeg = this.ToLineSegment(newEdge);
                     if (newEdge == constrained_edge)
                     {
 
@@ -969,7 +969,7 @@ namespace Geometry.Meshing
             long iStart = e.A;
             long iEnd = e.B;
 
-            GridLineSegment ConstrainedEdge = this.ToGridLineSegment(e);
+            LineSegment ConstrainedEdge = this.ToLineSegment(e);
 
             VERTEX v = this[iStart];
             IEnumerable<IFace> faces = v.Edges.Where(vert_edge => e.Equals(vert_edge) == false).SelectMany(edge => this[edge].Faces).Distinct(); //Our edge may or may not be in the mesh, but we'll exclude any faces it is part of.
@@ -979,14 +979,14 @@ namespace Geometry.Meshing
                 ITriangleFace face = f as ITriangleFace;
                 IEdge oppEdge = this[face.OppositeEdge(v.Index)]; //Identify the edge we have a chance of intersecting.
 
-                GridLineSegment oppEdgeSeg = this.ToGridLineSegment(oppEdge);
+                LineSegment oppEdgeSeg = this.ToLineSegment(oppEdge);
 
                 //We should never intersect an endpoint, but if the mesh is not correct and an edge passes through our endpoint we may. 
                 //if (ConstrainedEdge.Intersects(oppEdgeSeg, EndpointsOnRingDoNotIntersect: true)) 
                 if (ConstrainedEdge.Intersects(in oppEdgeSeg, EndpointsOnRingDoNotIntersect: false, Intersection: out IShape2D intersection))
                 {
                     //Todo: Handle endpoint intersection case
-                    if (intersection.ShapeType == ShapeType2D.POINT)
+                    if (intersection.ShapeType == ShapeType2D.Point)
                     {
                         IPoint2D iPoint = intersection as IPoint2D;
                         if (oppEdgeSeg.IsEndpoint(iPoint))
@@ -1006,7 +1006,7 @@ namespace Geometry.Meshing
             return intersected_edges;
         }
 
-        private bool FindIntersectingFaceEdges(ITriangleFace previous_intersected_face, IEdgeKey constrained_edge, GridLineSegment constrained_seg, IEdge previous_intersected_edge, ref List<IEdge> intersected_edges)
+        private bool FindIntersectingFaceEdges(ITriangleFace previous_intersected_face, IEdgeKey constrained_edge, LineSegment constrained_seg, IEdge previous_intersected_edge, ref List<IEdge> intersected_edges)
         {
             bool new_edge_found = true;
             while (new_edge_found)
@@ -1039,7 +1039,7 @@ namespace Geometry.Meshing
                     if (intersected_edges.Contains(candidate))
                         continue;
 
-                    GridLineSegment candidateEdgeSeg = this.ToGridLineSegment(candidate);
+                    LineSegment candidateEdgeSeg = this.ToLineSegment(candidate);
                     if (constrained_seg.Intersects(in candidateEdgeSeg, EndpointsOnRingDoNotIntersect: false, Intersection: out IShape2D intersection))
                     {
                         intersected_edges.Add(candidate);
@@ -1079,18 +1079,18 @@ namespace Geometry.Meshing
         /// <param name="vector"></param>
         /// <param name="CloneData">If true, the data value of each vertex is cloned instead of referenced</param>
         /// <returns></returns>
-        public static TriangulationMesh<VERTEX> Translate(TriangulationMesh<VERTEX> mesh, GridVector2 vector, bool CloneData = false)
+        public static TriangulationMesh<VERTEX> Translate(TriangulationMesh<VERTEX> mesh, Vector2 vector, bool CloneData = false)
         {
             TriangulationMesh<VERTEX> triMesh = new();
 
             if (CloneData)
             {
-                var translated_verts = mesh.Verticies.Select(v => (VERTEX)(IVertex2D<T>)new Vertex2D<T>(v.Index, v.Position + vector, (T)v.Data.Clone()));
+                var translated_verts = mesh.Vertices.Select(v => (VERTEX)(IVertex2D<T>)new Vertex2D<T>(v.Index, v.Position + vector, (T)v.Data.Clone()));
                 return triMesh.Clone(translated_verts, mesh.Edges.Values, mesh.Faces);
             }
             else
             {
-                var translated_verts = mesh.Verticies.Select(v => (VERTEX)(IVertex2D<T>)new Vertex2D<T>(v.Index, v.Position + vector, v.Data));
+                var translated_verts = mesh.Vertices.Select(v => (VERTEX)(IVertex2D<T>)new Vertex2D<T>(v.Index, v.Position + vector, v.Data));
                 return triMesh.Clone(translated_verts, mesh.Edges.Values, mesh.Faces);
             }
         }

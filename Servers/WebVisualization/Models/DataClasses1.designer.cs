@@ -432,7 +432,7 @@ namespace Tracker.Model
 		}
 		
 		[Column(Storage="_Verticies", DbType="VarBinary(MAX)", UpdateCheck=UpdateCheck.Never)]
-		public System.Data.Linq.Binary Verticies
+		public System.Data.Linq.Binary Vertices
 		{
 			get
 			{
@@ -445,7 +445,7 @@ namespace Tracker.Model
 					this.OnVerticiesChanging(value);
 					this.SendPropertyChanging();
 					this._Verticies = value;
-					this.SendPropertyChanged("Verticies");
+					this.SendPropertyChanged("Vertices");
 					this.OnVerticiesChanged();
 				}
 			}

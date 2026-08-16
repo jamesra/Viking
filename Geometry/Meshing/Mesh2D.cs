@@ -18,12 +18,12 @@ namespace Geometry.Meshing
     public abstract class Mesh2DBase<VERTEX> : MeshBase<VERTEX>, IMesh2D<VERTEX>
         where VERTEX : IVertex2D
     {
-        private GridRectangle? _BoundingBox = new GridRectangle?();
+        private Rectangle? _BoundingBox = new Rectangle?();
 
 
-        public override IReadOnlyList<VERTEX> Verticies => _Verticies;
+        public override IReadOnlyList<VERTEX> Vertices => _Verticies;
 
-        public GridRectangle BoundingBox
+        public Rectangle BoundingBox
         {
             get
             {
@@ -31,14 +31,14 @@ namespace Geometry.Meshing
                 {
                     return _BoundingBox.Value;
                 }
-                else if (Verticies.Count > 0)
+                else if (Vertices.Count > 0)
                 {
-                    UpdateBoundingBox(this.Verticies);
+                    UpdateBoundingBox(this.Vertices);
                     return _BoundingBox.Value;
                 }
                 else
                 {
-                    return new GridRectangle();
+                    return new Rectangle();
                 }
             }
         }
@@ -46,7 +46,7 @@ namespace Geometry.Meshing
         protected override void UpdateBoundingBox(VERTEX vert)
         {
             if (_BoundingBox is null)
-                _BoundingBox = new GridRectangle(vert.Position, 0);
+                _BoundingBox = new Rectangle(vert.Position, 0);
             else
             {
                 _BoundingBox += vert.Position;
@@ -59,18 +59,18 @@ namespace Geometry.Meshing
             _BoundingBox = _BoundingBox is null ? points.BoundingBox() : _BoundingBox.Value + points.BoundingBox();
         }
 
-        public GridLineSegment ToGridLineSegment(IEdgeKey key) => new GridLineSegment(this[key.A].Position, this[key.B].Position);
+        public LineSegment ToLineSegment(IEdgeKey key) => new LineSegment(this[key.A].Position, this[key.B].Position);
 
-        public GridLineSegment ToGridLineSegment(long A, long B) => new GridLineSegment(this[A].Position, this[B].Position);
+        public LineSegment ToLineSegment(long A, long B) => new LineSegment(this[A].Position, this[B].Position);
 
         /// <summary>
         /// Return a normalized vector with origin at A towards B
         /// </summary> 
         /// <returns></returns>
-        public GridLine ToGridLine(IEdgeKey key)
+        public Line ToLine(IEdgeKey key)
         {
-            GridVector2 O = this[key.A].Position;
-            return new GridLine(O, GridVector2.Normalize(this[key.B].Position - O));
+            Vector2 O = this[key.A].Position;
+            return new Line(O, Vector2.Normalize(this[key.B].Position - O));
         }
 
         /// <summary>
@@ -79,10 +79,10 @@ namespace Geometry.Meshing
         /// <param name="Origin"></param>
         /// <param name="Direction"></param>
         /// <returns></returns>
-        public GridLine ToGridLine(long Origin, long Direction)
+        public Line ToLine(long Origin, long Direction)
         {
-            GridVector2 O = this[Origin].Position;
-            return new GridLine(O, GridVector2.Normalize(this[Direction].Position - O));
+            Vector2 O = this[Origin].Position;
+            return new Line(O, Vector2.Normalize(this[Direction].Position - O));
         }
 
         /// <summary>
@@ -91,10 +91,10 @@ namespace Geometry.Meshing
         /// <param name="Origin"></param>
         /// <param name="Direction"></param>
         /// <returns></returns>
-        public GridPolygon ToPolygon(IFace f)
+        public Polygon ToPolygon(IFace f)
         {
             var positions = f.iVerts.Select(v => this[v].Position);
-            GridPolygon poly = new(positions);
+            Polygon poly = new(positions);
             return poly;
         }
 
@@ -104,14 +104,14 @@ namespace Geometry.Meshing
         /// <param name="Origin"></param>
         /// <param name="Direction"></param>
         /// <returns></returns>
-        public GridTriangle ToTriangle(IFace f)
+        public Triangle ToTriangle(IFace f)
         {
             var positions = f.iVerts.Select(v => this[v].Position).ToArray();
-            GridTriangle tri = new(positions);
+            Triangle tri = new(positions);
             return tri;
         }
 
-        public GridVector2 Centroid(IFace f) => this.ToTriangle(f).Centroid;
+        public Vector2 Centroid(IFace f) => this.ToTriangle(f).Centroid;
 
         public RotationDirection Winding(IFace f) => this[f].Select(v => v.Position).ToArray().Winding();
 
@@ -134,8 +134,8 @@ namespace Geometry.Meshing
             {
                 RemoveFace(face);
 
-                GridVector2[] positions = [.. this[face.iVerts].Select(v => v.Position)];
-                if (GridVector2.Distance(positions[0], positions[2]) < GridVector2.Distance(positions[1], positions[3]))
+                Vector2[] positions = [.. this[face.iVerts].Select(v => v.Position)];
+                if (Vector2.Distance(positions[0], positions[2]) < Vector2.Distance(positions[1], positions[3]))
                 {
                     IFace ABC = CreateFace([face.iVerts[0], face.iVerts[1], face.iVerts[2]]);
                     IFace ACD = CreateFace([face.iVerts[0], face.iVerts[2], face.iVerts[3]]);
@@ -174,7 +174,7 @@ namespace Geometry.Meshing
         public virtual JObject ToJObject()
         {
             dynamic jObj = new JObject();
-            jObj.verts = this.Verticies.Select(v => v.Position).ToJArray();
+            jObj.verts = this.Vertices.Select(v => v.Position).ToJArray();
             jObj.edges = new JArray(this.Edges.Values.Select(e => e.ToJObject()));
             jObj.faces = new JArray(this.Faces.Select(f => f.ToJObject()));
             return jObj;
@@ -182,6 +182,6 @@ namespace Geometry.Meshing
 
         public virtual string ToJSON() => this.ToJObject().ToString();
 
-        public override string ToString() => string.Format("{0} Verts {1} Edges {2} Faces", this.Verticies.Count, this.Edges.Count, this.Faces.Count);
+        public override string ToString() => string.Format("{0} Verts {1} Edges {2} Faces", this.Vertices.Count, this.Edges.Count, this.Faces.Count);
     }
 }

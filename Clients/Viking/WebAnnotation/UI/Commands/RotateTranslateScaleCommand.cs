@@ -6,7 +6,7 @@ using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-    internal abstract class RotateTranslateScaleCommand(Viking.UI.Controls.SectionViewerControl parent, Geometry.GridVector2 VolumePosition) : TranslateScaleCommandBase(parent, VolumePosition), Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal abstract class RotateTranslateScaleCommand(Viking.UI.Controls.SectionViewerControl parent, Geometry.Vector2 VolumePosition) : TranslateScaleCommandBase(parent, VolumePosition), Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
         public new static string[] DefaultMouseHelpStrings =
         [
@@ -16,7 +16,7 @@ namespace WebAnnotation.UI.Commands
         /// <summary>
         /// This is the center point about which we are rotating.  Usually the center of the shape
         /// </summary>
-        protected abstract GridVector2 VolumeRotationOrigin
+        protected abstract Vector2 VolumeRotationOrigin
         { get; }
 
         /// <summary>
@@ -61,9 +61,9 @@ namespace WebAnnotation.UI.Commands
             }
             else if (e.Button.Right())
             {
-                GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
-                // GridVector2 Center = this.TranslatedVolumePosition;
-                _AngleOffset = GridVector2.Angle(VolumeRotationOrigin, WorldPosition) - Angle;
+                Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+                // Vector2 Center = this.TranslatedVolumePosition;
+                _AngleOffset = Vector2.Angle(VolumeRotationOrigin, WorldPosition) - Angle;
             }
             else
             {
@@ -75,16 +75,16 @@ namespace WebAnnotation.UI.Commands
         {
             if (e.Button.Right())
             {
-                GridVector2 worldPosition = Parent.ScreenToWorld(e.X, e.Y);
-                //GridVector2 origin = this.TranslatedVolumePosition;
-                //GridVector2 centroid = this.OriginalVolumePosition;
+                Vector2 worldPosition = Parent.ScreenToWorld(e.X, e.Y);
+                //Vector2 origin = this.TranslatedVolumePosition;
+                //Vector2 centroid = this.OriginalVolumePosition;
 
                 if (VolumeRotationOrigin == worldPosition)
                 {
                     return;
                 }
 
-                Angle = GridVector2.Angle(VolumeRotationOrigin, worldPosition) - _AngleOffset;
+                Angle = Vector2.Angle(VolumeRotationOrigin, worldPosition) - _AngleOffset;
 
                 //Save as old mouse position so location doesn't jump when we release the right mouse button
                 SaveAsOldMousePosition(e);

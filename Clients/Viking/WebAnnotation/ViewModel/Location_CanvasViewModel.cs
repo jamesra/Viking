@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -10,12 +10,15 @@ using Microsoft.Xna.Framework.Graphics;
 using Viking.Common;
 using WebAnnotation;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System.Drawing;
 using Viking.Common.UI;
 using WebAnnotation.UI.Commands;
 using System.Collections.Concurrent;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.ViewModel
 {
@@ -38,8 +41,8 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        public GridVector2 SectionPosition => modelObj.Position;
+        public Geometry.Vector2 SectionPosition => modelObj.Position;
 
-        public GridVector2 VolumePosition => modelObj.VolumePosition;
+        public Geometry.Vector2 VolumePosition => modelObj.VolumePosition;
     }
 }

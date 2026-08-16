@@ -10,17 +10,19 @@ using System.Windows.Forms;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands
 {
     internal class AdjustPolygonVertexCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
-        private readonly GridPolygon OriginalMosaicPolygon;
-        private readonly GridPolygon OriginalVolumePolygon;
+        private readonly Polygon OriginalMosaicPolygon;
+        private readonly Polygon OriginalVolumePolygon;
 
-        private GridPolygon OutputVolumePolygon;
+        private Polygon OutputVolumePolygon;
         private PositionColorMeshModel polygonView;
-        private GridPolygon? AdjustedPolygon = null; //The polygon we are adjusting.  This can be an interior polygon.
+        private Polygon? AdjustedPolygon = null; //The polygon we are adjusting.  This can be an interior polygon.
         private bool ControlPointSelected = false;
         private PolygonIndex iOriginalVolumePolyControlPoint;
         private PolygonIndex iAdjustedControlPoint; //The index of the vertex in the exterior ring to adjust. 
@@ -32,7 +34,7 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="MosaicPolygon"></param>
         /// <param name="VolumePolygon"></param>
-        public delegate void OnCommandSuccess(GridPolygon MosaicPolygon, GridPolygon VolumePolygon);
+        public delegate void OnCommandSuccess(Polygon MosaicPolygon, Polygon VolumePolygon);
 
         private readonly OnCommandSuccess success_callback;
         private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
@@ -42,7 +44,7 @@ namespace WebAnnotation.UI.Commands
         public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
 
         public AdjustPolygonVertexCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridPolygon mosaic_polygon,
+                                        Polygon mosaic_polygon,
                                         Microsoft.Xna.Framework.Color color,
                                         OnCommandSuccess success_callback) : base(parent)
         {
@@ -56,15 +58,15 @@ namespace WebAnnotation.UI.Commands
 
         }
 
-        private static async Task<PositionColorMeshModel> CreateView(GridPolygon poly, Color color, CancellationToken token) => await Task.Run(() => poly.Smooth(Global.NumClosedCurveInterpolationPointsForDisplay).CreateMeshForPolygon2D(color), token);
+        private static async Task<PositionColorMeshModel> CreateView(Polygon poly, Color color, CancellationToken token) => await Task.Run(() => poly.Smooth(Global.NumClosedCurveInterpolationPointsForDisplay).CreateMeshForPolygon2D(color), token);
 
-        protected void PopulateControlPointIndexIfNeeded(GridVector2 WorldPosition)
+        protected void PopulateControlPointIndexIfNeeded(Geometry.Vector2 WorldPosition)
         {
             if (ControlPointSelected == false)
             {
                 ControlPointSelected = true;
                 OriginalVolumePolygon.NearestVertex(WorldPosition, out iOriginalVolumePolyControlPoint);
-                AdjustedPolygon = (GridPolygon)iOriginalVolumePolyControlPoint.Polygon(OriginalVolumePolygon).Clone();
+                AdjustedPolygon = (Polygon)iOriginalVolumePolyControlPoint.Polygon(OriginalVolumePolygon).Clone();
 
                 iAdjustedControlPoint = iOriginalVolumePolyControlPoint.IsInner
                     ? iOriginalVolumePolyControlPoint.ReindexToOuter()
@@ -74,12 +76,12 @@ namespace WebAnnotation.UI.Commands
 
         private CancellationTokenSource? UpdatePositionCancellationTokenSource = null;
 
-        protected virtual async Task UpdatePosition(GridVector2 PositionDelta)
+        protected virtual async Task UpdatePosition(Geometry.Vector2 PositionDelta)
         {
             AdjustedPolygon[iAdjustedControlPoint] = AdjustedPolygon[iAdjustedControlPoint] + PositionDelta;
 
             //If we haven't moved a significant distance, don't update the view
-            if (PositionDelta.Round(0) == GridVector2.Zero)
+            if (PositionDelta.Round(0) == Geometry.Vector2.Zero)
             {
                 return;
             }
@@ -98,7 +100,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
             PopulateControlPointIndexIfNeeded(NewPosition);
 
             //Redraw if we are dragging a location
@@ -106,7 +108,7 @@ namespace WebAnnotation.UI.Commands
             {
                 if (oldMouse.Button.Left())
                 {
-                    GridVector2 LastWorldPosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
+                    Geometry.Vector2 LastWorldPosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
                     UpdatePosition(NewPosition - LastWorldPosition);
                 }
             }
@@ -118,12 +120,12 @@ namespace WebAnnotation.UI.Commands
         {
             if (e.Button.Left())
             {
-                GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+                Geometry.Vector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
                 PopulateControlPointIndexIfNeeded(NewPosition);
 
                 if (AdjustedPolygon != null)
                 {
-                    OutputVolumePolygon = (GridPolygon)OriginalVolumePolygon.Clone();
+                    OutputVolumePolygon = (Polygon)OriginalVolumePolygon.Clone();
                     OutputVolumePolygon[iOriginalVolumePolyControlPoint] = AdjustedPolygon[iAdjustedControlPoint];
                     Execute();
                 }
@@ -147,7 +149,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute()
         {
-            GridPolygon mosaic_polygon;
+            Polygon mosaic_polygon;
             try
             {
                 mosaic_polygon = mapping.TryMapShapeVolumeToSection(OutputVolumePolygon);

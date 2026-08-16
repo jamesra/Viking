@@ -27,7 +27,7 @@ namespace Viking.VolumeModel
 
             GridInfo gridInfo = LevelToGridInfo[this.MinDownsample];
 
-            MappingGridVector2[] mappingPoints = new MappingGridVector2[(gridInfo.GridYDim+1) * (gridInfo.GridXDim+1)];
+            MappingVector2[] mappingPoints = new MappingVector2[(gridInfo.GridYDim+1) * (gridInfo.GridXDim+1)];
             int[] TriangleIndicies = new int[gridInfo.GridYDim * gridInfo.GridXDim * 6];
             
             int iPoint = 0;
@@ -36,10 +36,10 @@ namespace Viking.VolumeModel
             {
                 for(int iY = 0; iY <= gridInfo.GridYDim; iY++, iPoint++)
                 {
-                    GridVector2 controlPoint = new GridVector2(iX * this.TileSizeX,
+                    Vector2 controlPoint = new Vector2(iX * this.TileSizeX,
                                                                iY * this.TileSizeY); 
-                    GridVector2 mappedPoint = controlPoint; //This will get warped later when we add to volume transform
-                    MappingGridVector2 PointPair = new MappingGridVector2(controlPoint, mappedPoint);
+                    Vector2 mappedPoint = controlPoint; //This will get warped later when we add to volume transform
+                    MappingVector2 PointPair = new MappingVector2(controlPoint, mappedPoint);
 
                     mappingPoints[iPoint] = PointPair;
                     
@@ -70,24 +70,24 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool TrySectionToVolume(GridVector2 P, out GridVector2 transformedP) => this.VolumeTransform.TryTransform(P, out transformedP);
+        public override bool TrySectionToVolume(Vector2 P, out Vector2 transformedP) => this.VolumeTransform.TryTransform(P, out transformedP);
 
-        public override bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP) => this.VolumeTransform.TryInverseTransform(P, out transformedP);
+        public override bool TryVolumeToSection(Vector2 P, out Vector2 transformedP) => this.VolumeTransform.TryInverseTransform(P, out transformedP);
 
         /// <summary>
         /// Maps a point from volume space into the section space
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TrySectionToVolume(in GridVector2[] P, out GridVector2[] transformedP) => this.VolumeTransform.TryTransform(P, out transformedP);
+        public override bool[] TrySectionToVolume(in Vector2[] P, out Vector2[] transformedP) => this.VolumeTransform.TryTransform(P, out transformedP);
 
-        public override bool[] TryVolumeToSection(in GridVector2[] P, out GridVector2[] transformedP) => this.VolumeTransform.TryInverseTransform(P, out transformedP);
-
-
-        public override GridVector2[] VolumeToSection(GridVector2[] P) => this.VolumeTransform.InverseTransform(P);
+        public override bool[] TryVolumeToSection(in Vector2[] P, out Vector2[] transformedP) => this.VolumeTransform.TryInverseTransform(P, out transformedP);
 
 
-        public override GridVector2[] SectionToVolume(GridVector2[] P) => this.VolumeTransform.Transform(P);
+        public override Vector2[] VolumeToSection(Vector2[] P) => this.VolumeTransform.InverseTransform(P);
+
+
+        public override Vector2[] SectionToVolume(Vector2[] P) => this.VolumeTransform.Transform(P);
 
         public override Task FreeMemory()
         {
@@ -100,7 +100,7 @@ namespace Viking.VolumeModel
         }
 
 
-        public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
+        public override TilePyramid VisibleTiles(Rectangle VisibleBounds, double DownSample)
         {
             //double AdjustedDownSample = AdjustDownsampleForScale(DownSample);
             TilePyramid TilesToDraw = new(VisibleBounds);
@@ -110,17 +110,17 @@ namespace Viking.VolumeModel
                 return TilesToDraw;
 
 
-            GridQuad VisibleQuad;
-            GridRectangle? visibleSection = VisibleBounds.ApproximateVisibleMosaicBounds(this);
+            Quad VisibleQuad;
+            Rectangle? visibleSection = VisibleBounds.ApproximateVisibleMosaicBounds(this);
             if (!visibleSection.HasValue)
             {
                 //Nothing to draw
                 return TilesToDraw;
             }
 
-            VisibleQuad = new GridQuad(visibleSection.Value);
+            VisibleQuad = new Quad(visibleSection.Value);
 
-            GridRectangle SectionBorder = visibleSection.Value;
+            Rectangle SectionBorder = visibleSection.Value;
 
             int iLevel = AvailableLevels.Length - 1;
             int level = AvailableLevels[iLevel];
@@ -149,9 +149,9 @@ namespace Viking.VolumeModel
 
 
         private List<TileViewModel> RecursiveVisibleTiles(
-                                                 GridRectangle VolumeVisibleBounds,
-                                                 GridRectangle SectionVisibleBounds,
-                                                 GridQuad? VisibleQuad,
+                                                 Rectangle VolumeVisibleBounds,
+                                                 Rectangle SectionVisibleBounds,
+                                                 Quad? VisibleQuad,
                                                  int roundedDownsample)
         {
 
@@ -188,7 +188,7 @@ namespace Viking.VolumeModel
                         continue; //We are already getting this tile, so continue
 
                     //Figure out if the tile would be visible
-                    GridRectangle tileBorder = TileBoundingBox(iX, iY, (int)roundedDownsample);
+                    Rectangle tileBorder = TileBoundingBox(iX, iY, (int)roundedDownsample);
                     if (tileBorder.Intersects(SectionVisibleBounds) == false)
                         continue;
 
@@ -272,22 +272,22 @@ namespace Viking.VolumeModel
         /// <param name="iX"></param>
         /// <param name="iY"></param>
         /// <returns></returns>
-        private GridRectangle TileBoundingBox(int iX, int iY, int Downsample)
+        private Rectangle TileBoundingBox(int iX, int iY, int Downsample)
         {
-            GridRectangle TileBorder;
+            Rectangle TileBorder;
             double Width = this.TileSizeX * Downsample;
             double Height = this.TileSizeY * Downsample;
             double X = iX * Width;
             double Y = iY * Height;
 
-            TileBorder = new GridRectangle(X, X + Width, Y, Y + Height);
+            TileBorder = new Rectangle(X, X + Width, Y, Y + Height);
 
             return TileBorder;
         }
 
-        GridVector2[] TileHull(int iX, int iY, int Downsample)
+        Vector2[] TileHull(int iX, int iY, int Downsample)
         {
-            GridVector2[] verts = new GridVector2[16];
+            Vector2[] verts = new Vector2[16];
             double Width = this.TileSizeX * Downsample;
             double Height = this.TileSizeY * Downsample;
             double HalfWidth = Width / 2.0;
@@ -296,40 +296,40 @@ namespace Viking.VolumeModel
             double QuarterHeight = HalfHeight / 2.0;
             double X = iX * Width;
             double Y = iY * Height;
-            verts[0] = new GridVector2(X, Y);
-            verts[1] = new GridVector2(X + Width, Y);
-            verts[2] = new GridVector2(X, Y + Height);
-            verts[3] = new GridVector2(X + Width, Y + Height);
+            verts[0] = new Vector2(X, Y);
+            verts[1] = new Vector2(X + Width, Y);
+            verts[2] = new Vector2(X, Y + Height);
+            verts[3] = new Vector2(X + Width, Y + Height);
 
-            verts[4] = new GridVector2(X + HalfWidth, Y);
-            verts[5] = new GridVector2(X + QuarterWidth, Y);
-            verts[6] = new GridVector2(X + HalfWidth + QuarterWidth, Y);
-
-
-            verts[7] = new GridVector2(X, Y + HalfHeight);
-            verts[8] = new GridVector2(X, Y + QuarterHeight);
-            verts[9] = new GridVector2(X, Y + HalfHeight + QuarterHeight);
+            verts[4] = new Vector2(X + HalfWidth, Y);
+            verts[5] = new Vector2(X + QuarterWidth, Y);
+            verts[6] = new Vector2(X + HalfWidth + QuarterWidth, Y);
 
 
-            verts[10] = new GridVector2(X + Width, Y + QuarterHeight);
-            verts[11] = new GridVector2(X + Width, Y + HalfHeight);
-            verts[12] = new GridVector2(X + Width, Y + HalfHeight + QuarterHeight);
+            verts[7] = new Vector2(X, Y + HalfHeight);
+            verts[8] = new Vector2(X, Y + QuarterHeight);
+            verts[9] = new Vector2(X, Y + HalfHeight + QuarterHeight);
 
-            verts[13] = new GridVector2(X + QuarterHeight, Y + Height);
-            verts[14] = new GridVector2(X + HalfWidth, Y + Height);
-            verts[15] = new GridVector2(X + HalfWidth + QuarterHeight, Y + Height);
 
-            //verts[16] = new GridVector2(X + HalfWidth, Y + HalfHeight);
+            verts[10] = new Vector2(X + Width, Y + QuarterHeight);
+            verts[11] = new Vector2(X + Width, Y + HalfHeight);
+            verts[12] = new Vector2(X + Width, Y + HalfHeight + QuarterHeight);
 
-            // verts[8] = new GridVector2(X + HalfWidth, Y + HalfHeight);
+            verts[13] = new Vector2(X + QuarterHeight, Y + Height);
+            verts[14] = new Vector2(X + HalfWidth, Y + Height);
+            verts[15] = new Vector2(X + HalfWidth + QuarterHeight, Y + Height);
+
+            //verts[16] = new Vector2(X + HalfWidth, Y + HalfHeight);
+
+            // verts[8] = new Vector2(X + HalfWidth, Y + HalfHeight);
 
 
             return verts;
         }
 
-        GridVector2[] TileGrid(int iX, int iY, int GridDimX, int GridDimY, int Downsample)
+        Vector2[] TileGrid(int iX, int iY, int GridDimX, int GridDimY, int Downsample)
         {
-            GridVector2[] verts = new GridVector2[(GridDimX + 1) * (GridDimY + 1)];
+            Vector2[] verts = new Vector2[(GridDimX + 1) * (GridDimY + 1)];
             double Width = this.TileSizeX * Downsample;
             double Height = this.TileSizeY * Downsample;
             double XOrigin = iX * Width;
@@ -346,7 +346,7 @@ namespace Viking.VolumeModel
                     int i = (jY * (GridDimX + 1)) + jX;
                     double X = XOrigin + (XStep * (double)jX);
 
-                    verts[i] = new GridVector2(X, Y);
+                    verts[i] = new Vector2(X, Y);
                 }
             }
 
@@ -358,23 +358,23 @@ namespace Viking.VolumeModel
                                                                             int Downsample,
                                                                             out int[] TriangleEdges)
         {
-            //GridVector2[] SectionTileCorners = TileGrid(iX,iY,3,3,Downsample);
-            GridVector2[] SectionTileCorners = TileHull(iX, iY, Downsample);
-            List<MappingGridVector2> TileCornerMappedPoints = new(SectionTileCorners.Length);
+            //Vector2[] SectionTileCorners = TileGrid(iX,iY,3,3,Downsample);
+            Vector2[] SectionTileCorners = TileHull(iX, iY, Downsample);
+            List<MappingVector2> TileCornerMappedPoints = new(SectionTileCorners.Length);
 
-            bool[] transformSuccess = VolumeTransform.TryTransform(SectionTileCorners, out GridVector2[] mappedVerts);
+            bool[] transformSuccess = VolumeTransform.TryTransform(SectionTileCorners, out Vector2[] mappedVerts);
 
             for (int i = 0; i < SectionTileCorners.Length; i++)
             {
                 if (transformSuccess[i])
                 {
-                    TileCornerMappedPoints.Add(new MappingGridVector2(mappedVerts[i], SectionTileCorners[i]));
+                    TileCornerMappedPoints.Add(new MappingVector2(mappedVerts[i], SectionTileCorners[i]));
                 }
             }
 
-            GridRectangle tileBorder = TileBoundingBox(iX, iY, Downsample);
+            Rectangle tileBorder = TileBoundingBox(iX, iY, Downsample);
 
-            List<MappingGridVector2> MappedPoints = new(16);
+            List<MappingVector2> MappedPoints = new(16);
 
             //Add all of the points in the tiles rectangle
 
@@ -383,7 +383,7 @@ namespace Viking.VolumeModel
                 MappedPoints.AddRange(((ITransformControlPoints)VolumeTransform).IntersectingMappedRectangle(tileBorder));
             }
 
-            //            MappedPoints.Sort(new MappingGridVector2SortByMapPoints());
+            //            MappedPoints.Sort(new MappingVector2SortByMapPoints());
 
             if (MappedPoints.Count + TileCornerMappedPoints.Count < 3)
             {
@@ -413,11 +413,11 @@ namespace Viking.VolumeModel
             MappedPoints.AddRange(TileCornerMappedPoints);
 
             //Eliminate duplicates in case tile coordinate landed exactly on transform grid (Common for 0,0)
-            MappingGridVector2.RemoveMappedSpaceDuplicates(MappedPoints);
+            MappingVector2.RemoveMappedSpaceDuplicates(MappedPoints);
 
-            MappedPoints.Sort(new MappingGridVector2SortByMapPoints());
+            MappedPoints.Sort(new MappingVector2SortByMapPoints());
 
-            GridVector2[] DelaunayPoints = new GridVector2[MappedPoints.Count];
+            Vector2[] DelaunayPoints = new Vector2[MappedPoints.Count];
             //Triangulate the points
             for (int iPoint = 0; iPoint < MappedPoints.Count; iPoint++)
             {
@@ -440,12 +440,12 @@ namespace Viking.VolumeModel
             PositionNormalTextureVertex[] verticies = new PositionNormalTextureVertex[MappedPoints.Count];
             for (int iPoint = 0; iPoint < MappedPoints.Count; iPoint++)
             {
-                GridVector2 Pos = MappedPoints[iPoint].ControlPoint;
-                GridVector2 TextureBasis = MappedPoints[iPoint].MappedPoint;
-                GridVector2 TexturePos = new(((TextureBasis.X - tileBorder.Left) / tileBorder.Width),
+                Vector2 Pos = MappedPoints[iPoint].ControlPoint;
+                Vector2 TextureBasis = MappedPoints[iPoint].MappedPoint;
+                Vector2 TexturePos = new(((TextureBasis.X - tileBorder.Left) / tileBorder.Width),
                                                  ((TextureBasis.Y - tileBorder.Bottom) / tileBorder.Height));
-                verticies[iPoint] = new PositionNormalTextureVertex(new GridVector3((float)Pos.X, (float)Pos.Y, 0),
-                                                                     GridVector3.UnitZ,
+                verticies[iPoint] = new PositionNormalTextureVertex(new Vector3((float)Pos.X, (float)Pos.Y, 0),
+                                                                     Vector3.UnitZ,
                                                                      TexturePos);
             }
 

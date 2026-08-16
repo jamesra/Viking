@@ -5,6 +5,8 @@ using Microsoft.Xna.Framework.Input;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 
 namespace MonogameTestbed
@@ -26,7 +28,7 @@ namespace MonogameTestbed
         readonly GamePadStateTracker Gamepad = new();
         readonly Cursor2DCameraManipulator CameraManipulator = new();
 
-        GridVector2 Cursor = GridVector2.Zero;
+        Geometry.Vector2 Cursor = Geometry.Vector2.Zero;
         CircleView cursorView;
         LabelView cursorLabel;
 
@@ -50,7 +52,7 @@ namespace MonogameTestbed
             PolyCView.Polygon = GeometryJSONExtensions.PolygonFromJSON(DebugJSONA);
             scene.Camera.LookAt = PolyCView.Polygon.ExteriorRing[0].ToXNAVector2();
 
-            cursorView = new CircleView(new GridCircle(Cursor, PointRadius), Color.Gray);
+            cursorView = new CircleView(new Circle(Cursor, PointRadius), Color.Gray);
 
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
             return Task.CompletedTask;
@@ -69,8 +71,8 @@ namespace MonogameTestbed
 
             if (state.ThumbSticks.Left != Vector2.Zero)
             {
-                Cursor += state.ThumbSticks.Left.ToGridVector2();
-                cursorView = new CircleView(new GridCircle(Cursor, PointRadius), Color.Gray);
+                Cursor += state.ThumbSticks.Left.ToVector2();
+                cursorView = new CircleView(new Circle(Cursor, PointRadius), Color.Gray);
                 cursorLabel = new LabelView(Cursor.ToLabel(), Cursor)
                 {
                     FontSize = 2,
@@ -80,8 +82,8 @@ namespace MonogameTestbed
 
             if (state.Buttons.RightStick == ButtonState.Pressed)
             {
-                Cursor = this.scene.Camera.LookAt.ToGridVector2();
-                cursorView = new CircleView(new GridCircle(Cursor, PointRadius), Color.Gray);
+                Cursor = this.scene.Camera.LookAt.ToVector2();
+                cursorView = new CircleView(new Circle(Cursor, PointRadius), Color.Gray);
                 cursorLabel = new LabelView(Cursor.ToLabel(), Cursor)
                 {
                     FontSize = 2,
@@ -94,7 +96,7 @@ namespace MonogameTestbed
                 Points_A.TogglePoint(Cursor);
                 if (Points_A.Points.Count >= 3)
                 {
-                    PolyAView.Polygon = new GridPolygon(Points_A.Points.Points.EnsureClosedRing());
+                    PolyAView.Polygon = new Polygon(Points_A.Points.Points.EnsureClosedRing());
                 }
             }
 
@@ -103,7 +105,7 @@ namespace MonogameTestbed
                 Points_B.TogglePoint(Cursor);
                 if (Points_B.Points.Count >= 3)
                 {
-                    PolyBView.Polygon = new GridPolygon(Points_B.Points.Points.EnsureClosedRing());
+                    PolyBView.Polygon = new Polygon(Points_B.Points.Points.EnsureClosedRing());
                 }
             }
 
@@ -112,7 +114,7 @@ namespace MonogameTestbed
                 Points_C.TogglePoint(Cursor);
                 if (Points_C.Points.Count >= 3)
                 {
-                    PolyCView.Polygon = new GridPolygon(Points_C.Points.Points.EnsureClosedRing());
+                    PolyCView.Polygon = new Polygon(Points_C.Points.Points.EnsureClosedRing());
                 }
             }
         }
@@ -142,7 +144,7 @@ namespace MonogameTestbed
             //Create a map of Vertex ID's to DRMesh ID's
             int[] IndexMap = mesh.Vertices.Select(v => v.ID).ToArray();
 
-            DRMesh.AddVertex(mesh.Vertices.Select(v => new Vertex<int>(new GridVector3(v.X, v.Y, 0), GridVector3.Zero, v.ID)).ToArray());
+            DRMesh.AddVertex(mesh.Vertices.Select(v => new Vertex<int>(new Geometry.Vector3(v.X, v.Y, 0), Geometry.Vector3.Zero, v.ID)).ToArray());
 
             foreach(TriangleNet.Topology.DCEL.Face f in mesh.Faces)
             {

@@ -28,6 +28,11 @@ namespace Viking.Services
             Form? checkingForm = null;
 
             var mgr = new UpdateManager(UpdateUrl);
+            if (!mgr.IsInstalled)
+            {
+                Trace.WriteLine("[Velopack] Skipping update check — not a Velopack-installed build.");
+                return;
+            }
 
             try
             {
@@ -65,6 +70,9 @@ namespace Viking.Services
         /// </summary>
         private static (VelopackAsset? release, SemanticVersion? version) CheckAndHandleUpdates(UpdateManager mgr)
         {
+            if (!mgr.IsInstalled)
+                return (null, null);
+
             try
             {
                 var updateInfo = mgr.CheckForUpdates();

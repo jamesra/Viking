@@ -1,10 +1,14 @@
-# Annotation SQL Server for local gRPC integration tests.
-# Use with the root compose file:
+# Local annotation SQL for gRPC. Does not change Identity Server settings —
+# those stay in .env.Docker (Viking / production) or docker-compose.identity-devtest.yml
+# (integration tests). Mixing a production Viking JWT with DevTest Identity is a 401.
+#
+# Viking + local SQL + production Identity:
 #   docker compose --env-file D:/Docker/Builds/AnnotationSql/.env \
 #     -f docker-compose.yml -f docker-compose.annotation-db.yml \
-#     up --build identity-devtest annotation-sql grpc-annotation-service
+#     up -d annotation-sql grpc-annotation-service
 #
-# Or run Servers/GrpcAnnotationService/scripts/Start-AnnotationTestStack.ps1
+# Integration tests (DevTest Identity):
+#   Servers/GrpcAnnotationService/scripts/Start-AnnotationTestStack.ps1
 #
 # Env template: Servers/AnnotationDatabase/config-template/
 
@@ -39,22 +43,10 @@ services:
     depends_on:
       annotation-sql:
         condition: service_healthy
-      identity-devtest:
-        condition: service_started
-    # Override ConnectionStrings / Identity when running the local test stack.
     # ${MSSQL_SA_PASSWORD} and ${ANNOTATION_DATABASE} come from
     # `docker compose --env-file D:/Docker/Builds/AnnotationSql/.env ...`
     environment:
-      # HTTP-only in the test stack — the container image has no HTTPS cert.
-      # Host tests use http://localhost:5010 (mapped from container :80).
-      ASPNETCORE_URLS: "http://+:80"
       ConnectionStrings__AnnotationConnection: "Server=annotation-sql,1433;Database=${ANNOTATION_DATABASE:-AnnotationTest};User ID=sa;Password=${MSSQL_SA_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True"
-      # Reach DevTest Identity on the compose network (not host.docker.internal).
-      IdentityServer__Endpoint: "http://identity-devtest/"
-      IdentityServer__IntrospectionEndpoint: "http://identity-devtest/connect/introspect"
-      IdentityServer__ClientId: "grpc-annotation"
-      IdentityServer__ClientSecret: "DevTestIntrospectionSecret"
-      IdentityServer__AllowHttpMetadata: "true"
 
 volumes:
   annotation-sql-data:

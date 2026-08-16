@@ -130,7 +130,7 @@ namespace WebAnnotation.UI
             // 
             // tagBindingSource
             // 
-            this.tagBindingSource.DataSource = typeof(WebAnnotationModel.ObjAttribute);
+            this.tagBindingSource.DataSource = typeof(WebAnnotationModel.Objects.ObjAttribute);
             // 
             // labelTags
             // 

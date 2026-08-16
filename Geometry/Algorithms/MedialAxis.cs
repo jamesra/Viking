@@ -6,45 +6,45 @@ using System.Linq;
 
 namespace Geometry
 {
-    public class MedialAxisEdge(GridVector2 SourceNode, GridVector2 TargetNode) : GraphLib.Edge<GridVector2>(SourceNode, TargetNode, false)
+    public class MedialAxisEdge(Vector2 SourceNode, Vector2 TargetNode) : GraphLib.Edge<Vector2>(SourceNode, TargetNode, false)
     {
-        public GridLineSegment Line => new(this.SourceNodeKey, this.TargetNodeKey);
+        public LineSegment Line => new(this.SourceNodeKey, this.TargetNodeKey);
     }
 
-    public class MedialAxisVertex(GridVector2 k) : GraphLib.Node<GridVector2, MedialAxisEdge>(k)
+    public class MedialAxisVertex(Vector2 k) : GraphLib.Node<Vector2, MedialAxisEdge>(k)
     {
         public override string ToString() => Key.ToString();
     }
 
-    public class MedialAxisGraph : GraphLib.Graph<GridVector2, MedialAxisVertex, MedialAxisEdge>
+    public class MedialAxisGraph : GraphLib.Graph<Vector2, MedialAxisVertex, MedialAxisEdge>
     {
-        public GridVector2 FindStartForBoundarySearch(GridPolygon[] shapes) => Nodes.First(v => shapes.All(shape => !shape.Contains(v.Key))).Key;
+        public Vector2 FindStartForBoundarySearch(Polygon[] shapes) => Nodes.First(v => shapes.All(shape => !shape.Contains(v.Key))).Key;
 
-        public GridLineSegment[] Segments => [.. this.Edges.Select(edge => edge.Value.Line)];
+        public LineSegment[] Segments => [.. this.Edges.Select(edge => edge.Value.Line)];
 
-        public GridVector2[] Points => [.. this.Nodes.Select(n => n.Key)];
+        public Vector2[] Points => [.. this.Nodes.Select(n => n.Key)];
 
         /// <summary>
         /// Returns a copy of the graph with all nodes translated by the specified vector.
         /// </summary>
         /// <param name="vector">The translation vector to apply to all nodes</param>
         /// <returns>A new MedialAxisGraph with translated nodes and edges</returns>
-        public MedialAxisGraph Translate(GridVector2 vector)
+        public MedialAxisGraph Translate(Vector2 vector)
         {
             MedialAxisGraph translatedGraph = new();
 
             // Add all translated nodes
             foreach (var node in this.Nodes)
             {
-                GridVector2 translatedPosition = node.Key + vector;
+                Vector2 translatedPosition = node.Key + vector;
                 translatedGraph.AddNode(new MedialAxisVertex(translatedPosition));
             }
 
             // Add all edges with translated endpoints
             foreach (var edge in this.Edges.Values)
             {
-                GridVector2 translatedSource = edge.SourceNodeKey + vector;
-                GridVector2 translatedTarget = edge.TargetNodeKey + vector;
+                Vector2 translatedSource = edge.SourceNodeKey + vector;
+                Vector2 translatedTarget = edge.TargetNodeKey + vector;
                 translatedGraph.AddEdge(new MedialAxisEdge(translatedSource, translatedTarget));
             }
 
@@ -67,7 +67,7 @@ namespace Geometry
         /// </remarks>
         /// <param name="shape">The polygon shape to calculate the medial axis for</param>
         /// <returns></returns>
-        public static MedialAxisGraph ApproximateMedialAxis(GridPolygon shape) =>
+        public static MedialAxisGraph ApproximateMedialAxis(Polygon shape) =>
             ApproximateMedialAxisChordal(shape, extendToApex: false, pruneRatio: 0.0);
 
         /// <summary>
@@ -75,7 +75,7 @@ namespace Geometry
         /// </summary>
         /// <remarks>
         /// The Chordal Axis (Prasad 1997) is extracted directly from the constrained Delaunay triangulation
-        /// produced by <see cref="MeshExtensions.Triangulate(GridPolygon, int, TriangulationMesh{IVertex2D{PolygonIndex}}.ProgressUpdate)"/>.
+        /// produced by <see cref="MeshExtensions.Triangulate(Polygon, int, TriangulationMesh{IVertex2D{PolygonIndex}}.ProgressUpdate)"/>.
         /// Each interior triangle is classified by how many of its edges lie on the polygon boundary and the
         /// midpoints of its interior edges (plus a centroid at junctions) are connected.  Because adjacent
         /// triangles share an interior edge, they share that edge's midpoint node, so the resulting graph is
@@ -94,7 +94,7 @@ namespace Geometry
         /// clearance of the junction it attaches to.  Zero (the default) disables pruning.
         /// </param>
         /// <returns>A connected medial axis graph</returns>
-        public static MedialAxisGraph ApproximateMedialAxisChordal(GridPolygon shape, bool extendToApex = false, double pruneRatio = 0.0)
+        public static MedialAxisGraph ApproximateMedialAxisChordal(Polygon shape, bool extendToApex = false, double pruneRatio = 0.0)
         {
             TriangulationMesh<IVertex2D<PolygonIndex>> mesh;
             var centroid = shape.Centroid;
@@ -109,14 +109,14 @@ namespace Geometry
                 return new MedialAxisGraph();
             }
 
-            GridPolygon boundary = centroid == GridVector2.Zero ? shape : shape.Translate(-centroid);
+            Polygon boundary = centroid == Vector2.Zero ? shape : shape.Translate(-centroid);
             MedialAxisGraph graph = BuildChordalAxisFromMesh2D(mesh, boundary, extendToApex);
 
             if (pruneRatio > 0.0)
                 PruneBranches(graph, boundary, pruneRatio);
 
             //Translate the medial axis graph back to the shape centroid if necessary
-            if (centroid == GridVector2.Zero)
+            if (centroid == Vector2.Zero)
                 return graph;
             else
                 return graph.Translate(centroid);
@@ -134,7 +134,7 @@ namespace Geometry
         /// <param name="shape">The polygon shape to calculate the medial axis for</param>
         /// <returns>A medial axis graph</returns>
         [Obsolete("Use ApproximateMedialAxisChordal. This method now forwards to the Chordal Axis Transform.")]
-        public static MedialAxisGraph ApproximateMedialAxisImproved(GridPolygon shape) =>
+        public static MedialAxisGraph ApproximateMedialAxisImproved(Polygon shape) =>
             ApproximateMedialAxisChordal(shape, extendToApex: true, pruneRatio: 0.0);
 
         /// <summary>
@@ -148,7 +148,7 @@ namespace Geometry
         /// </remarks>
         /// <param name="shape">The polygon shape to calculate the medial axis for</param>
         /// <returns>A medial axis graph with vertices at triangle circumcenters</returns>
-        public static MedialAxisGraph ApproximateMedialAxisCircumcenter(GridPolygon shape)
+        public static MedialAxisGraph ApproximateMedialAxisCircumcenter(Polygon shape)
         {
             TriangulationMesh<IVertex2D<PolygonIndex>> mesh;
             var centroid = shape.Centroid;
@@ -161,9 +161,9 @@ namespace Geometry
                 return new MedialAxisGraph();
             }
 
-            MedialAxisGraph graph = BuildImprovedGraphFromMesh2D(mesh, centroid == GridVector2.Zero ? shape : shape.Translate(-centroid));
+            MedialAxisGraph graph = BuildImprovedGraphFromMesh2D(mesh, centroid == Vector2.Zero ? shape : shape.Translate(-centroid));
 
-            if (centroid == GridVector2.Zero)
+            if (centroid == Vector2.Zero)
                 return graph;
             else
                 return graph.Translate(centroid);
@@ -190,7 +190,7 @@ namespace Geometry
         /// <param name="boundary">The polygon boundary used to classify edges and constrain the axis</param>
         /// <param name="extendToApex">Whether termination triangles extend a branch to their apex boundary vertex</param>
         /// <returns>A connected medial axis graph</returns>
-        private static MedialAxisGraph BuildChordalAxisFromMesh2D(IReadOnlyMesh2D<IVertex2D> mesh, GridPolygon boundary, bool extendToApex)
+        private static MedialAxisGraph BuildChordalAxisFromMesh2D(IReadOnlyMesh2D<IVertex2D> mesh, Polygon boundary, bool extendToApex)
         {
             MedialAxisGraph graph = new();
 
@@ -206,7 +206,7 @@ namespace Geometry
                 List<IEdgeKey> interiorEdges = [];
                 foreach (IEdgeKey edgeKey in face.Edges)
                 {
-                    GridLineSegment line = mesh.ToGridLineSegment(edgeKey);
+                    LineSegment line = mesh.ToLineSegment(edgeKey);
                     if (false == boundary.IsExteriorOrInteriorSegment(line))
                         interiorEdges.Add(edgeKey);
                 }
@@ -215,33 +215,33 @@ namespace Geometry
                 {
                     case 3: //Junction triangle: centroid connects to all three interior edge midpoints.
                         {
-                            GridTriangle tri = new([.. mesh[iVerts].Select(v => v.Position)]);
+                            Triangle tri = new([.. mesh[iVerts].Select(v => v.Position)]);
                             MedialAxisVertex center = GetOrAddVertex(graph, tri.Centroid);
-                            System.Diagnostics.Debug.Assert(boundary.GetRelation(center.Key) == ShapeRelation.CONTAINED, "Medial Axis junction vertex must be within polygonal boundary");
+                            System.Diagnostics.Debug.Assert(boundary.GetRelation(center.Key) == ShapeRelation.Contained, "Medial Axis junction vertex must be within polygonal boundary");
 
                             foreach (IEdgeKey interiorEdge in interiorEdges)
                             {
-                                MedialAxisVertex mid = GetOrAddLineBisectorVertex(graph, mesh.ToGridLineSegment(interiorEdge));
+                                MedialAxisVertex mid = GetOrAddLineBisectorVertex(graph, mesh.ToLineSegment(interiorEdge));
                                 AddEdgeIfMissing(graph, center.Key, mid.Key);
                             }
                             break;
                         }
                     case 2: //Sleeve triangle: connect the midpoints of the two interior edges.
                         {
-                            MedialAxisVertex midA = GetOrAddLineBisectorVertex(graph, mesh.ToGridLineSegment(interiorEdges[0]));
-                            MedialAxisVertex midB = GetOrAddLineBisectorVertex(graph, mesh.ToGridLineSegment(interiorEdges[1]));
+                            MedialAxisVertex midA = GetOrAddLineBisectorVertex(graph, mesh.ToLineSegment(interiorEdges[0]));
+                            MedialAxisVertex midB = GetOrAddLineBisectorVertex(graph, mesh.ToLineSegment(interiorEdges[1]));
                             AddEdgeIfMissing(graph, midA.Key, midB.Key);
                             break;
                         }
                     case 1: //Termination triangle: the branch ends at the interior edge midpoint.
                         {
                             IEdgeKey interiorEdge = interiorEdges[0];
-                            MedialAxisVertex mid = GetOrAddLineBisectorVertex(graph, mesh.ToGridLineSegment(interiorEdge));
+                            MedialAxisVertex mid = GetOrAddLineBisectorVertex(graph, mesh.ToLineSegment(interiorEdge));
 
                             if (extendToApex)
                             {
                                 //The apex is the triangle vertex not on the interior edge (it lies on the boundary).
-                                GridVector2[] positions = [.. mesh[iVerts].Select(v => v.Position)];
+                                Vector2[] positions = [.. mesh[iVerts].Select(v => v.Position)];
                                 for (int k = 0; k < iVerts.Length; k++)
                                 {
                                     if (false == interiorEdge.Contains(iVerts[k]))
@@ -256,7 +256,7 @@ namespace Geometry
                         }
                     case 0: //Isolated single-triangle region: emit a centroid so the region is never empty.
                         {
-                            GridTriangle tri = new([.. mesh[iVerts].Select(v => v.Position)]);
+                            Triangle tri = new([.. mesh[iVerts].Select(v => v.Position)]);
                             GetOrAddVertex(graph, tri.Centroid);
                             break;
                         }
@@ -274,7 +274,7 @@ namespace Geometry
         /// <param name="graph">The medial axis graph to prune in place</param>
         /// <param name="boundary">The polygon boundary used to measure clearance (distance to the boundary)</param>
         /// <param name="pruneRatio">The clearance ratio threshold; values around 0.5-1.0 are typical</param>
-        private static void PruneBranches(MedialAxisGraph graph, GridPolygon boundary, double pruneRatio)
+        private static void PruneBranches(MedialAxisGraph graph, Polygon boundary, double pruneRatio)
         {
             bool removedAny = true;
             while (removedAny)
@@ -291,7 +291,7 @@ namespace Geometry
                     if (leafNode.Edges.Count != 1)
                         continue;
 
-                    GridVector2 neighborKey = leafNode.Edges.Keys.First();
+                    Vector2 neighborKey = leafNode.Edges.Keys.First();
                     if (false == graph.TryGetValue(neighborKey, out MedialAxisVertex neighbor))
                         continue;
 
@@ -312,7 +312,7 @@ namespace Geometry
             }
         }
 
-        private static void AddEdgeIfMissing(MedialAxisGraph graph, GridVector2 a, GridVector2 b)
+        private static void AddEdgeIfMissing(MedialAxisGraph graph, Vector2 a, Vector2 b)
         {
             //Skip zero-length self edges (can occur if two midpoints/centroids deduplicate to the same key).
             if (a.Equals(b))
@@ -331,25 +331,25 @@ namespace Geometry
         /// <param name="mesh">The triangulated mesh</param>
         /// <param name="boundary">The polygon boundary to constrain the medial axis</param>
         /// <returns>A medial axis graph with vertices at triangle circumcenters</returns>
-        private static MedialAxisGraph BuildImprovedGraphFromMesh2D(IReadOnlyMesh2D<IVertex2D> mesh, GridPolygon boundary)
+        private static MedialAxisGraph BuildImprovedGraphFromMesh2D(IReadOnlyMesh2D<IVertex2D> mesh, Polygon boundary)
         {
             MedialAxisGraph graph = new();
 
             // Map faces to their circumcenters (only if inside boundary)
-            Dictionary<IFace, GridVector2> faceToCircumcenter = [];
+            Dictionary<IFace, Vector2> faceToCircumcenter = [];
 
             // Step 1: Calculate circumcenters for all triangles
             foreach (var face in mesh.Faces)
             {
                 try
                 {
-                    GridVector2[] vertices = [.. mesh[face.iVerts].Select(v => v.Position)];
+                    Vector2[] vertices = [.. mesh[face.iVerts].Select(v => v.Position)];
 
                     // Calculate the circumcircle of the triangle
-                    GridCircle circle = GridCircle.CircleFromThreePoints(vertices);
+                    Circle circle = Circle.CircleFromThreePoints(vertices);
 
                     // Only add circumcenters that fall inside the polygon boundary
-                    if (boundary.GetRelation(circle.Center) == ShapeRelation.CONTAINED)
+                    if (boundary.GetRelation(circle.Center) == ShapeRelation.Contained)
                     {
                         // Store the canonical key from the deduplicated vertex, not the raw circumcenter.
                         // Near-duplicate circumcenters (within epsilon) must map to the same key so that
@@ -368,7 +368,7 @@ namespace Geometry
             // Step 2: Connect circumcenters of adjacent triangles that share an interior edge
             foreach (var edge in mesh.Edges.Values)
             {
-                GridLineSegment line = mesh.ToGridLineSegment(edge);
+                LineSegment line = mesh.ToLineSegment(edge);
 
                 // Only process interior (non-boundary) edges with exactly two adjacent faces
                 if (!boundary.IsExteriorOrInteriorSegment(line) && edge.Faces.Count == 2)
@@ -381,7 +381,7 @@ namespace Geometry
                     {
                         // Skip self-edges: two adjacent triangles whose circumcenters deduplicated to the
                         // same vertex (i.e., were within epsilon of each other). Such an edge would have
-                        // identical endpoints and cause a GridLineSegment exception when Line is accessed.
+                        // identical endpoints and cause a LineSegment exception when Line is accessed.
                         if (center1.Equals(center2))
                             continue;
 
@@ -395,7 +395,7 @@ namespace Geometry
             return graph;
         }
 
-        private static MedialAxisVertex GetOrAddVertex(MedialAxisGraph graph, GridVector2 p)
+        private static MedialAxisVertex GetOrAddVertex(MedialAxisGraph graph, Vector2 p)
         {
             if (graph.TryGetValue(p, out var node)) return node;
 
@@ -404,9 +404,9 @@ namespace Geometry
             return node;
         }
 
-        private static MedialAxisVertex GetOrAddLineBisectorVertex(MedialAxisGraph graph, GridLineSegment line)
+        private static MedialAxisVertex GetOrAddLineBisectorVertex(MedialAxisGraph graph, LineSegment line)
         {
-            GridVector2 midpoint = line.Bisect();
+            Vector2 midpoint = line.Bisect();
             if (graph.TryGetValue(midpoint, out var node))
             {
                 return node;

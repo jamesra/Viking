@@ -16,7 +16,7 @@ namespace GeometryTests.Algorithms
         /// <returns></returns>
         public static bool AreTriangulatedVertexEdgesValid(this TriangulationMesh<IVertex2D> mesh)
         {
-            foreach (var v in mesh.Verticies)
+            foreach (var v in mesh.Vertices)
             {
                 //Assert.IsTrue(v.Edges.Count > 1); //Every vertex must have at least two edges
                 if (v.Edges.Count <= 1)
@@ -59,12 +59,12 @@ namespace GeometryTests.Algorithms
                 //Assert.IsTrue(IsDelaunay, string.Format("{0} is not a delaunay triangle", f));
                 //Assert.IsFalse(IsClockwise, string.Format("{0} is clockwise, incorrect winding.", f));
 
-                if (winding == RotationDirection.COLINEAR)
+                if (winding == RotationDirection.Colinear)
                     return true;
 
                 if (f.iVerts.Length == 3)
                 {
-                    GridTriangle tri = new([.. mesh[f.iVerts].Select(v => v.Position)]);
+                    Triangle tri = new([.. mesh[f.iVerts].Select(v => v.Position)]);
                     if (tri.Area == 0)
                         return true;
                 }

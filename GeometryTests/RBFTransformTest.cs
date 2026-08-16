@@ -12,12 +12,12 @@ namespace GeometryTests
         [TestMethod]
         public void TestMethod1()
         {
-            GridVector2[] ControlPoints = [ new(104.8445,  75.1144),
+            Vector2[] ControlPoints = [ new(104.8445,  75.1144),
                                                            new(102.7622,   163.9576),
                                                            new(257.5437,  79.9730),
                                                            new(258.2378,  168.1221)];
 
-            GridVector2[] MappedPoints = [ new(68.7519, 127.1710),
+            Vector2[] MappedPoints = [ new(68.7519, 127.1710),
                                                            new(87.4923,   199.3560),
                                                            new(263.7905, 77.8907),
                                                            new(281.1427, 149.3817)];
@@ -31,26 +31,26 @@ namespace GeometryTests
             //double[] Weights = GridMatrix.LinSolve(BetaMatrix, SolutionMatrix); 
             float[] Weights = RBFTransform.CalculateRBFWeights(MappedPoints, ControlPoints, RBFTransform.StandardBasisFunction);
 
-            MappingGridVector2[] Points = new MappingGridVector2[ControlPoints.Length];
+            MappingVector2[] Points = new MappingVector2[ControlPoints.Length];
             for (int i = 0; i < ControlPoints.Length; i++)
             {
-                Points[i] = new MappingGridVector2(ControlPoints[i], MappedPoints[i]);
+                Points[i] = new MappingVector2(ControlPoints[i], MappedPoints[i]);
             }
 
             RBFTransform transform = new(Points, new TransformBasicInfo());
 
             for (int i = 0; i < ControlPoints.Length; i++)
             {
-                GridVector2 tPoint = transform.Transform(MappedPoints[i]);
+                Vector2 tPoint = transform.Transform(MappedPoints[i]);
                 Trace.WriteLine(tPoint.ToString() + " should equal " + ControlPoints[i]);
-                Assert.IsTrue(GridVector2.Distance(tPoint, ControlPoints[i]) < 1.0);
+                Assert.IsTrue(Vector2.Distance(tPoint, ControlPoints[i]) < 1.0);
             }
 
             for (int i = 0; i < ControlPoints.Length; i++)
             {
-                GridVector2 tPoint = transform.InverseTransform(ControlPoints[i]);
+                Vector2 tPoint = transform.InverseTransform(ControlPoints[i]);
                 Trace.WriteLine(tPoint.ToString() + " should equal " + MappedPoints[i]);
-                Assert.IsTrue(GridVector2.Distance(tPoint, MappedPoints[i]) < 1.0);
+                Assert.IsTrue(Vector2.Distance(tPoint, MappedPoints[i]) < 1.0);
             }
 
 

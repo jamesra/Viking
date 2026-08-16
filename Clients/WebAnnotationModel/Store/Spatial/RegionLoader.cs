@@ -138,7 +138,7 @@ namespace WebAnnotationModel
         /// <param name="ScreenPixelSizeInVolume"></param>
         /// <param name="SectionNumber"></param>
         /// <param name="callback">A thread-safe callback function to hand the loaded objects to</param>
-        public async Task<List<OBJECT>> GetObjectsInRegionAsync(GridRectangle VolumeBounds,
+        public async Task<List<OBJECT>> GetObjectsInRegionAsync(Geometry.Rectangle VolumeBounds,
                                                     double screenPixelSizeInVolume,
                                                     int sectionNumber,
                                                     QueryTargets queryTargets,
@@ -163,7 +163,7 @@ namespace WebAnnotationModel
 
             List<OBJECT> localObjects = new List<OBJECT>();
 
-            foreach (GridIndex iCell in gridRange.Indicies)
+            foreach (GridIndex iCell in gridRange.Indices)
             {
                 int iX = iCell.X;
                 int iY = iCell.Y;
@@ -213,7 +213,7 @@ namespace WebAnnotationModel
                 }
             }
 
-            var localObjectKeys = SpatialSearch.Intersects(VolumeBounds);
+            var localObjectKeys = SpatialSearch.Intersects(VolumeBounds.ToRTreeRect(sectionNumber));
             var localsObjects = await objectStore.GetObjectsByIDs(localObjectKeys, false, token);
             if (foundObjectsCallback != null)
                 foundObjectsCallback(localsObjects);
@@ -288,7 +288,7 @@ namespace WebAnnotationModel
             await ServerObjProcessor.ProcessServerResults(serverResult.QueryTime, serverResult.NewOrUpdated);
 
             //The locals should now include the new objects
-            var localObjectKeys = SpatialSearch.Intersects(cell.Bounds);
+            var localObjectKeys = SpatialSearch.Intersects(cell.Bounds.ToRTreeRect(sectionNumber));
             var localsObjects = await objectStore.GetObjectsByIDs(localObjectKeys, false, aToken); 
 
             await cell.OnLoadCompleted(localsObjects, serverResult.QueryTime);

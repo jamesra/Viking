@@ -66,7 +66,7 @@ namespace GeometryTests.Algorithms
         {
             return string.Format("Model {0} with {1} constraints\n{2}",
                 mesh.ToString(), ConstraintEdges.Count,
-                new string([.. mesh.Verticies.Select(v => v.Position).ToArray().ToJSON().Where(c => c != '\n' && c != '\r')]));
+                new string([.. mesh.Vertices.Select(v => v.Position).ToArray().ToJSON().Where(c => c != '\n' && c != '\r')]));
         }
 
         /// <summary>
@@ -111,7 +111,7 @@ namespace GeometryTests.Algorithms
             mesh = Original;
 
             //Since the verticies aren't sorted, just test the edges in order
-            OriginalCandidateEdges = [.. new int[mesh.Verticies.Count - 1].Select((v, i) => i)];
+            OriginalCandidateEdges = [.. new int[mesh.Vertices.Count - 1].Select((v, i) => i)];
 
             int[] EdgeVerts = SelectValidEdges(OriginalCandidateEdges, mesh);
             this.ConstraintEdges = ConstrainedDelaunayModel.CreateEdges(EdgeVerts);
@@ -122,7 +122,7 @@ namespace GeometryTests.Algorithms
             mesh = Original;
 
             //Since the verticies aren't sorted, just test the edges in order
-            OriginalCandidateEdges = mesh.Verticies.Count < 2 ? [] : [.. new int[mesh.Verticies.Count - 1].Select((v, i) => i)];
+            OriginalCandidateEdges = mesh.Vertices.Count < 2 ? [] : [.. new int[mesh.Vertices.Count - 1].Select((v, i) => i)];
 
             this.ConstraintEdges = constraints;
         }
@@ -199,11 +199,11 @@ namespace GeometryTests.Algorithms
             if (IntersectsConstrainedLine(proposedEdge, ConstrainedEdgeTree, mesh))
                 return false;
 
-            GridLineSegment proposedSeg = mesh.ToGridLineSegment(proposedEdge);
+            LineSegment proposedSeg = mesh.ToLineSegment(proposedEdge);
 
             Edge new_edge = new(proposedEdge.A, proposedEdge.B);
             //EdgeStart = candidateEdges[i];
-            ConstrainedEdgeTree.Add(proposedSeg.BoundingBox, new_edge);
+            ConstrainedEdgeTree.Add(proposedSeg.BoundingBox.ToRTreeRect(0), new_edge);
             //AddedConstraints.Add(candidateEdges[i]);
             return true;
         }
@@ -217,13 +217,13 @@ namespace GeometryTests.Algorithms
         /// <returns></returns>
         private static bool IntersectsConstrainedLine(EdgeKey proposed, RTree<IEdgeKey> rTree, TriangulationMesh<IVertex2D> mesh)
         {
-            GridLineSegment seg = mesh.ToGridLineSegment(proposed);
-            foreach (var intersection in rTree.IntersectionGenerator(seg.BoundingBox))
+            LineSegment seg = mesh.ToLineSegment(proposed);
+            foreach (var intersection in rTree.IntersectionGenerator(seg.BoundingBox.ToRTreeRect(0)))
             {
                 if (intersection.Equals(proposed)) //Don't test for intersecting with ourselves
                     continue;
 
-                GridLineSegment testLine = mesh.ToGridLineSegment(intersection);
+                LineSegment testLine = mesh.ToLineSegment(intersection);
                 if (seg.Intersects(testLine, true))
                 {
                     return true;
@@ -240,7 +240,7 @@ namespace GeometryTests.Algorithms
         private static readonly Arbitrary<uint> NumEdgesGenerator = Arb.Default.UInt32();
         private static readonly Arbitrary<uint> EdgeGenerator = Arb.Default.UInt32();
 
-        public int NumVerts => InitialActual.Verticies.Count;
+        public int NumVerts => InitialActual.Vertices.Count;
         public int NumEdges => InitialModel.ConstraintEdges.Count;
 
         private static int NextID = 0;
@@ -276,7 +276,7 @@ namespace GeometryTests.Algorithms
 
         public ConstrainedDelaunaySpec(ConstrainedDelaunayModel model)
         {
-            OriginalMesh = model.mesh;//GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(model.mesh.Verticies.Select(v => new Vertex2D(v.Position)).ToArray());
+            OriginalMesh = model.mesh;//GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(model.mesh.Vertices.Select(v => new Vertex2D(v.Position)).ToArray());
             TriangulatedMeshGenerators.OnProgress?.Invoke(InitialActual);
 
             OriginalModel = model;
@@ -286,7 +286,7 @@ namespace GeometryTests.Algorithms
             //Trace.WriteLine(string.Format("New Spec {0}:{1}", ID, InitialModel));
         }
 
-        public ConstrainedDelaunaySpec(GridVector2[] points, int[] Edges)
+        public ConstrainedDelaunaySpec(Vector2[] points, int[] Edges)
         {
             OriginalMesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh([.. points.Select(v => new Vertex2D(v, null))]);
             TriangulatedMeshGenerators.OnProgress?.Invoke(InitialActual);
@@ -301,7 +301,7 @@ namespace GeometryTests.Algorithms
         public ConstrainedDelaunaySpec(TriangulationMesh<IVertex2D> mesh)
         {
             int nEdgesMax = mesh.Edges.Count - 1;
-            int nVerts = mesh.Verticies.Count;
+            int nVerts = mesh.Vertices.Count;
 
             if (nEdgesMax > nVerts - 1)
             {
@@ -390,7 +390,7 @@ namespace GeometryTests.Algorithms
                 bool edgesIntersect = mesh.AnyMeshEdgesIntersect();
                 bool facesCCW = mesh.AreTriangulatedFacesCCW();
                 bool facesColinear = mesh.AreTriangulatedFacesColinear();
-                bool vertEdges = mesh.Verticies.Count < 3 || mesh.AreTriangulatedVertexEdgesValid();
+                bool vertEdges = mesh.Vertices.Count < 3 || mesh.AreTriangulatedVertexEdgesValid();
                 bool HasConstrainedEdges = model.AddedConstraintEdges.All(added_edge => mesh.Contains(added_edge));
                 bool facesAreTriangles = mesh.AreFacesTriangles();
                 bool pass = !edgesIntersect && !facesColinear && facesCCW && vertEdges && HasConstrainedEdges && facesAreTriangles;
@@ -403,10 +403,10 @@ namespace GeometryTests.Algorithms
                         .And(vertEdges.Label("Verts with 0 or 1 edges"))
                         .And(facesAreTriangles.Label("Faces aren't triangles"))
                         .And(HasConstrainedEdges.Label(string.Format("Missing Edge Constraint {0}", EdgeToAdd)))
-                        .ClassifyMeshSize(mesh.Verticies.Count)
+                        .ClassifyMeshSize(mesh.Vertices.Count)
                         .Classify(model.ConstraintEdges.Count == 1, "One constraint")
                         .Classify(model.ConstraintEdges.Count == 0, "No constraints")
-                        //.Label(mesh.Verticies.Select(v => v.Position).ToArray().ToJSON().Trim(new char[] { '\n', '\r' }))
+                        //.Label(mesh.Vertices.Select(v => v.Position).ToArray().ToJSON().Trim(new char[] { '\n', '\r' }))
                         .Label(mesh.ToString());
 
                 return prop;

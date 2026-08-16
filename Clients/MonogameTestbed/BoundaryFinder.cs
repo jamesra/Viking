@@ -16,7 +16,7 @@ namespace MonogameTestbed
         /// </summary>
         /// <param name="shapes"></param>
         /// <returns></returns>
-        public static List<GridLineSegment> DetermineBoundary(GridPolygon[] shapes)
+        public static List<LineSegment> DetermineBoundary(Polygon[] shapes)
         {
             TriangleNet.Meshing.IMesh triangulationMesh = null;
             try
@@ -30,15 +30,15 @@ namespace MonogameTestbed
 
 
 
-            //List<GridLineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(triangulationMesh, shapes);
+            //List<LineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(triangulationMesh, shapes);
 
-            List<GridTriangle> TrianglesBetweenShapes = SelectTrianglesBetweenShapes(triangulationMesh, shapes);
+            List<Triangle> TrianglesBetweenShapes = SelectTrianglesBetweenShapes(triangulationMesh, shapes);
 
             TriangleNet.Voronoi.VoronoiBase voronoi = shapes.Voronoi();
             if (voronoi is null)
                 return [];
 
-            //List<GridLineSegment> listVoronoiBetweenShapes = StripNonBoundaryLines(voronoi, shapes);
+            //List<LineSegment> listVoronoiBetweenShapes = StripNonBoundaryLines(voronoi, shapes);
 
             MedialAxisGraph graph = BuildGraphFromTriangles([.. TrianglesBetweenShapes], shapes);
 
@@ -73,9 +73,9 @@ namespace MonogameTestbed
                 BorderVertex vert = StartCandidates[0];
                 StartCandidates.RemoveAt(0);
 
-                foreach (GridVector2 TargetNode in vert.Edges.Keys.ToArray())
+                foreach (Vector2 TargetNode in vert.Edges.Keys.ToArray())
                 {
-                    GridLineSegment line = new GridLineSegment(vert.Key, TargetNode);
+                    LineSegment line = new LineSegment(vert.Key, TargetNode);
                     if (!IsValidBorderLine(line, shapes))
                     {
                         MoveBorder(graph, vert.Edges[TargetNode].First(), vert, graph.Nodes[TargetNode], shapes);
@@ -90,15 +90,15 @@ namespace MonogameTestbed
             }
 
             //Remove any edges that are entirely within a shape
-            List<GridVector2> KnownBad = graph.Nodes.Where(n => n.Value.InsidePolygon).Select(v => v.Key).ToList();
-            foreach (GridVector2 v in KnownBad)
+            List<Vector2> KnownBad = graph.Nodes.Where(n => n.Value.InsidePolygon).Select(v => v.Key).ToList();
+            foreach (Vector2 v in KnownBad)
             {
                 graph.RemoveNode(v);
             }
 
             //Remove any nodes with no edges
             KnownBad = graph.Nodes.Where(n => n.Value.Edges.Count == 0).Select(v => v.Key).ToList();
-            foreach (GridVector2 v in KnownBad)
+            foreach (Vector2 v in KnownBad)
             {
                 graph.RemoveNode(v);
             }
@@ -107,14 +107,14 @@ namespace MonogameTestbed
             return [.. graph.Edges.Select(edge => edge.Value.Line)];
         }
 
-        private static bool LineConnectsShapes(GridLineSegment line, Dictionary<GridVector2, int> PointToShapeIndex) => PointToShapeIndex[line.A] != PointToShapeIndex[line.B];
+        private static bool LineConnectsShapes(LineSegment line, Dictionary<Vector2, int> PointToShapeIndex) => PointToShapeIndex[line.A] != PointToShapeIndex[line.B];
 
-        private static List<IEdge> LinesOfFaceBetweenShapes(IReadOnlyMesh2D<IVertex2D> mesh, IFace face, Dictionary<GridVector2, int> PointToShapeIndex)
+        private static List<IEdge> LinesOfFaceBetweenShapes(IReadOnlyMesh2D<IVertex2D> mesh, IFace face, Dictionary<Vector2, int> PointToShapeIndex)
         {
             List<IEdge> edges = [];
             foreach (var edge in face.Edges)
             {
-                GridLineSegment line = mesh.ToGridLineSegment(edge);
+                LineSegment line = mesh.ToLineSegment(edge);
                 if (LineConnectsShapes(line, PointToShapeIndex))
                 {
                     edges.Add(mesh.Edges[edge]);
@@ -124,7 +124,7 @@ namespace MonogameTestbed
             return edges;
         }
 
-        private static MedialAxisVertex GetOrAddVertex(MedialAxisGraph graph, GridVector2 p)
+        private static MedialAxisVertex GetOrAddVertex(MedialAxisGraph graph, Vector2 p)
         {
             if (!graph.TryGetValue(p, out var vertex))
             {
@@ -135,9 +135,9 @@ namespace MonogameTestbed
             return vertex;
         }
 
-        private static MedialAxisVertex GetOrAddLineBisectorVertex(MedialAxisGraph graph, GridLineSegment line)
+        private static MedialAxisVertex GetOrAddLineBisectorVertex(MedialAxisGraph graph, LineSegment line)
         {
-            GridVector2 midpoint = line.Bisect();
+            Vector2 midpoint = line.Bisect();
             if (!graph.TryGetValue(midpoint, out var entry))
             {
                 entry = new MedialAxisVertex(midpoint);
@@ -147,20 +147,20 @@ namespace MonogameTestbed
             return entry;
         }
 
-        private static MedialAxisGraph BuildGraphFromTriangles(GridTriangle[] triangles, GridPolygon[] shapes)
+        private static MedialAxisGraph BuildGraphFromTriangles(Triangle[] triangles, Polygon[] shapes)
         {
             MedialAxisGraph graph = new();
 
             //Create an index map of points 
-            Dictionary<GridVector2, SortedSet<int>> PointToTrianglesIndex = CreatePointToConnectedTrianglesIndexLookup(triangles);
-            Dictionary<GridVector2, int> PointToShapeIndex = CreatePointToShapeIndexLookup(shapes);
+            Dictionary<Vector2, SortedSet<int>> PointToTrianglesIndex = CreatePointToConnectedTrianglesIndexLookup(triangles);
+            Dictionary<Vector2, int> PointToShapeIndex = CreatePointToShapeIndexLookup(shapes);
 
             Mesh2D mesh = triangles.ToDynamicRenderMesh();
 
             foreach (var edge in mesh.Edges.Values)
             {
                 //Create a vertex at the edge midpoint
-                GridLineSegment line = mesh.ToGridLineSegment(edge);
+                LineSegment line = mesh.ToLineSegment(edge);
 
                 //If the line is between two different shapes we add a node to the graph
                 if (LineConnectsShapes(line, PointToShapeIndex))
@@ -170,7 +170,7 @@ namespace MonogameTestbed
                     //Check the faces of this edge for lines to connect to.
                     foreach (var AdjacentEdge in edge.Faces.SelectMany(f => LinesOfFaceBetweenShapes(mesh, f, PointToShapeIndex)).Where(foundEdge => foundEdge != edge))
                     {
-                        GridLineSegment ConnectedLine = mesh.ToGridLineSegment(AdjacentEdge);
+                        LineSegment ConnectedLine = mesh.ToLineSegment(AdjacentEdge);
                         MedialAxisVertex otherNode = GetOrAddLineBisectorVertex(graph, ConnectedLine);
 
                         MedialAxisEdge borderEdge = new(node.Key, otherNode.Key);
@@ -183,7 +183,7 @@ namespace MonogameTestbed
             return graph;
         }
 
-        private static bool IsValidBorderLine(GridLineSegment line, GridPolygon[] shapes) => !shapes.Any(shape => shape.Intersects(line));
+        private static bool IsValidBorderLine(LineSegment line, Polygon[] shapes) => !shapes.Any(shape => shape.Intersects(line));
 
         /// <summary>
         /// This function creates the triangulation of a set of polygons returning the set of edges between polygons and the external polygon borders.
@@ -191,18 +191,18 @@ namespace MonogameTestbed
         /// </summary>
         /// <param name="Polygons"></param>
         /// <returns></returns>
-        internal static TriangleNet.Meshing.IMesh TriangulatePolygons(GridPolygon[] Polygons)
+        internal static TriangleNet.Meshing.IMesh TriangulatePolygons(Polygon[] Polygons)
         {
             if (Polygons.AnyIntersect())
                 throw new ArgumentException("TriangulatePolygons expects non overlapping polygons as input");
 
-            GridPolygon EntireSetConvexHull = Polygons.ConvexHull();
+            Polygon EntireSetConvexHull = Polygons.ConvexHull();
             if (EntireSetConvexHull is null)
                 return null;
 
             TriangleNet.Geometry.Polygon EntireSetConvexHullPoly = TriangleExtensions.CreatePolygon(EntireSetConvexHull);
 
-            foreach (GridVector2[] points in Polygons.Select(poly => poly.ExteriorRing))
+            foreach (Vector2[] points in Polygons.Select(poly => poly.ExteriorRing))
             {
                 if (points is null || points.Length < 4)
                     continue;
@@ -226,12 +226,12 @@ namespace MonogameTestbed
         /// <param name="mesh"></param>
         /// <param name="Polygons"></param>
         /// <returns></returns>
-        private static List<GridLineSegment> SelectLinesBetweenShapes(TriangleNet.Meshing.IMesh mesh, GridPolygon[] Polygons)
+        private static List<LineSegment> SelectLinesBetweenShapes(TriangleNet.Meshing.IMesh mesh, Polygon[] Polygons)
         {
             if (mesh is null)
                 return null;
 
-            List<GridLineSegment> lines = mesh.ToLines();
+            List<LineSegment> lines = mesh.ToLines();
             if (lines is null)
                 return null;
 
@@ -240,11 +240,11 @@ namespace MonogameTestbed
 
             //Create an index map of points
 
-            Dictionary<GridVector2, int> PointToShapeIndex = CreatePointToShapeIndexLookup(Polygons);
+            Dictionary<Vector2, int> PointToShapeIndex = CreatePointToShapeIndexLookup(Polygons);
 
             for (int i = lines.Count - 1; i >= 0; i--)
             {
-                GridLineSegment line = lines[i];
+                LineSegment line = lines[i];
                 if (!(PointToShapeIndex.ContainsKey(line.A) && PointToShapeIndex.ContainsKey(line.B)))
                     continue;
 
@@ -264,12 +264,12 @@ namespace MonogameTestbed
         /// <param name="mesh"></param>
         /// <param name="Polygons"></param>
         /// <returns></returns>
-        private static List<GridTriangle> SelectTrianglesBetweenShapes(TriangleNet.Meshing.IMesh mesh, GridPolygon[] Polygons)
+        private static List<Triangle> SelectTrianglesBetweenShapes(TriangleNet.Meshing.IMesh mesh, Polygon[] Polygons)
         {
             if (mesh is null)
                 return null;
 
-            List<GridTriangle> triangles = mesh.ToTriangles();
+            List<Triangle> triangles = mesh.ToTriangles();
             if (triangles is null)
                 return null;
 
@@ -277,11 +277,11 @@ namespace MonogameTestbed
                 return [];
 
             //Create an index map of points 
-            Dictionary<GridVector2, int> PointToShapeIndex = CreatePointToShapeIndexLookup(Polygons);
+            Dictionary<Vector2, int> PointToShapeIndex = CreatePointToShapeIndexLookup(Polygons);
 
             for (int i = triangles.Count - 1; i >= 0; i--)
             {
-                GridTriangle tri = triangles[i];
+                Triangle tri = triangles[i];
                 if (!tri.Points.All(p => PointToShapeIndex.ContainsKey(p)))
                     continue;
 
@@ -301,11 +301,11 @@ namespace MonogameTestbed
         /// </summary>
         /// <param name="Shapes"></param>
         /// <returns></returns>
-        private static Dictionary<GridVector2, int> CreatePointToShapeIndexLookup(GridPolygon[] Shapes)
+        private static Dictionary<Vector2, int> CreatePointToShapeIndexLookup(Polygon[] Shapes)
         {
-            Dictionary<GridVector2, int> PointToShapeIndex = new(GridVector2EqualityComparer.Default);
+            Dictionary<Vector2, int> PointToShapeIndex = new();
             //Create an index map of points
-            List<GridVector2> listPoints = [];
+            List<Vector2> listPoints = [];
             List<int> listIndicies = [];
 
             for (int iShape = 0; iShape < Shapes.Length; iShape++)
@@ -313,13 +313,13 @@ namespace MonogameTestbed
                 if (Shapes[iShape] is null)
                     continue;
 
-                GridVector2[] points = Shapes[iShape].ExteriorRing;
+                Vector2[] points = Shapes[iShape].ExteriorRing;
                 if (points is null || points.Length == 0)
                     continue;
 
                 points = points.EnsureOpenRing();
 
-                foreach (GridVector2 point in points)
+                foreach (Vector2 point in points)
                 {
                     PointToShapeIndex[point] = iShape;
                 }
@@ -334,24 +334,24 @@ namespace MonogameTestbed
         /// </summary>
         /// <param name="Shapes"></param>
         /// <returns></returns>
-        private static Dictionary<GridVector2, SortedSet<int>> CreatePointToConnectedTrianglesIndexLookup(GridTriangle[] Shapes)
+        private static Dictionary<Vector2, SortedSet<int>> CreatePointToConnectedTrianglesIndexLookup(Triangle[] Shapes)
         {
-            Dictionary<GridVector2, SortedSet<int>> PointToShapeIndex = new(GridVector2EqualityComparer.Default);
+            Dictionary<Vector2, SortedSet<int>> PointToShapeIndex = new();
             //Create an index map of points
-            List<GridVector2> listPoints = [];
+            List<Vector2> listPoints = [];
             List<int> listIndicies = [];
 
             for (int iShape = 0; iShape < Shapes.Length; iShape++)
             {
-                GridTriangle shape = Shapes[iShape];
-                if (shape.Equals(default(GridTriangle)))
+                Triangle shape = Shapes[iShape];
+                if (shape.Equals(default(Triangle)))
                     continue;
 
-                GridVector2[] points = shape.Points;
+                Vector2[] points = shape.Points;
                 if (points is null || points.Length == 0)
                     continue;
 
-                foreach (GridVector2 point in points)
+                foreach (Vector2 point in points)
                 {
                     if (!PointToShapeIndex.TryGetValue(point, out var sortedSet))
                     {
@@ -367,17 +367,17 @@ namespace MonogameTestbed
         }
 
         /*
-        private static void MoveBorder(MedialAxisGraph graph, MedialAxisEdge edge, MedialAxisVertex StartingVertex, MedialAxisVertex InvalidVertex, GridPolygon[] shapes)
+        private static void MoveBorder(MedialAxisGraph graph, MedialAxisEdge edge, MedialAxisVertex StartingVertex, MedialAxisVertex InvalidVertex, Polygon[] shapes)
         {
             //Remove the edge that we know is invalid
 
             //Find all verticies the invalid node can reach that are valid
-            SortedSet<GridVector2> validDestinations = MedialAxisGraph.FindReachableMatches(graph, StartingVertex.Key,
+            SortedSet<Vector2> validDestinations = MedialAxisGraph.FindReachableMatches(graph, StartingVertex.Key,
                  v => {
                      if (v == StartingVertex || v == InvalidVertex || v.InsidePolygon)
                          return false;
 
-                     GridLineSegment line = new GridLineSegment(StartingVertex.Key, v.Key);
+                     LineSegment line = new LineSegment(StartingVertex.Key, v.Key);
                      return !shapes.Any(shape => shape.Intersects(line));
                      });
             if (validDestinations is null)
@@ -386,13 +386,13 @@ namespace MonogameTestbed
             bool EdgeAdded = false; 
 
             //Create lines between our source and destination.  If they do not intersect any shapes create a new edge
-            foreach(GridVector2 validTarget in validDestinations)
+            foreach(Vector2 validTarget in validDestinations)
             {
-                GridLineSegment newLine = new GridLineSegment(StartingVertex.Key, validTarget);
-                IList<GridVector2> path = MedialAxisGraph.ShortestPath(graph, StartingVertex.Key, validTarget);
+                LineSegment newLine = new LineSegment(StartingVertex.Key, validTarget);
+                IList<Vector2> path = MedialAxisGraph.ShortestPath(graph, StartingVertex.Key, validTarget);
 
                 //Make sure there is not a valid node further down the path.  This would create a duplicate or an extra branch in the border
-                if (IsValidBorderLine(new GridLineSegment(StartingVertex.Key, path[1]), shapes))
+                if (IsValidBorderLine(new LineSegment(StartingVertex.Key, path[1]), shapes))
                     continue;
 
                 if(!shapes.Any(shape => shape.Intersects(newLine)))
@@ -421,11 +421,11 @@ namespace MonogameTestbed
         /// <param name="edgeToTest"></param>
         /// <param name="linesBetweenShapes"></param>
         /// <param name="LineOrigin"></param>
-        private static void AddVertexAtDelaunayIntercepts(MedialAxisGraph graph, MedialAxisEdge edgeToTest, List<GridLineSegment> linesBetweenShapes, GridPolygon[] shapes)
+        private static void AddVertexAtDelaunayIntercepts(MedialAxisGraph graph, MedialAxisEdge edgeToTest, List<LineSegment> linesBetweenShapes, Polygon[] shapes)
         {
-            GridLineSegment boundaryLine = edgeToTest.Line;
+            LineSegment boundaryLine = edgeToTest.Line;
 
-            GridVector2[] delaunayIntersections = IntersectionPointsForLines(boundaryLine, linesBetweenShapes, out GridLineSegment[] intersectedDelaunayLines);
+            Vector2[] delaunayIntersections = IntersectionPointsForLines(boundaryLine, linesBetweenShapes, out LineSegment[] intersectedDelaunayLines);
 
             if (delaunayIntersections.Length == 0)
             {
@@ -433,13 +433,13 @@ namespace MonogameTestbed
             }
             else
             {
-                double[] delaunayDistances = [.. delaunayIntersections.Select(intersection => GridVector2.Distance(boundaryLine.A, intersection))];
+                double[] delaunayDistances = [.. delaunayIntersections.Select(intersection => Vector2.Distance(boundaryLine.A, intersection))];
                 double NearestDelaunay = delaunayDistances.Min();
 
                 //OK, add a vertex at the intersection.  Split the edge into two parts.
                 int iIntersection = Array.FindIndex(delaunayDistances, d => d == NearestDelaunay);
 
-                GridVector2 IntersectionPoint = delaunayIntersections[iIntersection];
+                Vector2 IntersectionPoint = delaunayIntersections[iIntersection];
 
                 graph.RemoveEdge(edgeToTest);
 
@@ -453,7 +453,7 @@ namespace MonogameTestbed
 
                 //Continue searching down the line for more intercepts
                 //Create a copy of the Delaunay Lines and remove the line we intersected with.  This prevents us from intersecting with that line again when we test the next segment we are making.
-                List<GridLineSegment> updatedLinesBetweenShapes = [.. linesBetweenShapes];
+                List<LineSegment> updatedLinesBetweenShapes = [.. linesBetweenShapes];
                 updatedLinesBetweenShapes.Remove(intersectedDelaunayLines[iIntersection]);
 
                 AddVertexAtDelaunayIntercepts(graph, DelaunayToTarget, updatedLinesBetweenShapes, shapes);
@@ -467,13 +467,13 @@ namespace MonogameTestbed
         /// <param name="lineset">Set of lines we are looking for intersections with</param>
         /// <param name="intersectingLines">An array of the same length as the return value containing the lines that were intersected</param>
         /// <returns></returns>
-        private static GridVector2[] IntersectionPointsForLines(GridLineSegment testLine, ICollection<GridLineSegment> lineset, out GridLineSegment[] intersectingLines)
+        private static Vector2[] IntersectionPointsForLines(LineSegment testLine, ICollection<LineSegment> lineset, out LineSegment[] intersectingLines)
         {
             intersectingLines = [.. lineset.Where(Line => Line.Intersects(testLine))];
 
-            GridVector2[] intersections = [.. intersectingLines.Select(Line =>
+            Vector2[] intersections = [.. intersectingLines.Select(Line =>
             {
-                Line.Intersects(testLine, out GridVector2 intersection);
+                Line.Intersects(testLine, out Vector2 intersection);
                 return intersection;
             })];
 
@@ -485,21 +485,21 @@ namespace MonogameTestbed
         /// </summary>
         /// <param name="voronoi"></param>
         /// <returns></returns>
-        internal static List<GridLineSegment> StripNonBoundaryLines(TriangleNet.Voronoi.VoronoiBase voronoi, GridPolygon[] shapes)
+        internal static List<LineSegment> StripNonBoundaryLines(TriangleNet.Voronoi.VoronoiBase voronoi, Polygon[] shapes)
         {
             if (voronoi is null)
                 return null;
 
             //Build a set of LineSegments
-            List<GridLineSegment> lines = [];
+            List<LineSegment> lines = [];
 
-            Dictionary<GridVector2, int> PointToShapeIndex = CreatePointToShapeIndexLookup(shapes.Select(s => s.ExteriorRing).ToList());
+            Dictionary<Vector2, int> PointToShapeIndex = CreatePointToShapeIndexLookup(shapes.Select(s => s.ExteriorRing).ToList());
 
             foreach (TriangleNet.Topology.DCEL.HalfEdge halfEdge in voronoi.HalfEdges)
             {
-                GridVector2 FaceA = new(halfEdge.Face.generator.X,
+                Vector2 FaceA = new(halfEdge.Face.generator.X,
                                                     halfEdge.Face.generator.Y);
-                GridVector2 FaceB = new(halfEdge.Twin.Face.generator.X,
+                Vector2 FaceB = new(halfEdge.Twin.Face.generator.X,
                                                     halfEdge.Twin.Face.generator.Y);
 
                 if (!(PointToShapeIndex.ContainsKey(FaceA) && PointToShapeIndex.ContainsKey(FaceB)))
@@ -507,8 +507,8 @@ namespace MonogameTestbed
 
                 if (PointToShapeIndex[FaceA] != PointToShapeIndex[FaceB])
                 {
-                    GridLineSegment line = new(halfEdge.Origin.ToGridVector2(),
-                                                  halfEdge.Twin.Origin.ToGridVector2());
+                    LineSegment line = new(halfEdge.Origin.ToVector2(),
+                                                  halfEdge.Twin.Origin.ToVector2());
                     if (!lines.Contains(line))
                         lines.Add(line);
                 }
@@ -517,29 +517,29 @@ namespace MonogameTestbed
             return lines;
         }
 
-        private static int FindStartForBoundarySearch(Mesh3D mesh, GridPolygon[] shapes)
+        private static int FindStartForBoundarySearch(Mesh3D mesh, Polygon[] shapes)
         {
-            IVertex3D vert = mesh.Verticies.First(v => shapes.All(shape => !shape.Contains(v.Position.XY())));
+            IVertex3D vert = mesh.Vertices.First(v => shapes.All(shape => !shape.Contains(v.Position.XY())));
             return vert.Index;
-            //return mesh.Verticies.TIndexOf(vert);
+            //return mesh.Vertices.TIndexOf(vert);
         }
 
-        private static Dictionary<GridVector2, int> CreatePointToShapeIndexLookup(List<GridVector2[]> shapeVerticies)
+        private static Dictionary<Vector2, int> CreatePointToShapeIndexLookup(List<Vector2[]> shapeVerticies)
         {
-            Dictionary<GridVector2, int> PointToShapeIndex = new(GridVector2EqualityComparer.Default);
+            Dictionary<Vector2, int> PointToShapeIndex = new();
             //Create an index map of points
-            List<GridVector2> listPoints = [];
+            List<Vector2> listPoints = [];
             List<int> listIndicies = [];
 
             for (int iShape = 0; iShape < shapeVerticies.Count; iShape++)
             {
-                GridVector2[] points = shapeVerticies[iShape];
+                Vector2[] points = shapeVerticies[iShape];
                 if (points is null || points.Length == 0)
                     continue;
 
                 points = shapeVerticies[iShape].EnsureOpenRing();
 
-                foreach (GridVector2 point in points)
+                foreach (Vector2 point in points)
                 {
                     PointToShapeIndex[point] = iShape;
                 }
@@ -549,7 +549,7 @@ namespace MonogameTestbed
         }
 
         /*
-        private static MedialAxisGraph CreateGraph(List<GridLineSegment> KnownGoodLines, GridPolygon[] shapes)
+        private static MedialAxisGraph CreateGraph(List<LineSegment> KnownGoodLines, Polygon[] shapes)
         {
             MedialAxisGraph graph = new MorphologyMesh.MedialAxisGraph();
 

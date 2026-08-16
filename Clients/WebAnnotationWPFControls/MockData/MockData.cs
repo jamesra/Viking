@@ -1,3 +1,4 @@
+using Viking.AnnotationServiceTypes;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Microsoft.SqlServer.Types;
 using System.Collections.Generic;
@@ -47,7 +48,7 @@ namespace WebAnnotation.WPF.MockData
     public class MockPermittedStructureLinks : ObservableCollection<MockPermittedStructureLink>
     { }
 
-    public class MockPermittedStructureLink : IPermittedStructureLinkReadOnly
+    public class MockPermittedStructureLink : IPermittedStructureLink
     {
         public ulong SourceTypeID { get; set; }
 
@@ -55,9 +56,21 @@ namespace WebAnnotation.WPF.MockData
 
         public bool Directional { get; set; }
 
-        public bool Equals(IPermittedStructureLinkReadOnly other)
+        PermittedStructureLinkKey IDataObjectWithKey<PermittedStructureLinkKey>.ID
         {
-            if (object.ReferenceEquals(other, null))
+            get => new((long)SourceTypeID, (long)TargetTypeID, Directional == false);
+            set { SourceTypeID = (ulong)value.SourceTypeID; TargetTypeID = (ulong)value.TargetTypeID; Directional = value.Bidirectional == false; }
+        }
+
+        IPermittedStructureLinkKey IDataObjectWithKey<IPermittedStructureLinkKey>.ID
+        {
+            get => new PermittedStructureLinkKey((long)SourceTypeID, (long)TargetTypeID, Directional == false);
+            set { SourceTypeID = (ulong)value.SourceTypeID; TargetTypeID = (ulong)value.TargetTypeID; Directional = value.Directional; }
+        }
+
+        public bool Equals(IPermittedStructureLink other)
+        {
+            if (other is null)
                 return false;
 
             return SourceTypeID == other.SourceTypeID &&
@@ -115,7 +128,7 @@ namespace WebAnnotation.WPF.MockData
 
         public bool Equals(IStructureTypeReadOnly other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return this.ID == other.ID;
@@ -149,7 +162,7 @@ namespace WebAnnotation.WPF.MockData
             }
         }
 
-        public IPermittedStructureLinkReadOnly[] Permitted { get; internal set; }
+        public IPermittedStructureLink[] Permitted { get; internal set; }
 
         public ulong[] AllowedInputLinks => [.. MockData.PermittedStructureLinks.Where(t => t.TargetTypeID == this._ID && t.Directional).Select(t => t.SourceTypeID)];
 
@@ -160,6 +173,12 @@ namespace WebAnnotation.WPF.MockData
         public string Code { get; set; }
 
         public string Notes { get; set; }
+
+        public IReadOnlyDictionary<string, string> Attributes { get; set; } = new Dictionary<string, string>();
+
+        public bool Abstract { get; set; }
+
+        public int AllowedShapes { get; set; }
     }
 
     public class MockStructure : IStructureReadOnly
@@ -172,15 +191,21 @@ namespace WebAnnotation.WPF.MockData
 
         public string Label { get; internal set; }
 
-        public ICollection<IStructureLink> Links { get; internal set; }
+        public ICollection<IStructureLinkKey> Links { get; internal set; } = new List<IStructureLinkKey>();
 
         public IStructureTypeReadOnly Type { get; internal set; }
 
         public string TagsXML { get; internal set; }
 
+        public IReadOnlyDictionary<string, string> Attributes { get; internal set; } = new Dictionary<string, string>();
+
+        public double Confidence { get; internal set; }
+
+        public string Notes { get; internal set; }
+
         public bool Equals(IStructureReadOnly other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return this.ID == other.ID;
@@ -189,15 +214,35 @@ namespace WebAnnotation.WPF.MockData
 
     public class MockStructureLink : IStructureLink
     {
-        public ulong SourceID { get; internal set; }
+        public ulong SourceID { get; set; }
 
-        public ulong TargetID { get; internal set; }
+        public ulong TargetID { get; set; }
 
-        public bool Directional { get; internal set; }
+        public bool Directional { get; set; }
+
+        StructureLinkKey IDataObjectWithKey<StructureLinkKey>.ID
+        {
+            get => new((long)SourceID, (long)TargetID, Directional == false);
+            set { SourceID = (ulong)value.SourceID; TargetID = (ulong)value.TargetID; Directional = value.Bidirectional == false; }
+        }
+
+        IStructureLinkKey IDataObjectWithKey<IStructureLinkKey>.ID
+        {
+            get => new StructureLinkKey((long)SourceID, (long)TargetID, Directional == false);
+            set { SourceID = (ulong)value.SourceID; TargetID = (ulong)value.TargetID; Directional = value.Directional; }
+        }
 
         public bool Equals(IStructureLink other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
+                return false;
+
+            return this.SourceID == other.SourceID && this.TargetID == other.TargetID && this.Directional == other.Directional;
+        }
+
+        public bool Equals(IStructureLinkKey other)
+        {
+            if (other is null)
                 return false;
 
             return this.SourceID == other.SourceID && this.TargetID == other.TargetID && this.Directional == other.Directional;
@@ -218,7 +263,7 @@ namespace WebAnnotation.WPF.MockData
 
         public bool IsUntraceable { get; internal set; }
 
-        public IDictionary<string, string> Attributes { get; internal set; }
+        public IReadOnlyDictionary<string, string> Attributes { get; internal set; } = new Dictionary<string, string>();
 
         public long UnscaledZ { get; internal set; }
 
@@ -228,11 +273,17 @@ namespace WebAnnotation.WPF.MockData
 
         public double Z { get; internal set; }
 
+        public double? Width { get; internal set; }
+
+        public string MosaicGeometryWKT { get; internal set; }
+
+        public string VolumeGeometryWKT { get; internal set; }
+
         public SqlGeometry Geometry { get; internal set; }
 
         public bool Equals(ILocationReadOnly other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return this.ID == other.ID;
@@ -245,9 +296,31 @@ namespace WebAnnotation.WPF.MockData
 
         public ulong B { get; internal set; }
 
+        public ulong OtherKey(ulong key)
+        {
+            if (A == key)
+                return B;
+            if (B == key)
+                return A;
+
+            throw new System.ArgumentException($"{key} is not part of location link {A}-{B}");
+        }
+
+        LocationLinkKey IDataObjectWithKey<LocationLinkKey>.ID
+        {
+            get => new((long)A, (long)B);
+            set { A = (ulong)value.A; B = (ulong)value.B; }
+        }
+
+        ILocationLinkKey IDataObjectWithKey<ILocationLinkKey>.ID
+        {
+            get => new LocationLinkKey((long)A, (long)B);
+            set { A = value.A; B = value.B; }
+        }
+
         public bool Equals(ILocationLink other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return (this.A == other.A && this.B == other.B) || (this.B == other.A && this.A == other.B);

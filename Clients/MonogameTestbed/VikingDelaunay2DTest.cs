@@ -1,5 +1,6 @@
 using FsCheck;
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Geometry.JSON;
 using Geometry.Meshing;
 using GeometryTests.Algorithms;
@@ -15,6 +16,8 @@ using System.Threading.Tasks;
 using TriangleNet;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -137,7 +140,7 @@ namespace MonogameTestbed
 
 
 
-        GridVector2 Cursor = GridVector2.Zero;
+        Geometry.Vector2 Cursor = Geometry.Vector2.Zero;
         CircleView cursorView;
         LabelView cursorLabel;
 
@@ -203,7 +206,7 @@ namespace MonogameTestbed
                 Cursor = PolyCView.Polygon.Centroid;
             }
 
-            cursorView = new CircleView(new GridCircle(Cursor, PointRadius), Color.Gray);
+            cursorView = new CircleView(new Circle(Cursor, PointRadius), Color.Gray);
             cursorLabel = new LabelView(Cursor.ToLabel(), Cursor);
 
             ResetTestTask();
@@ -213,17 +216,17 @@ namespace MonogameTestbed
 
         private void ResetTestTask()
         {
-            List<GridVector2> listPoints = null;
+            List<Geometry.Vector2> listPoints = null;
 
-            GridRectangle rect = new(GridVector2.Zero, 50);
+            Rectangle rect = new(Geometry.Vector2.Zero, 50);
 
             if (testData == DelaunayTestDataType.JSON && DebugJSONPoints != null)
             {
                 FirstTriangulationDone = true;
 
                 listPoints = [.. GeometryJSONExtensions.PointsFromJSON(DebugJSONPoints)];
-                //listPoints = listPoints.Scale(2, GridVector2.Zero).ToList();
-                GridVector2 avg = listPoints.Average();
+                //listPoints = listPoints.Scale(2, Geometry.Vector2.Zero).ToList();
+                Geometry.Vector2 avg = listPoints.Average();
                 //listPoints = listPoints.Select(p => p - avg).ToList();
                 scene.Camera.LookAt = listPoints.Average().ToXNAVector2();
                 rect = listPoints.BoundingBox();
@@ -233,10 +236,10 @@ namespace MonogameTestbed
             }
             else if (testData == DelaunayTestDataType.POLYGONS && DebugPolyArray != null)
             {
-                GridPolygon[] polygons = GeometryJSONExtensions.PolygonsFromJSON(DebugPolyArray7);
+                Polygon[] polygons = GeometryJSONExtensions.PolygonsFromJSON(DebugPolyArray7);
                 listPoints = [.. polygons.SelectMany(p => p.ExteriorRing.Union(p.InteriorRings.SelectMany(ir => ir))).Distinct()];
 
-                GridVector2 avg = listPoints.Average();
+                Geometry.Vector2 avg = listPoints.Average();
                 listPoints = [.. listPoints.Select(p => p - avg)];
 
                 //scene.Camera.LookAt = listPoints[567].ToXNAVector2();//listPoints.Average().ToXNAVector2();
@@ -244,7 +247,7 @@ namespace MonogameTestbed
             }
             else if (testData == DelaunayTestDataType.JSON_POLYGON_CONSTRAINED)
             {
-                GridPolygon polygon = GeometryJSONExtensions.PolygonFromJSON(DebugConstrainedPoly4);
+                Polygon polygon = GeometryJSONExtensions.PolygonFromJSON(DebugConstrainedPoly4);
 
                 FirstTriangulationDone = true;
 
@@ -263,7 +266,7 @@ namespace MonogameTestbed
                     throw new ArgumentException($"Input file {JSONFile} not found");
 
                 string json = System.IO.File.ReadAllText(JSONFile);
-                GridPolygon polygon = GeometryJSONExtensions.PolygonFromJSON(json);
+                Polygon polygon = GeometryJSONExtensions.PolygonFromJSON(json);
 
                 FirstTriangulationDone = true;
 
@@ -336,10 +339,10 @@ namespace MonogameTestbed
 
                     /*
                     listPoints = rect.Corners.ToList();
-                    listPoints.Add(GridVector2.Zero);
-                    listPoints.Add(new GridVector2(0, 15));
-                    listPoints.Add(new GridVector2(0, -15));
-                    listPoints.Add(new GridVector2(-5, 17.5));
+                    listPoints.Add(Geometry.Vector2.Zero);
+                    listPoints.Add(new Geometry.Vector2(0, 15));
+                    listPoints.Add(new Geometry.Vector2(0, -15));
+                    listPoints.Add(new Geometry.Vector2(-5, 17.5));
                     */
 
                     listPoints = [];
@@ -349,7 +352,7 @@ namespace MonogameTestbed
                         for (int x = 0; x < GridDims; x++)
                         {
                             //if(listPoints.Count < 4)
-                            listPoints.Add(new GridVector2(x * 10, y * 10));
+                            listPoints.Add(new Geometry.Vector2(x * 10, y * 10));
 
                         }
                     }
@@ -359,17 +362,17 @@ namespace MonogameTestbed
                     // Random points 
                     int nPoints = 101;
                     //int nPoints = 30;
-                    GridVector2[] points = new GridVector2[nPoints];
+                    Geometry.Vector2[] points = new Geometry.Vector2[nPoints];
                     System.Random rand = new(1);
                     for (int i = 0; i < nPoints; i++)
                     {
                         double X = (rand.NextDouble() * rect.Width) + rect.Left;
                         double Y = (rand.NextDouble() * rect.Height) + rect.Bottom;
-                        GridVector2 p = new(X, Y);
+                        Geometry.Vector2 p = new(X, Y);
                         points[i] = p;
                     }
 
-                    System.Array.Sort(points, new GridVectorComparerXY());
+                    System.Array.Sort(points, new Vector2ComparerXY());
 
                     listPoints = [.. points];
 
@@ -409,8 +412,8 @@ namespace MonogameTestbed
 
             if (state.ThumbSticks.Left != Vector2.Zero)
             {
-                Cursor += state.ThumbSticks.Left.ToGridVector2();
-                cursorView = new CircleView(new GridCircle(Cursor, PointRadius), Color.Gray);
+                Cursor += state.ThumbSticks.Left.ToVector2();
+                cursorView = new CircleView(new Circle(Cursor, PointRadius), Color.Gray);
                 cursorLabel = new LabelView(Cursor.ToLabel(), Cursor)
                 {
                     FontSize = 2,
@@ -420,8 +423,8 @@ namespace MonogameTestbed
 
             if (state.Buttons.RightStick == ButtonState.Pressed)
             {
-                Cursor = this.scene.Camera.LookAt.ToGridVector2();
-                cursorView = new CircleView(new GridCircle(Cursor, PointRadius), Color.Gray);
+                Cursor = this.scene.Camera.LookAt.ToVector2();
+                cursorView = new CircleView(new Circle(Cursor, PointRadius), Color.Gray);
                 cursorLabel = new LabelView(Cursor.ToLabel(), Cursor)
                 {
                     FontSize = 2,
@@ -462,7 +465,7 @@ namespace MonogameTestbed
                 Points_B.TogglePoint(Cursor);
                 if (Points_B.Points.Count >= 3)
                 {
-                    PolyBView.Polygon = new GridPolygon(Points_B.Points.Points.EnsureClosedRing());
+                    PolyBView.Polygon = new Polygon(Points_B.Points.Points.EnsureClosedRing());
                 }
                 */
                 ShowMeshFaces = !ShowMeshFaces;
@@ -475,12 +478,12 @@ namespace MonogameTestbed
     ConstrainedEdgeStart = 
 }*/
 
-                //trimesh.AddContrainedEdge(new Edge(1, 3 * (trimesh.Verticies.Count / 4)));
+                //trimesh.AddContrainedEdge(new Edge(1, 3 * (trimesh.Vertices.Count / 4)));
                 trimesh?.AddConstrainedEdge(new ConstrainedEdge(0, 1), OnTriangulationProgress);
                 /*
                 Points_C.TogglePoint(Cursor);
                 if (Points_C.Points.Count >= 3)
-                    PolyCView.Polygon = new GridPolygon(Points_C.Points.Points.EnsureClosedRing());
+                    PolyCView.Polygon = new Polygon(Points_C.Points.Points.EnsureClosedRing());
                 }
                 */
             }
@@ -496,15 +499,15 @@ namespace MonogameTestbed
 
                 if (Points_A.Points.Count > 0 && (Points_B.Points.Count > 0 || Points_C.Points.Count > 0))
                 {
-                    GridVector2[] points = [.. Points_A.Points.Points.Union(Points_B.Points.Points).Union(Points_C.Points.Points)];
-                    GridVector2 origin = points[0];
+                    Geometry.Vector2[] points = [.. Points_A.Points.Points.Union(Points_B.Points.Points).Union(Points_C.Points.Points)];
+                    Geometry.Vector2 origin = points[0];
 
                     Mesh2D mesh = new();
                     mesh.AddVerticies(points.Select(p => new Vertex2D(p)));
 
                     //OK, until we get Delaunay working, create an edge between all B Points to the first PointA.  Then sort and iterate the edges.
-                    GridVector2[] connectedPoints = new GridVector2[points.Length - 1];
-                    for (int iPoint = 1; iPoint < mesh.Verticies.Count; iPoint++)
+                    Geometry.Vector2[] connectedPoints = new Geometry.Vector2[points.Length - 1];
+                    for (int iPoint = 1; iPoint < mesh.Vertices.Count; iPoint++)
                     {
                         mesh.AddEdge(new Edge(0, iPoint));
                         connectedPoints[iPoint - 1] = points[iPoint];
@@ -516,20 +519,20 @@ namespace MonogameTestbed
                         color = Color.Beige
                     };
 
-                    GridLine originLine = new(origin, Cursor - mesh[0].Position == GridVector2.Zero ? GridVector2.UnitY : GridVector2.Normalize(Cursor - mesh[0].Position));
+                    Line originLine = new(origin, Cursor - mesh[0].Position == Geometry.Vector2.Zero ? Geometry.Vector2.UnitY : Geometry.Vector2.Normalize(Cursor - mesh[0].Position));
 
                     //Sort the edges in rotation order
                     CompareAngle compareAngle = new(originLine);
                     sortedPointsByAngle = connectedPoints.SortAndIndex(compareAngle);
 
-                    GridLineSegment[] sortedLines = new GridLineSegment[sortedPointsByAngle.Length];
+                    LineSegment[] sortedLines = new LineSegment[sortedPointsByAngle.Length];
                     LineView[] lineViews = new LineView[sortedPointsByAngle.Length];
 
                     LabelView[] lineLabels = new LabelView[sortedPointsByAngle.Length];
                     for (int i = 0; i < sortedLines.Length; i++)
                     {
                         int iPoint = sortedPointsByAngle[i];
-                        sortedLines[i] = new GridLineSegment(origin, connectedPoints[iPoint]);
+                        sortedLines[i] = new LineSegment(origin, connectedPoints[iPoint]);
                         lineViews[i] = new LineView(sortedLines[i], 1.5, Color.Beige.SetAlpha((float)(iPoint + 1) / (float)sortedLines.Length), LineStyle.Glow);
                         lineLabels[i] = new LabelView(iPoint.ToString(), sortedLines[i].PointAlongLine(0.33), scaleFontWithScene: true, fontSize: 2.0);
                     }
@@ -562,7 +565,7 @@ namespace MonogameTestbed
             {
                 RWLock.EnterWriteLock();
 
-                if (mesh.Verticies.Count == 0)
+                if (mesh.Vertices.Count == 0)
                 {
                     Points_X = [];
                     TriangulatedEdgeView = new LineSetView();
@@ -571,21 +574,21 @@ namespace MonogameTestbed
                     return;
                 }
 
-                if ((Points_X.Count != mesh.Verticies.Count) || (Points_X.Points.First() != mesh.Verticies.First().Position))
+                if ((Points_X.Count != mesh.Vertices.Count) || (Points_X.Points.First() != mesh.Vertices.First().Position))
                 {
-                    Points_X = [.. mesh.Verticies.Select(v => v.Position)];
+                    Points_X = [.. mesh.Vertices.Select(v => v.Position)];
                     Points_X_View.Points = Points_X;
                     Points_X_View.LabelType = PointLabelType.INDEX;
 
-                    GridRectangle rect = Points_X.BoundingBox();
-                    rect = GridRectangle.Scale(rect, 1.05);
+                    Rectangle rect = Points_X.BoundingBox();
+                    rect = Rectangle.Scale(rect, 1.05);
                     scene.Camera.LookAt = rect.Center.ToXNAVector2();
                     scene.Camera.Downsample = rect.Height / scene.Viewport.Height;
                 }
 
                 LineView[] lineViews = new LineView[mesh.Edges.Count];
                 LabelView[] lineLabels = new LabelView[lineViews.Length];
-                GridLineSegment[] sortedLines = new GridLineSegment[lineViews.Length];
+                LineSegment[] sortedLines = new LineSegment[lineViews.Length];
 
                 TriangulatedEdgeView = new LineSetView
                 {
@@ -597,11 +600,11 @@ namespace MonogameTestbed
                 for (int i = 0; i < lineViews.Length; i++)
                 {
                     IEdgeKey key = edgeKeys[i];
-                    sortedLines[i] = mesh.ToGridLineSegment(key);
+                    sortedLines[i] = mesh.ToLineSegment(key);
                     lineViews[i] = new LineView(sortedLines[i], 1.5, mesh[key] as ConstrainedEdge != null ? Color.Yellow : Color.LightGray, LineStyle.Standard);
                     /*
                     lineLabels[i] = new CurveLabel(key.ToString(),
-                        new GridVector2[] { sortedLines[i].A, sortedLines[i].B },
+                        new Geometry.Vector2[] { sortedLines[i].A, sortedLines[i].B },
                         Color.Black,
                         TryToClose: false, lineWidth: this.PointRadius,
                         numInterpolations: 0); // key.ToString(), sortedLines[i].PointAlongLine(0.5), scaleFontWithScene: true, fontSize: 2.0);
@@ -613,7 +616,7 @@ namespace MonogameTestbed
 
                 FaceLabels = new LabelView[mesh.Faces.Count];
                 FaceLabels = [.. mesh.Faces.Select((f, i) => FaceLabels[i] = new LabelView(f.ToString(),
-                                                                         new GridTriangle([.. f.iVerts.Select(iVert => mesh[iVert].Position)]).BaryToVector(new GridVector2(1 / 3.0, 1 / 3.0)),
+                                                                         new Triangle([.. f.iVerts.Select(iVert => mesh[iVert].Position)]).BaryToVector(new Geometry.Vector2(1 / 3.0, 1 / 3.0)),
                                                                          mesh.IsClockwise(f) ? Color.Red.SetAlpha(0.75f) : Color.LightBlue.SetAlpha(0.75f),
                                                                          scaleFontWithScene: true,
                                                                          fontSize: 2.0)
@@ -643,7 +646,7 @@ namespace MonogameTestbed
         {
             MeshModel<VertexPositionNormalColor> model = new()
             {
-                Verticies = [.. mesh.Verticies.Select(v => new VertexPositionNormalColor(v.Position.ToXNAVector3(0), Vector3.UnitZ, ColorExtensions.Random().SetAlpha(0.5f)))],
+                Vertices = [.. mesh.Vertices.Select(v => new VertexPositionNormalColor(v.Position.ToXNAVector3(0), Vector3.UnitZ, ColorExtensions.Random().SetAlpha(0.5f)))],
                 Edges = [.. mesh.Faces.SelectMany(f => f.iVerts)]
             };
             return model;
@@ -657,7 +660,7 @@ namespace MonogameTestbed
         {
             if (Points_X.Points.Count >= 3)
             {
-                //PolyXView.Polygon = new GridPolygon(Points_C.Points.Points.EnsureClosedRing());
+                //PolyXView.Polygon = new Polygon(Points_C.Points.Points.EnsureClosedRing());
 
                 if (TriangulationTask is null)
                 {
@@ -667,7 +670,7 @@ namespace MonogameTestbed
 
                 /*
                 var lineViews = new LineView[mesh.Edges.Count];
-                var sortedLines = new GridLineSegment[lineViews.Length];
+                var sortedLines = new LineSegment[lineViews.Length];
                 var lineLabels = new LabelView[lineViews.Length];
 
                 TriangulatedEdgeView = new LineSetView();
@@ -678,7 +681,7 @@ namespace MonogameTestbed
                 for (int i = 0; i < lineViews.Length; i++)
                 {
                     IEdgeKey key = edgeKeys[i];
-                    sortedLines[i] = mesh.ToGridLineSegment(key);
+                    sortedLines[i] = mesh.ToLineSegment(key);
                     lineViews[i] = new LineView(sortedLines[i], 1.5, Color.LightGray, LineStyle.Glow);
                     lineLabels[i] = new LabelView(key.ToString(), sortedLines[i].PointAlongLine(0.5), scaleFontWithScene: true, fontSize: 2.0);
                 }

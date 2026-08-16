@@ -1,21 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
     <AssemblyName>VolumeViewModel</AssemblyName>
     <RootNamespace>Viking.VolumeViewModel</RootNamespace>
-    <UseWPF>true</UseWPF>
-    <OutputPath Condition="'$(Configuration)' == 'Debug'">..\..\Jotunn\bin\Debug\Modules\VolumeViewModel\</OutputPath>
-    <OutputPath Condition="'$(Configuration)' == 'Release'">..\..\Jotunn\bin\Release\Modules\VolumeViewModel\</OutputPath>
     <LangVersion>latest</LangVersion>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Prism.Core" Version="6.2.0" />
-    <PackageReference Include="Prism.Mef" Version="6.2.0" />
-    <PackageReference Include="Prism.Wpf" Version="6.2.0" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Common.csproj" />
@@ -23,13 +17,5 @@
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj" />
     <ProjectReference Include="..\JotunnCommon\JotunnUICommon.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <None Include="app.config" />
-  </ItemGroup>
-
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="mkdir &quot;$(SolutionDir)Jotunn\Jotunn\Modules\$(TargetName)&quot;&#xD;&#xA;copy $(TargetDir)\*.dll &quot;$(SolutionDir)Jotunn\Jotunn\Modules\$(TargetName)&quot;&#xD;&#xA;copy $(TargetDir)\*.pdb &quot;$(SolutionDir)Jotunn\Jotunn\Modules\$(TargetName)&quot;" />
-  </Target>
 
 </Project>

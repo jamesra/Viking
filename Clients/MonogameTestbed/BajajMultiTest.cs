@@ -19,6 +19,8 @@ using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
 using MonogameTestbed;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 
 namespace MonogameTestbed
@@ -49,7 +51,7 @@ namespace MonogameTestbed
             return new
             {
                 faces = mesh.Faces.Count,
-                verts = mesh.Verticies.Count,
+                verts = mesh.Vertices.Count,
                 s.ManifoldEdges,
                 s.InconsistentManifoldEdges,
                 s.NonManifoldEdges,
@@ -60,7 +62,7 @@ namespace MonogameTestbed
 
     class BajajMultiOTVAssignmentView
     {
-        public readonly GridPolygon[] Polygons = null;
+        public readonly Polygon[] Polygons = null;
         public readonly double[] PolyZ = null;
         //public PointSetViewView[] PolyPointsView = null;
         public PointSetView IncompletedVertexView = null;
@@ -81,7 +83,7 @@ namespace MonogameTestbed
         /// <summary>
         /// The position of this mesh in volume space. 
         /// </summary>
-        public GridVector2 Position => Graph.BoundingBox.CenterPoint.XY();
+        public Geometry.Vector2 Position => Graph.BoundingBox.CenterPoint.XY();
 
         readonly PolygonSetView PolyViews;
         readonly List<LineView> OTVTableView = null;
@@ -290,7 +292,7 @@ namespace MonogameTestbed
             Mesh3D<MorphMeshVertex> composite, Color color)
         {
             var model = new MeshModel<VertexPositionNormalColor>();
-            model.Verticies = [.. composite.Verticies.Select(v => new VertexPositionNormalColor(
+            model.Vertices = [.. composite.Vertices.Select(v => new VertexPositionNormalColor(
                 v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), color))];
             model.Edges = [.. composite.Faces.SelectMany(f => f.iVerts)];
             return model;
@@ -379,7 +381,7 @@ namespace MonogameTestbed
             if (IncompletedVertexView != null && ShowCompletedVerticies)
             {
                 IncompletedVertexView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha);
-                ViewLabels.AppendLine("Incomplete Verticies");
+                ViewLabels.AppendLine("Incomplete Vertices");
             }
 
             if (MeshVertsView != null && (this.VertexLabelType & IndexLabelType.MESH) > 0)
@@ -459,10 +461,10 @@ namespace MonogameTestbed
             {
                 bool assembledBuffersOk = _assembledDisplayModel?.EnsureBuffers(window.GraphicsDevice) ?? false;
                 int completedModelCount = meshCompletedView?.MeshModels?.Length ?? 0;
-                int completedVertCount = meshCompletedView?.MeshModels?.Where(m => m?.Verticies != null).Sum(m => m.Verticies.Length) ?? 0;
+                int completedVertCount = meshCompletedView?.MeshModels?.Where(m => m?.Vertices != null).Sum(m => m.Vertices.Length) ?? 0;
                 int incompleteModelCount = meshIncompleteView?.MeshModels?.Length ?? 0;
                 bool assemblyComplete = meshAssemblyPlan?.MeshAssembledEvent.IsSet ?? false;
-                int rootVertCount = meshAssemblyPlan?.Root?.MeshModel?.model?.Verticies?.Length ?? 0;
+                int rootVertCount = meshAssemblyPlan?.Root?.MeshModel?.model?.Vertices?.Length ?? 0;
                 DebugSessionLog.Write(
                     "BajajMultiTest.cs:Draw3D",
                     "Draw3D frame",
@@ -475,7 +477,7 @@ namespace MonogameTestbed
                         assemblyComplete,
                         incompleteModelCount,
                         hasAssembledDisplayModel = _assembledDisplayModel != null,
-                        assembledVertCount = _assembledDisplayModel?.Verticies?.Length ?? 0,
+                        assembledVertCount = _assembledDisplayModel?.Vertices?.Length ?? 0,
                         assembledEdgeCount = _assembledDisplayModel?.Edges?.Length ?? 0,
                         assembledBuffersOk,
                         rootVertCount,
@@ -536,7 +538,7 @@ namespace MonogameTestbed
 
                             bool drewSolidMesh = false;
                             var rootMeshModel = meshAssemblyPlan?.Root?.MeshModel;
-                            if (rootMeshModel?.model?.Verticies?.Length > 0)
+                            if (rootMeshModel?.model?.Vertices?.Length > 0)
                             {
                                 try
                                 {
@@ -591,16 +593,16 @@ namespace MonogameTestbed
                 any = true;
             }
 
-            if (_assembledDisplayModel?.Verticies != null)
+            if (_assembledDisplayModel?.Vertices != null)
             {
-                foreach (var v in _assembledDisplayModel.Verticies)
+                foreach (var v in _assembledDisplayModel.Vertices)
                     Include(v.Position);
             }
 
             var rootModel = meshAssemblyPlan?.Root?.MeshModel?.model;
-            if (rootModel?.Verticies != null)
+            if (rootModel?.Vertices != null)
             {
-                foreach (var v in rootModel.Verticies)
+                foreach (var v in rootModel.Vertices)
                     Include(v.Position);
             }
 
@@ -608,17 +610,17 @@ namespace MonogameTestbed
             {
                 foreach (var model in meshCompletedView.MeshModels)
                 {
-                    if (model?.Verticies == null)
+                    if (model?.Vertices == null)
                         continue;
-                    foreach (var v in model.Verticies)
+                    foreach (var v in model.Vertices)
                         Include(v.Position);
                 }
             }
 
             var composite = meshAssemblyPlan?.Root?.MeshModel?.composite;
-            if (composite?.Verticies != null)
+            if (composite?.Vertices != null)
             {
-                foreach (var v in composite.Verticies)
+                foreach (var v in composite.Vertices)
                     Include(v.Position.ToXNAVector3());
             }
 
@@ -644,8 +646,8 @@ class BajajMultiAssignmentTest : IGraphicsTest
 
     AnnotationVizLib.MorphologyGraph graph;
 
-    //GridPolygon A;
-    //GridPolygon B;
+    //Polygon A;
+    //Polygon B;
 
     readonly PointSetViewCollection Points_A = new(Color.Blue, Color.BlueViolet, Color.PowderBlue);
     readonly PointSetViewCollection Points_B = new(Color.Red, Color.Pink, Color.Plum);
@@ -819,8 +821,8 @@ class BajajMultiAssignmentTest : IGraphicsTest
         DebugDrawLogCount = 0;
 
         #region agent log
-        GridBox bbox = graph.BoundingBox;
-        var compositeVerts = wrapViews.FirstOrDefault()?.meshAssemblyPlan?.Root?.MeshModel?.composite?.Verticies;
+        Box bbox = graph.BoundingBox;
+        var compositeVerts = wrapViews.FirstOrDefault()?.meshAssemblyPlan?.Root?.MeshModel?.composite?.Vertices;
         object meshBounds = null;
         if (compositeVerts != null && compositeVerts.Count > 0)
         {
@@ -869,7 +871,7 @@ class BajajMultiAssignmentTest : IGraphicsTest
         A = SqlGeometry.STPolyFromText(PolyA.ToSqlChars(), 0).ToPolygon();
         B = SqlGeometry.STPolyFromText(PolyB.ToSqlChars(), 0).ToPolygon();
 
-        GridVector2 Centroid = A.Centroid;
+        Geometry.Vector2 Centroid = A.Centroid;
         A = A.Translate(-Centroid);
         B = B.Translate(-Centroid);
 
@@ -1096,14 +1098,14 @@ class BajajMultiAssignmentTest : IGraphicsTest
         if (graph?.BoundingBox != null)
         {
             var bbox = graph.BoundingBox;
-            hud.AppendLine($"Mesh XY +/-{bbox.Width / 2:F0}  Z {bbox.minVals[2]:F0}-{bbox.maxVals[2]:F0}");
+            hud.AppendLine($"Mesh XY +/-{bbox.Width / 2:F0}  Z {bbox.MinVals[2]:F0}-{bbox.MaxVals[2]:F0}");
         }
 
         foreach (var wrapView in wrapViews)
         {
             hud.AppendLine($"Composite={wrapView.ShowCompositeMesh} BBoxOverlay={wrapView.ShowAssemblyBoundingBoxes} Cull={wrapView.CullMode}");
             bool assembled = wrapView.meshAssemblyPlan?.MeshAssembledEvent.IsSet ?? false;
-            int verts = wrapView.meshAssemblyPlan?.Root?.MeshModel?.model?.Verticies?.Length ?? 0;
+            int verts = wrapView.meshAssemblyPlan?.Root?.MeshModel?.model?.Vertices?.Length ?? 0;
             int incomplete = wrapView.meshIncompleteView?.MeshModels?.Length ?? 0;
             hud.AppendLine($"Struct {wrapView.Graph?.StructureID} assembled={assembled} verts={verts} incompleteBoxes={incomplete}");
         }
@@ -1233,7 +1235,7 @@ class BajajMultiAssignmentTest : IGraphicsTest
         DynamicRenderMeshColladaSerializer.SerializeToFile(ColladaView, outputFile);
     }
 
-    public void SaveMesh(IReadOnlyMesh3D<IVertex3D> mesh, GridVector3 Position, ulong structure_id, string outputDir = null)
+    public void SaveMesh(IReadOnlyMesh3D<IVertex3D> mesh, Geometry.Vector3 Position, ulong structure_id, string outputDir = null)
     {
         outputDir = outputDir ?? DefaultOutputPath;
 
@@ -1281,7 +1283,7 @@ class BajajMultiAssignmentTest : IGraphicsTest
         PositionColorNormalMeshModel mesh_model = new()
         {
             ModelMatrix = Matrix.CreateTranslation(bm.Center.ToXNAVector3()),
-            Verticies = [.. bm.Mesh.Verticies.Select(v => new VertexPositionNormalColor(v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), color))],
+            Vertices = [.. bm.Mesh.Vertices.Select(v => new VertexPositionNormalColor(v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), color))],
             Edges = [.. bm.TriangulationMesh.Faces.SelectMany(f => f.iVerts)]
         };
         return mesh_model;

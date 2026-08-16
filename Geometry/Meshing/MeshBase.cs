@@ -12,14 +12,14 @@ namespace Geometry.Meshing
     public interface IMesh3D<VERTEX> : IReadOnlyMesh3D<VERTEX>, IMesh<VERTEX>
         where VERTEX : IVertex3D
     {
-        //new IReadOnlyList<VERTEX> Verticies { get; }
+        //new IReadOnlyList<VERTEX> Vertices { get; }
 
     }
 
     public interface IReadOnlyMesh3D<out VERTEX> : IReadOnlyMesh<VERTEX>
     where VERTEX : IVertex3D
     {
-        GridBox BoundingBox { get; }
+        Box BoundingBox { get; }
     }
 
 
@@ -32,17 +32,17 @@ namespace Geometry.Meshing
     public interface IReadOnlyMesh2D<out VERTEX> : IReadOnlyMesh<VERTEX>
     where VERTEX : IVertex2D
     {
-        //new IReadOnlyList<VERTEX> Verticies { get; }
+        //new IReadOnlyList<VERTEX> Vertices { get; }
 
-        GridLineSegment ToGridLineSegment(IEdgeKey key);
+        LineSegment ToLineSegment(IEdgeKey key);
 
-        GridLineSegment ToGridLineSegment(long A, long B);
+        LineSegment ToLineSegment(long A, long B);
 
         /// <summary>
         /// Return a normalized vector with origin at A towards B
         /// </summary> 
         /// <returns></returns>
-        GridLine ToGridLine(IEdgeKey key);
+        Line ToLine(IEdgeKey key);
 
         /// <summary>
         /// Return a normalized vector from the Origin towards the Direction vertex
@@ -50,7 +50,7 @@ namespace Geometry.Meshing
         /// <param name="Origin"></param>
         /// <param name="Direction"></param>
         /// <returns></returns>
-        GridLine ToGridLine(long Origin, long Direction);
+        Line ToLine(long Origin, long Direction);
 
         bool IsClockwise(IFace f);
 
@@ -61,7 +61,7 @@ namespace Geometry.Meshing
     public interface IReadOnlyMesh<out VERTEX>
         where VERTEX : IVertex
     {
-        IReadOnlyList<VERTEX> Verticies { get; }
+        IReadOnlyList<VERTEX> Vertices { get; }
         Dictionary<IEdgeKey, IEdge> Edges { get; } //If you are ever tempted to try a sortedlist profiling showed dictionary to be much faster during bajaj mesh generation
         SortedSet<IFace> Faces { get; }
 
@@ -208,7 +208,7 @@ namespace Geometry.Meshing
         //        public event MeshChangeEvent OnMeshChange;
         //        public delegate void MeshChangeEvent(MeshBase<VERTEX> mesh, MeshChangeEventArgs e);
 
-        public virtual IReadOnlyList<VERTEX> Verticies => _Verticies;
+        public virtual IReadOnlyList<VERTEX> Vertices => _Verticies;
         public Dictionary<IEdgeKey, IEdge> Edges => _Edges;
         public SortedSet<IFace> Faces => _Faces;
 

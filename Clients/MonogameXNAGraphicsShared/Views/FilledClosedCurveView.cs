@@ -4,6 +4,8 @@ using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using System.Linq;
 using VikingXNA;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -24,20 +26,20 @@ namespace VikingXNAGraphics
 
         private readonly MeshModel<VertexPositionColor> _mesh;
 
-        public FilledClosedCurvePolygonView(ICollection<GridVector2> exteriorControlPoints, ICollection<GridVector2[]> interiorPolyControlPoints, Color color, uint numInterpolations)
+        public FilledClosedCurvePolygonView(ICollection<Geometry.Vector2> exteriorControlPoints, ICollection<Geometry.Vector2[]> interiorPolyControlPoints, Color color, uint numInterpolations)
         {
             this.Color = color;
             InitializeCurveControlPoints(exteriorControlPoints, interiorPolyControlPoints, numInterpolations);
             _mesh = CreateMesh();
         }
 
-        private void InitializeCurveControlPoints(ICollection<GridVector2> exteriorControlPoints, ICollection<GridVector2[]> interiorPolyControlPoints, uint numInterpolations)
+        private void InitializeCurveControlPoints(ICollection<Geometry.Vector2> exteriorControlPoints, ICollection<Geometry.Vector2[]> interiorPolyControlPoints, uint numInterpolations)
         {
             this._ExteriorCurveControlPoints = new CurveViewControlPoints(exteriorControlPoints, numInterpolations, true);
 
             _InteriorCurveControlPoints = new CurveViewControlPoints[interiorPolyControlPoints.Count];
 
-            foreach (GridVector2[] interiorPoints in interiorPolyControlPoints)
+            foreach (Geometry.Vector2[] interiorPoints in interiorPolyControlPoints)
             {
                 CurveViewControlPoints interiorCurve = new(interiorPoints, numInterpolations, true);
                 _InteriorCurveControlPoints.Add(interiorCurve);

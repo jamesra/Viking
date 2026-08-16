@@ -2,6 +2,8 @@
 using Microsoft.Xna.Framework.Graphics;
 using System.Linq;
 using System.Windows;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameWPFLibrary.ViewModels
 {
@@ -10,15 +12,15 @@ namespace MonogameWPFLibrary.ViewModels
     /// </summary>
     public class MeshViewModel : DependencyObject
     {
-        public VertexPositionColor[] Verticies
+        public VertexPositionColor[] Vertices
         {
             get { return (VertexPositionColor[])GetValue(VerticiesProperty); }
             set { SetValue(VerticiesProperty, value); }
         }
 
-        // Using a DependencyProperty as the backing store for Verticies.  This enables animation, styling, binding, etc...
+        // Using a DependencyProperty as the backing store for Vertices.  This enables animation, styling, binding, etc...
         public static readonly DependencyProperty VerticiesProperty =
-            DependencyProperty.Register("Verticies", typeof(VertexPositionColor[]), typeof(MeshViewModel), new PropertyMetadata( new VertexPositionColor[0], OnVerticiesChanged));
+            DependencyProperty.Register("Vertices", typeof(VertexPositionColor[]), typeof(MeshViewModel), new PropertyMetadata( new VertexPositionColor[0], OnVerticiesChanged));
 
 
         /// <summary>
@@ -35,14 +37,14 @@ namespace MonogameWPFLibrary.ViewModels
             DependencyProperty.Register("Edges", typeof(int[]), typeof(MeshViewModel), new PropertyMetadata(new int[0]));
 
 
-        public Geometry.GridBox BoundingBox
+        public Geometry.Box BoundingBox
         {
-            get { return (Geometry.GridBox)GetValue(BoundingBoxProperty); }
+            get { return (Geometry.Box)GetValue(BoundingBoxProperty); }
             protected set { SetValue(BoundingBoxPropertyKey, value); }
         }
 
         // Using a DependencyProperty as the backing store for View.  This enables animation, styling, binding, etc...
-        protected static readonly DependencyPropertyKey BoundingBoxPropertyKey = DependencyProperty.RegisterReadOnly("BoundingBox", typeof(Geometry.GridBox), typeof(MeshViewModel), new PropertyMetadata());
+        protected static readonly DependencyPropertyKey BoundingBoxPropertyKey = DependencyProperty.RegisterReadOnly("BoundingBox", typeof(Geometry.Box), typeof(MeshViewModel), new PropertyMetadata());
 
         public static readonly DependencyProperty BoundingBoxProperty = BoundingBoxPropertyKey.DependencyProperty;
 
@@ -91,7 +93,7 @@ namespace MonogameWPFLibrary.ViewModels
 
         public MeshViewModel(VertexPositionColor[] verts, int[] edges)
         {
-            this.Verticies = verts;
+            this.Vertices = verts;
             this.Faces = edges;
         }
         public MeshViewModel(VertexPositionColor[] verts, int[] edges, Vector3 translate) : this(verts, edges)
@@ -123,9 +125,9 @@ namespace MonogameWPFLibrary.ViewModels
             }
         }
 
-        private Geometry.GridBox CalculateBoundingBox()
+        private Geometry.Box CalculateBoundingBox()
         {
-            return Geometry.GridBox.GetBoundingBox(this.Verticies.Select(v => v.Position.ToGridVector3()));
+            return Geometry.Box.GetBoundingBox(this.Vertices.Select(v => v.Position.ToVector3()));
         }
     }
 }

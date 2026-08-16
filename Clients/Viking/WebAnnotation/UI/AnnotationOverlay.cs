@@ -1,5 +1,6 @@
 using rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using SqlGeometryUtils;
@@ -32,6 +33,8 @@ using WebAnnotation.View;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation
 {
@@ -56,8 +59,8 @@ namespace WebAnnotation
         protected static WebAnnotation.UI.Forms.GoToActionForm GoToLocationForm;
         protected static WebAnnotation.UI.Forms.GoToActionForm GoToStructureForm;
         protected static WebAnnotation.UI.Forms.FindStructureNumberForm FindStructureNumberForm;
-        private GridVector2 LastMouseDownCoords;
-        private GridVector2 LastMouseMoveVolumeCoords;
+        private Geometry.Vector2 LastMouseDownCoords;
+        private Geometry.Vector2 LastMouseMoveVolumeCoords;
 
         /// <summary>
         /// The last object the mouse was over, if any
@@ -180,8 +183,8 @@ namespace WebAnnotation
 
             {
                 //ICanvasView lastObj = 
-                GridVector2 lastObjCenter = WebAnnotation.AnnotationOverlay.CurrentOverlay.LastMouseDownCoords;
-                GridVector3 origin = new(lastObjCenter.X * Global.Scale.X, lastObjCenter.Y * Global.Scale.Y, WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.Number * Global.Scale.Z);
+                Geometry.Vector2 lastObjCenter = WebAnnotation.AnnotationOverlay.CurrentOverlay.LastMouseDownCoords;
+                Geometry.Vector3 origin = new(lastObjCenter.X * Global.Scale.X, lastObjCenter.Y * Global.Scale.Y, WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.Number * Global.Scale.Z);
 
                 //Sort locations by distance
                 List<LocationObj> nearest = [.. locations.OrderBy(l => l.DistanceToPoint3D(origin))];
@@ -320,7 +323,7 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
-        public static List<HitTestResult> GetAnnotations(int sectionNumber, GridVector2 position)
+        public static List<HitTestResult> GetAnnotations(int sectionNumber, Geometry.Vector2 position)
         {
             SectionAnnotationsView locView = GetAnnotationsForSection(sectionNumber);
             if (locView == null)
@@ -337,7 +340,7 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
-        public List<HitTestResult> GetAnnotations(GridVector2 position)
+        public List<HitTestResult> GetAnnotations(Geometry.Vector2 position)
         {
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
@@ -354,7 +357,7 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
-        public object ObjectAtPosition(GridVector2 position, out double distance)
+        public object ObjectAtPosition(Geometry.Vector2 position, out double distance)
         {
             distance = double.MaxValue;
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
@@ -395,7 +398,7 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
-        public List<HitTestResult> GetAnnotations(GridRectangle rect)
+        public List<HitTestResult> GetAnnotations(Rectangle rect)
         {
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
@@ -412,7 +415,7 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
-        public static ICanvasView FirstIntersectedObjectOnSection(int CurrentSectionNumber, GridLineSegment line)
+        public static ICanvasView FirstIntersectedObjectOnSection(int CurrentSectionNumber, LineSegment line)
         {
             List<HitTestResult> listObjects = GetAnnotations(line, CurrentSectionNumber);
 
@@ -429,7 +432,7 @@ namespace WebAnnotation
             return (ICanvasView)bestHit.obj;
         }
 
-        public static List<HitTestResult> GetAnnotations(GridLineSegment line, int CurrentSectionNumber)
+        public static List<HitTestResult> GetAnnotations(LineSegment line, int CurrentSectionNumber)
         {
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
@@ -441,7 +444,7 @@ namespace WebAnnotation
             return listObjects;
         }
 
-        public List<HitTestResult> GetAnnotations(GridLineSegment line) => GetAnnotations(line, CurrentSectionNumber);
+        public List<HitTestResult> GetAnnotations(LineSegment line) => GetAnnotations(line, CurrentSectionNumber);
 
         #region ISectionOverlayExtension Members
 
@@ -492,8 +495,8 @@ namespace WebAnnotation
             {
                 try
                 {
-                    GridVector2 WorldPosition = LastMouseMoveVolumeCoords;
-                    LocationAction action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, CurrentSectionNumber, Control.ModifierKeys, out long locID);
+                    Geometry.Vector2 WorldPosition = LastMouseMoveVolumeCoords;
+                    LocationAction action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, CurrentSectionNumber, Viking.Input.ModifierKeysConverter.FromWinFormsKeys((int)Control.ModifierKeys), out long locID);
                     _Parent.Cursor = action.GetCursor();
                 }
                 catch (Exception ex)
@@ -516,8 +519,8 @@ namespace WebAnnotation
             {
                 try
                 {
-                    GridVector2 WorldPosition = LastMouseMoveVolumeCoords;
-                    LocationAction action = loc.GetPenContactActionForPositionOnAnnotation(WorldPosition, CurrentSectionNumber, Control.ModifierKeys, out long locID);
+                    Geometry.Vector2 WorldPosition = LastMouseMoveVolumeCoords;
+                    LocationAction action = loc.GetPenContactActionForPositionOnAnnotation(WorldPosition, CurrentSectionNumber, Viking.Input.ModifierKeysConverter.FromWinFormsKeys((int)Control.ModifierKeys), out long locID);
                     _Parent.Cursor = action.GetCursor();
                 }
                 catch (Exception ex)
@@ -578,7 +581,7 @@ namespace WebAnnotation
                 return;
             }
 
-            GridVector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
             LastMouseMoveVolumeCoords = WorldPosition;
 
             ICanvasView NextMouseOverObject = ObjectAtPosition(WorldPosition, out double distance) as ICanvasView;
@@ -615,7 +618,7 @@ namespace WebAnnotation
 
             StopPenPath(); //If we are tracking the pen we should stop
 
-            GridVector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
             LastMouseDownCoords = WorldPosition;
 
             //Left mouse button selects objects
@@ -647,7 +650,7 @@ namespace WebAnnotation
                         {
                             LocationAction action =
                                 actionSupportedObj.GetMouseClickActionForPositionOnAnnotation(WorldPosition,
-                                    CurrentSectionNumber, Control.ModifierKeys, out long LocationID);
+                                    CurrentSectionNumber, Viking.Input.ModifierKeysConverter.FromWinFormsKeys((int)Control.ModifierKeys), out long LocationID);
 
                             Viking.UI.Commands.Command command = action.CreateCommand(Parent,
                                 Store.Locations.GetObjectByID(LocationID), WorldPosition);
@@ -702,7 +705,7 @@ namespace WebAnnotation
                 return;
             }
 
-            GridVector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
 
             if (PenPath == null)
             {
@@ -719,7 +722,7 @@ namespace WebAnnotation
                     try
                     {
                         LocationAction action = actionSupportedObj.GetPenContactActionForPositionOnAnnotation(WorldPosition,
-                            CurrentSectionNumber, Control.ModifierKeys, out long LocationID);
+                            CurrentSectionNumber, Viking.Input.ModifierKeysConverter.FromWinFormsKeys((int)Control.ModifierKeys), out long LocationID);
 
                         if (actionSupportedObj is LocationCanvasView viewObj)
                         {
@@ -781,7 +784,7 @@ namespace WebAnnotation
                 return;
             }
 
-            GridVector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
             LastMouseMoveVolumeCoords = WorldPosition;
 
             if (e.Erase || e.Inverted)
@@ -811,12 +814,12 @@ namespace WebAnnotation
         /// <summary>
         /// Begin recording the path of the cursor
         /// </summary>
-        protected void StartPenPath(GridVector2 origin)
+        protected void StartPenPath(Geometry.Vector2 origin)
         {
             AnnotationOverlayPenFreeDrawCommandV2 cmd = new(Parent,
                 Color.Yellow,
                 Global.DefaultClosedLineWidth,
-                (object sender, GridVector2[] points) =>
+                (object sender, Geometry.Vector2[] points) =>
                 {
                     AnnotationOverlayPenFreeDrawCommandV2 sender_cmd = (AnnotationOverlayPenFreeDrawCommandV2)sender;
 
@@ -850,7 +853,7 @@ namespace WebAnnotation
         /// intersected to determine the possible interactions.  We then present the options to the user to confirm.
         /// </summary>
         /// <param name="path"></param>
-        protected void OnPenPathCompleted(AnnotationOverlayPenFreeDrawCommandV2 sender_cmd, GridVector2[] path)
+        protected void OnPenPathCompleted(AnnotationOverlayPenFreeDrawCommandV2 sender_cmd, Geometry.Vector2[] path)
         {
             List<IAction> actions = sender_cmd.PossibleActions == null ? new List<IAction>() : [.. sender_cmd.PossibleActions];
             if (path.Length < 2)
@@ -865,7 +868,7 @@ namespace WebAnnotation
                 IAction new_action = null;
                 if (sender_cmd.Path.HasSelfIntersection)
                 {
-                    new_action = new WebAnnotation.UI.Actions.Create2DStructureAction(System.Convert.ToInt64(favoriteStructureID), new GridPolygon(sender_cmd.Path.SimplifiedFirstLoop.EnsureClosedRing()), CurrentSectionNumber);
+                    new_action = new WebAnnotation.UI.Actions.Create2DStructureAction(System.Convert.ToInt64(favoriteStructureID), new Polygon(sender_cmd.Path.SimplifiedFirstLoop.EnsureClosedRing()), CurrentSectionNumber);
                 }
                 else
                 {
@@ -882,16 +885,16 @@ namespace WebAnnotation
 
 
             /*
-            GridRectangle bounding_rect = path.BoundingBox();
+            Rectangle bounding_rect = path.BoundingBox();
 
             IShape2D shape = null;
             if(path.IsValidClosedRing())
             {
-                shape = new GridPolygon(path);
+                shape = new Polygon(path);
             }
             else
             {
-                shape = new GridPolyline(path, AllowSelfIntersection: true); 
+                shape = new Polyline(path, AllowSelfIntersection: true); 
             }
 
             var intersected = this.ObjectsAtPosition(bounding_rect).Where(i => (i as IPenActionSupport) != null).Select(i => (IPenActionSupport)i).ToArray();
@@ -926,7 +929,7 @@ namespace WebAnnotation
 
         }
 
-        protected void OnPenPathCompleted(object sender, GridVector2[] Path) =>
+        protected void OnPenPathCompleted(object sender, Geometry.Vector2[] Path) =>
             /*
 * TODO: If the path is a valid shape for the last editted annotation we should continue the last trace. 
 if(CanContinueLastTrace)
@@ -1274,8 +1277,8 @@ break;
                 StructureType type = new(typeObj);
                 bool StructureNeedsParent = type.ParentID.HasValue;
                 System.Drawing.Point ClientPoint = _Parent.PointToClient(System.Windows.Forms.Control.MousePosition);
-                GridVector2 WorldPos = _Parent.ScreenToWorld(ClientPoint.X, ClientPoint.Y);
-                bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(WorldPos, out GridVector2 SectionPos);
+                Geometry.Vector2 WorldPos = _Parent.ScreenToWorld(ClientPoint.X, ClientPoint.Y);
+                bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(WorldPos, out Geometry.Vector2 SectionPos);
                 Debug.Assert(success);
                 if (!success)
                 {
@@ -1331,7 +1334,7 @@ break;
             }
         }
 
-        public static void QueuePlacementCommandForCircleStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 worldPos, GridVector2 sectionPos, System.Drawing.Color typecolor, bool SaveToStore)
+        public static void QueuePlacementCommandForCircleStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, Geometry.Vector2 worldPos, Geometry.Vector2 sectionPos, System.Drawing.Color typecolor, bool SaveToStore)
         {
             Parent.CommandQueue.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent,
                     typecolor,
@@ -1346,13 +1349,13 @@ break;
                                     if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } })});
         }
 
-        public static void QueuePlacementCommandForOpenCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
+        public static void QueuePlacementCommandForOpenCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, Geometry.Vector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
         {
             double LineWidth = 16.0;
             if (Global.PenMode)
             {
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceOpenCurveWithPenCommand), new object[] { Parent, typecolor, origin,  LineWidth,
-                                                            new ControlPointCommandBase.OnCommandSuccess((object sender, GridVector2[] points) => {
+                                                            new ControlPointCommandBase.OnCommandSuccess((object sender, Geometry.Vector2[] points) => {
                                                                     PlaceOpenCurveWithPenCommand cmd = (PlaceOpenCurveWithPenCommand)sender;
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
@@ -1362,7 +1365,7 @@ break;
             else
             {
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceOpenCurveCommand), new object[] { Parent, typecolor, origin,  LineWidth,
-                                                            new ControlPointCommandBase.OnCommandSuccess((object sender, GridVector2[] points) => {
+                                                            new ControlPointCommandBase.OnCommandSuccess((object sender, Geometry.Vector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
@@ -1370,13 +1373,13 @@ break;
             }
         }
 
-        public static void QueuePlacementCommandForClosedCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
+        public static void QueuePlacementCommandForClosedCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, Geometry.Vector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
         {
             double LineWidth = 16.0;
             if (Global.PenMode)//Parent.FindForm() is WebAnnotation.UI.Forms.PenAnnotationViewForm)
             {
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveWithPenCommand), new object[] { Parent, typecolor, origin, LineWidth,
-                                                            new ControlPointCommandBase.OnCommandSuccess((object sender, GridVector2[] points) => {
+                                                            new ControlPointCommandBase.OnCommandSuccess((object sender, Geometry.Vector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
@@ -1385,7 +1388,7 @@ break;
             else
             {
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
-                                                            new ControlPointCommandBase.OnCommandSuccess((object sender, GridVector2[] points) => {
+                                                            new ControlPointCommandBase.OnCommandSuccess((object sender, Geometry.Vector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
@@ -1394,13 +1397,13 @@ break;
 
         }
 
-        public static void QueuePlacementCommandForPolygonStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
+        public static void QueuePlacementCommandForPolygonStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, Geometry.Vector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
         {
             double LineWidth = 16.0;
             if (Global.PenMode)//Parent.FindForm() is WebAnnotation.UI.Forms.PenAnnotationViewForm)
             {
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveWithPenCommand), new object[] { Parent, typecolor, origin, LineWidth,
-                                                            new ControlPointCommandBase.OnCommandSuccess((object sender, GridVector2[] points) => {
+                                                            new ControlPointCommandBase.OnCommandSuccess((object sender, Geometry.Vector2[] points) => {
                                                                     PlaceClosedCurveWithPenCommand cmd = sender as PlaceClosedCurveWithPenCommand;
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
@@ -1411,7 +1414,7 @@ break;
 
 
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
-                                                            new ControlPointCommandBase.OnCommandSuccess((object sender, GridVector2[] points) => {
+                                                            new ControlPointCommandBase.OnCommandSuccess((object sender, Geometry.Vector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
                                                                     if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } }) });
@@ -1528,7 +1531,7 @@ break;
                 return;
             }
 
-            bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(LastMouseMoveVolumeCoords, out GridVector2 SectionPos);
+            bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(LastMouseMoveVolumeCoords, out Geometry.Vector2 SectionPos);
             Debug.Assert(success);
             if (!success)
             {
@@ -1560,11 +1563,11 @@ break;
         protected void OnContinueLastTrace()
         {
             System.Drawing.Point ClientPoint = _Parent.PointToClient(System.Windows.Forms.Control.MousePosition);
-            GridVector2 WorldPos = _Parent.ScreenToWorld(ClientPoint.X, ClientPoint.Y);
+            Geometry.Vector2 WorldPos = _Parent.ScreenToWorld(ClientPoint.X, ClientPoint.Y);
             OnContinueLastTrace(WorldPos);
         }
 
-        protected void OnContinueLastTrace(GridVector2 WorldPos)
+        protected void OnContinueLastTrace(Geometry.Vector2 WorldPos)
         {
             if (!Global.LastEditedAnnotationID.HasValue)
             {
@@ -1809,11 +1812,59 @@ break;
         protected void OnLocationLinksCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             SortedSet<int> changedSections = ChangedSectionsInLocationLinkCollection(e);
+            if (LocationLinkCollectionHasUnresolvedEndpoint(e))
+                AddVisibleSectionsForUnresolvedLinks(changedSections);
+
             foreach (int section in changedSections)
             {
                 SectionAnnotationsView SLVModel = GetOrCreateAnnotationsForSection(section);
                 SLVModel?.OnLocationLinksStoreChanged(sender, e);
             }
+        }
+
+        /// <summary>
+        /// True when a link arrived before one or both endpoints are in the location store.
+        /// Those links cannot be routed by section Z until the locations exist.
+        /// </summary>
+        private static bool LocationLinkCollectionHasUnresolvedEndpoint(NotifyCollectionChangedEventArgs e)
+        {
+            return LinkListHasUnresolvedEndpoint(e.NewItems) || LinkListHasUnresolvedEndpoint(e.OldItems);
+        }
+
+        private static bool LinkListHasUnresolvedEndpoint(System.Collections.IList listObjs)
+        {
+            if (listObjs == null)
+                return false;
+
+            for (int iObj = 0; iObj < listObjs.Count; iObj++)
+            {
+                if (listObjs[iObj] is not LocationLinkObj locLink)
+                    continue;
+
+                LocationObj locA = Store.Locations.GetObjectByID(locLink.A, false);
+                LocationObj locB = Store.Locations.GetObjectByID(locLink.B, false);
+                if (locA == null || locB == null)
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Deliver unresolved links to the section on screen (and its references) so they can be held.
+        /// </summary>
+        private void AddVisibleSectionsForUnresolvedLinks(SortedSet<int> changedSections)
+        {
+            if (_Parent?.Section == null)
+                return;
+
+            changedSections.Add(_Parent.Section.Number);
+            Viking.VolumeModel.Section above = _Parent.Section.ReferenceSectionAbove;
+            Viking.VolumeModel.Section below = _Parent.Section.ReferenceSectionBelow;
+            if (above != null)
+                changedSections.Add(above.Number);
+            if (below != null)
+                changedSections.Add(below.Number);
         }
 
         /// <summary>
@@ -1856,14 +1907,14 @@ break;
             RequestCurrentSectionAnnotationsLoad();
         }
 
-        private GridRectangle LastVisibleWorldBounds;
+        private Rectangle LastVisibleWorldBounds;
         private double LastCameraDownsample;
 
         /// <summary>
         /// Visible world bounds and downsample the last time annotations were loaded.
         /// Used to avoid reloading on every zoom/pan; we only reload when visible area changes or magnification changes by a factor of 2.
         /// </summary>
-        private GridRectangle? LastLoadVisibleWorldBounds;
+        private Rectangle? LastLoadVisibleWorldBounds;
         private double LastLoadDownsample;
 
         /// <summary>
@@ -1882,7 +1933,7 @@ break;
                 return false;
             if (LastLoadDownsample == 0)
                 return true;
-            GridRectangle bounds = Parent.Scene.VisibleWorldBounds;
+            Rectangle bounds = Parent.Scene.VisibleWorldBounds;
             double downsample = Parent.Camera.Downsample;
             if (bounds != LastLoadVisibleWorldBounds)
                 return true;
@@ -2130,7 +2181,7 @@ break;
 
             Matrix ViewProjMatrix = scene.Camera.View * scene.Projection;
 
-            GridRectangle Bounds = scene.VisibleWorldBounds;
+            Rectangle Bounds = scene.VisibleWorldBounds;
 
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
@@ -2360,7 +2411,7 @@ break;
                 (byte)(alpha));
         }
 
-        public LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, Keys ModifierKeys, out long LocationID) => throw new NotImplementedException();
+        public LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID) => throw new NotImplementedException();
 
         public List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new NotImplementedException();//If we didn't overlap an existing annotation then create a new structure/*if(interaction_log.All(e => e.Annotation == null))
 

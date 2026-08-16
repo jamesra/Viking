@@ -6,11 +6,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Viking.Common;
-using Viking.UI;
 
 namespace Viking
 {
-    internal class LocalTextureCacheEntry : CacheEntry<string>
+    public class LocalTextureCacheEntry : CacheEntry<string>
     {
         public LocalTextureCacheEntry(string filename)
             : this(new FileInfo(filename))
@@ -32,7 +31,7 @@ namespace Viking
     /// <summary>
     /// This class manages all requests for textures
     /// </summary>
-    class LocalTextureCache : TimeQueueCache<string, LocalTextureCacheEntry, byte[], Stream>
+    public class LocalTextureCache : TimeQueueCache<string, LocalTextureCacheEntry, byte[], Stream>
     {
         private static readonly ConcurrentDictionary<string, SemaphoreSlim> FileLocks = new(StringComparer.OrdinalIgnoreCase);
 
@@ -66,8 +65,8 @@ namespace Viking
         public LocalTextureCache()
         {
             //Create the cache directory if it does not exist
-            if (System.IO.Directory.Exists(State.CachePath) == false)
-                System.IO.Directory.CreateDirectory(State.CachePath);
+            if (System.IO.Directory.Exists(TileLoadEnvironment.CachePath) == false)
+                System.IO.Directory.CreateDirectory(TileLoadEnvironment.CachePath);
 
             //Search the cache directory and create a list of existing files
             //            string[] dirs = System.IO.Directory.GetDirectories(State.CachePath);

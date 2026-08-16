@@ -1,3 +1,4 @@
+using Viking.AnnotationServiceTypes;
 using Viking.AnnotationServiceTypes.Interfaces;
 using ODataClient.ConnectomeDataModel;
 using System;
@@ -17,14 +18,21 @@ namespace AnnotationVizLib.OData
 
         public string Label => structure.Label;
 
-        public ICollection<IStructureLink> Links
+        public IReadOnlyDictionary<string, string> Attributes =>
+            ObjAttribute.Parse(structure.Tags).ToDictionary(a => a.Name, a => a.Value);
+
+        public double Confidence => 0;
+
+        public string Notes => null;
+
+        public ICollection<IStructureLinkKey> Links
         {
             get
             {
                 List<StructureLink> links = [.. structure.SourceOfLinks];
                 links.AddRange(structure.TargetOfLinks);
 
-                return [.. links.Select(l => new ODataStructureLinkAdapter(l))];
+                return [.. links.Select(l => (IStructureLinkKey)new StructureLinkKey(new ODataStructureLinkAdapter(l)))];
             }
         }
 

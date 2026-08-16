@@ -83,7 +83,7 @@ namespace Geometry
             throw new FormatException($"Unable to parse WKT {input}"); ;
         }
 
-        internal static GridVector2 ParsePointParameters(string coords)
+        internal static Vector2 ParsePointParameters(string coords)
         {
             var m = single_coord_regex.Match(coords);
             if (m.Success == false)
@@ -91,17 +91,17 @@ namespace Geometry
 
             double X = System.Convert.ToDouble(m.Groups["X"].Value);
             double Y = System.Convert.ToDouble(m.Groups["Y"].Value);
-            return new GridVector2(X, Y);
+            return new Vector2(X, Y);
         }
 
-        internal static List<GridVector2> ParsePointsFromParameters(string coords)
+        internal static List<Vector2> ParsePointsFromParameters(string coords)
         {
             var m = coord_list_regex.Match(coords);
 
             if (m.Success == false)
                 throw new FormatException($"Cannot parse WKT to point {coords}");
 
-            List<GridVector2> points = new(m.Groups["coords"].Captures.Count);
+            List<Vector2> points = new(m.Groups["coords"].Captures.Count);
             foreach (var val in m.Groups["coords"].Captures)
             {
                 var p = ParsePointParameters(val.ToString());
@@ -129,9 +129,9 @@ namespace Geometry
         {
             var points = ParsePointsFromParameters(coords);
             if (points.Count == 2)
-                return new GridLineSegment(points[0], points[1]);
+                return new LineSegment(points[0], points[1]);
 
-            return new GridPolyline(points);
+            return new Polyline(points);
         }
 
         internal static IShape2D ParseMultiPolylineParameters(string coords)
@@ -149,16 +149,16 @@ namespace Geometry
             return lineCollection;
         }
 
-        internal static GridPolygon ParsePolygonParameters(string coords)
+        internal static Polygon ParsePolygonParameters(string coords)
         {
             var matchedParenthesis = ParseParenListFromParameters(coords);
-            GridPolygon poly = null;
+            Polygon poly = null;
 
             foreach (var coordList in matchedParenthesis)
             {
                 var p = ParsePointsFromParameters(coordList);
                 if (poly is null)
-                    poly = new GridPolygon(p);
+                    poly = new Polygon(p);
                 else
                     poly.AddInteriorRing(p);
             }
@@ -173,7 +173,7 @@ namespace Geometry
         /// </summary>
         /// <param name="coords"></param>
         /// <returns></returns>
-        internal static GridCircle ParseCurvePolygonParameters(string coords)
+        internal static Circle ParseCurvePolygonParameters(string coords)
         {
             var matchedParenthesis = ParseParenListFromParameters(coords);
 
@@ -181,7 +181,7 @@ namespace Geometry
             {
                 var p = ParsePointsFromParameters(coordList);
                 var bRect = p.BoundingBox();
-                return new GridCircle(bRect.Center, bRect.Width / 2.0);
+                return new Circle(bRect.Center, bRect.Width / 2.0);
             }
 
             return default;

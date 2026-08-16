@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using RoundLineCode;
@@ -13,6 +14,9 @@ using VikingXNAGraphics;
 using VikingXNAWinForms;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -24,7 +28,7 @@ namespace WebAnnotation.UI.Commands
         /// <summary>
         /// Where the origin of the line used for rendering UI feedback is
         /// </summary>
-        private readonly GridVector2 OriginPosition = GetOriginForLocation(existingLoc);
+        private readonly Geometry.Vector2 OriginPosition = GetOriginForLocation(existingLoc);
         private LocationObj? NearestTarget = null;
 
         /// <summary>
@@ -32,7 +36,7 @@ namespace WebAnnotation.UI.Commands
         /// Adjacent locations often do not display exactly where they are located so this is a quick way
         /// of tracking where the user is seeing the adjacent location rendered so we can draw a line to it.
         /// </summary>
-        private GridRectangle NearestTargetBoundingBox = default;
+        private Rectangle NearestTargetBoundingBox = default;
 
         public string[] HelpStrings => [ "Left Mouse Button Release over annotation from the same structure: Link locations to indicate morphological connection",
                                       "Left Mouse Button Release over annotation from different structure: Link structures to indicate relationship connection, for example Pre- & Post- Synaptic densities",
@@ -40,7 +44,7 @@ namespace WebAnnotation.UI.Commands
 
         public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
 
-        private static GridVector2 GetOriginForLocation(LocationObj obj)
+        private static Geometry.Vector2 GetOriginForLocation(LocationObj obj)
         {
             return obj.TypeCode switch
             {
@@ -52,13 +56,13 @@ namespace WebAnnotation.UI.Commands
             };
         }
 
-        private static GridVector2 Midpoint(GridVector2[] array)
+        private static Geometry.Vector2 Midpoint(Geometry.Vector2[] array)
         {
             int i = array.Length / 2;
             return array[i];
         }
 
-        public static IViewLocation FindBestLinkCandidate(SectionAnnotationsView sectionView, GridVector2 WorldPos, LocationObj OriginObj, out GridRectangle rectBestMatchBBox)
+        public static IViewLocation FindBestLinkCandidate(SectionAnnotationsView sectionView, Geometry.Vector2 WorldPos, LocationObj OriginObj, out Rectangle rectBestMatchBBox)
         {
             if (sectionView is null)
             {
@@ -102,7 +106,7 @@ namespace WebAnnotation.UI.Commands
         /// <param name="WorldPos"></param>
         /// <param name="candidateBoundingBox">The bounding box of the candidate we selected, used to improve UI feedback</param>
         /// <returns>The identity of the best candidate</returns>
-        protected IViewLocation FindBestLinkCandidate(GridVector2 WorldPos, out GridRectangle candidateBoundingBox)
+        protected IViewLocation FindBestLinkCandidate(Geometry.Vector2 WorldPos, out Rectangle candidateBoundingBox)
         {
             candidateBoundingBox = default;
             SectionAnnotationsView sectionView = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
@@ -111,9 +115,9 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
-            IViewLocation nearestVisible = FindBestLinkCandidate(WorldPos, out GridRectangle boundingBox);
+            IViewLocation nearestVisible = FindBestLinkCandidate(WorldPos, out Rectangle boundingBox);
             NearestTarget = TrySetTarget(nearestVisible, boundingBox);
 
             base.OnMouseMove(sender, e);
@@ -125,7 +129,7 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="NearestTarget"></param>
         /// <returns></returns>
-        private LocationObj TrySetTarget(IViewLocation nearest, in GridRectangle targetBoundingRect)
+        private LocationObj TrySetTarget(IViewLocation nearest, in Rectangle targetBoundingRect)
         {
             if (nearest != null)
             {
@@ -169,10 +173,10 @@ namespace WebAnnotation.UI.Commands
             //Figure out if we've clicked another structure and create the structure
             if (e.Button.Left())
             {
-                GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+                Geometry.Vector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
                 //Find if we are close enough to a location to "snap" the line to the target
-                IViewLocation nearest = FindBestLinkCandidate(WorldPos, out GridRectangle boundingBox);
+                IViewLocation nearest = FindBestLinkCandidate(WorldPos, out Rectangle boundingBox);
                 NearestTarget = TrySetTarget(nearest, boundingBox);
 
                 if (NearestTarget is null)
@@ -224,10 +228,10 @@ namespace WebAnnotation.UI.Commands
             base.OnMouseUp(sender, e);
         }
 
-        public static bool TryCreateLink(SectionAnnotationsView sectionView, GridVector2 WorldPos, LocationObj OriginObj)
+        public static bool TryCreateLink(SectionAnnotationsView sectionView, Geometry.Vector2 WorldPos, LocationObj OriginObj)
         {
             //Find if we are close enough to a location to "snap" the line to the target
-            IViewLocation nearest = FindBestLinkCandidate(sectionView, WorldPos, OriginObj, out GridRectangle _);
+            IViewLocation nearest = FindBestLinkCandidate(sectionView, WorldPos, OriginObj, out Rectangle _);
             LocationObj NearestTarget = nearest != null ? Store.Locations[nearest.ID] : null;
             if (NearestTarget is null)
             {
@@ -319,7 +323,7 @@ namespace WebAnnotation.UI.Commands
             if (NearestTarget != null)
             {
                 //Snap the line to a nearby target if it exists
-                GridVector2 targetPos = NearestTargetBoundingBox.Center; //GetOriginForLocation(NearestTarget);
+                Geometry.Vector2 targetPos = NearestTargetBoundingBox.Center; //GetOriginForLocation(NearestTarget);
 
                 target = new Vector3((float)targetPos.X, (float)targetPos.Y, 0f);
             }

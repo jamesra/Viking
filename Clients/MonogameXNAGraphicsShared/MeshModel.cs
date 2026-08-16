@@ -8,13 +8,15 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
     public interface IMeshModel<VERTEXTYPE>
          where VERTEXTYPE : struct, IVertexType
     {
-        VERTEXTYPE[] Verticies { get; }
+        VERTEXTYPE[] Vertices { get; }
         int[] Edges { get; }
     }
 
@@ -29,7 +31,7 @@ namespace VikingXNAGraphics
         }
 
         private VERTEXTYPE[] _verticies;
-        public VERTEXTYPE[] Verticies
+        public VERTEXTYPE[] Vertices
         {
             get => _verticies;
             set { _verticies = value; _bufferDirty = true; }
@@ -133,22 +135,22 @@ namespace VikingXNAGraphics
         /// <returns></returns>
         public int AppendVerticies(ICollection<VERTEXTYPE> input)
         {
-            if (Verticies is null)
+            if (Vertices is null)
             {
-                Verticies = [.. input];
+                Vertices = [.. input];
                 return 0;
             }
 
-            int iInsert = Verticies.Length;
+            int iInsert = Vertices.Length;
 
             /////////////////////////
             //Extend our vertex array
-            //VERTEXTYPE[] newVerts = new VERTEXTYPE[input.Count + Verticies.Length];
-            //Array.Copy(Verticies, newVerts, Verticies.Length);
-            Verticies = Verticies.AddRange([.. input]);
+            //VERTEXTYPE[] newVerts = new VERTEXTYPE[input.Count + Vertices.Length];
+            //Array.Copy(Vertices, newVerts, Vertices.Length);
+            Vertices = Vertices.AddRange([.. input]);
             /////////////////////////
 
-            //Array.Copy(input.ToArray(), 0, Verticies, iInsert, input.Count);
+            //Array.Copy(input.ToArray(), 0, Vertices, iInsert, input.Count);
 
             return iInsert;
         }
@@ -166,9 +168,9 @@ namespace VikingXNAGraphics
             }
         }
 
-        public GridVector3 Position
+        public Geometry.Vector3 Position
         {
-            get => _modelMatrix.Translation.ToGridVector3();
+            get => _modelMatrix.Translation.ToVector3();
 
             set => _modelMatrix.Translation = value.ToXNAVector3();
         }
@@ -190,16 +192,16 @@ namespace VikingXNAGraphics
 
         public float Alpha
         {
-            get => Verticies.First().Color.GetAlpha();
+            get => Vertices.First().Color.GetAlpha();
 
             set
             {
                 if (value != Alpha)
                 {
                     Color newColor = this.Color.SetAlpha(value);
-                    for (int i = 0; i < Verticies.Length; i++)
+                    for (int i = 0; i < Vertices.Length; i++)
                     {
-                        Verticies[i].Color = newColor;
+                        Vertices[i].Color = newColor;
                     }
                     InvalidateBuffers();
                 }
@@ -208,15 +210,15 @@ namespace VikingXNAGraphics
 
         public Color Color
         {
-            get => Verticies.First().Color;
+            get => Vertices.First().Color;
 
             set
             {
                 if (value != Color)
                 {
-                    for (int i = 0; i < Verticies.Length; i++)
+                    for (int i = 0; i < Vertices.Length; i++)
                     {
-                        Verticies[i].Color = value;
+                        Vertices[i].Color = value;
                     }
                     InvalidateBuffers();
                 }
@@ -236,16 +238,16 @@ namespace VikingXNAGraphics
 
         public float Alpha
         {
-            get => Verticies.First().Color.GetAlpha();
+            get => Vertices.First().Color.GetAlpha();
 
             set
             {
                 if (value != Alpha)
                 {
                     Color newColor = this.Color.SetAlpha(value);
-                    for (int i = 0; i < Verticies.Length; i++)
+                    for (int i = 0; i < Vertices.Length; i++)
                     {
-                        Verticies[i].Color = newColor;
+                        Vertices[i].Color = newColor;
                     }
                     InvalidateBuffers();
                 }
@@ -254,15 +256,15 @@ namespace VikingXNAGraphics
 
         public Color Color
         {
-            get => Verticies.First().Color;
+            get => Vertices.First().Color;
 
             set
             {
                 if (value != Color)
                 {
-                    for (int i = 0; i < Verticies.Length; i++)
+                    for (int i = 0; i < Vertices.Length; i++)
                     {
-                        Verticies[i].Color = value;
+                        Vertices[i].Color = value;
                     }
                     InvalidateBuffers();
                 }

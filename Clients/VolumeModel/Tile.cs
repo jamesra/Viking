@@ -5,8 +5,8 @@ namespace Viking.VolumeModel
     public interface ITile
     {
         ITransform Transform { get; }
-        GridRectangle SourceBounds { get; }
-        GridRectangle TargetBounds { get; }
+        Rectangle SourceBounds { get; }
+        Rectangle TargetBounds { get; }
 
     }
 
@@ -16,7 +16,7 @@ namespace Viking.VolumeModel
     public class Tile : ITile
     {
         public ITransform Transform { get; }
-        public GridRectangle SourceBounds { get; }
-        public GridRectangle TargetBounds { get; }
+        public Rectangle SourceBounds { get; }
+        public Rectangle TargetBounds { get; }
     }
 }

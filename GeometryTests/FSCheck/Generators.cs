@@ -32,17 +32,17 @@ namespace GeometryTests.FSCheck
         public static Gen<TriangulationMesh<IVertex2D>> GenMesh(int nVerts)
         {
             /*
-            return GridVector2Generators.Fresh().ArrayOf(nVerts)
+            return Vector2Generators.Fresh().ArrayOf(nVerts)
                 .Where(points => points.Distinct().Count() == points.Length)
                 .Select(verts => GenericDelaunayMeshGenerator2D<IVertex2D>
                 .TriangulateToMesh(verts.Select(v => new TriangulationVertex(v)).ToArray(), OnProgress));            
                 */
 
 
-            return GridVector2Generators.GenDistinctPoints(nVerts)
+            return Vector2Generators.GenDistinctPoints(nVerts)
                 .Select(verts => GenericDelaunayMeshGenerator2D<IVertex2D>
                 .TriangulateToMesh([.. verts.Select(v => new TriangulationVertex(v))], OnProgress));
-            //return GridVector2Generators.GenPoints().Select(verts => GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(verts.Select(v => new Vertex2D(v)).ToArray()));
+            //return Vector2Generators.GenPoints().Select(verts => GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(verts.Select(v => new Vertex2D(v)).ToArray()));
         }
 
         public static Gen<TriangulationMesh<IVertex2D>> RandomMesh() => Gen.Sized(size => GenMesh(size));
@@ -57,12 +57,12 @@ namespace GeometryTests.FSCheck
         /// <returns></returns>
         public static IEnumerable<TriangulationMesh<IVertex2D>> MeshShrinker(TriangulationMesh<IVertex2D> mesh)
         {
-            IVertex2D[] verts = [.. mesh.Verticies];
+            IVertex2D[] verts = [.. mesh.Vertices];
 
-            for (int i = mesh.Verticies.Count - 1; i >= 0; i--)
+            for (int i = mesh.Vertices.Count - 1; i >= 0; i--)
             {
                 /*
-                Vertex2D[] fewer_verts = new Vertex2D[mesh.Verticies.Count - 1];
+                Vertex2D[] fewer_verts = new Vertex2D[mesh.Vertices.Count - 1];
                 Array.Copy(verts, fewer_verts, i);
                 Array.Copy(verts, i+1, fewer_verts, i, fewer_verts.Length - i);
 
@@ -83,9 +83,9 @@ namespace GeometryTests.FSCheck
         /// <returns></returns>
         public static TriangulationMesh<IVertex2D> RemoveMeshVert(TriangulationMesh<IVertex2D> mesh, int i)
         {
-            IVertex2D[] verts = [.. mesh.Verticies];
+            IVertex2D[] verts = [.. mesh.Vertices];
 
-            Vertex2D[] fewer_verts = new Vertex2D[mesh.Verticies.Count - 1];
+            Vertex2D[] fewer_verts = new Vertex2D[mesh.Vertices.Count - 1];
             Array.Copy(verts, fewer_verts, i);
             Array.Copy(verts, i + 1, fewer_verts, i, fewer_verts.Length - i);
 
@@ -129,7 +129,7 @@ namespace GeometryTests.FSCheck
             }
 
             //Attempt to shrink the mesh
-            for (int i = model.mesh.Verticies.Count - 1; i >= 0; i--)
+            for (int i = model.mesh.Vertices.Count - 1; i >= 0; i--)
             {
                 yield return RemoveModelMeshVert(model, i);
             }
@@ -181,11 +181,11 @@ namespace GeometryTests.FSCheck
         /*
         public static Gen<TriangulationMesh<Vertex2D>> GenMesh(int nVerts)
         {
-            return GridVector2Generators.Fresh().ArrayOf(nVerts)
+            return Vector2Generators.Fresh().ArrayOf(nVerts)
                 .Where(points => points.Distinct().Count() == points.Length)
                 .Select(verts => GenericDelaunayMeshGenerator2D<Vertex2D>
                 .TriangulateToMesh(verts.Select(v => new Vertex2D(v)).ToArray()));
-            //return GridVector2Generators.GenPoints().Select(verts => GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(verts.Select(v => new Vertex2D(v)).ToArray()));
+            //return Vector2Generators.GenPoints().Select(verts => GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(verts.Select(v => new Vertex2D(v)).ToArray()));
         }
 
         public static Gen<TriangulationMesh<Vertex2D>> RandomMesh()
@@ -205,11 +205,11 @@ namespace GeometryTests.FSCheck
         /// <returns></returns>
         public static IEnumerable<TriangulationMesh<Vertex2D>> MeshShrinker(TriangulationMesh<Vertex2D> mesh)
         {
-            Vertex2D[] verts = mesh.Verticies.ToArray();
+            Vertex2D[] verts = mesh.Vertices.ToArray();
 
-            for (int i = mesh.Verticies.Count - 1; i >= 0; i--)
+            for (int i = mesh.Vertices.Count - 1; i >= 0; i--)
             {
-                Vertex2D[] fewer_verts = new Vertex2D[mesh.Verticies.Count - 1];
+                Vertex2D[] fewer_verts = new Vertex2D[mesh.Vertices.Count - 1];
                 Array.Copy(verts, fewer_verts, i);
                 Array.Copy(verts, i + 1, fewer_verts, i, fewer_verts.Length - i);
 

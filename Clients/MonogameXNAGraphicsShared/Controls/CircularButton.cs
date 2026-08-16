@@ -1,6 +1,9 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using System;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics.Controls
 {
@@ -27,7 +30,7 @@ namespace VikingXNAGraphics.Controls
         public InputDeviceEventConsumerDelegate OnClick { get; set; } = null;
 
 
-        public GridCircle Circle
+        public Circle Circle
         {
             get => circleView.Circle;
             set => circleView.Circle = value;
@@ -40,7 +43,7 @@ namespace VikingXNAGraphics.Controls
         /// <param name="color"></param>
         /// <param name="action"></param>
         /// <returns></returns>
-        public static CircularButton CreateSimple(GridCircle circle, Microsoft.Xna.Framework.Color color, Action action)
+        public static CircularButton CreateSimple(Circle circle, Microsoft.Xna.Framework.Color color, Action action)
         {
             CircularButton obj = new(circle, color)
             {
@@ -73,14 +76,14 @@ namespace VikingXNAGraphics.Controls
                 this.OnClick = OnClick;
         }
 
-        public CircularButton(GridCircle circle, Microsoft.Xna.Framework.Color color, InputDeviceEventConsumerDelegate OnClick = null)
+        public CircularButton(Circle circle, Microsoft.Xna.Framework.Color color, InputDeviceEventConsumerDelegate OnClick = null)
         {
             this.circleView = new CircleView(circle, color);
             if (OnClick != null)
                 this.OnClick += OnClick;
         }
 
-        public GridRectangle BoundingBox => circleView.Circle.BoundingBox;
+        public Rectangle BoundingBox => circleView.Circle.BoundingBox;
 
         public Color Color
         {
@@ -93,7 +96,7 @@ namespace VikingXNAGraphics.Controls
             set => circleView.Alpha = value;
         }
 
-        public bool Contains(GridVector2 Position) => Circle.Intersects(Position);
+        public bool Contains(Geometry.Vector2 Position) => Circle.Intersects(Position);
 
     }
 }

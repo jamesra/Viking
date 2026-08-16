@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Duende.IdentityServer.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -21,19 +22,16 @@ namespace Viking.Identity.Server.WebManagement.Extensions
             foreach (var s in context.Result.ValidatedRequest.ValidatedResources.Resources.ApiScopes)
             {
                 Trace.WriteLine(s.Name);
-                var parts = s.Name.Split('.');
-                string ResourceName;
-                string ScopeName;
-                if (parts.Length != 2)
-                {
+                if (!ResourceScopeNames.TryParse(s.Name, out var resourceName, out var encodedPermission))
                     continue;
-                }
 
-                ResourceName = parts[0];
-                ScopeName = parts[1];
+                if (string.Equals(resourceName, "Viking", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var permissionId = ResourceScopeNames.ToPermissionId(encodedPermission);
 
                 // Prefer Volume/SegmentationService when names collide with Group/OrgUnit (e.g. "Yiu").
-                var resource = await _context.FindApiFacingResourceAsync(ResourceName);
+                var resource = await _context.FindApiFacingResourceAsync(resourceName);
                 if (resource == null || (resource.ResourceTypeId != nameof(Volume) && resource.ResourceTypeId != nameof(SegmentationService)))
                     continue;
 
@@ -45,7 +43,7 @@ namespace Viking.Identity.Server.WebManagement.Extensions
                     return;
                 }
 
-                if(false == await _context.IsUserPermitted(resource.Id, user.Id, ScopeName))
+                if(false == await _context.IsUserPermitted(resource.Id, user.Id, permissionId))
                 {
                     context.Result.IsError = true;
                     context.Result.Error = $"{user.UserName} does not have access to scope {s.Name}";

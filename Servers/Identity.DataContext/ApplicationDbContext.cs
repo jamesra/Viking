@@ -185,8 +185,9 @@ namespace Viking.Identity.Data
                AnonymousGroup
             });
 
-            // Note: UserToGroupAssignment for Everyone group will be created when first user registers
-            // Anonymous group has virtual membership (no UserToGroupAssignment rows)
+            // Everyone and Anonymous both have virtual membership in RecursiveMemberOfGroups.
+            // Explicit UserToGroupAssignment for Everyone is also created on registration (and CreateUser)
+            // for UI/reporting; Anonymous has no assignment rows.
         }
 
 
@@ -221,6 +222,13 @@ namespace Viking.Identity.Data
             var passwordHash = _passwordHasher.HashPassword(user, password);
             user.SecurityStamp = Guid.NewGuid().ToString();
             user.PasswordHash = passwordHash;
+
+            // Match AccountController registration: every user is a member of Everyone.
+            this.UserToGroupAssignments.Add(new UserToGroupAssignment
+            {
+                UserId = userId,
+                GroupId = Special.Groups.Everyone
+            });
 
             return userId;
         }

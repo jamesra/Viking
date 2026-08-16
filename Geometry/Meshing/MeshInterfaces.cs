@@ -44,12 +44,12 @@ namespace Geometry.Meshing
 
     public interface IVertex2D : IVertex, IComparable<IVertex2D>, IEquatable<IVertex2D>
     {
-        GridVector2 Position { get; }
+        Vector2 Position { get; }
     }
 
     public interface INormal
     {
-        GridVector3 Normal { get; }
+        Vector3 Normal { get; }
     }
 
     public interface IVertex2D<out T> : IVertex2D
@@ -60,8 +60,8 @@ namespace Geometry.Meshing
 
     public interface IVertex3D : IVertex, INormal, IComparable<IVertex3D>, IEquatable<IVertex3D>
     {
-        GridVector3 Position { get; set; }
-        new GridVector3 Normal { get; set; }
+        Vector3 Position { get; set; }
+        new Vector3 Normal { get; set; }
     }
 
     public interface IVertex3D<out T> : IVertex3D
@@ -91,7 +91,7 @@ namespace Geometry.Meshing
         /// <param name="mesh">Mesh containing the indexed verticies</param>
         /// <param name="origin_edge">Edge connected vertex indicating the origin line.  Throws an argument exception if the edge doesn't exist.</param>
         /// <param name="clockwise">True if edges should be returned in clockwise order.  Default is counter-clockwise.</param>
-        /// <returns>Indicies of partner verticies in sorted order.</returns>
+        /// <returns>Indices of partner verticies in sorted order.</returns>
         IEnumerable<long> EdgesByAngle(IComparer<IEdgeKey> comparer, long origin_edge, bool clockwise);
     }
 

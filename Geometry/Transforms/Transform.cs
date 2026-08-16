@@ -7,51 +7,51 @@ namespace Geometry.Transforms
     [Serializable]
     public class IdentityTransform : Geometry.IContinuousTransform
     {
-        public bool CanInverseTransform(in GridVector2 Point) => true;
+        public bool CanInverseTransform(in Vector2 Point) => true;
 
-        public bool CanTransform(in GridVector2 Point) => true;
+        public bool CanTransform(in Vector2 Point) => true;
 
-        public GridVector2[] InverseTransform(in GridVector2[] Points)
+        public Vector2[] InverseTransform(in Vector2[] Points)
         {
-            GridVector2[] transformedP = new GridVector2[Points.Length];
+            Vector2[] transformedP = new Vector2[Points.Length];
             Points.CopyTo(transformedP, 0);
             return transformedP;
         }
 
-        public GridVector2 InverseTransform(in GridVector2 Point) => Point;
+        public Vector2 InverseTransform(in Vector2 Point) => Point;
 
-        public GridVector2[] Transform(in GridVector2[] Points)
+        public Vector2[] Transform(in Vector2[] Points)
         {
-            GridVector2[] transformedP = new GridVector2[Points.Length];
+            Vector2[] transformedP = new Vector2[Points.Length];
             Points.CopyTo(transformedP, 0);
             return transformedP;
         }
 
-        public GridVector2 Transform(in GridVector2 Point) => Point;
+        public Vector2 Transform(in Vector2 Point) => Point;
 
-        public void Translate(in GridVector2 vector) => throw new NotImplementedException();
+        public void Translate(in Vector2 vector) => throw new NotImplementedException();
 
-        public bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] transformedP)
+        public bool[] TryInverseTransform(in Vector2[] Points, out Vector2[] transformedP)
         {
-            transformedP = new GridVector2[Points.Length];
+            transformedP = new Vector2[Points.Length];
             Points.CopyTo(transformedP, 0);
             return [.. transformedP.Select(p => true)];
         }
 
-        public bool TryInverseTransform(in GridVector2 Point, out GridVector2 v)
+        public bool TryInverseTransform(in Vector2 Point, out Vector2 v)
         {
             v = Point;
             return true;
         }
 
-        public bool[] TryTransform(in GridVector2[] Points, out GridVector2[] transformedP)
+        public bool[] TryTransform(in Vector2[] Points, out Vector2[] transformedP)
         {
-            transformedP = new GridVector2[Points.Length];
+            transformedP = new Vector2[Points.Length];
             Points.CopyTo(transformedP, 0);
             return [.. transformedP.Select(p => true)];
         }
 
-        public bool TryTransform(in GridVector2 Point, out GridVector2 v)
+        public bool TryTransform(in Vector2 Point, out Vector2 v)
         {
             v = Point;
             return true;
@@ -72,23 +72,23 @@ namespace Geometry.Transforms
                 return "Transform Base, No Info";
         }
 
-        public abstract bool CanTransform(in GridVector2 Point);
-        public abstract GridVector2 Transform(in GridVector2 Point);
-        public abstract GridVector2[] Transform(in GridVector2[] Points);
-        public abstract bool TryTransform(in GridVector2 Point, out GridVector2 v);
-        public abstract bool[] TryTransform(in GridVector2[] Points, out GridVector2[] v);
+        public abstract bool CanTransform(in Vector2 Point);
+        public abstract Vector2 Transform(in Vector2 Point);
+        public abstract Vector2[] Transform(in Vector2[] Points);
+        public abstract bool TryTransform(in Vector2 Point, out Vector2 v);
+        public abstract bool[] TryTransform(in Vector2[] Points, out Vector2[] v);
 
-        public abstract bool CanInverseTransform(in GridVector2 Point);
-        public abstract GridVector2 InverseTransform(in GridVector2 Point);
-        public abstract GridVector2[] InverseTransform(in GridVector2[] Points);
-        public abstract bool TryInverseTransform(in GridVector2 Point, out GridVector2 v);
-        public abstract bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] v);
+        public abstract bool CanInverseTransform(in Vector2 Point);
+        public abstract Vector2 InverseTransform(in Vector2 Point);
+        public abstract Vector2[] InverseTransform(in Vector2[] Points);
+        public abstract bool TryInverseTransform(in Vector2 Point, out Vector2 v);
+        public abstract bool[] TryInverseTransform(in Vector2[] Points, out Vector2[] v);
 
         /// <summary>
         /// Adjust the output of the transform by the following vector
         /// </summary>
         /// <param name="vector"></param>
-        public abstract void Translate(GridVector2 vector);
+        public abstract void Translate(Vector2 vector);
 
         protected TransformBase(TransformBasicInfo info)
         {
@@ -131,12 +131,12 @@ namespace Geometry.Transforms
         /// <param name="BtoC"></param>
         /// <param name="AtoB"></param>
         /// <returns></returns>
-        public static MappingGridVector2[] TransformControlPoints(this IContinuousTransform BtoC, MappingGridVector2[] AtoB) => [.. AtoB.Select(mp => new MappingGridVector2(BtoC.Transform(mp.ControlPoint), mp.MappedPoint))];
+        public static MappingVector2[] TransformControlPoints(this IContinuousTransform BtoC, MappingVector2[] AtoB) => [.. AtoB.Select(mp => new MappingVector2(BtoC.Transform(mp.ControlPoint), mp.MappedPoint))];
         public static IContinuousTransform TransformTransform(this IContinuousTransform BtoC, ITransformControlPoints AtoB)
         {
             StosTransformInfo BtoCInfo = ((ITransformInfo)BtoC)?.Info as StosTransformInfo;
             StosTransformInfo AtoBInfo = ((ITransformInfo)AtoB)?.Info as StosTransformInfo;
-            MappingGridVector2[] newControlPoints = BtoC.TransformControlPoints(AtoB.MapPoints);
+            MappingVector2[] newControlPoints = BtoC.TransformControlPoints(AtoB.MapPoints);
             IContinuousTransform rbfTransform = new RBFTransform(newControlPoints,
                 StosTransformInfo.Merge(AtoBInfo, BtoCInfo));
             return rbfTransform;
@@ -149,7 +149,7 @@ namespace Geometry.Transforms
 
             StosTransformInfo AtoCInfo = StosTransformInfo.Merge(AtoBInfo, BtoCInfo);
 
-            MappingGridVector2[] newControlPoints = BtoC.TransformControlPoints(AtoB.MapPoints);
+            MappingVector2[] newControlPoints = BtoC.TransformControlPoints(AtoB.MapPoints);
 
             if (transformType == typeof(RBFTransform))
             {

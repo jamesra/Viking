@@ -11,16 +11,8 @@ namespace AnnotationVizLibTests
 
     public static class GraphTestShared
     {
-        public static string WCFEndpoint =    "https://webdev1.codepharm.net/RC1Test/Annotation/Annotate.svc";
         public static string ODataEndpoint =  "https://webdev1.codepharm.net/RC1Test/OData/";
         public static string ExportEndpoint = "https://webdev1.codepharm.net/RC1Test/Export/";
-        public static System.Net.NetworkCredential userCredentials;
-
-        static GraphTestShared()
-        {
-            userCredentials = new System.Net.NetworkCredential("jamesan", "4%w%o06");
-        }
-
 
         internal static double[] DistancesToDesmosomesForSubgraph(MorphologyGraph cell_graph) =>
             // TODO: This method uses internal APIs and non-existent methods
@@ -102,11 +94,11 @@ namespace AnnotationVizLibTests
 
         public static void TestMorphologyGraphBoundingBox(MorphologyGraph graph)
         {
-            Geometry.GridBox bbox = graph.BoundingBox;
+            Geometry.Box bbox = graph.BoundingBox;
 
             //Ensure the bbox contains all of the centers of the morphology nodes
-            GridVector3[] centers = [.. graph.Nodes.Select(n => n.Value.Center)];
-            GridBox node_center_bbox = GridBox.GetBoundingBox(centers);
+            Vector3[] centers = [.. graph.Nodes.Select(n => n.Value.Center)];
+            Box node_center_bbox = Box.GetBoundingBox(centers);
 
             Assert.IsTrue(bbox.Contains(node_center_bbox));
         }
@@ -193,50 +185,6 @@ namespace AnnotationVizLibTests
         public static void InitializeSharedGraph(TestContext testContext)
         {
 
-        }
-
-        [TestMethod]
-        public void TestSaveLoadGraph()
-        {
-            SharedGraph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
-            Assert.IsNotNull(SharedGraph);
-            Assert.IsTrue(!SharedGraph.Subgraphs.IsEmpty);
-
-            string SavedGraphFullPath = "C:\\Temp\\180.bin";
-
-            GraphTestShared.SaveGraph(SavedGraphFullPath, SharedGraph);
-
-            MorphologyGraph loadedGraph = GraphTestShared.LoadGraph(SavedGraphFullPath);
-
-            Assert.IsNotNull(loadedGraph);
-            Assert.Equals(SharedGraph.Nodes.Count, loadedGraph.Nodes.Count);
-            Assert.Equals(SharedGraph.Edges.Count, loadedGraph.Edges.Count);
-
-            foreach (MorphologyNode n in SharedGraph.Nodes.Values)
-            {
-                Assert.IsTrue(loadedGraph.Nodes.ContainsKey(n.Key));
-                Assert.AreEqual(n.Edges.Count, loadedGraph.Nodes[n.Key].Edges.Count);
-            }
-        }
-
-        [TestMethod]
-        public void TestDistanceMeasurement()
-        {
-            SharedGraph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
-            Assert.IsNotNull(SharedGraph);
-            Assert.IsTrue(!SharedGraph.Subgraphs.IsEmpty);
-
-            SharedGraph.ConnectIsolatedSubgraphs();
-            var subgraphs = MorphologyGraph.IsolatedSubgraphs(SharedGraph.Subgraphs.Values.First());
-            Assert.AreEqual(1, subgraphs.Count);
-
-            MorphologyGraph cell_graph = SharedGraph.Subgraphs.Values.First();
-
-            double[] distances = GraphTestShared.DistancesToDesmosomesForSubgraph(cell_graph);
-
-            double avg_distance = distances.Average();
-            double max_distance = distances.Max();
-            Console.WriteLine("Avg distance to synapse component: {0}", avg_distance);
         }
 
         [TestMethod]
@@ -548,11 +496,11 @@ namespace AnnotationVizLibTests
         [TestMethod]
         public void TestMorphologyGraphBoundingBox()
         {
-            Geometry.GridBox bbox = SharedGraph.BoundingBox;
+            Geometry.Box bbox = SharedGraph.BoundingBox;
 
             //Ensure the bbox contains all of the centers of the morphology nodes
-            GridVector3[] centers = SharedGraph.Subgraphs.First().Value.Nodes.Select(n => n.Value.Center).ToArray();
-            GridBox node_center_bbox = GridBox.GetBoundingBox(centers);
+            Vector3[] centers = SharedGraph.Subgraphs.First().Value.Nodes.Select(n => n.Value.Center).ToArray();
+            Box node_center_bbox = Box.GetBoundingBox(centers);
 
             Assert.IsTrue(bbox.Contains(node_center_bbox));
         }
@@ -640,101 +588,6 @@ namespace AnnotationVizLibTests
             Console.WriteLine("Avg distance to synapse component: {0}", avg_distance);
         }
         */
-    }
-
-    /// <summary>
-    /// Summary description for MotifGraphTest
-    /// </summary>
-    [TestClass]
-    public class WCFMorphologyGraphTest
-    {
-        public WCFMorphologyGraphTest()
-        {
-        }
-
-        private TestContext testContextInstance;
-
-        /// <summary>
-        ///Gets or sets the test context which provides
-        ///information about and functionality for the current test run.
-        ///</summary>
-        public TestContext TestContext
-        {
-            get => testContextInstance;
-            set => testContextInstance = value;
-        }
-
-        #region Additional test attributes
-        //
-        // You can use the following additional attributes as you write your tests:
-        //
-        // Use ClassInitialize to run code before running the first test in the class
-        // [ClassInitialize()]
-        // public static void MyClassInitialize(TestContext testContext) { }
-        //
-        // Use ClassCleanup to run code after all tests in a class have run
-        // [ClassCleanup()]
-        // public static void MyClassCleanup() { }
-        //
-        // Use TestInitialize to run code before running each test 
-        // [TestInitialize()]
-        // public void MyTestInitialize() { }
-        //
-        // Use TestCleanup to run code after each test has run
-        // [TestCleanup()]
-        // public void MyTestCleanup() { }
-        //
-        #endregion
-
-        /// <summary>
-        /// A Shared graph instance we can load once.  It should not be changed by tests
-        /// </summary>
-        static MorphologyGraph SharedGraph = null;
-        // Use ClassInitialize to run code before running the first test in the class
-        [ClassInitialize()]
-        public static void InitializeSharedGraph(TestContext testContext)
-        {
-
-            SharedGraph = AnnotationVizLib.WCFClient.WCFMorphologyFactory.FromWCF(new long[] { 180 }, true, GraphTestShared.WCFEndpoint, GraphTestShared.userCredentials);
-            Assert.IsNotNull(SharedGraph);
-            Assert.IsTrue(!SharedGraph.Subgraphs.IsEmpty);
-
-            SharedGraph.ConnectIsolatedSubgraphs();
-            var subgraphs = MorphologyGraph.IsolatedSubgraphs(SharedGraph.Subgraphs.Values.First());
-            Assert.AreEqual(1, subgraphs.Count);
-
-        }
-
-        public static UnitsAndScale.Scale DefaultScale()
-        {
-            return new UnitsAndScale.Scale(new UnitsAndScale.AxisUnits(2.18, "nm"),
-                                      new UnitsAndScale.AxisUnits(2.18, "nm"),
-                                      new UnitsAndScale.AxisUnits(90, "nm"));
-        }
-
-        [TestMethod]
-        public void GenerateWCFMorphologyGraph()
-        {
-            StructureMorphologyColorMap colormap = AnnotationVizLibTests.TestUtils.LoadColorMap("Resources/ExportColorMapping");
-
-            MorphologyTLPView tlpGraph = AnnotationVizLib.MorphologyTLPView.ToTLP(SharedGraph, DefaultScale(), colormap, GraphTestShared.ExportEndpoint);
-
-            string TLPFileFullPath = "C:\\Temp\\180_WCF.tlp";
-
-            tlpGraph.SaveTLP(TLPFileFullPath);
-        }
-
-        /// <summary>
-        /// Test measuring distance along a process, or distance between two types of child graphs.
-        /// </summary>
-        [TestMethod]
-        public void TestBranchTerminalProcessSelection() => GraphTestShared.TestBranchAndTerminalProcessSelection(SharedGraph.Subgraphs.First().Value);
-
-        [TestMethod]
-        public void TestMorphologyGraphBoundingBox() => GraphTestShared.TestMorphologyGraphBoundingBox(SharedGraph.Subgraphs.First().Value);
-
-
-
     }
 
 

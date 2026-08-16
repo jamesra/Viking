@@ -68,13 +68,13 @@ namespace gRPCAnnotationService.Protos
                 ParentId = src.ParentId.HasValue ? src.ParentId.Value : 0,
                 Created = ToUtcTimestamp(src.Created),
                 LastModified = ToUtcTimestamp(src.LastModified),
-                Notes = src.Notes,
-                Username = src.Username,
+                Notes = src.Notes ?? string.Empty,
+                Username = src.Username ?? string.Empty,
                 Attributes = src.Tags ?? string.Empty,
                 Abstract = src.Abstract,
-                Code = src.Code,
+                Code = src.Code ?? string.Empty,
                 Color = unchecked((uint)src.Color),
-                Name = src.Name,
+                Name = src.Name ?? string.Empty,
                 StructureAttributes = src.StructureTags ?? string.Empty,
                 //Markuptype = src.MarkupType
             };

@@ -170,8 +170,8 @@ namespace Viking.VolumeModel
 
         #endregion
 
-        protected virtual TilePyramid VisibleTiles(GridRectangle VisibleBounds,
-                                                GridQuad? SectionVisibleBounds,
+        protected virtual TilePyramid VisibleTiles(Rectangle VisibleBounds,
+                                                Quad? SectionVisibleBounds,
                                                 double DownSample)
         {
             TilePyramid VisibleTiles = new(VisibleBounds);
@@ -179,12 +179,12 @@ namespace Viking.VolumeModel
             double scaledDownsampleLevel = AdjustDownsampleForScale(DownSample);
 
             //Setup a larger boundary outside of which we release textures
-            GridRectangle releaseBounds = VisibleBounds; //Tiles outside this quad will have textures released
-            GridRectangle loadBounds = VisibleBounds;  //Tiles inside this quad will have textures loaded
-            GridRectangle abortBounds = VisibleBounds; //Tiles outside this quad will have HTTP requests aborted
-            releaseBounds = GridRectangle.Scale(releaseBounds, 1.25 * scaledDownsampleLevel);
-            loadBounds = GridRectangle.Scale(loadBounds, 1.1f);
-            abortBounds = GridRectangle.Scale(abortBounds, 1.20f * scaledDownsampleLevel);
+            Rectangle releaseBounds = VisibleBounds; //Tiles outside this quad will have textures released
+            Rectangle loadBounds = VisibleBounds;  //Tiles inside this quad will have textures loaded
+            Rectangle abortBounds = VisibleBounds; //Tiles outside this quad will have HTTP requests aborted
+            releaseBounds = Rectangle.Scale(releaseBounds, 1.25 * scaledDownsampleLevel);
+            loadBounds = Rectangle.Scale(loadBounds, 1.1f);
+            abortBounds = Rectangle.Scale(abortBounds, 1.20f * scaledDownsampleLevel);
 
             //Get ready by loading a smaller texture in case the user scrolls this direction 
             //Once we have smaller textures then increase the quality
@@ -220,9 +220,9 @@ namespace Viking.VolumeModel
                     {
                         if (T_Info.Info is TileTransformInfo info)
                         {
-                            GridVector2[] corners =
+                            Vector2[] corners =
                             [
-                                GridVector2.Zero,
+                                Vector2.Zero,
                                 new(info.ImageWidth, 0),
                                 new(0, info.ImageHeight),
                                 new(info.ImageWidth, info.ImageHeight)

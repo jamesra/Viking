@@ -13,17 +13,19 @@ using System.Linq;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
     class DelaunayTetrahedronView
     {
-        public GridPolygon[] Polygons = null;
+        public Polygon[] Polygons = null;
         public double[] PolyZ = null;
 
         public List<Mesh3D> meshes = [];
 
-        public DelaunayTetrahedronView(GridPolygon[] polys, double[] Z)
+        public DelaunayTetrahedronView(Polygon[] polys, double[] Z)
         {
             Polygons = polys;
             PolyZ = Z;
@@ -38,7 +40,7 @@ namespace MonogameTestbed
             {
                 var map = Polygons[iPoly].CreatePointToPolyMap();
                 double Z = PolyZ[iPoly];
-                listPoints.AddRange(map.Keys.Select((Func<GridVector2, MIVector3>)(k => new MIVector3((GridVector3)k.ToGridVector3(Z), (PolygonIndex)new PolygonIndex((int)iPoly, (int?)map[(GridVector2)k].iInnerPoly, (int)map[(GridVector2)k].iVertex, (IReadOnlyList<GridPolygon>)Polygons)))));
+                listPoints.AddRange(map.Keys.Select((Func<Geometry.Vector2, MIVector3>)(k => new MIVector3((Geometry.Vector3)k.ToVector3(Z), (PolygonIndex)new PolygonIndex((int)iPoly, (int?)map[(Geometry.Vector2)k].InnerShapeIndex, (int)map[(Geometry.Vector2)k].VertexIndex, (IReadOnlyList<Polygon>)Polygons)))));
             }
 
             DelaunayTriangulation<MIVector3, DefaultTriangulationCell<MIVector3>> tri = MIConvexHull.DelaunayTriangulation<MIConvexHullExtensions.MIVector3, DefaultTriangulationCell<MIVector3>>.Create(listPoints, 1e-10);
@@ -49,7 +51,7 @@ namespace MonogameTestbed
 
             Mesh3D mesh = new();
 
-            Dictionary<GridVector3, int> vertexLookup = [];
+            Dictionary<Geometry.Vector3, int> vertexLookup = [];
 
             foreach (MIVector3 v in listPoints)
             {
@@ -68,7 +70,7 @@ namespace MonogameTestbed
                 bool SkipCell = false;
                 foreach (Combo<MIVector3> combo in cell.Vertices.CombinationPairs())
                 {
-                    GridLineSegment line = new(combo.A.P, combo.B.P);
+                    LineSegment line = new(combo.A.P.XY(), combo.B.P.XY());
 
                     PolygonIndex A = cell.Vertices[combo.iA].PolyIndex;
                     PolygonIndex B = cell.Vertices[combo.iB].PolyIndex;
@@ -94,14 +96,14 @@ namespace MonogameTestbed
                 foreach (int[] face in faceIndicies)
                 {
                     //All edges of the triangle must be on the surface or we ignore the face.
-                    GridVector3[] faceVerts = [.. face.Select(i => cell.Vertices[i].P)];
+                    Geometry.Vector3[] faceVerts = [.. face.Select(i => cell.Vertices[i].P)];
                     int[] faceMeshIndicies = [.. faceVerts.Select(p => vertexLookup[p])];
 
                     bool FaceOnSurface = true;
                     int OnSurfaceCount = 0;
                     foreach (Combo<int> combo in face.CombinationPairs())
                     {
-                        GridLineSegment line = new(cell.Vertices[combo.A].P, cell.Vertices[combo.B].P);
+                        LineSegment line = new(cell.Vertices[combo.A].P.XY(), cell.Vertices[combo.B].P.XY());
                         PolygonIndex A = cell.Vertices[combo.A].PolyIndex;
                         PolygonIndex B = cell.Vertices[combo.B].PolyIndex;
 
@@ -138,7 +140,7 @@ namespace MonogameTestbed
 
                         foreach (Combo<int> combo in face.CombinationPairs())
                         {
-                            var line = new GridLineSegment(cell.Vertices[combo.A].P, cell.Vertices[combo.B].P);
+                            var line = new LineSegment(cell.Vertices[combo.A].P, cell.Vertices[combo.B].P);
                             PointIndex A = cell.Vertices[combo.A].PolyIndex;
                             PointIndex B = cell.Vertices[combo.B].PolyIndex;
 
@@ -160,7 +162,7 @@ namespace MonogameTestbed
                        //Wraparound to zero to close the cycle for the face
                        //int next = i + 1 == cell.Vertices.Length ? 0 : i + 1;
 
-                       var line = new GridLineSegment(cell.Vertices[i].P, cell.Vertices[j].P);
+                       var line = new LineSegment(cell.Vertices[i].P, cell.Vertices[j].P);
                        PointIndex A = cell.Vertices[i].PolyIndex;
                        PointIndex B = cell.Vertices[j].PolyIndex;
 
@@ -210,12 +212,12 @@ namespace MonogameTestbed
             */
         }
 
-        public static bool LineCrossesEmptySpace(PolygonIndex APoly, PolygonIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint, double[] PolyZ)
+        public static bool LineCrossesEmptySpace(PolygonIndex APoly, PolygonIndex BPoly, Polygon[] Polygons, Geometry.Vector2 midpoint, double[] PolyZ)
         {
-            GridPolygon A = Polygons[APoly.iPoly];
-            GridPolygon B = Polygons[BPoly.iPoly];
+            Polygon A = Polygons[APoly.ShapeIndex];
+            Polygon B = Polygons[BPoly.ShapeIndex];
 
-            if (APoly.iPoly != BPoly.iPoly)
+            if (APoly.ShapeIndex != BPoly.ShapeIndex)
             {
                 bool midInA = A.Contains(midpoint);
                 bool midInB = B.Contains(midpoint);
@@ -226,7 +228,7 @@ namespace MonogameTestbed
                 }
 
                 //If we connect two polygons on the same Z level we know the line crosses empty space
-                if (PolyZ[APoly.iPoly] == PolyZ[BPoly.iPoly])
+                if (PolyZ[APoly.ShapeIndex] == PolyZ[BPoly.ShapeIndex])
                 {
                     return true;
                 }
@@ -242,12 +244,12 @@ namespace MonogameTestbed
             return false;
         }
 
-        private static Color GetColorForLine(PolygonIndex APoly, PolygonIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint)
+        private static Color GetColorForLine(PolygonIndex APoly, PolygonIndex BPoly, Polygon[] Polygons, Geometry.Vector2 midpoint)
         {
-            GridPolygon A = Polygons[APoly.iPoly];
-            GridPolygon B = Polygons[BPoly.iPoly];
+            Polygon A = Polygons[APoly.ShapeIndex];
+            Polygon B = Polygons[BPoly.ShapeIndex];
 
-            if (APoly.iPoly != BPoly.iPoly)
+            if (APoly.ShapeIndex != BPoly.ShapeIndex)
             {
                 bool midInA = A.Contains(midpoint);
                 bool midInB = B.Contains(midpoint);
@@ -312,14 +314,14 @@ namespace MonogameTestbed
                     }
                 }
             }
-            else if (APoly.iPoly == BPoly.iPoly)
+            else if (APoly.ShapeIndex == BPoly.ShapeIndex)
             {
                 bool midInA = A.Contains(midpoint);
                 bool midInB = midInA;
 
-                if (PolygonIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.iPoly]))
+                if (PolygonIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.ShapeIndex]))
                 {
-                    return Color.White;//PolyPointsView[APoly.iPoly].Color;
+                    return Color.White;//PolyPointsView[APoly.ShapeIndex].Color;
 
                 }
 
@@ -329,7 +331,7 @@ namespace MonogameTestbed
                 }
                 else
                 {
-                    bool LineIntersectsAnyOtherPoly = Polygons.Where((p, iP) => iP != APoly.iPoly).Any(p => p.Contains(midpoint));
+                    bool LineIntersectsAnyOtherPoly = Polygons.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Contains(midpoint));
                     if (APoly.IsInner ^ BPoly.IsInner)
                     {
                         //Two options, the line is outside other shapes or inside other shapes.
@@ -400,21 +402,21 @@ namespace MonogameTestbed
             };
             this.meshView = new MeshView<VertexPositionNormalColor>();
 
-            labelCamera = new LabelView("", new GridVector2(0, 100));
+            labelCamera = new LabelView("", new Geometry.Vector2(0, 100));
 
             AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData([.. TroubleIDS.Select(id => (long)id)], true, DataSource.EndpointMap[Endpoint.TEST]);
 
             AnnotationVizLib.MorphologyNode[] nodes = [.. graph.Nodes.Values];
 
-            GridPolygon[] polygons = [.. nodes.Select(n => n.Geometry.ToPolygon())];
+            Polygon[] polygons = [.. nodes.Select(n => n.Geometry.ToPolygon())];
             double[] polyZ = [.. nodes.Select(n => n.Z)];
             polygons.AddPointsAtAllIntersections();
 
             DelaunayTetrahedronView tetraView = new(polygons, polyZ);
 
-            GridBox bbox = tetraView.meshes.First().BoundingBox;
+            Box bbox = tetraView.meshes.First().BoundingBox;
 
-            this.Scene.Camera.Position = (bbox.CenterPoint - new GridVector3(bbox.Width / 2.0, bbox.Height / 2.0, 0)).ToXNAVector3();
+            this.Scene.Camera.Position = (bbox.CenterPoint - new Geometry.Vector3(bbox.Width / 2.0, bbox.Height / 2.0, 0)).ToXNAVector3();
             //this.Scene.Camera.Position = (bbox.CenterPoint * 0.9).ToXNAVector3();
             //this.Scene.Camera.Position = new Vector3(this.Scene.Camera.Position.X, this.Scene.Camera.Position.Y, -this.Scene.Camera.Position.Z);
             //            this.Scene.Camera.Position = bbox.CenterPoint.ToXNAVector3();
@@ -474,8 +476,8 @@ namespace MonogameTestbed
                 this.Scene.Camera.Position = new Vector3(0, -10, 0);
             }
 
-            GridVector3 VolumePosition = Scene.Camera.Position.ToGridVector3();
-            VolumePosition /= new GridVector3(2.18, 2.18, -90);
+            Geometry.Vector3 VolumePosition = Scene.Camera.Position.ToVector3();
+            VolumePosition /= new Geometry.Vector3(2.18, 2.18, -90);
 
             labelCamera.Text = string.Format("{0}\n{1}\n{2}", Scene.Camera.Position, VolumePosition, Scene.Camera.Rotation);
 

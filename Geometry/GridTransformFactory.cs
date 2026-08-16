@@ -40,7 +40,7 @@ namespace Geometry.Transforms
             string[] controlDims = lines[4].Split(new char[] { ' ','\t'}, StringSplitOptions.RemoveEmptyEntries);
             string[] mappedDims = lines[5].Split(new char[] { ' ','\t' }, StringSplitOptions.RemoveEmptyEntries);
             
-            GridRectangle MappedBounds = new GridRectangle();
+            Rectangle MappedBounds = new Rectangle();
 
             double left, right, bottom, top;
             left = (System.Convert.ToDouble(controlDims[0]) * pixelSpacing);
@@ -48,14 +48,14 @@ namespace Geometry.Transforms
             bottom = (System.Convert.ToDouble(controlDims[1]) * pixelSpacing);
             top = bottom + (System.Convert.ToDouble(controlDims[3]) * pixelSpacing);
               
-            GridRectangle ControlBounds = new GridRectangle(left, right, bottom, top);
+            Rectangle ControlBounds = new Rectangle(left, right, bottom, top);
 
             left = (int)(System.Convert.ToDouble(mappedDims[0]) * pixelSpacing);
             right = left + (int)(System.Convert.ToDouble(mappedDims[2]) * pixelSpacing);
             bottom = (int)(System.Convert.ToDouble(mappedDims[1]) * pixelSpacing);
             top = bottom + (int)(System.Convert.ToDouble(mappedDims[3]) * pixelSpacing);
 
-            MappedBounds = new GridRectangle(left, right, bottom, top);
+            MappedBounds = new Rectangle(left, right, bottom, top);
             
             string[] parts = lines[6].Split(new char[] {' '}, StringSplitOptions.RemoveEmptyEntries);
 
@@ -78,7 +78,7 @@ namespace Geometry.Transforms
             }
 
             Debug.Assert(iFixedParameters > 0 && iVariableParameters > 0, "StosGridTransform::ParseGridTransform");
-            MappingGridVector2[] mapPoints = null;
+            MappingVector2[] mapPoints = null;
 
             switch (parts[0].ToLower())
             {
@@ -99,31 +99,31 @@ namespace Geometry.Transforms
             return new GridTransform(mapPoints, MappedBounds, ControlBounds); 
         } 
         
-        private static List<MappingGridVector2> ParseRotateTranslateAffineTransform(string[] parts,
+        private static List<MappingVector2> ParseRotateTranslateAffineTransform(string[] parts,
             float pixelSpacing,
             int iFixedParameters,
             int iVariableParameters,
-            GridRectangle MappedBounds, 
-            GridRectangle ControlBounds)
+            Rectangle MappedBounds, 
+            Rectangle ControlBounds)
         {
             
             //Find the dimensions of the grid
-            List<MappingGridVector2> mappings = new List<MappingGridVector2>();
+            List<MappingVector2> mappings = new List<MappingVector2>();
     */
     /*
-    GridVector2[] Points = new GridVector2[4];
-    GridVector2[] mappedPoints = new GridVector2[4];
-    GridVector2[] ctrlPoints = new GridVector2[4];
+    Vector2[] Points = new Vector2[4];
+    Vector2[] mappedPoints = new Vector2[4];
+    Vector2[] ctrlPoints = new Vector2[4];
 
-    Points[0] = new GridVector2(0, 0);
-    Points[1] = new GridVector2(MappedBounds.Width, 0);
-    Points[2] = new GridVector2(0, MappedBounds.Height);
-    Points[3] = new GridVector2(MappedBounds.Width, MappedBounds.Height);
+    Points[0] = new Vector2(0, 0);
+    Points[1] = new Vector2(MappedBounds.Width, 0);
+    Points[2] = new Vector2(0, MappedBounds.Height);
+    Points[3] = new Vector2(MappedBounds.Width, MappedBounds.Height);
 
-    ctrlPoints[0] = new GridVector2(0, 0);
-    ctrlPoints[1] = new GridVector2(ControlBounds.Width, 0);
-    ctrlPoints[2] = new GridVector2(0, ControlBounds.Height);
-    ctrlPoints[3] = new GridVector2(ControlBounds.Width, ControlBounds.Height);
+    ctrlPoints[0] = new Vector2(0, 0);
+    ctrlPoints[1] = new Vector2(ControlBounds.Width, 0);
+    ctrlPoints[2] = new Vector2(0, ControlBounds.Height);
+    ctrlPoints[3] = new Vector2(ControlBounds.Width, ControlBounds.Height);
 
     Matrix mat = Matrix.Identity;
     mat.M11 = System.Convert.ToSingle(parts[iVariableParameters + 2]);
@@ -157,10 +157,10 @@ namespace Geometry.Transforms
     return mappings; 
 }
 
-private static List<MappingGridVector2> ParseGridTransform(string[] parts, float pixelSpacing, int iFixedParameters, int iVariableParameters, GridRectangle MappedBounds)
+private static List<MappingVector2> ParseGridTransform(string[] parts, float pixelSpacing, int iFixedParameters, int iVariableParameters, Rectangle MappedBounds)
 {
     //Find the dimensions of the grid
-    List<MappingGridVector2> mappings = new List<MappingGridVector2>();
+    List<MappingVector2> mappings = new List<MappingVector2>();
 
     float MappedWidth = (float)MappedBounds.Width;
     float MappedHeight = (float)MappedBounds.Height; 
@@ -169,13 +169,13 @@ private static List<MappingGridVector2> ParseGridTransform(string[] parts, float
     int gridHeight = System.Convert.ToInt32(System.Convert.ToDouble(parts[iFixedParameters + 3]) + 1.0);
     double NumPts = gridHeight * gridWidth;
 
-    GridVector2[] Points = new GridVector2[System.Convert.ToInt32(NumPts)];
+    Vector2[] Points = new Vector2[System.Convert.ToInt32(NumPts)];
 
     int iPoints = iVariableParameters + 2; 
 
     for (int i = 0; i < NumPts; i++)
     {
-        GridVector2 P = new GridVector2(System.Convert.ToDouble(parts[iPoints + (i * 2)]) * pixelSpacing,
+        Vector2 P = new Vector2(System.Convert.ToDouble(parts[iPoints + (i * 2)]) * pixelSpacing,
                                         System.Convert.ToDouble(parts[iPoints + (i * 2) + 1]) * pixelSpacing);
         Points[i] = P;  
     }
@@ -185,10 +185,10 @@ private static List<MappingGridVector2> ParseGridTransform(string[] parts, float
         for (int x = 0; x < gridWidth; x++)
         {
             int i = x + (y * gridWidth);
-            GridVector2 controlPoint = Points[i];
-            GridVector2 mappedPoint = CoordinateFromGridPos(x, y, gridWidth, gridHeight, MappedWidth, MappedHeight);
+            Vector2 controlPoint = Points[i];
+            Vector2 mappedPoint = CoordinateFromGridPos(x, y, gridWidth, gridHeight, MappedWidth, MappedHeight);
 
-            mappings.Add(new MappingGridVector2(controlPoint, mappedPoint)); 
+            mappings.Add(new MappingVector2(controlPoint, mappedPoint)); 
         }
     }
 
@@ -218,9 +218,9 @@ static uint index_b(int j, int k)
 /// <param name="iVariableParameters"></param>
 /// <param name="MappedBounds"></param>
 /// <returns></returns>
-private static List<MappingGridVector2> ParsePolyTransform(string[] parts, float pixelSpacing, int iFixedParameters, int iVariableParameters, GridRectangle MappedBounds)
+private static List<MappingVector2> ParsePolyTransform(string[] parts, float pixelSpacing, int iFixedParameters, int iVariableParameters, Rectangle MappedBounds)
 {
-    List<MappingGridVector2> mappings = new List<MappingGridVector2>();
+    List<MappingVector2> mappings = new List<MappingVector2>();
 
     float MappedWidth = (float)MappedBounds.Width;
     float MappedHeight = (float)MappedBounds.Height; 
@@ -250,7 +250,7 @@ private static List<MappingGridVector2> ParsePolyTransform(string[] parts, float
 
     int NumPts = (int)(gridHeight * gridWidth);
 
-    GridVector2[] Points = new GridVector2[NumPts];
+    Vector2[] Points = new Vector2[NumPts];
 
     for (int iY = 0; iY < gridHeight; iY++)
     {
@@ -291,7 +291,7 @@ private static List<MappingGridVector2> ParsePolyTransform(string[] parts, float
 
 
 
-            Points[(iY * gridWidth) + iX] = new GridVector2((xmax * Sa * pixelSpacing), (ymax * Sb * pixelSpacing)); 
+            Points[(iY * gridWidth) + iX] = new Vector2((xmax * Sa * pixelSpacing), (ymax * Sb * pixelSpacing)); 
         }
     }
 
@@ -300,10 +300,10 @@ private static List<MappingGridVector2> ParsePolyTransform(string[] parts, float
         for (int x = 0; x < gridWidth; x++)
         {
             int i = x + (y * gridWidth);
-            GridVector2 controlPoint = Points[i];
-            GridVector2 mappedPoint = CoordinateFromGridPos(x, y, gridWidth, gridHeight, MappedWidth, MappedHeight);
+            Vector2 controlPoint = Points[i];
+            Vector2 mappedPoint = CoordinateFromGridPos(x, y, gridWidth, gridHeight, MappedWidth, MappedHeight);
 
-            mappings.Add(new MappingGridVector2(controlPoint, mappedPoint)); 
+            mappings.Add(new MappingVector2(controlPoint, mappedPoint)); 
         }
     }
 

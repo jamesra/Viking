@@ -73,9 +73,9 @@ namespace Viking.AnnotationServiceTypes.Interfaces
         /// </summary>
         LocationType TypeCode { get; set; }
           
-        GridVector3 VolumePosition { get; }
+        Vector3 VolumePosition { get; }
 
-        GridVector3 MosaicPosition { get; }
+        Vector3 MosaicPosition { get; }
          
         DateTime LastModified { get; }
 

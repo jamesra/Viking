@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -6,14 +7,16 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
 using VikingXNA;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
     public class RectangleView : BillboardViewBase, IHitTesting
     {
-        private GridRectangle _BoundingRect;
+        private Rectangle _BoundingRect;
 
-        public override GridRectangle BoundingRect
+        public override Rectangle BoundingRect
         {
             get => _BoundingRect;
             set
@@ -26,23 +29,23 @@ namespace VikingXNAGraphics
             }
         }
 
-        public override GridVector2 Position
+        public override Geometry.Vector2 Position
         {
             get => BoundingRect.Center;
 
             set
             {
-                GridVector2 Offset = BoundingRect.Center - BoundingRect.LowerLeft;
-                _BoundingRect = new GridRectangle(value - Offset, _BoundingRect.Width, _BoundingRect.Height);
+                Geometry.Vector2 Offset = BoundingRect.Center - BoundingRect.LowerLeft;
+                _BoundingRect = new Rectangle(value - Offset, _BoundingRect.Width, _BoundingRect.Height);
                 ClearCachedData();
             }
         }
 
         public override IShape2D Shape => BoundingRect;
 
-        public GridRectangle BoundingBox => BoundingRect;
+        public Rectangle BoundingBox => BoundingRect;
 
-        public RectangleView(GridRectangle boundingRect, Color color) : base(color)
+        public RectangleView(Rectangle boundingRect, Color color) : base(color)
         {
             this.BoundingRect = boundingRect;
         }
@@ -98,6 +101,6 @@ namespace VikingXNAGraphics
             device.BlendState = originalState;
         }
 
-        public bool Contains(GridVector2 Position) => BoundingRect.Contains(Position);
+        public bool Contains(Geometry.Vector2 Position) => BoundingRect.Contains(Position);
     }
 }

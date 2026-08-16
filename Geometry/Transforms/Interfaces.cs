@@ -10,19 +10,19 @@ namespace Geometry
     /// </summary>
     public interface ITransform
     {
-        GridVector2 Transform(in GridVector2 Point);
-        GridVector2[] Transform(in GridVector2[] Points);
+        Vector2 Transform(in Vector2 Point);
+        Vector2[] Transform(in Vector2[] Points);
 
-        GridVector2 InverseTransform(in GridVector2 Point);
-        GridVector2[] InverseTransform(in GridVector2[] Points);
+        Vector2 InverseTransform(in Vector2 Point);
+        Vector2[] InverseTransform(in Vector2[] Points);
 
-        bool CanTransform(in GridVector2 Point);
-        bool TryTransform(in Geometry.GridVector2 Point, out GridVector2 v);
-        bool[] TryTransform(in GridVector2[] Points, out GridVector2[] v);
+        bool CanTransform(in Vector2 Point);
+        bool TryTransform(in Geometry.Vector2 Point, out Vector2 v);
+        bool[] TryTransform(in Vector2[] Points, out Vector2[] v);
 
-        bool CanInverseTransform(in GridVector2 Point);
-        bool TryInverseTransform(in GridVector2 Point, out GridVector2 v);
-        bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] v);
+        bool CanInverseTransform(in Vector2 Point);
+        bool TryInverseTransform(in Vector2 Point, out Vector2 v);
+        bool[] TryInverseTransform(in Vector2[] Points, out Vector2[] v);
     }
 
     /// <summary>
@@ -30,9 +30,9 @@ namespace Geometry
     /// </summary>
     public interface IDiscreteTransform : ITransform
     {
-        GridRectangle ControlBounds { get; }
+        Rectangle ControlBounds { get; }
 
-        GridRectangle MappedBounds { get; }
+        Rectangle MappedBounds { get; }
 
         /// <summary>
         /// Find the edge which intersects the passed edge L.
@@ -44,7 +44,7 @@ namespace Geometry
         /// <param name="foundMapLine"></param>
         /// <param name="intersection">Intersection point</param>
         /// <returns>Distance to intersection or double.MaxValue if no intersection is found</returns>
-        double ConvexHullIntersection(GridLineSegment L, GridVector2 OutsidePoint, out GridLineSegment foundCtrlLine, out GridLineSegment foundMapLine, out GridVector2 intersection);
+        double ConvexHullIntersection(LineSegment L, Vector2 OutsidePoint, out LineSegment foundCtrlLine, out LineSegment foundMapLine, out Vector2 intersection);
 
     }
 
@@ -55,7 +55,7 @@ namespace Geometry
         /// we translate target by (x = 1, y = 0).  The source space at (0,0) now maps to (1,0) in target space.
         /// </summary>
         /// <param name="vector"></param>
-        void Translate(in GridVector2 vector);
+        void Translate(in Vector2 vector);
     }
 
     /// <summary>
@@ -63,14 +63,14 @@ namespace Geometry
     /// </summary>
     public interface ITransformControlPoints : ITransform
     {
-        MappingGridVector2[] MapPoints { get; }
+        MappingVector2[] MapPoints { get; }
 
-        List<MappingGridVector2> IntersectingControlRectangle(in GridRectangle gridRect);
+        List<MappingVector2> IntersectingControlRectangle(in Rectangle gridRect);
 
-        List<MappingGridVector2> IntersectingMappedRectangle(in GridRectangle gridRect);
+        List<MappingVector2> IntersectingMappedRectangle(in Rectangle gridRect);
 
-        GridRectangle ControlBounds { get; }
-        GridRectangle MappedBounds { get; }
+        Rectangle ControlBounds { get; }
+        Rectangle MappedBounds { get; }
     }
 
 
@@ -107,11 +107,6 @@ namespace Geometry
     public interface ITransformInfo
     {
         TransformBasicInfo Info { get; set; }
-    }
-
-    public interface IStosTransformInfo
-    {
-        Geometry.Transforms.StosTransformInfo Info { get; }
     }
 
     public interface IGridTransformInfo

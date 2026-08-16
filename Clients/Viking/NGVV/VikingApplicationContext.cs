@@ -29,6 +29,14 @@ namespace Viking
             }
 
             UI.State.MainThreadDispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+            TileLoadEnvironment.UiDispatcher = UI.State.MainThreadDispatcher;
+            TileLoadEnvironment.CachePath = UI.State.CachePath;
+            TileLoadEnvironment.GetDevice = () => UI.State.ViewerControl?.Device;
+            TileLoadEnvironment.GetVisibleWorldBounds = () => UI.State.ViewerControl?.Scene?.VisibleWorldBounds ?? default;
+            TileLoadEnvironment.GetSectionNumber = () => UI.State.ViewerControl?.Section?.Number ?? 0;
+            TileLoadEnvironment.VisibleTileSortIntervalMs = Viking.Properties.Settings.Default.VisibleTileSortIntervalMs;
+            TileLoadEnvironment.MinTexturesToLoadFromQueue = Viking.Properties.Settings.Default.MinTexturesToLoadFromQueue;
+            TileLoadEnvironment.TextureLoadingWindowMs = Viking.Properties.Settings.Default.TextureLoadingWindow;
 
             //Microsoft.Xna.Framework.Content.RootDirectory = "Content";
         }
@@ -145,6 +153,7 @@ namespace Viking
                 TextureReaderV2.SetMaxConcurrentRequestLimit(Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel.DefaultMaxConcurrentTextureRequests);
 
             UI.State.volume = new Viking.ViewModels.VolumeViewModel(Volume);
+            TileLoadEnvironment.BindVolume(Volume);
 
             DateTime startExtensions = DateTime.UtcNow;
             Viking.Common.ExtensionManager.LoadExtensions(progressReporter);

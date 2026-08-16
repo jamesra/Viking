@@ -83,7 +83,7 @@ namespace Geometry.Meshing
 
         public static TriangulationMesh<IVertex2D> Clone(this TriangulationMesh<IVertex2D> mesh)
         {
-            IVertex2D[] vert_clones = [.. mesh.Verticies.Select(v => v.ShallowCopy() as IVertex2D)];
+            IVertex2D[] vert_clones = [.. mesh.Vertices.Select(v => v.ShallowCopy() as IVertex2D)];
             TriangulationMesh<IVertex2D> newMesh = new();
             newMesh.AddVerticies(vert_clones);
             foreach (IEdge key in mesh.Edges.Values)
@@ -110,13 +110,13 @@ namespace Geometry.Meshing
 
             foreach (var e in mesh.Edges.Keys)
             {
-                GridLineSegment seg = mesh.ToGridLineSegment(e);
-                foreach (var intersection in rTree.IntersectionGenerator(seg.BoundingBox))
+                LineSegment seg = mesh.ToLineSegment(e);
+                foreach (var intersection in rTree.IntersectionGenerator(seg.BoundingBox.ToRTreeRect(0)))
                 {
                     if (intersection.Equals(e)) //Don't test for intersecting with ourselves
                         continue;
 
-                    GridLineSegment testLine = mesh.ToGridLineSegment(intersection);
+                    LineSegment testLine = mesh.ToLineSegment(intersection);
                     if (seg.Intersects(in testLine, intersection.A == e.A || intersection.B == e.A || intersection.A == e.B || intersection.B == e.B))
                     {
                         System.Diagnostics.Trace.WriteLine(string.Format("{0} intersects {1}", e, intersection));
@@ -134,8 +134,8 @@ namespace Geometry.Meshing
             RTree.RTree<IEdge> rTree = new();
             foreach (var e in mesh.Edges.Values)
             {
-                GridLineSegment seg = mesh.ToGridLineSegment(e);
-                rTree.Add(seg.BoundingBox, e);
+                LineSegment seg = mesh.ToLineSegment(e);
+                rTree.Add(seg.BoundingBox.ToRTreeRect(0), e);
             }
 
             return rTree;
@@ -146,29 +146,29 @@ namespace Geometry.Meshing
         /// </summary>
         /// <param name="triangles"></param>
         /// <returns></returns>
-        public static Mesh2D ToDynamicRenderMesh(this ICollection<GridTriangle> triangles)
+        public static Mesh2D ToDynamicRenderMesh(this ICollection<Triangle> triangles)
         {
             Mesh2D mesh = new();
             QuadTreeWithUniqueValues<int> PointToVertexIndex = new();
 
-            foreach (GridVector2 v in triangles.SelectMany(tri => tri.Points).Distinct())
+            foreach (Vector2 v in triangles.SelectMany(tri => tri.Points).Distinct())
             {
                 int index = mesh.AddVertex(new Vertex2D(v));
                 PointToVertexIndex.Add(v, index);
             }
 
-            foreach (GridLineSegment segment in triangles.SelectMany(tri => tri.Segments).Distinct())
+            foreach (LineSegment segment in triangles.SelectMany(tri => tri.Segments).Distinct(LineSegmentUndirectedComparer.Default))
             {
                 int vertexA = PointToVertexIndex[segment.A];
                 int vertexB = PointToVertexIndex[segment.B];
                 mesh.AddEdge(vertexA, vertexB);
             }
 
-            foreach (GridTriangle tri in triangles)
+            foreach (Triangle tri in triangles)
             {
-                int vertexA = PointToVertexIndex[tri.p1];
-                int vertexB = PointToVertexIndex[tri.p2];
-                int vertexC = PointToVertexIndex[tri.p3];
+                int vertexA = PointToVertexIndex[tri.P1];
+                int vertexB = PointToVertexIndex[tri.P2];
+                int vertexC = PointToVertexIndex[tri.P3];
 
                 mesh.AddFace(new Face(vertexA, vertexB, vertexC));
             }
@@ -180,11 +180,11 @@ namespace Geometry.Meshing
 
         public static bool IsQuad(this IFace face) => face.iVerts.Length == 4;
 
-        public static TriangulationMesh<IVertex2D<PolygonIndex>> Triangulate(this IReadOnlyList<GridPolygon> polys, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null) => throw new NotImplementedException();
+        public static TriangulationMesh<IVertex2D<PolygonIndex>> Triangulate(this IReadOnlyList<Polygon> polys, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null) => throw new NotImplementedException();
 
-        public static TriangulationMesh<IVertex2D<PolygonIndex>> Triangulate(this GridPolygon poly, int iPoly = 0, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null)
+        public static TriangulationMesh<IVertex2D<PolygonIndex>> Triangulate(this Polygon poly, int iPoly = 0, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null)
         {
-            //var polyCopy = (GridPolygon)poly.Clone();
+            //var polyCopy = (Polygon)poly.Clone();
 
             //Center the polygon on 0,0 to reduce floating point error
             var centeredPoly = poly.Translate(-poly.Centroid);
@@ -227,9 +227,9 @@ namespace Geometry.Meshing
             var EdgesToCheck = mesh.Edges.Keys.Where(k => mesh[k.A].Data.AreOnSameRing(mesh[k.B].Data) && constrainedEdges.Contains(k) == false).ToArray();
             foreach (IEdgeKey key in EdgesToCheck)
             {
-                GridLineSegment line = mesh.ToGridLineSegment(key);
+                LineSegment line = mesh.ToLineSegment(key);
 
-                if (ShapeRelation.NONE == centeredPoly.GetRelation(line.Bisect()))
+                if (ShapeRelation.None == centeredPoly.GetRelation(line.Bisect()))
                 {
                     mesh.RemoveEdge(key);
 
@@ -239,10 +239,10 @@ namespace Geometry.Meshing
 
             //If there are three constrained edges that form an interior polygon that is a triangle the face won't be removed.  This results
             //in a constrained edge with two faces.  For this case remove the interior face
-            foreach (var innerPolyGroup in edgeFacesToCheck.GroupBy(i => i.Key.iInnerPoly))
+            foreach (var innerPolyGroup in edgeFacesToCheck.GroupBy(i => i.Key.InnerShapeIndex))
             {
-                GridPolygon innerPolygon = poly.InteriorPolygons[innerPolyGroup.Key.Value];
-                GridVector2 Centroid = innerPolygon.Centroid;
+                Polygon innerPolygon = poly.InteriorPolygons[innerPolyGroup.Key.Value];
+                Vector2 Centroid = innerPolygon.Centroid;
 
                 //Figure out the inner polygon vertex numbers in the mesh
                 SortedSet<int> innerPolyVerts = [.. innerPolyGroup.SelectMany(g => new int[] { g.Value.A, g.Value.B })];
@@ -281,14 +281,14 @@ namespace Geometry.Meshing
             List<IVertex2D> cleanedPerimeter = new(perimeter.Count);
             foreach (IVertex2D v in perimeter)
             {
-                if (cleanedPerimeter.Count > 0 && GridVector2.Equals(cleanedPerimeter[cleanedPerimeter.Count - 1].Position, v.Position))
+                if (cleanedPerimeter.Count > 0 && Vector2.Equals(cleanedPerimeter[cleanedPerimeter.Count - 1].Position, v.Position))
                     continue; //Skip a point that duplicates the previous perimeter point
 
                 cleanedPerimeter.Add(v);
             }
 
             //Drop a trailing point that closes the ring back onto the first point
-            while (cleanedPerimeter.Count > 1 && GridVector2.Equals(cleanedPerimeter[0].Position, cleanedPerimeter[cleanedPerimeter.Count - 1].Position))
+            while (cleanedPerimeter.Count > 1 && Vector2.Equals(cleanedPerimeter[0].Position, cleanedPerimeter[cleanedPerimeter.Count - 1].Position))
                 cleanedPerimeter.RemoveAt(cleanedPerimeter.Count - 1);
 
             //Remove redundant colinear midpoints.  Keep removing while the middle of a triplet lies on the line
@@ -299,11 +299,11 @@ namespace Geometry.Meshing
                 removed = false;
                 for (int i = 0; i < cleanedPerimeter.Count; i++)
                 {
-                    GridVector2 prev = cleanedPerimeter[(i - 1 + cleanedPerimeter.Count) % cleanedPerimeter.Count].Position;
-                    GridVector2 curr = cleanedPerimeter[i].Position;
-                    GridVector2 next = cleanedPerimeter[(i + 1) % cleanedPerimeter.Count].Position;
+                    Vector2 prev = cleanedPerimeter[(i - 1 + cleanedPerimeter.Count) % cleanedPerimeter.Count].Position;
+                    Vector2 curr = cleanedPerimeter[i].Position;
+                    Vector2 next = cleanedPerimeter[(i + 1) % cleanedPerimeter.Count].Position;
 
-                    if (prev.Winding(curr, next) == RotationDirection.COLINEAR)
+                    if (prev.Winding(curr, next) == RotationDirection.Colinear)
                     {
                         cleanedPerimeter.RemoveAt(i);
                         removed = true;
@@ -317,8 +317,8 @@ namespace Geometry.Meshing
             {
                 foreach (IVertex2D v in interior)
                 {
-                    bool duplicate = cleanedPerimeter.Any(p => GridVector2.Equals(p.Position, v.Position))
-                                  || cleanedInterior.Any(p => GridVector2.Equals(p.Position, v.Position));
+                    bool duplicate = cleanedPerimeter.Any(p => Vector2.Equals(p.Position, v.Position))
+                                  || cleanedInterior.Any(p => Vector2.Equals(p.Position, v.Position));
                     if (duplicate)
                         continue;
 
@@ -345,11 +345,11 @@ namespace Geometry.Meshing
                 verts = [.. faceList];
             }
 
-            GridVector2 shapeCenter = verts.Select(v => v.Position).ToArray().Average();
+            Vector2 shapeCenter = verts.Select(v => v.Position).ToArray().Average();
 
             if (shapeCenter.Magnitude < 100)
             {
-                shapeCenter = GridVector2.Zero; //Don't nudge if we are close to origin, prevents errors in our tests.
+                shapeCenter = Vector2.Zero; //Don't nudge if we are close to origin, prevents errors in our tests.
             }
 
             //Center the verts on 0,0 to reduce floating point error
@@ -357,7 +357,7 @@ namespace Geometry.Meshing
             var faceVerts = verts.Select((v, i) => new Vertex2D<int>(i, v.Position - shapeCenter, v.Index)).ToArray();
             var interiorVerts = InteriorPoints is null ? System.Array.Empty<Vertex2D<int>>() : [.. InteriorPoints.Select((v, i) => new Vertex2D<int>(i + faceVerts.Length, v.Position - shapeCenter, v.Index))];
 
-            GridPolygon centeredPoly = new(faceVerts.Select(v => v.Position).ToArray().EnsureClosedRing());
+            Polygon centeredPoly = new(faceVerts.Select(v => v.Position).ToArray().EnsureClosedRing());
             System.Diagnostics.Debug.Assert(interiorVerts.All(v => centeredPoly.Contains(v.Position)), "Interior points must be inside Face");
 
             var tri_mesh_verts = faceVerts.Union(interiorVerts).ToArray();
@@ -401,7 +401,7 @@ namespace Geometry.Meshing
             var EdgesToCheck = tri_mesh.Edges.Keys.Where(k => faceIndicies.Contains(k.A) && faceIndicies.Contains(k.B) && expectedConstrainedEdges.Contains(k) == false).ToArray();
             foreach (IEdgeKey key in EdgesToCheck)
             {
-                GridLineSegment line = new(tri_mesh_verts[key.A].Position, tri_mesh_verts[key.B].Position);// tri_mesh.ToGridLineSegment(key);
+                LineSegment line = new(tri_mesh_verts[key.A].Position, tri_mesh_verts[key.B].Position);// tri_mesh.ToLineSegment(key);
 
                 if (false == centeredPoly.Contains(line.Bisect()))
                 {

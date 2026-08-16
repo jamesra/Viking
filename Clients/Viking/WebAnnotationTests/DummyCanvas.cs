@@ -18,26 +18,26 @@ namespace WebAnnotationTests
             this.Shape = shape; 
         }
 
-        public GridRectangle BoundingBox => Shape.BoundingBox;
+        public Rectangle BoundingBox => Shape.BoundingBox;
 
         public int VisualHeight => throw new NotImplementedException();
 
-        public bool Contains(GridVector2 Position)
+        public bool Contains(Vector2 Position)
         {
             return Shape.Contains(Position);
         }
 
-        public double Distance(GridVector2 Position)
+        public double Distance(Vector2 Position)
         {
             return 0;
         }
 
-        public double DistanceFromCenterNormalized(GridVector2 Position)
+        public double DistanceFromCenterNormalized(Vector2 Position)
         {
             return 0;
         }
 
-        public bool Intersects(GridLineSegment line)
+        public bool Intersects(LineSegment line)
         {
             return Shape.Intersects(line);
         }
@@ -57,7 +57,7 @@ namespace WebAnnotationTests
             this.Children = children.Select(c => new DummyAnnotation(c)).ToArray(); 
         }
 
-        public ICanvasView GetAnnotationAtPosition(GridVector2 position)
+        public ICanvasView GetAnnotationAtPosition(Vector2 position)
         {
             foreach(var dc in Children)
             {
@@ -82,7 +82,7 @@ namespace WebAnnotationTests
             Annotations.Add(a);
         }
 
-        public List<HitTestResult> GetAnnotations(GridVector2 WorldPosition)
+        public List<HitTestResult> GetAnnotations(Vector2 WorldPosition)
         {
             var results = new List<HitTestResult>();
             foreach(DummyAnnotation annotation in Annotations)
@@ -97,7 +97,7 @@ namespace WebAnnotationTests
             return results;
         }
 
-        public List<HitTestResult> GetAnnotations(GridLineSegment line)
+        public List<HitTestResult> GetAnnotations(LineSegment line)
         {
             var results = new List<HitTestResult>();
             foreach (DummyAnnotation annotation in Annotations)
@@ -112,7 +112,7 @@ namespace WebAnnotationTests
             return results;
         }
 
-        public List<HitTestResult> GetAnnotations(GridRectangle rect)
+        public List<HitTestResult> GetAnnotations(Rectangle rect)
         {
             var results = new List<HitTestResult>();
             foreach (DummyAnnotation annotation in Annotations)

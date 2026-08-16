@@ -102,24 +102,24 @@ namespace MorphologyMesh
 
         }
 
-        public IShape2D[] GetSameLevelShapes(in IShapeIndex key) => IsUpperShape[key.iShape] ? UpperShapes : LowerShapes;
+        public IShape2D[] GetSameLevelShapes(in IShapeIndex key) => IsUpperShape[key.ShapeIndex] ? UpperShapes : LowerShapes;
 
-        public IShape2D[] GetAdjacentLevelShapes(in IShapeIndex key) => IsUpperShape[key.iShape] ? LowerShapes : UpperShapes;
+        public IShape2D[] GetAdjacentLevelShapes(in IShapeIndex key) => IsUpperShape[key.ShapeIndex] ? LowerShapes : UpperShapes;
 
-        public IShape2D[] GetSameLevelShapes(in SliceChord sc) => IsUpperShape[sc.Origin.iShape] ? UpperShapes : LowerShapes;
+        public IShape2D[] GetSameLevelShapes(in SliceChord sc) => IsUpperShape[sc.Origin.ShapeIndex] ? UpperShapes : LowerShapes;
 
-        public IShape2D[] GetAdjacentLevelShapes(in SliceChord sc) => IsUpperShape[sc.Origin.iShape] ? LowerShapes : UpperShapes;
+        public IShape2D[] GetAdjacentLevelShapes(in SliceChord sc) => IsUpperShape[sc.Origin.ShapeIndex] ? LowerShapes : UpperShapes;
 
 
         public void IdentifyRegionsViaFaces() => this.Regions = IdentifyRegions(this);
 
         public MorphMeshRegionGraph IdentifyRegionsViaVerticies(List<MorphMeshVertex> IncompleteVerticies) => SecondPassRegionDetection(this, IncompleteVerticies);
 
-        public GridVector2 CalculateAverageVertexPositionXY()
+        public Vector2 CalculateAverageVertexPositionXY()
         {
-            List<GridVector2> points = new(this.Verticies.Count);
+            List<Vector2> points = new(this.Vertices.Count);
 
-            var groups = this.Verticies.GroupBy(v => v.Corresponding.HasValue);
+            var groups = this.Vertices.GroupBy(v => v.Corresponding.HasValue);
             foreach (var g in groups)
             {
                 if (g.Key == true)
@@ -142,7 +142,7 @@ namespace MorphologyMesh
         /// </summary>
         public void CloseFaces(IEnumerable<IVertex> VertsToClose = null)
         {
-            VertsToClose ??= this.Verticies;
+            VertsToClose ??= this.Vertices;
 
             foreach (var v in VertsToClose)
             {
@@ -507,10 +507,10 @@ namespace MorphologyMesh
                 MorphMeshVertex[] verts = [.. this[f.iVerts]];
                 for (int i = 1; i + 1 < verts.Length; i++)
                 {
-                    GridVector3 a = verts[0].Position;
-                    GridVector3 b = verts[i].Position;
-                    GridVector3 c = verts[i + 1].Position;
-                    sixV += GridVector3.Dot(a, GridVector3.Cross(b, c));
+                    Vector3 a = verts[0].Position;
+                    Vector3 b = verts[i].Position;
+                    Vector3 c = verts[i + 1].Position;
+                    sixV += Vector3.Dot(a, Vector3.Cross(b, c));
                 }
             }
 
@@ -524,8 +524,8 @@ namespace MorphologyMesh
         {
             MorphMeshVertex[] verts = [.. this[f.iVerts]];
 
-            GridVector3 n = this.Normal(f);
-            GridVector2 face_center;
+            Vector3 n = this.Normal(f);
+            Vector2 face_center;
 
             bool CheckAgainstUpperPolygons; //True if we check if the centroid is contained in upper polygons, false if centroid needs to be checked against lower polygons
             //Check if the normal is oriented up or down.  If it is up, then check that the face centroid is not contained within the upper polygons, and vice versa.
@@ -538,19 +538,19 @@ namespace MorphologyMesh
                     //so if the vertex is corresponding it could stil be the extra vertex of the triangle if its corresponding vertex is not part of the face.
                     MorphMeshVertex noncorresponding = verts.Where(v => v.Corresponding.HasValue == false || f.iVerts.Contains(v.Corresponding.Value) == false).First();
                     int iNonCorresponding = Array.IndexOf(verts, noncorresponding);
-                    bool NonCorrespondingIsUpper = IsUpperShape[noncorresponding.ShapeIndex.iShape];
+                    bool NonCorrespondingIsUpper = IsUpperShape[noncorresponding.ShapeIndex.ShapeIndex];
 
                     InfiniteSequentialIndexSet faceIndexer = new(0, f.iVerts.Length, 0);
 
                     MorphMeshVertex nextVert = verts[faceIndexer[iNonCorresponding + 1]];
                     MorphMeshVertex prevVert = verts[faceIndexer[iNonCorresponding - 1]];
                     //Find the line segment between the two adjacent verts on the same Z level
-                    GridLineSegment seg;
+                    LineSegment seg;
                     bool output;
                     if (nextVert.ShapeIndex == noncorresponding.ShapeIndex.Next)
                     {
                         output = NonCorrespondingIsUpper == false;
-                        //seg = new GridLineSegment(noncorresponding.Position.XY(), verts[faceIndexer[iNonCorresponding + 1]].Position.XY());
+                        //seg = new LineSegment(noncorresponding.Position.XY(), verts[faceIndexer[iNonCorresponding + 1]].Position.XY());
                     }
                     else if (nextVert.ShapeIndex == noncorresponding.ShapeIndex.Previous)
                     {
@@ -581,14 +581,14 @@ namespace MorphologyMesh
 
             if (CheckAgainstUpperPolygons == false)
             {
-                if (this.LowerShapes.Any(p => p.GetRelation(face_center) == ShapeRelation.CONTAINED))
+                if (this.LowerShapes.Any(p => p.GetRelation(face_center) == ShapeRelation.Contained))
                     return false;
 
                 return true;
             }
             else
             {
-                if (this.UpperShapes.Any(p => p.GetRelation(face_center) == ShapeRelation.CONTAINED))
+                if (this.UpperShapes.Any(p => p.GetRelation(face_center) == ShapeRelation.Contained))
                     return false;
 
                 return true;
@@ -596,8 +596,8 @@ namespace MorphologyMesh
             /*
             MorphMeshVertex[] verts = this[f.iVerts].ToArray();
 
-            //GridVector2 face_center = GetCentroid(f);
-            GridVector2[] positions = verts.Select(v => v.Position.XY()).Distinct().ToArray();
+            //Vector2 face_center = GetCentroid(f);
+            Vector2[] positions = verts.Select(v => v.Position.XY()).Distinct().ToArray();
 
             if (positions.Length < 3)
                 return true; //Not implemented

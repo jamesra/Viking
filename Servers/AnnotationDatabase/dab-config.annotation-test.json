@@ -1,0 +1,61 @@
+{
+  "$schema": "https://github.com/Azure/data-api-builder/releases/latest/download/dab.draft.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "@env('MSSQL_CONNECTION_STRING')",
+    "options": {
+      "set-session-context": false
+    }
+  },
+  "runtime": {
+    "rest": {
+      "enabled": false,
+      "path": "/api"
+    },
+    "graphql": {
+      "enabled": false,
+      "path": "/graphql",
+      "allow-introspection": false
+    },
+    "mcp": {
+      "enabled": true,
+      "path": "/mcp"
+    },
+    "host": {
+      "cors": {
+        "origins": [],
+        "allow-credentials": false
+      },
+      "authentication": {
+        "provider": "Unauthenticated"
+      },
+      "mode": "development"
+    }
+  },
+  "entities": {
+    "LocationLink": {
+      "source": {
+        "object": "dbo.LocationLink",
+        "type": "table"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        }
+      ]
+    },
+    "DeletedLocationLink": {
+      "source": {
+        "object": "dbo.DeletedLocationLinks",
+        "type": "table"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        }
+      ]
+    }
+  }
+}

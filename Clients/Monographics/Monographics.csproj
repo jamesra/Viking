@@ -2,7 +2,7 @@
 	<PropertyGroup>
 	<LangVersion>latest</LangVersion>
 		<OutputType>Library</OutputType>
-		<TargetFramework>net9.0-windows</TargetFramework>
+		<TargetFrameworks>net9.0-windows;net10.0-windows</TargetFrameworks>
 		<RootNamespace>VikingXNAGraphics</RootNamespace>
 		<AssemblyName>Monographics</AssemblyName>
 		<MonoGamePlatform>DesktopGL</MonoGamePlatform>
@@ -43,6 +43,7 @@
 	</ItemGroup> 
 	<ItemGroup>
 		<ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj" />
+		<ProjectReference Include="..\Common\Common.csproj" />
 		<ProjectReference Include="..\..\Geometry\Geometry.csproj" />
 		<ProjectReference Include="..\..\Triangle.NET\Triangle\Triangle.csproj" />
 		<ProjectReference Include="..\..\TriangleNetGeometryExtensions\TriangleNetGeometryExtensions.csproj" />

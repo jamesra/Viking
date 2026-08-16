@@ -1,9 +1,11 @@
-﻿using System;
+using System;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Controls
 {
@@ -11,7 +13,7 @@ namespace WebAnnotation.UI.Controls
     public partial class ListStructures : Viking.UI.BaseClasses.DockingListControl
     {
         private Structure[] _structures;
-        private readonly EventHandler StructureCreateEventHandler;
+        private readonly NotifyCollectionChangedEventHandler StructureCreateEventHandler;
 
         public ListStructures()
         {
@@ -20,8 +22,8 @@ namespace WebAnnotation.UI.Controls
             ListItems.ShowPropertiesOnDoubleClick = false;
             InitializeComponent();
 
-            StructureCreateEventHandler = new EventHandler(OnLocationCreate);
-            LocationObj.Create += StructureCreateEventHandler;
+            StructureCreateEventHandler = new NotifyCollectionChangedEventHandler(OnStructuresCollectionChanged);
+            Store.Structures.OnCollectionChanged += StructureCreateEventHandler;
         }
 
         public void SetStructures(Structure[] structures)
@@ -43,9 +45,21 @@ namespace WebAnnotation.UI.Controls
             }
         }
 
-        public void OnLocationCreate(object sender, EventArgs e)
+        private void OnStructuresCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            Structure structure = sender as Structure;
+            if (e.Action != NotifyCollectionChangedAction.Add || e.NewItems is null)
+            {
+                return;
+            }
+
+            foreach (StructureObj addedObj in e.NewItems)
+            {
+                OnStructureCreate(new Structure(addedObj));
+            }
+        }
+
+        private void OnStructureCreate(Structure structure)
+        {
             Debug.Assert(structure != null);
             if (structure != null)
             {
@@ -62,7 +76,7 @@ namespace WebAnnotation.UI.Controls
 
         protected override void parentForm_Closing(object sender, CancelEventArgs e)
         {
-            LocationObj.Create -= StructureCreateEventHandler;
+            Store.Structures.OnCollectionChanged -= StructureCreateEventHandler;
 
             base.parentForm_Closing(sender, e);
         }

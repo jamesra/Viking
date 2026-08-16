@@ -52,7 +52,7 @@ namespace AnnotationVizLib
                 JSONView.Nodes.Add(new
                 {
                     ID = node.Key,
-                    Shape = node.Location.Geometry.STAsText().ToString()
+                    Shape = node.Location.Geometry().STAsText().ToString()
                 });
             }
 

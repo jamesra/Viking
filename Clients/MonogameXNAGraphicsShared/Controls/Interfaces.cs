@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using System;
 
 namespace VikingXNAGraphics.Controls
@@ -18,7 +19,7 @@ namespace VikingXNAGraphics.Controls
     /// <param name="source">Type of Device</param>
     /// <param name="source_info">Input device information (ie: mouse button info or pen info) </param>
     /// <returns>True if the input event should be considered handled.</returns>
-    public delegate bool InputDeviceEventConsumerDelegate(IClickable sender, GridVector2 point, InputDevice source, object source_info);
+    public delegate bool InputDeviceEventConsumerDelegate(IClickable sender, Vector2 point, InputDevice source, object source_info);
 
     /// <summary>
     /// Called by an owner window or control when the input device has sent an event that is relevant to the implementation.
@@ -28,7 +29,7 @@ namespace VikingXNAGraphics.Controls
     /// <param name="point">Point device was clicked at in world coordinates</param>
     /// <param name="source">Type of Device</param>
     /// <param name="source_info">Input device information (ie: mouse button info or pen info) </param>
-    public delegate void InputDeviceEventPassiveDelegate(IClickable sender, GridVector2 point, InputDevice source, object source_info);
+    public delegate void InputDeviceEventPassiveDelegate(IClickable sender, Vector2 point, InputDevice source, object source_info);
 
     /// <summary>
     /// This interface has Contains called on it by the owner.  If it contains a click
@@ -82,8 +83,8 @@ namespace VikingXNAGraphics.Controls
 
         public InputDeviceEventConsumerDelegate OnClick { get; set; }
 
-        public GridRectangle BoundingBox => Shape.BoundingBox;
+        public Rectangle BoundingBox => Shape.BoundingBox;
 
-        public bool Contains(GridVector2 Position) => Shape.Contains(Position);
+        public bool Contains(Vector2 Position) => Shape.Contains(Position);
     }
 }

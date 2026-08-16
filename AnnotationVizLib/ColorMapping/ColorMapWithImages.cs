@@ -82,7 +82,7 @@ namespace AnnotationVizLib
         public Color GetColor(ICollection<ILocationReadOnly> locations)
         {
             //Remove locations with Z values not in our lookup list to save a lot of time
-            List<GridVector3> listPoints = locations.Where(l => ColorMapTable.ContainsKey((int)l.UnscaledZ)).ToList().ConvertAll(loc => loc.Geometry.Centroid().ToGridVector3(loc.UnscaledZ));
+            List<Vector3> listPoints = locations.Where(l => ColorMapTable.ContainsKey((int)l.UnscaledZ)).ToList().ConvertAll(loc => loc.Geometry().Centroid().ToVector3(loc.UnscaledZ));
 
             return GetColor(listPoints);
         }
@@ -92,13 +92,13 @@ namespace AnnotationVizLib
         /// </summary>
         /// <param name="locations"></param>
         /// <returns></returns>
-        public Color GetColor(ICollection<GridVector3> points)
+        public Color GetColor(ICollection<Vector3> points)
         {
             if (points.Count == 0)
                 return Color.Empty;
 
-            IEnumerable<GridVector3> filteredPoints = points.Where(p => ColorMapTable.ContainsKey((int)p.Z));
-            IList<Color> colors = [.. filteredPoints.Select<GridVector3, Color>(p => GetColor(p.X, p.Y, (int)p.Z))];
+            IEnumerable<Vector3> filteredPoints = points.Where(p => ColorMapTable.ContainsKey((int)p.Z));
+            IList<Color> colors = [.. filteredPoints.Select<Vector3, Color>(p => GetColor(p.X, p.Y, (int)p.Z))];
             return ColorMapWithImages.AverageColors(colors);
         }
 

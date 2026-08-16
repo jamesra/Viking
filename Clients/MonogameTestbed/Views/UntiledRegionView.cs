@@ -6,6 +6,8 @@ using System.Linq;
 using TriangleNet;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -16,7 +18,7 @@ namespace MonogameTestbed
     {
         public List<PointSet> Sets = [];
 
-        public List<GridPolygon> Shapes = [];
+        public List<Polygon> Shapes = [];
 
         public TriangleNet.Voronoi.VoronoiBase Voronoi;
 
@@ -62,7 +64,7 @@ namespace MonogameTestbed
         /// </summary>
         public void UpdateSet(PointSet ps, int i)
         {
-            int[] original_indicies;
+            int[] originalIndices;
 
             Sets[i] = ps;
 
@@ -77,7 +79,7 @@ namespace MonogameTestbed
 
             if (ps.Points.Count >= 3)
             {
-                Shapes[i] = new GridPolygon(ps.Points.EnsureClosedRing().ToArray());//ConvexHullExtension.ConvexHull(ps.Points.ToArray(), out original_indicies);
+                Shapes[i] = new Polygon(ps.Points.EnsureClosedRing().ToArray());//ConvexHullExtension.ConvexHull(ps.Points.ToArray(), out originalIndices);
             }
             else
             {
@@ -86,7 +88,7 @@ namespace MonogameTestbed
 
             PolygonViews[i].UpdateViews(Shapes[i]);
 
-            GridPolygon[] ShapeArray = [.. Shapes.Where(s => s != null)];
+            Polygon[] ShapeArray = [.. Shapes.Where(s => s != null)];
 
             TriangleNet.Meshing.IMesh mesh = null;
             try
@@ -98,20 +100,20 @@ namespace MonogameTestbed
 
             }
 
-            //List<GridLineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(mesh, Shapes);
+            //List<LineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(mesh, Shapes);
 
             if (mesh is null)
-                DelaunayView.UpdateViews(Array.Empty<GridVector2>());
+                DelaunayView.UpdateViews(Array.Empty<Geometry.Vector2>());
             else
                 DelaunayView.UpdateViews(mesh.ToLines());
 
             Voronoi = Shapes.Voronoi();
 
-            List<GridLineSegment> listVoronoiLines = BoundaryFinder.StripNonBoundaryLines(Voronoi, ShapeArray);
+            List<LineSegment> listVoronoiLines = BoundaryFinder.StripNonBoundaryLines(Voronoi, ShapeArray);
             VoronoiView.UpdateViews(listVoronoiLines);
 
             //DetermineBoundary
-            List<GridLineSegment> listBoundaryLines = BoundaryFinder.DetermineBoundary(ShapeArray);
+            List<LineSegment> listBoundaryLines = BoundaryFinder.DetermineBoundary(ShapeArray);
             BoundaryView.UpdateViews(listBoundaryLines);
 
             listLabels = [.. listBoundaryLines.Select(line => new LabelView(line.A.ToLabel(), line.A))];
@@ -129,18 +131,18 @@ namespace MonogameTestbed
         /// </summary>
         /// <param name="PointSets"></param>
         /// <returns></returns>
-        private static TriangleNet.Meshing.IMesh TriangulatePolygons(List<GridVector2[]> PointSets)
+        private static TriangleNet.Meshing.IMesh TriangulatePolygons(List<Geometry.Vector2[]> PointSets)
         {
-            GridVector2[] AllPoints = [.. PointSets.SelectMany(ps => ps.EnsureOpenRing())];
+            Geometry.Vector2[] AllPoints = [.. PointSets.SelectMany(ps => ps.EnsureOpenRing())];
 
             if (AllPoints.Length < 3)
                 return null;
 
-            GridVector2[] EntireSetConvexHull = AllPoints.ConvexHull(out int[] original_indicies);
+            Geometry.Vector2[] EntireSetConvexHull = AllPoints.ConvexHull(out int[] originalIndices);
 
             TriangleNet.Geometry.Polygon poly = TriangleExtensions.CreatePolygon(EntireSetConvexHull);
 
-            foreach (GridVector2[] points in PointSets)
+            foreach (Geometry.Vector2[] points in PointSets)
             {
                 if (points is null || points.Length < 4)
                     continue;
@@ -155,18 +157,18 @@ namespace MonogameTestbed
             return mesh;
         }
 
-        private static List<LabelView> LabelDistances(IReadOnlyList<GridPolygon> shapes)
+        private static List<LabelView> LabelDistances(IReadOnlyList<Polygon> shapes)
         {
             List<LabelView> labels = [];
             for (int i = 0; i < shapes.Count; i++)
             {
-                GridPolygon iPoly = shapes[i];
+                Polygon iPoly = shapes[i];
                 if (iPoly is null)
                     continue;
 
                 for (int j = i + 1; j < shapes.Count; j++)
                 {
-                    GridPolygon jPoly = shapes[j];
+                    Polygon jPoly = shapes[j];
                     if (jPoly is null)
                         continue;
 

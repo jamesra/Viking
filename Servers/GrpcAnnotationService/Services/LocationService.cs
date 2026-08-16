@@ -322,18 +322,35 @@ namespace gRPCAnnotationService
                 // Clients pass 0 (or other pre-SQL dates) to mean "no lower bound". SqlDateTime
                 // cannot represent DateTime.FromBinary(0), so skip the filter in that case.
                 var modifiedAfter = ModifiedAfterOrNull(request.ModifiedAfterThisTime);
-                var query = LinksTouchingSection(request.Section);
-                if (modifiedAfter.HasValue)
-                    query = query.Where(link => link.Created > modifiedAfter.Value);
 
-                var links = await query.ToListAsync();
-
+                // Use the section TVF (same as WCF). Joining LocationLink → Location.Z goes
+                // through the circle-shape interceptor and fails on production CurvePolygons.
                 var response = new GetLocationLinksForSectionResponse
                 {
                     QueryExecutedTime = Timestamp.FromDateTime(queryStart)
                 };
-                response.Results.AddRange(links.Select(ToProtobufMessage));
-                response.Deleted.AddRange(await DeletedLocationLinksSince(request.Section, modifiedAfter));
+                if (modifiedAfter.HasValue)
+                {
+                    var rows = await _context.SectionLocationLinksModifiedAfterDate(request.Section, modifiedAfter.Value)
+                        .ToListAsync();
+                    response.Results.AddRange(rows.Select(l => new ProtoLocationLink { SourceId = l.A, TargetId = l.B }));
+                }
+                else
+                {
+                    var rows = await _context.SectionLocationLinks(request.Section).ToListAsync();
+                    response.Results.AddRange(rows.Select(l => new ProtoLocationLink { SourceId = l.A, TargetId = l.B }));
+                }
+
+                try
+                {
+                    response.Deleted.AddRange(await DeletedLocationLinksSince(request.Section, modifiedAfter));
+                }
+                catch (Exception e)
+                {
+                    // WCF always returned an empty deleted list; the table is optional on older DBs.
+                    _logger.LogWarning(e, "DeletedLocationLinks unavailable for section {Section}", request.Section);
+                }
+
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(GetLocationLinksForSection), e); }
@@ -344,17 +361,17 @@ namespace gRPCAnnotationService
             try
             {
                 var bbox = request.Bbox;
+                // Filter locations on scalar columns only. Joining LocationLink → Location
+                // pulled MosaicShape/VolumeShape and broke under the circle interceptor.
+                var locationIds = _context.Locations.AsNoTracking()
+                    .Where(l => l.Z == request.Section
+                                && l.X >= bbox.Xmin && l.X <= bbox.Xmax
+                                && l.Y >= bbox.Ymin && l.Y <= bbox.Ymax
+                                && l.Radius >= request.MinRadius)
+                    .Select(l => l.Id);
+
                 var links = await _context.LocationLinks.AsNoTracking()
-                    .Where(link =>
-                        (link.ANavigation.Z == request.Section &&
-                         link.ANavigation.X >= bbox.Xmin && link.ANavigation.X <= bbox.Xmax &&
-                         link.ANavigation.Y >= bbox.Ymin && link.ANavigation.Y <= bbox.Ymax &&
-                         link.ANavigation.Radius >= request.MinRadius)
-                        ||
-                        (link.BNavigation.Z == request.Section &&
-                         link.BNavigation.X >= bbox.Xmin && link.BNavigation.X <= bbox.Xmax &&
-                         link.BNavigation.Y >= bbox.Ymin && link.BNavigation.Y <= bbox.Ymax &&
-                         link.BNavigation.Radius >= request.MinRadius))
+                    .Where(link => locationIds.Contains(link.A) || locationIds.Contains(link.B))
                     .ToListAsync();
 
                 var response = new GetLocationLinksForSectionInMosaicRegionResponse();
@@ -379,6 +396,7 @@ namespace gRPCAnnotationService
 
                 var added = await _context.Locations.AddAsync(row);
                 await _context.SaveChangesAsync();
+                await PersistCircleShapesIfNeededAsync(request.Obj, added.Entity);
 
                 return new CreateLocationResponse { Result = added.Entity.ToProtobufMessage() };
             }
@@ -391,6 +409,7 @@ namespace gRPCAnnotationService
             {
                 var response = new UpdateLocationsResponse();
                 var username = CallerName(context);
+                var pendingCircles = new List<(LocationChangeResponse Response, EfLocation Entity, ProtoLocation Proto, bool IsCreate)>();
 
                 foreach (var change in request.Locations)
                 {
@@ -404,6 +423,7 @@ namespace gRPCAnnotationService
                             toInsert.Created = DateTime.UtcNow;
                             toInsert.LastModified = toInsert.Created;
                             var inserted = await _context.Locations.AddAsync(toInsert);
+                            pendingCircles.Add((rowResponse, inserted.Entity, change.Create, true));
                             rowResponse.Success = true;
                             rowResponse.Created = inserted.Entity.ToProtobufMessage();
                             break;
@@ -417,6 +437,7 @@ namespace gRPCAnnotationService
                             }
 
                             ApplyUpdate(change.Update, existing, username);
+                            pendingCircles.Add((rowResponse, existing, change.Update, false));
                             rowResponse.Success = true;
                             rowResponse.Updated = _context.Locations.Update(existing).Entity.ToProtobufMessage();
                             break;
@@ -465,6 +486,15 @@ namespace gRPCAnnotationService
                 }
 
                 await _context.SaveChangesAsync();
+                foreach (var (rowResponse, entity, proto, isCreate) in pendingCircles)
+                {
+                    await PersistCircleShapesIfNeededAsync(proto, entity);
+                    if (isCreate)
+                        rowResponse.Created = entity.ToProtobufMessage();
+                    else
+                        rowResponse.Updated = entity.ToProtobufMessage();
+                }
+
                 return response;
             }
             catch (Exception e) { throw Failure(nameof(Update), e); }
@@ -623,8 +653,9 @@ namespace gRPCAnnotationService
         {
             var bounds = BoundsOf(region);
 
-            // Filter on the persisted centroid and radius columns rather than the geometry, so
-            // the query stays translatable and never has to parse a CurvePolygon.
+            // Filter on the persisted centroid and radius columns rather than the geometry so
+            // the predicate stays translatable. Circle CurvePolygons are omitted on read by
+            // SqlServerCircleShapeCommandInterceptor.
             var query = _context.Locations.AsNoTracking()
                 .Where(l => l.Z == z
                             && l.Radius >= minRadius
@@ -702,6 +733,15 @@ namespace gRPCAnnotationService
                 SourceId = d.A,
                 TargetId = d.B
             }).ToList();
+        }
+
+        private async Task PersistCircleShapesIfNeededAsync(ProtoLocation proto, EfLocation entity)
+        {
+            if (proto.TypeCode != AnnotationType.Circle)
+                return;
+
+            var (mosaicWkt, volumeWkt) = proto.CircleShapeWkt();
+            await _context.PersistCircleShapesAsync(entity, mosaicWkt, volumeWkt);
         }
 
         private static void ApplyUpdate(ProtoLocation src, EfLocation dst, string username)

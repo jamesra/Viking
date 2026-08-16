@@ -25,7 +25,7 @@ namespace WebAnnotationModel
         /// </summary>
         public readonly SemaphoreSlim Lock = new SemaphoreSlim(1);
 
-        public readonly GridRectangle Bounds;
+        public readonly Rectangle Bounds;
 
 #if DEBUG
         private static int NumOutstandingQueries = 0;
@@ -55,7 +55,7 @@ namespace WebAnnotationModel
         /// </summary>
         private readonly List<Action<ICollection<OBJECT>>> OnCompletionCallbacks; 
 
-        public RegionRequestData(GridRectangle bounds)
+        public RegionRequestData(Rectangle bounds)
         {
             Bounds = bounds;
             OnCompletionCallbacks = new List<Action<ICollection<OBJECT>>>();

@@ -1,0 +1,28 @@
+# DevTest Identity overrides for gRPC annotation integration tests only.
+# Do not use this file when Viking is logged in against identity.codepharm.net —
+# those JWTs have iss https://identity.codepharm.net:5001/ and will 401 if the
+# gRPC service is pointed at identity-devtest (http://host.docker.internal:5020).
+#
+# Test stack:
+#   docker compose --env-file D:/Docker/Builds/AnnotationSql/.env \
+#     -f docker-compose.yml -f docker-compose.annotation-db.yml \
+#     -f docker-compose.identity-devtest.yml \
+#     up -d identity-devtest annotation-sql grpc-annotation-service
+#
+# Viking + local SQL + production Identity:
+#   docker compose --env-file D:/Docker/Builds/AnnotationSql/.env \
+#     -f docker-compose.yml -f docker-compose.annotation-db.yml \
+#     up -d annotation-sql grpc-annotation-service
+# (IdentityServer__* come from D:/Docker/Builds/GrpcAnnotationService/.env.Docker)
+
+services:
+  grpc-annotation-service:
+    depends_on:
+      identity-devtest:
+        condition: service_started
+    environment:
+      IdentityServer__Endpoint: "http://identity-devtest/"
+      IdentityServer__IntrospectionEndpoint: "http://identity-devtest/connect/introspect"
+      IdentityServer__ClientId: "grpc-annotation"
+      IdentityServer__ClientSecret: "DevTestIntrospectionSecret"
+      IdentityServer__AllowHttpMetadata: "true"

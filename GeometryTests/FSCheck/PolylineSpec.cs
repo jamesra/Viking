@@ -12,24 +12,24 @@ namespace GeometryTests.FSCheck
     /// <summary>
     /// A list of points that increase along one axis with random values on the 2nd axis;
     /// </summary>
-    internal class LinearPolylineModel(AXIS axis) : SortedSet<PointTuple>(new PointTupleComparer(axis))
+    internal class LinearPolylineModel(Axis axis) : SortedSet<PointTuple>(new PointTupleComparer(axis))
     {
-        public AXIS Axis = axis;
+        public Axis Axis = axis;
 
-        public bool Contains(GridVector2 point) => this.Any(pt => pt.Point.Equals(point));
+        public bool Contains(Vector2 point) => this.Any(pt => pt.Point.Equals(point));
 
-        public GridRectangle BoundingRect => this.Select(p => p.Point).BoundingBox();
+        public Rectangle BoundingRect => this.Select(p => p.Point).BoundingBox();
     }
 
-    class PolylineSpec(AXIS axis) : ICommandGenerator<GridPolyline, LinearPolylineModel>
+    class PolylineSpec(Axis axis) : ICommandGenerator<Polyline, LinearPolylineModel>
     {
-        public GridPolyline InitialActual => new(false);
+        public Polyline InitialActual => new(false);
 
         public LinearPolylineModel InitialModel => new(Axis);
 
-        private readonly AXIS Axis = axis;
+        private readonly Axis Axis = axis;
 
-        public Gen<Command<GridPolyline, LinearPolylineModel>> Next(LinearPolylineModel value)
+        public Gen<Command<Polyline, LinearPolylineModel>> Next(LinearPolylineModel value)
         {
             if (value.Count < 2)
             {
@@ -37,7 +37,7 @@ namespace GeometryTests.FSCheck
                                Gen.Choose(1, 9).Select(v => (double)v / 10.0),
                                Arb.Default.NormalFloat().Generator
                                ) //Todo: Limit range to 0 
-                          .Select((val) => new InsertPointOperation(val.Item1, val.Item2, val.Item3.Get, Axis) as Command<GridPolyline, LinearPolylineModel>);
+                          .Select((val) => new InsertPointOperation(val.Item1, val.Item2, val.Item3.Get, Axis) as Command<Polyline, LinearPolylineModel>);
             }
             else
             {
@@ -46,10 +46,10 @@ namespace GeometryTests.FSCheck
                                                    Gen.Choose(1, 9).Select(v => (double)v / 10.0),  //We do not use 0 to 10 in this test because the Y value is random so it is hard to know if self intersection should occur during the test
                                                    Arb.Default.NormalFloat().Generator
                                                    )
-                                                   .Select((val) => new InsertPointOperation(val.Item1, val.Item2, val.Item3.Get, Axis) as Command<GridPolyline, LinearPolylineModel>)),
+                                                   .Select((val) => new InsertPointOperation(val.Item1, val.Item2, val.Item3.Get, Axis) as Command<Polyline, LinearPolylineModel>)),
                     Tuple.Create(1, Gen.Zip(Gen.Choose(0, value.Count - 2 < 0 ? 0 : value.Count - 2),
                                             Gen.Choose(0, 10).Select(v => (double)v / 10.0))
-                                            .Select((val) => new IntersectLineTestOperation(val.Item1, val.Item2, Axis) as Command<GridPolyline, LinearPolylineModel>))
+                                            .Select((val) => new IntersectLineTestOperation(val.Item1, val.Item2, Axis) as Command<Polyline, LinearPolylineModel>))
 
                     );
             }
@@ -57,7 +57,7 @@ namespace GeometryTests.FSCheck
         }
     }
 
-    class InsertPointOperation : Command<GridPolyline, LinearPolylineModel>
+    class InsertPointOperation : Command<Polyline, LinearPolylineModel>
     {
         private static int NextPointID = -1;
 
@@ -65,13 +65,13 @@ namespace GeometryTests.FSCheck
         readonly int InsertID;
         readonly double InterpolationFraction;
         readonly double OffAxisValue;
-        readonly AXIS Axis;
+        readonly Axis Axis;
 
         Property InsertToActualExpectedResult;
 
         PointTuple InsertValue;
 
-        public InsertPointOperation(int index, double fraction, double off_axis_value, AXIS axis)
+        public InsertPointOperation(int index, double fraction, double off_axis_value, Axis axis)
         {
             InsertIndex = index;
             InsertID = System.Threading.Interlocked.Increment(ref NextPointID);
@@ -81,7 +81,7 @@ namespace GeometryTests.FSCheck
             Debug.Assert(fraction > 0 && fraction < 1.0);
         }
 
-        public override Property Post(GridPolyline polyline, LinearPolylineModel model)
+        public override Property Post(Polyline polyline, LinearPolylineModel model)
         {
             bool SameLength = polyline.PointCount == model.Count;
             bool AllMatchInOrder = false == model.Select((p, i) => p.Point != polyline.Points[i]).Any(p => p == true);
@@ -98,7 +98,7 @@ namespace GeometryTests.FSCheck
 
             if (model.Count == 0)
             {
-                InsertValue = new PointTuple(new GridVector2(InterpolationFraction, OffAxisValue), InsertID);
+                InsertValue = new PointTuple(new Vector2(InterpolationFraction, OffAxisValue), InsertID);
                 return true;
             }
             else if (model.Count == 1)
@@ -107,7 +107,7 @@ namespace GeometryTests.FSCheck
                 double origin = model.First().Point[Axis];
                 OnAxisValue = InsertIndex == 0 ? origin - (InterpolationScalar + 1) : origin + InterpolationScalar + 1;
 
-                InsertValue = new PointTuple(new GridVector2(OnAxisValue, OffAxisValue), InsertID);
+                InsertValue = new PointTuple(new Vector2(OnAxisValue, OffAxisValue), InsertID);
                 return true;
             }
             else
@@ -160,7 +160,7 @@ namespace GeometryTests.FSCheck
 
                 OnAxisValue = OffsetOrigin.Point[Axis] + Offset;
 
-                InsertValue = new PointTuple(new GridVector2(OnAxisValue, OffAxisValue), InsertID);
+                InsertValue = new PointTuple(new Vector2(OnAxisValue, OffAxisValue), InsertID);
 
                 if (InsertIndex < model.Count)
                     Debug.Assert(InsertValue.Point[Axis] < modelPoints[InsertIndex].Point[Axis], $"New point {InsertValue.Point[Axis]} is to the right or equal to the point {modelPoints[InsertIndex].Point[Axis]} at the inserted index {InsertIndex}");
@@ -171,9 +171,9 @@ namespace GeometryTests.FSCheck
             }
         }
 
-        public override GridPolyline RunActual(GridPolyline value)
+        public override Polyline RunActual(Polyline value)
         {
-            Trace.WriteLine($"Insert: {InsertID}@{this.InsertIndex} {this.InterpolationFraction} {InsertValue.Point} - Polyline Length: {value.NumUniqueVerticies}");
+            Trace.WriteLine($"Insert: {InsertID}@{this.InsertIndex} {this.InterpolationFraction} {InsertValue.Point} - Polyline Length: {value.NumUniqueVertices}");
             try
             {
                 value.Insert(InsertIndex, InsertValue.Point);
@@ -202,14 +202,14 @@ namespace GeometryTests.FSCheck
     /// <summary>
     /// Checks if we can intersect the line segment of the polyline starting at the provided index
     /// </summary>
-    class IntersectLineTestOperation(int index, double fraction, AXIS axis) : Command<GridPolyline, LinearPolylineModel>
+    class IntersectLineTestOperation(int index, double fraction, Axis axis) : Command<Polyline, LinearPolylineModel>
     {
         readonly int TestIndex = index;
         readonly double InterpolationFraction = fraction;
-        readonly AXIS Axis = axis;
-        readonly AXIS OffAxis = axis == AXIS.X ? AXIS.Y : AXIS.X;
-        GridVector2 ExpectedIntersection;
-        GridLineSegment TestSegment;
+        readonly Axis Axis = axis;
+        readonly Axis OffAxis = axis == Axis.X ? Axis.Y : Axis.X;
+        Vector2 ExpectedIntersection;
+        LineSegment TestSegment;
 
         public override bool Pre(LinearPolylineModel model)
         {
@@ -230,27 +230,32 @@ namespace GeometryTests.FSCheck
                 Adjacent = modelPoints[TestIndex + 1];
 
                 //Where we expect the intersection to occur
-                GridVector2 ExpectedIntersection = (Adjacent.Point - Origin.Point) * InterpolationFraction;
+                Vector2 ExpectedIntersection = (Adjacent.Point - Origin.Point) * InterpolationFraction;
                 ExpectedIntersection += Origin.Point;
 
-                GridVector2 TestOrigin = ExpectedIntersection;
-                GridVector2 TestAdjacent = ExpectedIntersection;
+                Vector2 TestOrigin = ExpectedIntersection;
+                Vector2 TestAdjacent = ExpectedIntersection;
 
-                TestOrigin[OffAxis] -= TestOrigin[OffAxis] / 2.0;
-                TestAdjacent[OffAxis] += TestAdjacent[OffAxis] / 2.0;
+                TestOrigin = OffsetAxis(TestOrigin, OffAxis, -TestOrigin[OffAxis] / 2.0);
+                TestAdjacent = OffsetAxis(TestAdjacent, OffAxis, TestAdjacent[OffAxis] / 2.0);
 
-                TestSegment = new GridLineSegment(TestOrigin, TestAdjacent);
+                TestSegment = new LineSegment(TestOrigin, TestAdjacent);
                 return true;
             }
+
+            static Vector2 OffsetAxis(Vector2 point, Axis axis, double delta) =>
+                axis == Axis.X
+                    ? new Vector2(point.X + delta, point.Y)
+                    : new Vector2(point.X, point.Y + delta);
         }
 
-        public override Property Post(GridPolyline polyline, LinearPolylineModel model)
+        public override Property Post(Polyline polyline, LinearPolylineModel model)
         {
             bool FoundIntersection = polyline.Intersects(TestSegment);
             return (FoundIntersection.Label("Find intersection in polyline"));
         }
 
-        public override GridPolyline RunActual(GridPolyline value) => value;
+        public override Polyline RunActual(Polyline value) => value;
 
         public override LinearPolylineModel RunModel(LinearPolylineModel value) => value;
 

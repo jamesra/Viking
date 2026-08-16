@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Windows.Data;
 using WebAnnotation.WPF.MockData;
 using WebAnnotationModel;
@@ -70,21 +71,21 @@ namespace WebAnnotation.WPF.Converters
                     }
                 }
 
-                return Store.StructureTypes.GetObjectsByIDs(IDs, true);
+                return Store.StructureTypes.GetObjectsByIDs(IDs, true, CancellationToken.None).Result;
             }
             else if (value is IEnumerable<long>)
             {
                 IEnumerable<long> values = value as IEnumerable<long>;
-                return Store.StructureTypes.GetObjectsByIDs([.. values], true);
+                return Store.StructureTypes.GetObjectsByIDs([.. values], true, CancellationToken.None).Result;
             }
             else if (value is IEnumerable<ulong>)
             {
                 IEnumerable<ulong> values = value as IEnumerable<ulong>;
-                return Store.StructureTypes.GetObjectsByIDs([.. values.Select(i => (long)i)], true);
+                return Store.StructureTypes.GetObjectsByIDs([.. values.Select(i => (long)i)], true, CancellationToken.None).Result;
             }
             else if (value is IEnumerable<int>)
             {
-                return Store.StructureTypes.GetObjectsByIDs([.. ((IEnumerable<int>)IDs).Select(i => (long)i)], true);
+                return Store.StructureTypes.GetObjectsByIDs([.. ((IEnumerable<int>)IDs).Select(i => (long)i)], true, CancellationToken.None).Result;
             }
             else if (value is IEnumerable<IStructureTypeReadOnly>)
             {
@@ -129,7 +130,7 @@ namespace WebAnnotation.WPF.Converters
 
                 try
                 {
-                    return Store.StructureTypes.GetObjectByID(ID, true);
+                    return Store.StructureTypes.GetObjectByID(ID, AskServer: true, ForceRefreshFromServer: false, CancellationToken.None).Result;
                 }
                 catch (ArgumentException)
                 {

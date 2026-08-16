@@ -9,7 +9,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\UnitsAndScale\UnitsAndScale.csproj" />
-    <ProjectReference Include="..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
     <ProjectReference Include="..\SqlGeometryUtils\SqlGeometryUtils.csproj" />
     <ProjectReference Include="..\AnnotationVizLib\AnnotationVizLib.csproj" />
     <ProjectReference Include="..\ODataClient\ODataClient.csproj" />

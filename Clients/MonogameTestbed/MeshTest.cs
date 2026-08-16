@@ -9,6 +9,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -28,17 +30,17 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        private Vertex3D[] CreateCubeVerts(GridVector3 offset)
+        private Vertex3D[] CreateCubeVerts(Geometry.Vector3 offset)
         {
             Vertex3D[] verts = new Vertex3D[] {
-                new Vertex3D(new GridVector3(-5, -5, -5), GridVector3.Zero),
-                new Vertex3D(new GridVector3(5, -5, -5), GridVector3.Zero),
-                new Vertex3D(new GridVector3(-5, -5, 5), GridVector3.Zero),
-                new Vertex3D(new GridVector3(5, -5, 5), GridVector3.Zero),
-                new Vertex3D(new GridVector3(-5, 5, -5), GridVector3.Zero),
-                new Vertex3D(new GridVector3(5, 5, -5), GridVector3.Zero),
-                new Vertex3D(new GridVector3(-5, 5, 5), GridVector3.Zero),
-                new Vertex3D(new GridVector3(5, 5, 5), GridVector3.Zero)
+                new Vertex3D(new Geometry.Vector3(-5, -5, -5), Geometry.Vector3.Zero),
+                new Vertex3D(new Geometry.Vector3(5, -5, -5), Geometry.Vector3.Zero),
+                new Vertex3D(new Geometry.Vector3(-5, -5, 5), Geometry.Vector3.Zero),
+                new Vertex3D(new Geometry.Vector3(5, -5, 5), Geometry.Vector3.Zero),
+                new Vertex3D(new Geometry.Vector3(-5, 5, -5), Geometry.Vector3.Zero),
+                new Vertex3D(new Geometry.Vector3(5, 5, -5), Geometry.Vector3.Zero),
+                new Vertex3D(new Geometry.Vector3(-5, 5, 5), Geometry.Vector3.Zero),
+                new Vertex3D(new Geometry.Vector3(5, 5, 5), Geometry.Vector3.Zero)
             };
 
             for (int i = 0; i < verts.Length; i++)
@@ -61,12 +63,12 @@ namespace MonogameTestbed
                 new Face(0, 4, 6), new Face(0, 6, 2) };      // Left
         }
 
-    private Vertex3D[] CreateTetrahedronVerts(GridVector3 offset)
+    private Vertex3D[] CreateTetrahedronVerts(Geometry.Vector3 offset)
     {
-        Vertex3D[] verts = new Vertex3D[] {new Vertex3D(new GridVector3(0, 0, 0), new GridVector3(0, 0, 0)),
-                                 new Vertex3D(new GridVector3(0, 1, 0), new GridVector3(0, 1, 0)),
-                                 new Vertex3D(new GridVector3(0, 0, 1), new GridVector3(0, 0, 1)),
-                                 new Vertex3D(new GridVector3(1, 0, 0), new GridVector3(1, 0, 0)) };
+        Vertex3D[] verts = new Vertex3D[] {new Vertex3D(new Geometry.Vector3(0, 0, 0), new Geometry.Vector3(0, 0, 0)),
+                                 new Vertex3D(new Geometry.Vector3(0, 1, 0), new Geometry.Vector3(0, 1, 0)),
+                                 new Vertex3D(new Geometry.Vector3(0, 0, 1), new Geometry.Vector3(0, 0, 1)),
+                                 new Vertex3D(new Geometry.Vector3(1, 0, 0), new Geometry.Vector3(1, 0, 0)) };
 
         for(int i = 0; i < verts.Length; i++)
         {
@@ -84,10 +86,10 @@ namespace MonogameTestbed
                            new Face(1,3,2) };
     }
 
-    private Mesh3D CreateTetrahedronMeshModel(GridVector3 offset)
+    private Mesh3D CreateTetrahedronMeshModel(Geometry.Vector3 offset)
     {
         Mesh3D mesh = new Mesh3D();
-        mesh.AddVerticies(CreateTetrahedronVerts(new GridVector3(0, 0, 0)));
+        mesh.AddVerticies(CreateTetrahedronVerts(new Geometry.Vector3(0, 0, 0)));
         Face[] faces = CreateTetrahedronFaces();
         foreach (Face f in faces)
         {
@@ -97,7 +99,7 @@ namespace MonogameTestbed
         return mesh;
     }
 
-    private Mesh3D CreateCubeMeshModel(GridVector3 offset)
+    private Mesh3D CreateCubeMeshModel(Geometry.Vector3 offset)
     {
         Mesh3D mesh = new Mesh3D();
         mesh.AddVerticies(CreateCubeVerts(offset));
@@ -124,9 +126,9 @@ namespace MonogameTestbed
       Color[] tetra_colors = new Color[] { Color.Red, Color.Blue, Color.Green, Color.Yellow };
       Color[] cube_colors  = new Color[] { Color.White, Color.Blue, Color.Green, Color.Yellow, Color.Red, Color.Orange, Color.Purple, Color.Black };
 
-      tetraMesh = CreateTetrahedronMeshModel(new GridVector3(-20, 0, 0));
+      tetraMesh = CreateTetrahedronMeshModel(new Geometry.Vector3(-20, 0, 0));
 
-      Mesh3D cubeMeshForView = CreateCubeMeshModel(new GridVector3(20, 0, 0));
+      Mesh3D cubeMeshForView = CreateCubeMeshModel(new Geometry.Vector3(20, 0, 0));
       cubeMeshForView.RecalculateNormals();
       MeshModel<VertexPositionNormalColor> cubeModel = cubeMeshForView.ToVertexPositionNormalColorMeshModel(cube_colors);
       meshViewWithLighting.models.Add(cubeModel);
@@ -149,18 +151,18 @@ namespace MonogameTestbed
         // foreach (var model in BuildSmoothMeshLine(...)) ...
 
 
-    //meshViewWithLighting.models.Add(BuildPolygonBranchCenter(GridVector3.Zero));
+    //meshViewWithLighting.models.Add(BuildPolygonBranchCenter(Geometry.Vector3.Zero));
     //Add a simple shape that should always be correct to test simple process and terminal rendering
-    //meshViewWithLighting.models.Add(BuildSmoothMeshTwoNonOverlappingCircles(new GridVector3(50,0,0)));
+    //meshViewWithLighting.models.Add(BuildSmoothMeshTwoNonOverlappingCircles(new Geometry.Vector3(50,0,0)));
 
-    //meshViewWithLighting.models.Add(BuildSmoothMeshTwoPolygons(GridVector3.Zero));
-    //meshViewWithLighting.models.Add(BuildPolygonBranchCenter(GridVector3.Zero));
+    //meshViewWithLighting.models.Add(BuildSmoothMeshTwoPolygons(Geometry.Vector3.Zero));
+    //meshViewWithLighting.models.Add(BuildPolygonBranchCenter(Geometry.Vector3.Zero));
 
-    //meshView.models.Add(BuildSmoothMeshFromSharedModel_ColorOnly(new GridVector3(-25, 0, 0)));
+    //meshView.models.Add(BuildSmoothMeshFromSharedModel_ColorOnly(new Geometry.Vector3(-25, 0, 0)));
 
-    //meshViewWithLighting.models.Add(BuildSmoothMeshFromSharedModel(new GridVector3(0, 0, 0)));
+    //meshViewWithLighting.models.Add(BuildSmoothMeshFromSharedModel(new Geometry.Vector3(0, 0, 0)));
     
-      labelCamera = new LabelView("", new GridVector2(39950, 0));
+      labelCamera = new LabelView("", new Geometry.Vector2(39950, 0));
 
       _initialized = true;
       return Task.CompletedTask;
@@ -171,58 +173,58 @@ public void UnloadContent(MonoTestbed window)
     //this.Scene.SaveCamera(TestMode.MESH);
 }
 
-private MeshModel<VertexPositionNormalColor> BuildSmoothMesh1(GridVector3 translate)
+private MeshModel<VertexPositionNormalColor> BuildSmoothMesh1(Geometry.Vector3 translate)
 {
     // StandardModels / SmoothMeshGenerator not available
     return null;
 }
 
-private MeshModel<VertexPositionColor> BuildSmoothMeshFromSharedModel_ColorOnly(GridVector3 translate)
+private MeshModel<VertexPositionColor> BuildSmoothMeshFromSharedModel_ColorOnly(Geometry.Vector3 translate)
 {
     return null;
 }
 
-private MeshModel<VertexPositionNormalColor> BuildSmoothMeshFromSharedModel(GridVector3 translate)
+private MeshModel<VertexPositionNormalColor> BuildSmoothMeshFromSharedModel(Geometry.Vector3 translate)
 {
     return null;
 }
 
-private MeshModel<VertexPositionNormalColor> BuildSmoothMeshTwoPolygons(GridVector3 translate)
+private MeshModel<VertexPositionNormalColor> BuildSmoothMeshTwoPolygons(Geometry.Vector3 translate)
 {
     return null;
 }
 
-private MeshModel<VertexPositionNormalColor> BuildSmoothMeshTwoNonOverlappingCircles(GridVector3 translate)
+private MeshModel<VertexPositionNormalColor> BuildSmoothMeshTwoNonOverlappingCircles(Geometry.Vector3 translate)
 {
     return null;
 }
 
-private MeshModel<VertexPositionNormalColor> BuildSmoothMeshCircleBranchOfOneOverlapping(GridVector3 translate)
+private MeshModel<VertexPositionNormalColor> BuildSmoothMeshCircleBranchOfOneOverlapping(Geometry.Vector3 translate)
 {
     return null;
 }
 
-private MeshModel<VertexPositionNormalColor> BuildSmoothMeshCircleBranchOfOneOverlappingButTall(GridVector3 translate)
+private MeshModel<VertexPositionNormalColor> BuildSmoothMeshCircleBranchOfOneOverlappingButTall(Geometry.Vector3 translate)
 {
     return null;
 }
 
-private MeshModel<VertexPositionNormalColor> BuildSmoothMeshCircleXBranchOfOneOverlappingButTall(GridVector3 translate)
+private MeshModel<VertexPositionNormalColor> BuildSmoothMeshCircleXBranchOfOneOverlappingButTall(Geometry.Vector3 translate)
 {
     return null;
 }
 
-private MeshModel<VertexPositionNormalColor> BuildSmoothMeshCircleDoubleBranchOfOneOverlappingButTall(GridVector3 translate)
+private MeshModel<VertexPositionNormalColor> BuildSmoothMeshCircleDoubleBranchOfOneOverlappingButTall(Geometry.Vector3 translate)
 {
     return null;
 }
 
-private MeshModel<VertexPositionNormalColor> BuildSmoothMeshLine(GridVector3 translate)
+private MeshModel<VertexPositionNormalColor> BuildSmoothMeshLine(Geometry.Vector3 translate)
 {
     return null;
 }
 
-private MeshModel<VertexPositionNormalColor> BuildPolygonBranchCenter(GridVector3 translate)
+private MeshModel<VertexPositionNormalColor> BuildPolygonBranchCenter(Geometry.Vector3 translate)
 {
     return null;
 }

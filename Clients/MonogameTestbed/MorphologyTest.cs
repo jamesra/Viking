@@ -9,6 +9,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -116,7 +118,7 @@ namespace MonogameTestbed
             };
             this.meshView = new MeshView<VertexPositionNormalColor>();
 
-            labelCamera = new LabelView("", new GridVector2(0, 100));
+            labelCamera = new LabelView("", new Geometry.Vector2(0, 100));
 
             //meshes = InitSmallSmoothModelFromOData(144287, ENDPOINT.TEST);
             //meshes = InitSmallSmoothModelFromOData(new long[] { 1 }, ENDPOINT.RC2);
@@ -143,9 +145,9 @@ namespace MonogameTestbed
             //meshes = InitSmallModelFromOData(476);
             //meshes = InitSmallModelFromOData(1);
 
-            GridBox bbox = meshes.First().BoundingBox;
+            Box bbox = meshes.First().BoundingBox;
 
-            this.Scene.Camera.Position = (bbox.CenterPoint - new GridVector3(bbox.Width / 2.0, bbox.Height / 2.0, 0)).ToXNAVector3();
+            this.Scene.Camera.Position = (bbox.CenterPoint - new Geometry.Vector3(bbox.Width / 2.0, bbox.Height / 2.0, 0)).ToXNAVector3();
             //this.Scene.Camera.Position = (bbox.CenterPoint * 0.9).ToXNAVector3();
             //this.Scene.Camera.Position = new Vector3(this.Scene.Camera.Position.X, this.Scene.Camera.Position.Y, -this.Scene.Camera.Position.Z);
             //            this.Scene.Camera.Position = bbox.CenterPoint.ToXNAVector3();
@@ -278,8 +280,8 @@ namespace MonogameTestbed
                 this.Scene.Camera.Position = new Vector3(0, -10, 0);
             }
 
-            GridVector3 VolumePosition = Scene.Camera.Position.ToGridVector3();
-            VolumePosition /= new GridVector3(2.18, 2.18, -90);
+            Geometry.Vector3 VolumePosition = Scene.Camera.Position.ToVector3();
+            VolumePosition /= new Geometry.Vector3(2.18, 2.18, -90);
 
             labelCamera.Text = string.Format("{0}\n{1}\n{2}", Scene.Camera.Position, VolumePosition, Scene.Camera.Rotation);
 

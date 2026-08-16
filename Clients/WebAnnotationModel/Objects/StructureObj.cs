@@ -354,28 +354,32 @@ namespace WebAnnotationModel.Objects
         }
 
         private StructureTypeObj _Type = null;
+        private static int TypesReloadAttempted;
+
+        /// <summary>
+        /// Structure type from the table loaded at startup. gRPC conversion only sets TypeID, so this
+        /// resolves the object from <see cref="Store.StructureTypes"/> on first access.
+        /// </summary>
         public StructureTypeObj Type
         {
-            get => _Type;
-            /*
-            set
+            get
             {
-                Debug.Assert(value != null);
-                if (value.ID == TypeID)
-                    return;
+                if (_Type != null)
+                    return _Type;
 
-                if (value != null)
+                if (!Store.IsInitialized || TypeID == 0)
+                    return null;
+
+                _Type = Store.StructureTypes.GetObjectByID(TypeID, false);
+                if (_Type == null && Interlocked.Exchange(ref TypesReloadAttempted, 1) == 0)
                 {
-                    OnPropertyChanging("Type");
-                    TypeID = value.ID;
-                    _Type = value;
-
-                    SetDBActionForChange();
-
-                    OnPropertyChanged("Type");
+                    Store.StructureTypes.GetAll().ConfigureAwait(false).GetAwaiter().GetResult();
+                    _Type = Store.StructureTypes.GetObjectByID(TypeID, false);
                 }
+
+                return _Type;
             }
-            */
+            internal set => _Type = value;
         }
 
         public string TagsXML => this.TagsXML;

@@ -24,10 +24,10 @@ namespace VolumeModel
             };
 
             options.Converters.Add(new JsonStringEnumConverter());
-            options.Converters.Add(new GridVector2JsonConverter());
-            options.Converters.Add(new GridRectangleJsonConverter());
+            options.Converters.Add(new Vector2JsonConverter());
+            options.Converters.Add(new RectangleJsonConverter());
             options.Converters.Add(new TransformBasicInfoJsonConverter());
-            options.Converters.Add(new MappingGridVector2JsonConverter());
+            options.Converters.Add(new MappingVector2JsonConverter());
             options.Converters.Add(new TransformJsonConverter());
             return options;
         }
@@ -106,10 +106,10 @@ namespace VolumeModel
         {
             if (root.TryGetProperty("gridSizeX", out JsonElement gridSizeXEl))
             {
-                MappingGridVector2[] mapPoints = ReadMapPoints(root);
+                MappingVector2[] mapPoints = ReadMapPoints(root);
                 TransformBasicInfo info = ReadInfo(root);
-                GridRectangle mappedBounds = root.TryGetProperty("mappedBounds", out JsonElement mb)
-                    ? GridRectangleSerialization.Read(mb)
+                Rectangle mappedBounds = root.TryGetProperty("mappedBounds", out JsonElement mb)
+                    ? RectangleSerialization.Read(mb)
                     : mapPoints.MappedBounds();
                 return new GridTransform(mapPoints, mappedBounds, gridSizeXEl.GetInt32(),
                     root.GetProperty("gridSizeY").GetInt32(), info);
@@ -117,21 +117,21 @@ namespace VolumeModel
 
             if (root.TryGetProperty("triangleIndicies", out _))
             {
-                MappingGridVector2[] mapPoints = ReadMapPoints(root);
+                MappingVector2[] mapPoints = ReadMapPoints(root);
                 return new MeshTransform(mapPoints, ReadInfo(root));
             }
 
             if (root.TryGetProperty("mapPoints", out _))
             {
-                MappingGridVector2[] mapPoints = ReadMapPoints(root);
+                MappingVector2[] mapPoints = ReadMapPoints(root);
                 return new RBFTransform(mapPoints, ReadInfo(root));
             }
 
             throw new JsonException("Unable to determine transform type from JSON");
         }
 
-        private static MappingGridVector2[] ReadMapPoints(JsonElement root) =>
-            root.GetProperty("mapPoints").Deserialize<MappingGridVector2[]>(JsonTransformSerializer.ReadOptions)
+        private static MappingVector2[] ReadMapPoints(JsonElement root) =>
+            root.GetProperty("mapPoints").Deserialize<MappingVector2[]>(JsonTransformSerializer.ReadOptions)
             ?? throw new JsonException("mapPoints is null");
 
         private static TransformBasicInfo ReadInfo(JsonElement root) =>
@@ -163,7 +163,7 @@ namespace VolumeModel
                     writer.WriteNumber("gridSizeX", grid.GridSizeX);
                     writer.WriteNumber("gridSizeY", grid.GridSizeY);
                     writer.WritePropertyName("mappedBounds");
-                    GridRectangleSerialization.Write(writer, grid.MappedBounds);
+                    RectangleSerialization.Write(writer, grid.MappedBounds);
                     break;
                 case MeshTransform mesh:
                     writer.WritePropertyName("triangleIndicies");
@@ -174,18 +174,18 @@ namespace VolumeModel
             writer.WriteEndObject();
         }
 
-        private static void WriteMapPoints(Utf8JsonWriter writer, MappingGridVector2[] mapPoints)
+        private static void WriteMapPoints(Utf8JsonWriter writer, MappingVector2[] mapPoints)
         {
             writer.WriteStartArray();
-            foreach (MappingGridVector2 point in mapPoints)
-                MappingGridVector2JsonConverter.WritePoint(writer, point);
+            foreach (MappingVector2 point in mapPoints)
+                MappingVector2JsonConverter.WritePoint(writer, point);
             writer.WriteEndArray();
         }
     }
 
-    internal static class GridVector2Serialization
+    internal static class Vector2Serialization
     {
-        internal static void Write(Utf8JsonWriter writer, in GridVector2 value)
+        internal static void Write(Utf8JsonWriter writer, in Vector2 value)
         {
             writer.WriteStartObject();
             writer.WriteNumber("x", value.X);
@@ -193,34 +193,34 @@ namespace VolumeModel
             writer.WriteEndObject();
         }
 
-        internal static GridVector2 Read(JsonElement element)
+        internal static Vector2 Read(JsonElement element)
         {
             double x = element.TryGetProperty("x", out JsonElement xEl) ? xEl.GetDouble()
                 : element.GetProperty("X").GetDouble();
             double y = element.TryGetProperty("y", out JsonElement yEl) ? yEl.GetDouble()
                 : element.GetProperty("Y").GetDouble();
-            return new GridVector2(x, y);
+            return new Vector2(x, y);
         }
 
-        internal static GridVector2 Read(ref Utf8JsonReader reader)
+        internal static Vector2 Read(ref Utf8JsonReader reader)
         {
             using JsonDocument doc = JsonDocument.ParseValue(ref reader);
             return Read(doc.RootElement);
         }
     }
 
-    internal sealed class GridVector2JsonConverter : JsonConverter<GridVector2>
+    internal sealed class Vector2JsonConverter : JsonConverter<Vector2>
     {
-        public override GridVector2 Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-            GridVector2Serialization.Read(ref reader);
+        public override Vector2 Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+            Vector2Serialization.Read(ref reader);
 
-        public override void Write(Utf8JsonWriter writer, GridVector2 value, JsonSerializerOptions options) =>
-            GridVector2Serialization.Write(writer, in value);
+        public override void Write(Utf8JsonWriter writer, Vector2 value, JsonSerializerOptions options) =>
+            Vector2Serialization.Write(writer, in value);
     }
 
-    internal static class GridRectangleSerialization
+    internal static class RectangleSerialization
     {
-        internal static void Write(Utf8JsonWriter writer, in GridRectangle value)
+        internal static void Write(Utf8JsonWriter writer, in Rectangle value)
         {
             writer.WriteStartObject();
             writer.WriteNumber("left", value.Left);
@@ -230,9 +230,9 @@ namespace VolumeModel
             writer.WriteEndObject();
         }
 
-        internal static GridRectangle Read(JsonElement element)
+        internal static Rectangle Read(JsonElement element)
         {
-            return new GridRectangle(
+            return new Rectangle(
                 element.GetProperty("left").GetDouble(),
                 element.GetProperty("right").GetDouble(),
                 element.GetProperty("bottom").GetDouble(),
@@ -240,16 +240,16 @@ namespace VolumeModel
         }
     }
 
-    internal sealed class GridRectangleJsonConverter : JsonConverter<GridRectangle>
+    internal sealed class RectangleJsonConverter : JsonConverter<Rectangle>
     {
-        public override GridRectangle Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override Rectangle Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             using JsonDocument doc = JsonDocument.ParseValue(ref reader);
-            return GridRectangleSerialization.Read(doc.RootElement);
+            return RectangleSerialization.Read(doc.RootElement);
         }
 
-        public override void Write(Utf8JsonWriter writer, GridRectangle value, JsonSerializerOptions options) =>
-            GridRectangleSerialization.Write(writer, in value);
+        public override void Write(Utf8JsonWriter writer, Rectangle value, JsonSerializerOptions options) =>
+            RectangleSerialization.Write(writer, in value);
     }
 
     internal static class TransformBasicInfoSerialization
@@ -319,15 +319,15 @@ namespace VolumeModel
             TransformBasicInfoSerialization.Write(writer, value);
     }
 
-    internal sealed class MappingGridVector2JsonConverter : JsonConverter<MappingGridVector2>
+    internal sealed class MappingVector2JsonConverter : JsonConverter<MappingVector2>
     {
-        public override MappingGridVector2 Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override MappingVector2 Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType != JsonTokenType.StartObject)
-                throw new JsonException("Expected start of object for MappingGridVector2");
+                throw new JsonException("Expected start of object for MappingVector2");
 
-            GridVector2 control = default;
-            GridVector2 mapped = default;
+            Vector2 control = default;
+            Vector2 mapped = default;
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndObject)
@@ -340,12 +340,12 @@ namespace VolumeModel
                 if (string.Equals(name, "controlPoint", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(name, "control", StringComparison.OrdinalIgnoreCase))
                 {
-                    control = GridVector2Serialization.Read(ref reader);
+                    control = Vector2Serialization.Read(ref reader);
                 }
                 else if (string.Equals(name, "mappedPoint", StringComparison.OrdinalIgnoreCase)
                          || string.Equals(name, "mapped", StringComparison.OrdinalIgnoreCase))
                 {
-                    mapped = GridVector2Serialization.Read(ref reader);
+                    mapped = Vector2Serialization.Read(ref reader);
                 }
                 else
                 {
@@ -353,19 +353,19 @@ namespace VolumeModel
                 }
             }
 
-            return new MappingGridVector2(control, mapped);
+            return new MappingVector2(control, mapped);
         }
 
-        public override void Write(Utf8JsonWriter writer, MappingGridVector2 value, JsonSerializerOptions options) =>
+        public override void Write(Utf8JsonWriter writer, MappingVector2 value, JsonSerializerOptions options) =>
             WritePoint(writer, value);
 
-        internal static void WritePoint(Utf8JsonWriter writer, MappingGridVector2 value)
+        internal static void WritePoint(Utf8JsonWriter writer, MappingVector2 value)
         {
             writer.WriteStartObject();
             writer.WritePropertyName("controlPoint");
-            GridVector2Serialization.Write(writer, value.ControlPoint);
+            Vector2Serialization.Write(writer, value.ControlPoint);
             writer.WritePropertyName("mappedPoint");
-            GridVector2Serialization.Write(writer, value.MappedPoint);
+            Vector2Serialization.Write(writer, value.MappedPoint);
             writer.WriteEndObject();
         }
     }

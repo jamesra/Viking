@@ -76,7 +76,7 @@ namespace WebAnnotationModel.gRPC.Tests
             var label = $"store-smoke-{Guid.NewGuid():N}".Substring(0, 24);
             var structureDraft = new StructureObj(type) { Label = label };
             // Use POINT (same as seed / proto round-trips); CIRCLE becomes CURVEPOLYGON WKT.
-            var shapeA = new GridVector2(120, 130);
+            var shapeA = new Vector2(120, 130);
             var locationDraft = new LocationObj(structureDraft, shapeA, shapeA, section, LocationType.POINT);
 
             var (structure, createdLocFromCreate) = await stores.Structures.Create(structureDraft, locationDraft);
@@ -95,7 +95,7 @@ namespace WebAnnotationModel.gRPC.Tests
                 Assert.That(locationA, Is.Not.Null);
 
                 // Move
-                var moved = new GridVector2(200, 210);
+                var moved = new Vector2(200, 210);
                 locationA.MosaicShape = moved;
                 locationA.VolumeShape = moved;
                 Assert.That(await stores.Locations.Save(), Is.True);
@@ -105,7 +105,7 @@ namespace WebAnnotationModel.gRPC.Tests
                 Assert.That(reloadedA.Position.Y, Is.EqualTo(210).Within(0.5));
 
                 // Second location + location link
-                var shapeB = new GridVector2(220, 230);
+                var shapeB = new Vector2(220, 230);
                 var locationBDraft = new LocationObj(structure, shapeB, shapeB, section, LocationType.POINT);
                 var locationB = stores.Locations.Create(locationBDraft);
                 Assert.That(locationB, Is.Not.Null);

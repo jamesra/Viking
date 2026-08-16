@@ -6,10 +6,10 @@
 # `env_file:`), overriding appsettings.json via ASP.NET Core's double-underscore
 # configuration-key convention. Do not commit the filled-in copy.
 #
-# When using docker-compose.annotation-db.yml / Start-AnnotationTestStack.ps1,
-# the override file sets ConnectionStrings + IdentityServer for the local test
-# stack (annotation-sql service name + identity-devtest). Values below still
-# matter if you run grpc-annotation-service without that override.
+# Start-AnnotationTestStack.ps1 applies docker-compose.annotation-db.yml (SQL)
+# and docker-compose.identity-devtest.yml (DevTest Identity). For Viking against
+# this gRPC container, omit the identity overlay so IdentityServer__* below are
+# used; a production JWT will 401 against DevTest Identity.
 
 # --- SQL Server (annotation database) ---
 # SQL auth (not Windows/Trusted_Connection) because the container is Linux-based.

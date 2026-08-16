@@ -112,8 +112,34 @@ namespace WebAnnotationModel.gRPC
             if (LastQueryForSection.TryGetValue(sectionNumber, out var last) && last > DateTime.MinValue)
                 modifiedAfter = last;
 
-            await _locationLinkStore.GetLinksForSectionAsync(sectionNumber, modifiedAfter, token)
-                .ConfigureAwait(false);
+            try
+            {
+                await _locationLinkStore.GetLinksForSectionAsync(sectionNumber, modifiedAfter, token)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                Trace.WriteLine(
+                    $"GetLocationLinksForSection failed for section {sectionNumber}: {e.Message}",
+                    "WebAnnotation");
+            }
+        }
+
+        /// <summary>
+        /// One GetStructuresByIDs for every parent missing from the local store. Region views
+        /// read Location.Parent; without this each Parent getter hits the server by ID.
+        /// </summary>
+        private async Task EnsureParentStructuresAsync(IEnumerable<ILocation> locations, CancellationToken token)
+        {
+            var missing = locations
+                .Where(l => l != null && l.ParentID.HasValue && !_structureStore.Contains(l.ParentID.Value))
+                .Select(l => l.ParentID.Value)
+                .Distinct()
+                .ToArray();
+            if (missing.Length == 0)
+                return;
+
+            await _structureStore.GetObjectsByIDs(missing, true, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -156,7 +182,7 @@ namespace WebAnnotationModel.gRPC
         /// Queries the server for locations on the given section whose mosaic-space bounding box intersects
         /// VolumeBounds, merges them into the local store, and invokes foundObjectCallback with the results.
         /// </summary>
-        public async Task<List<LocationObj>> GetObjectsInRegionAsync(Geometry.GridRectangle VolumeBounds,
+        public async Task<List<LocationObj>> GetObjectsInRegionAsync(Geometry.Rectangle VolumeBounds,
             double ScreenPixelSizeInVolume,
             int SectionNumber,
             QueryTargets queryTargets,
@@ -189,6 +215,7 @@ namespace WebAnnotationModel.gRPC
                     {
                         if (token.IsCancellationRequested)
                             return;
+                        await EnsureParentStructuresAsync(update.NewOrUpdated, token);
                         var chunkChanges = await ServerQueryResultsHandler
                             .ProcessServerUpdate(update.NewOrUpdated, update.DeletedIDs);
                         await CallOnCollectionChanged(chunkChanges);
@@ -218,6 +245,7 @@ namespace WebAnnotationModel.gRPC
             if (token.IsCancellationRequested)
                 return new List<LocationObj>();
 
+            await EnsureParentStructuresAsync(unary.NewOrUpdated, token);
             var changes = await ServerQueryResultsHandler.ProcessServerUpdate(unary.NewOrUpdated, unary.DeletedIDs);
             await CallOnCollectionChanged(changes);
             await OnServerObjectsLoaded(unary.NewOrUpdated, unary.QueryTime);
@@ -230,7 +258,7 @@ namespace WebAnnotationModel.gRPC
             return results;
         }
 
-        private static string ToWktPolygon(Geometry.GridRectangle bounds)
+        private static string ToWktPolygon(Geometry.Rectangle bounds)
         {
             System.Globalization.CultureInfo ci = System.Globalization.CultureInfo.InvariantCulture;
             return string.Format(ci,
@@ -285,20 +313,18 @@ namespace WebAnnotationModel.gRPC
 
         #region Add/Update/Remove
 
-        /*
         /// <summary>
-        /// Send a request to load all structure parents in one batch before adding locations
+        /// Load missing parent structures in one batch before adding locations so
+        /// <see cref="LocationObj.Parent"/> can resolve from the structure store.
         /// </summary>
-        /// <param name="newObjs"></param>
-        /// <returns></returns>
         protected override ChangeInventory<LocationObj> InternalAdd(LocationObj[] newObjs)
         {
             long[] MissingParentIDs = newObjs.Where(loc => loc.ParentID.HasValue && _structureStore.Contains(loc.ParentID.Value) == false).Select(loc => loc.ParentID.Value).Distinct().ToArray();
             if (MissingParentIDs.Length > 0)
-                _structureStore.GetObjectsByIDs(MissingParentIDs, true, CancellationToken.None);
+                _structureStore.GetObjectsByIDs(MissingParentIDs, true);
 
             return base.InternalAdd(newObjs);
-        }*/
+        }
 
         protected ICollection<LocationObj> InternalDelete(LocationObj[] objs)
         {
@@ -317,6 +343,7 @@ namespace WebAnnotationModel.gRPC
             var client = _locationClientFactory.GetOrCreate();
             var response = await client.GetStructureLocations(structureID);
             var queryTime = DateTime.UtcNow;
+            await EnsureParentStructuresAsync(response, CancellationToken.None);
             var changes = await ServerQueryResultsHandler.ProcessServerUpdate(response, Array.Empty<long>());
             await CallOnCollectionChanged(changes).ConfigureAwait(false);
             await OnServerObjectsLoaded(response, queryTime);
@@ -336,7 +363,7 @@ namespace WebAnnotationModel.gRPC
             return new List<LocationObj>();
         }
 
-        public bool Contains(LocationObj o, Geometry.GridRectangle bounds)
+        public bool Contains(LocationObj o, Geometry.Rectangle bounds)
         {
             return bounds.Contains(o.Position);
         }

@@ -1,4 +1,5 @@
 ﻿using Jotunn.Common;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -8,26 +9,22 @@ using Viking.VolumeModel;
 
 namespace Viking.VolumeViewModel
 {
-    /// <summary>
-    /// A view of a volume and a number of sections of the same X/Y region across all visible regions
-    /// </summary>
     public class VolumeViewModelSharedView : DependencyObject
     {
         public static readonly DependencyProperty VisibleRegionProperty;
 
         public VisibleRegionInfo VisibleRegion
         {
-            get { return (VisibleRegionInfo)GetValue(VolumeViewModelSharedView.VisibleRegionProperty); }
-            set { SetCurrentValue(VolumeViewModelSharedView.VisibleRegionProperty, value); }
+            get { return (VisibleRegionInfo)GetValue(VisibleRegionProperty); }
+            set { SetCurrentValue(VisibleRegionProperty, value); }
         }
 
         public static readonly DependencyProperty VisibleSectionsProperty;
         public ObservableCollection<SectionViewModel> VisibleSections
         {
-            get { return (ObservableCollection<SectionViewModel>)GetValue(VolumeViewModelSharedView.VisibleSectionsProperty); }
-            set { SetCurrentValue(VolumeViewModelSharedView.VisibleSectionsProperty, value); }
+            get { return (ObservableCollection<SectionViewModel>)GetValue(VisibleSectionsProperty); }
+            set { SetCurrentValue(VisibleSectionsProperty, value); }
         }
-
 
         private readonly VolumeViewModel volume;
 
@@ -35,23 +32,22 @@ namespace Viking.VolumeViewModel
 
         static VolumeViewModelSharedView()
         {
-            VolumeViewModelSharedView.VisibleRegionProperty = DependencyProperty.Register("VisibleRegion",
+            VisibleRegionProperty = DependencyProperty.Register("VisibleRegion",
                                                                                    typeof(VisibleRegionInfo),
                                                                                    typeof(VolumeViewModelSharedView),
                                                                                    new FrameworkPropertyMetadata(null,
                                                                                        FrameworkPropertyMetadataOptions.AffectsRender));
 
-            VolumeViewModelSharedView.VisibleSectionsProperty = DependencyProperty.Register("VisibleSections",
-                                                                                   typeof(ObservableCollection<int>),
+            VisibleSectionsProperty = DependencyProperty.Register("VisibleSections",
+                                                                                   typeof(ObservableCollection<SectionViewModel>),
                                                                                    typeof(VolumeViewModelSharedView),
                                                                                    new FrameworkPropertyMetadata(null,
                                                                                        FrameworkPropertyMetadataOptions.AffectsRender));
         }
-         
 
         public VolumeViewModelSharedView(VolumeViewModel volume)
         {
-            this.volume = volume; 
+            this.volume = volume;
         }
     }
 
@@ -59,9 +55,49 @@ namespace Viking.VolumeViewModel
     {
         private Volume _Volume;
 
+        public Volume Volume => _Volume;
+
         private MappingManager _MappingManager;
 
         public SortedList<int, SectionViewModel> SectionViewModels;
+
+        public static readonly DependencyProperty VisibleRegionProperty = DependencyProperty.Register(
+            nameof(VisibleRegion),
+            typeof(VisibleRegionInfo),
+            typeof(VolumeViewModel),
+            new FrameworkPropertyMetadata(new VisibleRegionInfo(0, 0, 10000, 10000, 256), FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+
+        public VisibleRegionInfo VisibleRegion
+        {
+            get { return (VisibleRegionInfo)GetValue(VisibleRegionProperty); }
+            set { SetValue(VisibleRegionProperty, value); }
+        }
+
+        public static readonly DependencyProperty CenterIndexProperty = DependencyProperty.Register(
+            nameof(CenterIndex),
+            typeof(int),
+            typeof(VolumeViewModel),
+            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, null, CoerceCenterIndex));
+
+        public int CenterIndex
+        {
+            get { return (int)GetValue(CenterIndexProperty); }
+            set { SetValue(CenterIndexProperty, value); }
+        }
+
+        private static object CoerceCenterIndex(DependencyObject d, object baseValue)
+        {
+            VolumeViewModel vm = (VolumeViewModel)d;
+            int value = (int)baseValue;
+            int max = vm.SectionViewModels == null || vm.SectionViewModels.Count == 0
+                ? 0
+                : vm.SectionViewModels.Count - 1;
+            if (value < 0)
+                return 0;
+            if (value > max)
+                return max;
+            return value;
+        }
 
         public string Name { get { return _Volume.Name; } }
 
@@ -75,9 +111,7 @@ namespace Viking.VolumeViewModel
 
         public XDocument VolumeXML { get { return _Volume.VolumeElement.Document; } }
 
- //       public string[] TransformNames { get { return _Volume.Transforms.Keys.ToArray(); } }
-               
-        public VolumeViewModel(Volume volume, System.ComponentModel.BackgroundWorker workerThread)
+        public VolumeViewModel(Volume volume)
         {
             _Volume = volume;
 
@@ -90,7 +124,6 @@ namespace Viking.VolumeViewModel
                 SectionViewModel sectionViewModel = new SectionViewModel(volume, s, _MappingManager);
                 SectionViewModels.Add(s.Number, sectionViewModel);
             }
-             
         }
 
         public string Host { get { return _Volume.Host; } }
@@ -101,9 +134,9 @@ namespace Viking.VolumeViewModel
             while (false == SectionViewModels.ContainsKey(sectionNumber))
             {
                 if (sectionNumber < LowestKey)
-                    return new int?(); 
+                    return new int?();
 
-                sectionNumber--; 
+                sectionNumber--;
             }
 
             return new int?(sectionNumber);
@@ -114,7 +147,7 @@ namespace Viking.VolumeViewModel
             int HighestKey = SectionViewModels.Keys.Max();
             while (false == SectionViewModels.ContainsKey(sectionNumber))
             {
-                if (sectionNumber < HighestKey)
+                if (sectionNumber > HighestKey)
                     return new int?();
 
                 sectionNumber++;

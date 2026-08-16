@@ -6,19 +6,21 @@ using System.Linq;
 using TriangleNet;
 using TriangleNet.Geometry;
 using TriangleNet.Meshing;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
 
     public static class TriangleNetExtensions
     {
-        public static PositionColorMeshModel CreateMeshForPolygon2D(GridVector2[] Verticies, ICollection<GridVector2[]> InteriorPolygons, Color color)
+        public static PositionColorMeshModel CreateMeshForPolygon2D(Geometry.Vector2[] Vertices, ICollection<Geometry.Vector2[]> InteriorPolygons, Color color)
         {
-            IPolygon poly = Verticies.CreatePolygon(InteriorPolygons);
+            IPolygon poly = Vertices.CreatePolygon(InteriorPolygons);
             return poly.CreateMeshForPolygon2D(color);
         }
 
-        public static PositionColorMeshModel CreateMeshForPolygon2D(this GridPolygon input, Color color)
+        public static PositionColorMeshModel CreateMeshForPolygon2D(this Geometry.Polygon input, Color color)
         {
             IPolygon poly = input.CreatePolygon();
             return poly.CreateMeshForPolygon2D(color);
@@ -44,7 +46,7 @@ namespace VikingXNAGraphics
 
         public static Geometry.Meshing.Mesh3D ToMesh(this TriangleNet.Meshing.IMesh mesh)
         {
-            GridVector3[] vertArray = [.. mesh.Vertices.Select(v => v.ToGridVector3(0))];
+            Geometry.Vector3[] vertArray = [.. mesh.Vertices.Select(v => v.ToVector3(0))];
 
             Geometry.Meshing.Mesh3D output = new();
 
@@ -56,7 +58,7 @@ namespace VikingXNAGraphics
             {
                 int[] face = [tri.GetVertexID(0), tri.GetVertexID(1), tri.GetVertexID(2)];
 
-                GridVector2[] verts = [.. face.Select(f => vertArray[f].XY())];
+                Geometry.Vector2[] verts = [.. face.Select(f => vertArray[f].XY())];
 
                 if (verts.AreClockwise())
                 {
@@ -81,15 +83,15 @@ namespace VikingXNAGraphics
         {
             PositionColorMeshModel meshModel = new();
             VertexPositionColor[] vertArray = [.. mesh.Vertices.Select(v => new VertexPositionColor(new Vector3((float)v.X, (float)v.Y, 0), color))];
-            meshModel.Verticies = vertArray;
+            meshModel.Vertices = vertArray;
 
             List<int> edges = new(mesh.Vertices.Count * 3);
 
             foreach (TriangleNet.Topology.Triangle tri in mesh.Triangles)
             {
-                GridVector2[] verts = [ vertArray[tri.GetVertexID(0)].Position.ToGridVector3().XY(),
-                                                  vertArray[tri.GetVertexID(1)].Position.ToGridVector3().XY(),
-                                                  vertArray[tri.GetVertexID(2)].Position.ToGridVector3().XY()];
+                Geometry.Vector2[] verts = [ vertArray[tri.GetVertexID(0)].Position.ToVector3().XY(),
+                                                  vertArray[tri.GetVertexID(1)].Position.ToVector3().XY(),
+                                                  vertArray[tri.GetVertexID(2)].Position.ToVector3().XY()];
 
                 if (verts.AreClockwise())
                 {

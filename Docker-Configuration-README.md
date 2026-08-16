@@ -9,16 +9,11 @@ The Docker setup has been updated to map `appsettings.json` files from the proje
 ## Services
 
 ### 1. GrpcAnnotationService
-- **Ports**: HTTP (5001), HTTPS (5002)
+- **Ports**: HTTP/h2c (5010) — mapped from container 80. HTTPS is not enabled (no cert in the image).
 - **Configuration**: `Servers/GrpcAnnotationService/appsettings.json`
 - **Development Config**: `Servers/GrpcAnnotationService/appsettings.Development.json`
 
-### 2. GrpcAnnotation
-- **Ports**: HTTP (5000), HTTPS (5003)
-- **Configuration**: `Servers/GrpcAnnotation/appsettings.json`
-- **Development Config**: `Servers/GrpcAnnotation/appsettings.Development.json`
-
-### 3. SegmentationServer (SAM2)
+### 2. SegmentationServer (SAM2)
 - **Ports**: Web (8080), gRPC (50051)
 - **Configuration**: Uses Python-based configuration
 
@@ -45,12 +40,6 @@ cd Servers/GrpcAnnotationService
 run-with-config.cmd
 ```
 
-#### GrpcAnnotation
-```bash
-cd Servers/GrpcAnnotation
-run-with-config.cmd
-```
-
 #### SegmentationServer
 ```bash
 cd Servers/SegmentationServer
@@ -62,23 +51,13 @@ run-with-config.cmd
 #### GrpcAnnotationService
 ```bash
 docker build -t grpc-annotation-service -f Servers/GrpcAnnotationService/Dockerfile .
-docker run -it -p 5001:80 -p 5002:443 \
+docker run -it -p 5010:80 \
   -v "$(pwd)/Servers/GrpcAnnotationService/appsettings.json:/app/appsettings.json:ro" \
   -v "$(pwd)/Servers/GrpcAnnotationService/appsettings.Development.json:/app/appsettings.Development.json:ro" \
   -e ASPNETCORE_ENVIRONMENT=Development \
+  -e ASPNETCORE_URLS=http://+:80 \
   --name grpc-annotation-service \
   grpc-annotation-service
-```
-
-#### GrpcAnnotation
-```bash
-docker build -t grpc-annotation -f Servers/GrpcAnnotation/Dockerfile .
-docker run -it -p 5000:80 -p 5003:443 \
-  -v "$(pwd)/Servers/GrpcAnnotation/appsettings.json:/app/appsettings.json:ro" \
-  -v "$(pwd)/Servers/GrpcAnnotation/appsettings.Development.json:/app/appsettings.Development.json:ro" \
-  -e ASPNETCORE_ENVIRONMENT=Development \
-  --name grpc-annotation \
-  grpc-annotation
 ```
 
 ## Configuration Management
@@ -87,7 +66,6 @@ docker run -it -p 5000:80 -p 5003:443 \
 
 1. **Edit the appsettings.json files** in the project directories:
    - `Servers/GrpcAnnotationService/appsettings.json`
-   - `Servers/GrpcAnnotation/appsettings.json`
 
 2. **Restart the containers** to pick up changes:
    ```bash
@@ -112,11 +90,7 @@ docker run -it -p 5000:80 -p 5003:443 \
 Once containers are running, access the services at:
 
 - **GrpcAnnotationService**: 
-  - HTTP: http://localhost:5001
-  - HTTPS: https://localhost:5002
-- **GrpcAnnotation**: 
-  - HTTP: http://localhost:5000
-  - HTTPS: https://localhost:5003
+  - HTTP (h2c): http://localhost:5010
 - **SegmentationServer**: 
   - Web: http://localhost:8080
   - gRPC: localhost:50051

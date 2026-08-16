@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace Viking.Common
 {
@@ -36,7 +38,7 @@ namespace Viking.Common
         /// <param name="WorldPosition"></param>
         /// <param name="distance"></param>
         /// <returns></returns>
-        object ObjectAtPosition(GridVector2 WorldPosition, out double distance);
+        object ObjectAtPosition(Geometry.Vector2 WorldPosition, out double distance);
 
         /// <summary>
         /// Draw the specified overlay extension on the render target.  

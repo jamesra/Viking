@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI
 {
@@ -233,15 +234,15 @@ namespace WebAnnotation.UI
         /// <param name="Start"></param>
         /// <param name="Finish"></param>
         /// <returns></returns>
-        public static GridVector2[] PathBetween(this IReadOnlyList<GridVector2> path, InteractionLogEvent Start, InteractionLogEvent Finish) => PathBetween(path, Start.Index, Finish.Index);
+        public static Vector2[] PathBetween(this IReadOnlyList<Vector2> path, InteractionLogEvent Start, InteractionLogEvent Finish) => PathBetween(path, Start.Index, Finish.Index);
 
-        public static GridVector2[] PathBetween(this IReadOnlyList<GridVector2> path, int Start, int Finish)
+        public static Vector2[] PathBetween(this IReadOnlyList<Vector2> path, int Start, int Finish)
         {
             int length = (Finish - Start) + 1; //Inclusive, so add 1
 
             Debug.Assert(length > 1, "PathBetween request is inclusive and should have a length greater than 1");
 
-            GridVector2[] output = new GridVector2[length];
+            Vector2[] output = new Vector2[length];
 
             for (int i = Start; i < Finish + 1; i++)
             {
@@ -353,7 +354,7 @@ namespace WebAnnotation.UI
                 ///     Exit 0
                 ///     Enter 2 
 
-                GridLineSegment latest = _Path.NewestSegment;
+                LineSegment latest = _Path.NewestSegment;
                 candidates = [.. Overlay.GetAnnotations(latest.BoundingBox)];
 
                 point_intersect_candidates = [.. candidates.Where(o => o.obj.Contains(latest.A))];
@@ -463,7 +464,7 @@ namespace WebAnnotation.UI
             }
 
             //Update the current intersection list
-            GridLineSegment latest = _Path.NewestSegment;
+            LineSegment latest = _Path.NewestSegment;
             HitTestResult[] candidates = [.. Overlay.GetAnnotations(latest.BoundingBox).Where(o => ((ICanvasView)o.obj).Intersects(latest) || o.obj.Contains(latest.A))];
             List<ICanvasView> newIntersections = [.. candidates.Select(c => c.obj as ICanvasView)];
             CurrentlyIntersected = newIntersections;

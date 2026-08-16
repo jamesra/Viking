@@ -13,19 +13,19 @@ namespace Geometry
 {
     internal readonly struct Baseline
     {
-        public readonly GridLineSegment Segment;
+        public readonly LineSegment Segment;
         public readonly IVertex2D OriginVert;
         public readonly IVertex2D TargetVert;
         public long Origin => (long)OriginVert.Index;
         public long Target => (long)TargetVert.Index;
-        public readonly GridLine Line;
+        public readonly Line Line;
 
         public Baseline(IVertex2D Origin, IVertex2D Target)
         {
             OriginVert = Origin;
             TargetVert = Target;
-            Segment = new GridLineSegment(Origin.Position, Target.Position);
-            Line = new GridLine(Segment.A, GridVector2.Normalize(Segment.B - Segment.A));
+            Segment = new LineSegment(Origin.Position, Target.Position);
+            Line = new Line(Segment.A, Vector2.Normalize(Segment.B - Segment.A));
         }
     }
 
@@ -40,7 +40,7 @@ namespace Geometry
         /// by Paul Bourke
         /// </summary>
         /// <returns>A Mesh2D whose vertex indicies match the input points</returns>
-        public static TriangulationMesh<TriangulationVertex> TriangulateToMesh(GridVector2[] points)
+        public static TriangulationMesh<TriangulationVertex> TriangulateToMesh(Vector2[] points)
         {
             TriangulationVertex[] verts = [.. points.Select(p => new TriangulationVertex(p))];
             return GenericDelaunayMeshGenerator2D<TriangulationVertex>.TriangulateToMesh(verts);
@@ -67,7 +67,7 @@ namespace Geometry
         {
             if (verts is null)
             {
-                throw new ArgumentNullException(nameof(verts), "Verticies must not be null.");
+                throw new ArgumentNullException(nameof(verts), "Vertices must not be null.");
             }
 
             TriangulationMesh<VERTEX> mesh = new();
@@ -132,14 +132,14 @@ namespace Geometry
         /// Divides the mesh verticies into two halves and triangulates the halves
         /// </summary>
         /// <param name="mesh"></param>
-        /// <param name="VertSet">Indicies of verticies in the half.  Sorted on either X or Y axis</param>
+        /// <param name="VertSet">Indices of verticies in the half.  Sorted on either X or Y axis</param>
         /// <returns></returns>
         private static TriangulationMesh<VERTEX> RecursiveDivideAndConquerDelaunay(TriangulationMesh<VERTEX> mesh, MeshCut VertSet = null, IVertex2D[] verts = null, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
         {
             //The first recursion we populate variables to include all the verticies in the mesh
             VertSet ??= new MeshCut(mesh.XSorted, mesh.YSorted, CutDirection.HORIZONTAL, mesh.BoundingBox);
 
-            verts ??= [.. mesh.Verticies.Cast<IVertex2D>()];
+            verts ??= [.. mesh.Vertices.Cast<IVertex2D>()];
 
             //Check if we have 0-3 verticies.  Create edges appropriately.
             if (VertSet.Count == 0)
@@ -179,7 +179,7 @@ namespace Geometry
                 mesh.AddEdge(OneTwo);
 
                 //There is a case where all three points are on a perfect line, in this case don't create the final edge and face.
-                if (mesh.ToGridLineSegment(TwoZero).IsLeft(mesh[VertSet[1]].Position) != 0)
+                if (mesh.ToLineSegment(TwoZero).IsLeft(mesh[VertSet[1]].Position) != 0)
                 {
                     mesh.AddEdge(new Edge((int)VertSet[2], (int)VertSet[0]));
 
@@ -241,8 +241,8 @@ namespace Geometry
             Baseline LRBaseline = new(L, R);
             Baseline RLBaseline = new(R, L);
 
-            GridCircle? LCircle = new GridCircle();
-            GridCircle? RCircle = new GridCircle();
+            Circle? LCircle = new Circle();
+            Circle? RCircle = new Circle();
             TriangleFace newFace;
 
             List<Face> AddedFaces = [];
@@ -291,13 +291,13 @@ namespace Geometry
                 else
                 {
                     if (LCircle.HasValue == false)
-                        LCircle = GridCircle.CircleFromThreePoints(LOrigin.Position, ROrigin.Position, LeftCandidate.Position);
+                        LCircle = Circle.CircleFromThreePoints(LOrigin.Position, ROrigin.Position, LeftCandidate.Position);
 
                     if (LCircle.Value.Contains(RightCandidate.Position))
                     {
 
                         if (RCircle.HasValue == false)
-                            RCircle = GridCircle.CircleFromThreePoints(ROrigin.Position, LOrigin.Position, RightCandidate.Position);
+                            RCircle = Circle.CircleFromThreePoints(ROrigin.Position, LOrigin.Position, RightCandidate.Position);
 
                         if (RCircle.Value.Contains(LeftCandidate.Position) == false)
                         {
@@ -306,8 +306,8 @@ namespace Geometry
                         }
 
                         //Probably a straight line... use largest angle
-                        GridTriangle triLeft = new(LOrigin.Position, LeftCandidate.Position, ROrigin.Position);
-                        GridTriangle triRight = new(LOrigin.Position, RightCandidate.Position, ROrigin.Position);
+                        Triangle triLeft = new(LOrigin.Position, LeftCandidate.Position, ROrigin.Position);
+                        Triangle triRight = new(LOrigin.Position, RightCandidate.Position, ROrigin.Position);
 
                         if (triLeft.Angles.Min() > triRight.Angles.Min())
                             goto UseLeft;
@@ -493,11 +493,11 @@ namespace Geometry
                 }
 #endif
                 /*
-               GridLine testAngleAxisLine = new GridLine(L.Position, FirstHalfSet.CutAxis == CutDirection.VERTICAL ? GridVector2.UnitX : GridVector2.UnitY);
+               Line testAngleAxisLine = new Line(L.Position, FirstHalfSet.CutAxis == CutDirection.VERTICAL ? Vector2.UnitX : Vector2.UnitY);
 
                if(L_CW_Candidates.Length > 0 || R_CCW_Candidates.Length > 0)
                {
-                   double L_Max_Angle = GridVector2.AbsArcAngle(testAngleAxisLine, R.Position, false);//Check angles from the base line to parallel with the cut axis
+                   double L_Max_Angle = Vector2.AbsArcAngle(testAngleAxisLine, R.Position, false);//Check angles from the base line to parallel with the cut axis
                    Debug.Assert(L_Max_Angle <= Math.PI);
                    double R_Max_Angle = Math.PI - L_Max_Angle;
 
@@ -558,8 +558,8 @@ namespace Geometry
                 R = mesh[UpperHalfSet.SortedAlongCutAxisVertSet.First()];
             }
 
-            GridLineSegment LR_baseline_candidate;
-            GridLineSegment RL_baseline_candidate;
+            LineSegment LR_baseline_candidate;
+            LineSegment RL_baseline_candidate;
 
             Dictionary<int, SortedSet<int>> RejectedBaselinePairs = new Dictionary<int, SortedSet<int>>();
             int iLoopCount = 0;
@@ -576,8 +576,8 @@ namespace Geometry
                     break;
                 }
 
-                LR_baseline_candidate = mesh.ToGridLineSegment(L.Index, R.Index);
-                RL_baseline_candidate = mesh.ToGridLineSegment(R.Index, L.Index);
+                LR_baseline_candidate = mesh.ToLineSegment(L.Index, R.Index);
+                RL_baseline_candidate = mesh.ToLineSegment(R.Index, L.Index);
 
                 SortedSet<int> L_Rejected_Candidates = RejectedBaselinePairs.ContainsKey(R.Index) ? RejectedBaselinePairs[R.Index] : new SortedSet<int>();
 
@@ -636,8 +636,8 @@ namespace Geometry
                 R = mesh[UpperHalfSet.SortedAlongCutAxisVertSet.First()];
             }
 
-            GridLineSegment LR_baseline_candidate;
-            GridLineSegment RL_baseline_candidate;
+            LineSegment LR_baseline_candidate;
+            LineSegment RL_baseline_candidate;
 
             //L = mesh[FirstHalfSet.SortedOppositeCutAxisVertSet.First()];
             //R = mesh[SecondHalfSet.SortedOppositeCutAxisVertSet.First()];
@@ -694,8 +694,8 @@ namespace Geometry
 
 
 
-                LR_baseline_candidate = mesh.ToGridLineSegment(L.Index, R.Index);
-                RL_baseline_candidate = mesh.ToGridLineSegment(R.Index, L.Index);
+                LR_baseline_candidate = mesh.ToLineSegment(L.Index, R.Index);
+                RL_baseline_candidate = mesh.ToLineSegment(R.Index, L.Index);
 
                 var L_Rejected_Found = RejectedBaselinePairs.TryGetValue(R.Index, out SortedSet<int> L_Rejected_Candidates);
                 if (!L_Rejected_Found)
@@ -781,7 +781,7 @@ namespace Geometry
                     //If we are going to replace the origin because the candidate is on or left of the baseline make sure the new candidate baseline will not contain the point we are ruling out
                     if (L_Origin_Candidates_IsLeft[i] <= 0)
                     {
-                        GridLineSegment candidate_seg = mesh.ToGridLineSegment(L_Candidate, R.Index);
+                        LineSegment candidate_seg = mesh.ToLineSegment(L_Candidate, R.Index);
                         if (candidate_seg.Contains(L.Position))
                         {
                             RejectedBaselinePairs.AddToSet(L_Candidate, R.Index); //Record that this baseline pairing does not work so we don't test it again
@@ -815,8 +815,8 @@ namespace Geometry
 
                     else if (L_Origin_Candidates_IsLeft[i] == 0)
                     {
-                        double L_R_Distance = GridVector2.DistanceSquared(L.Position, R.Position);
-                        double L_Candidate_Distance = GridVector2.DistanceSquared(mesh[L_Candidate].Position, R.Position);
+                        double L_R_Distance = Vector2.DistanceSquared(L.Position, R.Position);
+                        double L_Candidate_Distance = Vector2.DistanceSquared(mesh[L_Candidate].Position, R.Position);
                         if (L_R_Distance > L_Candidate_Distance)
                         {
                             //OK, the point on the L_R baseline is closer, switch to the new baseline.  Repeat the search.
@@ -881,7 +881,7 @@ namespace Geometry
                     //If we are going to replace the origin because the candidate is on or left of the baseline make sure the new candidate baseline will not contain the point we are ruling out
                     if (R_Origin_Candidates_IsLeft[i] <= 0)
                     {
-                        GridLineSegment candidate_seg = mesh.ToGridLineSegment(L.Index, R_Candidate);
+                        LineSegment candidate_seg = mesh.ToLineSegment(L.Index, R_Candidate);
                         if (candidate_seg.Contains(R.Position))
                         {
                             RejectedBaselinePairs.AddToSet(L.Index, R_Candidate); //Record that this baseline pairing does not work so we don't test it again
@@ -915,8 +915,8 @@ namespace Geometry
 
                     else if (R_Origin_Candidates_IsLeft[i] == 0)
                     {
-                        double L_R_Distance = GridVector2.DistanceSquared(L.Position, R.Position);
-                        double R_Candidate_Distance = GridVector2.DistanceSquared(mesh[R_Candidate].Position, L.Position);
+                        double L_R_Distance = Vector2.DistanceSquared(L.Position, R.Position);
+                        double R_Candidate_Distance = Vector2.DistanceSquared(mesh[R_Candidate].Position, L.Position);
                         if (L_R_Distance > R_Candidate_Distance)
                         {
                             //OK, the point on the L_R baseline is closer, switch to the new baseline.  Repeat the search.
@@ -1002,8 +1002,8 @@ namespace Geometry
         public static EdgeAngle[] EdgesByAngle(TriangulationMesh<VERTEX> mesh, IVertex2D Origin, long origin_edge_target, bool clockwise)
         {
             //Setting the comparer should update the order of the edges attribute only if necessary.
-            GridVector2 target = mesh[origin_edge_target].Position;
-            MeshEdgeAngleComparerFixedIndex<VERTEX> angleComparer = new(mesh, Origin.Index, new GridLine(Origin.Position, target - Origin.Position), clockwise);
+            Vector2 target = mesh[origin_edge_target].Position;
+            MeshEdgeAngleComparerFixedIndex<VERTEX> angleComparer = new(mesh, Origin.Index, new Line(Origin.Position, target - Origin.Position), clockwise);
 
             List<long> edge_list = [.. Origin.Edges.Select(e => e.OppositeEnd((long)Origin.Index)).Where(e => e != origin_edge_target)];
 
@@ -1050,11 +1050,11 @@ namespace Geometry
             return edgeAnglesFiltered;
         }
 
-        private static IVertex2D TryGetNextCandidate(TriangulationMesh<VERTEX> mesh, ref List<EdgeAngle> sortedCandidates, in Baseline baseline, bool Clockwise, out double angle, out GridCircle? circle)
+        private static IVertex2D TryGetNextCandidate(TriangulationMesh<VERTEX> mesh, ref List<EdgeAngle> sortedCandidates, in Baseline baseline, bool Clockwise, out double angle, out Circle? circle)
         {
             if (sortedCandidates is null || sortedCandidates.Count == 0)
             {
-                circle = new GridCircle?();
+                circle = new Circle?();
                 angle = double.MinValue;
                 return null;
             }
@@ -1068,7 +1068,7 @@ namespace Geometry
 
                 if (sortedCandidates.Count == 0)
                 {
-                    circle = new GridCircle?();
+                    circle = new Circle?();
                     return candidateVert;
                 }
 
@@ -1082,7 +1082,7 @@ namespace Geometry
                 //However, a changing baseline may make the candidates viable again, so do not remove them.
                 if (angle >= Math.PI)
                 {
-                    circle = new GridCircle?();
+                    circle = new Circle?();
                     return null;
                 }
 
@@ -1091,7 +1091,7 @@ namespace Geometry
                 {
                     if (baseline.Segment.IsLeft(candidateVert.Position) == 0)
                     {
-                        circle = new GridCircle?();
+                        circle = new Circle?();
                         return null;
                     }
 
@@ -1100,10 +1100,10 @@ namespace Geometry
                         //Create a line from our suggested candidate and the target on the other side of the baseline.  See if it intersects a vertex.
                         //TODO: Can I simplify this to only check the baseline.Origin vertex?  Pretty sure the answer is yes
                         EdgeKey key = new(baseline.Target, candidate.Target);
-                        GridLineSegment seg = mesh.ToGridLineSegment(key);
+                        LineSegment seg = mesh.ToLineSegment(key);
                         if (seg.Intersects(baseline.OriginVert.Position))
                         {
-                            circle = new GridCircle?();
+                            circle = new Circle?();
                             return null;
                         }
 
@@ -1112,7 +1112,7 @@ namespace Geometry
                     catch (EdgeIntersectsVertexException)
                     {
                         //This edge intersects a vertex, reject it because it is close enough to 180 degrees that it may as well be the same
-                        circle = new GridCircle?();
+                        circle = new Circle?();
                         return null;
                     }
                 }
@@ -1120,13 +1120,13 @@ namespace Geometry
                 //If there are no other candidates, then we can return this vertex
                 if (sortedCandidates.Count == 1)
                 {
-                    circle = new GridCircle?();
+                    circle = new Circle?();
                     return candidateVert;
                 }
 
                 //OK, now we check if the next candidate is inside the circle described by the baseline and the candidate
                 //TODO: We can check this faster with linear algebra using the determinant I believe
-                circle = GridCircle.CircleFromThreePoints(baseline.Segment.A, baseline.Segment.B, candidateVert.Position);
+                circle = Circle.CircleFromThreePoints(baseline.Segment.A, baseline.Segment.B, candidateVert.Position);
 
                 EdgeAngle nextCandidate = sortedCandidates[1];
                 IVertex2D nextCandidateVert = mesh[nextCandidate.Target];
@@ -1134,7 +1134,7 @@ namespace Geometry
                 if (circle.Value.Contains(nextCandidateVert.Position))
                 {
                     //Check edge case of a point exactly on the circle boundary
-                    if (GridVector2.Distance(nextCandidateVert.Position, circle.Value.Center) == circle.Value.Radius)
+                    if (Vector2.Distance(nextCandidateVert.Position, circle.Value.Center) == circle.Value.Radius)
                     {
                         return candidateVert;
                     }
@@ -1156,7 +1156,7 @@ namespace Geometry
             }
 
             angle = double.MinValue;
-            circle = new GridCircle?();
+            circle = new Circle?();
             return null;
         }
 
@@ -1201,7 +1201,7 @@ namespace Geometry
 #endif
 
             VERTEX[] verts = [.. f.iVerts.Select(v => mesh[v])];
-            GridVector2[] circlePoints = [.. verts.Select(v => v.Position)];
+            Vector2[] circlePoints = [.. verts.Select(v => v.Position)];
 
             Debug.Assert(circlePoints.AreClockwise() == false, "Face verts aren't counter-clockwise");
 
@@ -1228,8 +1228,8 @@ namespace Geometry
 
                 int other_opposite_vert = oppositeFace.OppositeVertex(edge);
 
-                GridLineSegment flippedEdgeCandidate = mesh.ToGridLineSegment(face_opposite_vert, other_opposite_vert);
-                GridLineSegment existingEdge = mesh.ToGridLineSegment(edge);
+                LineSegment flippedEdgeCandidate = mesh.ToLineSegment(face_opposite_vert, other_opposite_vert);
+                LineSegment existingEdge = mesh.ToLineSegment(edge);
 
                 //If the two triangles are not a convex polygon then we need to skip flipping this edge.  Otherwise we will cover an area already
                 //covered by another face
@@ -1237,7 +1237,7 @@ namespace Geometry
                     continue;
 
                 //I should check angles, but have the code written to look at circles and want to test other things
-                if (GridCircle.Contains(circlePoints, mesh[other_opposite_vert].Position) == ShapeRelation.CONTAINED)
+                if (Circle.Contains(circlePoints, mesh[other_opposite_vert].Position) == ShapeRelation.Contained)
                 {
                     //OK, need to flip the edge
 
@@ -1251,12 +1251,12 @@ namespace Geometry
 
                     //Sanity check: Ensure the edge endpoints will not be in the flipped triangles and we won't infinitely recurse
                     {
-                        ShapeRelation BInA = GridCircle.Contains([.. mesh[A.iVerts].Select(v => v.Position)], mesh[edge.B].Position);
-                        ShapeRelation AInB = GridCircle.Contains([.. mesh[B.iVerts].Select(v => v.Position)], mesh[edge.A].Position);
+                        ShapeRelation BInA = Circle.Contains([.. mesh[A.iVerts].Select(v => v.Position)], mesh[edge.B].Position);
+                        ShapeRelation AInB = Circle.Contains([.. mesh[B.iVerts].Select(v => v.Position)], mesh[edge.A].Position);
 
-                        if (BInA == ShapeRelation.CONTAINED || BInA == ShapeRelation.TOUCHING)
+                        if (BInA == ShapeRelation.Contained || BInA == ShapeRelation.Touching)
                             continue;
-                        if (AInB == ShapeRelation.CONTAINED || AInB == ShapeRelation.TOUCHING)
+                        if (AInB == ShapeRelation.Contained || AInB == ShapeRelation.Touching)
                             continue;
                     }
 
@@ -1346,15 +1346,15 @@ namespace Geometry
             TriangleFace oppositeFace = edge.Faces[1] as TriangleFace;
 
             VERTEX[] verts = [.. f.iVerts.Select(v => mesh[v])];
-            GridVector2[] circlePoints = [.. verts.Select(v => v.Position)];
+            Vector2[] circlePoints = [.. verts.Select(v => v.Position)];
 
             int other_opposite_vert = oppositeFace.OppositeVertex(edge);
 
             Debug.Assert(f.Edges.All(e => mesh.Contains(e)), "Mesh does not contain face edges");
             Debug.Assert(oppositeFace.Edges.All(e => mesh.Contains(e)), "Mesh does not contain face edges");
 
-            GridLineSegment flippedEdgeCandidate = mesh.ToGridLineSegment(f.OppositeVertex(edge), other_opposite_vert);
-            GridLineSegment existingEdge = mesh.ToGridLineSegment(edge);
+            LineSegment flippedEdgeCandidate = mesh.ToLineSegment(f.OppositeVertex(edge), other_opposite_vert);
+            LineSegment existingEdge = mesh.ToLineSegment(edge);
 
             //If the two triangles are not a convex polygon then we need to skip flipping this edge.  Otherwise we will cover an area already
             //covered by another face
@@ -1362,7 +1362,7 @@ namespace Geometry
                 return;
 
             //I should check angles, but have the code written to look at circles and want to test other things
-            if (GridCircle.Contains(circlePoints, mesh[other_opposite_vert].Position) == ShapeRelation.CONTAINED)
+            if (Circle.Contains(circlePoints, mesh[other_opposite_vert].Position) == ShapeRelation.Contained)
             {
                 //OK, need to flip the edge
                 int face_opposite_vert = f.OppositeVertex(edge);

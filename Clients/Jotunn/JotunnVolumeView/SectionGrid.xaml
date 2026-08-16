@@ -7,29 +7,22 @@
              xmlns:Viking="clr-namespace:Jotunn.Controls;assembly=JotunnUIControls"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300"
-             Name="Sections"
-              >
-    
-        <ItemsControl Grid.Row="1" x:Name="SectionsGrid"
-                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+             Name="Sections">
+    <Grid>
+        <VolumeView:SectionSceneHost x:Name="SceneHost"/>
+        <ItemsControl x:Name="SectionsGrid"
+                 Background="Transparent"
+                 ScrollViewer.VerticalScrollBarVisibility="Disabled"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  ScrollViewer.CanContentScroll="True"
                  HorizontalContentAlignment="Stretch"
-                 VerticalContentAlignment="Stretch">
-
-            <!--
-            <ItemsControl.ItemContainerStyle>
-                <Style TargetType="ListBoxItem"> 
-                    <Style.Resources> 
-                        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="Transparent"/> 
-                        <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="Transparent"/> 
-                    </Style.Resources> 
-                </Style>
-            </ItemsControl.ItemContainerStyle>
-            -->
+                 VerticalContentAlignment="Stretch"
+                 IsHitTestVisible="False">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <Viking:VirtualizingGrid IsItemsHost="True" Name="ItemsPanel">
+                    <Viking:VirtualizingGrid IsItemsHost="True" Name="ItemsPanel"
+                                             CenterNumber="{Binding CenterIndex, Mode=TwoWay}"
+                                             VisibleRegion="{Binding VisibleRegion, Mode=TwoWay}">
                     </Viking:VirtualizingGrid>
                 </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
@@ -40,11 +33,6 @@
                             <RowDefinition Height="16"/>
                             <RowDefinition/>
                         </Grid.RowDefinitions>
-                        <VolumeView:PyramidViewer Grid.Row="0"
-                                                  Grid.RowSpan="2"
-                                                  TileMapping="{Binding Path=DefaultMapping}"
-                                                  VisibleRegion="{Binding ElementName=ItemsPanel, Path=VisibleRegion,Mode=TwoWay}"
-                                                  />
                         <TextBlock Grid.Row="0"
                                    Text="{Binding Path=Name}"
                                    SnapsToDevicePixels="True"
@@ -65,5 +53,5 @@
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
-
+    </Grid>
 </UserControl>

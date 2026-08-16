@@ -1,4 +1,6 @@
 using Geometry;
+using Viking.Input;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -16,6 +18,9 @@ using VikingXNAGraphics;
 using WebAnnotation.UI;
 using WebAnnotation.UI.Actions;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
@@ -25,8 +30,8 @@ namespace WebAnnotation.View
         private OverlappedLinkCircleView OverlappedLinkView;
         private LocationInteriorHoleView[] InteriorHoleViews;
         private SolidPolygonView polygonMesh;
-        private readonly GridPolygon VolumePolygon;
-        private GridPolygon SmoothedVolumePolygon;
+        private readonly Polygon VolumePolygon;
+        private Polygon SmoothedVolumePolygon;
         private readonly PointSetView ControlPointView;
 
         public override string[] HelpStrings
@@ -179,7 +184,7 @@ namespace WebAnnotation.View
         public LocationPolygonView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {
             _ControlPointRadius = Global.AnnotationSettings.PolygonPointRadius;
-            VolumePolygon = mapper.TryMapShapeSectionToVolume(obj.MosaicShape)?.ToPolygon();
+            VolumePolygon = mapper.TryMapShapeSectionToVolume(obj.MosaicShape.ToSqlGeometry())?.ToPolygon();
             //_ControlPointRadius = GetRadiusFromPolygonArea(VolumePolygon, 0.01);
             SmoothedVolumePolygon = VolumePolygon;//VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
             bool hasParent = obj.Parent?.ParentID.HasValue ?? false;
@@ -190,9 +195,7 @@ namespace WebAnnotation.View
             }
             else
             {
-                Color = obj.Parent.TypeID == 1
-                    ? obj.Parent.Color.ToXNAColor(opacity)
-                    : obj.Parent.Type.Color.ToXNAColor(opacity);
+                Color = obj.Parent.Type.Color.ToXNAColor(opacity);
             }
 
             ControlPointView = new PointSetView(GetControlPointColor(), Global.AnnotationSettings.PolygonPointRadius)
@@ -265,15 +268,15 @@ namespace WebAnnotation.View
             return Task.CompletedTask;
         }
 
-        public static double GetRadiusFromPolygonArea(GridPolygon poly, double percentage)
+        public static double GetRadiusFromPolygonArea(Polygon poly, double percentage)
         {
             double circleArea = poly.Area * percentage;
             double radius = Math.Sqrt(circleArea / Math.PI);
             return radius;
         }
 
-        private GridCircle? _InscribedCircle;
-        protected GridCircle InscribedCircle
+        private Circle? _InscribedCircle;
+        protected Circle InscribedCircle
         {
             get
             {
@@ -293,12 +296,17 @@ namespace WebAnnotation.View
         /// </summary>
         /// <param name="polygon"></param>
         /// <returns></returns>
-        private ICollection<GridVector2> GetAllPolygonVertices(GridPolygon polygon)
+        private ICollection<Geometry.Vector2> GetAllPolygonVertices(Polygon polygon)
         {
-            List<GridVector2> vertices = [];
+            if (polygon is null)
+            {
+                return [];
+            }
+
+            List<Geometry.Vector2> vertices = [];
 
             // Add exterior ring vertices (excluding last duplicate point)
-            if (polygon.ExteriorRing.Length > 0)
+            if (polygon.ExteriorRing is { Length: > 0 })
             {
                 int count = polygon.ExteriorRing.Length;
                 // Exclude last point if it's duplicate of first
@@ -313,9 +321,9 @@ namespace WebAnnotation.View
             }
 
             // Add interior polygon vertices recursively
-            foreach (GridPolygon innerPoly in polygon.InteriorPolygons)
+            foreach (Polygon innerPoly in polygon.InteriorPolygons)
             {
-                ICollection<GridVector2> innerVertices = GetAllPolygonVertices(innerPoly);
+                ICollection<Geometry.Vector2> innerVertices = GetAllPolygonVertices(innerPoly);
                 vertices.AddRange(innerVertices);
             }
 
@@ -328,7 +336,7 @@ namespace WebAnnotation.View
         /// <summary>
         /// We have this because with the current renderings the control points are circles that fall outside the polygon we use to render the closed curves
         /// </summary> 
-        public override GridRectangle BoundingBox => GridRectangle.Pad(SmoothedVolumePolygon.BoundingBox, ControlPointRadius);
+        public override Rectangle BoundingBox => Rectangle.Pad(SmoothedVolumePolygon.BoundingBox, ControlPointRadius);
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
                           VikingXNA.Scene scene,
@@ -405,7 +413,7 @@ namespace WebAnnotation.View
             //FilledClosedCurvePolygonView.Draw(device, scene, listToDraw.Select(l => l.polyView));
         }
 
-        public override bool Contains(GridVector2 Position)
+        public override bool Contains(Geometry.Vector2 Position)
         {
             if (!BoundingBox.Contains(Position))
             {
@@ -415,7 +423,7 @@ namespace WebAnnotation.View
             //Test if we are over a control point
             if (Global.PenMode == false)
             {
-                if (SmoothedVolumePolygon.ExteriorRing.Any(p => new GridCircle(p, lineWidth / 2.0).Contains(Position)))
+                if (SmoothedVolumePolygon.ExteriorRing.Any(p => new Circle(p, lineWidth / 2.0).Contains(Position)))
                 {
                     return true;
                 }
@@ -442,7 +450,7 @@ namespace WebAnnotation.View
             return false;
         }
 
-        public override bool Intersects(GridLineSegment line)
+        public override bool Intersects(LineSegment line)
         {
             if (!BoundingBox.Intersects(line.BoundingBox))
             {
@@ -453,7 +461,7 @@ namespace WebAnnotation.View
             //Test if we are over a control point
             if (Global.PenMode == false)
             {
-                if (this.SmoothedVolumePolygon.ExteriorRing.Any(p => new GridCircle(p, lineWidth / 2.0).Intersects(line)))
+                if (this.SmoothedVolumePolygon.ExteriorRing.Any(p => new Circle(p, lineWidth / 2.0).Intersects(line)))
                     return true;
             }*/
 
@@ -476,7 +484,7 @@ namespace WebAnnotation.View
             curveLabels.DrawLabel(spriteBatch, font, scene);
         }
 
-        public ICanvasView GetAnnotationAtPosition(GridVector2 position)
+        public ICanvasView GetAnnotationAtPosition(Geometry.Vector2 position)
         {
             if (Initialized == false)
             {
@@ -540,17 +548,17 @@ namespace WebAnnotation.View
         }
 
 
-        public LocationAction GetMouseClickActionForPositionOnAnnotationWithPen(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public LocationAction GetMouseClickActionForPositionOnAnnotationWithPen(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
             LocationID = ID;
 
-            if (ModifierKeys.ShiftPressed())
+            if (modifierKeys.ShiftPressed())
             {
                 if (VisibleSectionNumber == (int)modelObj.Z)
                 {
                     if (SmoothedVolumePolygon.Contains(WorldPosition))
                     {
-                        GridCircle TranslateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
+                        Circle TranslateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
                         if (TranslateTargetCircle.Contains(WorldPosition))
                         {
                             LocationID = ID;
@@ -561,7 +569,7 @@ namespace WebAnnotation.View
                     }
                 }
             }
-            else if (ModifierKeys.CtrlPressed())
+            else if (modifierKeys.CtrlPressed())
             {
                 //Check to see if we are on a line segment to add/remove control points.  Otherwise cut a hole
                 if (SmoothedVolumePolygon.Contains(WorldPosition))
@@ -575,7 +583,7 @@ namespace WebAnnotation.View
                     return LocationAction.REMOVEHOLE;
                 }
             }
-            else if (!ModifierKeys.ShiftOrCtrlPressed())
+            else if (!modifierKeys.ShiftOrCtrlPressed())
             {
                 return LocationAction.CHANGEBOUNDARY;
             }
@@ -583,20 +591,20 @@ namespace WebAnnotation.View
             return LocationAction.NONE;
         }
 
-        public LocationAction GetMouseClickActionForPositionOnAnnotationWithoutPen(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public LocationAction GetMouseClickActionForPositionOnAnnotationWithoutPen(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
 
             LocationID = ID;
-            GridPolygon intersectingPoly; //Could be our polygon or an interior polygon
+            Polygon intersectingPoly; //Could be our polygon or an interior polygon
 
-            if (ModifierKeys.ShiftPressed())
+            if (modifierKeys.ShiftPressed())
             {
                 if (SmoothedVolumePolygon.Contains(WorldPosition))
                 {
                     return LocationAction.TRANSLATE;
                 }
             }
-            else if (ModifierKeys.CtrlPressed())
+            else if (modifierKeys.CtrlPressed())
             {
                 //Check to see if we are on a line segment to add/remove control points.  Otherwise cut a hole
                 if (SmoothedVolumePolygon.PointIntersectsAnyPolygonSegment(WorldPosition, ControlPointRadius, out intersectingPoly))
@@ -629,7 +637,7 @@ namespace WebAnnotation.View
                     return LocationAction.REMOVEHOLE;
                 }
             }
-            else if (!ModifierKeys.ShiftOrCtrlPressed())
+            else if (!modifierKeys.ShiftOrCtrlPressed())
             {
                 if (VisibleSectionNumber == (int)modelObj.Z)
                 {
@@ -639,7 +647,7 @@ namespace WebAnnotation.View
                     }
                     else if (SmoothedVolumePolygon.Contains(WorldPosition))
                     {
-                        GridCircle TranslateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
+                        Circle TranslateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
                         if (TranslateTargetCircle.Contains(WorldPosition))
                         {
                             LocationID = ID;
@@ -662,20 +670,20 @@ namespace WebAnnotation.View
             return LocationAction.NONE;
         }
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
 
             if (Global.PenMode)
             {
-                return GetMouseClickActionForPositionOnAnnotationWithPen(WorldPosition, VisibleSectionNumber, ModifierKeys, out LocationID);
+                return GetMouseClickActionForPositionOnAnnotationWithPen(WorldPosition, VisibleSectionNumber, modifierKeys, out LocationID);
             }
             else
             {
-                return GetMouseClickActionForPositionOnAnnotationWithoutPen(WorldPosition, VisibleSectionNumber, ModifierKeys, out LocationID);
+                return GetMouseClickActionForPositionOnAnnotationWithoutPen(WorldPosition, VisibleSectionNumber, modifierKeys, out LocationID);
             }
         }
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID) => GetMouseClickActionForPositionOnAnnotationWithPen(WorldPosition, VisibleSectionNumber, ModifierKeys, out LocationID);
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID) => GetMouseClickActionForPositionOnAnnotationWithPen(WorldPosition, VisibleSectionNumber, modifierKeys, out LocationID);
 
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
@@ -718,7 +726,7 @@ namespace WebAnnotation.View
             return LocationCanvasView.IsPolygonVisible(BoundingBox, scene);
         }
 
-        public override double DistanceFromCenterNormalized(GridVector2 Position)
+        public override double DistanceFromCenterNormalized(Geometry.Vector2 Position)
         {
             if (SmoothedVolumePolygon.Contains(Position))
             {
@@ -752,7 +760,7 @@ namespace WebAnnotation.View
                 if (Z == VisibleSectionNumber)
                 {
                     //Ask if they want to convert to a polyline
-                    GridPolyline line = new(path.SimplifiedPath);
+                    Polyline line = new(path.SimplifiedPath);
                     ChangeToPolylineAction action = new(modelObj, line);
                     listActions.Add(action);
 

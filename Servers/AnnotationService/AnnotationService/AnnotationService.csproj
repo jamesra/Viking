@@ -71,7 +71,6 @@
 	</ItemGroup>
 	<!-- Project references -->
 	<ItemGroup>
-		<ProjectReference Include="..\..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
 		<ProjectReference Include="..\..\..\SqlGeometryUtils\SqlGeometryUtils.csproj" />
 		<ProjectReference Include="..\..\ConnectomeDataModel\ConnectomeDataModel.csproj" />
 		<ProjectReference Include="..\..\WebAppSettings\VikingWebAppSettings.csproj" />

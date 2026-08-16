@@ -86,18 +86,18 @@ namespace Geometry
             this.Root = new QuadTreeNode<T>(this);
         }
 
-        public QuadTree(GridRectangle border)
+        public QuadTree(Rectangle border)
         {
             //Create a root centered at 0,0
             this.Root = new QuadTreeNode<T>(this, border);
         }
 
-        public QuadTree(GridVector2[] points, T[] values)
+        public QuadTree(Vector2[] points, T[] values)
         {
             CreateTree(points, values, points.BoundingBox());
         }
 
-        public QuadTree(GridVector2[] keys, T[] values, in GridRectangle border)
+        public QuadTree(Vector2[] keys, T[] values, in Rectangle border)
         {
             CreateTree(keys, values, in border);
         }
@@ -111,7 +111,7 @@ namespace Geometry
             {
             }
 
-            public DuplicatePointException(GridVector2 point) : base("The point being inserted into the quad treeWithUniqueValues is a duplicate point: " + point.ToString())
+            public DuplicatePointException(Vector2 point) : base("The point being inserted into the quad treeWithUniqueValues is a duplicate point: " + point.ToString())
             {
             }
 
@@ -136,8 +136,8 @@ namespace Geometry
             }
         }
 
-        public GridRectangle Border => Root.Border;
-        public IEnumerable<GridVector2> Keys => Root?.Keys ?? Array.Empty<GridVector2>();
+        public Rectangle Border => Root.Border;
+        public IEnumerable<Vector2> Keys => Root?.Keys ?? Array.Empty<Vector2>();
 
         /*
         public T[] Values
@@ -162,16 +162,16 @@ namespace Geometry
         public virtual int Count { get; protected set; }
 
 
-        internal virtual void PointAdded(QuadTreeNode<T> node, GridVector2 point, T value) => Count++;
+        internal virtual void PointAdded(QuadTreeNode<T> node, Vector2 point, T value) => Count++;
 
-        internal virtual void PointRemoved(QuadTreeNode<T> node, GridVector2 point, T value) => Count--;
+        internal virtual void PointRemoved(QuadTreeNode<T> node, Vector2 point, T value) => Count--;
 
         /// <summary>
         /// Returns the value nearest to the point p
         /// </summary>
         /// <param name="value"></param>
         /// <returns></returns>
-        public T this[GridVector2 p]
+        public T this[Vector2 p]
         {
             get
             {
@@ -203,7 +203,7 @@ namespace Geometry
         /// </summary>
         /// <param name="point"></param>
         /// <param name="value"></param>
-        public virtual void Add(GridVector2 point, T value)
+        public virtual void Add(Vector2 point, T value)
         {
             /*
             try
@@ -244,7 +244,7 @@ namespace Geometry
         /// </summary>
         /// <param name="point"></param>
         /// <param name="value"></param>
-        public virtual bool TryAdd(GridVector2 point, in T value)
+        public virtual bool TryAdd(Vector2 point, in T value)
         {
             try
             {
@@ -268,9 +268,9 @@ namespace Geometry
             }
         }
 
-        protected virtual void SetValueAtPoint(GridVector2 p, T value) => Root.Update(p, value);
+        protected virtual void SetValueAtPoint(Vector2 p, T value) => Root.Update(p, value);
 
-        public virtual void Update(GridVector2 p, T value)
+        public virtual void Update(Vector2 p, T value)
         {
             try
             {
@@ -284,7 +284,7 @@ namespace Geometry
             }
         }
 
-        public bool TryUpdate(GridVector2 p, T value)
+        public bool TryUpdate(Vector2 p, T value)
         {
             try
             {
@@ -298,17 +298,17 @@ namespace Geometry
             }
         }
 
-        public bool Contains(GridVector2 p)
+        public bool Contains(Vector2 p)
         {
-            if (this.TryFindNearest(p, out GridVector2 foundPoint, out var val, out double distance))
+            if (this.TryFindNearest(p, out Vector2 foundPoint, out var val, out double distance))
                 return foundPoint.Equals(p);
 
             return false;
         }
 
-        public bool ContainsKey(GridVector2 p) => Contains(p);
+        public bool ContainsKey(Vector2 p) => Contains(p);
 
-        public bool TryRemove(GridVector2 point, out T RemovedValue)
+        public bool TryRemove(Vector2 point, out T RemovedValue)
         {
             RemovedValue = default;
 
@@ -339,7 +339,7 @@ namespace Geometry
         /// <param name="point"></param>
         /// <param name="value"></param>
         /// <returns>True if position was updated</returns>
-        public bool TryAddUpdatePosition(GridVector2 point, T value)
+        public bool TryAddUpdatePosition(Vector2 point, T value)
         {
             try
             {
@@ -348,7 +348,7 @@ namespace Geometry
                 if (ValueToNodeTable.TryGetValue(value, out var node))
                 {
                     //If we are updating the same point, do nothing (Check for new value though?)
-                    if (GridVector2.Distance(in node.Point, in point) == 0)
+                    if (Vector2.Distance(in node.Point, in point) == 0)
                         return false;
                     else
                     {
@@ -400,14 +400,14 @@ namespace Geometry
         }
         */
 
-        private void CreateTree(GridVector2[] keys, T[] values, in GridRectangle border)
+        private void CreateTree(Vector2[] keys, T[] values, in Rectangle border)
         {
             try
             {
                 rwLock.EnterWriteLock();
 
                 //Create a node centered in the border
-                //this.Root = new QuadTreeNode<T>(this, new GridRectangle(double.MinValue, double.MaxValue, double.MinValue, double.MaxValue));
+                //this.Root = new QuadTreeNode<T>(this, new Rectangle(double.MinValue, double.MaxValue, double.MinValue, double.MaxValue));
                 this.Root = new QuadTreeNode<T>(this, border);
 
                 for (int iPoint = 0; iPoint < keys.Length; iPoint++)
@@ -421,7 +421,7 @@ namespace Geometry
             }
         }
 
-        public bool TryGetValue(GridVector2 p, out T result)
+        public bool TryGetValue(Vector2 p, out T result)
         {
             var found = TryFindNearest(p, out var foundPoint, out result, out double distance);
             if (found)
@@ -430,14 +430,14 @@ namespace Geometry
             return false;
         }
 
-        public bool TryFindNearest(GridVector2 point, out T val, out double distance) => TryFindNearest(point, out GridVector2 found_point, out val, out distance);
+        public bool TryFindNearest(Vector2 point, out T val, out double distance) => TryFindNearest(point, out Vector2 found_point, out val, out distance);
 
-        public bool TryFindNearest(GridVector2 point, out GridVector2 foundPoint, out T val, out double distance)
+        public bool TryFindNearest(Vector2 point, out Vector2 foundPoint, out T val, out double distance)
         {
             val = default;
             try
             {
-                foundPoint = GridVector2.Zero;
+                foundPoint = Vector2.Zero;
                 distance = double.MaxValue;
 
                 rwLock.EnterReadLock();
@@ -460,7 +460,7 @@ namespace Geometry
             }
         }
 
-        public List<DistanceToPoint<T>> FindNearestPoints(GridVector2 point, int nPoints)
+        public List<DistanceToPoint<T>> FindNearestPoints(Vector2 point, int nPoints)
         {
             List<DistanceToPoint<T>> listResults = null;
 
@@ -505,17 +505,17 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Return all points and values in the quadtree which fall inside the rectangle. Indicies correspond
+        /// Return all points and values in the quadtree which fall inside the rectangle. Indices correspond
         /// </summary>
         /// <param name="gridRect"></param>
         /// <returns></returns>
-        public void Intersect(in GridRectangle gridRect, out List<GridVector2> outPoints, out List<T> outValues)
+        public void Intersect(in Rectangle gridRect, out List<Vector2> outPoints, out List<T> outValues)
         {
             try
             {
                 rwLock.EnterReadLock();
 
-                outPoints = new List<GridVector2>(this.Count);
+                outPoints = new List<Vector2>(this.Count);
                 outValues = new List<T>(this.Count);
 
                 this.Root.Intersect(in gridRect, true, ref outPoints, ref outValues);
@@ -544,7 +544,7 @@ namespace Geometry
     /// <summary>
     /// Stores a quadtree.  Should be safe for concurrent access.  In addition to each point being unique, each value associated with a point must also be unique.  This allows reverse lookup of points by value.
     /// </summary>
-    public class QuadTreeWithUniqueValues<T> : QuadTree<T> //, IDictionary<GridVector2,T>
+    public class QuadTreeWithUniqueValues<T> : QuadTree<T> //, IDictionary<Vector2,T>
     {
         /// <summary>
         /// Used by QuadTreeWithUniqueValues when a duplicate value (two points with the same value) is added
@@ -555,7 +555,7 @@ namespace Geometry
             {
             }
 
-            public DuplicateValueException(GridVector2 point, object value) : base("Value {value}, associated with the point {point}, being inserted into the quad treeWithUniqueValues is a duplicate value")
+            public DuplicateValueException(Vector2 point, object value) : base("Value {value}, associated with the point {point}, being inserted into the quad treeWithUniqueValues is a duplicate value")
             {
             }
 
@@ -580,7 +580,7 @@ namespace Geometry
             }
         }
 
-        //GridVector2[] _points;
+        //Vector2[] _points;
 
         /// <summary>
         /// Maps the values to the node containing the values. Populated by the QuadTreeNode class.
@@ -593,19 +593,19 @@ namespace Geometry
         }
 
 
-        public QuadTreeWithUniqueValues(GridRectangle border) : base(border)
+        public QuadTreeWithUniqueValues(Rectangle border) : base(border)
         {
         }
 
-        public QuadTreeWithUniqueValues(GridVector2[] points, T[] values) : base(points, values)
+        public QuadTreeWithUniqueValues(Vector2[] points, T[] values) : base(points, values)
         {
         }
 
-        public QuadTreeWithUniqueValues(GridVector2[] keys, T[] values, in GridRectangle border) : base(keys, values, in border)
+        public QuadTreeWithUniqueValues(Vector2[] keys, T[] values, in Rectangle border) : base(keys, values, in border)
         {
         }
 
-        internal override void PointAdded(QuadTreeNode<T> node, GridVector2 point, T value)
+        internal override void PointAdded(QuadTreeNode<T> node, Vector2 point, T value)
         {
             if (ValueToNodeTable.ContainsKey(value))
                 throw new QuadTreeWithUniqueValues<T>.DuplicateValueException(point, value);
@@ -614,7 +614,7 @@ namespace Geometry
             base.PointAdded(node, point, value);
         }
 
-        internal override void PointRemoved(QuadTreeNode<T> node, GridVector2 point, T value)
+        internal override void PointRemoved(QuadTreeNode<T> node, Vector2 point, T value)
         {
             bool success = ValueToNodeTable.Remove(value);
 #if DEBUG
@@ -624,7 +624,7 @@ namespace Geometry
             base.PointRemoved(node, point, value);
         }
 
-        public override void Update(GridVector2 p, T value)
+        public override void Update(Vector2 p, T value)
         {
             try
             {
@@ -638,9 +638,9 @@ namespace Geometry
             }
         }
 
-        protected override void SetValueAtPoint(GridVector2 p, T value)
+        protected override void SetValueAtPoint(Vector2 p, T value)
         {
-            if (!TryFindNearest(p, out GridVector2 foundPoint, out T oldValue, out double distance) ||
+            if (!TryFindNearest(p, out Vector2 foundPoint, out T oldValue, out double distance) ||
                 distance > Global.Epsilon ||
                 !foundPoint.Equals(p))
             {
@@ -665,16 +665,16 @@ namespace Geometry
             ValueToNodeTable.Add(value, node);
         }
 
-        //ICollection<GridVector2> IDictionary<GridVector2, T>.Keys => Keys.ToArray();
+        //ICollection<Vector2> IDictionary<Vector2, T>.Keys => Keys.ToArray();
 
-        //ICollection<T> IDictionary<GridVector2, T>.Values => Values;
+        //ICollection<T> IDictionary<Vector2, T>.Values => Values;
 
         /// <summary>
         /// Returns the point associated with the value T
         /// </summary>
         /// <param name="value"></param>
         /// <returns></returns>
-        public GridVector2 this[T value]
+        public Vector2 this[T value]
         {
             get
             {
@@ -728,7 +728,7 @@ namespace Geometry
         /// </summary>
         /// <param name="point"></param>
         /// <param name="value"></param>
-        public override void Add(GridVector2 point, T value)
+        public override void Add(Vector2 point, T value)
         {
             /*
             try
@@ -767,7 +767,7 @@ namespace Geometry
         /// </summary>
         /// <param name="point"></param>
         /// <param name="value"></param>
-        public override bool TryAdd(GridVector2 point, in T value)
+        public override bool TryAdd(Vector2 point, in T value)
         {
             try
             {
@@ -825,7 +825,7 @@ namespace Geometry
         /// </summary>
         /// <param name="value"></param>
         /// <returns></returns>
-        private T Remove(GridVector2 toRemove)
+        private T Remove(Vector2 toRemove)
         { 
             QuadTreeNode<T> node = ValueToNodeTable[toRemove];
 
@@ -883,7 +883,7 @@ namespace Geometry
             return true;
         }
 
-        public bool TryGetPosition(T value, out GridVector2 position)
+        public bool TryGetPosition(T value, out Vector2 position)
         {
             try
             {
@@ -891,7 +891,7 @@ namespace Geometry
 
                 if (ValueToNodeTable.TryGetValue(value, out QuadTreeNode<T> node) == false)
                 {
-                    position = new GridVector2();
+                    position = new Vector2();
                     return false;
                     //throw new ArgumentException("Quadtree does not contains requested value");
                 }

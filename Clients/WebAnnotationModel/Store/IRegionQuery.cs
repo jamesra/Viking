@@ -16,7 +16,7 @@ namespace WebAnnotationModel
         /// <param name="MinRadius"></param>
         /// <param name="LastQueryUtc"></param>
         /// <returns></returns>
-        Task<ICollection<OBJECT>> GetLocalObjectsInRegion(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius);
+        Task<ICollection<OBJECT>> GetLocalObjectsInRegion(long SectionNumber, Geometry.Rectangle bounds, double MinRadius);
 
         /// <summary>
         /// Return objects from the server
@@ -26,6 +26,6 @@ namespace WebAnnotationModel
         /// <param name="MinRadius"></param>
         /// <param name="LastQueryUtc"></param>
         /// <returns></returns>
-        Task<ICollection<OBJECT>> GetServerObjectsInRegion(long SectionNumber, Geometry.GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc, out DateTime queryCompletedTime); 
+        Task<ICollection<OBJECT>> GetServerObjectsInRegion(long SectionNumber, Geometry.Rectangle bounds, double MinRadius, DateTime? LastQueryUtc, out DateTime queryCompletedTime); 
     }
 }

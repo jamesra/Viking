@@ -57,19 +57,19 @@ namespace UtilitiesTests
         [TestMethod]
         public void TestAngle()
         {
-            GridVector3 A = new(5, 0, 0);
-            GridVector3 B = new(2.5, 2.5, 0);
+            Vector3 A = new(5, 0, 0);
+            Vector3 B = new(2.5, 2.5, 0);
 
             double PI4 = Math.PI / 4;
 
-            double angle = GridVector3.Angle(A, B);
+            double angle = Vector3.Angle(A, B);
             Assert.IsTrue(angle - Global.Epsilon < (1.0 * PI4) &&
                          angle + Global.Epsilon > (1.0 * PI4));
 
-            A = new GridVector3(5, 0, 0);
-            B = new GridVector3(2.5, -2.5, 0);
+            A = new Vector3(5, 0, 0);
+            B = new Vector3(2.5, -2.5, 0);
 
-            angle = GridVector3.Angle(A, B);
+            angle = Vector3.Angle(A, B);
             Assert.IsTrue(angle - Global.Epsilon < (1.0 * PI4) &&
                          angle + Global.Epsilon > (1.0 * PI4));
 
@@ -84,24 +84,24 @@ namespace UtilitiesTests
             double Pi4 = Math.PI / 4.0;
             double Pi2 = Math.PI / 2.0;
 
-            GridVector3 Origin = new GridVector3(0, 0, 0);
-            GridVector3 A = new GridVector3(1, 0, 0);
-            GridVector3 B = new GridVector3(0, 1, 0);
-            GridVector3 C = new GridVector3(-1, 0, 0);
+            Vector3 Origin = new Vector3(0, 0, 0);
+            Vector3 A = new Vector3(1, 0, 0);
+            Vector3 B = new Vector3(0, 1, 0);
+            Vector3 C = new Vector3(-1, 0, 0);
 
-            double Degree90 = GridVector3.ArcAngle(Origin, A, B);
+            double Degree90 = Vector3.ArcAngle(Origin, A, B);
             Assert.AreEqual(Degree90, Pi2);
 
-            Degree90 = GridVector3.ArcAngle(Origin, B, A);
+            Degree90 = Vector3.ArcAngle(Origin, B, A);
             Assert.AreEqual(Degree90, -Pi2);
 
-            double Degree180 = GridVector3.ArcAngle(Origin, A, C);
+            double Degree180 = Vector3.ArcAngle(Origin, A, C);
             Assert.AreEqual(Degree180, Math.PI);
 
-            double Degree0 = GridVector3.Angle(Origin, A);
+            double Degree0 = Vector3.Angle(Origin, A);
             Assert.AreEqual(Degree0, 0);
 
-            Degree90 = GridVector3.Angle(Origin, B);
+            Degree90 = Vector3.Angle(Origin, B);
             Assert.AreEqual(Degree90, Pi2);
         }
         
@@ -111,14 +111,14 @@ namespace UtilitiesTests
             double Pi4 = Math.PI / 4.0;
             double Pi2 = Math.PI / 2.0;
 
-            GridVector3 Origin = new GridVector3(0, 0, 0);
-            GridVector3 A = new GridVector3(1, 0, 0);
-            GridVector3 B = new GridVector3(0, 1, 0);
-            GridVector3 C = new GridVector3(-1, 0, 0);
-            GridVector3 D = new GridVector3(Math.Cos(Pi4), Math.Sin(Pi4), 0);
+            Vector3 Origin = new Vector3(0, 0, 0);
+            Vector3 A = new Vector3(1, 0, 0);
+            Vector3 B = new Vector3(0, 1, 0);
+            Vector3 C = new Vector3(-1, 0, 0);
+            Vector3 D = new Vector3(Math.Cos(Pi4), Math.Sin(Pi4), 0);
 
-            double degree45 = GridVector3.ArcAngle(Origin, A, D);
-            double result = GridVector3.Angle(Origin, D);
+            double degree45 = Vector3.ArcAngle(Origin, A, D);
+            double result = Vector3.Angle(Origin, D);
             Assert.AreEqual(degree45, Pi4);
             Assert.AreEqual(result, Pi4);
         }*/
@@ -126,20 +126,20 @@ namespace UtilitiesTests
         [TestMethod]
         public void TestArcAngle()
         {
-            GridVector3 O = new(0, 0, 0);
-            GridVector3 A = new(5, 0, 0);
-            GridVector3 B = new(2.5, 2.5, 0);
+            Vector3 O = new(0, 0, 0);
+            Vector3 A = new(5, 0, 0);
+            Vector3 B = new(2.5, 2.5, 0);
 
             double PI4 = Math.PI / 4;
 
-            double angle = GridVector3.ArcAngle(O, A, B);
+            double angle = Vector3.ArcAngle(O, A, B);
             Assert.IsTrue(angle - Global.Epsilon < (1.0 * PI4) &&
                          angle + Global.Epsilon > (1.0 * PI4));
 
-            A = new GridVector3(5, 0, 0);
-            B = new GridVector3(-2.5, -2.5, 0);
+            A = new Vector3(5, 0, 0);
+            B = new Vector3(-2.5, -2.5, 0);
 
-            angle = GridVector3.ArcAngle(O, A, B);
+            angle = Vector3.ArcAngle(O, A, B);
             Assert.IsTrue(angle - Global.Epsilon < (3.0 * PI4) &&
                          angle + Global.Epsilon > (3.0 * PI4));
 
@@ -151,44 +151,44 @@ namespace UtilitiesTests
         [TestMethod]
         public void TestTranslate()
         {
-            GridVector3 A = new(0, 0, 0);
+            Vector3 A = new(0, 0, 0);
 
             Vector<double> v = Vector<double>.Build.Dense([A.X, A.Y, 0, 1]);
 
-            GridVector3 Offset = new(1, 2, 0);
+            Vector3 Offset = new(1, 2, 0);
 
             Matrix<double> translationMatrix = GeometryMathNetNumerics.CreateTranslationMatrix(Offset);
             Vector<double> translated = translationMatrix * v;
 
-            GridVector3 translatedPoint = translated.ToGridVector3();
+            Vector3 translatedPoint = translated.ToVector3();
             Assert.AreEqual(translatedPoint, A + Offset);
 
             Matrix<double> p = A.ToMatrix();
             Matrix<double> translatedMatrix = translationMatrix * p;
 
-            ICollection<GridVector3> translatedPoints = translatedMatrix.ToGridVector3();
+            ICollection<Vector3> translatedPoints = translatedMatrix.ToVector3();
             Assert.AreEqual(translatedPoints.First(), A + Offset);
         }
 
         [TestMethod]
         public void ToFromMatrix()
         {
-            GridVector3 A = new(1, 2, 0);
-            GridVector3 B = new(1, 0, 0);
-            GridVector3 C = new(2, 1, 0);
-            GridVector3 D = new(0, 1, 0);
+            Vector3 A = new(1, 2, 0);
+            Vector3 B = new(1, 0, 0);
+            Vector3 C = new(2, 1, 0);
+            Vector3 D = new(0, 1, 0);
 
-            GridVector3[] points = [A, B, C, D];
+            Vector3[] points = [A, B, C, D];
 
             Matrix<double> m = points.ToMatrix();
-            GridVector3[] convertedPoints = [.. m.ToGridVector3()];
+            Vector3[] convertedPoints = [.. m.ToVector3()];
 
             Assert.AreEqual(points.Length, convertedPoints.Length);
 
             for (int i = 0; i < points.Length; i++)
             {
                 Assert.AreEqual(points[i], convertedPoints[i], "Output of matrix conversion does not match input");
-                Assert.AreEqual(3, points[i].coords.Length, "Expect a GridVector3 to have coords array of length 3");
+                Assert.AreEqual(3, points[i].Coords.Length, "Expect a Vector3 to have coords array of length 3");
             }
         }
     }

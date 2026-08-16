@@ -18,13 +18,13 @@ namespace Viking.VolumeModel
     {
         protected ITransform[] _TileTransforms = null;
 
-        private GridRectangle _VolumeBounds;
-        public override GridRectangle ControlBounds => _VolumeBounds;
+        private Rectangle _VolumeBounds;
+        public override Rectangle ControlBounds => _VolumeBounds;
 
-        private GridRectangle _SectionBounds;
-        public override GridRectangle? SectionBounds => _SectionBounds;
+        private Rectangle _SectionBounds;
+        public override Rectangle? SectionBounds => _SectionBounds;
 
-        public override GridRectangle? VolumeBounds => _VolumeBounds;
+        public override Rectangle? VolumeBounds => _VolumeBounds;
 
 
         public override ITransform[] GetLoadedTransformsOrNull()
@@ -262,44 +262,44 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP) => this.VolumeTransform.TryInverseTransform(P, out transformedP);
+        public override bool TryVolumeToSection(Vector2 P, out Vector2 transformedP) => this.VolumeTransform.TryInverseTransform(P, out transformedP);
 
         /// <summary>
         /// Maps a point from section space into the volume space
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool TrySectionToVolume(GridVector2 P, out GridVector2 transformedP) => this.VolumeTransform.TryTransform(P, out transformedP);
+        public override bool TrySectionToVolume(Vector2 P, out Vector2 transformedP) => this.VolumeTransform.TryTransform(P, out transformedP);
 
-        public override GridVector2[] SectionToVolume(GridVector2[] P) => this.VolumeTransform.Transform(P);
+        public override Vector2[] SectionToVolume(Vector2[] P) => this.VolumeTransform.Transform(P);
 
-        public override GridVector2[] VolumeToSection(GridVector2[] P) => this.VolumeTransform.InverseTransform(P);
+        public override Vector2[] VolumeToSection(Vector2[] P) => this.VolumeTransform.InverseTransform(P);
 
         /// <summary>
         /// Maps a point from volume space into the section space
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TryVolumeToSection(in GridVector2[] P, out GridVector2[] transformedP) => this.VolumeTransform.TryInverseTransform(P, out transformedP);
+        public override bool[] TryVolumeToSection(in Vector2[] P, out Vector2[] transformedP) => this.VolumeTransform.TryInverseTransform(P, out transformedP);
 
         /// <summary>
         /// Maps a point from section space into the volume space
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TrySectionToVolume(in GridVector2[] P, out GridVector2[] transformedP) => this.VolumeTransform.TryTransform(P, out transformedP);
+        public override bool[] TrySectionToVolume(in Vector2[] P, out Vector2[] transformedP) => this.VolumeTransform.TryTransform(P, out transformedP);
 
-        public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
+        public override TilePyramid VisibleTiles(Rectangle VisibleBounds, double DownSample)
         {
             if (VolumeTransform != null)
             {
-                GridQuad? VisibleQuad = default;
+                Quad? VisibleQuad = default;
                 //Add any corners of the VisibleBounds that we can transform to the list of points
-                List<MappingGridVector2> VisiblePoints = VisibleBoundsCorners(VisibleBounds);
+                List<MappingVector2> VisiblePoints = VisibleBoundsCorners(VisibleBounds);
                 if (VisiblePoints.Count == 4)
                 {
-                    VisiblePoints.Sort(new MappingGridVector2SortByMapPoints());
-                    VisibleQuad = new GridQuad(VisiblePoints[0].MappedPoint,
+                    VisiblePoints.Sort(new MappingVector2SortByMapPoints());
+                    VisibleQuad = new Quad(VisiblePoints[0].MappedPoint,
                                                VisiblePoints[1].MappedPoint,
                                                VisiblePoints[2].MappedPoint,
                                                VisiblePoints[3].MappedPoint);

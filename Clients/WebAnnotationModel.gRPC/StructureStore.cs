@@ -59,7 +59,7 @@ namespace WebAnnotationModel.gRPC
                 var z = t.Position?.HasZ == true ? t.Position.Z : 0;
                 var pos = t.Position == null
                     ? default
-                    : new GridVector3(t.Position.X, t.Position.Y, z);
+                    : new Vector3(t.Position.X, t.Position.Y, z);
                 return new WebAnnotationModel.LocationPositionOnly(t.Id, pos, t.Radius);
             }).ToArray();
         }
@@ -258,7 +258,7 @@ namespace WebAnnotationModel.gRPC
             return changes.ObjectsInStore;
         }
 
-        public Task<ICollection<StructureObj>> GetLocalObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius)
+        public Task<ICollection<StructureObj>> GetLocalObjectsInRegion(long SectionNumber, Rectangle bounds, double MinRadius)
         {
             var structures = Store.Locations.GetLocalObjectsForSection(SectionNumber).Values
                 .Where(l => l.Radius >= MinRadius && bounds.Contains(l.Position) && l.Parent != null)
@@ -268,7 +268,7 @@ namespace WebAnnotationModel.gRPC
             return Task.FromResult<ICollection<StructureObj>>(structures);
         }
 
-        public Task<ICollection<StructureObj>> GetServerObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc, out DateTime queryCompletedTime)
+        public Task<ICollection<StructureObj>> GetServerObjectsInRegion(long SectionNumber, Rectangle bounds, double MinRadius, DateTime? LastQueryUtc, out DateTime queryCompletedTime)
         {
             var client = StructureClientFactory.GetOrCreate();
             string regionWkt = ToWktPolygon(bounds);
@@ -301,7 +301,7 @@ namespace WebAnnotationModel.gRPC
         public Task<StructureLinkObj> GetLinksForStructure(bool AskServer) =>
             Task.FromResult<StructureLinkObj>(null);
 
-        private static string ToWktPolygon(GridRectangle bounds)
+        private static string ToWktPolygon(Rectangle bounds)
         {
             var ci = System.Globalization.CultureInfo.InvariantCulture;
             return string.Format(ci,

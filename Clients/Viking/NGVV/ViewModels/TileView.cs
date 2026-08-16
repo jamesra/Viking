@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -6,9 +7,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Viking;
-using Viking.UI;
 using Viking.VolumeModel;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace Viking.ViewModels
 {
@@ -30,7 +31,7 @@ namespace Viking.ViewModels
         private IndexBuffer? IndBuffer = null;
 
         /// <summary>
-        /// Indicies passed to render call specifying triangle verticies
+        /// Indices passed to render call specifying triangle verticies
         /// </summary>
         int[] TriangleIndicies => _tileViewModel.TriangleIndicies;
 
@@ -47,7 +48,7 @@ namespace Viking.ViewModels
         /// <summary>
         /// World-space bounds of the tile (from the underlying TileViewModel).
         /// </summary>
-        public GridRectangle Bounds => _tileViewModel.Bounds;
+        public Rectangle Bounds => _tileViewModel.Bounds;
 
         /// <summary>
         /// Section number (Z) of the tile (from the underlying TileViewModel.UniqueKey).
@@ -234,18 +235,18 @@ namespace Viking.ViewModels
         /// </summary>
         /// <param name="device"></param>
         /// <returns></returns>
-        private static VertexBuffer CreateVertexBuffer(GraphicsDevice device, VolumeModel.PositionNormalTextureVertex[] Verticies)
+        private static VertexBuffer CreateVertexBuffer(GraphicsDevice device, VolumeModel.PositionNormalTextureVertex[] Vertices)
         {
-            if (Verticies.Length == 0)
+            if (Vertices.Length == 0)
                 return null;
 
-            VertexPositionNormalTexture[] vertArray = new VertexPositionNormalTexture[Verticies.Length];
+            VertexPositionNormalTexture[] vertArray = new VertexPositionNormalTexture[Vertices.Length];
 
-            for (int i = 0; i < Verticies.Length; i++)
+            for (int i = 0; i < Vertices.Length; i++)
             {
-                GridVector3 pos = Verticies[i].Position;
-                GridVector3 norm = Verticies[i].Normal;
-                GridVector2 tex = Verticies[i].Texture;
+                Geometry.Vector3 pos = Vertices[i].Position;
+                Geometry.Vector3 norm = Vertices[i].Normal;
+                Geometry.Vector2 tex = Vertices[i].Texture;
 
                 vertArray[i] = new VertexPositionNormalTexture(new Vector3((float)pos.X, (float)pos.Y, (float)pos.Z),
                                                                 new Vector3((float)norm.X, (float)norm.Y, (float)norm.Z),
@@ -391,7 +392,7 @@ namespace Viking.ViewModels
                 if (!NullGridWarningPrinted)
                 {
                     NullGridWarningPrinted = true;
-                    Trace.WriteLine("Null Grid Indicies for " + this.TextureFileName, "Tile");
+                    Trace.WriteLine("Null Grid Indices for " + this.TextureFileName, "Tile");
                 }
 #endif
 
@@ -404,7 +405,7 @@ namespace Viking.ViewModels
                 if (!NullGridWarningPrinted)
                 {
                     NullGridWarningPrinted = true;
-                    Trace.WriteLine("No Grid Indicies for " + this.TextureFileName, "Tile");
+                    Trace.WriteLine("No Grid Indices for " + this.TextureFileName, "Tile");
                 }
 #endif
                 return;
@@ -433,7 +434,7 @@ namespace Viking.ViewModels
                     {
                         this.VertBuffer = null;
                     }
-                    VertBuffer = CreateVertexBuffer(graphicsDevice, _tileViewModel.Verticies);
+                    VertBuffer = CreateVertexBuffer(graphicsDevice, _tileViewModel.Vertices);
                 }
 
                 if (VertBuffer is null || VertBuffer.VertexCount == 0)
@@ -477,9 +478,9 @@ namespace Viking.ViewModels
                 graphicsDevice.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, TriangleIndicies.Length / 3);
                 /*
                 graphicsDevice.DrawUserIndexedPrimitives<VertexPositionNormalTexture>(PrimitiveType.TriangleList,
-                                        this.Verticies,
+                                        this.Vertices,
                                         0,
-                                        this.Verticies.Length, 
+                                        this.Vertices.Length, 
                                         TriangleIndicies, 
                                         0,
                                         TriangleIndicies.Length / 3);
@@ -503,15 +504,15 @@ namespace Viking.ViewModels
 
         public static VertexPositionColor[] CreateMeshVerticies(TileViewModel t, Color color)
         {
-            VertexPositionColor[] meshVerticies = new VertexPositionColor[t.Verticies.Length];
+            VertexPositionColor[] meshVerticies = new VertexPositionColor[t.Vertices.Length];
 
             if (meshVerticies.Length == 0)
                 throw new ArgumentException("No verticies for tile", "t");
 
             for (int iVert = 0; iVert < meshVerticies.Length; iVert++)
             {
-                meshVerticies[iVert] = new VertexPositionColor(new Vector3((float)t.Verticies[iVert].Position.X,
-                                                                               (float)t.Verticies[iVert].Position.Y, (float)0)
+                meshVerticies[iVert] = new VertexPositionColor(new Vector3((float)t.Vertices[iVert].Position.X,
+                                                                               (float)t.Vertices[iVert].Position.Y, (float)0)
                                                                                                             , color);
             }
 
@@ -616,7 +617,7 @@ namespace Viking.ViewModels
             }
         }
 
-        public void DrawLabel(Viking.UI.Controls.SectionViewerControl _Parent)
+        public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene)
         {
 
 
@@ -626,9 +627,9 @@ namespace Viking.ViewModels
 
             _Parent.spriteBatch.Begin();
 
-            for (int i = 0; i < this.Tile.Verticies.Length; i++)
+            for (int i = 0; i < this.Tile.Vertices.Length; i++)
             {
-                GridVector2 ControlPositionScreen = _Parent.WorldToScreen(this.Tile.Verticies[i].Position.X, this.Tile.Verticies[i].Position.Y); 
+                Geometry.Vector2 ControlPositionScreen = _Parent.WorldToScreen(this.Tile.Vertices[i].Position.X, this.Tile.Vertices[i].Position.Y); 
 
                 Offset = _Parent.GetLabelSize(_Parent.fontArial, i.ToString());
                 Offset.X /= 2f;
@@ -645,11 +646,11 @@ namespace Viking.ViewModels
                                         0); 
             }
 
-            if (this.Tile.Verticies.Length > 0)
+            if (this.Tile.Vertices.Length > 0)
             {
                 double TileNameX = this.Tile.Bounds.Left + (this.Tile.Bounds.Width / 2);
                 double TileNameY = this.Tile.Bounds.Bottom + (this.Tile.Bounds.Height / 2);
-                GridVector2 NamePositionScreen = _Parent.WorldToScreen(TileNameX, TileNameY);
+                Geometry.Vector2 NamePositionScreen = _Parent.WorldToScreen(TileNameX, TileNameY);
                 Offset = _Parent.GetLabelSize(_Parent.fontArial, this.Tile.TextureFullPath);
                 Offset.X /= 2f;
                 Offset.Y /= 2f;

@@ -26,6 +26,16 @@ namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
         [Display(Name = "Groups with Permissions")]
         public IList<GroupResourcePermissionsViewModel> GroupPermissions { get; set; } = new List<GroupResourcePermissionsViewModel>();
 
+        /// <summary>
+        /// When true, server proceeds despite a large-removal confirmation requirement.
+        /// </summary>
+        public bool ConfirmLargeRemoval { get; set; }
+
+        /// <summary>
+        /// JSON snapshot of existing grants (resource × grantee × permission) for client-side removal %.
+        /// </summary>
+        public string InitialGrantsJson { get; set; }
+
         public class ResourceInfo
         {
             public long Id { get; set; }

@@ -1,10 +1,14 @@
-﻿using Geometry;
+using Viking.AnnotationServiceTypes;
+using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using VikingXNA;
 using WebAnnotation.UI;
 using WebAnnotationModel;
 using LocationLinkKey = Viking.AnnotationServiceTypes.LocationLinkKey;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation
 {
@@ -37,12 +41,12 @@ namespace WebAnnotation
         /// <param name="VisibleSectionNumber">Which section is being viewed</param>
         /// <param name="LocationID">The location ID the action applies to</param>
         /// <returns></returns>
-        LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID);
+        LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID);
     }
 
     public interface IPenActionSupport
     {
-        LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID);
+        LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID);
 
         /// <summary>
         /// The user has drawn a shape that may or may not have a way to interact with this annotation.  This class tells us how to handle that shape. 
@@ -108,21 +112,21 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="line"></param>
         /// <returns></returns>
-        bool Intersects(GridLineSegment line);
+        bool Intersects(LineSegment line);
 
         /// <summary>
         /// Returns the distance from the position to the nearest point on the annotation, or 0 if the position is inside the annotation
         /// </summary>
         /// <param name="Position"></param>
         /// <returns></returns>
-        double Distance(GridVector2 Position);
+        double Distance(Geometry.Vector2 Position);
 
         /// <summary>
         /// Assumes Position is within the annotation.  Returns a number from 0 to 1 indicating how close the position is between the center and edge of the annotation.
         /// </summary>
         /// <param name="Position"></param>
         /// <returns></returns>
-        double DistanceFromCenterNormalized(GridVector2 Position);
+        double DistanceFromCenterNormalized(Geometry.Vector2 Position);
     }
 
     /// <summary>
@@ -146,9 +150,9 @@ namespace WebAnnotation
         /// <summary>
         /// The 
         /// </summary>
-        GridPolygon MosaicPolygon { get; }
-        GridPolygon VolumePolygon { get; }
-        GridPolygon SmoothedVolumePolygon { get; }
+        Polygon MosaicPolygon { get; }
+        Polygon VolumePolygon { get; }
+        Polygon SmoothedVolumePolygon { get; }
     }
 
 
@@ -165,7 +169,7 @@ namespace WebAnnotation
         /// <param name="position"></param>
         /// <param name="distanceToCenterNormalized"></param>
         /// <returns></returns>
-        ICanvasView GetAnnotationAtPosition(GridVector2 position);
+        ICanvasView GetAnnotationAtPosition(Geometry.Vector2 position);
     }
 
     /// <summary>
@@ -179,20 +183,20 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="WorldPosition"></param>
         /// <returns>Annotations containing the point</returns>
-        List<HitTestResult> GetAnnotations(GridVector2 WorldPosition);
+        List<HitTestResult> GetAnnotations(Geometry.Vector2 WorldPosition);
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="line"></param>
         /// <returns>Annotations intersected by the line</returns>
-        List<HitTestResult> GetAnnotations(GridLineSegment line);
+        List<HitTestResult> GetAnnotations(LineSegment line);
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="line"></param>
         /// <returns>Annotations contained or intersected by the rectangle</returns>
-        List<HitTestResult> GetAnnotations(GridRectangle rect);
+        List<HitTestResult> GetAnnotations(Rectangle rect);
     }
 }

@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Controls
 {
@@ -11,7 +13,7 @@ namespace WebAnnotation.UI.Controls
     public partial class ListLocations : Viking.UI.BaseClasses.DockingListControl
     {
         private Location_PropertyPageViewModel[] _locations;
-        private readonly EventHandler LocationCreateEventHandler;
+        private readonly NotifyCollectionChangedEventHandler LocationCreateEventHandler;
 
 
         public ListLocations()
@@ -19,8 +21,8 @@ namespace WebAnnotation.UI.Controls
             ListItems.ShowPropertiesOnDoubleClick = false;
             InitializeComponent();
 
-            LocationCreateEventHandler = new EventHandler(OnLocationCreate);
-            LocationObj.Create += LocationCreateEventHandler;
+            LocationCreateEventHandler = new NotifyCollectionChangedEventHandler(OnLocationsCollectionChanged);
+            Store.Locations.OnCollectionChanged += LocationCreateEventHandler;
         }
 
         public void SetLocations(Location_PropertyPageViewModel[] locations)
@@ -38,10 +40,21 @@ namespace WebAnnotation.UI.Controls
             AnnotationOverlay.GoToLocation(loc.modelObj);
         }
 
-        public void OnLocationCreate(object sender, EventArgs e)
+        private void OnLocationsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            Location_PropertyPageViewModel loc = sender as Location_PropertyPageViewModel;
-            Debug.Assert(loc != null);
+            if (e.Action != NotifyCollectionChangedAction.Add || e.NewItems is null)
+            {
+                return;
+            }
+
+            foreach (LocationObj addedObj in e.NewItems)
+            {
+                OnLocationCreate(new Location_PropertyPageViewModel(addedObj.ID));
+            }
+        }
+
+        private void OnLocationCreate(Location_PropertyPageViewModel loc)
+        {
             if (loc != null)
             {
                 if (InvokeRequired)
@@ -57,7 +70,7 @@ namespace WebAnnotation.UI.Controls
 
         protected override void parentForm_Closing(object sender, CancelEventArgs e)
         {
-            LocationObj.Create -= LocationCreateEventHandler;
+            Store.Locations.OnCollectionChanged -= LocationCreateEventHandler;
 
             base.parentForm_Closing(sender, e);
         }

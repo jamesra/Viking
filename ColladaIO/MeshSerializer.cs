@@ -37,12 +37,12 @@ namespace ColladaIO
         {
             mesh_type dae_mesh = new();
 
-            GridVector3 center = -mesh.BoundingBox.CenterPoint;
+            Vector3 center = -mesh.BoundingBox.CenterPoint;
 
             List<source_type> listSources =
             [
-                CreateSource([.. mesh.Verticies.Select(v => (v.Position + center) * 0.001)], id, "positions"),
-                CreateSource([.. mesh.Verticies.Select(v => v.Normal)], id, "normals")
+                CreateSource([.. mesh.Vertices.Select(v => (v.Position + center) * 0.001)], id, "positions"),
+                CreateSource([.. mesh.Vertices.Select(v => v.Normal)], id, "normals")
             ];
 
             dae_mesh.source = [.. listSources];
@@ -65,7 +65,7 @@ namespace ColladaIO
             return dae_mesh;
         }
 
-        private static source_type CreateSource(GridVector3[] verticies, string id, string array_type)
+        private static source_type CreateSource(Vector3[] verticies, string id, string array_type)
         {
             source_type source = new()
             {
@@ -78,7 +78,7 @@ namespace ColladaIO
                 id = string.Format("{0}-{1}-{2}", id, array_type, "array"),
                 count = (ulong)verticies.LongLength * 3,
 
-                Text = [.. verticies.SelectMany(v => v.coords)]
+                Text = [.. verticies.SelectMany(v => v.Coords)]
             };
 
             source.Item = float_array;

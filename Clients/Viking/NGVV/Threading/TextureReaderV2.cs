@@ -8,7 +8,6 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Documents.Serialization;
 using Microsoft.Xna.Framework.Graphics;
 using Viking.VolumeModel;
 using Viking.ViewModels;

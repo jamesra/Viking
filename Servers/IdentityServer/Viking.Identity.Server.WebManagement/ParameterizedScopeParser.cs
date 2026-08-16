@@ -4,6 +4,7 @@ using Duende.IdentityServer.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Viking.Identity.Data;
+using Viking.Identity.Models;
 
 namespace Viking.Identity.Server.WebManagement
 {
@@ -20,48 +21,45 @@ namespace Viking.Identity.Server.WebManagement
             const string Viking = "Viking";
             const string resource = "resource";
             const string permission = "permission";
-            const char separator = '.';
 
             var scopeValue = scopeContext.RawValue;
 
-            var parts = scopeValue.Split(separator, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 2)
+            if (!ResourceScopeNames.TryParse(scopeValue, out var resourceName, out var encodedPermission))
             {
-                // we get in here with a scope like "resource.permission"
-                var resourceName = parts[0];
-                var permissionId = parts[1];
-
-                if (resourceName == Viking)
-                {
-                    //This is the old Viking.Annotation scope, which I'm just passing through
-                    base.ParseScopeValue(scopeContext);
-                    return;
-                }
-
-                var resourceObj = _context.Resource.Include(r => r.ResourceType).ThenInclude(rt => rt.Permissions).FirstOrDefault(r => r.Name == resourceName);
-                if(resourceObj == null)
-                {
-                    //Unknown resource, ignore it and do not add it to the results
-                    scopeContext.SetIgnore();
-                    return;
-                }
-
-                if(resourceObj.AvailablePermissions.Any(ap => ap.PermissionId == permissionId))
-                {
-                    scopeContext.SetParsedValues(resource, resourceName);
-                    scopeContext.SetParsedValues(permission, permissionId);
-                    return;
-                }
-                else
-                {
-                    scopeContext.SetError("resource scope specifies unknown permission");
-                }
-            }
-            else
-            {
-                // we get in here with a scope not like "resource.permission"
                 base.ParseScopeValue(scopeContext);
+                return;
             }
+
+            if (string.Equals(resourceName, Viking, StringComparison.OrdinalIgnoreCase))
+            {
+                base.ParseScopeValue(scopeContext);
+                return;
+            }
+
+            var permissionId = ResourceScopeNames.ToPermissionId(encodedPermission);
+
+            var resourceObj = _context.Resource
+                .Include(r => r.ResourceType).ThenInclude(rt => rt.Permissions)
+                .Where(r => r.ResourceTypeId == nameof(Volume) || r.ResourceTypeId == nameof(SegmentationService))
+                .AsEnumerable()
+                .FirstOrDefault(r =>
+                    string.Equals(r.Name, resourceName, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(ResourceScopeNames.ToScopePrefix(r.Name), resourceName, StringComparison.OrdinalIgnoreCase));
+
+            if (resourceObj == null)
+            {
+                scopeContext.SetIgnore();
+                return;
+            }
+
+            if (resourceObj.AvailablePermissions.Any(ap => ap.PermissionId == permissionId))
+            {
+                scopeContext.SetParsedValues(resource, resourceName);
+                scopeContext.SetParsedValues(permission, permissionId);
+                return;
+            }
+
+            scopeContext.SetError("resource scope specifies unknown permission");
         }
     }
 }

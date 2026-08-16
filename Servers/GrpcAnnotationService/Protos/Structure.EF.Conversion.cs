@@ -42,12 +42,12 @@ namespace gRPCAnnotationService.Protos
                 ParentId = src.ParentId.HasValue ? src.ParentId.Value : 0,
                 Confidence = src.Confidence,
                 Created = ToUtcTimestamp(src.Created),
-                Label = src.Label,
+                Label = src.Label ?? string.Empty,
                 LastModified = ToUtcTimestamp(src.LastModified),
-                Notes = src.Notes,
+                Notes = src.Notes ?? string.Empty,
                 TypeId = src.TypeId,
                 Verified = src.Verified,
-                Username = src.Username,
+                Username = src.Username ?? string.Empty,
             };
 
             if(false == src.ParentId.HasValue)

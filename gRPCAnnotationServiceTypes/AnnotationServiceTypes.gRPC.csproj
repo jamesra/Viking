@@ -30,6 +30,7 @@
   <ItemGroup>
     <ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
+    <ProjectReference Include="..\UnitsAndScale\UnitsAndScale.csproj" />
   </ItemGroup>
 
   <ItemGroup>

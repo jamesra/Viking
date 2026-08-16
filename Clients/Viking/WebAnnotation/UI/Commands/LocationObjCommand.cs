@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -8,6 +8,9 @@ using VikingXNAGraphics;
 using VikingXNAWinForms;
 using WebAnnotation.View;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -98,7 +101,7 @@ namespace WebAnnotation.UI.Commands
             //Draw a line from the selected location to the new location if we are holding left button down
             if (oldMouse.Button == MouseButtons.Left)
             {
-                GridVector2 selectedPos = selected.VolumePosition;
+                Geometry.Vector2 selectedPos = selected.VolumePosition;
                 /*bool found = sectionAnnotations.TryGetPositionForLocation(selected, out selectedPos);
                 if (found == false)
                     return; 

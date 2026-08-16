@@ -11,7 +11,7 @@ namespace Viking.VolumeModel
 
         public long ID => _Name.GetHashCode();
 
-        public GridRectangle? SectionBounds
+        public Rectangle? SectionBounds
         {
             get
             {
@@ -21,12 +21,12 @@ namespace Viking.VolumeModel
                 }
                 else
                 {
-                    return new GridRectangle?();
+                    return new Rectangle?();
                 }
             }
         }
 
-        public GridRectangle? VolumeBounds
+        public Rectangle? VolumeBounds
         {
             get
             {
@@ -36,25 +36,25 @@ namespace Viking.VolumeModel
                 }
                 else
                 {
-                    return new GridRectangle?();
+                    return new Rectangle?();
                 }
             }
         }
 
-        public GridVector2[] SectionToVolume(GridVector2[] Points) => Transform.Transform(Points);
+        public Vector2[] SectionToVolume(Vector2[] Points) => Transform.Transform(Points);
 
-        public GridVector2 SectionToVolume(GridVector2 P) => Transform.Transform(P);
+        public Vector2 SectionToVolume(Vector2 P) => Transform.Transform(P);
 
-        public bool[] TrySectionToVolume(in GridVector2[] Points, out GridVector2[] transformedP) => Transform.TryTransform(Points, out transformedP);
+        public bool[] TrySectionToVolume(in Vector2[] Points, out Vector2[] transformedP) => Transform.TryTransform(Points, out transformedP);
 
-        public bool TrySectionToVolume(GridVector2 P, out GridVector2 transformedP) => Transform.TryTransform(P, out transformedP);
+        public bool TrySectionToVolume(Vector2 P, out Vector2 transformedP) => Transform.TryTransform(P, out transformedP);
 
-        public bool[] TryVolumeToSection(in GridVector2[] Points, out GridVector2[] transformedP) => Transform.TryInverseTransform(Points, out transformedP);
+        public bool[] TryVolumeToSection(in Vector2[] Points, out Vector2[] transformedP) => Transform.TryInverseTransform(Points, out transformedP);
 
-        public bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP) => Transform.TryInverseTransform(P, out transformedP);
+        public bool TryVolumeToSection(Vector2 P, out Vector2 transformedP) => Transform.TryInverseTransform(P, out transformedP);
 
-        public GridVector2[] VolumeToSection(GridVector2[] Points) => Transform.InverseTransform(Points);
+        public Vector2[] VolumeToSection(Vector2[] Points) => Transform.InverseTransform(Points);
 
-        public GridVector2 VolumeToSection(GridVector2 P) => Transform.InverseTransform(P);
+        public Vector2 VolumeToSection(Vector2 P) => Transform.InverseTransform(P);
     }
 }

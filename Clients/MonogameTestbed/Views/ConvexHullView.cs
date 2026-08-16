@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using TriangleNet;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -13,9 +15,9 @@ namespace MonogameTestbed
         public double LineRadius = 1;
         public Color color;
 
-        public List<LineView> UpdateViews(IReadOnlyList<GridVector2> Points)
+        public List<LineView> UpdateViews(IReadOnlyList<Geometry.Vector2> Points)
         {
-            GridVector2[] cv_points = ConvexHullExtension.ConvexHull(Points, out int[] original_indicies);
+            Geometry.Vector2[] cv_points = ConvexHullExtension.ConvexHull(Points, out int[] originalIndices);
 
             List<LineView> listLines = [];
 
@@ -40,8 +42,8 @@ namespace MonogameTestbed
 
             foreach (var e in mesh.Edges)
             {
-                listLines.Add(new LineView(mesh.Vertices[e.P0].ToGridVector2(),
-                                           mesh.Vertices[e.P1].ToGridVector2(),
+                listLines.Add(new LineView(mesh.Vertices[e.P0].ToVector2(),
+                                           mesh.Vertices[e.P1].ToVector2(),
                                            LineRadius,
                                            color,
                                            LineStyle.Standard));

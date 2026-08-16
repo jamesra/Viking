@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Geometry.Meshing;
 using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
@@ -13,13 +14,15 @@ using System.Threading.Tasks;
 using TriangleNet;
 using TriangleNet.Meshing;
 using VikingXNA;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
     /*
     class MeshMergeIncrementalView
     {
-        public GridPolygon[] Polys;
+        public Polygon[] Polys;
         public GraphLib.Edge<ulong>[] Edges;
         public double[] ZLevels;
 
@@ -56,7 +59,7 @@ namespace MonogameTestbed
             }
         }
 
-        public MeshMergeIncrementalView(GridPolygon[] polys, GraphLib.Edge<ulong>[] edges, double[] Z)
+        public MeshMergeIncrementalView(Polygon[] polys, GraphLib.Edge<ulong>[] edges, double[] Z)
         {
             this.Polys = polys;
             this.Edges = edges;
@@ -76,11 +79,11 @@ namespace MonogameTestbed
                 PointRadius = 7.5
             };
 
-            MeshGraph graph = StandardModels.BuildMeshGraph(this.Polys, this.ZLevels, this.Edges, 10, GridVector3.Zero);
+            MeshGraph graph = StandardModels.BuildMeshGraph(this.Polys, this.ZLevels, this.Edges, 10, Geometry.Vector3.Zero);
 
-            Mesh3D<IVertex3D<ulong>> CompositeMesh = SmoothMeshGenerator.Generate(graph, out List<GridLineSegment> addedMeshEdges);
+            Mesh3D<IVertex3D<ulong>> CompositeMesh = SmoothMeshGenerator.Generate(graph, out List<LineSegment> addedMeshEdges);
 
-            //GridLineSegment[] lines = CompositeMesh.Edges.Values.Select(e => new GridLineSegment(CompositeMesh.Verticies[e.A].Position, CompositeMesh.Verticies[e.B].Position)).ToArray();
+            //LineSegment[] lines = CompositeMesh.Edges.Values.Select(e => new LineSegment(CompositeMesh.Vertices[e.A].Position, CompositeMesh.Vertices[e.B].Position)).ToArray();
 
             StartingLine = new LineView(addedMeshEdges[0], 2, Color.Red, LineStyle.Standard);
 
@@ -142,8 +145,8 @@ namespace MonogameTestbed
     /*
     class TriangulationShapeWrapView
     {
-        public GridPolygon A;
-        public GridPolygon B;
+        public Polygon A;
+        public Polygon B;
 
         MeshNode NodeA;
         MeshNode NodeB;
@@ -182,7 +185,7 @@ namespace MonogameTestbed
             }
         }
 
-        public TriangulationShapeWrapView(GridPolygon a, GridPolygon b)
+        public TriangulationShapeWrapView(Polygon a, Polygon b)
         {
             this.A = a;
             this.B = b;
@@ -220,8 +223,8 @@ namespace MonogameTestbed
             NodeA = MorphologyMesh.SmoothMeshGraphGenerator.CreateNode(0, A, 0, true);
             NodeB = MorphologyMesh.SmoothMeshGraphGenerator.CreateNode(1, B, 1, true);
 
-            ConnectionVerticies PortA = MorphologyMesh.SmoothMeshGraphGenerator.CreatePort(A, true);
-            ConnectionVerticies PortB = MorphologyMesh.SmoothMeshGraphGenerator.CreatePort(B, true);
+            ConnectionVertices PortA = MorphologyMesh.SmoothMeshGraphGenerator.CreatePort(A, true);
+            ConnectionVertices PortB = MorphologyMesh.SmoothMeshGraphGenerator.CreatePort(B, true);
 
             MeshEdge edge = new MeshEdge(0, 1, PortA, PortB);
 
@@ -238,11 +241,11 @@ namespace MonogameTestbed
 
             bool SourceIsUpper = Source.IsNodeBelow(Target);
 
-            GridVector2[] UpperVerticies = edge.SourcePort.ExternalBorder.Select(i => new GridVector2(CompositeMesh.Verticies[(int)i].Position.X, CompositeMesh.Verticies[(int)i].Position.Y)).ToArray();
-            GridVector2[] LowerVerticies = edge.TargetPort.ExternalBorder.Select(i => new GridVector2(CompositeMesh.Verticies[(int)i].Position.X, CompositeMesh.Verticies[(int)i].Position.Y)).ToArray();
+            Geometry.Vector2[] UpperVerticies = edge.SourcePort.ExternalBorder.Select(i => new Geometry.Vector2(CompositeMesh.Vertices[(int)i].Position.X, CompositeMesh.Vertices[(int)i].Position.Y)).ToArray();
+            Geometry.Vector2[] LowerVerticies = edge.TargetPort.ExternalBorder.Select(i => new Geometry.Vector2(CompositeMesh.Vertices[(int)i].Position.X, CompositeMesh.Vertices[(int)i].Position.Y)).ToArray();
 
-            long UpperStart = SmoothMeshGenerator.FirstIndex(UpperVerticies, out GridVector2 UpperPortConvexHullCentroid);
-            long LowerStart = SmoothMeshGenerator.FirstIndex(LowerVerticies, out GridVector2 LowerPortConvexHullCentroid);
+            long UpperStart = SmoothMeshGenerator.FirstIndex(UpperVerticies, out Geometry.Vector2 UpperPortConvexHullCentroid);
+            long LowerStart = SmoothMeshGenerator.FirstIndex(LowerVerticies, out Geometry.Vector2 LowerPortConvexHullCentroid);
 
             //UpperVerticies = UpperVerticies.Translate(-UpperPortConvexHullCentroid);
             //LowerVerticies = LowerVerticies.Translate(-LowerPortConvexHullCentroid);
@@ -253,23 +256,23 @@ namespace MonogameTestbed
             Trace.WriteLine("Upper Start " + UpperStart.ToString());
             Trace.WriteLine("Lower Start " + LowerStart.ToString());
 
-            List<GridVector2> startingPoints = new List<GridVector2>();
+            List<Geometry.Vector2> startingPoints = new List<Geometry.Vector2>();
             long UpperStartVertex = edge.SourcePort.ExternalBorder[(int)UpperStart];
             long LowerStartVertex = edge.TargetPort.ExternalBorder[(int)LowerStart];
 
             Trace.WriteLine("Upper Start Mesh Index " + UpperStartVertex.ToString());
             Trace.WriteLine("Lower Start Mesh Index " + LowerStartVertex.ToString());
 
-            startingPoints.Add(CompositeMesh.Verticies[(int)UpperStartVertex].Position.XY());
-            startingPoints.Add(CompositeMesh.Verticies[(int)LowerStartVertex].Position.XY());
+            startingPoints.Add(CompositeMesh.Vertices[(int)UpperStartVertex].Position.XY());
+            startingPoints.Add(CompositeMesh.Vertices[(int)LowerStartVertex].Position.XY());
 
             StartingIndexView.Points = startingPoints; 
 
-            List<GridLineSegment> CreatedLines = MorphologyMesh.SmoothMeshGenerator.AttachPorts(CompositeMesh,
+            List<LineSegment> CreatedLines = MorphologyMesh.SmoothMeshGenerator.AttachPorts(CompositeMesh,
                         SourceIsUpper ? edge.TargetPort : edge.SourcePort,
                         SourceIsUpper ? edge.SourcePort : edge.TargetPort);
 
-            //GridLineSegment[] lines = CompositeMesh.Edges.Values.Select(e => new GridLineSegment(CompositeMesh.Verticies[e.A].Position, CompositeMesh.Verticies[e.B].Position)).ToArray();
+            //LineSegment[] lines = CompositeMesh.Edges.Values.Select(e => new LineSegment(CompositeMesh.Vertices[e.A].Position, CompositeMesh.Vertices[e.B].Position)).ToArray();
 
             StartingLine = new LineView(UpperVerticies[UpperStart], LowerVerticies[LowerStart], 2, Color.Red, LineStyle.Standard);
              
@@ -338,8 +341,8 @@ namespace MonogameTestbed
     /*
     class PolywrapView
     {
-        public GridPolygon A;
-        public GridPolygon B;
+        public Polygon A;
+        public Polygon B;
 
         private readonly LineSetView TrianglesView = new LineSetView();
 
@@ -352,7 +355,7 @@ namespace MonogameTestbed
             }
         }
 
-        public PolywrapView(GridPolygon a, GridPolygon b)
+        public PolywrapView(Polygon a, Polygon b)
         {
             this.A = a;
             this.B = b;
@@ -363,20 +366,20 @@ namespace MonogameTestbed
 
         public void UpdateWrapping()
         {
-            GridPolygon[] shapes = new GridPolygon[] { A, B };
+            Polygon[] shapes = new Polygon[] { A, B };
 
-            List<GridVector2> points = A.ExteriorRing.ToList();
+            List<Geometry.Vector2> points = A.ExteriorRing.ToList();
             points.AddRange(B.ExteriorRing);
 
             IMesh mesh = points.Triangulate();
 
-            List<GridLineSegment> lines = mesh.ToLines();
+            List<LineSegment> lines = mesh.ToLines();
             
             //Figure out which endpoints are included in the wrapping.
             //Lines between polygons are included.
             for(int i = lines.Count-1; i >= 0; i--)
             {
-                GridLineSegment l = lines[i];
+                LineSegment l = lines[i];
 
                 if (A.ExteriorSegments.Contains(l) || B.ExteriorSegments.Contains(l))
                     continue;                
@@ -420,8 +423,8 @@ namespace MonogameTestbed
         Scene scene;
         readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
 
-        GridPolygon A;
-        GridPolygon B;
+        Polygon A;
+        Polygon B;
         readonly PointSetViewCollection Points_A = new PointSetViewCollection(Color.Blue, Color.BlueViolet, Color.PowderBlue);
         readonly PointSetViewCollection Points_B = new PointSetViewCollection(Color.Red, Color.Pink, Color.Plum);
         readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
@@ -443,16 +446,16 @@ namespace MonogameTestbed
             A = SqlGeometry.STPolyFromText(PolyA.ToSqlChars(), 0).ToPolygon();
             B = SqlGeometry.STPolyFromText(PolyB.ToSqlChars(), 0).ToPolygon();
 
-            GridVector2 Centroid = A.Centroid;
+            Geometry.Vector2 Centroid = A.Centroid;
             A = A.Translate(-Centroid);
             B = B.Translate(-Centroid);
 
             Points_A.Points = new PointSet(A.ExteriorRing);
             Points_B.Points = new PointSet(B.ExteriorRing);
 
-            GridPolygon SimpleA = StandardGeometryModels.CreateTestPolygon(false);
-            //GridPolygon SimpleB = StandardGeometryModels.CreateBoxPolygon(new GridRectangle(-5, 5, -10, 10));
-            GridPolygon SimpleB = StandardGeometryModels.CreateBoxPolygon(new GridRectangle(-30, -20, -10, 10));
+            Polygon SimpleA = StandardGeometryModels.CreateTestPolygon(false);
+            //Polygon SimpleB = StandardGeometryModels.CreateBoxPolygon(new Rectangle(-5, 5, -10, 10));
+            Polygon SimpleB = StandardGeometryModels.CreateBoxPolygon(new Rectangle(-30, -20, -10, 10));
 
             //wrapView = new TriangulationShapeWrapView(A, B);
             //wrapView = new TriangulationShapeWrapView(StandardModels.SharedModelPolygons[0], StandardModels.SharedModelPolygons[1]);

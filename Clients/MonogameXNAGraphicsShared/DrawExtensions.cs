@@ -4,6 +4,8 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Text;
 using System.Collections.Generic;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNA
 {
@@ -33,8 +35,8 @@ namespace VikingXNA
 
             for (int i = 0; i < transform.MapPoints.Length; i++)
             {
-                GridVector2 CtrlP = transform.MapPoints[i].ControlPoint;
-                GridVector2 MapP = transform.MapPoints[i].MappedPoint;
+                Geometry.Vector2 CtrlP = transform.MapPoints[i].ControlPoint;
+                Geometry.Vector2 MapP = transform.MapPoints[i].MappedPoint;
                 Vector3 ctrlPosition = new((Single)CtrlP.X, (Single)CtrlP.Y, 1);
                 Vector3 mapPosition = new((Single)MapP.X, (Single)MapP.Y, 1);
 

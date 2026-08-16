@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -11,6 +12,8 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 { 
@@ -457,7 +460,7 @@ namespace MonogameTestbed
                 DrawLegendHUD();
             }
             /*
-            testLabel.Position = this.Scene.VisibleWorldBounds.UpperRight - new GridVector2(testLabel.BoundingRect.Width/2.0, 0);//testLabel.BoundingRect.Height);
+            testLabel.Position = this.Scene.VisibleWorldBounds.UpperRight - new Geometry.Vector2(testLabel.BoundingRect.Width/2.0, 0);//testLabel.BoundingRect.Height);
             testLabel.ScaleFontWithScene = false;
             		testLabel.HorzAlign = Monographics.HorizontalAlignment.LEFT;
 		testLabel.VertAlign = Monographics.VerticalAlignment.BOTTOM;
@@ -553,7 +556,7 @@ namespace MonogameTestbed
                     foreach (LegendEntry entry in entries)
                     {
                         float swatchY = y + ((scaledLineHeight - swatchSize) / 2.0f);
-                        Rectangle swatchRect = new((int)(x + 2), (int)swatchY, (int)swatchSize, (int)swatchSize);
+                        Microsoft.Xna.Framework.Rectangle swatchRect = new((int)(x + 2), (int)swatchY, (int)swatchSize, (int)swatchSize);
                         spriteBatch.Draw(_whitePixel, swatchRect, entry.Color);
 
                         string entryText = entry.Style.HasValue ? $"{entry.Text} ({entry.Style.Value} line)" : entry.Text;
@@ -650,12 +653,12 @@ namespace MonogameTestbed
                                            new Vector2((float)(50.0f * Math.Cos(CurveAngle)), (float)(50.0f * Math.Sin(CurveAngle)) + 50.0f));
             window.lineManager.Draw(new RoundLine[] { line }, 16, Color.Red, ViewProjMatrix, time, labelTexture);
 
-            GridVector2[] cps = CreateTestCurveLagrange(CurveAngle, 100, new GridVector2(-150, 0));
+            Geometry.Vector2[] cps = CreateTestCurveLagrange(CurveAngle, 100, new Geometry.Vector2(-150, 0));
             RoundCurve.RoundCurve curve = new(cps, false);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { curve }, 16, Color.Blue, ViewProjMatrix, time, labelTexture);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { curve }, 16, Color.Blue, ViewProjMatrix, time, TechniqueName);
 
-            GridVector2[] cpsCatmull = CreateTestCurveCatmull(CurveAngle, 100, new GridVector2(150, 0));
+            Geometry.Vector2[] cpsCatmull = CreateTestCurveCatmull(CurveAngle, 100, new Geometry.Vector2(150, 0));
             RoundCurve.RoundCurve CatmullCurve = new(cpsCatmull, false);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { CatmullCurve }, 16, Color.Blue, ViewProjMatrix, time, labelTexture);
             window.curveManager.Draw(new RoundCurve.RoundCurve[] { CatmullCurve }, 16, Color.Blue, ViewProjMatrix, time, TechniqueName);
@@ -682,33 +685,33 @@ namespace MonogameTestbed
             return target;
         }
 
-        private static GridVector2[] CreateTestCurve(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve(double angle, double width)
         {
-            GridVector2[] cps = [new(-width,width),
+            Geometry.Vector2[] cps = [new(-width,width),
                                                    new(-width * Math.Cos(angle), -width * Math.Sin(angle)),
                                                    new(0,0),
                                                    new(width,0) ];
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurveLagrange(double angle, double width, GridVector2 origin)
+        private static Geometry.Vector2[] CreateTestCurveLagrange(double angle, double width, Geometry.Vector2 origin)
         {
-            GridVector2[] cps = [new(width,width),
+            Geometry.Vector2[] cps = [new(width,width),
                                                    new(0, width),
                                                    new(0,0),
                                                    new(width,0) ];
-            GridVector2[] curvePoints = Geometry.Lagrange.FitCurve(cps, 30);
+            Geometry.Vector2[] curvePoints = Geometry.Lagrange.FitCurve(cps, 30);
             return curvePoints.Translate(origin);
         }
 
-        private static GridVector2[] CreateTestCurveCatmull(double angle, double width, GridVector2 origin)
+        private static Geometry.Vector2[] CreateTestCurveCatmull(double angle, double width, Geometry.Vector2 origin)
         {
-            GridVector2[] cps = [new(width,width),
+            Geometry.Vector2[] cps = [new(width,width),
                                                    new(0, width),
                                                    new(0,0),
                                                    new(width,0) ];
 
-            GridVector2[] curvePoints = cps.CalculateCurvePoints(30, true);
+            Geometry.Vector2[] curvePoints = cps.CalculateCurvePoints(30, true);
             return curvePoints.Translate(origin);
         }
     }
@@ -732,12 +735,12 @@ namespace MonogameTestbed
         {
             _initialized = true;
 
-            GridVector2[] cps = CreateTestCurveLagrange(0, 100, new GridVector2(-100, 0));
+            Geometry.Vector2[] cps = CreateTestCurveLagrange(0, 100, new Geometry.Vector2(-100, 0));
             curveViewLagrange = new CurveView(cps, Color.Red, false);
             leftLagrangeCurveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, false);
             rightLagrangeCurveLabel = new CurveLabel("C 1485", cps, Color.PaleGoldenrod, false);
 
-            GridVector2[] cpsCatmull = CreateTestCurveCatmull(0, 100, new GridVector2(100, 0));
+            Geometry.Vector2[] cpsCatmull = CreateTestCurveCatmull(0, 100, new Geometry.Vector2(100, 0));
             curveViewCatmull = new CurveView(cpsCatmull, Color.Red, true);
             leftCatmullCurveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cpsCatmull, Color.Black, true);
             rightCatmullCurveLabel = new CurveLabel("C 1485", cpsCatmull, Color.PaleGoldenrod, true);
@@ -770,45 +773,45 @@ namespace MonogameTestbed
 
         }
 
-        private static GridVector2[] CreateTestCurve(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve(double angle, double width)
         {
-            GridVector2[] cps = [new(-width,width),
+            Geometry.Vector2[] cps = [new(-width,width),
                                                    new(-width * Math.Cos(angle), -width * Math.Sin(angle)),
                                                    new(0,0),
                                                    new(width,0) ];
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurve2(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve2(double angle, double width)
         {
-            GridVector2[] cps = [new(width,width),
+            Geometry.Vector2[] cps = [new(width,width),
                                                    new(0, width),
                                                    new(0,0),
                                                    new(width,0) ];
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurve3(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve3(double angle, double width)
         {
-            GridVector2[] cps = [new(-100,100),
+            Geometry.Vector2[] cps = [new(-100,100),
                                                    new(-50, 0),
                                                    new(0,100),
                                                    new(100,0) ];
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurveLagrange(double angle, double width, GridVector2 origin)
+        private static Geometry.Vector2[] CreateTestCurveLagrange(double angle, double width, Geometry.Vector2 origin)
         {
-            GridVector2[] cps = [new(width,width),
+            Geometry.Vector2[] cps = [new(width,width),
                                                    new(0, width),
                                                    new(0,0),
                                                    new(width,0) ];
             return cps.Translate(origin);
         }
 
-        private static GridVector2[] CreateTestCurveCatmull(double angle, double width, GridVector2 origin)
+        private static Geometry.Vector2[] CreateTestCurveCatmull(double angle, double width, Geometry.Vector2 origin)
         {
-            GridVector2[] cps = [new(width,width),
+            Geometry.Vector2[] cps = [new(width,width),
                                                    new(0, width),
                                                    new(0,0),
                                                    new(width,0) ];
@@ -831,9 +834,9 @@ namespace MonogameTestbed
         {
             _initialized = true;
 
-            GridVector2[] cps = CreateTestCurve3(0, 100);
+            Geometry.Vector2[] cps = CreateTestCurve3(0, 100);
             curveLabel = new CurveLabel("CurveLabel", cps, Color.Black, false);
-            labelView = new LabelView("LabelView", new GridVector2(0, 0));
+            labelView = new LabelView("LabelView", new Geometry.Vector2(0, 0));
             return Task.CompletedTask;
         }
 
@@ -865,27 +868,27 @@ namespace MonogameTestbed
             labelView.FontSize = (time * 8f) + 8f;
         }
 
-        private static GridVector2[] CreateTestCurve(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve(double angle, double width)
         {
-            GridVector2[] cps = [new(-width,width),
+            Geometry.Vector2[] cps = [new(-width,width),
                                                    new(-width * Math.Cos(angle), -width * Math.Sin(angle)),
                                                    new(0,0),
                                                    new(width,0) ];
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurve2(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve2(double angle, double width)
         {
-            GridVector2[] cps = [new(width,width),
+            Geometry.Vector2[] cps = [new(width,width),
                                                    new(0, width),
                                                    new(0,0),
                                                    new(width,0) ];
             return cps;
         }
 
-        private static GridVector2[] CreateTestCurve3(double angle, double width)
+        private static Geometry.Vector2[] CreateTestCurve3(double angle, double width)
         {
-            GridVector2[] cps = [new(-50, 0),
+            Geometry.Vector2[] cps = [new(-50, 0),
                                                    new(0,0),
                                                    new(100,0) ];
             return cps;
@@ -919,13 +922,13 @@ namespace MonogameTestbed
 
             foreach (LineStyle style in Enum.GetValues(typeof(LineStyle)))
             {
-                GridVector2 source = new(MinX, Y);
-                GridVector2 dest = new(MaxX, Y);
+                Geometry.Vector2 source = new(MinX, Y);
+                Geometry.Vector2 dest = new(MaxX, Y);
                 listLineViews.Add(new LineView(source, dest, lineWidth, Color.Blue, style));
 
                 Y += YStep;
 
-                listLabelViews.Add(new LabelView(style.ToString(), source + new GridVector2(-100, 0), anchor: Anchor.CenterRight));
+                listLabelViews.Add(new LabelView(style.ToString(), source + new Geometry.Vector2(-100, 0), anchor: Anchor.CenterRight));
             }
 
             return Task.CompletedTask;
@@ -981,15 +984,15 @@ namespace MonogameTestbed
 
             foreach (LineStyle style in Enum.GetValues(typeof(LineStyle)))
             {
-                GridVector2 source = new(MinX, Y);
-                GridVector2 mid = new(MinX + (MaxX - MinX / 2.0), Y - 30);
-                GridVector2 dest = new(MaxX, Y);
+                Geometry.Vector2 source = new(MinX, Y);
+                Geometry.Vector2 mid = new(MinX + (MaxX - MinX / 2.0), Y - 30);
+                Geometry.Vector2 dest = new(MaxX, Y);
 
-                listLineViews.Add(new CurveView(new GridVector2[] { source, mid, dest }, Color.Blue, false, MonoTestbed.NumCurveInterpolations, lineWidth: YStep / 1.5, lineStyle: style));
+                listLineViews.Add(new CurveView(new Geometry.Vector2[] { source, mid, dest }, Color.Blue, false, MonoTestbed.NumCurveInterpolations, lineWidth: YStep / 1.5, lineStyle: style));
 
                 Y += YStep;
 
-                listLabelViews.Add(new LabelView(style.ToString(), source + new GridVector2(-25, 10)));
+                listLabelViews.Add(new LabelView(style.ToString(), source + new Geometry.Vector2(-25, 10)));
             }
             return Task.CompletedTask;
         }
@@ -1030,7 +1033,7 @@ namespace MonogameTestbed
         {
             _initialized = true;
 
-            GridVector2[] cps = CreateTestCurve(90, 190);
+            Geometry.Vector2[] cps = CreateTestCurve(90, 190);
             curveView = new CurveView(cps, Color.Red, true, 10, lineWidth: 64, controlPointRadius: 16, lineStyle: LineStyle.HalfTube);
             curveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, true);
 
@@ -1056,9 +1059,9 @@ namespace MonogameTestbed
 
         }
 
-        private static GridVector2[] CreateTestCurve(double height, double width)
+        private static Geometry.Vector2[] CreateTestCurve(double height, double width)
         {
-            GridVector2[] cps = [new(-width,0),
+            Geometry.Vector2[] cps = [new(-width,0),
                                                    new(-width / 2.0, -height/4),
                                                    new(0,0),
                                                    new(width / 2.0, height),

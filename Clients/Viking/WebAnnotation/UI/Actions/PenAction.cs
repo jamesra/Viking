@@ -89,11 +89,11 @@ namespace WebAnnotation
         /// <param name="new_hole"></param>
         /// <param name="transform"></param>
         /// <returns></returns>
-        public static CutHoleAction TryCreateCutHole(LocationObj loc, GridPolygon new_hole, IVolumeToSectionTransform transform)
+        public static CutHoleAction TryCreateCutHole(LocationObj loc, Polygon new_hole, IVolumeToSectionTransform transform)
         {
             Action action = new Action(() =>
             {
-                GridVector2[] mosaic_points = transform.VolumeToSection(new_hole.ExteriorRing);
+                Vector2[] mosaic_points = transform.VolumeToSection(new_hole.ExteriorRing);
                 SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
 
                 try

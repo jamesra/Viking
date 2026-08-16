@@ -4,6 +4,8 @@ using System.Collections.Specialized;
 using System.Linq;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -48,7 +50,7 @@ namespace MonogameTestbed
             CVView.color = CVViewColor;
         }
 
-        public void TogglePoint(GridVector2 p) => Points.Toggle(p);
+        public void TogglePoint(Geometry.Vector2 p) => Points.Toggle(p);
 
         private void UpdateViews()
         {

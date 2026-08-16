@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using TriangleNet;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MonogameTestbed
 {
@@ -21,7 +23,7 @@ namespace MonogameTestbed
         /// </summary>
         public string Name = "";
 
-        public void UpdateViews(ICollection<GridVector2> Points)
+        public void UpdateViews(ICollection<Geometry.Vector2> Points)
         {
             if (Points.Count >= 3)
             {
@@ -36,9 +38,9 @@ namespace MonogameTestbed
 
         public void UpdateViews(TriangleNet.Voronoi.VoronoiBase v) => LineViews = v != null ? ToLines(v, color) : [];
 
-        public void UpdateViews(ICollection<GridLineSegment> lines) => LineViews = lines != null ? [.. lines.Select(l => new LineView(l.A, l.B, LineRadius, color, Style))] : [];
+        public void UpdateViews(ICollection<LineSegment> lines) => LineViews = lines != null ? [.. lines.Select(l => new LineView(l.A, l.B, LineRadius, color, Style))] : [];
 
-        public void UpdateViews(GridPolygon polygon) => LineViews = polygon is null ? [] : [.. polygon.ExteriorSegments.Select(l => new LineView(l.A, l.B, LineRadius, color, Style))];
+        public void UpdateViews(Polygon polygon) => LineViews = polygon is null ? [] : [.. polygon.ExteriorSegments.Select(l => new LineView(l.A, l.B, LineRadius, color, Style))];
 
         private List<LineView> ToLines(TriangleNet.Topology.DCEL.DcelMesh mesh, Color color)
         {
@@ -48,8 +50,8 @@ namespace MonogameTestbed
 
             foreach (var e in mesh.Edges)
             {
-                listLines.Add(new LineView(mesh.Vertices[e.P0].ToGridVector2(),
-                                           mesh.Vertices[e.P1].ToGridVector2(),
+                listLines.Add(new LineView(mesh.Vertices[e.P0].ToVector2(),
+                                           mesh.Vertices[e.P1].ToVector2(),
                                            LineRadius,
                                            color,
                                            Style));

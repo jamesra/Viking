@@ -21,14 +21,15 @@ namespace WebAnnotationModel.gRPC
     }
 
     /// <summary>
-    /// Updates structures with structurelinks when the structure link store is updated
+    /// Keeps LocationObj.Links in sync when LocationLinkStore changes.
+    /// Constructed by DI at store initialization; does not fetch missing endpoints.
     /// </summary>
-    class LocationLinkToLocationUpdater
+    public class LocationLinkToLocationUpdater
     {
         private readonly ILocationLinkStore LocationLinkStore;
         private readonly ILocationStore LocationStore;
 
-        LocationLinkToLocationUpdater(ILocationLinkStore locationLinkStore,
+        public LocationLinkToLocationUpdater(ILocationLinkStore locationLinkStore,
             ILocationStore locationStore)
         {
             LocationLinkStore = locationLinkStore;
@@ -40,13 +41,19 @@ namespace WebAnnotationModel.gRPC
         private void OnLocationLinkCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             var Tasks = new List<Task>();
-            foreach (var sl in e.OldItems.Cast<LocationLinkObj>())
+            if (e.OldItems != null)
             {
-                Tasks.Add(RemoveLinkToLocations(sl.ID, CancellationToken.None));
+                foreach (var sl in e.OldItems.Cast<LocationLinkObj>())
+                {
+                    Tasks.Add(RemoveLinkToLocations(sl.ID, CancellationToken.None));
+                }
+
+                Task.WaitAll(Tasks.ToArray());
+                Tasks.Clear();
             }
 
-            Task.WaitAll(Tasks.ToArray());
-            Tasks.Clear();
+            if (e.NewItems == null)
+                return;
 
             foreach (var sl in e.NewItems.Cast<LocationLinkObj>())
             {
@@ -54,7 +61,6 @@ namespace WebAnnotationModel.gRPC
             }
 
             Task.WaitAll(Tasks.ToArray());
-            Tasks.Clear();
         }
 
         private async Task<bool> AddLinkToLocations(LocationLinkObj link, CancellationToken token)
@@ -63,13 +69,8 @@ namespace WebAnnotationModel.gRPC
             if (link.A == link.B)
                 return false;
 
-            var SourceTask = LocationStore.GetObjectByID(link.A, token);
-            var TargetTask = LocationStore.GetObjectByID(link.B, token);
-            if (token.IsCancellationRequested)
-                return false;
-
-            LocationObj SourceObj = await SourceTask.ConfigureAwait(false);
-            LocationObj TargetObj = await TargetTask.ConfigureAwait(false);
+            LocationStore.TryGetValue(link.A, out LocationObj SourceObj);
+            LocationStore.TryGetValue(link.B, out LocationObj TargetObj);
 
             var tOne = SourceObj?.AddLinkAsync(link.OtherKey(SourceObj.ID)) ?? Task.FromResult(false);
             var tTwo = TargetObj?.AddLinkAsync(link.OtherKey(TargetObj.ID)) ?? Task.FromResult(false);
@@ -86,13 +87,8 @@ namespace WebAnnotationModel.gRPC
             if (link.B == link.A)
                 return false;
 
-            var SourceTask = LocationStore.GetObjectByID(link.A, token);
-            var TargetTask = LocationStore.GetObjectByID(link.B, token);
-            if (token.IsCancellationRequested)
-                return false;
-
-            LocationObj SourceObj = await SourceTask.ConfigureAwait(false);
-            LocationObj TargetObj = await TargetTask.ConfigureAwait(false);
+            LocationStore.TryGetValue(link.A, out LocationObj SourceObj);
+            LocationStore.TryGetValue(link.B, out LocationObj TargetObj);
 
             var tOne = SourceObj?.RemoveLinkAsync(link.OtherKey(SourceObj.ID)) ?? Task.FromResult(false);
             var tTwo = TargetObj?.RemoveLinkAsync(link.OtherKey(TargetObj.ID)) ?? Task.FromResult(false);

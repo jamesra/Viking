@@ -9,7 +9,7 @@ namespace Viking.UI.Forms
     {
         public string Filename;
         public double Z;
-        public GridRectangle Rect;
+        public Rectangle Rect;
         public double downsample;
         public bool IncludeOverlay;
     }
@@ -140,7 +140,7 @@ namespace Viking.UI.Forms
                     X -= ROIWidth / 2;
                     Y -= ROIHeight / 2;
 
-                    frame.Rect = new GridRectangle(new GridVector2(X, Y),
+                    frame.Rect = new Rectangle(new Vector2(X, Y),
                                                    ROIWidth,
                                                    ROIHeight);
 

@@ -1,6 +1,10 @@
 # Ignore build outputs
 **/bin/
+**/bin/**
 **/obj/
+**/obj/**
+bin/
+obj/
 **/node_modules/
 **/out/
 **/publish/
@@ -66,18 +70,106 @@ Clients/
 Viking/
 Jotunn/
 
+# GrpcAnnotationService depends on Clients/Common transitively via Geometry
+!Clients/Common/
+!Clients/Common/**
+
 # Ignore analysis tools
 Analysis/
+
+# Large trees not used by the gRPC / DevTest compose images
+MorphologyMesh/
+Triangle.NET/
+AnnotationVizLib/
+AnnotationVizLibODataClient/
+AnnotationVizLibSimpleODataClient/
+AnnotationVizLibWCFClient/
+AnnotationServiceTypes/
+Annotation.Geometry/
+BenchmarkDotNet.Artifacts/
+BenchmarkSuite1/
+ColladaIO/
+Database/
+Generated/
+MeshXNAVizLib/
+ODataClient/
+recovery-merge-report/
+SegmentationServiceTypes.gRPC/
+SIMeasurement/
+SqlGeometryAnnotationExtensions/
+SqlGeometryUtils/
+SqlServerTypesLoader/
+Viking.Annotation.Geometry/
+Viking.Annotation.Mapping/
+.nuget/
 
 # Ignore test projects
 **/*Test/
 **/*Tests/
 
 # Ignore unnecessary server projects for this build
-Servers/GrpcAnnotation/
-Servers/GrpcAnnotationService/
 Servers/SAM2_Segmentation_gRPC_Client/
+Servers/Libs/
+Servers/AnnotationDatabase/
+Servers/AnnotationService/
+Servers/ConnectomeDataModel/
+Servers/ConnectomeODataV4/
+Servers/ConnectomeOpenData/
+Servers/ConnectomicsWebsite/
+Servers/DataExport/
+Servers/gRPCSegmentAnything/
+Servers/Identity.DataContext/
+Servers/Identity.Models/
+Servers/IdentityServer/
+Servers/Neo4JGenerator/
+Servers/Neo4JService/
+Servers/SQL/
+Servers/VolumeAnnotationServices/
+Servers/WebAppSettings/
+Servers/WebVisualization/
+Servers/certbot/
+.cursor/
+.idea/
+.github/
 
 # Allow SegmentationServer files (needed for segmentation Docker build)
 !Servers/SegmentationServer/
 !Servers/SegmentationServer/**
+
+# GrpcAnnotationService and its project-reference dependency graph
+# (ConnectomeDataModelCore, gRPCAnnotationServiceTypes, GeometryOGCMapper,
+# AnnotationInterfaces, Geometry.Core, Geometry, GraphLib, RTree, UnitsAndScale, Utils).
+!Servers/GrpcAnnotationService/
+!Servers/GrpcAnnotationService/**
+!Servers/ConnectomeDataModelCore/
+!Servers/ConnectomeDataModelCore/**
+!gRPCAnnotationServiceTypes/
+!gRPCAnnotationServiceTypes/**
+!Geometry.Core/
+!Geometry.Core/**
+!GeometrySqlTypeMapper/
+!GeometrySqlTypeMapper/**
+!AnnotationInterfaces/
+!AnnotationInterfaces/**
+!Geometry/
+!Geometry/**
+!GraphLib/
+!GraphLib/**
+!RTree/
+!RTree/**
+!UnitsAndScale/
+!UnitsAndScale/**
+!Utils/
+!Utils/**
+
+# Throwaway test Identity Server (name ends in "Test", so it needs an explicit
+# override to escape the "**/*Test/" rule above).
+!Servers/IdentityServer/DevTest/
+!Servers/IdentityServer/DevTest/**
+
+# Last-match-wins: !project/** above would otherwise re-include host bin/obj
+# (GrpcAnnotationService/bin alone is ~1.1 GB).
+**/bin/
+**/bin/**
+**/obj/
+**/obj/**

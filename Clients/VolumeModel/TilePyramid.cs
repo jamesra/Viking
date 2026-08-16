@@ -5,12 +5,12 @@ namespace Viking.VolumeModel
     /// <summary>
     /// A tile pyramid is a list of all tiles visible within a bounding box at each of the requested resolutions
     /// </summary>
-    public class TilePyramid(Geometry.GridRectangle bounds)
+    public class TilePyramid(Geometry.Rectangle bounds)
     {
         /// <summary>
         /// The boundary of all tiles contained in the pyramid
         /// </summary>
-        public readonly Geometry.GridRectangle Bounds = bounds;
+        public readonly Geometry.Rectangle Bounds = bounds;
 
         /// <summary>
         /// A list of downsample levels, each entry is a sorted list using the tile unique key and the tile object as data

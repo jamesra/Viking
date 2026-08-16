@@ -1,14 +1,21 @@
 using Geometry;
+using Viking.Input;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework.Graphics;
 using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+#if NETFRAMEWORK
 using System.Windows.Forms;
+#endif
 using VikingXNAGraphics;
 using WebAnnotation.UI;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
@@ -22,7 +29,7 @@ namespace WebAnnotation.View
 
         public override SqlGeometry VolumeShapeAsRendered => Circle.ToSqlGeometry(Z);
 
-        public GridCircle Circle
+        public Circle Circle
         {
             get => circleView.Circle;
             set => circleView.Circle = value;
@@ -31,13 +38,13 @@ namespace WebAnnotation.View
         public double Radius
         {
             get => Circle.Radius;
-            set => circleView.Circle = new GridCircle(Circle.Center, value);
+            set => circleView.Circle = new Circle(Circle.Center, value);
         }
 
-        public GridVector2 Position
+        public Geometry.Vector2 Position
         {
             get => Circle.Center;
-            set => circleView.Circle = new GridCircle(value, Circle.Radius);
+            set => circleView.Circle = new Circle(value, Circle.Radius);
         }
 
         private readonly ICollection<long> _OverlappedLinks;
@@ -48,7 +55,7 @@ namespace WebAnnotation.View
             set => throw new NotImplementedException();
         }
 
-        public OverlappedLocationView(LocationObj obj, GridCircle gridCircle, bool Up) : base(obj)
+        public OverlappedLocationView(LocationObj obj, Circle gridCircle, bool Up) : base(obj)
         {
             label = new LabelView(LocationLabel(obj), gridCircle.Center)
             {
@@ -64,20 +71,20 @@ namespace WebAnnotation.View
 
         public bool IsLabelVisible(VikingXNA.Scene scene) => label.IsVisible(scene);
 
-        public override bool Contains(GridVector2 Position) => Circle.Contains(Position);
+        public override bool Contains(Geometry.Vector2 Position) => Circle.Contains(Position);
 
-        public override bool Intersects(GridLineSegment line) => Circle.Intersects(line);
+        public override bool Intersects(LineSegment line) => Circle.Intersects(line);
 
         public override bool Intersects(SqlGeometry shape) => throw new NotImplementedException();
 
-        public override double Distance(GridVector2 Position)
+        public override double Distance(Geometry.Vector2 Position)
         {
-            double Distance = GridVector2.Distance(Position, Circle.Center) - Radius;
+            double Distance = Geometry.Vector2.Distance(Position, Circle.Center) - Radius;
             Distance = Distance < 0 ? 0 : Distance;
             return Distance;
         }
 
-        public override double DistanceFromCenterNormalized(GridVector2 Position) => GridVector2.Distance(Position, Circle.Center) / Radius;
+        public override double DistanceFromCenterNormalized(Geometry.Vector2 Position) => Geometry.Vector2.Distance(Position, Circle.Center) / Radius;
 
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
@@ -99,11 +106,11 @@ namespace WebAnnotation.View
             label.Draw(spriteBatch, font, scene);
         }
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
             LocationID = ID;
 
-            if (ModifierKeys.ShiftOrCtrlPressed())
+            if (modifierKeys.ShiftOrCtrlPressed())
             {
                 return LocationAction.NONE;
             }
@@ -111,7 +118,7 @@ namespace WebAnnotation.View
             return LocationAction.CREATELINKEDLOCATION;
         }
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
             LocationID = ID;
 
@@ -124,9 +131,11 @@ namespace WebAnnotation.View
                     "Hold left click + drag on inscribed arrow: Create additional annotation for this structure linked to the annotation on the adjacent section."
                 ];
 
+#if NETFRAMEWORK
         public new ContextMenuStrip ContextMenu => new Location_CanvasContextMenuView(ID).ContextMenu;
+#endif
 
-        public override GridRectangle BoundingBox => Circle.BoundingBox;
+        public override Rectangle BoundingBox => Circle.BoundingBox;
 
         public Microsoft.Xna.Framework.Color Color
         {

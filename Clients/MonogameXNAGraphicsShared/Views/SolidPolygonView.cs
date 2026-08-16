@@ -8,6 +8,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using VikingXNA;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -140,14 +142,14 @@ namespace VikingXNAGraphics
         /// <summary>
         /// Centroid of the polygon
         /// </summary>
-        GridVector2 _Position;
+        Geometry.Vector2 _Position;
 
         float _Scale = 1.0f;
 
         /// <summary>
         /// The polygon being displayed
         /// </summary>
-        public readonly GridPolygon InputPolygon;
+        public readonly Polygon InputPolygon;
 
         /// <summary>
         /// Color passed to the constructor.  Used to create the first mesh.
@@ -162,9 +164,9 @@ namespace VikingXNAGraphics
         /// <param name="poly"></param>
         /// <param name="color"></param>
         /// <param name="LazyInit">If Lazy init is set to true, we do not start a task to triangulate the polygon until Draw is called.  At that point triangulation is performed in parallel. </param>
-        public SolidPolygonView(GridPolygon poly, Color color, bool LazyInit = true)
+        public SolidPolygonView(Polygon poly, Color color, bool LazyInit = true)
         {
-            //Debug.Assert(poly.TotalUniqueVerticies < 1000, "This is a huge polygon, why?");
+            //Debug.Assert(poly.TotalUniqueVertices < 1000, "This is a huge polygon, why?");
 
             InputPolygon = poly;
             InputColor = color;
@@ -173,12 +175,12 @@ namespace VikingXNAGraphics
                 _meshModel = InitializeModel(InputPolygon, InputColor);
         }
 
-        private static PositionColorMeshModel InitializeModel(GridPolygon InputPolygon, Color InputColor)
+        private static PositionColorMeshModel InitializeModel(Polygon InputPolygon, Color InputColor)
         {
-            GridVector2 _Position = InputPolygon.Centroid;
+            Geometry.Vector2 _Position = InputPolygon.Centroid;
 
             //Center the polygon to reduce rounding error and because we'll position the polygon with the matrix
-            GridPolygon centered_poly = InputPolygon.Translate(-_Position);
+            Polygon centered_poly = InputPolygon.Translate(-_Position);
             TriangulationMesh<IVertex2D<PolygonIndex>> Mesh;
             try
             {
@@ -202,11 +204,11 @@ namespace VikingXNAGraphics
             return mesh_model;
         }
 
-        private static TriangulationMesh<IVertex2D<PolygonIndex>> TrySimplifyPolygon(GridPolygon centered_poly)
+        private static TriangulationMesh<IVertex2D<PolygonIndex>> TrySimplifyPolygon(Polygon centered_poly)
         {
             Trace.WriteLine(string.Format("Could not triangulate polygon {0}.  Atttempting to simplify", centered_poly));
-            GridPolygon simpler_centered_poly = centered_poly.Simplify(1.0, NumInterpolations: 6);
-            if (simpler_centered_poly.TotalUniqueVerticies == centered_poly.TotalUniqueVerticies)
+            Polygon simpler_centered_poly = centered_poly.Simplify(1.0, NumInterpolations: 6);
+            if (simpler_centered_poly.TotalUniqueVertices == centered_poly.TotalUniqueVertices)
             {
                 return null;
             }
@@ -222,7 +224,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        private static MeshView<VertexPositionColor> InitializeModelView(GridPolygon InputPolygon, Color InputColor)
+        private static MeshView<VertexPositionColor> InitializeModelView(Polygon InputPolygon, Color InputColor)
         {
             var model = InitializeModel(InputPolygon, InputColor);
 
@@ -265,7 +267,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        public GridVector2 Position
+        public Geometry.Vector2 Position
         {
             get => _Position;
 
@@ -308,6 +310,6 @@ namespace VikingXNAGraphics
 
         public void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items) => SolidPolygonView.Draw(device, scene, Overlay, [.. items.Select(item => item as SolidPolygonView).Where(item => item != null)]);
 
-        public bool Contains(GridVector2 Position) => this.InputPolygon.Contains(Position);
+        public bool Contains(Geometry.Vector2 Position) => this.InputPolygon.Contains(Position);
     }
 }

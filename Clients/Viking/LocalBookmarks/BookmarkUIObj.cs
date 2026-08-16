@@ -1,5 +1,6 @@
 ﻿using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using System;
 using Viking.Common;
 using Viking.Common.UI;
@@ -29,7 +30,7 @@ namespace LocalBookmarks
             {
                 FontSize = Global.DefaultBookmarkRadius / 2.5
             };
-            GridRectangle boundingRect = new(GridPosition, Global.DefaultBookmarkRadius);
+            Rectangle boundingRect = new(GridPosition, Global.DefaultBookmarkRadius);
             _shapeView = new VikingXNAGraphics.TextureOverlayView(Parent.ShapeTexture, boundingRect, Parent.Color.SetAlpha(0.75f));
         }
 
@@ -67,7 +68,7 @@ namespace LocalBookmarks
 
         }
 
-        public GridRectangle BoundingRect => new(GridPosition, Global.DefaultBookmarkRadius);
+        public Rectangle BoundingRect => new(GridPosition, Global.DefaultBookmarkRadius);
 
         protected static event EventHandler OnCreate;
         protected void CallOnCreate()
@@ -125,7 +126,7 @@ namespace LocalBookmarks
             set => Data.View = value;
         }
 
-        public GridVector2 GridPosition => new(X, Y);
+        public Vector2 GridPosition => new(X, Y);
 
         public double X
         {

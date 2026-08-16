@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFramework>net48</TargetFramework>
+		<TargetFrameworks>net48;net10.0-windows</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
 		<RootNamespace>WebAnnotation.WPF</RootNamespace>
 		<AssemblyName>WebAnnotationWPFControls</AssemblyName>
@@ -27,7 +27,6 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
-		<ProjectReference Include="..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
 		<ProjectReference Include="..\WebAnnotationModel\WebAnnotationModel.csproj" />
 		<ProjectReference Include="..\WebAnnotationViewModels\WebAnnotationViewModels.csproj" />
 	</ItemGroup>

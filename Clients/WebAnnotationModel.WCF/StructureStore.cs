@@ -423,7 +423,7 @@ namespace WebAnnotationModel
         }
 
         /*
-        public ICollection<StructureObj> GetServerObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc)
+        public ICollection<StructureObj> GetServerObjectsInRegion(long SectionNumber, Rectangle bounds, double MinRadius, DateTime? LastQueryUtc)
         {
             ICollection<LocationObj> known_locations = Store.Locations.GetObjectsInRegion(SectionNumber, bounds, MinRadius, LastQueryUtc);
 
@@ -431,7 +431,7 @@ namespace WebAnnotationModel
         }
 
         
-        public MixedLocalAndRemoteQueryResults<long, StructureObj> GetObjectsInRegionAsync(long SectionNumber, GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc, Action<ICollection<StructureObj>> OnLoadedCallback)
+        public MixedLocalAndRemoteQueryResults<long, StructureObj> GetObjectsInRegionAsync(long SectionNumber, Rectangle bounds, double MinRadius, DateTime? LastQueryUtc, Action<ICollection<StructureObj>> OnLoadedCallback)
         {
             MixedLocalAndRemoteQueryResults<long, StructureObj> results;
 
@@ -448,7 +448,7 @@ namespace WebAnnotationModel
         }
         
 
-        public ICollection<StructureObj> GetLocalObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius)
+        public ICollection<StructureObj> GetLocalObjectsInRegion(long SectionNumber, Rectangle bounds, double MinRadius)
         {
             return Store.Locations.GetLocalObjectsInRegion(SectionNumber, bounds, MinRadius).Select(l => l.Parent).Distinct().ToList();
         }*/

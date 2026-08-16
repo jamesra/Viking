@@ -37,24 +37,24 @@ namespace Geometry
 
         private static double TwoToTheLevel(int Level) => Math.Pow(2.0, (double)Level);
 
-        public T[] ArrayForRegion(in GridRectangle volumeBounds)
+        public T[] ArrayForRegion(in Rectangle volumeBounds)
         {
-            GridIndicies iGrid = GridIndicies.FromRectangle(volumeBounds, ScaledCellDimensions);
+            GridIndices iGrid = GridIndices.FromRectangle(volumeBounds, ScaledCellDimensions);
             return BoundlessRegionPyramidLevel<T>.ToArray(Cells, iGrid);
         }
 
-        public GridRange<T> SubGridForRegion(in GridRectangle? volumeBounds)
+        public GridRange<T> SubGridForRegion(in Rectangle? volumeBounds)
         {
             if (!volumeBounds.HasValue)
             {
                 throw new ArgumentException("Volume Bounds does not have a value.  Continuuous transforms should  ");
             }
 
-            GridIndicies iGrid = GridIndicies.FromRectangle(volumeBounds.Value, this.ScaledCellDimensions);
+            GridIndices iGrid = GridIndices.FromRectangle(volumeBounds.Value, this.ScaledCellDimensions);
             return BoundlessRegionPyramidLevel<T>.ToSubGrid(Cells, iGrid);
         }
 
-        public static T[] ToArray(ConcurrentDictionary<GridIndex, T> grid, GridIndicies iGrid)
+        public static T[] ToArray(ConcurrentDictionary<GridIndex, T> grid, GridIndices iGrid)
         {
             T[] output = new T[iGrid.NumberOfCells];
             int i = 0;
@@ -69,7 +69,7 @@ namespace Geometry
             return output;
         }
 
-        public static GridRange<T> ToSubGrid(ConcurrentDictionary<GridIndex, T> grid, GridIndicies iGrid)
+        public static GridRange<T> ToSubGrid(ConcurrentDictionary<GridIndex, T> grid, GridIndices iGrid)
         {
             T[,] output = new T[iGrid.Width, iGrid.Height];
             for (int iY = iGrid.iMinY; iY < iGrid.iMaxY; iY++)
@@ -83,9 +83,9 @@ namespace Geometry
             return new GridRange<T>(output, iGrid);
         }
 
-        public GridRectangle CellBounds(int iX, int iY)
+        public Rectangle CellBounds(int iX, int iY)
         {
-            return new GridRectangle(new GridVector2(iX * ScaledCellDimensions.Width, iY * ScaledCellDimensions.Height),
+            return new Rectangle(new Vector2(iX * ScaledCellDimensions.Width, iY * ScaledCellDimensions.Height),
                                       ScaledCellDimensions.Width, ScaledCellDimensions.Height);
         }
 
@@ -147,7 +147,7 @@ namespace Geometry
         /// <param name="screenBounds"></param>
         /// <param name="Level"></param>
         /// <returns></returns>
-        protected virtual double MinRadiusForLevel(in GridRectangle screenBounds, int Level) => Math.Pow(PowerScale, Level);
+        protected virtual double MinRadiusForLevel(in Rectangle screenBounds, int Level) => Math.Pow(PowerScale, Level);
 
         public IRegionPyramidLevel<T> GetLevel(double SinglePixelRadius)
         {

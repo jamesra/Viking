@@ -80,6 +80,9 @@
     <Compile Update="UI\Controls\SectionViewerControl.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Update="UI\Controls\SectionViewerControl.ViewportHost.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Update="UI\Controls\UserCredentialsControl.cs">
       <SubType>UserControl</SubType>
     </Compile>

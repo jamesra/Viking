@@ -122,16 +122,16 @@ namespace Viking.UI.WPF.Controls
 
         private void RefreshColor()
         {
-            Color color = ConvertColor(Info.FormColor);
+            Color color = ToWpf(Info.Color);
             ColorPreview.Background = new SolidColorBrush(color);
 
             string preset = PresetColors.FirstOrDefault(kvp => kvp.Value == color).Key;
             ColorCombo.SelectedItem = preset ?? "Custom...";
         }
 
-        private static Color ConvertColor(System.Drawing.Color color) => Color.FromArgb(color.A, color.R, color.G, color.B);
+        private static Color ToWpf(Geometry.Graphics.Color color) => Color.FromArgb(color.A, color.R, color.G, color.B);
 
-        private static System.Drawing.Color ConvertColor(Color color) => System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B);
+        private static Geometry.Graphics.Color ToGeometry(Color color) => new Geometry.Graphics.Color(color.R, color.G, color.B, color.A);
 
         private void SectionCombo_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -180,17 +180,16 @@ namespace Viking.UI.WPF.Controls
             }
             else if (string.Equals(selected, "Custom...", StringComparison.OrdinalIgnoreCase))
             {
-                System.Windows.Forms.ColorDialog dlg = new()
+                ColorPickerDialog dlg = new ColorPickerDialog(ToWpf(Info.Color))
                 {
-                    Color = Info.FormColor
+                    Owner = Window.GetWindow(this)
                 };
-                if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                if (dlg.ShowDialog() == true)
                 {
-                    ApplyColor(ConvertColor(dlg.Color));
+                    ApplyColor(dlg.SelectedColor);
                 }
                 else
                 {
-                    // revert to previous selection
                     _isInitialized = false;
                     RefreshColor();
                     _isInitialized = true;
@@ -201,7 +200,7 @@ namespace Viking.UI.WPF.Controls
         private void ApplyColor(Color color)
         {
             ColorPreview.Background = new SolidColorBrush(color);
-            Info.FormColor = ConvertColor(color);
+            Info.Color = ToGeometry(color);
         }
 
         private void DeleteButton_OnClick(object sender, RoutedEventArgs e) => DeleteClicked?.Invoke(this, EventArgs.Empty);

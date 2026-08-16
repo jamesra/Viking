@@ -9,33 +9,33 @@ namespace MorphologyMeshTest
     [TestClass]
     public class MeshManifoldTests
     {
-        private static GridPolygon Rectangle(double halfWidth, double halfHeight) =>
+        private static Polygon Rectangle(double halfWidth, double halfHeight) =>
             new(
             [
-                new GridVector2(-halfWidth, -halfHeight),
-                new GridVector2(halfWidth, -halfHeight),
-                new GridVector2(halfWidth, halfHeight),
-                new GridVector2(-halfWidth, halfHeight),
-                new GridVector2(-halfWidth, -halfHeight),
+                new Vector2(-halfWidth, -halfHeight),
+                new Vector2(halfWidth, -halfHeight),
+                new Vector2(halfWidth, halfHeight),
+                new Vector2(-halfWidth, halfHeight),
+                new Vector2(-halfWidth, -halfHeight),
             ]);
 
-        private static GridPolygon Square(double halfWidth) => Rectangle(halfWidth, halfWidth);
+        private static Polygon Square(double halfWidth) => Rectangle(halfWidth, halfWidth);
 
         /// <summary>
         /// An ellipse sampled at <paramref name="nPoints"/> verticies.  The medial axis approximation needs a
         /// reasonably sampled boundary, like a real annotation contour, to produce interior points at all.
         /// </summary>
-        private static GridPolygon Ellipse(double radiusX, double radiusY, int nPoints)
+        private static Polygon Ellipse(double radiusX, double radiusY, int nPoints)
         {
-            GridVector2[] ring = new GridVector2[nPoints + 1];
+            Vector2[] ring = new Vector2[nPoints + 1];
             for (int i = 0; i < nPoints; i++)
             {
                 double theta = 2.0 * Math.PI * i / nPoints;
-                ring[i] = new GridVector2(radiusX * Math.Cos(theta), radiusY * Math.Sin(theta));
+                ring[i] = new Vector2(radiusX * Math.Cos(theta), radiusY * Math.Sin(theta));
             }
 
             ring[nPoints] = ring[0];
-            return new GridPolygon(ring);
+            return new Polygon(ring);
         }
 
         /// <summary>
@@ -101,7 +101,7 @@ namespace MorphologyMeshTest
 
             mesh.CapMeshEnd(true);
 
-            double[] capZ = [.. mesh.Verticies.Where(v => v.MedialAxisIndex.HasValue).Select(v => v.Position.Z)];
+            double[] capZ = [.. mesh.Vertices.Where(v => v.MedialAxisIndex.HasValue).Select(v => v.Position.Z)];
 
             Assert.IsTrue(capZ.Length > 1, "The cap should add several medial axis verticies to a long rectangle.");
 
@@ -130,7 +130,7 @@ namespace MorphologyMeshTest
 
             mesh.CapMeshEnd(false);
 
-            double[] capZ = [.. mesh.Verticies.Where(v => v.MedialAxisIndex.HasValue).Select(v => v.Position.Z)];
+            double[] capZ = [.. mesh.Vertices.Where(v => v.MedialAxisIndex.HasValue).Select(v => v.Position.Z)];
 
             Assert.IsTrue(capZ.Length > 1, "The cap should add several medial axis verticies to a long rectangle.");
 

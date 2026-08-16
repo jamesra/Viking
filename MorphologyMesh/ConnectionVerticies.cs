@@ -15,9 +15,9 @@ namespace MorphologyMesh
 
     /// <summary>
     /// Describes the verticies available to connect two meshes together.
-    /// Verticies should be listed in Counter-clockwise order
+    /// Vertices should be listed in Counter-clockwise order
     /// </summary>
-    public class ConnectionVerticies
+    public class ConnectionVertices
     {
         public ConnectionPortType Type;
 
@@ -27,7 +27,7 @@ namespace MorphologyMesh
         public Geometry.IIndexSet ExternalBorder;
 
         /// <summary>
-        /// Verticies known to be internal to the annotation. Not on any internal or external border
+        /// Vertices known to be internal to the annotation. Not on any internal or external border
         /// </summary>
         public Geometry.IIndexSet InternalVerticies;
 
@@ -36,7 +36,7 @@ namespace MorphologyMesh
         /// </summary>
         public Geometry.IIndexSet[] InternalBorders;
 
-        public ConnectionVerticies(long[] exteriorRing, long[] internalVerticies, ICollection<long[]> interiorRings)
+        public ConnectionVertices(long[] exteriorRing, long[] internalVerticies, ICollection<long[]> interiorRings)
         {
             this.Type = ConnectionPortType.CLOSED; //Cannot have internal verticies in an open port
             ExternalBorder = new IndexSet(exteriorRing);
@@ -46,7 +46,7 @@ namespace MorphologyMesh
             InternalBorders = InternalBorders != null ? [.. interiorRings.Select(ir => new IndexSet(ir))] : [];
         }
 
-        public ConnectionVerticies(IIndexSet exteriorRing, IIndexSet internalVerticies, IIndexSet[] interiorRings)
+        public ConnectionVertices(IIndexSet exteriorRing, IIndexSet internalVerticies, IIndexSet[] interiorRings)
         {
             this.Type = ConnectionPortType.CLOSED; //Cannot have internal verticies in an open port
             ExternalBorder = exteriorRing;
@@ -57,7 +57,7 @@ namespace MorphologyMesh
             InternalBorders = interiorRings != null ? interiorRings : [];
         }
 
-        public ConnectionVerticies(IIndexSet lineVerticies)
+        public ConnectionVertices(IIndexSet lineVerticies)
         {
             this.Type = ConnectionPortType.OPEN; //Cannot have internal verticies in an open port
             ExternalBorder = lineVerticies;
@@ -70,74 +70,74 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="value"></param>
         /// <returns></returns>
-        public ConnectionVerticies IncrementStartingIndex(int value)
+        public ConnectionVertices IncrementStartingIndex(int value)
         {
             IIndexSet external = ExternalBorder.IncrementStartingIndex(value);
             IIndexSet internalVerts = InternalVerticies.IncrementStartingIndex(value);
             IIndexSet[] internalSets = [.. InternalBorders.Select(ib => ib.IncrementStartingIndex(value))];
 
-            ConnectionVerticies port = new(external, internalVerts, internalSets)
+            ConnectionVertices port = new(external, internalVerts, internalSets)
             {
                 Type = this.Type
             };
             return port;
         }
 
-        public int TotalVerticies => ExternalBorder.Count + InternalBorders.Sum(ib => ib.Count) + InternalVerticies.Count;
-        public Geometry.GridPolygon ToPolygon(IReadOnlyList<IVertex3D> Verticies)
+        public int TotalVertices => ExternalBorder.Count + InternalBorders.Sum(ib => ib.Count) + InternalVerticies.Count;
+        public Geometry.Polygon ToPolygon(IReadOnlyList<IVertex3D> Vertices)
         {
-            System.Diagnostics.Debug.Assert(ExternalBorder.Max() < Verticies.Count);
+            System.Diagnostics.Debug.Assert(ExternalBorder.Max() < Vertices.Count);
 #if DEBUG
             if (InternalBorders.Length > 0)
-                System.Diagnostics.Debug.Assert(InternalBorders.Max(ib => ib.Max()) < Verticies.Count);
+                System.Diagnostics.Debug.Assert(InternalBorders.Max(ib => ib.Max()) < Vertices.Count);
 #endif
 
-            GridVector2[] externalBorder = [.. this.ExternalBorder.Select(i => Verticies[(int)i].Position.XY())];
+            Vector2[] externalBorder = [.. this.ExternalBorder.Select(i => Vertices[(int)i].Position.XY())];
             externalBorder = externalBorder.EnsureClosedRing();
-            List<GridVector2[]> internalBorders = [.. this.InternalBorders.Select(ib => ib.Select(i => Verticies[(int)i].Position.XY()).ToArray().EnsureClosedRing())];
-            GridPolygon polygon = new(externalBorder, internalBorders);
+            List<Vector2[]> internalBorders = [.. this.InternalBorders.Select(ib => ib.Select(i => Vertices[(int)i].Position.XY()).ToArray().EnsureClosedRing())];
+            Polygon polygon = new(externalBorder, internalBorders);
             return polygon;
         }
 
-        public Geometry.GridPolygon ToPolygon(IMesh<Vertex3D> mesh)
+        public Geometry.Polygon ToPolygon(IMesh<Vertex3D> mesh)
         {
-            System.Diagnostics.Debug.Assert(ExternalBorder.Max() < mesh.Verticies.Count);
+            System.Diagnostics.Debug.Assert(ExternalBorder.Max() < mesh.Vertices.Count);
 #if DEBUG
             if(InternalBorders.Length > 0)
-                System.Diagnostics.Debug.Assert(InternalBorders.Max(ib => ib.Max()) < mesh.Verticies.Count);
+                System.Diagnostics.Debug.Assert(InternalBorders.Max(ib => ib.Max()) < mesh.Vertices.Count);
 #endif
 
-            GridVector2[] externalBorder = [.. mesh[this.ExternalBorder].Select(v => v.Position.XY())];
+            Vector2[] externalBorder = [.. mesh[this.ExternalBorder].Select(v => v.Position.XY())];
             externalBorder = externalBorder.EnsureClosedRing();
-            List<GridVector2[]> internalBorders = [.. this.InternalBorders.Select(ib => ib.Select(i => mesh.Verticies[(int)i].Position.XY()).ToArray().EnsureClosedRing())];
-            GridPolygon polygon = new(externalBorder, internalBorders);
+            List<Vector2[]> internalBorders = [.. this.InternalBorders.Select(ib => ib.Select(i => mesh.Vertices[(int)i].Position.XY()).ToArray().EnsureClosedRing())];
+            Polygon polygon = new(externalBorder, internalBorders);
             return polygon;
         }
 
-        public Geometry.GridPolygon ToPolygon(IMesh<IVertex2D> mesh)
+        public Geometry.Polygon ToPolygon(IMesh<IVertex2D> mesh)
         {
-            System.Diagnostics.Debug.Assert(ExternalBorder.Max() < mesh.Verticies.Count);
+            System.Diagnostics.Debug.Assert(ExternalBorder.Max() < mesh.Vertices.Count);
 #if DEBUG
             if (InternalBorders.Length > 0)
-                System.Diagnostics.Debug.Assert(InternalBorders.Max(ib => ib.Max()) < mesh.Verticies.Count);
+                System.Diagnostics.Debug.Assert(InternalBorders.Max(ib => ib.Max()) < mesh.Vertices.Count);
 #endif
 
-            GridVector2[] externalBorder = [.. mesh[this.ExternalBorder].Select(v => v.Position)];
+            Vector2[] externalBorder = [.. mesh[this.ExternalBorder].Select(v => v.Position)];
             externalBorder = externalBorder.EnsureClosedRing();
-            List<GridVector2[]> internalBorders = [.. this.InternalBorders.Select(ib => ib.Select(i => mesh.Verticies[(int)i].Position).ToArray().EnsureClosedRing())];
-            GridPolygon polygon = new(externalBorder, internalBorders);
+            List<Vector2[]> internalBorders = [.. this.InternalBorders.Select(ib => ib.Select(i => mesh.Vertices[(int)i].Position).ToArray().EnsureClosedRing())];
+            Polygon polygon = new(externalBorder, internalBorders);
             return polygon;
         }
 
-        public static ConnectionVerticies CreatePort(ICircle2D shape, long NumPointsAroundCircle)
+        public static ConnectionVertices CreatePort(ICircle2D shape, long NumPointsAroundCircle)
         {
             ContinuousIndexSet ExternalBorder = new(0, NumPointsAroundCircle);
             //Add one internal point for the vertex at the center of the circle
             ContinuousIndexSet InternalPoints = new(NumPointsAroundCircle, 1);
-            return new ConnectionVerticies(ExternalBorder, InternalPoints, null);
+            return new ConnectionVertices(ExternalBorder, InternalPoints, null);
         }
 
-        public static ConnectionVerticies CreatePort(IPolygon2D shape)
+        public static ConnectionVertices CreatePort(IPolygon2D shape)
         {
             ContinuousIndexSet ExternalBorder = new(0, shape.ExteriorRing.Count - 1);
 
@@ -151,19 +151,19 @@ namespace MorphologyMesh
                 iStartVertex += interiorRing.Count - 1;
             }
 
-            return new ConnectionVerticies(ExternalBorder, null, InternalBorders);
+            return new ConnectionVertices(ExternalBorder, null, InternalBorders);
         }
 
-        public static ConnectionVerticies CreatePort(IPolyLine2D shape)
+        public static ConnectionVertices CreatePort(IPolyLine2D shape)
         {
             ContinuousIndexSet ExternalBorder = new(0, shape.Points.Count);
-            return new ConnectionVerticies(ExternalBorder);
+            return new ConnectionVertices(ExternalBorder);
         }
 
-        public static ConnectionVerticies CreatePort(IPoint2D shape)
+        public static ConnectionVertices CreatePort(IPoint2D shape)
         {
             ContinuousIndexSet ExternalBorder = new(0, 1);
-            return new ConnectionVerticies(ExternalBorder);
+            return new ConnectionVertices(ExternalBorder);
         }
     }
 

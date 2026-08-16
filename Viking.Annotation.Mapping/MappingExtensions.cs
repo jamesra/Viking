@@ -23,8 +23,8 @@ namespace WebAnnotationModel
             if (shape is IPoint2D p)
             {
                 return direction == TransformDirection.SectionToVolume
-                    ? mapper.SectionToVolume(p.ToGridVector2())
-                    : mapper.VolumeToSection(p.ToGridVector2());
+                    ? mapper.SectionToVolume(p.ToVector2())
+                    : mapper.VolumeToSection(p.ToVector2());
             }
             else if (shape is IPolygon2D polygon)
             {
@@ -42,7 +42,7 @@ namespace WebAnnotationModel
             {
                 return mapper.TryMapTriangle(tri, direction);
             }
-            else if (shape is IRectangle rect)
+            else if (shape is IRectangle2D rect)
             {
                 return mapper.TryMapRectangle(rect, direction);
             }
@@ -50,11 +50,11 @@ namespace WebAnnotationModel
             throw new NotImplementedException($"Shape does not have an interface that can be mapped {shape}");
         }
 
-        private static IShape2D TryMapRectangle(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IRectangle shape, TransformDirection direction)
+        private static IShape2D TryMapRectangle(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IRectangle2D shape, TransformDirection direction)
         { 
-            GridRectangle r = shape.ToGridRectangle();
-            GridVector2[] points = r.Corners;
-            GridVector2[] mappedPoints;
+            Rectangle r = shape.ToRectangle();
+            Vector2[] points = r.Corners;
+            Vector2[] mappedPoints;
 
             bool[] mappedPosition = direction == TransformDirection.SectionToVolume ?
                 mapper.TrySectionToVolume(points, out mappedPoints) :
@@ -66,13 +66,13 @@ namespace WebAnnotationModel
                 return null;
             }
 
-            return new GridPolygon(mappedPoints.EnsureClosedRing());
+            return new Polygon(mappedPoints.EnsureClosedRing());
         }
 
         private static ITriangle2D TryMapTriangle(this Viking.VolumeModel.IVolumeToSectionTransform mapper, ITriangle2D shape, TransformDirection direction)
         {
-            GridVector2[] points = shape.Points.ToGridVector2();
-            GridVector2[] mappedPoints; 
+            Vector2[] points = shape.Points.ToVector2();
+            Vector2[] mappedPoints; 
 
             bool[] mappedPosition = direction == TransformDirection.SectionToVolume ?
                 mapper.TrySectionToVolume(points, out mappedPoints) :
@@ -84,13 +84,13 @@ namespace WebAnnotationModel
                 return null;
             }
 
-            return new GridTriangle(mappedPoints);
+            return new Triangle(mappedPoints);
         }
 
         private static IPolyLine2D TryMapPolyline(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IPolyLine2D shape, TransformDirection direction)
         {
-            GridVector2[] points = shape.Points.ToGridVector2();
-            GridVector2[] mappedPoints; 
+            Vector2[] points = shape.Points.ToVector2();
+            Vector2[] mappedPoints; 
 
             bool[] mappedPosition = direction == TransformDirection.SectionToVolume ?
                 mapper.TrySectionToVolume(points, out mappedPoints) :
@@ -102,15 +102,15 @@ namespace WebAnnotationModel
                 return null;
             }
 
-            return new GridPolyline(mappedPoints, false);
+            return new Polyline(mappedPoints, false);
         }
 
         private static IPolygon2D TryMapPolygon(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IPolygon2D shape, TransformDirection direction)
         {
-            List<GridVector2[]> mappedInteriorRings = null; 
-            GridVector2[] points = shape.ExteriorRing.ToGridVector2();
+            List<Vector2[]> mappedInteriorRings = null; 
+            Vector2[] points = shape.ExteriorRing.ToVector2();
 
-            GridVector2[] mappedPoints; 
+            Vector2[] mappedPoints; 
 
             bool[] mappedPosition = direction == TransformDirection.SectionToVolume ?
                 mapper.TrySectionToVolume(points, out mappedPoints) :
@@ -125,15 +125,15 @@ namespace WebAnnotationModel
             
             if (shape.InteriorRings.Any())
             { 
-                mappedInteriorRings = new List<GridVector2[]>(shape.InteriorRings.Count);
+                mappedInteriorRings = new List<Vector2[]>(shape.InteriorRings.Count);
 
                 foreach (var innerRing in shape.InteriorRings)
                 {
-                    GridVector2[] sectionRingPositions; 
+                    Vector2[] sectionRingPositions; 
 
                     mappedPosition = direction == TransformDirection.SectionToVolume ?
-                        mapper.TrySectionToVolume(innerRing.ToGridVector2(), out sectionRingPositions) :
-                        mapper.TryVolumeToSection(innerRing.ToGridVector2(), out sectionRingPositions);
+                        mapper.TrySectionToVolume(innerRing.ToVector2(), out sectionRingPositions) :
+                        mapper.TryVolumeToSection(innerRing.ToVector2(), out sectionRingPositions);
                      
                     if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
                     {
@@ -145,7 +145,7 @@ namespace WebAnnotationModel
                 }
             }
 
-            return new GridPolygon(mappedPoints, mappedInteriorRings);
+            return new Polygon(mappedPoints, mappedInteriorRings);
         }
          
         /// <summary>
@@ -176,25 +176,25 @@ namespace WebAnnotationModel
             this Viking.VolumeModel.IVolumeToSectionTransform mapper, IShape2D shape,
             TransformDirection direction)
         {
-            if (shape.ShapeType != ShapeType2D.CURVEPOLYGON || shape.ShapeType != ShapeType2D.CIRCLE)
+            if (shape.ShapeType != ShapeType2D.Circle)
             {
-                throw new ArgumentException($"{nameof(shape.ShapeType)} must be {nameof(ShapeType2D.CURVEPOLYGON)} or {nameof(ShapeType2D.CIRCLE)}");
+                throw new ArgumentException($"{nameof(shape.ShapeType)} must be {nameof(ShapeType2D.Circle)}");
             }
 
-            GridVector2 center = shape.Centroid; 
-            GridRectangle bbox = shape.BoundingBox;
+            Vector2 center = ((ICentroid)shape).Centroid.ToVector2(); 
+            Rectangle bbox = shape.BoundingBox;
 
             //In some cases the transform can have significant distortions corrected.  To handle this we map points on the circle at the cardinal directions and then recalculate the radius
-            var points = new GridVector2[]
+            var points = new Vector2[]
             {
                 center,
-                new GridVector2(bbox.Left, center.Y),
-                new GridVector2(center.X, bbox.Bottom),
-                new GridVector2(bbox.Right, center.Y),
-                new GridVector2(center.X, bbox.Top)
+                new Vector2(bbox.Left, center.Y),
+                new Vector2(center.X, bbox.Bottom),
+                new Vector2(bbox.Right, center.Y),
+                new Vector2(center.X, bbox.Top)
             };
 
-            GridVector2[] mappedPoints;
+            Vector2[] mappedPoints;
             bool[] mappedCorrectly = direction == TransformDirection.SectionToVolume ? 
                 mapper.TrySectionToVolume(points, out mappedPoints) : 
                 mapper.TryVolumeToSection(points, out mappedPoints);
@@ -205,13 +205,13 @@ namespace WebAnnotationModel
                 return null;
             }
 
-            GridVector2 mappedCenter = mappedPoints[0];
+            Vector2 mappedCenter = mappedPoints[0];
 
             //Take the median radius measurement from the four cardinal points to adjust the radius of the circle for the transformation
-            double radiiSquared = mappedPoints.Where((p, i) => i > 0 && mappedCorrectly[i]).Select(p => GridVector2.DistanceSquared(mappedCenter, p)).Median();
+            double radiiSquared = mappedPoints.Where((p, i) => i > 0 && mappedCorrectly[i]).Select(p => Vector2.DistanceSquared(mappedCenter, p)).Median();
             double radius = Math.Sqrt(radiiSquared);
               
-            return new GridCircle(mappedCenter, radius);
+            return new Circle(mappedCenter, radius);
         }
     }
 }

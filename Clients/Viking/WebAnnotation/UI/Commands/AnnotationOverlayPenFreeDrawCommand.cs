@@ -11,6 +11,9 @@ using Viking.VolumeModel;
 using WebAnnotation.View;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -33,7 +36,7 @@ namespace WebAnnotation.UI.Commands
         {
         }
 
-        public AnnotationOverlayPenFreeDrawCommand(SectionViewerControl parent, Color color, GridVector2 origin, double LineWidth, OnCommandSuccess success_callback) : base(parent, color, origin, LineWidth, success_callback)
+        public AnnotationOverlayPenFreeDrawCommand(SectionViewerControl parent, Color color, Geometry.Vector2 origin, double LineWidth, OnCommandSuccess success_callback) : base(parent, color, origin, LineWidth, success_callback)
         {
         }
 
@@ -46,7 +49,7 @@ namespace WebAnnotation.UI.Commands
             //TODO: Prompt the user to create a closed curve type
             if (HasLoop)
             {
-                GridPolygon newVolumePoly = new(PenInput.SimplifiedFirstLoop);
+                Polygon newVolumePoly = new(PenInput.SimplifiedFirstLoop);
                 if (newVolumePoly.Area < MinAreaForClosedShape)
                 {
                     Deactivated = true;
@@ -103,7 +106,7 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        private bool TryConvertEnclosedCircle(GridPolygon newVolumePoly)
+        private bool TryConvertEnclosedCircle(Polygon newVolumePoly)
         {
             if (!PenInput.HasSelfIntersection)
             {
@@ -120,8 +123,8 @@ namespace WebAnnotation.UI.Commands
 
             LocationObj obj = Store.Locations.GetObjectByID(intersectedCircle.ID, false);
 
-            SqlGeometry original_mosaic_shape = obj.MosaicShape;
-            SqlGeometry original_volume_shape = obj.MosaicShape;
+            SqlGeometry original_mosaic_shape = obj.MosaicShape.ToSqlGeometry();
+            SqlGeometry original_volume_shape = obj.MosaicShape.ToSqlGeometry();
             Viking.AnnotationServiceTypes.Interfaces.LocationType original_typecode = obj.TypeCode;
 
             try
@@ -135,15 +138,15 @@ namespace WebAnnotation.UI.Commands
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(e);
                 obj.TypeCode = original_typecode;
-                obj.MosaicShape = original_mosaic_shape;
-                obj.VolumeShape = original_volume_shape;
+                obj.MosaicShape = original_mosaic_shape.ToShape2D();
+                obj.VolumeShape = original_volume_shape.ToShape2D();
             }
             return true;
         }
 
         private void CreateNewClosedAnnotation()
         {
-            GridPolygon newVolumePoly = new(PenInput.SimplifiedFirstLoop);
+            Polygon newVolumePoly = new(PenInput.SimplifiedFirstLoop);
 
             StructureTypeObj type = Store.StructureTypes.GetObjectByID(1);//new StructureType(typeObj);
             bool StructureNeedsParent = type.ParentID.HasValue;
@@ -169,7 +172,7 @@ namespace WebAnnotation.UI.Commands
              );
         }
 
-        protected override void OnPenPathComplete(object sender, GridVector2[] Path) =>
+        protected override void OnPenPathComplete(object sender, Geometry.Vector2[] Path) =>
             //TODO: Prompt the user to create an open curve type if there is no curve
             //If we draw from one annotation to another we either create a location link (different sections) or a structure link (same sections).
             //If not we create a new open curve annotation.
@@ -186,7 +189,7 @@ namespace WebAnnotation.UI.Commands
                 return;
             }
 
-            GridLineSegment move_line = PenInput.NewestSegent;
+            LineSegment move_line = PenInput.NewestSegent;
             ICanvasView IntersectedObject = AnnotationOverlay.FirstIntersectedObjectOnSection(Parent.Section.Number, move_line);
             //            ICanvasGeometryView MouseOverAnnotation = ObjectAtPosition(WorldPosition, out distance) as ICanvasGeometryView;
             System.Diagnostics.Trace.WriteLine($"{(IntersectedObject is null ? "NULL" : IntersectedObject.ToString())}");
@@ -200,7 +203,7 @@ namespace WebAnnotation.UI.Commands
                     //intersectedPolyView.
                     LocationObj Loc = Store.Locations.GetObjectByID(intersectedPolyView.ID, true);
 #if DEBUG
-                    bool Intersection_found = move_line.Intersects(intersectedPolyView.VolumeShapeAsRendered.ToPolygon(), out GridVector2 intersection_point);
+                    bool Intersection_found = move_line.Intersects(intersectedPolyView.VolumeShapeAsRendered.ToPolygon(), out Geometry.Vector2 intersection_point);
                     System.Diagnostics.Debug.Assert(Intersection_found, "Expected to find an intersection with the object boundary.");
 
                     Loc.VolumeShape.ToPolygon().AddVertex(intersection_point);
@@ -233,7 +236,7 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
+        protected override void OnPenProposedNextSegmentChanged(object sender, LineSegment? segment)
         {
             //TODO: Check if we need to start a retrace and replace command
 
@@ -247,7 +250,7 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
-        public static List<LocationCircleView> IntersectedCirclesOnSection(int CurrentSectionNumber, GridPolygon bounds)
+        public static List<LocationCircleView> IntersectedCirclesOnSection(int CurrentSectionNumber, Polygon bounds)
         {
             SectionAnnotationsView locView = AnnotationOverlay.GetAnnotationsForSection(CurrentSectionNumber);
             if (locView is null)

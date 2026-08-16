@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Grpc.Core;
 using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
@@ -22,13 +23,17 @@ using VikingXNAGraphics;
 using VikingXNAWinForms;
 using WebAnnotation;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 using WebAnnotation.ViewModel;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 using Viking.DependencyInjection;
 using Viking.Services.Grpc;
 using Viking.gRPC.SegmentationServiceTypes.V1;
+using Polygon = Geometry.Polygon;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands.Segmentation
 {
@@ -47,8 +52,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         #region Fields
         // Point collections
-        private readonly List<GridVector2> foregroundPoints = [];
-        private readonly List<GridVector2> backgroundPoints = [];
+        private readonly List<Geometry.Vector2> foregroundPoints = [];
+        private readonly List<Geometry.Vector2> backgroundPoints = [];
 
         // Monographics views for rendering
         private PointSetView foregroundPointsView;
@@ -62,14 +67,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
         // Segmentation state
         private byte[] currentMaskData;
         private Texture2D maskTexture;
-        private GridRectangle viewportBounds;
+        private Rectangle viewportBounds;
         private bool isSegmenting = false;
         private int maskWidth;
         private int maskHeight;
-        private GridPolygon selectedPolygon; // Track the polygon clicked for finalization
+        private Polygon selectedPolygon; // Track the polygon clicked for finalization
 
         // Pan/zoom tracking
-        private GridRectangle lastViewBounds;
+        private Rectangle lastViewBounds;
         private System.Timers.Timer panZoomDebounceTimer;
 
         // Uploaded image tracking (for coordinate mapping)
@@ -81,7 +86,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         // Server-side image caching
         private ulong? currentImageId;
         private CancellationTokenSource uploadCancellationTokenSource;
-        private GridRectangle? uploadedImageBounds;
+        private Rectangle? uploadedImageBounds;
         private int isUploadingImage = 0; // 0 = false, 1 = true (for Interlocked operations)
 
         // Rendering
@@ -103,7 +108,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Set to the segmented polygon if the command completes successfully
         /// </summary>
-        public GridPolygon Output
+        public Polygon Output
         {
             get;
             private set;
@@ -140,7 +145,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Return the approved polygon
         /// </summary>
         /// <param name="output"></param>
-        public delegate void OnCommandSuccess(GridPolygon output);
+        public delegate void OnCommandSuccess(Polygon output);
         private readonly OnCommandSuccess success_callback;
 
         #endregion
@@ -182,8 +187,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Constructor that accepts initial foreground and background points for automated segmentation
         /// </summary>
         public SegmentationCommand(SectionViewerControl parent,
-            IEnumerable<GridVector2> initialForegroundPoints,
-            IEnumerable<GridVector2> initialBackgroundPoints,
+            IEnumerable<Geometry.Vector2> initialForegroundPoints,
+            IEnumerable<Geometry.Vector2> initialBackgroundPoints,
             OnCommandSuccess? success_callback = null,
             IGrpcChannelManager? grpcChannelManager = null,
             long[]? excludestructureTypeIds = null, 
@@ -340,7 +345,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region Mouse Input Handling
         protected override void OnMouseDown(object sender, MouseEventArgs e)
         {
-            GridVector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
             bool ctrlHeld = Control.ModifierKeys.HasFlag(Keys.Control);
 
             if (e.Button.Left())
@@ -371,9 +376,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             base.OnMouseDown(sender, e);
         }
 
-        private void HandlePointDeletion(List<GridVector2> pointList, GridVector2 worldPos)
+        private void HandlePointDeletion(List<Geometry.Vector2> pointList, Geometry.Vector2 worldPos)
         {
-            GridVector2? pointToRemove = FindPointWithinRadius(pointList, worldPos, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius);
+            Geometry.Vector2? pointToRemove = FindPointWithinRadius(pointList, worldPos, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius);
             if (pointToRemove.HasValue)
             {
                 pointList.Remove(pointToRemove.Value);
@@ -386,15 +391,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Removes all points in the list that are within the given radius of worldPos (same screen-space logic as FindPointWithinRadius).
         /// Returns true if any points were removed.
         /// </summary>
-        private bool RemovePointsWithinRadius(List<GridVector2> pointList, GridVector2 worldPos, double radiusInScreenUnits)
+        private bool RemovePointsWithinRadius(List<Geometry.Vector2> pointList, Geometry.Vector2 worldPos, double radiusInScreenUnits)
         {
-            GridVector2 screenPos = WorldToScreen(worldPos);
+            Geometry.Vector2 screenPos = WorldToScreen(worldPos);
             double radiusSquared = radiusInScreenUnits * radiusInScreenUnits;
             bool anyRemoved = false;
             for (int i = pointList.Count - 1; i >= 0; i--)
             {
-                GridVector2 ptScreen = WorldToScreen(pointList[i]);
-                if (GridVector2.DistanceSquared(ptScreen, screenPos) <= radiusSquared)
+                Geometry.Vector2 ptScreen = WorldToScreen(pointList[i]);
+                if (Geometry.Vector2.DistanceSquared(ptScreen, screenPos) <= radiusSquared)
                 {
                     pointList.RemoveAt(i);
                     anyRemoved = true;
@@ -403,13 +408,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return anyRemoved;
         }
 
-        private void HandleForegroundPointAddition(GridVector2 worldPos)
+        private void HandleForegroundPointAddition(Geometry.Vector2 worldPos)
         {
             //Check if we are clicking inside a foreground point
             if (ForegroundPointsContain(worldPos))
             {
                 // Check if clicking inside existing polygon to execute (finalize)
-                GridPolygon clickedPolygon = FindPolygonContainingPoint(worldPos);
+                Polygon clickedPolygon = FindPolygonContainingPoint(worldPos);
                 if (clickedPolygon != null)
                 {
                     //Check if the user has selected a foreground point
@@ -423,12 +428,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             HandlePointAddition(foregroundPoints, worldPos);
         }
 
-        private void HandleBackgroundPointAddition(GridVector2 worldPos) => HandlePointAddition(backgroundPoints, worldPos);
+        private void HandleBackgroundPointAddition(Geometry.Vector2 worldPos) => HandlePointAddition(backgroundPoints, worldPos);
 
-        private void HandlePointAddition(List<GridVector2> pointList, GridVector2 worldPos)
+        private void HandlePointAddition(List<Geometry.Vector2> pointList, Geometry.Vector2 worldPos)
         {
             // Check for overlapping point
-            GridVector2? existingPoint = FindPointWithinRadius(pointList, worldPos, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius);
+            Geometry.Vector2? existingPoint = FindPointWithinRadius(pointList, worldPos, WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius);
             if (!existingPoint.HasValue)
             {
                 // Add point only if no overlap
@@ -494,14 +499,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 base.OnMouseMove(sender, e);
 
             // Update cursor based on mouse position over points
-            GridVector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
             
             // Check if mouse is over a foreground or background point
             // Convert world-space radius to screen-space radius for detection
             double pointRadiusInWorld = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius;
             double pointRadiusInScreen = pointRadiusInWorld;
-            GridVector2? foregroundPoint = FindPointWithinRadius(foregroundPoints, worldPos, pointRadiusInScreen);
-            GridVector2? backgroundPoint = FindPointWithinRadius(backgroundPoints, worldPos, pointRadiusInScreen);
+            Geometry.Vector2? foregroundPoint = FindPointWithinRadius(foregroundPoints, worldPos, pointRadiusInScreen);
+            Geometry.Vector2? backgroundPoint = FindPointWithinRadius(backgroundPoints, worldPos, pointRadiusInScreen);
             
             // Ctrl + button held: delete points under cursor (left = foreground, right = background)
             if (ctrlHeld)
@@ -557,7 +562,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region Pan/Zoom Handling
         private void CheckForViewportChange()
         {
-            GridRectangle currentBounds = GetCurrentViewportBounds();
+            Rectangle currentBounds = GetCurrentViewportBounds();
 
             // Check if viewport has changed significantly
             if (!AreViewportBoundsSimilar(lastViewBounds, currentBounds))
@@ -587,7 +592,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        private bool AreViewportBoundsSimilar(GridRectangle a, GridRectangle b)
+        private bool AreViewportBoundsSimilar(Rectangle a, Rectangle b)
         {
             // Check if bounds are within 1% of each other
             double tolerance = Math.Max(a.Width, a.Height) * 0.01;
@@ -648,17 +653,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Parent.Invalidate(); // Trigger redraw
         }
 
-        private GridVector2? FindPointWithinRadius(List<GridVector2> points, GridVector2 worldPos, double radiusInScreenUnits)
+        private Geometry.Vector2? FindPointWithinRadius(List<Geometry.Vector2> points, Geometry.Vector2 worldPos, double radiusInScreenUnits)
         {
             // Convert world position to screen coordinates
-            GridVector2 screenPos = WorldToScreen(worldPos);
+            Geometry.Vector2 screenPos = WorldToScreen(worldPos);
             double radiusSquared = radiusInScreenUnits * radiusInScreenUnits;
 
             // Search for a point within the radius
             foreach (var pt in points)
             {
-                GridVector2 ptScreen = WorldToScreen(pt);
-                double distSq = GridVector2.DistanceSquared(ptScreen, screenPos);
+                Geometry.Vector2 ptScreen = WorldToScreen(pt);
+                double distSq = Geometry.Vector2.DistanceSquared(ptScreen, screenPos);
                 if (distSq <= radiusSquared)
                 {
                     return pt;
@@ -668,16 +673,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return null;
         }
 
-        private void RemoveNearestPoint(GridVector2 worldPos)
+        private void RemoveNearestPoint(Geometry.Vector2 worldPos)
         {
             const double searchRadiusSquared = 100.0; // 10 pixel radius squared
 
             // Find nearest foreground point
-            GridVector2? nearestFg = null;
+            Geometry.Vector2? nearestFg = null;
             double nearestFgDistSq = double.MaxValue;
             foreach (var pt in foregroundPoints)
             {
-                double distSq = GridVector2.DistanceSquared(pt, worldPos);
+                double distSq = Geometry.Vector2.DistanceSquared(pt, worldPos);
                 if (distSq < nearestFgDistSq && distSq < searchRadiusSquared)
                 {
                     nearestFgDistSq = distSq;
@@ -686,11 +691,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             // Find nearest background point
-            GridVector2? nearestBg = null;
+            Geometry.Vector2? nearestBg = null;
             double nearestBgDistSq = double.MaxValue;
             foreach (var pt in backgroundPoints)
             {
-                double distSq = GridVector2.DistanceSquared(pt, worldPos);
+                double distSq = Geometry.Vector2.DistanceSquared(pt, worldPos);
                 if (distSq < nearestBgDistSq && distSq < searchRadiusSquared)
                 {
                     nearestBgDistSq = distSq;
@@ -709,7 +714,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        private GridPolygon FindPolygonContainingPoint(GridVector2 worldPos) =>
+        private Polygon FindPolygonContainingPoint(Geometry.Vector2 worldPos) =>
             // Check each segment polygon to see if the point is inside
             segmentPolygonViews.FirstOrDefault(polygonView => polygonView?.InputPolygon != null && polygonView.InputPolygon.Contains(worldPos))?.InputPolygon;
 
@@ -718,7 +723,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         /// <param name="worldPos"></param>
         /// <returns></returns>
-        private bool ForegroundPointsContain(GridVector2 worldPos) => foregroundPointsView.Points.Any(p => GridCircle.Contains(p, foregroundPointsView.PointRadius, worldPos) == ShapeRelation.CONTAINED);
+        private bool ForegroundPointsContain(Geometry.Vector2 worldPos) => foregroundPointsView.Points.Any(p => Circle.Contains(p, foregroundPointsView.PointRadius, worldPos) == ShapeRelation.Contained);
         #endregion
 
         #region Color Generation
@@ -1082,10 +1087,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
                 Debug.WriteLine($"Processing segment with score: {segment.Score:F3}, {segment.Polygons.Count} polygons");
 
-                // Convert each protobuf polygon to GridPolygon and create a view
+                // Convert each protobuf polygon to Polygon and create a view
                 foreach (var protoPolygon in segment.Polygons)
                 {
-                    GridPolygon gridPolygon = ConvertProtoPolygonToGridPolygon(protoPolygon, response);
+                    Polygon gridPolygon = ConvertProtoPolygonToGridPolygon(protoPolygon, response);
 
                     if (gridPolygon != null && gridPolygon.ExteriorRing.Length >= 3)
                     {
@@ -1109,16 +1114,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Converts a protobuf polygon to GridPolygon with Y-axis inversion
+        /// Converts a protobuf polygon to Polygon with Y-axis inversion
         /// </summary>
-        private GridPolygon ConvertProtoPolygonToGridPolygon(
+        private Polygon ConvertProtoPolygonToGridPolygon(
             SegmentationServiceTypes.Polygon protoPolygon,
             SegmentationServiceTypes.SegmentationResponse response)
         {
             try
             {
                 // Invert Y coordinates: Viking uses bottom-left origin, server uses top-left
-                Polygon invertedProtoPolygon = new()
+                SegmentationServiceTypes.Polygon invertedProtoPolygon = new()
                 {
                     Points = { protoPolygon.Points.Select(p => new SegmentationServiceTypes.Point
                     {
@@ -1159,14 +1164,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (maskTexture != null)
             {
                 // Transform segment bounds from viewport coordinates to world coordinates
-                GridVector2 topLeft = ViewportToWorld(bestSegment.X, response.Height - bestSegment.Y, uploadedImageWidth, uploadedImageHeight);
-                GridVector2 bottomRight = ViewportToWorld(
+                Geometry.Vector2 topLeft = ViewportToWorld(bestSegment.X, response.Height - bestSegment.Y, uploadedImageWidth, uploadedImageHeight);
+                Geometry.Vector2 bottomRight = ViewportToWorld(
                     bestSegment.X + decodedWidth,
                     (response.Height - bestSegment.Y) - decodedHeight,
                     uploadedImageWidth,
                     uploadedImageHeight
                 );
-                GridRectangle segmentBounds = new(topLeft, bottomRight);
+                Rectangle segmentBounds = new(topLeft, bottomRight);
                 maskOverlayView = new TextureOverlayView(maskTexture, segmentBounds, maskColor);
             }
         }
@@ -1574,7 +1579,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        private bool IsPointInsideMask(GridVector2 worldPos)
+        private bool IsPointInsideMask(Geometry.Vector2 worldPos)
         {
             if (currentMaskData is null || maskWidth == 0 || maskHeight == 0)
                 return false;
@@ -1617,16 +1622,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Converts world coordinates to screen pixel coordinates
         /// </summary>
-        private GridVector2 WorldToScreen(GridVector2 worldPos) => Parent.WorldToScreen(worldPos.X, worldPos.Y);
+        private Geometry.Vector2 WorldToScreen(Geometry.Vector2 worldPos) => Parent.WorldToScreen(worldPos.X, worldPos.Y);
 
         /// <summary>
         /// Gets the current viewport bounds in world coordinates
         /// </summary>
-        private GridRectangle GetCurrentViewportBounds()
+        private Rectangle GetCurrentViewportBounds()
         {
-            GridVector2 topLeft = Parent.ScreenToWorld(0, 0);
-            GridVector2 bottomRight = Parent.ScreenToWorld(Parent.Width, Parent.Height);
-            return new GridRectangle(topLeft, bottomRight);
+            Geometry.Vector2 topLeft = Parent.ScreenToWorld(0, 0);
+            Geometry.Vector2 bottomRight = Parent.ScreenToWorld(Parent.Width, Parent.Height);
+            return new Rectangle(topLeft, bottomRight);
         }
 
         /// <summary>
@@ -1636,17 +1641,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <param name="viewportWidth">Width of captured viewport image in pixels</param>
         /// <param name="viewportHeight">Height of captured viewport image in pixels</param>
         /// <returns>Position in viewport pixel coordinates</returns>
-        private GridVector2 WorldToViewport(GridVector2 worldPos, int viewportWidth, int viewportHeight)
+        private Geometry.Vector2 WorldToViewport(Geometry.Vector2 worldPos, int viewportWidth, int viewportHeight)
         {
-            GridVector2 boundsMin = viewportBounds.LowerLeft;
-            GridVector2 boundsMax = viewportBounds.UpperRight;
+            Geometry.Vector2 boundsMin = viewportBounds.LowerLeft;
+            Geometry.Vector2 boundsMax = viewportBounds.UpperRight;
 
             // Normalize to [0,1] range within viewport bounds
             double normalizedX = (worldPos.X - boundsMin.X) / (boundsMax.X - boundsMin.X);
             double normalizedY = (worldPos.Y - boundsMin.Y) / (boundsMax.Y - boundsMin.Y);
 
             // Scale to viewport pixel dimensions
-            return new GridVector2(
+            return new Geometry.Vector2(
                 normalizedX * viewportWidth,
                 normalizedY * viewportHeight
             );
@@ -1660,17 +1665,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <param name="viewportWidth">Width of captured viewport image in pixels</param>
         /// <param name="viewportHeight">Height of captured viewport image in pixels</param>
         /// <returns>Position in world coordinates</returns>
-        private GridVector2 ViewportToWorld(int pixelX, int pixelY, int viewportWidth, int viewportHeight)
+        private Geometry.Vector2 ViewportToWorld(int pixelX, int pixelY, int viewportWidth, int viewportHeight)
         {
             // Normalize from pixel coordinates to [0,1] range
             double normalizedX = (double)pixelX / viewportWidth;
             double normalizedY = (double)pixelY / viewportHeight;
 
-            GridVector2 boundsMin = viewportBounds.LowerLeft;
-            GridVector2 boundsMax = viewportBounds.UpperRight;
+            Geometry.Vector2 boundsMin = viewportBounds.LowerLeft;
+            Geometry.Vector2 boundsMax = viewportBounds.UpperRight;
 
             // Scale to world coordinates within viewport bounds
-            return new GridVector2(
+            return new Geometry.Vector2(
                 boundsMin.X + normalizedX * (boundsMax.X - boundsMin.X),
                 boundsMin.Y + normalizedY * (boundsMax.Y - boundsMin.Y)
             );
@@ -1770,10 +1775,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             base.Execute();
         }
 
-        private GridPolygon MaskToPolygon(byte[] maskData, int width, int height)
+        private Polygon MaskToPolygon(byte[] maskData, int width, int height)
         {
             // Extract contour points from binary mask
-            List<GridVector2> contourPoints = ExtractContourFromMask(maskData, width, height);
+            List<Geometry.Vector2> contourPoints = ExtractContourFromMask(maskData, width, height);
 
             if (contourPoints.Count < 3)
             {
@@ -1787,13 +1792,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Debug.WriteLine($"Contour: {contourPoints.Count} points simplified to {simplifiedPoints.Count} points");
 
             // Create polygon
-            return new GridPolygon(simplifiedPoints.EnsureClosedRing().RemoveAdjacentDuplicates());
+            return new Polygon(simplifiedPoints.EnsureClosedRing().RemoveAdjacentDuplicates());
         }
 
-        private List<GridVector2> ExtractContourFromMask(byte[] maskData, int width, int height)
+        private List<Geometry.Vector2> ExtractContourFromMask(byte[] maskData, int width, int height)
         {
             // Simple boundary extraction: find pixels on the edge of the mask
-            List<GridVector2> boundaryPixels = [];
+            List<Geometry.Vector2> boundaryPixels = [];
 
             for (int y = 1; y < height - 1; y++)
             {
@@ -1803,7 +1808,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     if (maskData[idx] > 0 && IsBoundaryPixel(maskData, x, y, width, height))
                     {
                         // Transform from pixel to world coordinates
-                        GridVector2 worldPt = ViewportToWorld(x, y, width, height);
+                        Geometry.Vector2 worldPt = ViewportToWorld(x, y, width, height);
                         boundaryPixels.Add(worldPt);
                     }
                 }
@@ -1826,25 +1831,25 @@ namespace WebAnnotation.UI.Commands.Segmentation
                    mask[y * width + (x + 1)] == 0;       // right
         }
 
-        private List<GridVector2> OrderContourPoints(List<GridVector2> points)
+        private List<Geometry.Vector2> OrderContourPoints(List<Geometry.Vector2> points)
         {
             if (points.Count < 3)
                 return points;
 
             // Simple ordering: start from leftmost point and find nearest unvisited neighbors
             // For production, implement proper contour following
-            List<GridVector2> ordered = [];
-            HashSet<GridVector2> remaining = [.. points];
+            List<Geometry.Vector2> ordered = [];
+            HashSet<Geometry.Vector2> remaining = [.. points];
 
             // Start with leftmost point
-            GridVector2 current = points.OrderBy(p => p.X).First();
+            Geometry.Vector2 current = points.OrderBy(p => p.X).First();
             ordered.Add(current);
             remaining.Remove(current);
 
             while (remaining.Count > 0)
             {
                 // Find nearest remaining point
-                GridVector2 nearest = remaining.OrderBy(p => GridVector2.DistanceSquared(current, p)).First();
+                Geometry.Vector2 nearest = remaining.OrderBy(p => Geometry.Vector2.DistanceSquared(current, p)).First();
                 ordered.Add(nearest);
                 remaining.Remove(nearest);
                 current = nearest;
@@ -1853,7 +1858,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return ordered;
         }
 
-        public static void CreateAnnotationFromPolygon(Viking.UI.Controls.SectionViewerControl Parent, StructureType? type, GridPolygon polygon)
+        public static void CreateAnnotationFromPolygon(Viking.UI.Controls.SectionViewerControl Parent, StructureType? type, Polygon polygon)
         {
             StructureTypeObj typeObj = GetDefaultStructureType(type);
             // Create structure

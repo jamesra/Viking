@@ -10,6 +10,9 @@ using VikingXNAGraphics;
 using VikingXNAWinForms;
 using WebAnnotation.View;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -22,7 +25,7 @@ namespace WebAnnotation.UI.Commands
         /// <summary>
         /// New Locations position in world space
         /// </summary>
-        private GridVector2 transformedPos;
+        private Geometry.Vector2 transformedPos;
         private readonly StructureObj putativeStruct;
         private readonly LocationObj putativeLoc;
         private LocationObj nearestParent;
@@ -48,7 +51,7 @@ namespace WebAnnotation.UI.Commands
             linecolor = LocType != null ? LocType.Color.ToXNAColor(0.5f) : Microsoft.Xna.Framework.Color.Green;
 
             //Transform the location position to the correct coordinates
-            transformedPos = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(new GridVector2(putativeLoc.Position.X, putativeLoc.Position.Y));
+            transformedPos = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(new Geometry.Vector2(putativeLoc.Position.X, putativeLoc.Position.Y));
 
             parent.Cursor = Cursors.Cross;
 
@@ -58,7 +61,7 @@ namespace WebAnnotation.UI.Commands
 
         }
 
-        protected LocationCanvasView NearestLocationToMouse(GridVector2 WorldPos)
+        protected LocationCanvasView NearestLocationToMouse(Geometry.Vector2 WorldPos)
         {
             List<HitTestResult> listHitTestResults = Overlay.GetAnnotations(WorldPos);
 
@@ -131,14 +134,14 @@ namespace WebAnnotation.UI.Commands
 
         protected void HandleInputMovement(int X, int Y)
         {
-            GridVector2 WorldPos = Parent.ScreenToWorld(X, Y);
+            Geometry.Vector2 WorldPos = Parent.ScreenToWorld(X, Y);
             LocationCanvasView nearest = NearestLocationToMouse(WorldPos);
             nearestParent = nearest != null ? Store.Locations[nearest.ID] : null;
         }
 
         protected bool HandleInputSelection(int X, int Y)
         {
-            GridVector2 WorldPos = Parent.ScreenToWorld(X, Y);
+            Geometry.Vector2 WorldPos = Parent.ScreenToWorld(X, Y);
 
             /*Check to see if we clicked a location*/
             LocationCanvasView loc = NearestLocationToMouse(WorldPos);
@@ -169,7 +172,7 @@ namespace WebAnnotation.UI.Commands
                 GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, transformedPos, putativeLoc.Radius, linecolor);
             }
 
-            GridVector2 target;
+            Geometry.Vector2 target;
             if (nearestParent != null)
             {
                 //Snap the line to a nearby target if it exists
@@ -191,7 +194,7 @@ namespace WebAnnotation.UI.Commands
 
             if (labelView is null)
             {
-                labelView = new CurveLabel("Select Parent Structure", new GridVector2[] { transformedPos, target }, Microsoft.Xna.Framework.Color.Black, false, lineWidth: line.LineWidth, numInterpolations: 0);
+                labelView = new CurveLabel("Select Parent Structure", new Geometry.Vector2[] { transformedPos, target }, Microsoft.Xna.Framework.Color.Black, false, lineWidth: line.LineWidth, numInterpolations: 0);
             }
             else
             {

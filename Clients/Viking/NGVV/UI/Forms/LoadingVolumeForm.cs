@@ -74,6 +74,7 @@ namespace Viking.UI.Forms
                 await Task.Factory.StartNew(() =>
                 {
                     State.volume = new VolumeViewModel(volume);
+                    TileLoadEnvironment.BindVolume(volume);
                 }, token, TaskCreationOptions.None,
                     TaskScheduler.FromCurrentSynchronizationContext());
 

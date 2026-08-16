@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI
 {
@@ -15,7 +16,7 @@ namespace WebAnnotation.UI
     public partial class StructureGeneralPage : Viking.UI.BaseClasses.PropertyPageBase
     {
         private Structure Obj;
-        private BindingList<WebAnnotationModel.ObjAttribute>? ListTags = null;
+        private BindingList<WebAnnotationModel.Objects.ObjAttribute>? ListTags = null;
 
         public StructureGeneralPage()
         {
@@ -33,7 +34,7 @@ namespace WebAnnotation.UI
             textLabel.Text = Obj.InfoLabel;
             linkType.Text = Obj.Type.Name;
 
-            ListTags = new BindingList<WebAnnotationModel.ObjAttribute>([.. Obj.Attributes]);
+            ListTags = new BindingList<WebAnnotationModel.Objects.ObjAttribute>([.. Obj.Attributes]);
 
             dataGridTags.DataSource = ListTags;
         }
@@ -49,11 +50,11 @@ namespace WebAnnotation.UI
             Obj.Attributes = ListTags;
         }
 
-        private static void RemoveBlankAttributesFromList(BindingList<WebAnnotationModel.ObjAttribute> list)
+        private static void RemoveBlankAttributesFromList(BindingList<WebAnnotationModel.Objects.ObjAttribute> list)
         {
             for (int i = list.Count - 1; i >= 0; i--)
             {
-                WebAnnotationModel.ObjAttribute item = list[i];
+                WebAnnotationModel.Objects.ObjAttribute item = list[i];
                 if (item.Name is null)
                 {
                     list.RemoveAt(i);

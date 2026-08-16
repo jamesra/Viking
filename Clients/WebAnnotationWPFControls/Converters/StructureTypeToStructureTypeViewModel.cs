@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Globalization;
+using System.Threading;
 using System.Windows.Data;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.WPF.Converters
 {
@@ -16,7 +18,7 @@ namespace WebAnnotation.WPF.Converters
             if (typeObj is null && (value is long || value is int || value is ulong || value is uint))
             {
                 long ID = System.Convert.ToInt64(value);
-                typeObj = Store.StructureTypes.GetObjectByID(ID, true);
+                typeObj = Store.StructureTypes.GetObjectByID(ID, AskServer: true, ForceRefreshFromServer: false, CancellationToken.None).Result;
             }
 
             if (typeObj is null)

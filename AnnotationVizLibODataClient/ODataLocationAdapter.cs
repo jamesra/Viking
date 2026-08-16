@@ -5,6 +5,7 @@ using ODataClient.ConnectomeDataModel;
 using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AnnotationVizLib.OData
 {
@@ -14,7 +15,13 @@ namespace AnnotationVizLib.OData
         private readonly Location loc = l ?? throw new ArgumentNullException(nameof(l));
         public readonly UnitsAndScale.IScale scale = scale ?? throw new ArgumentNullException(nameof(scale));
 
-        public IDictionary<string, string> Attributes => null;
+        public IReadOnlyDictionary<string, string> Attributes => loc.Attributes().ToDictionary(a => a.Name, a => a.Value);
+
+        public double? Width => loc.Radius;
+
+        public string MosaicGeometryWKT => loc.MosaicShape?.Geometry?.WellKnownText;
+
+        public string VolumeGeometryWKT => loc.VolumeShape?.Geometry?.WellKnownText;
 
         private SqlGeometry _VolumeShape = null;
         public SqlGeometry Geometry
@@ -56,15 +63,15 @@ namespace AnnotationVizLib.OData
 
         public LocationType TypeCode => (LocationType)loc.TypeCode;
 
-        GridBox _BoundingBox = default;
-        public GridBox BoundingBox
+        Box _BoundingBox = default;
+        public Box BoundingBox
         {
             get
             {
                 if (_BoundingBox == default)
                 {
-                    GridRectangle bound_rect = Geometry.BoundingBox();
-                    _BoundingBox = new GridBox(bound_rect, Z - scale.Z.Value, Z + scale.Z.Value);
+                    Rectangle bound_rect = Geometry.BoundingBox();
+                    _BoundingBox = new Box(bound_rect, Z - scale.Z.Value, Z + scale.Z.Value);
                 }
 
                 return _BoundingBox;

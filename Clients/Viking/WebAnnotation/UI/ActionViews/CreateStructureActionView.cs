@@ -1,9 +1,12 @@
-﻿using System;
+using System;
 using Geometry;
 using Microsoft.Xna.Framework;
 using VikingXNAGraphics;
 using WebAnnotation.UI.Actions;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.ActionViews
 {
@@ -43,7 +46,7 @@ namespace WebAnnotation.UI.ActionViews
             if (model is Create2DStructureAction)
             {
                 Create2DStructureAction action = model as Create2DStructureAction;
-                GridPolygon smoothedPoly = action.NewVolumePolygon; //NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
+                Polygon smoothedPoly = action.NewVolumePolygon; //NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
                 Shape = smoothedPoly;
                 SolidPolygonView view = new(action.NewVolumePolygon, Color);
                 Active = view;
@@ -51,7 +54,7 @@ namespace WebAnnotation.UI.ActionViews
             else if (model is Create1DStructureAction)
             {
                 Create1DStructureAction action = model as Create1DStructureAction;
-                GridPolyline smoothedPoly = action.NewVolumeShape; //NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
+                Polyline smoothedPoly = action.NewVolumeShape; //NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
                 Shape = smoothedPoly;
                 PolyLineView view = new(smoothedPoly, Color);
                 Active = view;

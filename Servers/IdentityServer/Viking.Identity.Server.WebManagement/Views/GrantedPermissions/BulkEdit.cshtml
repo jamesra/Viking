@@ -7,6 +7,11 @@
     var resourceBreadcrumb = ViewBag.ResourceBreadcrumb as string ?? resourceListTitle;
     var formAction = ViewBag.FormAction as string ?? "BulkEdit";
     var resourceIcon = Model.ResourceIconClass ?? "bi bi-folder";
+    var requiresLargeRemovalConfirmation = ViewBag.RequiresLargeRemovalConfirmation as bool? ?? false;
+    var removalPercent = ViewBag.RemovalPercent as double? ?? 0;
+    var grantsToRemove = ViewBag.GrantsToRemove as int? ?? 0;
+    var totalExistingGrants = ViewBag.TotalExistingGrants as int? ?? 0;
+    var removesAllUserGrants = ViewBag.RemovesAllUserGrants as bool? ?? false;
     ViewData["Breadcrumbs"] = new List<(string Text, string Url)>
     {
         ("Dashboard", Url.Action("Index", "Home")),
@@ -30,8 +35,28 @@
     </div>
 }
 
+@if (requiresLargeRemovalConfirmation)
+{
+    <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>A lot of permissions are being removed. Is that intentional?</strong>
+        <ul class="mb-0 mt-2">
+            <li>@grantsToRemove of @totalExistingGrants existing grants would be removed (@removalPercent.ToString("P0")).</li>
+            @if (removesAllUserGrants)
+            {
+                <li>All direct user grants on the selected resources would be removed.</li>
+            }
+        </ul>
+        <p class="mb-0 mt-2">Review the checkboxes below, then click <strong>Yes, apply anyway</strong> to confirm.</p>
+    </div>
+}
+
 <div class="alert alert-info">
-    <i class="bi bi-info-circle"></i> <strong>Bulk Operation:</strong> You are editing permissions for <strong>@Model.Resources.Count</strong> @Model.ResourcePluralDisplayName.ToLower(). Changes will be applied to all selected @Model.ResourcePluralDisplayName.ToLower().
+    <i class="bi bi-info-circle"></i>
+    <strong>Bulk Operation:</strong>
+    You are editing permissions for <strong>@Model.Resources.Count</strong> @Model.ResourcePluralDisplayName.ToLower().
+    A checkbox is checked if <strong>any</strong> selected resource already has that grant.
+    Saving applies this matrix to <strong>all</strong> selected @Model.ResourcePluralDisplayName.ToLower().
 </div>
 
 <div class="card card-modern mb-4">
@@ -56,11 +81,19 @@
     </div>
 </div>
 
-<form asp-action="@formAction" id="bulkPermissionsForm">
+<form asp-action="@formAction" id="bulkPermissionsForm"
+      data-initial-grants='@Html.Raw(Model.InitialGrantsJson ?? "[]")'
+      data-removal-threshold="0.10">
     @for (int i = 0; i < Model.SelectedResourceIds.Count; i++)
     {
         <input type="hidden" asp-for="SelectedResourceIds[i]" />
     }
+    <input type="hidden" asp-for="ConfirmLargeRemoval" id="ConfirmLargeRemoval" />
+    <input type="hidden" asp-for="ResourcePluralDisplayName" />
+    <input type="hidden" asp-for="ResourceSingularDisplayName" />
+    <input type="hidden" asp-for="ResourceIconClass" />
+    <input type="hidden" asp-for="ReturnController" />
+    <input type="hidden" asp-for="InitialGrantsJson" />
     
     <partial name="~/Views/Shared/_ResourcePermissionsGridViewPartialView.cshtml" 
              model="@(new Viking.Identity.Server.WebManagement.Models.UserViewModels.ResourcePermissionsEditGridViewModel 
@@ -73,12 +106,24 @@
     <div class="card card-modern mt-4">
         <div class="card-body">
             <div class="alert alert-warning">
-                <i class="bi bi-exclamation-triangle"></i> <strong>Warning:</strong> This will apply the selected permissions to all @Model.Resources.Count @Model.ResourcePluralDisplayName.ToLower(). Make sure this is what you want before proceeding.
+                <i class="bi bi-exclamation-triangle"></i>
+                <strong>Warning:</strong>
+                This will apply the selected permissions to all @Model.Resources.Count @Model.ResourcePluralDisplayName.ToLower().
+                Make sure this is what you want before proceeding.
             </div>
             <div class="form-group mt-4">
-                <button type="submit" class="btn btn-warning btn-lg">
-                    <i class="bi bi-save"></i> Apply to All @Model.Resources.Count @Model.ResourcePluralDisplayName
-                </button>
+                @if (requiresLargeRemovalConfirmation)
+                {
+                    <button type="submit" class="btn btn-danger btn-lg" id="confirmLargeRemovalBtn">
+                        <i class="bi bi-exclamation-triangle"></i> Yes, apply anyway
+                    </button>
+                }
+                else
+                {
+                    <button type="submit" class="btn btn-warning btn-lg">
+                        <i class="bi bi-save"></i> Apply to All @Model.Resources.Count @Model.ResourcePluralDisplayName
+                    </button>
+                }
                 <a asp-action="Index" asp-controller="@resourceController" class="btn btn-outline-secondary btn-lg ms-2">
                     <i class="bi bi-x-circle"></i> Cancel
                 </a>
@@ -90,12 +135,88 @@
 @section Scripts {
     <script>
         $(document).ready(function() {
-            $('#bulkPermissionsForm').on('submit', function() {
-                if (!confirm('Are you sure you want to apply these permissions to all @Model.Resources.Count selected @Model.ResourcePluralDisplayName.ToLower()? This action cannot be undone.')) {
+            var $form = $('#bulkPermissionsForm');
+            var initialGrants = [];
+            try {
+                initialGrants = JSON.parse($form.attr('data-initial-grants') || '[]');
+            } catch (e) {
+                initialGrants = [];
+            }
+            var threshold = parseFloat($form.attr('data-removal-threshold') || '0.10');
+            var resourceIds = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SelectedResourceIds));
+
+            function computeClientRemovalStats() {
+                var desired = {};
+                $form.find('.permission-checkbox').each(function() {
+                    var $cb = $(this);
+                    if (!$cb.is(':checked')) return;
+                    var name = $cb.attr('name') || '';
+                    // names look like UserPermissions[i].Permissions[j].Selected or GroupPermissions...
+                    var isUser = name.indexOf('UserPermissions') >= 0;
+                    var rowMatch = name.match(/(User|Group)Permissions\[(\d+)\]/);
+                    var permMatch = name.match(/Permissions\[(\d+)\]/);
+                    if (!rowMatch || !permMatch) return;
+                    var rowIndex = parseInt(rowMatch[2], 10);
+                    var permIndex = parseInt(permMatch[1], 10);
+                    var $row = $cb.closest('tr');
+                    var granteeId = $row.find('input[name$=".GranteeId"]').val();
+                    var permissionId = $cb.closest('td, .permission-switch-container').find('input[type="hidden"][name$=".Id"]').val()
+                        || $cb.attr('data-permission-id');
+                    if (!granteeId || !permissionId) return;
+                    resourceIds.forEach(function(rid) {
+                        var key = rid + '|' + (isUser ? 'U' : 'G') + '|' + granteeId + '|' + permissionId;
+                        desired[key] = true;
+                    });
+                });
+
+                var existingKeys = initialGrants.map(function(g) {
+                    return g.resourceId + '|' + (g.isUserGrant ? 'U' : 'G') + '|' + g.granteeKey + '|' + g.permissionId;
+                });
+                var toRemove = existingKeys.filter(function(k) { return !desired[k]; });
+                var total = existingKeys.length;
+                var removalPercent = total === 0 ? 0 : toRemove.length / total;
+
+                var existingUser = initialGrants.filter(function(g) { return g.isUserGrant; });
+                var removesAllUsers = existingUser.length > 0 && existingUser.every(function(g) {
+                    var key = g.resourceId + '|U|' + g.granteeKey + '|' + g.permissionId;
+                    return !desired[key];
+                });
+
+                return {
+                    removalPercent: removalPercent,
+                    removesAllUsers: removesAllUsers,
+                    toRemoveCount: toRemove.length,
+                    total: total
+                };
+            }
+
+            $form.on('submit', function(e) {
+                var confirmField = $('#ConfirmLargeRemoval');
+                if (confirmField.val() === 'true' || confirmField.val() === 'True') {
+                    var $submitBtn = $(this).find('button[type="submit"]');
+                    $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Applying...');
+                    return true;
+                }
+
+                var stats = computeClientRemovalStats();
+                var needsConfirm = (stats.total > 0 && stats.removalPercent > threshold) || stats.removesAllUsers;
+                if (needsConfirm) {
+                    var msg = 'A lot of permissions are being removed (' + stats.toRemoveCount + ' of ' + stats.total +
+                        ', ' + Math.round(stats.removalPercent * 100) + '%). Is that intentional?';
+                    if (!confirm(msg)) {
+                        return false;
+                    }
+                    confirmField.val('true');
+                } else if (!confirm('Are you sure you want to apply these permissions to all @Model.Resources.Count selected @Model.ResourcePluralDisplayName.ToLower()? This action cannot be undone.')) {
                     return false;
                 }
+
                 var $submitBtn = $(this).find('button[type="submit"]');
                 $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Applying...');
+            });
+
+            $('#confirmLargeRemovalBtn').on('click', function() {
+                $('#ConfirmLargeRemoval').val('true');
             });
             
             // Add visual feedback for checkbox changes
@@ -110,5 +231,3 @@
         });
     </script>
 }
-
-

@@ -2,6 +2,8 @@ using System;
 using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using System.Windows.Controls;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace Viking.Common
 {

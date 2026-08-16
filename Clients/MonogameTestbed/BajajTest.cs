@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Geometry.JSON;
 using Geometry.Meshing;
 using Microsoft.Xna.Framework;
@@ -15,6 +16,8 @@ using System.Text;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 //using OTVTable = System.Collections.Concurrent.ConcurrentDictionary<Geometry.PointIndex, Geometry.PointIndex>;
 //using SliceChordRTree = RTree.RTree<MorphologyMesh.ISliceChord>;
@@ -123,7 +126,7 @@ namespace MonogameTestbed
             Shapes = topology.Shapes;
             ShapeZ = topology.ShapeZ;
 
-            //BajajGeneratorMesh.AddCorrespondingVerticies(Polygons);
+            //BajajGeneratorMesh.AddCorrespondingVertices(Polygons);
 
             BajajMeshGenerationTask = System.Threading.Tasks.Task.Run(() =>
             {
@@ -141,12 +144,12 @@ namespace MonogameTestbed
             ShapeZ = topology.ShapeZ;
 
             //Create our mesh with only the verticies
-            PolyViews = new PolygonSetView(Shapes.Select(s => s as GridPolygon), PolygonSetView.DefaultColorMapping)
+            PolyViews = new PolygonSetView(Shapes.Select(s => s as Polygon), PolygonSetView.DefaultColorMapping)
             {
                 PointLabelType = IndexLabelType.MESH
             };
 
-            //BajajGeneratorMesh.AddCorrespondingVerticies(Polygons);
+            //BajajGeneratorMesh.AddCorrespondingVertices(Polygons);
 
             BajajMeshGenerationTask = System.Threading.Tasks.Task.Run(() =>
             {
@@ -176,7 +179,7 @@ namespace MonogameTestbed
         }
 
 
-        private GridVector2 VertexPositionAverage = GridVector2.Zero;
+        private Geometry.Vector2 VertexPositionAverage = Geometry.Vector2.Zero;
 
         /// <summary>
         /// Display progress as we triangulate the polygons. 
@@ -209,7 +212,7 @@ namespace MonogameTestbed
             listLineViews.Add(LineSetView.Create(mesh, Color.Black.SetAlpha(0.5f), linewidth: lineWidth));
             iShownLineView = 0;
 
-            //Verticies never change, so set them on creation and leave them.
+            //Vertices never change, so set them on creation and leave them.
             foreach (LabelView label in listLineViews[0].LineLabels)
             {
                 label.Position += VertexPositionAverage;
@@ -218,7 +221,7 @@ namespace MonogameTestbed
         }
         else
         {
-            //Verticies never change, so only recreate the lines
+            //Vertices never change, so only recreate the lines
 
             //listLineViews[0] = LineSetView.Create(mesh, Color.Black, linewidth: 3);
             listLineViews[0].LineViews = LineSetView.CreateLineList(mesh, Color.Black.SetAlpha(0.5f), linewidth: lineWidth * 2);
@@ -249,7 +252,7 @@ namespace MonogameTestbed
                 VertexPositionAverage = FirstPassTriangulation.CalculateAverageVertexPositionXY();
 
                 //Create our mesh with only the verticies
-                PolyViews = new PolygonSetView(Shapes.Select(s => s as GridPolygon), PolygonSetView.DefaultColorMapping, 2)
+                PolyViews = new PolygonSetView(Shapes.Select(s => s as Polygon), PolygonSetView.DefaultColorMapping, 2)
                 {
                     PointLabelType = IndexLabelType.MESH
                 };
@@ -261,7 +264,7 @@ namespace MonogameTestbed
 
             //UpdatePolyViews();
 
-            string temp = FirstPassTriangulation.Verticies.Select(v => v.Position.XY()).Distinct().ToJSON();
+            string temp = FirstPassTriangulation.Vertices.Select(v => v.Position.XY()).Distinct().ToJSON();
             Trace.WriteLine(temp);
             //BajajMeshGenerator.AddDelaunayEdges(FirstPassTriangulation, OnTriangulationProgress); /*Use this line to see triangulation construction */
             BajajMeshGenerator.AddDelaunayEdges(FirstPassTriangulation, OnProgress: null);
@@ -407,7 +410,7 @@ namespace MonogameTestbed
 
             foreach (MorphMeshRegion region in regions)
             {
-                GridPolygon poly = region.Polygon;
+                Polygon poly = region.Polygon;
                 LineSetView lineView = new();
                 Color c = region.Type.GetColor();
                 c.A = 128;
@@ -443,11 +446,11 @@ namespace MonogameTestbed
             meshViewModel.ModelMatrix = Microsoft.Xna.Framework.Matrix.CreateTranslation(new Microsoft.Xna.Framework.Vector3(0, 0, -(float)mesh.BoundingBox.CenterPoint.Z)) * Microsoft.Xna.Framework.Matrix.CreateScale(1, 1, 1f / (float)ZRange);//).ToXNAVector3());
 
             /*
-                        for (int iVert =0; iVert < meshViewModel.Verticies.Length;iVert++)
+                        for (int iVert =0; iVert < meshViewModel.Vertices.Length;iVert++)
                         {
-                            double Z = meshViewModel.Verticies[iVert].Position.Z;
+                            double Z = meshViewModel.Vertices[iVert].Position.Z;
                             Z = (Z - minZ) / ZRange;
-                            meshViewModel.Verticies[iVert].Position.Z = (float)Z;
+                            meshViewModel.Vertices[iVert].Position.Z = (float)Z;
                         }
                         */
 
@@ -515,12 +518,12 @@ namespace MonogameTestbed
 
             polyRingViews = new List<LineView>();
 
-            foreach (GridPolygon p in Polygons)
+            foreach (Polygon p in Polygons)
             {
                 PointSetView psv = new PointSetView();
 
-                List<GridVector2> points = p.ExteriorRing.ToList();
-                foreach (GridPolygon innerPoly in p.InteriorPolygons)
+                List<Geometry.Vector2> points = p.ExteriorRing.ToList();
+                foreach (Polygon innerPoly in p.InteriorPolygons)
                 {
                     points.AddRange(innerPoly.ExteriorRing);
                 }
@@ -554,12 +557,12 @@ namespace MonogameTestbed
                 return Color.Aqua.SetAlpha(alpha); //This should never happen at the time I'm writing this code.
 
             if (v.IsFaceSurfaceComplete(mesh))
-                if (mesh.IsUpperShape[v.ShapeIndex.iShape])// Position.Z == mesh.BoundingBox.minVals[2])
+                if (mesh.IsUpperShape[v.ShapeIndex.ShapeIndex])// Position.Z == mesh.BoundingBox.minVals[2])
                     return Color.LimeGreen.SetAlpha(alpha);
                 else
                     return Color.ForestGreen.SetAlpha(alpha);
 
-            if (mesh.IsUpperShape[v.ShapeIndex.iShape])
+            if (mesh.IsUpperShape[v.ShapeIndex.ShapeIndex])
                 return Color.Orange.SetAlpha(alpha);
             else
                 return Color.Red.SetAlpha(alpha);
@@ -579,7 +582,7 @@ namespace MonogameTestbed
                 //double MaxZ = mesh.BoundingBox.maxVals[2];
 
 
-                Verticies = [.. mesh.Verticies.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), GetVertColor(mesh, v)))] //Color.Orange.SetAlpha(0.5f) /*ColorExtensions.CreateGrayscale((v.Position.Z - MinZ) / (MaxZ - MinZ))*/)).ToArray();
+                Vertices = [.. mesh.Vertices.Select((v, i) => new VertexPositionColor(v.Position.ToXNAVector3(), GetVertColor(mesh, v)))] //Color.Orange.SetAlpha(0.5f) /*ColorExtensions.CreateGrayscale((v.Position.Z - MinZ) / (MaxZ - MinZ))*/)).ToArray();
             };
 
             foreach (IFace face in mesh.Faces)
@@ -589,7 +592,7 @@ namespace MonogameTestbed
                 /*Color regionColor = Color.Gold;
                 foreach (int iVert in face.iVerts)
                 {
-                    model.Verticies[iVert].Color = regionColor;
+                    model.Vertices[iVert].Color = regionColor;
                 }*/
             }
             /*
@@ -600,22 +603,22 @@ namespace MonogameTestbed
                 //TEMP
                 color = color.SetAlpha(1.0f);
 
-                model.Verticies[edge.A].Color = color;
-                model.Verticies[edge.B].Color = color;
+                model.Vertices[edge.A].Color = color;
+                model.Vertices[edge.B].Color = color;
             }*/
 
             return model;
         }
 
         /*
-        private void BuildAPort(IMesh mesh, Dictionary<GridVector2, PolygonIndex> pointToPoly)
+        private void BuildAPort(IMesh mesh, Dictionary<Geometry.Vector2, PolygonIndex> pointToPoly)
         {
-            List<GridVector2> points = pointToPoly.Keys.ToList();
-            Debug.Assert(mesh.Vertices.Select(v => v.ToGridVector2()).SequenceEqual(points));
+            List<Geometry.Vector2> points = pointToPoly.Keys.ToList();
+            Debug.Assert(mesh.Vertices.Select(v => v.ToVector2()).SequenceEqual(points));
 
             Mesh3D<IVertex3D<PolygonIndex>> SearchMesh = new Mesh3D<IVertex3D<PolygonIndex>>();
 
-            SearchMesh.AddVerticies(pointToPoly.Keys.Select(v => new Vertex3D<PolygonIndex>(v.ToGridVector3(0), pointToPoly[v])).ToArray());
+            SearchMesh.AddVerticies(pointToPoly.Keys.Select(v => new Vertex3D<PolygonIndex>(v.ToVector3(0), pointToPoly[v])).ToArray());
             SearchMesh.AddFaces(mesh.Triangles.Select(t => new Face(t.GetVertexID(0), t.GetVertexID(1), t.GetVertexID(2)) as IFace).ToArray()); 
         }
           */
@@ -650,8 +653,8 @@ namespace MonogameTestbed
         /// <returns></returns>
         private static MorphMeshRegion FindRegionPartner(MorphRenderMesh mesh, MorphMeshRegion region)
         {
-            MorphMeshVertex[] verts = region.Verticies.Select(i => (MorphMeshVertex)mesh.Verticies[i]).ToArray();
-            SortedSet<int> RegionVerts = new SortedSet<int>(region.Verticies);
+            MorphMeshVertex[] verts = region.Vertices.Select(i => (MorphMeshVertex)mesh.Vertices[i]).ToArray();
+            SortedSet<int> RegionVerts = new SortedSet<int>(region.Vertices);
             IEdgeKey[] edgeKeys = verts.SelectMany(v => v.Edges).ToArray();
             MorphMeshEdge[] edges = edgeKeys.Select(key => mesh[key]).Where(edge => edge.Type != EdgeType.CONTOUR).ToArray();
 
@@ -666,7 +669,7 @@ namespace MonogameTestbed
             MorphMeshRegion BestLink = null;
             foreach (MorphMeshRegion other in mesh.Regions.Where(r => region != r && region.Type.IsValidPair(r.Type) && r.Z != region.Z))
             {
-                SortedSet<int> OtherRegionVerts = new SortedSet<int>(other.Verticies);
+                SortedSet<int> OtherRegionVerts = new SortedSet<int>(other.Vertices);
                 int Count = LinkedVerts.Where(lv => OtherRegionVerts.Contains(lv)).Count();
                 if (Count > MaxLinks)
                 {
@@ -689,7 +692,7 @@ namespace MonogameTestbed
             OTVTable Table = new OTVTable(); 
 
             //TODO: Add flags to this call to select which tests are used to built the OTV table
-            BajajMeshGenerator.CreateOptimalTilingVertexTable(source.Verticies.Select(i => ((MorphMeshVertex)mesh[i]).PolyIndex.Value), target.Verticies.Select(i => ((MorphMeshVertex)mesh[i]).PolyIndex.Value), mesh.Polygons, mesh.IsUpperPolygon,
+            BajajMeshGenerator.CreateOptimalTilingVertexTable(source.Vertices.Select(i => ((MorphMeshVertex)mesh[i]).PolyIndex.Value), target.Vertices.Select(i => ((MorphMeshVertex)mesh[i]).PolyIndex.Value), mesh.Polygons, mesh.IsUpperPolygon,
                                                                                             Tests, out Table, ref rTree);
              
             return Table;
@@ -847,7 +850,7 @@ namespace MonogameTestbed
             if (IncompletedVertexView != null && ShowCompletedVerticies)
             {
                 IncompletedVertexView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha);
-                ViewLabels.AppendLine("Incomplete Verticies");
+                ViewLabels.AppendLine("Incomplete Vertices");
             }
 
             if (MeshVertsView != null && (this.VertexLabelType & IndexLabelType.MESH) > 0 && iShownLineView.HasValue)
@@ -1214,7 +1217,7 @@ namespace MonogameTestbed
             133001
         ];
 
-        //Verticies that create an additional correspondance point when nudged
+        //Vertices that create an additional correspondance point when nudged
         readonly ulong[] DelaunayTest18 =
         [
             145437 ,
@@ -1290,8 +1293,8 @@ namespace MonogameTestbed
         Scene scene;
         Scene3D scene3D;
         readonly GamePadStateTracker Gamepad = new();
-        readonly GridPolygon A;
-        readonly GridPolygon B;
+        readonly Polygon A;
+        readonly Polygon B;
         readonly PointSetViewCollection Points_A = new(Color.Blue, Color.BlueViolet, Color.PowderBlue);
         readonly PointSetViewCollection Points_B = new(Color.Red, Color.Pink, Color.Plum);
         readonly Cursor2DCameraManipulator CameraManipulator = new();
@@ -1359,20 +1362,20 @@ namespace MonogameTestbed
 
             if (window.Scene.RestoreCamera(TestMode.BAJAJTEST) == false)
             {
-                GridRectangle bRect = wrapView.Shapes.BoundingBox();
+                Geometry.Rectangle bRect = wrapView.Shapes.BoundingBox();
                 window.Scene.Camera.LookAt = bRect.Center.ToXNAVector2();
                 window.Scene.Camera.Downsample = bRect.Width / window.GraphicsDevice.Viewport.Width;
             }
 
-            GridBox bbox = new(wrapView.Shapes.BoundingBox(), Graph.Nodes.Values.Min(n => n.Z), Graph.Nodes.Values.Max(n => n.Z));
-            scene3D.Camera.Position = (bbox.CenterPoint.XY().ToGridVector3(0) + new GridVector3(0, 0, 10f * (float)bbox.Depth)).ToXNAVector3();
+            Box bbox = new(wrapView.Shapes.BoundingBox(), Graph.Nodes.Values.Min(n => n.Z), Graph.Nodes.Values.Max(n => n.Z));
+            scene3D.Camera.Position = (bbox.CenterPoint.XY().ToVector3(0) + new Geometry.Vector3(0, 0, 10f * (float)bbox.Depth)).ToXNAVector3();
             scene3D.Camera.LookAt = new Microsoft.Xna.Framework.Vector3((float)bbox.CenterPoint.X, (float)bbox.CenterPoint.Y, 0); // bbox.CenterPoint.ToXNAVector3();
 
             /*
             A = SqlGeometry.STPolyFromText(PolyA.ToSqlChars(), 0).ToPolygon();
             B = SqlGeometry.STPolyFromText(PolyB.ToSqlChars(), 0).ToPolygon();
 
-            GridVector2 Centroid = A.Centroid;
+            Geometry.Vector2 Centroid = A.Centroid;
             A = A.Translate(-Centroid);
             B = B.Translate(-Centroid);
 
@@ -1490,11 +1493,11 @@ namespace MonogameTestbed
 
             if (Gamepad.Back_Clicked)
             {
-                GridRectangle bbox = wrapView.Shapes.BoundingBox();
+                Geometry.Rectangle bbox = wrapView.Shapes.BoundingBox();
                 double MinZ = wrapView.ShapeZ.Min();
                 double MaxZ = wrapView.ShapeZ.Max();
                 double Depth = MaxZ - MinZ;
-                scene3D.Camera.Position = (bbox.Center.ToGridVector3(0) + new GridVector3(0, 0, 100f * (float)Depth)).ToXNAVector3();
+                scene3D.Camera.Position = (bbox.Center.ToVector3(0) + new Geometry.Vector3(0, 0, 100f * (float)Depth)).ToXNAVector3();
                 scene3D.Camera.LookAt = new Microsoft.Xna.Framework.Vector3((float)bbox.Center.X, (float)bbox.Center.Y, 0); // bbox.CenterPoint.ToXNAVector3();
             }
 

@@ -119,24 +119,24 @@ namespace MorphologyMesh
 
         public static bool CouldBeSliceChord(this EdgeType edge) => edge.IsValid() || edge == EdgeType.FLYING;
 
-        public static EdgeType GetEdgeType(this GridVector2 midpoint, IShape2D A, IShape2D B)
+        public static EdgeType GetEdgeType(this Vector2 midpoint, IShape2D A, IShape2D B)
         {
-            if (A is GridPolygon apoly && B is GridPolygon bpoly)
+            if (A is Polygon apoly && B is Polygon bpoly)
                 return GetEdgeType(midpoint, apoly, bpoly);
 
-            if (A is GridPolyline aline && B is GridPolyline bline)
+            if (A is Polyline aline && B is Polyline bline)
                 return EdgeType.FLYING; //Line covers empty space, could be on surface 
 
-            if (A is GridPolygon && B is GridPolyline)
+            if (A is Polygon && B is Polyline)
                 return EdgeType.FLYING; //Line covers empty space, could be on surface
 
-            if (A is GridPolyline && B is GridPolygon)
+            if (A is Polyline && B is Polygon)
                 return EdgeType.FLYING; //Line covers empty space, could be on surface
 
             throw new ArgumentException("Unhandled case in GetEdgeType");
         }
 
-        public static EdgeType GetEdgeType(this GridVector2 midpoint, GridPolygon A, GridPolygon B)
+        public static EdgeType GetEdgeType(this Vector2 midpoint, Polygon A, Polygon B)
         {
             bool midInA = A.Contains(midpoint);
             bool midInB = B.Contains(midpoint);
@@ -156,9 +156,9 @@ namespace MorphologyMesh
             }
         }
 
-        public static EdgeType GetEdgeType(this GridLineSegment line, GridPolygon A, GridPolygon B)
+        public static EdgeType GetEdgeType(this LineSegment line, Polygon A, Polygon B)
         {
-            GridVector2 midpoint = line.PointAlongLine(0.5);
+            Vector2 midpoint = line.PointAlongLine(0.5);
             // bool midInA = A.Contains(midpoint);
             // bool midInB = B.Contains(midpoint);
             bool lineCrossesA = line.Crosses(A);
@@ -181,9 +181,9 @@ namespace MorphologyMesh
             }
         }
 
-        public static EdgeType GetEdgeType(this GridLineSegment line, IShape2D A, IShape2D B)
+        public static EdgeType GetEdgeType(this LineSegment line, IShape2D A, IShape2D B)
         {
-            GridVector2 midpoint = line.PointAlongLine(0.5);
+            Vector2 midpoint = line.PointAlongLine(0.5);
             return GetEdgeType(midpoint, A, B);
         }
 
@@ -196,14 +196,14 @@ namespace MorphologyMesh
         /// <param name="Polylines"></param>
         /// <param name="midpoint"></param>
         /// <returns></returns>
-        public static EdgeType GetEdgeType(PolylineIndex APoly, PolylineIndex BPoly, IReadOnlyList<GridPolyline> Polylines, GridVector2 midpoint)
+        public static EdgeType GetEdgeType(PolylineIndex APoly, PolylineIndex BPoly, IReadOnlyList<Polyline> Polylines, Vector2 midpoint)
         {
-            GridPolyline A = Polylines[APoly.iLine];
-            GridPolyline B = Polylines[BPoly.iLine];
+            Polyline A = Polylines[APoly.ShapeIndex];
+            Polyline B = Polylines[BPoly.ShapeIndex];
 
-            GridLineSegment chord = new(A[APoly], B[BPoly]);
+            LineSegment chord = new(A[APoly], B[BPoly]);
 
-            if (APoly.iLine != BPoly.iLine)
+            if (APoly.ShapeIndex != BPoly.ShapeIndex)
             {
                 var results = chord.Intersections([.. Polylines.SelectMany(p => p.LineSegments)], EndpointsOnLineDoNotIntersect: true, out var Intersections);
                 if (results.Any())
@@ -228,7 +228,7 @@ namespace MorphologyMesh
             }
         }
 
-        public static EdgeType GetEdgeType(IShapeIndex A, IShapeIndex B, IReadOnlyList<IShape2D> shapes, GridVector2 midpoint)
+        public static EdgeType GetEdgeType(IShapeIndex A, IShapeIndex B, IReadOnlyList<IShape2D> shapes, Vector2 midpoint)
         {
             if (A is PolygonIndex iPolyA && B is PolygonIndex iPolyB)
                 return GetEdgeType(iPolyA, iPolyB, shapes, midpoint);
@@ -246,31 +246,31 @@ namespace MorphologyMesh
         /// <param name="Polygons"></param>
         /// <param name="midpoint"></param>
         /// <returns></returns>
-        public static EdgeType GetEdgeType(PolygonIndex APoly, PolygonIndex BPoly, IReadOnlyList<IShape2D> Shapes, GridVector2 midpoint)
+        public static EdgeType GetEdgeType(PolygonIndex APoly, PolygonIndex BPoly, IReadOnlyList<IShape2D> Shapes, Vector2 midpoint)
         {
-            if (Shapes[APoly.iPoly] is not GridPolygon A)
-                throw new ArgumentException($"Shape #{APoly.iPoly} must be a polygon", nameof(APoly));
-            if (Shapes[BPoly.iPoly] is not GridPolygon B)
-                throw new ArgumentException($"Shape #{BPoly.iPoly} must be a polygon", nameof(BPoly));
+            if (Shapes[APoly.ShapeIndex] is not Polygon A)
+                throw new ArgumentException($"Shape #{APoly.ShapeIndex} must be a polygon", nameof(APoly));
+            if (Shapes[BPoly.ShapeIndex] is not Polygon B)
+                throw new ArgumentException($"Shape #{BPoly.ShapeIndex} must be a polygon", nameof(BPoly));
 
-            if (APoly.iPoly != BPoly.iPoly)
+            if (APoly.ShapeIndex != BPoly.ShapeIndex)
             {
                 ShapeRelation midInA = A.GetRelation(midpoint);
                 ShapeRelation midInB = B.GetRelation(midpoint);
 
-                if (!(midInA == ShapeRelation.NONE ^ midInB == ShapeRelation.NONE)) //Midpoint in both or neither polygon. Line may be on exterior surface
+                if (!(midInA == ShapeRelation.None ^ midInB == ShapeRelation.None)) //Midpoint in both or neither polygon. Line may be on exterior surface
                 {
-                    if (midInA == ShapeRelation.CONTAINED && midInB == ShapeRelation.CONTAINED)
+                    if (midInA == ShapeRelation.Contained && midInB == ShapeRelation.Contained)
                         return EdgeType.INTERNAL; //Line is inside the final mesh. Cannot be on surface.
-                    else if (midInA == ShapeRelation.TOUCHING && midInB == ShapeRelation.TOUCHING)
+                    else if (midInA == ShapeRelation.Touching && midInB == ShapeRelation.Touching)
                     {
                         return EdgeType.CONTOUR;
                     }
                     else
                     {
                         //return EdgeType.FLYING; //Line covers empty space, could be on surface
-                        GridLineSegment segment = new(APoly.Point(A), BPoly.Point(B));
-                        bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.iPoly && iP != BPoly.iPoly).Any(p => p.GetRelation(segment) != ShapeRelation.NONE);
+                        LineSegment segment = new(APoly.Point(A), BPoly.Point(B));
+                        bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.ShapeIndex && iP != BPoly.ShapeIndex).Any(p => p.GetRelation(segment) != ShapeRelation.None);
                         if (!LineIntersectsAnyOtherPoly)
                             return EdgeType.FLYING;
                         else
@@ -310,7 +310,7 @@ namespace MorphologyMesh
                         }
                         else //Find out if the midpoint is contained by the same polygon with the inner polygon
                         {
-                            if ((!(midInA == ShapeRelation.NONE) && APoly.IsInner) || (!(midInB == ShapeRelation.NONE) && BPoly.IsInner))
+                            if ((!(midInA == ShapeRelation.None) && APoly.IsInner) || (!(midInB == ShapeRelation.None) && BPoly.IsInner))
                             {
                                 return EdgeType.SURFACE;// lineViews[i].Color = Color.Gold;
                             }
@@ -326,7 +326,7 @@ namespace MorphologyMesh
                     }
                 }
             }
-            else if (APoly.iPoly == BPoly.iPoly)
+            else if (APoly.ShapeIndex == BPoly.ShapeIndex)
             {
                 if (PolygonIndex.IsBorderLine(APoly, BPoly, A))
                 {
@@ -336,7 +336,7 @@ namespace MorphologyMesh
 
                 if (APoly.IsInner ^ BPoly.IsInner) //Spans from inner to outer ring
                 {
-                    bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.iPoly).Any(p => p.Contains(midpoint));
+                    bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Contains(midpoint));
                     bool midInA = A.Contains(midpoint);
                     if (LineIntersectsAnyOtherPoly)
                     {
@@ -353,13 +353,13 @@ namespace MorphologyMesh
                 }
                 else if (APoly.IsInner && BPoly.IsInner)
                 {
-                    if (APoly.iInnerPoly == BPoly.iInnerPoly)
+                    if (APoly.InnerShapeIndex == BPoly.InnerShapeIndex)
                     {
                         return EdgeType.HOLE;
                     }
                     else //Edge spans from one inner polygon to another
                     {
-                        bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.iPoly).Any(p => p.Contains(midpoint));
+                        bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Contains(midpoint));
                         if (LineIntersectsAnyOtherPoly)
                         {
                             return EdgeType.INVALID;
@@ -372,7 +372,7 @@ namespace MorphologyMesh
                 }
                 else //Both points are on outer ring of one polygon
                 {
-                    bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.iPoly).Any(p => p.Contains(midpoint));
+                    bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Contains(midpoint));
                     bool midInA = A.Contains(midpoint);
 
                     if (midInA)
@@ -405,18 +405,18 @@ namespace MorphologyMesh
         /// <param name="Polygons"></param>
         /// <param name="midpoint"></param>
         /// <returns></returns>
-        public static EdgeType GetEdgeType(PolylineIndex ALine, PolylineIndex BLine, IReadOnlyList<IShape2D> Shapes, GridVector2 midpoint)
+        public static EdgeType GetEdgeType(PolylineIndex ALine, PolylineIndex BLine, IReadOnlyList<IShape2D> Shapes, Vector2 midpoint)
         {
-            if (Shapes[ALine.iShape] is not GridPolyline A)
-                throw new ArgumentException($"Shape #{ALine.iShape} must be a polyline", nameof(Shapes));
-            if (Shapes[BLine.iShape] is not GridPolyline B)
-                throw new ArgumentException($"Shape #{BLine.iShape} must be a polyline", nameof(Shapes));
+            if (Shapes[ALine.ShapeIndex] is not Polyline A)
+                throw new ArgumentException($"Shape #{ALine.ShapeIndex} must be a polyline", nameof(Shapes));
+            if (Shapes[BLine.ShapeIndex] is not Polyline B)
+                throw new ArgumentException($"Shape #{BLine.ShapeIndex} must be a polyline", nameof(Shapes));
 
-            if (ALine.iShape != BLine.iShape)
+            if (ALine.ShapeIndex != BLine.ShapeIndex)
             {
                 //return EdgeType.FLYING; //Line covers empty space, could be on surface
-                GridLineSegment segment = new(ALine.Point(A), BLine.Point(B));
-                bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != ALine.iShape && iP != BLine.iShape).Any(p => p.GetRelation(segment) != ShapeRelation.NONE);
+                LineSegment segment = new(ALine.Point(A), BLine.Point(B));
+                bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != ALine.ShapeIndex && iP != BLine.ShapeIndex).Any(p => p.GetRelation(segment) != ShapeRelation.None);
                 if (!LineIntersectsAnyOtherPoly)
                     return EdgeType.INVALID;
                 else
@@ -424,7 +424,7 @@ namespace MorphologyMesh
                     return EdgeType.SURFACE;
                 }
             }
-            else if (ALine.iShape == BLine.iShape)
+            else if (ALine.ShapeIndex == BLine.ShapeIndex)
             {
                 return EdgeType.INVALID;
             }
@@ -441,11 +441,11 @@ namespace MorphologyMesh
         /// <returns></returns>
         public static double Orientation(this IShapeIndex A, IShapeIndex B, IReadOnlyList<IShape2D> Shapes)
         {
-            GridVector2 AO = A.GetOrientation(Shapes);
-            GridVector2 BO = B.GetOrientation(Shapes);
+            Vector2 AO = A.GetOrientation(Shapes);
+            Vector2 BO = B.GetOrientation(Shapes);
 
             //If the normals are more than 90 degrees apart then we consider them to have different orientations
-            double arcAngle = GridVector2.ArcAngle(GridVector2.Zero, AO, BO);
+            double arcAngle = Vector2.ArcAngle(Vector2.Zero, AO, BO);
             if (A.IsInner ^ B.IsInner)
             {
                 if (arcAngle < 0)
@@ -464,17 +464,17 @@ namespace MorphologyMesh
             return Math.Abs(arcAngle) < Math.PI / 2.0;
 
             /*
-            GridVector2 p1 = APoly.Point(Shapes);
-            GridVector2 p2 = BPoly.Point(Shapes);
+            Vector2 p1 = APoly.Point(Shapes);
+            Vector2 p2 = BPoly.Point(Shapes);
 
-            GridVector2[] adjacent1 = APoly.ConnectedVerticies(Shapes);
-            GridLineSegment ALine = new GridLineSegment(adjacent1[0], adjacent1[1]);
+            Vector2[] adjacent1 = APoly.ConnectedVertices(Shapes);
+            LineSegment ALine = new LineSegment(adjacent1[0], adjacent1[1]);
 
-            GridVector2[] adjacent2 = BPoly.ConnectedVerticies(Shapes);
-            GridLineSegment BLine = new GridLineSegment(adjacent2[0], adjacent2[1]);
+            Vector2[] adjacent2 = BPoly.ConnectedVertices(Shapes);
+            LineSegment BLine = new LineSegment(adjacent2[0], adjacent2[1]);
 
             //If the normals are more than 90 degrees apart then we consider them to have different orientations
-            double arcAngle = GridVector2.ArcAngle(GridVector2.Zero, ALine.Normal, BLine.Normal);
+            double arcAngle = Vector2.ArcAngle(Vector2.Zero, ALine.Normal, BLine.Normal);
             bool AngleMatched = Math.Abs(arcAngle) < Math.PI / 2.0;
             if (APoly.IsInner ^ BPoly.IsInner)
             {
@@ -493,7 +493,7 @@ namespace MorphologyMesh
         /// <param name="midpoint"></param>
         /// <param name="Polygons"></param>
         /// <returns></returns>
-        public static EdgeType GetContourEdgeTypeWithOrientation(this MorphRenderMesh mesh, PolygonIndex A, PolygonIndex B, GridVector2? midpoint = new GridVector2?())
+        public static EdgeType GetContourEdgeTypeWithOrientation(this MorphRenderMesh mesh, PolygonIndex A, PolygonIndex B, Vector2? midpoint = new Vector2?())
         {
             if (!midpoint.HasValue)
             {
@@ -512,7 +512,7 @@ namespace MorphologyMesh
         /// <param name="midpoint"></param>
         /// <param name="Polygons"></param>
         /// <returns></returns>
-        public static EdgeType GetContourEdgeTypeWithOrientation(PolygonIndex APoly, PolygonIndex BPoly, IReadOnlyList<IShape2D> Shapes, GridVector2 midpoint)
+        public static EdgeType GetContourEdgeTypeWithOrientation(PolygonIndex APoly, PolygonIndex BPoly, IReadOnlyList<IShape2D> Shapes, Vector2 midpoint)
         {
             EdgeType type = GetEdgeType(APoly, BPoly, Shapes, midpoint);
             if ((type.IsValid() &&
@@ -537,7 +537,7 @@ namespace MorphologyMesh
         /// <param name="Shapes"></param>
         /// <param name="midpoint"></param>
         /// <returns></returns>
-        public static EdgeType GetEdgeTypeWithOrientation(MorphMeshVertex A, MorphMeshVertex B, IReadOnlyList<IShape2D> Shapes, GridVector2? midpoint = new GridVector2?())
+        public static EdgeType GetEdgeTypeWithOrientation(MorphMeshVertex A, MorphMeshVertex B, IReadOnlyList<IShape2D> Shapes, Vector2? midpoint = new Vector2?())
         {
             if (A.Type == VertexOrigin.CONTOUR && B.Type == VertexOrigin.CONTOUR)
             {
@@ -559,9 +559,9 @@ namespace MorphologyMesh
             }
         }
 
-        public static EdgeType GetEdgeTypeWithOrientation(this MorphRenderMesh mesh, MorphMeshVertex A, MorphMeshVertex B, GridVector2? midpoint = new GridVector2?()) => GetEdgeTypeWithOrientation(A, B, mesh.Shapes, midpoint);
+        public static EdgeType GetEdgeTypeWithOrientation(this MorphRenderMesh mesh, MorphMeshVertex A, MorphMeshVertex B, Vector2? midpoint = new Vector2?()) => GetEdgeTypeWithOrientation(A, B, mesh.Shapes, midpoint);
 
-        public static EdgeType GetEdgeTypeWithOrientation(this MorphRenderMesh mesh, int iA, int iB, GridVector2? midpoint = new GridVector2?()) => GetEdgeTypeWithOrientation(mesh[iA], mesh[iB], mesh.Shapes, midpoint);
+        public static EdgeType GetEdgeTypeWithOrientation(this MorphRenderMesh mesh, int iA, int iB, Vector2? midpoint = new Vector2?()) => GetEdgeTypeWithOrientation(mesh[iA], mesh[iB], mesh.Shapes, midpoint);
 
     }
 }

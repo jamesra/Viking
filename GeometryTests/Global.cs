@@ -3,13 +3,9 @@ namespace GeometryTests
     public static class Global
     {
         /// <summary>
-        /// The seed value for FsCheck random generators
+        /// Fixed seed so CI failures replay. Override Replay on a Configuration when shrinking a specific case.
         /// </summary>
-        //public static readonly FsCheck.Random.StdGen StdGenSeed = FsCheck.Random.StdGen.NewStdGen(1475755927,296717278);
-        //public static readonly FsCheck.Random.StdGen StdGenSeed = FsCheck.Random.StdGen.NewStdGen(385597658, 296722803);
-        //public static readonly FsCheck.Random.StdGen StdGenSeed = FsCheck.Random.StdGen.NewStdGen(1825931114, 296730464);
-
-        public static readonly FsCheck.Random.StdGen StdGenSeed = FsCheck.Random.newSeed();
+        public static readonly FsCheck.Random.StdGen StdGenSeed = FsCheck.Random.StdGen.NewStdGen(1475755927, 296717278);
         public static void ResetRollingSeed() => _RollingStdGenSeed = StdGenSeed;
 
         private static FsCheck.Random.StdGen _RollingStdGenSeed = StdGenSeed;

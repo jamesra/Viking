@@ -5,6 +5,8 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using Geometry;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -96,7 +98,7 @@ namespace VikingXNAGraphics
         private string[] _Rows = null; //The label text divided across rows
         private Vector2[] _RowMeasurements; // Measurements for each row
 
-        public LabelView(string Text, GridVector2 VolumePosition)
+        public LabelView(string Text, Geometry.Vector2 VolumePosition)
         {
             this.Text = Text;
             this.Position = VolumePosition;
@@ -114,8 +116,8 @@ namespace VikingXNAGraphics
             }
         }
 
-        private GridVector2 _Position;
-        public GridVector2 Position
+        private Geometry.Vector2 _Position;
+        public Geometry.Vector2 Position
         {
             get
             {

@@ -2,6 +2,7 @@
 #define SUBMITVOLUMEPOSITION
 
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Concurrent;
@@ -18,6 +19,9 @@ using Viking.ViewModels;
 using Viking.VolumeModel;
 using WebAnnotation.View;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.ViewModel
 {
@@ -29,7 +33,7 @@ namespace WebAnnotation.ViewModel
         bool RemoveLocations(ICollection<LocationObj> locations);
         bool RemoveLocation(LocationObj loc);
 
-        List<HitTestResult> GetAnnotationsAtPosition(GridVector2 WorldPosition);
+        List<HitTestResult> GetAnnotationsAtPosition(Geometry.Vector2 WorldPosition);
     }
 
     internal abstract class SectionAnnotationsViewBase : System.Windows.IWeakEventListener, ICanvasViewHitTesting
@@ -49,14 +53,14 @@ namespace WebAnnotation.ViewModel
             //We should fallback by mapping as many points as possible, and then using those to make an equivalent sized rectangle.
             //If we cannot map any points we shouldn't bother with the request.
 
-            GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(mapper);
+            Rectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(mapper);
 
             if (!VisibleMosaicBounds.HasValue)
             {
                 return;
             }
 
-            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, SectionNumber, null, AddLocationsInLocalCache, token); // this.AddLocations, null);
+            _ = Store.LocationsByRegion.GetObjectsInRegionAsync(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, SectionNumber, QueryTargets.Server, token, AddLocationsInLocalCache); // this.AddLocations, null);
         }
 
         protected abstract void AddLocationsInLocalCache(IEnumerable<LocationObj> locations);
@@ -65,11 +69,11 @@ namespace WebAnnotation.ViewModel
 
         public abstract void RemoveLocations(IEnumerable<LocationObj> locations);
 
-        public abstract List<HitTestResult> GetAnnotations(GridVector2 WorldPosition);
+        public abstract List<HitTestResult> GetAnnotations(Geometry.Vector2 WorldPosition);
 
-        public abstract List<HitTestResult> GetAnnotations(GridLineSegment line);
+        public abstract List<HitTestResult> GetAnnotations(LineSegment line);
 
-        public abstract List<HitTestResult> GetAnnotations(GridRectangle line);
+        public abstract List<HitTestResult> GetAnnotations(Rectangle line);
 
         private readonly KeyTracker<long> SubscribedLocations = new();
 
@@ -81,9 +85,21 @@ namespace WebAnnotation.ViewModel
 
         protected bool UnsubscribeToLocationChangeEvents(LocationObj loc) => SubscribedLocations.TryRemove(loc.ID, () => loc.UnsubscribeToPropertyChangeEvents(this));
 
-        protected void SubscribeToStructureChangeEvents(LocationObj loc) => SubscribedStructures.AddRef(loc.ParentID.Value, (StructureID) => loc.Parent.SubscribeToPropertyChangeEvents(this));
+        protected void SubscribeToStructureChangeEvents(LocationObj loc)
+        {
+            if (loc.ParentID.HasValue == false || loc.Parent == null)
+                return;
 
-        protected bool UnsubscribeToStructureChangeEvents(LocationObj loc) => SubscribedStructures.ReleaseRef(loc.ParentID.Value, (StructureID) => loc.Parent.UnsubscribeToPropertyChangeEvents(this));
+            SubscribedStructures.AddRef(loc.ParentID.Value, (_) => loc.Parent.SubscribeToPropertyChangeEvents(this));
+        }
+
+        protected bool UnsubscribeToStructureChangeEvents(LocationObj loc)
+        {
+            if (loc.ParentID.HasValue == false || loc.Parent == null)
+                return false;
+
+            return SubscribedStructures.ReleaseRef(loc.ParentID.Value, (_) => loc.Parent.UnsubscribeToPropertyChangeEvents(this));
+        }
 
         public abstract bool ReceiveWeakEvent(Type managerType, object sender, EventArgs e);
     }
@@ -101,7 +117,24 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// The adjacent section this class is storing annotations for
         /// <summary>
-        public readonly SectionViewModel AdjacentSection;
+        public AdjacentSectionAnnotationsView(int primary_section_number, Viking.VolumeModel.Section adjacent, Viking.VolumeModel.IVolumeToSectionTransform mapper)
+        {
+            PrimarySectionNumber = primary_section_number;
+            AdjacentSection = adjacent;
+            Mapper = mapper;
+            Init();
+        }
+
+#if NETFRAMEWORK
+        public AdjacentSectionAnnotationsView(int primary_section_number, SectionViewModel adjacent)
+            : this(primary_section_number, adjacent.section, adjacent.ActiveSectionToVolumeTransform)
+        {
+        }
+#endif
+
+        public readonly Viking.VolumeModel.Section AdjacentSection;
+
+        public readonly Viking.VolumeModel.IVolumeToSectionTransform Mapper;
 
         public override int SectionNumber => AdjacentSection.Number;
 
@@ -111,17 +144,7 @@ namespace WebAnnotation.ViewModel
         protected readonly RTree.RTree<long> LocationsSearch = new();
         protected readonly ConcurrentDictionary<long, LocationCanvasView> LocationViews = new();
 
-        /// <summary>
-        /// Mapping interface for moving geometry between volume and section space
-        /// </summary>
-        public override Viking.VolumeModel.IVolumeToSectionTransform mapper => AdjacentSection.ActiveSectionToVolumeTransform;
-
-        public AdjacentSectionAnnotationsView(int primary_section_number, SectionViewModel AdjacentSection)
-        {
-            PrimarySectionNumber = primary_section_number;
-            this.AdjacentSection = AdjacentSection;
-            Init();
-        }
+        public override Viking.VolumeModel.IVolumeToSectionTransform mapper => Mapper;
 
         public override void Init()
         {
@@ -274,7 +297,7 @@ namespace WebAnnotation.ViewModel
             return LocationsSearch.Delete(loc.ID, out long RemovedID);
         }
 
-        public override List<HitTestResult> GetAnnotations(GridVector2 WorldPosition)
+        public override List<HitTestResult> GetAnnotations(Geometry.Vector2 WorldPosition)
         {
             IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(WorldPosition.ToRTreeRect(SectionNumber));
             List<HitTestResult> listHitResults = [];
@@ -288,7 +311,7 @@ namespace WebAnnotation.ViewModel
             return listHitResults;
         }
 
-        public override List<HitTestResult> GetAnnotations(GridLineSegment world_line)
+        public override List<HitTestResult> GetAnnotations(LineSegment world_line)
         {
             IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(world_line.BoundingBox.ToRTreeRect(SectionNumber));
             List<HitTestResult> listHitResults = [];
@@ -302,7 +325,7 @@ namespace WebAnnotation.ViewModel
             return listHitResults;
         }
 
-        public override List<HitTestResult> GetAnnotations(GridRectangle world_rect)
+        public override List<HitTestResult> GetAnnotations(Rectangle world_rect)
         {
             IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(world_rect.ToRTreeRect(SectionNumber));
             List<HitTestResult> listHitResults = [];
@@ -316,7 +339,7 @@ namespace WebAnnotation.ViewModel
             return listHitResults;
         }
 
-        public ICollection<LocationCanvasView> AnnotationsInRegion(GridRectangle worldRect)
+        public ICollection<LocationCanvasView> AnnotationsInRegion(Rectangle worldRect)
         {
             List<long> loc_IDs = LocationsSearch.Intersects(worldRect.ToRTreeRect(SectionNumber));
 
@@ -331,7 +354,7 @@ namespace WebAnnotation.ViewModel
             return locations;
         }
 
-        public ICollection<long> LocationIdsInRegion(GridRectangle worldRect) => LocationsSearch.Intersects(worldRect.ToRTreeRect(SectionNumber));
+        public ICollection<long> LocationIdsInRegion(Rectangle worldRect) => LocationsSearch.Intersects(worldRect.ToRTreeRect(SectionNumber));
 
         public ICollection<LocationCanvasView> LocationViewsForIds(ICollection<long> loc_IDs)
         {
@@ -417,7 +440,11 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// The section we store annotations for
         /// <summary>
-        public readonly SectionViewModel Section;
+        public readonly Viking.VolumeModel.Section Section;
+
+        public readonly Viking.VolumeModel.IVolumeTransformProvider Transforms;
+
+        public readonly Viking.VolumeModel.Volume Volume;
 
         public readonly AdjacentSectionAnnotationsView SectionAbove;
 
@@ -442,12 +469,12 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<LocationLinkView> NonOverlappedLocationLinks => SectionLocationLinks.NonOverlappedLinks;
 
-        public ICollection<LocationLinkView> NonOverlappedLocationLinksInRegion(GridRectangle bounds) => SectionLocationLinks.NonOverlappedLinksInRegion(bounds);
+        public ICollection<LocationLinkView> NonOverlappedLocationLinksInRegion(Rectangle bounds) => SectionLocationLinks.NonOverlappedLinksInRegion(bounds);
 
         /// <summary>
         /// Mapping interface for moving geometry between volume and section space
         /// </summary>
-        public override Viking.VolumeModel.IVolumeToSectionTransform mapper => Section.ActiveSectionToVolumeTransform;
+        public override Viking.VolumeModel.IVolumeToSectionTransform mapper => Transforms.GetSectionToVolumeTransform(Section.Number);
 
         public override int SectionNumber => Section.Number;
 
@@ -460,31 +487,38 @@ namespace WebAnnotation.ViewModel
         /// <param name="Parent"></param>
         private readonly bool SubmitUpdatedVolumePositions = false;
 
-        public SectionAnnotationsView(SectionViewModel section)
+        public SectionAnnotationsView(Viking.VolumeModel.Section section, Viking.VolumeModel.IVolumeTransformProvider transforms, Viking.VolumeModel.Volume volume)
         {
             Trace.WriteLine("Create SectionLocationsViewModel for " + section.Number.ToString());
             Section = section;
+            Transforms = transforms;
+            Volume = volume;
 
-            SectionLocationLinks = new SectionLocationLinkAnnotationsViewModel(section);
+            SectionLocationLinks = new SectionLocationLinkAnnotationsViewModel(section.Number, transforms, KnownLocations.Contains);
             SectionStructureLinks = new SectionStructureLinkAnnotationsViewModel(this);
 
-            SubmitUpdatedVolumePositions = section.VolumeViewModel.UpdateServerVolumePositions;
+            SubmitUpdatedVolumePositions = false;
 
-            if (Section.ReferenceSectionAbove != null)
-            {
-                SectionAbove = new AdjacentSectionAnnotationsView(section.Number, Viking.UI.State.volume.SectionViewModels[Section.ReferenceSectionAbove.Number]);
-            }
+            Viking.VolumeModel.Section above = volume.GetReferenceSectionAbove(section);
+            if (above != null)
+                SectionAbove = new AdjacentSectionAnnotationsView(section.Number, above, transforms.GetSectionToVolumeTransform(above.Number));
 
-            if (Section.ReferenceSectionBelow != null)
-            {
-                SectionBelow = new AdjacentSectionAnnotationsView(section.Number, Viking.UI.State.volume.SectionViewModels[Section.ReferenceSectionBelow.Number]);
-            }
+            Viking.VolumeModel.Section below = volume.GetReferenceSectionBelow(section);
+            if (below != null)
+                SectionBelow = new AdjacentSectionAnnotationsView(section.Number, below, transforms.GetSectionToVolumeTransform(below.Number));
 
             CollectionChangedEventManager.AddListener(Store.Structures, this);
             CollectionChangedEventManager.AddListener(Store.StructureLinks, this);
 
             Init();
         }
+
+#if NETFRAMEWORK
+        public SectionAnnotationsView(SectionViewModel section)
+            : this(section.section, section.VolumeViewModel, section.section.volume)
+        {
+        }
+#endif
 
         public override void Init()
         {
@@ -599,7 +633,7 @@ namespace WebAnnotation.ViewModel
         private List<LocationObj> LocationsOnOurSectionLinkedFromSet(IEnumerable<LocationObj> locations)
         {
             List<long> LocationIDs = [.. locations.SelectMany(l => l.LinksCopy).Where(id => KnownLocations.Contains(id)).Distinct()];
-            return Store.Locations.GetObjectsByIDs(LocationIDs, false);
+            return [.. Store.Locations.GetObjectsByIDs(LocationIDs, false)];
         }
 
         private void AddLocationBatch(IEnumerable<LocationObj> locations)
@@ -610,6 +644,7 @@ namespace WebAnnotation.ViewModel
 
             IEnumerable<LocationObj> locsOnOurSectionOrLinkedByInputLocations = locsOnOurSection.Union(LocationsOnOurSectionLinkedFromSet(locations));
             SectionLocationLinks.AddLocationLinks(locsOnOurSectionOrLinkedByInputLocations);
+            SectionLocationLinks.RetryPendingLinks();
             AddOverlappedLocations(locsOnOurSectionOrLinkedByInputLocations);
         }
 
@@ -696,6 +731,7 @@ namespace WebAnnotation.ViewModel
             {
                 case NotifyCollectionChangedAction.Add:
                     SectionStructureLinks.AddStructureLinks(e.NewItems.Cast<StructureObj>());
+                    SectionLocationLinks.RetryPendingLinks();
                     break;
 
                 case NotifyCollectionChangedAction.Replace:
@@ -1008,7 +1044,7 @@ namespace WebAnnotation.ViewModel
             return LocationsForStructure.TryGetValue(ID, out child_locations);
         }
 
-        public ICollection<LocationCanvasView> GetLocations(GridRectangle bounds)
+        public ICollection<LocationCanvasView> GetLocations(Rectangle bounds)
         {
             List<long> intersectingIDs = LocationViewSearch.Intersects(bounds.ToRTreeRect((float)Section.Number));
             List<LocationCanvasView> locations = [];
@@ -1022,7 +1058,7 @@ namespace WebAnnotation.ViewModel
             return locations;
         }
 
-        public ICollection<LocationCanvasView> GetLocations(GridVector2 point)
+        public ICollection<LocationCanvasView> GetLocations(Geometry.Vector2 point)
         {
             List<long> intersectingIDs = LocationViewSearch.Intersects(point.ToRTreeRect((float)Section.Number));
             List<LocationCanvasView> locations = [];
@@ -1036,7 +1072,7 @@ namespace WebAnnotation.ViewModel
             return locations;
         }
 
-        public ICollection<LocationCanvasView> GetLocations(GridLineSegment line)
+        public ICollection<LocationCanvasView> GetLocations(LineSegment line)
         {
             List<long> intersectingIDs = LocationViewSearch.Intersects(line.BoundingBox.ToRTreeRect((float)Section.Number));
             List<LocationCanvasView> locations = [];
@@ -1052,11 +1088,11 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks() => SectionStructureLinks.GetStructureLinks();
 
-        public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridRectangle bounds) => SectionStructureLinks.GetStructureLinks(bounds);
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(Rectangle bounds) => SectionStructureLinks.GetStructureLinks(bounds);
 
-        public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridVector2 point) => SectionStructureLinks.GetStructureLinks(point);
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(Geometry.Vector2 point) => SectionStructureLinks.GetStructureLinks(point);
 
-        public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridLineSegment line) => SectionStructureLinks.GetStructureLinks(line);
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(LineSegment line) => SectionStructureLinks.GetStructureLinks(line);
 
         /// <summary>
         /// Return all the line segments visible in the passed bounds
@@ -1070,7 +1106,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="WorldPosition"></param>
         /// <returns></returns>
-        public override List<HitTestResult> GetAnnotations(GridVector2 WorldPosition)
+        public override List<HitTestResult> GetAnnotations(Geometry.Vector2 WorldPosition)
         {
             List<HitTestResult> listIntersectingObjects =
             [
@@ -1093,7 +1129,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="WorldPosition"></param>
         /// <returns></returns>
-        public List<HitTestResult> GetAdjacentIntersectedAnnotations(GridVector2 WorldPosition)
+        public List<HitTestResult> GetAdjacentIntersectedAnnotations(Geometry.Vector2 WorldPosition)
         {
             List<HitTestResult> listAnnotations = [];
 
@@ -1125,7 +1161,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="WorldPosition"></param>
         /// <returns></returns>
-        public override List<HitTestResult> GetAnnotations(GridLineSegment world_line)
+        public override List<HitTestResult> GetAnnotations(LineSegment world_line)
         {
             List<HitTestResult> listIntersectingObjects =
             [
@@ -1148,7 +1184,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="WorldPosition"></param>
         /// <returns></returns>
-        public override List<HitTestResult> GetAnnotations(GridRectangle world_rect)
+        public override List<HitTestResult> GetAnnotations(Rectangle world_rect)
         {
             List<HitTestResult> listIntersectingObjects =
             [
@@ -1171,7 +1207,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="WorldPosition"></param>
         /// <returns></returns>
-        public List<HitTestResult> GetAdjacentIntersectedAnnotations(GridLineSegment world_line)
+        public List<HitTestResult> GetAdjacentIntersectedAnnotations(LineSegment world_line)
         {
             List<HitTestResult> listAnnotations = [];
 
@@ -1203,7 +1239,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="WorldPosition"></param>
         /// <returns></returns>
-        public List<HitTestResult> GetAdjacentIntersectedAnnotations(GridRectangle world_rect)
+        public List<HitTestResult> GetAdjacentIntersectedAnnotations(Rectangle world_rect)
         {
             List<HitTestResult> listAnnotations = [];
 
@@ -1230,7 +1266,7 @@ namespace WebAnnotation.ViewModel
             })];
         }
 
-        public ICollection<LocationCanvasView> AdjacentLocationsNotOverlappedInRegion(GridRectangle worldRect)
+        public ICollection<LocationCanvasView> AdjacentLocationsNotOverlappedInRegion(Rectangle worldRect)
         {
             SortedSet<LocationCanvasView> adjacentLocations = [];
             if (SectionAbove != null)
@@ -1261,9 +1297,12 @@ namespace WebAnnotation.ViewModel
         public override void LoadAnnotationsInRegion(VikingXNA.Scene scene, CancellationToken token)
         {
             //Store.LocationsByRegion.LoadSectionAnnotationsInRegion(scene.VisibleWorldBounds, scene.ScreenPixelSizeInVolume, this.SectionNumber, this.AddLocationsInRegionCallback);
-            GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(mapper);
+            Rectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(mapper);
 
-            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, SectionNumber, null, AddLocationsInLocalCache, token);// this.AddLocationsInRegionCallback);
+            if (VisibleMosaicBounds.HasValue)
+            {
+                _ = Store.LocationsByRegion.GetObjectsInRegionAsync(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, SectionNumber, QueryTargets.Server, token, AddLocationsInLocalCache);// this.AddLocationsInRegionCallback);
+            }
 
 
             SectionAbove?.LoadAnnotationsInRegion(scene, token);
@@ -1290,13 +1329,12 @@ namespace WebAnnotation.ViewModel
         {
             if (e is System.Collections.Specialized.NotifyCollectionChangedEventArgs CollectionChangeArgs)
             {
-                Type senderType = sender.GetType();
-                if (senderType == typeof(StructureStore))
+                if (sender is IStructureStore)
                 {
                     OnStructuresStoreChanged(sender, CollectionChangeArgs);
                     return true;
                 }
-                else if (senderType == typeof(StructureLinkStore))
+                else if (sender is IStructureLinkStore)
                 {
                     OnStructureLinksStoreChanged(sender, CollectionChangeArgs);
                     return true;

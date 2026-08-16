@@ -8,6 +8,8 @@ using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -16,8 +18,8 @@ namespace VikingXNAGraphics
     /// </summary>
     public class LinkedPolyLineSimpleView : IColorView
     {
-        GridVector2[] Source;
-        GridVector2[] Target;
+        Geometry.Vector2[] Source;
+        Geometry.Vector2[] Target;
         public LineView[] Lines;
 
         public LineStyle Style
@@ -45,20 +47,20 @@ namespace VikingXNAGraphics
             set { Color = Color.SetAlpha(value); }
         }
 
-        public LinkedPolyLineSimpleView(GridVector2[] source, GridVector2[] target, float linewidth, Color color, LineStyle style)
+        public LinkedPolyLineSimpleView(Geometry.Vector2[] source, Geometry.Vector2[] target, float linewidth, Color color, LineStyle style)
         {
             Lines = CreateViewData(source, target, linewidth, color, style);
             Source = source;
             Target = target; 
         }
 
-        protected static bool SourceAndTargetLinesCanBothUseAscendingIndexWithoutCrossingLines(GridVector2[] source, GridVector2[] target)
+        protected static bool SourceAndTargetLinesCanBothUseAscendingIndexWithoutCrossingLines(Geometry.Vector2[] source, Geometry.Vector2[] target)
         {
             try
             {
-                GridLineSegment LineA = new GridLineSegment(source[0], target[0]);
-                GridLineSegment LineB = new GridLineSegment(source.Last(), target.Last());
-                GridVector2 intersectionPoint;
+                LineSegment LineA = new LineSegment(source[0], target[0]);
+                LineSegment LineB = new LineSegment(source.Last(), target.Last());
+                Geometry.Vector2 intersectionPoint;
                 return !LineA.Intersects(LineB, out intersectionPoint);
             }
             catch(ArgumentException e)
@@ -68,7 +70,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        protected static LineView[] CreateViewData(GridVector2[] source, GridVector2[] target, double linewidth, Color color, LineStyle style)
+        protected static LineView[] CreateViewData(Geometry.Vector2[] source, Geometry.Vector2[] target, double linewidth, Color color, LineStyle style)
         {
             //Figure out which orientation the lines have to each other
             if (!SourceAndTargetLinesCanBothUseAscendingIndexWithoutCrossingLines(source, target))
@@ -100,24 +102,24 @@ namespace VikingXNAGraphics
     /// </summary>
     class LinkedPolyLineView
     {
-        GridVector2[] Source;
-        GridVector2[] Target;
+        Geometry.Vector2[] Source;
+        Geometry.Vector2[] Target;
 
-        public LinkedPolyLineView(GridVector2[] source, GridVector2[] target)
+        public LinkedPolyLineView(Geometry.Vector2[] source, Geometry.Vector2[] target)
         {
             Source = source;
             Target = target;
         }
 
-        protected static bool SourceAndTargetLinesCanBothUseAscendingIndexWithoutCrossingLines(GridVector2[] source, GridVector2[] target)
+        protected static bool SourceAndTargetLinesCanBothUseAscendingIndexWithoutCrossingLines(Geometry.Vector2[] source, Geometry.Vector2[] target)
         {
-            GridLineSegment LineA = new GridLineSegment(source[0], target[0]);
-            GridLineSegment LineB = new GridLineSegment(source.Last(), target.Last());
-            GridVector2 intersectionPoint;
+            LineSegment LineA = new LineSegment(source[0], target[0]);
+            LineSegment LineB = new LineSegment(source.Last(), target.Last());
+            Geometry.Vector2 intersectionPoint;
             return !LineA.Intersects(LineB, out intersectionPoint);
         }
 
-        protected static void CreatePolygons(GridVector2[] source, GridVector2[] target)
+        protected static void CreatePolygons(Geometry.Vector2[] source, Geometry.Vector2[] target)
         {
             //Figure out which orientation the lines have to each other
             if (!SourceAndTargetLinesCanBothUseAscendingIndexWithoutCrossingLines(source, target))
@@ -125,7 +127,7 @@ namespace VikingXNAGraphics
 
             //Draw triangles from each vertex on source to each vertex on target
             List<int> indicies = new List<int>(source.Length * 3);
-            List<GridVector2> verticies = new List<GridVector2>((source.Length + target.Length) * 3);
+            List<Geometry.Vector2> verticies = new List<Geometry.Vector2>((source.Length + target.Length) * 3);
             int iTarget = 0;
             for(int iSource = 0; iSource < source.Length; iSource++)
             {

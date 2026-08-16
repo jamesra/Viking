@@ -10,7 +10,9 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using Duende.IdentityModel.Client;
+using Viking.Common;
 using Viking.UI.WPF.ViewModels;
 using Viking.Tokens;
 
@@ -38,6 +40,26 @@ namespace Viking.UI.WPF
             InitializeComponent();
             Loaded += OnLoaded;
             InitializeLoginStage();
+            PreviewMouseDown += OnPreviewMouseDown;
+        }
+
+        private void OnPreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton != MouseButton.XButton1)
+                return;
+
+            ICommand cancelCommand = CurrentStage switch
+            {
+                LoginStage.VolumeSelection => _volumeSelectionViewModel?.CancelCommand,
+                LoginStage.SegmentationServiceSelection => _segmentationServiceSelectionViewModel?.CancelCommand,
+                _ => null
+            };
+
+            if (cancelCommand is null || !cancelCommand.CanExecute(null))
+                return;
+
+            cancelCommand.Execute(null);
+            e.Handled = true;
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
@@ -149,6 +171,13 @@ namespace Viking.UI.WPF
 
             // Populate recent volumes from settings (will be done by hosting app)
             PopulateRecentVolumes();
+
+            if (!string.IsNullOrWhiteSpace(InitialVolumeUrl))
+            {
+                _volumeSelectionViewModel.AddRecentVolume(InitialVolumeUrl, null);
+                _volumeSelectionViewModel.ManualVolumeUrl = InitialVolumeUrl;
+                _volumeSelectionViewModel.SelectMostRecentVolumeIfAvailable();
+            }
 
             volumeSelectionControl.DataContext = _volumeSelectionViewModel;
         }
@@ -297,8 +326,8 @@ namespace Viking.UI.WPF
 
                 Task<Dictionary<long, object>> segmentationTask = FetchSegmentationServicesAsync(apiToken, identityApiUrl);
                 // Set TokenInjector immediately so WCF AnnotationService calls use the volume-scoped token (critical for non-anonymous users after pre-load segmentation flow).
-                TokenInjector.BearerToken = volumeToken;
-                TokenInjector.BearerTokenAuthority = identityServerUrl?.ToString() ?? _loginViewModel?.IdentityServerUrl;
+                TokenStore.BearerToken = volumeToken;
+                TokenStore.BearerTokenAuthority = identityServerUrl?.ToString() ?? _loginViewModel?.IdentityServerUrl;
 
                 UpdateViewModelStatus(false, "Authentication successful!");
 
@@ -618,18 +647,12 @@ namespace Viking.UI.WPF
                     }
                 }
 
-                // Final fallback to IdentityServerUrl + "/api"
-                if (identityApiUrl is null && !string.IsNullOrEmpty(_loginViewModel?.IdentityServerUrl))
-                {
-                    if (Uri.TryCreate(_loginViewModel.IdentityServerUrl, UriKind.Absolute, out Uri baseUri))
-                    {
-                        UriBuilder uriBuilder = new(baseUri)
-                        {
-                            Port = 6001,
-                        };
-                        identityApiUrl = uriBuilder.Uri;
-                    }
-                }
+                Uri identityServerUrl = null;
+                if (!string.IsNullOrEmpty(_loginViewModel?.IdentityServerUrl))
+                    Uri.TryCreate(_loginViewModel.IdentityServerUrl, UriKind.Absolute, out identityServerUrl);
+
+                identityApiUrl = IdentityEndpoints.ResolvePermissionsApiUrl(identityApiUrl, identityServerUrl);
+                Trace.WriteLine($"[LoginWindow] Identity API URL: {identityApiUrl}");
 
                 return (volumeName, identityApiUrl);
             }

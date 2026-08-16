@@ -38,7 +38,7 @@
         /// </summary>
         /// <param name="bounds"></param>
         /// <returns></returns>
-        public IEnumerable<LocationLinkView> VisibleLocationLinks(int sectionNumber, GridRectangle bounds)
+        public IEnumerable<LocationLinkView> VisibleLocationLinks(int sectionNumber, Rectangle bounds)
         {
             RTree.RTree<LocationLinkView> searchGrid = GetSearchGrid(sectionNumber);
 
@@ -71,7 +71,7 @@
             return success; 
         }
 
-        public IUIObjectBasic GetNearestLink(int SectionNumber, GridVector2 WorldPosition, out double distance)
+        public IUIObjectBasic GetNearestLink(int SectionNumber, Vector2 WorldPosition, out double distance)
         {
             distance = double.MaxValue; 
             RTree.RTree<LocationLinkView> searchGrid = GetSearchGrid(SectionNumber);
@@ -165,7 +165,7 @@
             int minSection = linkView.MinSection;
             int maxSection = linkView.MaxSection;
 
-            GridLineSegment lineSegment = new GridLineSegment(AObj.VolumePosition, BObj.VolumePosition);
+            LineSegment lineSegment = new LineSegment(AObj.VolumePosition, BObj.VolumePosition);
 
             bool success = false;
             //Add a grid line segment to each section the link intersects

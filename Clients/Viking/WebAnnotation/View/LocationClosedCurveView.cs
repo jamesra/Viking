@@ -1,4 +1,6 @@
 using Geometry;
+using Viking.Input;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -11,6 +13,9 @@ using VikingXNA;
 using VikingXNAGraphics;
 using WebAnnotation.UI;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
@@ -59,8 +64,8 @@ namespace WebAnnotation.View
             CreateLabelObjects();
         }
 
-        private GridCircle? _InscribedCircle;
-        protected GridCircle InscribedCircle
+        private Circle? _InscribedCircle;
+        protected Circle InscribedCircle
         {
             get
             {
@@ -77,8 +82,8 @@ namespace WebAnnotation.View
 
         public void CreateLabelObjects() => curveLabels = new StructureCircleLabels(modelObj, InscribedCircle);
 
-        private GridVector2[] _MosaicCurveControlPoints;
-        public override GridVector2[] MosaicCurveControlPoints
+        private Geometry.Vector2[] _MosaicCurveControlPoints;
+        public override Geometry.Vector2[] MosaicCurveControlPoints
         {
             get
             {
@@ -88,8 +93,8 @@ namespace WebAnnotation.View
             }
         }
 
-        private GridVector2[] _VolumeCurveControlPoints;
-        public override GridVector2[] VolumeCurveControlPoints
+        private Geometry.Vector2[] _VolumeCurveControlPoints;
+        public override Geometry.Vector2[] VolumeCurveControlPoints
         {
             get
             {
@@ -113,14 +118,14 @@ namespace WebAnnotation.View
         /// <summary>
         /// We have this because with the current renderings the control points are circles that fall outside the polygon we use to render the closed curves
         /// </summary>
-        private GridRectangle? _BoundingBox;
-        public override GridRectangle BoundingBox
+        private Rectangle? _BoundingBox;
+        public override Rectangle BoundingBox
         {
             get
             {
                 if (!_BoundingBox.HasValue)
                 {
-                    _BoundingBox = GridRectangle.Pad(VolumeCurveControlPoints.BoundingBox(), lineWidth / 2.0);
+                    _BoundingBox = Rectangle.Pad(VolumeCurveControlPoints.BoundingBox(), lineWidth / 2.0);
                 }
 
                 return _BoundingBox.Value;
@@ -146,9 +151,9 @@ namespace WebAnnotation.View
             CurveView.Draw(device, scene, lineManager, basicEffect, overlayEffect, 0, [.. listToDraw.Select(l => l.curveView)]);
         }
 
-        public override bool Contains(GridVector2 Position)
+        public override bool Contains(Geometry.Vector2 Position)
         {
-            if (VolumeControlPoints.Any(p => new GridCircle(p, lineWidth / 2.0).Contains(Position)))
+            if (VolumeControlPoints.Any(p => new Circle(p, lineWidth / 2.0).Contains(Position)))
             {
                 return true;
             }
@@ -161,9 +166,9 @@ namespace WebAnnotation.View
             return base.Contains(Position);
         }
 
-        public override bool Intersects(GridLineSegment line)
+        public override bool Intersects(LineSegment line)
         {
-            if (VolumeControlPoints.Any(p => new GridCircle(p, lineWidth / 2.0).Intersects(line)))
+            if (VolumeControlPoints.Any(p => new Circle(p, lineWidth / 2.0).Intersects(line)))
             {
                 return true;
             }
@@ -182,7 +187,7 @@ namespace WebAnnotation.View
             curveLabels.DrawLabel(spriteBatch, font, scene);
         }
 
-        public ICanvasView GetAnnotationAtPosition(GridVector2 position)
+        public ICanvasView GetAnnotationAtPosition(Geometry.Vector2 position)
         {
             if (OverlappedLinkView != null)
             {
@@ -231,18 +236,18 @@ namespace WebAnnotation.View
             }
         }
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID) => throw new NotImplementedException();
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID) => throw new NotImplementedException();
 
-        public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
-            GridCircle TranslateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
+            Circle TranslateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
             if (TranslateTargetCircle.Contains(WorldPosition))
             {
                 LocationID = ID;
                 return LocationAction.TRANSLATE;
             }
 
-            return base.GetMouseClickActionForPositionOnAnnotation(WorldPosition, VisibleSectionNumber, ModifierKeys, out LocationID);
+            return base.GetMouseClickActionForPositionOnAnnotation(WorldPosition, VisibleSectionNumber, modifierKeys, out LocationID);
         }
 
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)

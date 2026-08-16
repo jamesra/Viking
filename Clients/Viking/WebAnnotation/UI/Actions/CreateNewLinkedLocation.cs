@@ -1,9 +1,10 @@
-﻿using Geometry;
+using Geometry;
 using SqlGeometryUtils;
 using System;
 using System.Diagnostics;
 using Viking.VolumeModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Actions
 {
@@ -50,8 +51,8 @@ namespace WebAnnotation.UI.Actions
             {
                 LocationObj existingLoc = Store.Locations[ExistingLocID];
                 LocationObj newLoc = new(existingLoc.Parent,
-                                                     NewMosaicShape.ToSqlGeometry(),
-                                                     NewVolumeShape.ToSqlGeometry(),
+                                                     NewMosaicShape,
+                                                     NewVolumeShape,
                                                      SectionNumber,
                                                      NewMosaicShape.ShapeType.IsClosed() ? Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON : Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYLINE);
 

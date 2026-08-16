@@ -1,6 +1,7 @@
 using System;
 
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -19,10 +20,10 @@ namespace WebAnnotation.UI.Commands
         protected override void Execute()
         {
             //Create the new structure
-            Store.Structures.Create(newStruct, newLoc, out LocationObj unused);
-            if (unused != null)
+            var result = Store.Structures.Create(newStruct, newLoc).Result;
+            if (result.Location != null)
             {
-                Global.LastEditedAnnotationID = unused.ID;
+                Global.LastEditedAnnotationID = result.Location.ID;
             }
 
             base.Execute();

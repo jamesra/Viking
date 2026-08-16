@@ -55,25 +55,25 @@ namespace GeometryTests
         [TestMethod]
         public void TestTriangleContains()
         {
-            GridVector2 v1 = new(50, 50);
-            GridVector2 v2 = new(15, 50);
-            GridVector2 v3 = new(15, 100);
-            GridTriangle tri = new(v1, v2, v3);
+            Vector2 v1 = new(50, 50);
+            Vector2 v2 = new(15, 50);
+            Vector2 v3 = new(15, 100);
+            Triangle tri = new(v1, v2, v3);
 
-            GridVector2 outsidetest = new(5, 75);
+            Vector2 outsidetest = new(5, 75);
             Assert.IsFalse(tri.Contains(outsidetest));
 
-            GridVector2 insidetest = new(25, 75);
+            Vector2 insidetest = new(25, 75);
             Assert.IsTrue(tri.Contains(insidetest));
 
             //Bug Fix #1
-            v1 = new GridVector2(6313.066666666, 13608);
-            v2 = new GridVector2(4509.33, 12700.8);
-            v3 = new GridVector2(2705.6, 11793.6);
+            v1 = new Vector2(6313.066666666, 13608);
+            v2 = new Vector2(4509.33, 12700.8);
+            v3 = new Vector2(2705.6, 11793.6);
 
-            tri = new GridTriangle(v1, v2, v3);
+            tri = new Triangle(v1, v2, v3);
 
-            outsidetest = new GridVector2(double.MaxValue / 2, 10652.94);
+            outsidetest = new Vector2(double.MaxValue / 2, 10652.94);
             Assert.IsFalse(tri.Contains(outsidetest));
         }
 
@@ -82,7 +82,7 @@ namespace GeometryTests
         /// </summary>
         /// <param name="tri"></param>
         /// <param name="expected">Expected angles in degrees, sorted smallest to largest.  Rounded to nearest integer</param>
-        private void VerifyInternalAngles(GridTriangle tri, double[] expected)
+        private void VerifyInternalAngles(Triangle tri, double[] expected)
         {
             double[] angleDegrees = [.. tri.Angles.Select(a => Math.Round(TriangleTest.RadianToDegrees(a))).OrderBy(a => a)];
 
@@ -96,29 +96,29 @@ namespace GeometryTests
         [TestMethod]
         public void TestTriangleAngles()
         {
-            GridVector2 v1 = new(0, 0);
-            GridVector2 v2 = new(0, 10);
-            GridVector2 v3 = new(10, 0);
-            GridTriangle tri = new(v1, v2, v3);
+            Vector2 v1 = new(0, 0);
+            Vector2 v2 = new(0, 10);
+            Vector2 v3 = new(10, 0);
+            Triangle tri = new(v1, v2, v3);
 
             double[] angleDegrees = [.. tri.Angles.Select(a => (a / (2 * Math.PI)) * 360).OrderBy(a => a)];
             VerifyInternalAngles(tri, [45, 45, 90]);
 
-            v1 = new GridVector2(0, 0);
-            v2 = new GridVector2(10, 0);
-            v3 = new GridVector2(5, 10 * Math.Sin(TriangleTest.DegreesToRadians(60)));
-            double distance = GridVector2.Distance(v1, v3);
+            v1 = new Vector2(0, 0);
+            v2 = new Vector2(10, 0);
+            v3 = new Vector2(5, 10 * Math.Sin(TriangleTest.DegreesToRadians(60)));
+            double distance = Vector2.Distance(v1, v3);
             Assert.AreEqual(10, distance);
-            tri = new GridTriangle(v1, v2, v3);
+            tri = new Triangle(v1, v2, v3);
             VerifyInternalAngles(tri, [60, 60, 60]);
 
-            v1 = new GridVector2(0, 0);
-            v2 = new GridVector2(Math.Sqrt(3), 0);
-            v3 = new GridVector2(0, 1);
-            tri = new GridTriangle(v1, v2, v3);
+            v1 = new Vector2(0, 0);
+            v2 = new Vector2(Math.Sqrt(3), 0);
+            v3 = new Vector2(0, 1);
+            tri = new Triangle(v1, v2, v3);
             VerifyInternalAngles(tri, [30, 60, 90]);
 
-            v2 = new GridVector2(1, 0);
+            v2 = new Vector2(1, 0);
 
             for (int i = 1; i < 360; i++)
             {
@@ -126,9 +126,9 @@ namespace GeometryTests
                     continue;
 
                 double radians = TriangleTest.DegreesToRadians(i);
-                v3 = new GridVector2(Math.Cos(radians), Math.Sin(radians));
+                v3 = new Vector2(Math.Cos(radians), Math.Sin(radians));
 
-                tri = new GridTriangle(v1, v2, v3);
+                tri = new Triangle(v1, v2, v3);
 
                 double adjustedAngle = radians > Math.PI ? 2 * Math.PI - radians : radians;
                 //The remaining two angles should be equal 
@@ -150,7 +150,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestDelaunay()
         {
-            GridVector2[] points = [ new(50, 50),
+            Vector2[] points = [ new(50, 50),
                                                       new(50, 100),
                                                       new(50, 150),
                                                        new(150, 50),

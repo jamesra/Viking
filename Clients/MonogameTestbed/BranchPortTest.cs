@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Geometry.Meshing;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
@@ -8,6 +9,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 
 namespace MonogameTestbed
@@ -16,7 +19,7 @@ namespace MonogameTestbed
     class BranchPortView
     {
         public List<PointSet> Sets = [];
-        public List<GridPolygon> Shapes = [];
+        public List<Polygon> Shapes = [];
 
         private PointSet _BranchPoints = null;
         public PointSet BranchPoints
@@ -38,7 +41,7 @@ namespace MonogameTestbed
             }
         }
 
-        public GridPolygon BranchShape = null;
+        public Polygon BranchShape = null;
         public LineSetView BranchShapeView = new();
         public LineSetView ScaledBranchShapeView = new();
 
@@ -70,7 +73,7 @@ namespace MonogameTestbed
         public void OnBranchShapeChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             PointSet updatedSet = sender as PointSet;
-            BranchShape = updatedSet.Count >= 3 ? new GridPolygon(updatedSet.Points.EnsureClosedRing().ToArray()) : null;
+            BranchShape = updatedSet.Count >= 3 ? new Polygon(updatedSet.Points.EnsureClosedRing().ToArray()) : null;
 
             BranchShapeView.UpdateViews(BranchShape);
             CalculateBranchPorts();
@@ -99,7 +102,7 @@ namespace MonogameTestbed
 
             if (ps.Points.Count >= 3)
             {
-                Shapes[i] = new GridPolygon(ps.Points.EnsureClosedRing().ToArray());//ConvexHullExtension.ConvexHull(ps.Points.ToArray(), out original_indicies);
+                Shapes[i] = new Polygon(ps.Points.EnsureClosedRing().ToArray());//ConvexHullExtension.ConvexHull(ps.Points.ToArray(), out originalIndices);
             }
             else
             {
@@ -114,27 +117,27 @@ namespace MonogameTestbed
             if (BranchShape is null)
                 return;
 
-            GridPolygon[] UseableShapes = [.. Shapes.Where(s => s != null)];
+            Polygon[] UseableShapes = [.. Shapes.Where(s => s != null)];
 
             if (!UseableShapes.Any())
                 return;
 
-            GridRectangle BranchPortBoundingRect = BranchShape.BoundingBox;
+            Rectangle BranchPortBoundingRect = BranchShape.BoundingBox;
 
-            GridVector2[] shapePoints = [.. UseableShapes.SelectMany(s => s.ExteriorRing.EnsureOpenRing())];
-            GridRectangle shapeBoundingBox = shapePoints.BoundingBox();
+            Geometry.Vector2[] shapePoints = [.. UseableShapes.SelectMany(s => s.ExteriorRing.EnsureOpenRing())];
+            Rectangle shapeBoundingBox = shapePoints.BoundingBox();
 
-            GridPolygon convex_hull = new(shapePoints.ConvexHull());
-            GridVector2 translate_vector = convex_hull.BoundingBox.Center - BranchShape.BoundingBox.Center;
+            Polygon convex_hull = new(shapePoints.ConvexHull());
+            Geometry.Vector2 translate_vector = convex_hull.BoundingBox.Center - BranchShape.BoundingBox.Center;
 
-            GridPolygon ScaledBranchPort = BranchShape.Translate(translate_vector);
+            Polygon ScaledBranchPort = BranchShape.Translate(translate_vector);
 
             double maxDistance = double.MinValue;
 
-            GridVector2 furthest_point = new();
-            foreach (GridVector2 p in convex_hull.ExteriorRing.EnsureOpenRing())
+            Geometry.Vector2 furthest_point = new();
+            foreach (Geometry.Vector2 p in convex_hull.ExteriorRing.EnsureOpenRing())
             {
-                double distance = GridVector2.Distance(ScaledBranchPort.Centroid, p);
+                double distance = Geometry.Vector2.Distance(ScaledBranchPort.Centroid, p);
                 if (distance > maxDistance)
                 {
                     maxDistance = distance;
@@ -142,14 +145,14 @@ namespace MonogameTestbed
                 }
             }
 
-            GridLineSegment lineToFurthestPoint = new(ScaledBranchPort.Centroid, furthest_point);
-            GridVector2 IntersectionOnLine = new();
+            LineSegment lineToFurthestPoint = new(ScaledBranchPort.Centroid, furthest_point);
+            Geometry.Vector2 IntersectionOnLine = new();
             double maxDistanceToIntersection = double.MinValue;
-            foreach (GridLineSegment line in ScaledBranchPort.ExteriorSegments)
+            foreach (LineSegment line in ScaledBranchPort.ExteriorSegments)
             {
-                if (line.Intersects(lineToFurthestPoint, out GridVector2 Intersection))
+                if (line.Intersects(lineToFurthestPoint, out Geometry.Vector2 Intersection))
                 {
-                    double distance = GridVector2.Distance(Intersection, ScaledBranchPort.Centroid);
+                    double distance = Geometry.Vector2.Distance(Intersection, ScaledBranchPort.Centroid);
                     if (distance > maxDistanceToIntersection)
                     {
                         IntersectionOnLine = Intersection;
@@ -158,15 +161,15 @@ namespace MonogameTestbed
                 }
             }
 
-            double DistanceToCentroid = GridVector2.Distance(IntersectionOnLine, ScaledBranchPort.Centroid);
+            double DistanceToCentroid = Geometry.Vector2.Distance(IntersectionOnLine, ScaledBranchPort.Centroid);
             double DistanceToPoint = maxDistance;
 
             /*
-            GridLineSegment furthest_line = new GridLineSegment();
-            GridVector2 furthest_point = new GridVector2();
-            foreach(GridVector2 p in convex_hull.ExteriorRing.EnsureOpenRing())
+            LineSegment furthest_line = new LineSegment();
+            Geometry.Vector2 furthest_point = new Geometry.Vector2();
+            foreach(Geometry.Vector2 p in convex_hull.ExteriorRing.EnsureOpenRing())
             {
-                GridLineSegment line;
+                LineSegment line;
                 double distance = ScaledBranchPort.Distance(p, out line);
                 if(distance > maxDistance)
                 {
@@ -176,19 +179,19 @@ namespace MonogameTestbed
                 }
             }
 
-            GridVector2 IntersectionOnLine; 
+            Geometry.Vector2 IntersectionOnLine; 
             furthest_line.DistanceToPoint(furthest_point, out IntersectionOnLine);
 
-            GridLineSegment lineToIntersection = new GridLineSegment(furthest_point, IntersectionOnLine);
+            LineSegment lineToIntersection = new LineSegment(furthest_point, IntersectionOnLine);
 
-            double DistanceToCentroid = GridVector2.Distance(IntersectionOnLine, ScaledBranchPort.Centroid);
-            double DistanceToPoint = GridVector2.Distance(furthest_point, ScaledBranchPort.Centroid);
+            double DistanceToCentroid = Geometry.Vector2.Distance(IntersectionOnLine, ScaledBranchPort.Centroid);
+            double DistanceToPoint = Geometry.Vector2.Distance(furthest_point, ScaledBranchPort.Centroid);
             */
 
             double WidthScalar = DistanceToPoint / DistanceToCentroid;
             double HeightScalar = DistanceToPoint / DistanceToCentroid;
 
-            ScaledBranchPort = ScaledBranchPort.Scale(new GridVector2(WidthScalar, HeightScalar));
+            ScaledBranchPort = ScaledBranchPort.Scale(new Geometry.Vector2(WidthScalar, HeightScalar));
 
             ScaledBranchShapeView.UpdateViews(ScaledBranchPort);
         }
@@ -221,7 +224,7 @@ namespace MonogameTestbed
         readonly BranchPortView PortView = new();
         readonly GamePadStateTracker Gamepad = new();
 
-        GridVector2 Cursor;
+        Geometry.Vector2 Cursor;
         CircleView cursorView;
         LabelView cursorLabel;
 
@@ -267,9 +270,9 @@ namespace MonogameTestbed
         {
         }
 
-        private void UpdateCursorViews(GridVector2 position)
+        private void UpdateCursorViews(Geometry.Vector2 position)
         {
-            cursorView = new CircleView(new GridCircle(position, PointRadius), Color.Gray);
+            cursorView = new CircleView(new Circle(position, PointRadius), Color.Gray);
             cursorLabel = new LabelView(position.ToLabel(), Cursor)
             {
                 FontSize = 2,
@@ -286,7 +289,7 @@ namespace MonogameTestbed
 
             if (state.ThumbSticks.Left != Vector2.Zero)
             {
-                Cursor += state.ThumbSticks.Left.ToGridVector2();
+                Cursor += state.ThumbSticks.Left.ToVector2();
                 UpdateCursorViews(Cursor);
             }
 

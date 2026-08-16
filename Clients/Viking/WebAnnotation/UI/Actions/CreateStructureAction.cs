@@ -3,8 +3,11 @@ using SqlGeometryUtils;
 using System;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
-using WebAnnotation.UI.Commands;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
+#if NETFRAMEWORK
+using WebAnnotation.UI.Commands;
+#endif
 
 namespace WebAnnotation.UI.Actions
 {
@@ -23,6 +26,20 @@ namespace WebAnnotation.UI.Actions
         public readonly int SectionNumber = SectionNumber;
 
         public abstract void OnExecute();
+
+        protected static void CommitNewStructure(StructureTypeObj typeObj, StructureObj newStruct, LocationObj newLocation)
+        {
+#if NETFRAMEWORK
+            if (typeObj.Parent != null)
+            {
+                AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), [AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation]);
+            }
+
+            AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), [AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation]);
+#else
+            Store.Structures.Create(newStruct, newLocation).GetAwaiter().GetResult();
+#endif
+        }
     }
 
     /// <summary>
@@ -34,15 +51,15 @@ namespace WebAnnotation.UI.Actions
         /// <summary>
         /// The volume space polygon we want to add to the location
         /// </summary>
-        public readonly GridPolygon NewVolumePolygon;
+        public readonly Polygon NewVolumePolygon;
 
         /// <summary>
         /// The volume space polygon after smoothing
         /// </summary>
-        public readonly GridPolygon NewSmoothVolumePolygon;
+        public readonly Polygon NewSmoothVolumePolygon;
 
 
-        public Create2DStructureAction(long StructureTypeID, GridPolygon newVolumePolygon, int SectionNumber, IVolumeToSectionTransform? transform = null) : base(SectionNumber, transform)
+        public Create2DStructureAction(long StructureTypeID, Polygon newVolumePolygon, int SectionNumber, IVolumeToSectionTransform? transform = null) : base(SectionNumber, transform)
         {
             NewVolumePolygon = newVolumePolygon;
             TypeID = StructureTypeID;
@@ -57,7 +74,7 @@ namespace WebAnnotation.UI.Actions
                 throw new ArgumentException($"StructureTypeID {TypeID} not found when assigning type to structure");
             }
 
-            GridPolygon mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
+            Polygon mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
 
             StructureObj newStruct = new(TypeObj);
 
@@ -67,15 +84,7 @@ namespace WebAnnotation.UI.Actions
 
 
             newLocation.SetShapeFromGeometryInSection(Transform, mosaic_polygon.ToSqlGeometry());
-
-            if (TypeObj.Parent != null)
-            {
-                //Enqueue extra command to select a parent
-                WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), [WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation]);
-            }
-
-            WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), [WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation]);
-
+            CommitNewStructure(TypeObj, newStruct, newLocation);
         }
 
         public override bool Equals(IAction other)
@@ -109,15 +118,15 @@ namespace WebAnnotation.UI.Actions
         /// <summary>
         /// The volume space polygon we want to add to the location
         /// </summary>
-        public readonly GridPolyline NewVolumeShape;
+        public readonly Polyline NewVolumeShape;
 
         /// <summary>
         /// The volume space polygon after smoothing
         /// </summary>
-        public readonly GridPolyline NewSmoothVolumeShape;
+        public readonly Polyline NewSmoothVolumeShape;
 
 
-        public Create1DStructureAction(long StructureTypeID, GridPolyline newVolumeShape, int SectionNumber, IVolumeToSectionTransform? transform = null) : base(SectionNumber, transform)
+        public Create1DStructureAction(long StructureTypeID, Polyline newVolumeShape, int SectionNumber, IVolumeToSectionTransform? transform = null) : base(SectionNumber, transform)
         {
             NewVolumeShape = newVolumeShape;
             TypeID = StructureTypeID;
@@ -133,7 +142,7 @@ namespace WebAnnotation.UI.Actions
                 throw new ArgumentException($"StructureTypeID {TypeID} not found when assigning type to structure");
             }
 
-            GridPolyline mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumeShape);
+            Polyline mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumeShape);
 
             StructureObj newStruct = new(TypeObj);
 
@@ -146,15 +155,7 @@ namespace WebAnnotation.UI.Actions
 
 
             newLocation.SetShapeFromGeometryInSection(Transform, mosaic_polygon.ToSqlGeometry());
-
-            if (TypeObj.Parent != null)
-            {
-                //Enqueue extra command to select a parent
-                WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), [WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation]);
-            }
-
-            WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), [WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation]);
-
+            CommitNewStructure(TypeObj, newStruct, newLocation);
         }
 
         public override bool Equals(IAction other)

@@ -1,7 +1,9 @@
 using System;
+using Viking.AnnotationServiceTypes;
 using System.Windows.Forms;
 using Viking.Common;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.View
 {

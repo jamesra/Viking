@@ -3,6 +3,9 @@ using Microsoft.Xna.Framework;
 using System;
 using VikingXNAGraphics;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
@@ -16,7 +19,7 @@ namespace WebAnnotation.View
         public LabelView StructureAttributeView;
         public LabelView ParentStructureLabelView;
         private readonly LocationObj? locationObj = null;
-        private GridCircle VolumeCircle;
+        private Circle VolumeCircle;
         private readonly bool ShowAttributeLabels = true;
 
         public double DesiredRowsOfText { get; set; } = 4.0;
@@ -28,12 +31,12 @@ namespace WebAnnotation.View
             get => VolumeCircle.Radius;
             set
             {
-                VolumeCircle = new GridCircle(VolumeCircle.Center, value);
+                VolumeCircle = new Circle(VolumeCircle.Center, value);
                 CreateLabelObjects();
             }
         }
 
-        public StructureCircleLabels(LocationObj obj, GridCircle circle, bool ShowAttributeLabels = true)
+        public StructureCircleLabels(LocationObj obj, Circle circle, bool ShowAttributeLabels = true)
         {
             VolumeCircle = circle;
             locationObj = obj;
@@ -112,9 +115,9 @@ namespace WebAnnotation.View
         {
             {
                 double Height = VolumeCircle.Radius / 3.0f;
-                StructureIDLabelView = new LabelView(StructureIDLabelWithTypeCode(locationObj.Parent), VolumeCircle.Center - new GridVector2(0, Height), fontSize: DefaultFontSize)
+                StructureIDLabelView = new LabelView(StructureIDLabelWithTypeCode(locationObj.Parent), VolumeCircle.Center - new Geometry.Vector2(0, Height), fontSize: DefaultFontSize)
                 {
-                    MaxLineWidth = GridCircle.WidthAtHeight(Height / Radius) * (Radius * 2.0),
+                    MaxLineWidth = Circle.WidthAtHeight(Height / Radius) * (Radius * 2.0),
                     _Color = locationObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black
                 };
             }
@@ -129,9 +132,9 @@ namespace WebAnnotation.View
                 else
                 {
                     double height = Radius / 2.0f;
-                    StructureLabelView = new LabelView(Label, VolumeCircle.Center + new GridVector2(0, height))
+                    StructureLabelView = new LabelView(Label, VolumeCircle.Center + new Geometry.Vector2(0, height))
                     {
-                        MaxLineWidth = GridCircle.WidthAtHeight(height / Radius) * (Radius * 2.0)
+                        MaxLineWidth = Circle.WidthAtHeight(height / Radius) * (Radius * 2.0)
                     };
                 }
 
@@ -143,9 +146,9 @@ namespace WebAnnotation.View
                 else
                 {
                     double height = Radius / 4.0f;
-                    StructureAttributeView = new LabelView(Tags, VolumeCircle.Center + new GridVector2(0, height))
+                    StructureAttributeView = new LabelView(Tags, VolumeCircle.Center + new Geometry.Vector2(0, height))
                     {
-                        MaxLineWidth = GridCircle.WidthAtHeight(height / Radius) * (Radius * 2.0)
+                        MaxLineWidth = Circle.WidthAtHeight(height / Radius) * (Radius * 2.0)
                     };
                 }
             }
@@ -153,10 +156,10 @@ namespace WebAnnotation.View
             if (locationObj.Parent != null && locationObj.Parent.ParentID.HasValue)
             {
                 double height = Radius / 2.0f;
-                ParentStructureLabelView = new LabelView(locationObj.Parent.ParentID.ToString(), VolumeCircle.Center + new GridVector2(0, height))
+                ParentStructureLabelView = new LabelView(locationObj.Parent.ParentID.ToString(), VolumeCircle.Center + new Geometry.Vector2(0, height))
                 {
                     _Color = Color.Red, //locationObj.Parent.Parent.Type.Color.ToXNAColor(0.75f);
-                    MaxLineWidth = GridCircle.WidthAtHeight(height / Radius) * (Radius * 2.0)
+                    MaxLineWidth = Circle.WidthAtHeight(height / Radius) * (Radius * 2.0)
                 };
             }
             else
@@ -213,7 +216,7 @@ namespace WebAnnotation.View
                 {
                     StructureLabelView.FontSize = DefaultFontSize / 2.0f;
 
-                    //StructureIDLabelView.Position = modelObj.VolumePosition - new GridVector2(0.0, this.Radius / 3.0f);
+                    //StructureIDLabelView.Position = modelObj.VolumePosition - new Geometry.Vector2(0.0, this.Radius / 3.0f);
 
                     StructureLabelView.Draw(spriteBatch, font, scene);
                 }

@@ -10,7 +10,7 @@ namespace Geometry.JSON
     /// </summary>
     public static class GeometryJSONExtensions
     {
-        public static JObject ToJObject(this GridPolygon poly)
+        public static JObject ToJObject(this Polygon poly)
         {
             dynamic obj = new JObject();
 
@@ -20,7 +20,7 @@ namespace Geometry.JSON
             return obj;
         }
 
-        public static string ToJSON(this GridPolygon poly)
+        public static string ToJSON(this Polygon poly)
         {
             dynamic obj = poly.ToJObject();
             return obj.ToString();
@@ -34,15 +34,15 @@ namespace Geometry.JSON
 
         public static JObject ToJObject(this IShape2D input)
         {
-            if (input is GridPolygon poly)
+            if (input is Polygon poly)
             {
                 return poly.ToJObject();
             }
-            else if (input is GridLineSegment line)
+            else if (input is LineSegment line)
             {
                 return line.ToJObject();
             }
-            else if (input is GridVector2 vec)
+            else if (input is Vector2 vec)
             {
                 return vec.ToJObject();
             }
@@ -57,13 +57,13 @@ namespace Geometry.JSON
 
         }
 
-        public static JArray ToJArray(this IEnumerable<GridPolygon> input)
+        public static JArray ToJArray(this IEnumerable<Polygon> input)
         {
             JArray obj = new(input.Select(p => p.ToJObject()));
             return obj;
         }
 
-        public static string ToJSON(this IEnumerable<GridVector2> input)
+        public static string ToJSON(this IEnumerable<Vector2> input)
         {
             JArray obj = input.ToJArray();
             return obj.ToString();
@@ -89,7 +89,7 @@ namespace Geometry.JSON
             return obj.ToString();
         }
 
-        public static JObject ToJObject(this GridVector2 p)
+        public static JObject ToJObject(this Vector2 p)
         {
             dynamic jObj = new JObject();
             jObj.X = p.X;
@@ -97,9 +97,9 @@ namespace Geometry.JSON
             return jObj;
         }
 
-        public static JArray ToJArray(this IEnumerable<GridVector2> points) => new JArray(points.Select(p => p.ToJObject()));
+        public static JArray ToJArray(this IEnumerable<Vector2> points) => new JArray(points.Select(p => p.ToJObject()));
 
-        public static JObject ToJObject(this GridLineSegment p)
+        public static JObject ToJObject(this LineSegment p)
         {
             dynamic jObj = new JObject();
             jObj.A = p.A;
@@ -107,9 +107,9 @@ namespace Geometry.JSON
             return jObj;
         }
 
-        public static JArray ToJArray(this IEnumerable<GridLineSegment> lines) => new JArray(lines.Select(p => p.ToJObject()));
+        public static JArray ToJArray(this IEnumerable<LineSegment> lines) => new JArray(lines.Select(p => p.ToJObject()));
 
-        public static GridVector2[] PointsFromJSON(string json)
+        public static Vector2[] PointsFromJSON(string json)
         {
             if (json is null)
                 return null;
@@ -119,13 +119,13 @@ namespace Geometry.JSON
         }
 
 
-        public static GridVector2[] PointsFromJSON(this JToken points)
+        public static Vector2[] PointsFromJSON(this JToken points)
         {
-            GridVector2[] output = [.. points.Select(p => new GridVector2(System.Convert.ToDouble(p["X"]), System.Convert.ToDouble((p["Y"]))))];
+            Vector2[] output = [.. points.Select(p => new Vector2(System.Convert.ToDouble(p["X"]), System.Convert.ToDouble((p["Y"]))))];
             return output;
         }
 
-        public static GridPolygon PolygonFromJSON(string json)
+        public static Polygon PolygonFromJSON(string json)
         {
             if (json is null)
                 return null;
@@ -134,45 +134,45 @@ namespace Geometry.JSON
 
             var ExteriorRing = obj["ExteriorRing"];
 
-            GridVector2[] ERing = ExteriorRing.PointsFromJSON();
+            Vector2[] ERing = ExteriorRing.PointsFromJSON();
 
             var InteriorRings = obj["InteriorRings"];
-            List<GridVector2[]> IRings = [.. InteriorRings.Select(ir => ir.PointsFromJSON())];
+            List<Vector2[]> IRings = [.. InteriorRings.Select(ir => ir.PointsFromJSON())];
 
-            GridPolygon output = new(ERing, IRings);
+            Polygon output = new(ERing, IRings);
 
             return output;
         }
 
-        public static GridPolygon PolygonFromJSON(JObject obj)
+        public static Polygon PolygonFromJSON(JObject obj)
         {
             if (obj is null)
                 return null;
 
             var ExteriorRing = obj["ExteriorRing"];
 
-            GridVector2[] ERing = ExteriorRing.PointsFromJSON();
+            Vector2[] ERing = ExteriorRing.PointsFromJSON();
 
             var InteriorRings = obj["InteriorRings"];
-            List<GridVector2[]> IRings = [.. InteriorRings.Select(ir => ir.PointsFromJSON())];
+            List<Vector2[]> IRings = [.. InteriorRings.Select(ir => ir.PointsFromJSON())];
 
-            GridPolygon output = new(ERing, IRings);
+            Polygon output = new(ERing, IRings);
 
             return output;
         }
 
-        public static GridPolygon[] PolygonsFromJSON(string json)
+        public static Polygon[] PolygonsFromJSON(string json)
         {
             if (json is null)
                 return null;
 
             JArray array = JArray.Parse(json);
 
-            List<GridPolygon> polygonList = [];
+            List<Polygon> polygonList = [];
 
             foreach (var token in array)
             {
-                GridPolygon p = PolygonFromJSON(token as JObject);
+                Polygon p = PolygonFromJSON(token as JObject);
                 polygonList.Add(p);
             }
 

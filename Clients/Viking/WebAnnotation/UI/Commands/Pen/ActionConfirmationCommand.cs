@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -12,6 +13,8 @@ using Viking.UI.Controls;
 using VikingXNA;
 using VikingXNAGraphics;
 using VikingXNAGraphics.Controls;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -40,7 +43,7 @@ namespace WebAnnotation.UI.Commands
 
         private readonly OnCommandSuccess? SuccessCallback = null;
 
-        private readonly GridRectangle BoundingBox;
+        private readonly Rectangle BoundingBox;
 
         private readonly IActionView[]? action_views = null;
 
@@ -54,7 +57,7 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         private readonly double CircleAreaScalar = 10;
 
-        public ActionConfirmationCommand(SectionViewerControl parent, IAction[] actions, GridRectangle bounding_box, OnCommandSuccess? success_callback = null) : base(parent)
+        public ActionConfirmationCommand(SectionViewerControl parent, IAction[] actions, Rectangle bounding_box, OnCommandSuccess? success_callback = null) : base(parent)
         {
             BoundingBox = bounding_box;
             AvailableActions = actions;
@@ -87,7 +90,7 @@ namespace WebAnnotation.UI.Commands
 
                 Color color = action is not IColorView colorView ? Color.Green : colorView.Color;
 
-                GridCircle circle = new(GridVector2.Zero, 1); //Button is positioned later.  This is just to call constructor.
+                Circle circle = new(Geometry.Vector2.Zero, 1); //Button is positioned later.  This is just to call constructor.
                 btnView = action is IIconTexture view && view.Icon != BuiltinTexture.None
                     ? new TextureCircleView(view.Icon.GetTexture(), circle, color)
                     : new CircleView(circle, color);
@@ -103,15 +106,15 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         private void LayoutButtons()
         {
-            GridRectangle bbox = BoundingBox;
-            GridVector2 Origin = bbox.UpperLeft;
+            Rectangle bbox = BoundingBox;
+            Geometry.Vector2 Origin = bbox.UpperLeft;
 
             //TODO: Ensure buttons are visible on the screen
 
             double Radius = GetButtonRadius(BoundingBox, CircleAreaScalar);
-            //Origin = Origin - new GridVector2(Radius, 0);
+            //Origin = Origin - new Geometry.Vector2(Radius, 0);
 
-            GridVector2 NextPosition = Origin;
+            Geometry.Vector2 NextPosition = Origin;
             double HorizontalSpacing = Radius * 3;
             double VerticalSpacing = Radius * 3;
             //Place everything but the cancel button, which is the last button in the list.  The cancel button
@@ -121,22 +124,22 @@ namespace WebAnnotation.UI.Commands
             int nCols = (int)(bbox.Width / HorizontalSpacing);
             for (int i = 0; i < Buttons.Count - 1; i++)
             {
-                NextPosition = Origin + new GridVector2((iCol) * HorizontalSpacing, 0 - (VerticalSpacing * iRow));
-                Buttons[i].Circle = new GridCircle(NextPosition, Radius);
+                NextPosition = Origin + new Geometry.Vector2((iCol) * HorizontalSpacing, 0 - (VerticalSpacing * iRow));
+                Buttons[i].Circle = new Circle(NextPosition, Radius);
                 iCol++;
 
                 if (iCol > nCols)
                 {
                     iRow += 1;
                     iCol = 0;
-                    //    NextPosition = new GridVector2(Origin.X - Radius, NextPosition.Y);
+                    //    NextPosition = new Geometry.Vector2(Origin.X - Radius, NextPosition.Y);
                 }
                 //                Trace.WriteLine(NextPosition);
             }
 
             //Place the cancel button one row up and one column right of the normal button positions
-            NextPosition = Origin + new GridVector2((nCols + 1) * HorizontalSpacing, 0 - (VerticalSpacing * -1));
-            Buttons[Buttons.Count - 1].Circle = new GridCircle(NextPosition, Radius);
+            NextPosition = Origin + new Geometry.Vector2((nCols + 1) * HorizontalSpacing, 0 - (VerticalSpacing * -1));
+            Buttons[Buttons.Count - 1].Circle = new Circle(NextPosition, Radius);
         }
 
         /// <summary>
@@ -144,10 +147,10 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         private void AppendCancelButton()
         {
-            GridVector2 ButtonCenter = BoundingBox.UpperRight;
+            Geometry.Vector2 ButtonCenter = BoundingBox.UpperRight;
             double CancelCircleRadius = GetButtonRadius(BoundingBox, CircleAreaScalar);
-            ButtonCenter = ButtonCenter + new GridVector2(CancelCircleRadius, CancelCircleRadius);
-            GridCircle ButtonCircle = new(ButtonCenter, CancelCircleRadius);
+            ButtonCenter = ButtonCenter + new Geometry.Vector2(CancelCircleRadius, CancelCircleRadius);
+            Circle ButtonCircle = new(ButtonCenter, CancelCircleRadius);
 
             //CancelView = new CircularButton(ButtonCircle, Color.Magenta);
             TextureCircleView cancelBtnView = new(BuiltinTexture.X.GetTexture(), ButtonCircle, Color.Magenta);
@@ -163,25 +166,25 @@ namespace WebAnnotation.UI.Commands
         {
             switch (VolumeShape.ShapeType)
             {
-                case ShapeType2D.CIRCLE:
-                    circleView = new CircleView((GridCircle)VolumeShape, ShapeColor);
+                case ShapeType2D.Circle:
+                    circleView = new CircleView((Circle)VolumeShape, ShapeColor);
                     break;
 
-                case ShapeType2D.CLOSEDCURVE:
+                case ShapeType2D.ClosedCurve:
                     DrawnShape1D = new PolyLineView(ShapeColor, null, Width, LineStyle.Standard);
                     break;
 
-                case ShapeType2D.CURVEPOLYGON:
-                case ShapeType2D.POLYGON:
-                    DrawnShape2D = TriangleNetExtensions.CreateMeshForPolygon2D((GridPolygon)VolumeShape, ShapeColor.ConvertToHCL());
+                case ShapeType2D.CurvePolygon:
+                case ShapeType2D.Polygon:
+                    DrawnShape2D = TriangleNetExtensions.CreateMeshForPolygon2D((Polygon)VolumeShape, ShapeColor.ConvertToHCL());
                     break;
 
-                case ShapeType2D.POINT:
-                case ShapeType2D.ELLIPSE:
+                case ShapeType2D.Point:
+                case ShapeType2D.Ellipse:
                     throw new NotImplementedException();
 
-                case ShapeType2D.POLYLINE:
-                case ShapeType2D.OPENCURVE:
+                case ShapeType2D.Polyline:
+                case ShapeType2D.OpenCurve:
                     DrawnShape1D = new PolyLineView(ShapeColor, null, Width, LineStyle.Standard);
                     break;
             }
@@ -269,7 +272,7 @@ namespace WebAnnotation.UI.Commands
         {
             base.OnMouseDown(sender, e);
 
-            GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             foreach (CircularButton button in Buttons)
             {
@@ -295,7 +298,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
             UpdateActiveView(WorldPosition);
         }
 
@@ -305,7 +308,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnPenContact(object sender, PenEventArgs e)
         {
-            GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             foreach (CircularButton button in Buttons)
             {
@@ -336,7 +339,7 @@ namespace WebAnnotation.UI.Commands
         {
             if (e.InContact == false)
             {
-                GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+                Geometry.Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
                 UpdateActiveView(WorldPosition);
             }
 
@@ -347,7 +350,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override bool ShouldSerializeProperty(DependencyProperty dp) => base.ShouldSerializeProperty(dp);
 
-        protected void UpdateActiveView(GridVector2 WorldPosition)
+        protected void UpdateActiveView(Geometry.Vector2 WorldPosition)
         {
             for (int iButton = 0; iButton < Buttons.Count; iButton++)
             {

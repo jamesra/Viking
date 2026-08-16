@@ -27,10 +27,10 @@ namespace Viking.VolumeModel
         }
 
         //  public static string ConstructUniqueKey(int SectionNumber, string Texture
-        public readonly PositionNormalTextureVertex[] Verticies;
+        public readonly PositionNormalTextureVertex[] Vertices;
 
         /// <summary>
-        /// Indicies passed to render call specifying triangle verticies
+        /// Indices passed to render call specifying triangle verticies
         /// </summary>
         public readonly int[] TriangleIndicies = null;
 
@@ -53,7 +53,7 @@ namespace Viking.VolumeModel
         public readonly string TextureCacheFilePath;
 
         //Need to initialize or union operator of bounds property won't work
-        public readonly GridRectangle Bounds;
+        public readonly Rectangle Bounds;
 
         //PORT: public readonly string TextureCachedFileName;
 
@@ -79,7 +79,7 @@ namespace Viking.VolumeModel
             //PORT: this.TextureCachedFileName = cachedTextureFileName;
             //PORT: this.MipMapLevels = mipMapLevels;
 
-            this.Verticies = verticies;
+            this.Vertices = verticies;
             Debug.Assert(verticies != null);
             Debug.Assert(verticies.Length > 0, "Tile must have verticies");
             this.TriangleIndicies = TriangleIndicies;
@@ -91,19 +91,19 @@ namespace Viking.VolumeModel
 
             for (int i = 0; i < transform.MapPoints.Length; i++)
             {
-                GridVector2 CtrlP = transform.MapPoints[i].ControlPoint;
-                GridVector2 MapP = transform.MapPoints[i].MappedPoint;
+                Vector2 CtrlP = transform.MapPoints[i].ControlPoint;
+                Vector2 MapP = transform.MapPoints[i].MappedPoint;
 
-                GridVector3 pos = new(CtrlP.X, CtrlP.Y, 0);
-                GridVector2 tex = new(MapP.X / info.ImageWidth, MapP.Y / info.ImageHeight);
-                var norm = GridVector3.UnitZ;
+                Vector3 pos = new(CtrlP.X, CtrlP.Y, 0);
+                Vector2 tex = new(MapP.X / info.ImageWidth, MapP.Y / info.ImageHeight);
+                var norm = Vector3.UnitZ;
 
                 verticies[i] = new PositionNormalTextureVertex(pos, norm, tex);
 
                 Debug.Assert(verticies[i].Texture.X >= 0 && verticies[i].Texture.X <= 1, "Texture X coordinate out of bounds 0,1");
                 Debug.Assert(verticies[i].Texture.Y >= 0 && verticies[i].Texture.Y <= 1, "Texture Y coordinate out of bounds 0,1");
 
-                //verticies[i] = new PositionNormalTextureVertex(position, GridVector3.UnitZ, textureCoord);
+                //verticies[i] = new PositionNormalTextureVertex(position, Vector3.UnitZ, textureCoord);
             }
 
             return verticies;
@@ -115,10 +115,10 @@ namespace Viking.VolumeModel
 
             PositionNormalTextureVertex[] vertices =
             [
-                new(transform.Transform(GridVector2.Zero).ToGridVector3(0), GridVector3.UnitZ, GridVector2.Zero),
-                new(transform.Transform(new GridVector2(0, info.ImageHeight)).ToGridVector3(0), GridVector3.UnitZ, GridVector2.UnitY),
-                new(transform.Transform(new GridVector2(info.ImageWidth, info.ImageHeight)).ToGridVector3(0), GridVector3.UnitZ, GridVector2.One),
-                new(transform.Transform(new GridVector2(info.ImageWidth, 0)).ToGridVector3(0), GridVector3.UnitZ, GridVector2.UnitX),
+                new(transform.Transform(Vector2.Zero).ToVector3(0), Vector3.UnitZ, Vector2.Zero),
+                new(transform.Transform(new Vector2(0, info.ImageHeight)).ToVector3(0), Vector3.UnitZ, Vector2.UnitY),
+                new(transform.Transform(new Vector2(info.ImageWidth, info.ImageHeight)).ToVector3(0), Vector3.UnitZ, Vector2.One),
+                new(transform.Transform(new Vector2(info.ImageWidth, 0)).ToVector3(0), Vector3.UnitZ, Vector2.UnitX),
             ];
 
             Triangulation = defaultSquareTriangulation;

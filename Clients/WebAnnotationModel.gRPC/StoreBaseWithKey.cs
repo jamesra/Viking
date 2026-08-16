@@ -356,14 +356,16 @@ namespace WebAnnotationModel.gRPC
                 obj = default;
             }
 
+            if (obj == null)
+                return default;
+
             var queryTime = DateTime.UtcNow;
-            var inventory = await ServerQueryResultsHandler.ProcessServerUpdate(
+            await ServerQueryResultsHandler.ProcessServerUpdate(
                 new ServerUpdate<KEY, SERVER_OBJECT>(queryTime, obj, Array.Empty<KEY>()));
+            await OnServerObjectsLoaded(new[] { obj }, queryTime);
 
-            if (obj != null)
-                await OnServerObjectsLoaded(new[] { obj }, queryTime);
-
-            return inventory.AddedObjects.Union(inventory.UpdatedObjects).First();
+            // Already-cached rows are Unchanged, not Added/Updated — look up by key instead of First().
+            return IDToObject.TryGetValue(ID, out newObj) ? newObj : default;
         }
 
         /// <summary>

@@ -106,7 +106,7 @@ namespace MorphologyMesh
             this.CreateEdge = MorphMeshEdge.Create;
 
             //Now that we have polygons organized by Z-level, add any corresponding verticies for polygons on adjacent Z levels.
-            //AddCorrespondingVerticies(PolygonsByZ);
+            //AddCorrespondingVertices(PolygonsByZ);
 
             PopulateMesh(this);
         }
@@ -122,11 +122,11 @@ namespace MorphologyMesh
 
             //This is used to identify corresponding edges
             //TODO: PositionToIndex does not handle multiple Z Level meshes correctly when generating corresponding edges
-            Dictionary<GridVector2, int> PositionToIndex = new(GridVector2EqualityComparer.Default);
+            Dictionary<Vector2, int> PositionToIndex = new();
 
             foreach (var i1 in shapeVerts)
             {
-                MorphMeshVertex v = new(i1, i1.Point(mesh.Shapes).ToGridVector3(mesh.ShapeZ[i1.iShape]));
+                MorphMeshVertex v = new(i1, i1.Point(mesh.Shapes).ToVector3(mesh.ShapeZ[i1.ShapeIndex]));
                 int iV;
 
                 if (PositionToIndex.TryGetValue(v.Position.XY(), out var corresponding_vertex))
@@ -134,7 +134,7 @@ namespace MorphologyMesh
                     //This vertex corresponds to where the polygon overlaps another polygon on another level.
                     //Populate the correspoinding field, and ensure the positions are 100% identical 
                     var corresponding = mesh[corresponding_vertex];
-                    v = new MorphMeshVertex(i1, corresponding.Position.XY().ToGridVector3(v.Position.Z))
+                    v = new MorphMeshVertex(i1, corresponding.Position.XY().ToVector3(v.Position.Z))
                     {
                         Corresponding = corresponding_vertex
                     }; //Ensure the position is identical
@@ -180,7 +180,7 @@ namespace MorphologyMesh
         /// Given a vertex, predict where the vertex would be using the two points before and after and a catmullrom fit
         /// </summary>
         /// <param name="corresponding"></param>
-        private static GridVector2 FitCurveMidpoint(MorphRenderMesh mesh, int index)
+        private static Vector2 FitCurveMidpoint(MorphRenderMesh mesh, int index)
         {
             return FitCurveMidpoint(mesh, mesh[index]);
         }
@@ -189,7 +189,7 @@ namespace MorphologyMesh
         /// Given a vertex, predict where the vertex would be using the two points before and after and a catmullrom fit
         /// </summary>
         /// <param name="corresponding"></param>
-        private static GridVector2 FitCurveMidpoint(MorphRenderMesh mesh, MorphMeshVertex v)
+        private static Vector2 FitCurveMidpoint(MorphRenderMesh mesh, MorphMeshVertex v)
         {
             PolygonIndex cIndex = v.ShapeIndex;
             return cIndex.PredictPoint(mesh.Shapes);
@@ -204,7 +204,7 @@ namespace MorphologyMesh
         /// <param name="ZLevelA"></param>
         /// <param name="ZLevelB"></param>
         /// <returns></returns>
-        public Dictionary<GridVector2, List<PolygonIndex>> CreatePointToPolyMap(double ZLevelA, double ZLevelB) => throw new NotImplementedException();
+        public Dictionary<Vector2, List<PolygonIndex>> CreatePointToPolyMap(double ZLevelA, double ZLevelB) => throw new NotImplementedException();
 
         public new MorphMeshEdge this[IEdgeKey key] => (MorphMeshEdge)this.Edges[key];
 
@@ -239,7 +239,7 @@ namespace MorphologyMesh
             return this.Contains(key);
         }
 
-        public MorphMeshVertex GetVertex(int key) => (MorphMeshVertex)Verticies[key];
+        public MorphMeshVertex GetVertex(int key) => (MorphMeshVertex)Vertices[key];
 
         public override int AddVertex(MorphMeshVertex v)
         {
@@ -265,7 +265,7 @@ namespace MorphologyMesh
             return iStartVert;
         }
 
-        public MorphMeshVertex GetOrAddVertex(PolygonIndex pIndex, GridVector3 vert3)
+        public MorphMeshVertex GetOrAddVertex(PolygonIndex pIndex, Vector3 vert3)
         {
             MorphMeshVertex meshVertex;
             if (!this.Contains(pIndex))
@@ -310,7 +310,7 @@ namespace MorphologyMesh
         {
             get
             {
-                foreach (var v in this.Verticies)
+                foreach (var v in this.Vertices)
                 {
                     yield return (MorphMeshVertex)v;
                 }
@@ -531,14 +531,14 @@ namespace MorphologyMesh
                 }
 
                 //Create a polygon for the region
-                GridPolygon regionBorder = new(CleanedFace.EnsureClosedRing().Select(iVert => mesh[iVert].Position.XY()).ToArray());
+                Polygon regionBorder = new(CleanedFace.EnsureClosedRing().Select(iVert => mesh[iVert].Position.XY()).ToArray());
                 PolygonVertexEnum vertEnumerator = new(regionBorder);
 
-                Dictionary<PolygonIndex, int> IndexToVertex = vertEnumerator.ToDictionary(pIndex => pIndex, pIndex => pIndex.iVertex); //Converts a PointIndex to a Mesh Index
+                Dictionary<PolygonIndex, int> IndexToVertex = vertEnumerator.ToDictionary(pIndex => pIndex, pIndex => pIndex.VertexIndex); //Converts a PointIndex to a Mesh Index
 
                 //string json = regionBorder.ToJSON();
 
-                //GridPolygon loadedFromJSON = GeometryJSONExtensions.PolygonFromJSON(json);
+                //Polygon loadedFromJSON = GeometryJSONExtensions.PolygonFromJSON(json);
                 //Triangulate the region
                 var regionMesh = regionBorder.Triangulate(iPoly: 0, OnProgress: OnProgress);
 
@@ -554,9 +554,9 @@ namespace MorphologyMesh
                 //List<int[]> listXYPointIndicies = listTriangles.Select(t => regionMesh.IndiciesForPointsXY(t.Points)).ToList();
                 //List<int[]> listMeshFaces = listXYPointIndicies.Select(iPoints => iPoints.Select(i => Face[i]).ToArray()).ToList();
                 /*
-                List<GridLineSegment> lines = regionMesh.ToLines();
+                List<LineSegment> lines = regionMesh.ToLines();
 
-                List<int[]> listLineIndicies = lines.Select(l => regionMesh.IndiciesForPointsXY(new GridVector2[] { l.A, l.B })).ToList();
+                List<int[]> listLineIndicies = lines.Select(l => regionMesh.IndiciesForPointsXY(new Vector2[] { l.A, l.B })).ToList();
                  */
                 foreach (var f in regionMesh.Faces)
                 {
@@ -736,7 +736,7 @@ namespace MorphologyMesh
 
                 MorphMeshFace face = (MorphMeshFace)f;
 
-                var faceVerts = face.iVerts.Select(i => (MorphMeshVertex)mesh.Verticies[i]).ToArray();
+                var faceVerts = face.iVerts.Select(i => (MorphMeshVertex)mesh.Vertices[i]).ToArray();
 
                 if (face.IsInUntiledRegion(mesh))
                 {
@@ -804,7 +804,7 @@ namespace MorphologyMesh
 
         public List<int> IdentifyIncompleteFace(int iVert)
         {
-            IVertex origin = this.Verticies[iVert];
+            IVertex origin = this.Vertices[iVert];
             return IdentifyIncompleteFace(origin);
         }
 
@@ -1021,8 +1021,8 @@ namespace MorphologyMesh
                 if (!(this[e.A].ShapeIndex is null || this[e.B].ShapeIndex is null))
                 {
                     SliceChord chord = new(this[e.A].ShapeIndex, this[e.B].ShapeIndex, this.Shapes);
-                    var AZ = this.Verticies[e.A].Position.Z;
-                    var BZ = this.Verticies[e.B].Position.Z;
+                    var AZ = this.Vertices[e.A].Position.Z;
+                    var BZ = this.Vertices[e.B].Position.Z;
                     rTree.Add(bbox, chord); //(MinZ: Math.Min(AZ,BZ), MaxZ: Math.Max(AZ,BZ)), e);
                 }
                 else

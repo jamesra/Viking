@@ -33,7 +33,7 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
         /// </summary>
         protected Microsoft.Xna.Framework.Color OriginalColor = color;
 
-        public delegate void OnCommandSuccess(object sender, GridVector2[] control_points);
+        public delegate void OnCommandSuccess(object sender, Vector2[] control_points);
         protected OnCommandSuccess success_callback = success_callback;
 
         public LineGeometryCommandBase(Viking.UI.Controls.SectionViewerControl parent,
@@ -48,7 +48,7 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
         }
 
 
-        protected virtual void Execute(GridVector2[] updated_verticies)
+        protected virtual void Execute(Vector2[] updated_verticies)
         {
             if (success_callback != null)
             {
@@ -67,7 +67,7 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
     {
         public virtual double ControlPointRadius => LineWidth / 2.0;
 
-        public abstract GridVector2[] Verticies
+        public abstract Vector2[] Vertices
         {
             get;
             protected set;
@@ -98,34 +98,34 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
         /// </summary>
         /// <param name="WorldPos"></param>
         /// <returns></returns>
-        protected abstract bool CanControlPointBePlaced(GridVector2 WorldPos);
+        protected abstract bool CanControlPointBePlaced(Vector2 WorldPos);
 
         /// <summary>
         /// Can a control point be placed at this position?
         /// </summary>
         /// <param name="WorldPos"></param>
         /// <returns></returns>
-        protected abstract bool CanControlPointBeGrabbed(GridVector2 WorldPos);
+        protected abstract bool CanControlPointBeGrabbed(Vector2 WorldPos);
 
         /// <summary>
         /// Can the command complete if the mouse is clicked at this position?
         /// </summary>
         /// <param name="WorldPosition"></param>
         /// <returns></returns>
-        protected abstract bool CanCommandComplete(GridVector2 WorldPosition);
+        protected abstract bool CanCommandComplete(Vector2 WorldPosition);
 
 
-        protected bool OverlapsFirstVertex(GridVector2 position) => GridVector2.Distance(Verticies.First(), position) <= ControlPointRadius;
+        protected bool OverlapsFirstVertex(Vector2 position) => Vector2.Distance(Vertices.First(), position) <= ControlPointRadius;
 
-        protected bool OverlapsLastVertex(GridVector2 position) => GridVector2.Distance(Verticies.Last(), position) <= ControlPointRadius;
+        protected bool OverlapsLastVertex(Vector2 position) => Vector2.Distance(Vertices.Last(), position) <= ControlPointRadius;
 
-        protected bool OverlapsAnyVertex(GridVector2 position) => Verticies.Any(lv => GridVector2.Distance(lv, position) <= ControlPointRadius);
+        protected bool OverlapsAnyVertex(Vector2 position) => Vertices.Any(lv => Vector2.Distance(lv, position) <= ControlPointRadius);
 
-        protected int? IndexOfOverlappedVertex(GridVector2 position)
+        protected int? IndexOfOverlappedVertex(Vector2 position)
         {
-            for (int i = 0; i < Verticies.Count(); i++)
+            for (int i = 0; i < Vertices.Count(); i++)
             {
-                bool overlaps = GridVector2.Distance(Verticies[i], position) <= ControlPointRadius;
+                bool overlaps = Vector2.Distance(Vertices[i], position) <= ControlPointRadius;
                 if (overlaps)
                 {
                     return new int?(i);
@@ -135,14 +135,14 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
             return new int?();
         }
 
-        protected override void Execute() => Execute(Verticies);
+        protected override void Execute() => Execute(Vertices);
 
         /// <summary>
         /// Return the intersection point with a value if the provided line intersects any segment of our polyline.
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
-        protected abstract GridVector2? IntersectsSelf(GridLineSegment lineSeg);
+        protected abstract Vector2? IntersectsSelf(LineSegment lineSeg);
     }
 
     internal abstract class PolyLineCommandBase : ControlPointCommandBase
@@ -168,7 +168,7 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
-        protected override GridVector2? IntersectsSelf(GridLineSegment lineSeg) => Verticies.IntersectionPoint(lineSeg);
+        protected override Vector2? IntersectsSelf(LineSegment lineSeg) => Vertices.IntersectionPoint(lineSeg);
     }
 
     /// <summary>
@@ -179,18 +179,18 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
     /// </summary>
     internal class PlacePolylineCommand : PolyLineCommandBase
     {
-        private readonly Stack<GridVector2> vert_stack = new();
+        private readonly Stack<Vector2> vert_stack = new();
 
         /// <summary>
         /// Returns the stack with the bottomost entry first in the array
         /// </summary>
-        public override GridVector2[] Verticies
+        public override Vector2[] Vertices
         {
-            get => [.. ((IEnumerable<GridVector2>)[.. vert_stack]).Reverse()];
+            get => [.. ((IEnumerable<Vector2>)[.. vert_stack]).Reverse()];
             protected set
             {
                 vert_stack.Clear();
-                foreach (GridVector2 v in value)
+                foreach (Vector2 v in value)
                 {
                     vert_stack.Push(v);
                 }
@@ -199,7 +199,7 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
 
         public PlacePolylineCommand(Viking.UI.Controls.SectionViewerControl parent,
                                      Microsoft.Xna.Framework.Color color,
-                                     GridVector2 origin,
+                                     Vector2 origin,
                                      double LineWidth,
                                      OnCommandSuccess success_callback)
             : base(parent, color, LineWidth, success_callback)
@@ -210,7 +210,7 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
 
         public PlacePolylineCommand(Viking.UI.Controls.SectionViewerControl parent,
                                      System.Drawing.Color color,
-                                     GridVector2 origin,
+                                     Vector2 origin,
                                      double LineWidth,
                                      OnCommandSuccess success_callback)
             : this(parent,
@@ -224,15 +224,15 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
         {
         }
 
-        protected override bool CanControlPointBeGrabbed(GridVector2 WorldPos) => OverlapsAnyVertex(WorldPos);
+        protected override bool CanControlPointBeGrabbed(Vector2 WorldPos) => OverlapsAnyVertex(WorldPos);
 
-        protected override bool CanCommandComplete(GridVector2 WorldPosition) => OverlapsLastVertex(WorldPosition);
+        protected override bool CanCommandComplete(Vector2 WorldPosition) => OverlapsLastVertex(WorldPosition);
 
-        protected override bool CanControlPointBePlaced(GridVector2 WorldPosition) => !OverlapsAnyVertex(WorldPosition);
+        protected override bool CanControlPointBePlaced(Vector2 WorldPosition) => !OverlapsAnyVertex(WorldPosition);
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+            Vector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
             if (e.Button.None())
             {
@@ -247,13 +247,13 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
 
                     Parent.CommandQueue.InjectCommand(new AdjustPolylineCommand(Parent,
                                                                                         LineColor,
-                                                                                        Verticies,
+                                                                                        Vertices,
                                                                                         LineWidth,
                                                                                         iOverlapped.Value,
                                                                                         false,
                                                                                         new OnCommandSuccess((ControlPointCommandBase, line_verticies) =>
                                                                                             {
-                                                                                                Verticies = line_verticies;
+                                                                                                Vertices = line_verticies;
                                                                                                 //Update oldWorldPosition to keep the line we draw to our cursor from jumping on the first draw when we are reactivated and user hasn't used the mouse yet
                                                                                                 oldWorldPosition = line_verticies[iOverlapped.Value];
                                                                                             })));
@@ -269,7 +269,7 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
             if (e.Button == MouseButtons.Left)
             {
                 //    TimeSpan Elapsed = new TimeSpan(DateTime.Now.Ticks - CreationTime.Ticks);
-                GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+                Vector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
                 if (CanCommandComplete(WorldPos))
                 {
@@ -300,7 +300,7 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
             }
             else if (e.Button == MouseButtons.Left)
             {
-                GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+                Vector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
                 if (CanControlPointBePlaced(WorldPos))
                 {
                     vert_stack.Push(WorldPos);
@@ -314,9 +314,9 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            if (oldWorldPosition != Verticies.Last())
+            if (oldWorldPosition != Vertices.Last())
             {
-                GridVector2? SelfIntersection = IntersectsSelf(new GridLineSegment(oldWorldPosition, Verticies.Last()));
+                Vector2? SelfIntersection = IntersectsSelf(new LineSegment(oldWorldPosition, Vertices.Last()));
 
                 vert_stack.Push(oldWorldPosition);
 
@@ -331,7 +331,7 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
             }
             else
             {
-                GlobalPrimitives.DrawPolyline(Parent.LumaOverlayLineManager, basicEffect, [.. Verticies], LineWidth, LineColor);
+                GlobalPrimitives.DrawPolyline(Parent.LumaOverlayLineManager, basicEffect, [.. Vertices], LineWidth, LineColor);
             }
         }
     }
@@ -343,11 +343,11 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
     internal class AdjustPolylineCommand : PolyLineCommandBase
     {
         private readonly int DraggedVertexIndex;
-        private GridVector2[] vert_list;
+        private Vector2[] vert_list;
 
         public bool IsClosed;
 
-        public override GridVector2[] Verticies
+        public override Vector2[] Vertices
         {
             get => vert_list;
             protected set => vert_list = value;
@@ -365,7 +365,7 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
         /// <param name="success_callback"></param>
         public AdjustPolylineCommand(Viking.UI.Controls.SectionViewerControl parent,
                                      Microsoft.Xna.Framework.Color color,
-                                     GridVector2[] verticies,
+                                     Vector2[] verticies,
                                      double LineWidth,
                                      int DraggedVertex,
                                      bool IsClosed,
@@ -381,7 +381,7 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
 
         public AdjustPolylineCommand(Viking.UI.Controls.SectionViewerControl parent,
                                      System.Drawing.Color color,
-                                     GridVector2[] verticies,
+                                     Vector2[] verticies,
                                      double LineWidth,
                                      int DraggedVertex,
                                      bool IsClosed,
@@ -400,16 +400,16 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
             Parent.Cursor = Cursors.Hand;
         }
 
-        private bool OverlapsNonDraggedVertex(GridVector2 WorldPosition)
+        private bool OverlapsNonDraggedVertex(Vector2 WorldPosition)
         {
-            for (int i = 0; i < Verticies.Length; i++)
+            for (int i = 0; i < Vertices.Length; i++)
             {
                 if (i == DraggedVertexIndex)
                 {
                     continue;
                 }
 
-                if (GridVector2.Distance(WorldPosition, Verticies[i]) <= ControlPointRadius)
+                if (Vector2.Distance(WorldPosition, Vertices[i]) <= ControlPointRadius)
                 {
                     return true;
                 }
@@ -418,15 +418,15 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
             return false;
         }
 
-        protected override bool CanCommandComplete(GridVector2 WorldPosition) => !OverlapsNonDraggedVertex(WorldPosition);
+        protected override bool CanCommandComplete(Vector2 WorldPosition) => !OverlapsNonDraggedVertex(WorldPosition);
 
-        protected override bool CanControlPointBePlaced(GridVector2 WorldPosition) => !OverlapsNonDraggedVertex(WorldPosition);
+        protected override bool CanControlPointBePlaced(Vector2 WorldPosition) => !OverlapsNonDraggedVertex(WorldPosition);
 
-        protected override bool CanControlPointBeGrabbed(GridVector2 WorldPos) => throw new NotImplementedException();
+        protected override bool CanControlPointBeGrabbed(Vector2 WorldPos) => throw new NotImplementedException();
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+            Vector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
             if (e.Button.Left())
             {
@@ -442,11 +442,11 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
         {
             if (e.Button.Left())
             {
-                GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+                Vector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
                 if (CanCommandComplete(WorldPos))
                 {
                     //If we release the left mouse button the command is completed                   
-                    Verticies[DraggedVertexIndex] = WorldPos;
+                    Vertices[DraggedVertexIndex] = WorldPos;
                     Execute();
                 }
                 return;
@@ -458,10 +458,10 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            if (Verticies.Length > 1)
+            if (Vertices.Length > 1)
             {
 
-                CurveView curveView = new(Verticies, LineColor,
+                CurveView curveView = new(Vertices, LineColor,
                     IsClosed, IsClosed ? Global.NumClosedCurveInterpolationPoints : Global.NumOpenCurveInterpolationPoints, null,
                     LineWidth, ControlPointRadius,
                     Style);
@@ -473,7 +473,7 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
             }
             else
             {
-                CircleView circleView = new(new GridCircle(Verticies[0], LineWidth / 2.0), LineColor);
+                CircleView circleView = new(new Circle(Vertices[0], LineWidth / 2.0), LineColor);
                 CircleView.Draw(graphicsDevice, scene, OverlayStyle.Luma, new CircleView[] { circleView });
             }
 

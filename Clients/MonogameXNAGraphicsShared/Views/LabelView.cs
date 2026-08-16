@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -6,6 +7,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using VikingXNA;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
@@ -13,32 +16,32 @@ namespace VikingXNAGraphics
     {
         private readonly IScene _Scene;
 
-        public ScaledLabelView(string Text, GridVector2 VolumePosition, Color color, IScene scene, Alignment alignment = null, Anchor anchor = null, double fontSize = 16) : base(Text, VolumePosition, color, alignment, anchor, true, fontSize)
+        public ScaledLabelView(string Text, Geometry.Vector2 VolumePosition, Color color, IScene scene, Alignment alignment = null, Anchor anchor = null, double fontSize = 16) : base(Text, VolumePosition, color, alignment, anchor, true, fontSize)
         {
             _Scene = scene;
         }
 
-        public ScaledLabelView(string Text, GridVector2 VolumePosition, IScene scene, Alignment alignment = null, Anchor anchor = null, double fontSize = 16) : base(Text, VolumePosition, alignment, anchor, true, fontSize)
+        public ScaledLabelView(string Text, Geometry.Vector2 VolumePosition, IScene scene, Alignment alignment = null, Anchor anchor = null, double fontSize = 16) : base(Text, VolumePosition, alignment, anchor, true, fontSize)
         {
             _Scene = scene;
         }
 
-        public ScaledLabelView(string Text, GridLineSegment VolumePosition, IScene scene, Alignment alignment = null, Anchor anchor = null, double lineWidth = 16) : base(Text, VolumePosition, alignment, anchor, true, lineWidth)
+        public ScaledLabelView(string Text, LineSegment VolumePosition, IScene scene, Alignment alignment = null, Anchor anchor = null, double lineWidth = 16) : base(Text, VolumePosition, alignment, anchor, true, lineWidth)
         {
             _Scene = scene;
         }
 
-        public ScaledLabelView(string Text, GridLineSegment VolumePosition, Color color, IScene scene, Alignment alignment = null, Anchor anchor = null, double lineWidth = 16) : base(Text, VolumePosition, color, alignment, anchor, true, lineWidth)
+        public ScaledLabelView(string Text, LineSegment VolumePosition, Color color, IScene scene, Alignment alignment = null, Anchor anchor = null, double lineWidth = 16) : base(Text, VolumePosition, color, alignment, anchor, true, lineWidth)
         {
             _Scene = scene;
         }
 
-        public ScaledLabelView(string Text, GridVector2 VolumePosition, SpriteFont font, IScene scene, Alignment alignment = null, Anchor anchor = null, double fontSize = 16) : base(Text, VolumePosition, font, alignment, anchor, true, fontSize)
+        public ScaledLabelView(string Text, Geometry.Vector2 VolumePosition, SpriteFont font, IScene scene, Alignment alignment = null, Anchor anchor = null, double fontSize = 16) : base(Text, VolumePosition, font, alignment, anchor, true, fontSize)
         {
             _Scene = scene;
         }
 
-        public override GridRectangle BoundingRect
+        public override Rectangle BoundingRect
         {
 
             get
@@ -47,16 +50,16 @@ namespace VikingXNAGraphics
                 var scaledFont = ScaleForMagnification(FontScaleForVolume, _Scene);
                 var unanchoredBoundingRect = UnanchoredUnscaledBoundingRect;
 
-                GridVector2 label_size = new(unanchoredBoundingRect.Width * scaledFont, unanchoredBoundingRect.Height * scaledFont);
-                GridVector2 half_label_size = label_size / 2.0;
+                Geometry.Vector2 label_size = new(unanchoredBoundingRect.Width * scaledFont, unanchoredBoundingRect.Height * scaledFont);
+                Geometry.Vector2 half_label_size = label_size / 2.0;
 
-                GridVector2 origin = Position;
-                GridVector2 offset = new(
+                Geometry.Vector2 origin = Position;
+                Geometry.Vector2 offset = new(
                     Anchor.Horizontal == HorizontalAlignment.LEFT ? 0 : Anchor.Horizontal == HorizontalAlignment.RIGHT ? -label_size.X : -half_label_size.X,
                     Anchor.Vertical == VerticalAlignment.BOTTOM ? 0 : Anchor.Vertical == VerticalAlignment.TOP ? -label_size.Y : -half_label_size.Y
                 );
 
-                return new GridRectangle(this.Position + offset, label_size.X, label_size.Y);
+                return new Rectangle(this.Position + offset, label_size.X, label_size.Y);
             }
         }
 
@@ -170,35 +173,35 @@ namespace VikingXNAGraphics
         /// </summary>
         public bool ScaleFontWithScene { get; set; }
 
-        public LabelView(string Text, GridVector2 VolumePosition, Color color, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double fontSize = 16.0)
+        public LabelView(string Text, Geometry.Vector2 VolumePosition, Color color, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double fontSize = 16.0)
             : this(Text, VolumePosition, Global.DefaultFont, alignment, anchor, scaleFontWithScene, fontSize)
         {
             this._Color = color;
         }
 
-        public LabelView(string Text, GridVector2 VolumePosition, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double fontSize = 16.0)
+        public LabelView(string Text, Geometry.Vector2 VolumePosition, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double fontSize = 16.0)
             : this(Text, VolumePosition, Global.DefaultFont, alignment, anchor, scaleFontWithScene, fontSize)
         {
         }
 
-        public LabelView(string Text, GridLineSegment VolumePosition, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double lineWidth = 16.0)
+        public LabelView(string Text, LineSegment VolumePosition, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double lineWidth = 16.0)
             : this(Text, VolumePosition.PointAlongLine(0.5), Global.DefaultFont, alignment, anchor, scaleFontWithScene, lineWidth)
         {
-            GridVector2 direction = VolumePosition.Direction;
-            this.Rotation = (float)GridVector2.ArcAngle(GridVector2.Zero, GridVector2.UnitX, direction);
+            Geometry.Vector2 direction = VolumePosition.Direction;
+            this.Rotation = (float)Geometry.Vector2.ArcAngle(Geometry.Vector2.Zero, Geometry.Vector2.UnitX, direction);
             //this.Rotation = (float)Math.Atan2(direction.X, direction.Y);
         }
 
-        public LabelView(string Text, GridLineSegment VolumePosition, Color color, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double lineWidth = 16.0)
+        public LabelView(string Text, LineSegment VolumePosition, Color color, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double lineWidth = 16.0)
             : this(Text, VolumePosition, alignment, anchor, scaleFontWithScene, lineWidth)
         {
-            GridVector2 direction = VolumePosition.Direction;
-            this.Rotation = (float)GridVector2.ArcAngle(GridVector2.Zero, GridVector2.UnitX, direction);
+            Geometry.Vector2 direction = VolumePosition.Direction;
+            this.Rotation = (float)Geometry.Vector2.ArcAngle(Geometry.Vector2.Zero, Geometry.Vector2.UnitX, direction);
             this.Color = color;
             //this.Rotation = (float)Math.Atan2(direction.X, direction.Y);
         }
 
-        public LabelView(string Text, GridVector2 VolumePosition, SpriteFont font, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double fontSize = 16.0)
+        public LabelView(string Text, Geometry.Vector2 VolumePosition, SpriteFont font, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double fontSize = 16.0)
         {
             this.font = font;
             this._FontSize = fontSize;
@@ -223,8 +226,8 @@ namespace VikingXNAGraphics
             }
         }
 
-        private GridVector2 _Position;
-        public GridVector2 Position
+        private Geometry.Vector2 _Position;
+        public Geometry.Vector2 Position
         {
             get => _Position;
             set => _Position = value;
@@ -233,7 +236,7 @@ namespace VikingXNAGraphics
         /// <summary>
         /// Returns the measured bounding box of the text in the label.  It does not scale the bounding box to the scene if needed or translate the bounding box according to the anchor.
         /// </summary>
-        protected GridRectangle UnanchoredUnscaledBoundingRect
+        protected Rectangle UnanchoredUnscaledBoundingRect
         {
             get
             {
@@ -245,12 +248,12 @@ namespace VikingXNAGraphics
                 var Width = _RowMeasurements.Max(m => m.X);
                 var Height = _RowMeasurements.Sum(m => m.Y);
 
-                return new GridRectangle(this.Position, Width, Height);
+                return new Rectangle(this.Position, Width, Height);
             }
         }
 
 
-        public virtual GridRectangle BoundingRect
+        public virtual Rectangle BoundingRect
         {
 
             get
@@ -258,16 +261,16 @@ namespace VikingXNAGraphics
                 double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
                 var unanchoredBoundingRect = UnanchoredUnscaledBoundingRect;
 
-                GridVector2 label_size = new(unanchoredBoundingRect.Width * FontScaleForVolume, unanchoredBoundingRect.Height * FontScaleForVolume);
-                GridVector2 half_label_size = label_size / 2.0;
+                Geometry.Vector2 label_size = new(unanchoredBoundingRect.Width * FontScaleForVolume, unanchoredBoundingRect.Height * FontScaleForVolume);
+                Geometry.Vector2 half_label_size = label_size / 2.0;
 
-                GridVector2 origin = Position;
-                GridVector2 offset = new(
+                Geometry.Vector2 origin = Position;
+                Geometry.Vector2 offset = new(
                     Anchor.Horizontal == HorizontalAlignment.LEFT ? 0 : Anchor.Horizontal == HorizontalAlignment.RIGHT ? -label_size.X : -half_label_size.X,
                     Anchor.Vertical == VerticalAlignment.BOTTOM ? 0 : Anchor.Vertical == VerticalAlignment.TOP ? -label_size.Y : -half_label_size.Y
                     );
 
-                return new GridRectangle(this.Position + offset, label_size.X, label_size.Y);
+                return new Rectangle(this.Position + offset, label_size.X, label_size.Y);
             }
         }
 
@@ -275,7 +278,7 @@ namespace VikingXNAGraphics
         /// Returns the measured bounding box of the text in the label.
         /// This bounding rect is not scaled for magnification if ScaleFontSizeForMagnification is set to true
         /// </summary>
-        public GridRectangle GetAnchoredBoundingRect(IScene scene)
+        public Rectangle GetAnchoredBoundingRect(IScene scene)
         {
             if (!_IsMeasured)
             {
@@ -287,16 +290,16 @@ namespace VikingXNAGraphics
             double Width = _RowMeasurements.Max(m => m.X);
             double Height = _RowMeasurements.Sum(m => m.Y);
 
-            GridVector2 label_size = new(Width * FontScaleForVolume, Height * FontScaleForVolume);
-            GridVector2 half_label_size = label_size / 2.0;
+            Geometry.Vector2 label_size = new(Width * FontScaleForVolume, Height * FontScaleForVolume);
+            Geometry.Vector2 half_label_size = label_size / 2.0;
 
-            GridVector2 origin = Position;
-            GridVector2 offset = new(
+            Geometry.Vector2 origin = Position;
+            Geometry.Vector2 offset = new(
                 Anchor.Horizontal == HorizontalAlignment.LEFT ? 0 : Anchor.Horizontal == HorizontalAlignment.RIGHT ? -label_size.X : -half_label_size.X,
                 Anchor.Vertical == VerticalAlignment.BOTTOM ? 0 : Anchor.Vertical == VerticalAlignment.TOP ? -label_size.Y : -half_label_size.Y
             );
 
-            return new GridRectangle(this.Position + offset, Width * FontScaleForVolume, Height * FontScaleForVolume);
+            return new Rectangle(this.Position + offset, Width * FontScaleForVolume, Height * FontScaleForVolume);
         }
 
 
@@ -320,9 +323,9 @@ namespace VikingXNAGraphics
         /// <param name="bbox"></param>
         /// <param name="Padding_factor">Scalar to indicate how much padding to add around text. 1.05 = 5% additional space around text</param>
         /// <returns></returns>
-        public double GetFontSizeToFitBounds(GridRectangle bbox, GridVector2? Padding_factor = null)
+        public double GetFontSizeToFitBounds(Rectangle bbox, Geometry.Vector2? Padding_factor = null)
         {
-            Padding_factor ??= new GridVector2 { X = 1, Y = 1 };
+            Padding_factor ??= new Geometry.Vector2(1, 1);
             //Determine how to fix the text within the width of the rectangle
 
             double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
@@ -575,7 +578,7 @@ namespace VikingXNAGraphics
         */
 
 
-        private static Vector2 AlignmentAdjustmentForRow(Vector2 row_measurement, GridRectangle bounds, Vector2 max_row_size, Alignment alignment)
+        private static Vector2 AlignmentAdjustmentForRow(Vector2 row_measurement, Rectangle bounds, Vector2 max_row_size, Alignment alignment)
         {
             Vector2 origin = new();
 
@@ -810,7 +813,7 @@ namespace VikingXNAGraphics
                     screenPosition.Y - textureHeight / 2.0f
                 );
 
-                var destRect = new Rectangle((int)drawPos.X, (int)drawPos.Y, (int)textureWidth, (int)textureHeight);
+                var destRect = new Microsoft.Xna.Framework.Rectangle((int)drawPos.X, (int)drawPos.Y, (int)textureWidth, (int)textureHeight);
                 byte a = this._Color.A;
                 Color premultiplied = new Color(
                     (byte)(this._Color.R * a / 255),
@@ -857,7 +860,7 @@ namespace VikingXNAGraphics
                 return;
 
             //Vector3 LocationCenterScreenPosition_v3 = scene.Viewport.Project(Position.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
-            GridRectangle bounds = BoundingRect;
+            Rectangle bounds = BoundingRect;
             Vector3 LocationCenterScreenPosition_v3 = scene.Viewport.Project(bounds.UpperLeft.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
             Vector2 LocationCenterScreenPosition = new(LocationCenterScreenPosition_v3.X, LocationCenterScreenPosition_v3.Y);
 

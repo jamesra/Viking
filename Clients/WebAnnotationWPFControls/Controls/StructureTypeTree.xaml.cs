@@ -1,6 +1,7 @@
 using Viking.AnnotationServiceTypes.Interfaces;
 using System;
 using System.Collections.ObjectModel;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using WebAnnotationModel;
@@ -25,18 +26,25 @@ namespace WebAnnotation.UI.Controls
                 typeof(StructureTypeTree), new PropertyMetadata());
 
 
+        public event EventHandler<ulong> StructureTypeSelected;
+
         public StructureTypeTree()
         {
             InitializeComponent();
-            //if (System.ComponentModel.DesignerProperties.GetIsInDesignMode(this))
-            if (true)
+
+            if (Store.IsInitialized)
             {
-                // Load design-time books.
-                WebAnnotationModel.State.Endpoint = new Uri("https://rouge1.codepharm.net/RABBIT/Annotation/Service.svc");
-                WebAnnotationModel.State.UserCredentials = new System.Net.NetworkCredential("jamesan", "4%w%o06");
-                RootStructureTypes = new System.Collections.ObjectModel.ObservableCollection<IStructureTypeReadOnly>(Store.StructureTypes.GetObjectsByIDs(Store.StructureTypes.RootObjects, true));
+                RootStructureTypes = new System.Collections.ObjectModel.ObservableCollection<IStructureTypeReadOnly>(Store.StructureTypes.GetObjectsByIDs(Store.StructureTypes.RootObjects, true, CancellationToken.None).Result);
                 tree_view.ItemsSource = RootStructureTypes;
             }
+
+            tree_view.SelectedItemChanged += OnSelectedItemChanged;
+        }
+
+        void OnSelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (e.NewValue is IStructureTypeReadOnly type)
+                StructureTypeSelected?.Invoke(this, type.ID);
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)

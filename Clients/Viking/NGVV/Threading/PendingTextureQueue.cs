@@ -6,13 +6,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework.Graphics;
-using Viking.Properties;
-using Viking.UI;
-using Viking.UI.Controls;
 using Viking.ViewModels;
 using VikingXNA;
-using VikingXNAWinForms;
 
 namespace Viking
 {
@@ -190,7 +187,7 @@ namespace Viking
             if (Interlocked.CompareExchange(ref _pumpScheduled, 1, 0) != 0)
                 return;
 
-            if (State.MainThreadDispatcher is null)
+            if (TileLoadEnvironment.UiDispatcher is null)
             {
                 Interlocked.Exchange(ref _pumpScheduled, 0);
                 return;
@@ -199,7 +196,7 @@ namespace Viking
             if (msDelay > 0)
                 await Task.Delay(msDelay).ConfigureAwait(false);
 
-            State.MainThreadDispatcher.BeginInvoke(new Action(ProcessQueue), priority: DispatcherPriority.Background);
+            TileLoadEnvironment.UiDispatcher.BeginInvoke(new Action(ProcessQueue), priority: DispatcherPriority.Background);
         }
 
         /// <summary>
@@ -210,13 +207,13 @@ namespace Viking
             if (Interlocked.CompareExchange(ref _pumpScheduled, 1, 0) != 0)
                 return;
 
-            if (State.MainThreadDispatcher is null)
+            if (TileLoadEnvironment.UiDispatcher is null)
             {
                 Interlocked.Exchange(ref _pumpScheduled, 0);
                 return;
             }
 
-            State.MainThreadDispatcher.BeginInvoke(new Action(ProcessQueue), priority: DispatcherPriority.Background);
+            TileLoadEnvironment.UiDispatcher.BeginInvoke(new Action(ProcessQueue), priority: DispatcherPriority.Background);
         }
 
         /// <summary>
@@ -224,13 +221,13 @@ namespace Viking
         /// </summary>
         private static void ContinuePump()
         {
-            if (State.MainThreadDispatcher is null)
+            if (TileLoadEnvironment.UiDispatcher is null)
             {
                 Interlocked.Exchange(ref _pumpScheduled, 0);
                 return;
             }
 
-            State.MainThreadDispatcher.BeginInvoke(new Action(ProcessQueue), priority: DispatcherPriority.Background);
+            TileLoadEnvironment.UiDispatcher.BeginInvoke(new Action(ProcessQueue), priority: DispatcherPriority.Background);
         }
 
         /// <summary>
@@ -250,8 +247,8 @@ namespace Viking
         /// </summary>
         private static bool LoadingWindowClosed(int texturesLoaded, long elapsedMs)
         {
-            return texturesLoaded >= Settings.Default.MinTexturesToLoadFromQueue
-                && elapsedMs >= Settings.Default.TextureLoadingWindow;
+            return texturesLoaded >= TileLoadEnvironment.MinTexturesToLoadFromQueue
+                && elapsedMs >= TileLoadEnvironment.TextureLoadingWindowMs;
         }
 
         /// <summary>
@@ -331,10 +328,7 @@ namespace Viking
                 bool requeuedForDevice = false;
                 try
                 {
-                    GraphicsDevice device = null;
-                    var viewer = State.ViewerControl;
-                    if (viewer is GraphicsDeviceControl gdc)
-                        device = gdc.Device;
+                    GraphicsDevice device = TileLoadEnvironment.GetDevice?.Invoke();
 
                     if (device is null || device.IsDisposed)
                     {
@@ -416,7 +410,7 @@ namespace Viking
         /// bounds appear before non-visible items; then by Downsample (highest first);
         /// then by Z distance to current section. Called on main thread by the sort timer.
         /// </summary>
-        public static void SortByVisibility(GridRectangle visibleBounds, int currentSectionZ)
+        public static void SortByVisibility(Rectangle visibleBounds, int currentSectionZ)
         {
             _pendingLock.EnterWriteLock();
             try
@@ -447,14 +441,14 @@ namespace Viking
             if (_sortTimer != null) return;
             _sortTimer = new DispatcherTimer(DispatcherPriority.Background)
             {
-                Interval = TimeSpan.FromMilliseconds(Settings.Default.VisibleTileSortIntervalMs)
+                Interval = TimeSpan.FromMilliseconds(TileLoadEnvironment.VisibleTileSortIntervalMs)
             };
             _sortTimer.Tick += (_, _) =>
             {
-                var viewer = State.ViewerControl;
-                if (viewer?.Scene is null) return;
-                int currentZ = (viewer as SectionViewerControl)?.Section?.Number ?? 0;
-                SortByVisibility(viewer.Scene.VisibleWorldBounds, currentZ);
+                var bounds = TileLoadEnvironment.GetVisibleWorldBounds?.Invoke();
+                if (bounds == null) return;
+                int currentZ = TileLoadEnvironment.GetSectionNumber?.Invoke() ?? 0;
+                SortByVisibility(bounds.Value, currentZ);
             };
             TextureRequestQueue.RegisterSortCallback(_sortTimer);
             _sortTimer.Start();

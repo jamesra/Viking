@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Geometry;
-using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
+﻿using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 
 namespace Viking.AnnotationServiceTypes.gRPC.V1
 {
@@ -22,15 +18,10 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1
             return ToCircleWKT(loc.VolumePosition.X, loc.VolumePosition.Y, loc.Radius);
         }
 
-        internal static string ToCircleWKT(in double X, in double Y, in double radius)
+        public static string ToCircleWKT(in double X, in double Y, in double radius)
         {
             return
-                $"CURVEPOLYGON (CIRCULARSTRING ({ToPointWKT(X - radius, Y)}, {ToPointWKT(X, Y + radius)}, {ToPointWKT(X + radius, Y)}, {ToPointWKT(X, Y - radius)}, {ToPointWKT(X - radius, Y)}))";
-        }
-
-        internal static string ToPointWKT(in double X, in double Y)
-        {
-            return $"({X} {Y}";
+                $"CURVEPOLYGON (CIRCULARSTRING ({X - radius} {Y}, {X} {Y + radius}, {X + radius} {Y}, {X} {Y - radius}, {X - radius} {Y}))";
         }
     }
 }

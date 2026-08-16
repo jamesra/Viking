@@ -13,14 +13,14 @@ namespace MonogameWPFLibrary.Views
         Point LastMousePosition;
         private MonogameCamera3D camera;
 
-        public Geometry.GridBox BoundingBox
+        public Geometry.Box BoundingBox
         {
-            get { return (Geometry.GridBox)GetValue(BoundingBoxProperty); }
+            get { return (Geometry.Box)GetValue(BoundingBoxProperty); }
             set { SetValue(BoundingBoxProperty, value); }
         }
 
         // Using a DependencyProperty as the backing store for View.  This enables animation, styling, binding, etc...
-        protected static readonly DependencyProperty BoundingBoxProperty = DependencyProperty.Register("BoundingBox", typeof(Geometry.GridBox), typeof(Camera3DBehavior), new PropertyMetadata());
+        protected static readonly DependencyProperty BoundingBoxProperty = DependencyProperty.Register("BoundingBox", typeof(Geometry.Box), typeof(Camera3DBehavior), new PropertyMetadata());
           
         protected override void OnAttached()
         {

@@ -8,6 +8,8 @@ using Microsoft.Xna.Framework.Graphics;
 using System.ComponentModel;
 using Geometry;
 using System.Runtime.CompilerServices;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNA
 {
@@ -125,7 +127,7 @@ namespace VikingXNA
         {
             _Projection = Matrix.CreateOrthographic((float)(_Viewport.Width * _camera.Downsample), (float)(_Viewport.Height * _camera.Downsample), MinDrawdistance, MaxDrawDistance);
             _WorldViewProj = (World * Camera.View) * _Projection;
-            _VisibleWorldBounds = new GridRectangle?();
+            _VisibleWorldBounds = new Rectangle?();
         }
 
         private void OnCameraPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -138,24 +140,24 @@ namespace VikingXNA
             else
             {
                 _WorldViewProj = (_World * Camera.View) * _Projection;
-                _VisibleWorldBounds = new GridRectangle?();
+                _VisibleWorldBounds = new Rectangle?();
             }
 
             OnPropertyChanged("Camera." + e.PropertyName);
         }
 
-        private Geometry.GridRectangle? _VisibleWorldBounds;
+        private Geometry.Rectangle? _VisibleWorldBounds;
 
-        public Geometry.GridRectangle VisibleWorldBounds
+        public Geometry.Rectangle VisibleWorldBounds
         {
             get
             {
                 if(!_VisibleWorldBounds.HasValue)
                 {
                     double offset = 0; 
-                    GridRectangle projectedArea = new GridRectangle(new GridVector2(0, 0), ((double)_Viewport.Width * Camera.Downsample), (double)_Viewport.Height * Camera.Downsample); ;
-                    GridVector2 BottomLeft = ScreenToWorld(offset, _Viewport.Height);
-                    _VisibleWorldBounds = new GridRectangle(BottomLeft, projectedArea.Width, projectedArea.Height);
+                    Rectangle projectedArea = new Rectangle(new Geometry.Vector2(0, 0), ((double)_Viewport.Width * Camera.Downsample), (double)_Viewport.Height * Camera.Downsample); ;
+                    Geometry.Vector2 BottomLeft = ScreenToWorld(offset, _Viewport.Height);
+                    _VisibleWorldBounds = new Rectangle(BottomLeft, projectedArea.Width, projectedArea.Height);
                 }
 
                 return _VisibleWorldBounds.Value;
@@ -208,29 +210,29 @@ namespace VikingXNA
             }
         }
 
-        public Geometry.GridVector2 ScreenToWorld(GridVector2 pos)
+        public Geometry.Vector2 ScreenToWorld(Geometry.Vector2 pos)
         {
             return ScreenToWorld(pos.X, pos.Y);
         }
 
-        public Geometry.GridVector2 ScreenToWorld(double X, double Y)
+        public Geometry.Vector2 ScreenToWorld(double X, double Y)
         {
             //The screen coordinates used by Windows and XNA put the Y origin at the top and bottom of the screen
             double XPos = ((X - ((double)_Viewport.Width / 2)) * Camera.Downsample) + Camera.LookAt.X;
             double YPos = -((Y - ((double)_Viewport.Height / 2)) * Camera.Downsample) + Camera.LookAt.Y;
 
-            return new GridVector2(XPos, YPos);
+            return new Geometry.Vector2(XPos, YPos);
         }
 
-        public Geometry.GridVector2 WorldToScreen(GridVector2 pos)
+        public Geometry.Vector2 WorldToScreen(Geometry.Vector2 pos)
         {
             return WorldToScreen(pos.X, pos.Y);
         }
 
-        public Geometry.GridVector2 WorldToScreen(double X, double Y)
+        public Geometry.Vector2 WorldToScreen(double X, double Y)
         {
             Vector3 p = _Viewport.Project(new Vector3((float)X, (float)Y, 0), _Projection, Camera.View, World);
-            return new GridVector2(p.X, p.Y);
+            return new Geometry.Vector2(p.X, p.Y);
         }
 
         protected void Dispose(bool freeManagedObjectsAlso)

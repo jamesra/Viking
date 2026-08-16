@@ -1,6 +1,7 @@
 using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Windows.Forms;
+using Viking.Input;
 using WebAnnotation;
 
 namespace WebAnnotationTests
@@ -23,15 +24,15 @@ namespace WebAnnotationTests
             }
 
             public LocationAction GetMouseClickActionForPositionOnAnnotation(
-                GridVector2 WorldPosition,
+                Vector2 WorldPosition,
                 int VisibleSectionNumber,
-                Keys ModifierKeys,
+                ModifierKeys modifierKeys,
                 out long LocationID)
             {
                 LocationID = LocationId;
                 if (!Contains(WorldPosition))
                     return LocationAction.NONE;
-                if (ModifierKeys.HasFlag(Keys.Shift) || ModifierKeys.HasFlag(Keys.Control))
+                if (modifierKeys.ShiftOrCtrlPressed())
                     return LocationAction.NONE;
                 return InsideAction;
             }
@@ -41,14 +42,14 @@ namespace WebAnnotationTests
         public void DummyCanvas_HitTest_ReturnsAnnotationUnderCursor()
         {
             var canvas = new DummyCanvas();
-            var ann = new DummyMouseActionAnnotation(new GridCircle(new GridVector2(10, 10), 5), locationId: 7);
+            var ann = new DummyMouseActionAnnotation(new Circle(new Vector2(10, 10), 5), locationId: 7);
             canvas.Add(ann);
 
-            var hits = canvas.GetAnnotations(new GridVector2(10, 10));
+            var hits = canvas.GetAnnotations(new Vector2(10, 10));
             Assert.AreEqual(1, hits.Count);
             Assert.AreSame(ann, hits[0].obj);
 
-            var misses = canvas.GetAnnotations(new GridVector2(100, 100));
+            var misses = canvas.GetAnnotations(new Vector2(100, 100));
             Assert.AreEqual(0, misses.Count);
         }
 
@@ -56,17 +57,17 @@ namespace WebAnnotationTests
         public void HitThenGetMouseAction_InsideWithoutModifiers_ReturnsConfiguredAction()
         {
             var canvas = new DummyCanvas();
-            var ann = new DummyMouseActionAnnotation(new GridCircle(new GridVector2(0, 0), 20), locationId: 42)
+            var ann = new DummyMouseActionAnnotation(new Circle(new Vector2(0, 0), 20), locationId: 42)
             {
                 InsideAction = LocationAction.TRANSLATE
             };
             canvas.Add(ann);
 
-            var hit = canvas.GetAnnotations(new GridVector2(5, 5))[0].obj as IMouseActionSupport;
+            var hit = canvas.GetAnnotations(new Vector2(5, 5))[0].obj as IMouseActionSupport;
             Assert.IsNotNull(hit);
 
             var action = hit.GetMouseClickActionForPositionOnAnnotation(
-                new GridVector2(5, 5), VisibleSectionNumber: 1, Keys.None, out long locId);
+                new Vector2(5, 5), VisibleSectionNumber: 1, ModifierKeys.None, out long locId);
 
             Assert.AreEqual(LocationAction.TRANSLATE, action);
             Assert.AreEqual(42, locId);
@@ -76,9 +77,9 @@ namespace WebAnnotationTests
         [TestMethod]
         public void HitThenGetMouseAction_WithShift_ReturnsNone()
         {
-            var ann = new DummyMouseActionAnnotation(new GridCircle(new GridVector2(0, 0), 20), locationId: 1);
+            var ann = new DummyMouseActionAnnotation(new Circle(new Vector2(0, 0), 20), locationId: 1);
             var action = ann.GetMouseClickActionForPositionOnAnnotation(
-                new GridVector2(0, 0), 1, Keys.Shift, out _);
+                new Vector2(0, 0), 1, ModifierKeys.Shift, out _);
             Assert.AreEqual(LocationAction.NONE, action);
         }
     }

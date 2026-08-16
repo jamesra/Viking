@@ -20,7 +20,7 @@ namespace WebAnnotationModel
         /// <param name="OnServerObjectsLoadedCallback"></param>
         /// <param name="FoundCachedLocalObjectsCallback"></param>
         /// <returns></returns>
-        Task<List<OBJECT>> GetObjectsInRegionAsync(GridRectangle VolumeBounds,
+        Task<List<OBJECT>> GetObjectsInRegionAsync(Rectangle VolumeBounds,
             double ScreenPixelSizeInVolume,
             int SectionNumber,
             QueryTargets queryTargets,

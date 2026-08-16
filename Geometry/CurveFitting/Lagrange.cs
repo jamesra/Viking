@@ -9,7 +9,7 @@ namespace Geometry
     /// </summary>
     public class Lagrange
     {
-        public static GridVector2[] RecursivelyFitCurve(GridVector2[] cp, SortedSet<double> TPoints = null)
+        public static Vector2[] RecursivelyFitCurve(Vector2[] cp, SortedSet<double> TPoints = null)
         {
             int nPoints = cp.Length;
             int NumInterpolations;
@@ -29,10 +29,10 @@ namespace Geometry
             double[] XOutput = ValuesAtTPoints(TPointsArray, TValues, XValues);
             double[] YOutput = ValuesAtTPoints(TPointsArray, TValues, YValues);
 
-            GridVector2[] output = [.. XOutput.Select((x, i) => new GridVector2(x, YOutput[i]))];
+            Vector2[] output = [.. XOutput.Select((x, i) => new Vector2(x, YOutput[i]))];
 
 #if DEBUG
-            foreach (GridVector2 p in cp)
+            foreach (Vector2 p in cp)
             {
                 Debug.Assert(output.Contains(p));
             }
@@ -71,7 +71,7 @@ namespace Geometry
         /// Return points along a curve described by three points
         /// </summary>
         /// <param name="points"></param>
-        public static GridVector2[] FitCurve(GridVector2[] cp, int NumInterpolations)
+        public static Vector2[] FitCurve(Vector2[] cp, int NumInterpolations)
         {
             int nPoints = cp.Length;
             Debug.Assert(nPoints >= 3);
@@ -87,7 +87,7 @@ namespace Geometry
             double[] XOutput = ValuesAtTPoints(TPointsArray, TValues, XValues);
             double[] YOutput = ValuesAtTPoints(TPointsArray, TValues, YValues);
 
-            GridVector2[] output = [.. XOutput.Select((x, i) => new GridVector2(x, YOutput[i]))];
+            Vector2[] output = [.. XOutput.Select((x, i) => new Vector2(x, YOutput[i]))];
 
             return output;
         }

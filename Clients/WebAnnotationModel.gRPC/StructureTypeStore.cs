@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -66,28 +67,21 @@ namespace WebAnnotationModel.gRPC
         public StructureTypeObj Create(StructureTypeObj new_type) => Create(new_type, CancellationToken.None).Result;
 
         /// <summary>
-        /// At startup we load the entire structure types table since it is fairly static
+        /// At startup we load the entire structure types table since it is fairly static.
+        /// Failures must surface — swallowing them leaves StructureObj.Type null and crashes views.
         /// </summary>
         public async Task<ICollection<StructureTypeObj>> GetAll()
         {
             var client = _structureTypeClientFactory.GetOrCreate();
-            
-            try
-            {
-                var response = await client.GetAll();
-                var changes = await ServerQueryResultsHandler.ProcessServerUpdate(new ServerUpdate<long, IStructureType[]>(DateTime.UtcNow, response.ToArray(), Array.Empty<long>()));
-                await CallOnCollectionChanged(changes).ConfigureAwait(false);
-                return changes.ObjectsInStore;
-            }
-            catch (Exception e)
-            {
-                ShowStandardExceptionMessage(e);
-                return Array.Empty<StructureTypeObj>();
-            }
-            finally
-            {
-                
-            }
+            var response = await client.GetAll().ConfigureAwait(false) ?? Array.Empty<IStructureType>();
+            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(
+                    new ServerUpdate<long, IStructureType[]>(DateTime.UtcNow, response, Array.Empty<long>()))
+                .ConfigureAwait(false);
+            await CallOnCollectionChanged(changes).ConfigureAwait(false);
+            Trace.WriteLine(
+                $"Loaded {changes.ObjectsInStore.Count} structure types (server returned {response.Length})",
+                "WebAnnotation");
+            return changes.ObjectsInStore;
         } 
     }
 }

@@ -22,14 +22,14 @@ namespace VolumeModel.Benchmarks
         private static readonly int[] PyramidLevels = [1, 2, 4, 8, 16, 32, 64];
 
         private BenchFixedTileCountMapping _mapping = null!;
-        private GridRectangle _visibleBounds;
+        private Rectangle _visibleBounds;
         private TilePyramid _pyramidForAddTileBench = null!;
         private TileViewModel _sampleTile = null!;
 
         [GlobalSetup]
         public void Setup()
         {
-            _visibleBounds = new GridRectangle(new GridVector2(0, 0), TransformCount * 1100 + 1024, 1024);
+            _visibleBounds = new Rectangle(new Vector2(0, 0), TransformCount * 1100 + 1024, 1024);
             var section = CreateBenchSection(sectionNumber: 42);
             var pyramid = CreateBenchPyramid(section);
             _mapping = new BenchFixedTileCountMapping(section, "bench", _visibleBounds)
@@ -51,9 +51,9 @@ namespace VolumeModel.Benchmarks
                     var key = TileUniqueKey.Create(section.Number, _mapping.Name, pyramid.Name, level, info.TileFileName);
                     var verts = new PositionNormalTextureVertex[]
                     {
-                        new(new GridVector3(0, 0, 0), GridVector3.UnitZ, new GridVector2(0, 0)),
-                        new(new GridVector3(1024, 0, 0), GridVector3.UnitZ, new GridVector2(1, 0)),
-                        new(new GridVector3(0, 1024, 0), GridVector3.UnitZ, new GridVector2(0, 1)),
+                        new(new Vector3(0, 0, 0), Vector3.UnitZ, new Vector2(0, 0)),
+                        new(new Vector3(1024, 0, 0), Vector3.UnitZ, new Vector2(1, 0)),
+                        new(new Vector3(0, 1024, 0), Vector3.UnitZ, new Vector2(0, 1)),
                     };
                     Viking.VolumeModel.Global.TileCache.ConstructTile(
                         key,
@@ -83,9 +83,9 @@ namespace VolumeModel.Benchmarks
             _sampleTile = Viking.VolumeModel.Global.TileCache.ConstructTile(
                 TileUniqueKey.Create(section.Number, _mapping.Name, pyramid.Name, DownsampleLevel, "sample.png"),
                 [
-                    new(new GridVector3(0, 0, 0), GridVector3.UnitZ, new GridVector2(0, 0)),
-                    new(new GridVector3(64, 0, 0), GridVector3.UnitZ, new GridVector2(1, 0)),
-                    new(new GridVector3(0, 64, 0), GridVector3.UnitZ, new GridVector2(0, 1)),
+                    new(new Vector3(0, 0, 0), Vector3.UnitZ, new Vector2(0, 0)),
+                    new(new Vector3(64, 0, 0), Vector3.UnitZ, new Vector2(1, 0)),
+                    new(new Vector3(0, 64, 0), Vector3.UnitZ, new Vector2(0, 1)),
                 ],
                 [0, 1, 2],
                 "bench/sample.png",
@@ -121,9 +121,9 @@ namespace VolumeModel.Benchmarks
                 var tile = new TileViewModel(
                     key,
                     [
-                        new(new GridVector3(i, 0, 0), GridVector3.UnitZ, new GridVector2(0, 0)),
-                        new(new GridVector3(i + 64, 0, 0), GridVector3.UnitZ, new GridVector2(1, 0)),
-                        new(new GridVector3(i, 64, 0), GridVector3.UnitZ, new GridVector2(0, 1)),
+                        new(new Vector3(i, 0, 0), Vector3.UnitZ, new Vector2(0, 0)),
+                        new(new Vector3(i + 64, 0, 0), Vector3.UnitZ, new Vector2(1, 0)),
+                        new(new Vector3(i, 64, 0), Vector3.UnitZ, new Vector2(0, 1)),
                     ],
                     [0, 1, 2],
                     $"bench/{key.TextureName}",

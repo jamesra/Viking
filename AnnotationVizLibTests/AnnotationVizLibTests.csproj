@@ -13,6 +13,7 @@
 		<PackageReference Include="Microsoft.OData.Edm" Version="8.1.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="protobuf-net" Version="3.2.56" />
+		<PackageReference Include="Simple.OData.V4.Client" Version="6.0.1" />
 		<PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
 		<PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
 		<PackageReference Include="MSTest.TestAdapter" Version="3.9.3" />
@@ -26,8 +27,6 @@
 	<ItemGroup>
 		<ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
 		<ProjectReference Include="..\AnnotationVizLibODataClient\AnnotationVizLibODataClient.csproj" />
-		<ProjectReference Include="..\AnnotationVizLibSimpleODataClient\AnnotationVizLibSimpleODataClient.csproj" />
-		<ProjectReference Include="..\AnnotationVizLibWCFClient\AnnotationVizLibWCFClient.csproj" />
 		<ProjectReference Include="..\AnnotationVizLib\AnnotationVizLib.csproj" />
 		<ProjectReference Include="..\Geometry\Geometry.csproj" />
 		<ProjectReference Include="..\GraphLib\GraphLib.csproj" />

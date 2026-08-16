@@ -7,7 +7,7 @@ namespace LocalBookmarks
     [Viking.Common.Command()]
     class CreateBookmarkCommand : Viking.UI.Commands.Command
     {
-        GridVector2 bookmarkPosition;
+        Vector2 bookmarkPosition;
         readonly FolderUIObj ParentFolder;
 
         VikingXNAGraphics.TextureCircleView? circleView;
@@ -34,7 +34,7 @@ namespace LocalBookmarks
 
         protected override void OnMouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
         {
-            GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Vector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             //Figure out if we are starting a rectangle
             if (e.Button == MouseButtons.Left)
@@ -50,11 +50,11 @@ namespace LocalBookmarks
         {
             BookmarkUIObj bookmark = new(ParentFolder);
             System.Drawing.Point ControlPostion = Viking.UI.State.ViewerForm.PointToClient(Cursor.Position);
-            GridVector2 WorldPosition = Viking.UI.State.ViewerControl.ScreenToWorld(ControlPostion.X, ControlPostion.Y);
+            Vector2 WorldPosition = Viking.UI.State.ViewerControl.ScreenToWorld(ControlPostion.X, ControlPostion.Y);
 
             Viking.VolumeModel.IVolumeToSectionTransform mapping = Parent.Section.ActiveSectionToVolumeTransform;
 
-            bool mappedToSection = mapping.TryVolumeToSection(WorldPosition, out GridVector2 SectionPosition);
+            bool mappedToSection = mapping.TryVolumeToSection(WorldPosition, out Vector2 SectionPosition);
 
             bookmark.X = WorldPosition.X;
             bookmark.Y = WorldPosition.Y;
@@ -98,7 +98,7 @@ namespace LocalBookmarks
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            circleView = new VikingXNAGraphics.TextureCircleView(BookmarkOverlay.StarTexture, new GridCircle(this.oldWorldPosition, Global.DefaultBookmarkRadius), Microsoft.Xna.Framework.Color.Gold)
+            circleView = new VikingXNAGraphics.TextureCircleView(BookmarkOverlay.StarTexture, new Circle(this.oldWorldPosition, Global.DefaultBookmarkRadius), Microsoft.Xna.Framework.Color.Gold)
             {
                 Alpha = (float)(DateTime.UtcNow.Second % 6) / 6f
             };

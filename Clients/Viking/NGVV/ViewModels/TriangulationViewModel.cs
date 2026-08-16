@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace Viking.ViewModels
 {
@@ -18,7 +20,7 @@ namespace Viking.ViewModels
         public Color MappedColor = new(255, 242, 0);
         public Color ControlColor = new(0, 255, 0);
 
-        private readonly MappingGridVector2[] MapPoints;
+        private readonly MappingVector2[] MapPoints;
         private readonly int[] TriangleIndicies;
 
         public TriangulationViewModel(IControlPointTriangulation Mapping)
@@ -27,7 +29,7 @@ namespace Viking.ViewModels
             this.TriangleIndicies = Mapping.TriangleIndicies;
         }
 
-        public TriangulationViewModel(MappingGridVector2[] mapPoints, int[] triangleIndicies)
+        public TriangulationViewModel(MappingVector2[] mapPoints, int[] triangleIndicies)
         {
             this.MapPoints = mapPoints;
             this.TriangleIndicies = triangleIndicies;
@@ -40,8 +42,8 @@ namespace Viking.ViewModels
 
             for (int iVert = 0; iVert < MappedMeshVerticies.Length; iVert++)
             {
-                GridVector2 MappedVect = this.MapPoints[iVert].MappedPoint;
-                GridVector2 ControlVect = this.MapPoints[iVert].ControlPoint;
+                Geometry.Vector2 MappedVect = this.MapPoints[iVert].MappedPoint;
+                Geometry.Vector2 ControlVect = this.MapPoints[iVert].ControlPoint;
 
                 MappedMeshVerticies[iVert] = new VertexPositionColor(new Vector3((float)MappedVect.X, (float)MappedVect.Y, (float)0),
                                                                MappedColor);
@@ -139,7 +141,7 @@ namespace Viking.ViewModels
             }
         }
 
-        public static LabelView[] CreateLabels(MappingGridVector2[] map_points)
+        public static LabelView[] CreateLabels(MappingVector2[] map_points)
         {
             LabelView[] labels = new LabelView[(map_points.Length + 1) * 2];
 
@@ -157,8 +159,8 @@ namespace Viking.ViewModels
 
             var lineHeight = labels[0].font.LineSpacing;
 
-            labels[map_points.Length] = new LabelView("Control Points", new GridVector2(15, 15), anchor: Anchor.CenterLeft, scaleFontWithScene: false); ;
-            labels[map_points.Length + 1] = new LabelView("Mapped Points", new GridVector2(15, 15 + (lineHeight * 2.15)), anchor: Anchor.CenterLeft, scaleFontWithScene: false); ;
+            labels[map_points.Length] = new LabelView("Control Points", new Geometry.Vector2(15, 15), anchor: Anchor.CenterLeft, scaleFontWithScene: false); ;
+            labels[map_points.Length + 1] = new LabelView("Mapped Points", new Geometry.Vector2(15, 15 + (lineHeight * 2.15)), anchor: Anchor.CenterLeft, scaleFontWithScene: false); ;
 
             return labels;
         }

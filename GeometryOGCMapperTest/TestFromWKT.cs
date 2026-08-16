@@ -107,7 +107,7 @@ namespace GeometryOGCMapperTest
         public void TestReadPoint()
         {
             string wkt = "Point (30 10)";
-            GridVector2 expected = new() { X = 30, Y = 10 };
+            Vector2 expected = new(30, 10);
             var result = FromWKT.ParseWKT(wkt);
             Assert.IsTrue(result.Equals(expected));
         }
@@ -222,7 +222,7 @@ namespace GeometryOGCMapperTest
         public void TestWKTReadPoint()
         {
             string wkt = "Point (30 10)";
-            GridVector2 expected = new() { X = 30, Y = 10 };
+            Vector2 expected = new(30, 10);
             var result = FromWKT.ParseWKT(wkt);
             Assert.IsTrue(result.Equals(expected));
         }
@@ -232,7 +232,7 @@ namespace GeometryOGCMapperTest
         public void TestWKTReadLineString()
         {
             string wkt = "LINESTRING (30 10, 10 30, 40 40)";
-            GridPolyline expected = new([new(30, 10), new(10, 30), new(40, 40)]);
+            Polyline expected = new([new(30, 10), new(10, 30), new(40, 40)]);
 
             var result = FromWKT.ParseWKT(wkt);
             Assert.IsTrue(result.Equals(expected));
@@ -242,9 +242,9 @@ namespace GeometryOGCMapperTest
         public void TestWKTReadMultiLineString()
         {
             string wkt = "MULTILINESTRING ((30 10, 10 30, 40 40), (-5 3, -8 -2))";
-            GridPolyline A = new([new(30, 10), new(10, 30), new(40, 40)]);
+            Polyline A = new([new(30, 10), new(10, 30), new(40, 40)]);
 
-            GridPolyline B = new([new(-5, 3), new(-8, -2)]);
+            Polyline B = new([new(-5, 3), new(-8, -2)]);
 
             Shape2DCollection expected = new(2);
             expected.Add(A);
@@ -258,7 +258,7 @@ namespace GeometryOGCMapperTest
         public void TestWKTReadSimplePolygon()
         {
             string wkt = "POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))";
-            GridPolygon expected = new(
+            Polygon expected = new(
             [
                 new(30, 10),
                 new(40, 40),
@@ -275,7 +275,7 @@ namespace GeometryOGCMapperTest
         {
             string wkt = @"POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10),
                 (20 30, 35 35, 30 20, 20 30))";
-            GridPolygon expected = new(
+            Polygon expected = new(
             [
                 new(35, 10),
                 new(45, 45),
@@ -284,7 +284,7 @@ namespace GeometryOGCMapperTest
                 new(35, 10)
             ]);
 
-            GridVector2[] innerPoly =
+            Vector2[] innerPoly =
             [
                 new(20, 30),
                 new(35, 35),
@@ -302,7 +302,7 @@ namespace GeometryOGCMapperTest
         public void TestWKTReadCurvePolygon()
         {
             string wkt = @"CURVEPOLYGON ((-1 0, 0 1, 1 0, 0 -1, -1 0))";
-            GridCircle expected = new(new GridVector2(0, 0), 1);
+            Circle expected = new(new Vector2(0, 0), 1);
 
             var result = FromWKT.ParseWKT(wkt);
             Assert.IsTrue(expected.Equals(result));

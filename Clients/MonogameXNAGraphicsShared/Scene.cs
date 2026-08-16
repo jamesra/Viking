@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -6,6 +7,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNA
 {
@@ -154,9 +157,9 @@ namespace VikingXNA
         }
 
         private readonly SemaphoreSlim initVisibleWorldBoundsSemaphore = new(1);
-        private Geometry.GridRectangle? _VisibleWorldBounds; //This should only be set by using ResetVisibleWorldBounds
+        private Geometry.Rectangle? _VisibleWorldBounds; //This should only be set by using ResetVisibleWorldBounds
 
-        public Geometry.GridRectangle VisibleWorldBounds
+        public Geometry.Rectangle VisibleWorldBounds
         {
             get
             {
@@ -172,9 +175,9 @@ namespace VikingXNA
                         return visibleBounds.Value;
 
                     double offset = 0;
-                    GridRectangle projectedArea = new(new GridVector2(0, 0), ((double)_Viewport.Width * Camera.Downsample), (double)_Viewport.Height * Camera.Downsample); ;
+                    Rectangle projectedArea = new(new Geometry.Vector2(0, 0), ((double)_Viewport.Width * Camera.Downsample), (double)_Viewport.Height * Camera.Downsample); ;
                     var BottomLeft = ScreenToWorld(offset, _Viewport.Height);
-                    GridRectangle result = new(BottomLeft, projectedArea.Width, projectedArea.Height);
+                    Rectangle result = new(BottomLeft, projectedArea.Width, projectedArea.Height);
                     _VisibleWorldBounds = result;
                     return result;
                 }
@@ -228,23 +231,23 @@ namespace VikingXNA
 
         public double ScreenPixelSizeInVolume => Math.Min(this.DevicePixelHeight, this.DevicePixelWidth);
 
-        public Geometry.GridVector2 ScreenToWorld(GridVector2 pos) => ScreenToWorld(pos.X, pos.Y);
+        public Geometry.Vector2 ScreenToWorld(Geometry.Vector2 pos) => ScreenToWorld(pos.X, pos.Y);
 
-        public Geometry.GridVector2 ScreenToWorld(double X, double Y)
+        public Geometry.Vector2 ScreenToWorld(double X, double Y)
         {
             //The screen coordinates used by Windows and XNA put the Y origin at the top and bottom of the screen
             double XPos = ((X - ((double)_Viewport.Width / 2)) * Camera.Downsample) + Camera.LookAt.X;
             double YPos = -((Y - ((double)_Viewport.Height / 2)) * Camera.Downsample) + Camera.LookAt.Y;
 
-            return new GridVector2(XPos, YPos);
+            return new Geometry.Vector2(XPos, YPos);
         }
 
-        public Geometry.GridVector2 WorldToScreen(GridVector2 pos) => WorldToScreen(pos.X, pos.Y);
+        public Geometry.Vector2 WorldToScreen(Geometry.Vector2 pos) => WorldToScreen(pos.X, pos.Y);
 
-        public Geometry.GridVector2 WorldToScreen(double X, double Y)
+        public Geometry.Vector2 WorldToScreen(double X, double Y)
         {
             Vector3 p = _Viewport.Project(new Vector3((float)X, (float)Y, 0), _Projection, Camera.View, World);
-            return new GridVector2(p.X, p.Y);
+            return new Geometry.Vector2(p.X, p.Y);
         }
 
         protected void Dispose(bool freeManagedObjectsAlso)

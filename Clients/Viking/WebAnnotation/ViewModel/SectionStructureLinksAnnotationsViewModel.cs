@@ -1,3 +1,4 @@
+using Viking.AnnotationServiceTypes;
 using Geometry;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -6,6 +7,7 @@ using System.Linq;
 using Viking.Common;
 using WebAnnotation.View;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.ViewModel
 {
@@ -192,19 +194,19 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks() => StructureLinks.Values;
 
-        public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridRectangle bounds)
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(Rectangle bounds)
         {
             List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(bounds.ToRTreeRect((float)PrimarySection.SectionNumber));
             return [.. intersectingIDs.Select(id => StructureLinks[id])];
         }
 
-        public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridVector2 point)
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(Vector2 point)
         {
             List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(point.ToRTreeRect((float)PrimarySection.SectionNumber));
             return [.. intersectingIDs.Select(id => StructureLinks[id]).Where(sl => sl != null && sl.Contains(point))];
         }
 
-        public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridLineSegment line)
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(LineSegment line)
         {
             List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(line.BoundingBox.ToRTreeRect((float)PrimarySection.SectionNumber));
             return [.. intersectingIDs.Select(id => StructureLinks[id]).Where(sl => sl != null && sl.Intersects(line))];

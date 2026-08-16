@@ -12,6 +12,8 @@ using Geometry.Meshing;
 using MathNet.Numerics.LinearAlgebra;
 using AnnotationVizLib.OData;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 
 namespace MonogameTestbed
@@ -20,13 +22,13 @@ namespace MonogameTestbed
     {
         readonly VikingXNAGraphics.MeshView<VertexPositionNormalColor> meshView;
         Scene scene;
-        readonly List<GridCircle> Points_A = [];
+        readonly List<Circle> Points_A = [];
         CircleView[] Views_A = [];
-        readonly List<GridCircle> Points_B = [];
+        readonly List<Circle> Points_B = [];
         CircleView[] Views_B = [];
         readonly GamePadStateTracker Gamepad = new();
 
-        GridVector2 Cursor;
+        Geometry.Vector2 Cursor;
         CircleView cursorView;
 
         static readonly double PointRadius = 2.0;
@@ -52,8 +54,8 @@ namespace MonogameTestbed
 
             if (state.ThumbSticks.Left != Vector2.Zero)
             {
-                Cursor += state.ThumbSticks.Left.ToGridVector2();
-                cursorView = new CircleView(new GridCircle(Cursor, PointRadius), Color.Gray);
+                Cursor += state.ThumbSticks.Left.ToVector2();
+                cursorView = new CircleView(new Circle(Cursor, PointRadius), Color.Gray);
             }
 
             if (state.ThumbSticks.Right != Vector2.Zero)
@@ -89,7 +91,7 @@ namespace MonogameTestbed
 
             if (Gamepad.A_Clicked)
             {
-                GridCircle newCircle = new(Cursor, PointRadius);
+                Circle newCircle = new(Cursor, PointRadius);
                 if (Points_A.Any(p => p.Intersects(newCircle)))
                 {
                     Points_A.RemoveAll(c => c.Intersects(newCircle));
@@ -104,7 +106,7 @@ namespace MonogameTestbed
 
             if (Gamepad.B_Clicked)
             {
-                GridCircle newCircle = new(Cursor, PointRadius);
+                Circle newCircle = new(Cursor, PointRadius);
                 if (Points_B.Any(p => p.Intersects(newCircle)))
                 {
                     Points_B.RemoveAll(c => c.Intersects(newCircle));

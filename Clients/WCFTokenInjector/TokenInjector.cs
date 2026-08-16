@@ -3,22 +3,28 @@ using System.ServiceModel.Channels;
 
 namespace Viking.Tokens
 {
-
     public class TokenInjector : System.ServiceModel.Dispatcher.IClientMessageInspector
     {
-        public static string BearerTokenAuthority = null;
-        public static Duende.IdentityModel.Client.TokenResponse BearerToken = null;
+        public static string BearerTokenAuthority
+        {
+            get => TokenStore.BearerTokenAuthority;
+            set => TokenStore.BearerTokenAuthority = value;
+        }
+
+        public static Duende.IdentityModel.Client.TokenResponse BearerToken
+        {
+            get => TokenStore.BearerToken;
+            set => TokenStore.BearerToken = value;
+        }
 
         public void AfterReceiveReply(ref Message reply, object correlationState)
         {
-            return;
         }
 
         public object BeforeSendRequest(ref Message request, IClientChannel channel)
         {
             if (BearerTokenAuthority != null && BearerToken != null)
             {
-                // Add bearer token to HTTP Authorization header
                 HttpRequestMessageProperty httpRequestMessage;
                 if (request.Properties.TryGetValue(HttpRequestMessageProperty.Name, out object httpRequestMessageObject))
                 {

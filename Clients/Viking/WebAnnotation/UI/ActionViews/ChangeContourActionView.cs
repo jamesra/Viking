@@ -3,6 +3,8 @@ using Microsoft.Xna.Framework;
 using System;
 using VikingXNAGraphics;
 using WebAnnotation.UI.Actions;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.ActionViews
 {
@@ -40,7 +42,7 @@ namespace WebAnnotation.UI.ActionViews
 
         public void CreateDefaultVisuals()
         {
-            GridPolygon smoothedPoly = model.NewSmoothedVolumePolygon; //NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
+            Polygon smoothedPoly = model.NewSmoothedVolumePolygon; //NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
             SolidPolygonView view = new(model.NewVolumePolygon, GetShapeColor(model.RetraceType).SetAlpha(0.5f));
             Passive = view;
             Active = new SolidPolygonView(model.NewVolumePolygon, GetShapeColor(model.RetraceType).SetAlpha(0.75f));

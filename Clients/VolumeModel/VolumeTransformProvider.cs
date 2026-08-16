@@ -1,0 +1,38 @@
+using System.Collections.Generic;
+using Geometry;
+using Geometry.Transforms;
+
+namespace Viking.VolumeModel
+{
+    /// <summary>
+    /// Maps section numbers onto volume space using a <see cref="Volume"/> transform group.
+    /// Shared by Viking's VolumeViewModel and Jotunn's annotation scene.
+    /// </summary>
+    public sealed class VolumeTransformProvider : IVolumeTransformProvider
+    {
+        readonly Volume _volume;
+
+        public string TransformName { get; }
+
+        public VolumeTransformProvider(Volume volume, string transformName = null)
+        {
+            _volume = volume;
+            TransformName = string.IsNullOrEmpty(transformName) ? volume?.DefaultVolumeTransform : transformName;
+        }
+
+        public IVolumeToSectionTransform GetSectionToVolumeTransform(int SectionNumber)
+        {
+            string keyBase = string.IsNullOrEmpty(TransformName) || TransformName == "None" ? "Identity" : TransformName;
+            if (string.IsNullOrEmpty(TransformName) || TransformName == "None")
+                return new VolumeToSectionTransform($"{keyBase}-{SectionNumber:D4}", new IdentityTransform());
+
+            if (_volume.Transforms.TryGetValue(TransformName, out SortedList<int, ITransform> sectionTransforms) &&
+                sectionTransforms.TryGetValue(SectionNumber, out ITransform transform))
+            {
+                return new VolumeToSectionTransform($"{TransformName}-{SectionNumber:D4}", transform);
+            }
+
+            return new VolumeToSectionTransform($"Identity-{SectionNumber:D4}", new IdentityTransform());
+        }
+    }
+}

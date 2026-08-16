@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
 using SqlGeometryUtils;
@@ -6,6 +6,9 @@ using System;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Actions
 {
@@ -20,12 +23,12 @@ namespace WebAnnotation.UI.Actions
         /// <summary>
         /// The volume space polygon we want to add to the location
         /// </summary>
-        public readonly GridPolygon NewVolumeInteriorPolygon;
+        public readonly Polygon NewVolumeInteriorPolygon;
 
         /// <summary>
         /// The volume space polygon after smoothing
         /// </summary>
-        public readonly GridPolygon NewSmoothVolumeInteriorPolygon;
+        public readonly Polygon NewSmoothVolumeInteriorPolygon;
 
         public LocationAction Type => LocationAction.CUTHOLE;
 
@@ -42,7 +45,7 @@ namespace WebAnnotation.UI.Actions
 
         public BuiltinTexture Icon { get; set; } = BuiltinTexture.Minus;
 
-        public CutHoleAction(LocationObj location, GridPolygon newVolumeInteriorPolygon, IVolumeToSectionTransform? transform = null)
+        public CutHoleAction(LocationObj location, Polygon newVolumeInteriorPolygon, IVolumeToSectionTransform? transform = null)
         {
             Location = location;
             Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
@@ -54,8 +57,8 @@ namespace WebAnnotation.UI.Actions
 
         public void OnExecute()
         {
-            SqlGeometry original_mosaic_shape = Location.MosaicShape;
-            GridVector2[] mosaic_points = Transform.VolumeToSection(NewVolumeInteriorPolygon.ExteriorRing);
+            SqlGeometry original_mosaic_shape = Location.MosaicShape.ToSqlGeometry();
+            Geometry.Vector2[] mosaic_points = Transform.VolumeToSection(NewVolumeInteriorPolygon.ExteriorRing);
             SqlGeometry updatedMosaicShape = Location.MosaicShape.AddInteriorPolygon(mosaic_points);
 
             Location.SetShapeFromGeometryInSection(Transform, updatedMosaicShape);

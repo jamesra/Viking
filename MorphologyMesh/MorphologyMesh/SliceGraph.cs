@@ -64,20 +64,20 @@ namespace MorphologyMesh
         /// </summary>
         internal Dictionary<ulong, IShape2D> MorphNodeToShape = null;
 
-        private GridVector2? _translationToCenter;
+        private Vector2? _translationToCenter;
 
         /// <summary>
         /// The translation InitializeShapes applied to every cached shape, so any shape rebuilt outside that cache
         /// can be placed in the same centered space.
         /// </summary>
-        private GridVector2 TranslationToCenter => _translationToCenter ??= -Graph.BoundingBox.CenterPoint.XY();
+        private Vector2 TranslationToCenter => _translationToCenter ??= -Graph.BoundingBox.CenterPoint.XY();
 
         private Dictionary<ulong, SliceTopology> SliceToTopology = null;
 
         /// <summary>
         /// The center of the bounding box of all slices in the graph
         /// </summary>
-        public GridBox BoundingBox => Graph.BoundingBox;
+        public Box BoundingBox => Graph.BoundingBox;
 
         private SliceGraph(MorphologyGraph graph)
         {
@@ -87,7 +87,7 @@ namespace MorphologyMesh
         public static async Task<SliceGraph> Create(MorphologyGraph graph, double tolerance = 0)
         {
             //An empty morphology graph has no bounding box; downstream code (InitializeShapes ->
-            //graph.BoundingBox.CenterPoint) would otherwise dereference a default GridBox and throw an opaque
+            //graph.BoundingBox.CenterPoint) would otherwise dereference a default Box and throw an opaque
             //NullReferenceException.  Fail fast with an actionable message instead.
             if (graph.Nodes.Count == 0 && graph.Subgraphs.IsEmpty)
                 throw new ArgumentException(
@@ -393,7 +393,7 @@ namespace MorphologyMesh
                     SliceTopology st = GetSliceTopology(node, MorphNodeToShape);
 
                     //Add corresponding verticies.  Will insert into the polygons without creating new ones, which will update MorphNodeToShape
-                    //List<GridVector2> correspondingPoints = st.Polygons.AddCorrespondingVerticies();
+                    //List<Vector2> correspondingPoints = st.Polygons.AddCorrespondingVertices();
 
                     //AddPointsBetweenAdjacentCorrespondingVerticies(st.Polygons,  correspondingPoints);
                 }
@@ -416,7 +416,7 @@ namespace MorphologyMesh
         {
             Dictionary<ulong, IShape2D> result = new(graph.Nodes.Count);
 
-            GridVector2 translationToCenter = -graph.BoundingBox.CenterPoint.XY();
+            Vector2 translationToCenter = -graph.BoundingBox.CenterPoint.XY();
 
             List<Task<IShape2D>> tasks = new(graph.Nodes.Count);
             foreach (var node in graph.Nodes.Values)
@@ -483,11 +483,11 @@ namespace MorphologyMesh
                     Debug.Assert(output.BoundingBox.Area > 0);
 
                     //Rounding exposed a rare bug on 82682, 82680 RPC1 where the inner hole was exactly over the exterior ring of the opposite polygon
-                    if (output is GridPolygon poly)
+                    if (output is Polygon poly)
                     {
                         result.Add((ulong)((MorphologyNode)(task.AsyncState)).ID, poly.Round(Global.SignificantDigits));
                     }
-                    else if (output is GridPolyline line)
+                    else if (output is Polyline line)
                     {
                         result.Add((ulong)((MorphologyNode)(task.AsyncState)).ID, line.Round(Global.SignificantDigits));
                     }
@@ -552,17 +552,17 @@ namespace MorphologyMesh
             //Correspondence is computed over every shape in the slice, including shapes we cannot tile, because a
             //polyline still contributes corresponding verticies to the polygons it touches.
             List<IShape2D> ShapeList = [.. sliceShapes.Select(s => s.Shape)];
-            var correspondingPoints = ShapeList.AddCorrespondingVerticies();
+            var correspondingPoints = ShapeList.AddCorrespondingVertices();
 
-            GridPolygon[] Polygons = [.. ShapeList.OfType<GridPolygon>()];
+            Polygon[] Polygons = [.. ShapeList.OfType<Polygon>()];
             SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(Polygons, correspondingPoints);
 
-            GridPolyline[] Polylines = [.. ShapeList.OfType<GridPolyline>()];
+            Polyline[] Polylines = [.. ShapeList.OfType<Polyline>()];
             SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(Polylines, correspondingPoints);
 
             //The Bajaj generator only tiles polygons.  Filter the shapes and their per-shape data as a unit so the
             //surviving entries remain indexed in lockstep.
-            SliceShape[] tileable = [.. sliceShapes.Where(s => s.Shape is GridPolygon)];
+            SliceShape[] tileable = [.. sliceShapes.Where(s => s.Shape is Polygon)];
 
             if (tileable.Length != sliceShapes.Count)
                 Trace.WriteLine($"Slice {group.Key}: {sliceShapes.Count - tileable.Length} of {sliceShapes.Count} shapes are not polygons and were excluded from the mesh.");

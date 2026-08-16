@@ -33,6 +33,8 @@ namespace WebAnnotationModel.gRPC.Converters
                 };
 
             obj.SetAttributes(ObjAttributeParser.ParseAttributes(src.Attributes ?? string.Empty)).Wait();
+            if (Store.IsInitialized)
+                obj.Type = Store.StructureTypes.GetObjectByID(src.TypeId, false);
             return obj;
         }
 
@@ -49,6 +51,8 @@ namespace WebAnnotationModel.gRPC.Converters
                 };
 
             obj.SetAttributes(ObjAttributeParser.ParseAttributes(src.Attributes ?? string.Empty)).Wait();
+            if (Store.IsInitialized)
+                obj.Type = Store.StructureTypes.GetObjectByID(src.TypeID, false);
             return obj;
         }
     }

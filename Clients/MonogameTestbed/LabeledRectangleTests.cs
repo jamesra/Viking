@@ -1,4 +1,5 @@
 using Geometry;
+using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -6,6 +7,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 
 namespace MonogameTestbed
@@ -85,7 +88,7 @@ namespace MonogameTestbed
                     for (int y = -150; y <= 150; y += StepSize)
                     {
                         Color color = x == 0 || y == 0 ? Color.Yellow : x % (StepSize * 5) == 0 || y % (StepSize * 5) == 0 ? Color.Green : Color.Red;
-                        CircleView dot = new(new GridCircle(x, y, 1), color);
+                        CircleView dot = new(new Circle(x, y, 1), color);
                         dot_views.Add(dot);
                     }
                 }
@@ -98,9 +101,9 @@ namespace MonogameTestbed
 
         private void LayoutButtons()
         {
-            GridVector2 box_size = new(50, 25); //Size of buttons
-            GridVector2 half_box_size = box_size / 2;
-            GridVector2 spacing = new(100, 50); //Space between buttons on grid
+            Geometry.Vector2 box_size = new(50, 25); //Size of buttons
+            Geometry.Vector2 half_box_size = box_size / 2;
+            Geometry.Vector2 spacing = new(100, 50); //Space between buttons on grid
 
             HorizontalAlignment hAlign = HorizontalAlignment.CENTER;
             VerticalAlignment vAlign = VerticalAlignment.CENTER;
@@ -120,8 +123,8 @@ namespace MonogameTestbed
                     vAlign = y < 0 ? VerticalAlignment.BOTTOM : y == 0 ? VerticalAlignment.CENTER : VerticalAlignment.TOP;
 
                     Anchor anchor = new() { Horizontal = hAlign, Vertical = vAlign };
-                    GridVector2 origin = ((spacing) * new GridVector2(x, y));// - half_box_size;
-                    GridRectangle bbox = new(origin, box_size.X, box_size.Y);
+                    Geometry.Vector2 origin = ((spacing) * new Geometry.Vector2(x, y));// - half_box_size;
+                    Rectangle bbox = new(origin, box_size.X, box_size.Y);
 
                     string label_text = UseNewlines ? string.Format("{0}\n{1}\nGoldfish", vAlign, hAlign) : string.Format("{0} {1}", vAlign, hAlign);
                     LabeledRectangleView new_view = PassRectanglesToConstructor
@@ -135,9 +138,9 @@ namespace MonogameTestbed
 
         private void LayoutFixedButtons()
         {
-            GridVector2 box_size = new(0.1, 0.05); //Size of buttons
-            GridVector2 half_box_size = box_size / 2;
-            GridVector2 spacing = new(0.5, 0.5); //Space between buttons on grid
+            Geometry.Vector2 box_size = new(0.1, 0.05); //Size of buttons
+            Geometry.Vector2 half_box_size = box_size / 2;
+            Geometry.Vector2 spacing = new(0.5, 0.5); //Space between buttons on grid
 
             fixed_views.Clear();
 
@@ -163,8 +166,8 @@ namespace MonogameTestbed
                     vAlign = y < 0 ? VerticalAlignment.BOTTOM : y == 0 ? VerticalAlignment.CENTER : VerticalAlignment.TOP;
 
                     Anchor anchor = new() { Horizontal = hAlign, Vertical = vAlign };
-                    GridVector2 origin = ((spacing) * new GridVector2(x, y));// - half_box_size;
-                    GridRectangle bbox = new(origin, box_size.X, box_size.Y);
+                    Geometry.Vector2 origin = ((spacing) * new Geometry.Vector2(x, y));// - half_box_size;
+                    Rectangle bbox = new(origin, box_size.X, box_size.Y);
 
                     string label_text = UseNewlines ? string.Format("{0}\n{1}\nGoldfish", vAlign, hAlign) : string.Format("{0} {1}", vAlign, hAlign);
                     LabeledRectangleView new_view = PassRectanglesToConstructor
@@ -182,7 +185,7 @@ namespace MonogameTestbed
         {
             rect_views =
             [
-                new RectangleView(new GridRectangle(-140, -120, -140, -120), Color.Aqua)
+                new RectangleView(new Rectangle(-140, -120, -140, -120), Color.Aqua)
             ];
         }
 
