@@ -19,28 +19,28 @@
         <conv:StructureTypeIDsToStructureTypeObjsConverter x:Key="StructureIDsToStructureObjsConverter"/>
         <conv:IntToBrushConverter x:Key="IntToBrushConverter"/>
         <HierarchicalDataTemplate x:Key="StructureTypeTemplate"
-                              ItemsSource="{Binding Children}"> 
-            <TreeViewItem HorizontalAlignment="Left"   Padding="0,5,0,0">
-                
-                <TreeViewItem.Header>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock  Grid.Row="0" Grid.Column="0" Text="{Binding Code}" Padding="0,0,0,0" VerticalAlignment="Center" Background="{Binding Color, Converter={StaticResource IntToBrushConverter}}"></TextBlock>
-                        <TextBlock  Grid.Row="0" Grid.Column="1" Text="{Binding Name}" Padding="8,0,8,0" TextAlignment="Right" VerticalAlignment="Center" HorizontalAlignment="Left"></TextBlock>
-                        <Button Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" Background="Green" BorderBrush="Black" Padding="3,3,3,3">Add</Button>
-                     
-                    </Grid>
-                </TreeViewItem.Header>
-            </TreeViewItem>
+                              ItemsSource="{Binding Children}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="TypeCode"/>
+                    <ColumnDefinition Width="16" SharedSizeGroup="TypeColor"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding Code}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <Border Grid.Column="1" Width="12" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center"
+                        BorderBrush="Gray" BorderThickness="1"
+                        Background="{Binding Color, Converter={StaticResource IntToBrushConverter}}"/>
+                <TextBlock Grid.Column="2" Text="{Binding Name}" Margin="6,0,0,0" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+            </Grid>
         </HierarchicalDataTemplate>
     </UserControl.Resources>
 
     <Grid>
-        <TreeView Name="tree_view" ItemTemplate="{StaticResource StructureTypeTemplate}" ItemsSource="{Binding Mode=OneWay}" HorizontalContentAlignment="Stretch">
+        <TreeView Name="tree_view" ItemTemplate="{StaticResource StructureTypeTemplate}"
+                  ItemsSource="{Binding RootStructureTypes, ElementName=_this}"
+                  Grid.IsSharedSizeScope="True"
+                  HorizontalContentAlignment="Stretch">
             <TreeView.ItemContainerStyle>
                 <Style TargetType="TreeViewItem">
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>

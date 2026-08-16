@@ -33,6 +33,8 @@ namespace WebAnnotation.WPF.Converters
             byte r = (byte)((val & 0x00FF0000) >> 16);
             byte g = (byte)((val & 0x0000FF00) >> 8);
             byte b = (byte)((val & 0x000000FF));
+            if (a == 0)
+                a = 255;
 
             if (targetType.IsAssignableFrom(typeof(System.Windows.Media.Brush)))
             {
