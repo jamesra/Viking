@@ -37,7 +37,8 @@ namespace WebAnnotation.UI.Actions
         public static List<IAction> IdentifyPossibleStructureLinkActions(this IReadOnlyList<LocationInteractionLogEvent> log_entries, long origin_ID)
         {
             List<IAction> listActions = [];
-            LocationObj origin_loc = Store.Locations.GetObjectByID(origin_ID);
+            if (!Store.Locations.TryGetObjectByID(origin_ID, out LocationObj origin_loc) || origin_loc is null)
+                return listActions;
 
             long origin_struct_id = origin_loc.ParentID.Value;
 
@@ -121,7 +122,8 @@ namespace WebAnnotation.UI.Actions
 
         public static List<IAction> IdentifyPossibleLocationLinkActions(this IReadOnlyList<LocationInteractionLogEvent> log_entries, long origin_ID)
         {
-            LocationObj origin_loc = Store.Locations.GetObjectByID(origin_ID);
+            if (!Store.Locations.TryGetObjectByID(origin_ID, out LocationObj origin_loc) || origin_loc is null)
+                return [];
 
             IEnumerable<LocationInteractionLogEvent> candidates = log_entries.Where(e => e.location != null &&
                                        e.location.ParentID == origin_loc.ParentID &&

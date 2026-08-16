@@ -1,6 +1,10 @@
 using System;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Net.Security;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -21,6 +25,21 @@ namespace WebAnnotation
         public static VolumeTransformProvider Transforms { get; private set; }
 
         public static bool TryInitialize(Volume volume, NetworkCredential credentials, string segmentationServiceUrl)
+        {
+            return Task.Run(() => TryInitializeAsync(volume, credentials, segmentationServiceUrl))
+                .GetAwaiter()
+                .GetResult();
+        }
+
+        /// <summary>
+        /// Compose gRPC annotation stores and warm structure types. Called by Jotunn from
+        /// <c>await</c> during splash so the UI thread is not blocked on gRPC.
+        /// </summary>
+        public static async Task<bool> TryInitializeAsync(
+            Volume volume,
+            NetworkCredential credentials,
+            string segmentationServiceUrl,
+            CancellationToken cancellationToken = default)
         {
             Volume = volume;
             Transforms = volume == null ? null : new VolumeTransformProvider(volume);
@@ -44,11 +63,7 @@ namespace WebAnnotation
                 opts => opts.Endpoint = endpoint,
                 channelOpts =>
                 {
-#if NETFRAMEWORK
-                    channelOpts.HttpHandler = CreateWinHttpHandler();
-#else
-                    _ = channelOpts;
-#endif
+                    channelOpts.HttpHandler = CreateGrpcHttpHandler();
                 });
 
             ServiceProvider provider = services.BuildServiceProvider();
@@ -56,9 +71,12 @@ namespace WebAnnotation
                 grpcSettings.Value.Endpoint = endpoint;
 
             if (provider.GetService<IAnnotationStores>() is IAnnotationStores stores)
-                Store.Initialize(stores);
+            {
+                await Store.InitializeAsync(stores, cancellationToken).ConfigureAwait(false);
+                return Store.IsInitialized;
+            }
 
-            return true;
+            return false;
         }
 
         public static bool TryPopulateEndpointFromVolumeXml(XElement volumeElement)
@@ -82,25 +100,41 @@ namespace WebAnnotation
             return WebAnnotationModel.State.Endpoint != null;
         }
 
-#if NETFRAMEWORK
-        static System.Net.Http.WinHttpHandler CreateWinHttpHandler()
+        /// <summary>
+        /// Viking (net48) needs WinHttpHandler for gRPC-over-HTTP/2. Jotunn (net10) uses
+        /// HttpClientHandler. Both accept the Docker localhost cert whose root is not in
+        /// the Windows trust store. TLS fails before any Bearer token is sent.
+        /// </summary>
+        static HttpMessageHandler CreateGrpcHttpHandler()
         {
-            return new System.Net.Http.WinHttpHandler
+#if NETFRAMEWORK
+            return new WinHttpHandler
             {
                 EnableMultipleHttp2Connections = true,
-                ServerCertificateValidationCallback = (request, certificate, chain, errors) =>
-                {
-                    if (errors == System.Net.Security.SslPolicyErrors.None)
-                        return true;
-
-                    string host = request?.RequestUri?.Host;
-                    return string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
-                        || host == "127.0.0.1"
-                        || host == "::1";
-                }
+                ServerCertificateValidationCallback = AcceptLocalDevCertificate
             };
-        }
+#else
+            return new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = AcceptLocalDevCertificate
+            };
 #endif
+        }
+
+        static bool AcceptLocalDevCertificate(
+            HttpRequestMessage request,
+            System.Security.Cryptography.X509Certificates.X509Certificate2 certificate,
+            System.Security.Cryptography.X509Certificates.X509Chain chain,
+            SslPolicyErrors errors)
+        {
+            if (errors == SslPolicyErrors.None)
+                return true;
+
+            string host = request?.RequestUri?.Host;
+            return string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
+                || host == "127.0.0.1"
+                || host == "::1";
+        }
 
         sealed class TokenStoreAccessTokenProvider : IAnnotationAccessTokenProvider
         {

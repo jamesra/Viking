@@ -7,13 +7,15 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Viking.AnnotationServiceTypes.Interfaces;
+using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 using WebAnnotationModel.ServerInterface;
 
 namespace WebAnnotationModel.gRPC
 {
     /// <summary>
-    /// This base class implements the basic functionality to talk to a WCF Service
+    /// Keyed gRPC store. Add paths do not share the same post-add hooks; see InternalAdd,
+    /// GetOrAdd, and IStoreEditor.GetOrAdd.
     /// </summary>
     public abstract class StoreBaseWithKey<KEY, OBJECT, SERVER_OBJECT, CREATION_DATA_TYPE, CREATION_RESULT> : StoreBase<OBJECT>, 
         IStoreWithKey<KEY, OBJECT>, IStoreEditor<KEY, OBJECT>
@@ -36,10 +38,15 @@ namespace WebAnnotationModel.gRPC
 
         protected readonly IServerAnnotationsClientFactory<IServerAnnotationsClient<KEY, SERVER_OBJECT, CREATION_DATA_TYPE, CREATION_RESULT>> ClientFactory;
 
+        /// <summary>Applies server payloads to IDToObject. Does not raise CollectionChanged.</summary>
         protected readonly IStoreServerQueryResultsHandler<KEY, OBJECT, SERVER_OBJECT> ServerQueryResultsHandler;
 
+        /// <summary>Server proto/interface → client object.</summary>
         protected readonly IObjectConverter<SERVER_OBJECT, OBJECT> ServerObjConverter;
+
+        /// <summary>Client object → server proto/interface for Create/Update.</summary>
         protected readonly IObjectConverter<OBJECT, SERVER_OBJECT> ClientObjConverter;
+        /// <summary>Optional timing log for server queries. Null is allowed.</summary>
         protected readonly IQueryLogger QueryLogger;
 
         protected StoreBaseWithKey(IServerAnnotationsClientFactory<IServerAnnotationsClient<KEY, SERVER_OBJECT, CREATION_DATA_TYPE, CREATION_RESULT>> clientFactory,
@@ -127,6 +134,10 @@ namespace WebAnnotationModel.gRPC
             return inventory.ObjectsInStore; 
         }
 
+        /// <summary>
+        /// Insert-or-get for UI/create callers. Fires CollectionChanged immediately when added.
+        /// Server ingest should use IStoreEditor.GetOrAdd and batch events via CallOnCollectionChanged.
+        /// </summary>
         public OBJECT GetOrAdd(KEY key, Func<KEY, OBJECT> createFunc, out bool added)
         {
             var result = this.InternalGetOrAdd(key, createFunc, out added);
@@ -292,56 +303,44 @@ namespace WebAnnotationModel.gRPC
 
         #region Queries
 
-        /// <summary>
-        /// Gets the requested location, first checking locally, then asking the server
-        /// </summary>
-        /// <param name="ID"></param>
-        /// <returns></returns>
-        public Task<OBJECT> GetObjectByID(KEY ID, CancellationToken token)
+        public OBJECT this[KEY key]
         {
-            return GetObjectByID(ID, true, false, token);
+            get
+            {
+                if (IDToObject.TryGetValue(key, out OBJECT obj))
+                    return obj;
+                throw new KeyNotFoundException(
+                    $"{typeof(OBJECT).Name} with key {key} is not in the local cache. Use TryGetObjectByID when a miss is possible, or GetObjectByID to fetch from the server.");
+            }
         }
 
-        /// <summary>
-        /// Synchronous convenience accessor for legacy UI call sites.
-        /// </summary>
-        public OBJECT this[KEY index] => GetObjectByID(index, true, false, CancellationToken.None).Result;
+        public bool TryGetObjectByID(KEY key, out OBJECT obj) => IDToObject.TryGetValue(key, out obj);
 
-        /// <summary>
-        /// Synchronous convenience overload equivalent to this[ID].
-        /// </summary>
-        public OBJECT GetObjectByID(KEY ID) => this[ID];
-
-        /// <summary>
-        /// Synchronous convenience overload equivalent to GetObjectByID(ID, AskServer, ForceRefreshFromServer: false, CancellationToken.None).
-        /// </summary>
-        public OBJECT GetObjectByID(KEY ID, bool AskServer) => GetObjectByID(ID, AskServer, false, CancellationToken.None).Result;
-
-        /// <summary>
-        /// Gets the requested location, first checking locally, then asking the server
-        /// </summary>
-        /// <param name="ID"></param>
-        /// <param name="AskServer">If false only the local cache is checked</param>
-        /// <param name="ForceRefreshFromServer">If true we ignore local data and refresh from the server</param>
-        /// <returns></returns>
-        public async Task<OBJECT> GetObjectByID(KEY ID, bool AskServer, bool ForceRefreshFromServer, CancellationToken token)
+        public bool TryGetObjectsByIDs(ICollection<KEY> keys, out IReadOnlyList<OBJECT> found, out IReadOnlyList<KEY> missing)
         {
-            OBJECT newObj = default;
-
-            if (ForceRefreshFromServer)
-                AskServer = true;
-
-            if (!ForceRefreshFromServer)
+            if (keys == null || keys.Count == 0)
             {
-                bool Success = IDToObject.TryGetValue(ID, out newObj);
-                if (Success)
-                    return newObj;
+                found = Array.Empty<OBJECT>();
+                missing = Array.Empty<KEY>();
+                return true;
             }
 
-            if (!AskServer)
-                return default;
-             
-            //If not check if the server knows what we're asking for
+            List<OBJECT> localObjs = GetLocalObjects(keys, out List<KEY> notFound);
+            found = localObjs;
+            missing = notFound;
+            return notFound.Count == 0;
+        }
+
+        public Task<OBJECT> GetObjectByID(KEY ID, CancellationToken token = default)
+        {
+            if (IDToObject.TryGetValue(ID, out OBJECT cached))
+                return Task.FromResult(cached);
+
+            return FetchObjectByID(ID, token);
+        }
+
+        private async Task<OBJECT> FetchObjectByID(KEY ID, CancellationToken token)
+        {
             var client = ClientFactory.GetOrCreate();
             SERVER_OBJECT obj;
             try
@@ -364,8 +363,7 @@ namespace WebAnnotationModel.gRPC
                 new ServerUpdate<KEY, SERVER_OBJECT>(queryTime, obj, Array.Empty<KEY>()));
             await OnServerObjectsLoaded(new[] { obj }, queryTime);
 
-            // Already-cached rows are Unchanged, not Added/Updated — look up by key instead of First().
-            return IDToObject.TryGetValue(ID, out newObj) ? newObj : default;
+            return IDToObject.TryGetValue(ID, out OBJECT newObj) ? newObj : default;
         }
 
         /// <summary>
@@ -376,65 +374,61 @@ namespace WebAnnotationModel.gRPC
             Task.CompletedTask;
          
 
-        /// <summary>
-        /// Get objects with the specified ID.  Change notifications are sent for objects fetched from server.
-        /// </summary>
-        /// <param name="IDs"></param>
-        /// <param name="AskServer"></param>
-        /// <returns></returns>
-        public async Task<List<OBJECT>> GetObjectsByIDs(ICollection<KEY> IDs, bool AskServer, CancellationToken token)
+        public async Task<GetByIDResult<KEY, OBJECT>> GetObjectsByIDs(ICollection<KEY> IDs, CancellationToken token = default)
         {
-            ChangeInventory<OBJECT> inventory = await InternalGetObjectsByIDs(IDs, AskServer, token);
+            if (IDs == null || IDs.Count == 0)
+                return GetByIDResult<KEY, OBJECT>.Empty;
 
-            CallOnCollectionChanged(inventory);
+            TryGetObjectsByIDs(IDs, out IReadOnlyList<OBJECT> found, out IReadOnlyList<KEY> missing);
+            if (missing.Count == 0)
+                return new GetByIDResult<KEY, OBJECT>(found, missing);
 
-            return inventory.ObjectsInStore;
+            ChangeInventory<OBJECT> inventory = await InternalGetObjectsByIDs(missing as ICollection<KEY> ?? missing.ToList(), token);
+            await CallOnCollectionChanged(inventory);
+
+            TryGetObjectsByIDs(IDs, out found, out missing);
+            return new GetByIDResult<KEY, OBJECT>(found, missing);
         }
 
-
         /// <summary>
-        /// Does not fire collection change events
+        /// Fetches the given keys from the server and merges them. Does not fire collection change events.
         /// </summary>
-        /// <param name="IDs"></param>
-        /// <param name="AskServer"></param>
-        /// <returns></returns>
-        protected async Task<ChangeInventory<OBJECT>> InternalGetObjectsByIDs(ICollection<KEY> IDs, bool AskServer, CancellationToken token)
+        protected async Task<ChangeInventory<OBJECT>> InternalGetObjectsByIDs(ICollection<KEY> IDs, CancellationToken token)
         {
-            //Objects not cached locally
-
-            //Objects we've already fetched
             List<OBJECT> listLocalObjs = GetLocalObjects(IDs, out List<KEY> listRemoteObjs);
 
-            if (!AskServer || listRemoteObjs.Count == 0)
+            if (listRemoteObjs.Count == 0)
             {
                 ChangeInventory<OBJECT> inventory = new ChangeInventory<OBJECT>(IDs.Count);
                 inventory.UnchangedObjects.AddRange(listLocalObjs);
                 return inventory;
             }
 
-            //If not check if the server knows what we're asking for 
-            var client = ClientFactory.GetOrCreate(); 
+            var client = ClientFactory.GetOrCreate();
             IList<SERVER_OBJECT> listServerObjs;
             try
-            { 
-                //Trace.WriteLine("Going to server to retrieve " + this.ToString() + " parent with ID: " + ID.ToString(), "WebAnnotation");
+            {
                 listServerObjs = await client.GetAsync(listRemoteObjs.ToArray(), token);
             }
             catch (Exception e)
             {
                 Trace.WriteLine(e.ToString(), "WebAnnotation");
                 Trace.WriteLine(e.Message, "WebAnnotation");
-                listServerObjs = null;
-                return new ChangeInventory<OBJECT>();
+                ChangeInventory<OBJECT> failed = new ChangeInventory<OBJECT>(IDs.Count);
+                failed.UnchangedObjects.AddRange(listLocalObjs);
+                return failed;
             }
 
             var queryTime = DateTime.UtcNow;
-            var serverArray = listServerObjs.ToArray();
+            var serverArray = listServerObjs?.ToArray() ?? Array.Empty<SERVER_OBJECT>();
+            KEY[] deletedIds = listRemoteObjs
+                .Where(id => serverArray.All(s => !s.ID.Equals(id)))
+                .ToArray();
             var changes = await ServerQueryResultsHandler.ProcessServerUpdate(
-                new ServerUpdate<KEY, SERVER_OBJECT[]>(queryTime, serverArray, Array.Empty<KEY>()));
+                new ServerUpdate<KEY, SERVER_OBJECT[]>(queryTime, serverArray, deletedIds));
 
             await OnServerObjectsLoaded(serverArray, queryTime);
-            
+
             changes.UnchangedObjects.AddRange(listLocalObjs);
 
             return changes;
@@ -466,13 +460,7 @@ namespace WebAnnotationModel.gRPC
 
             return localObjs;
         }
-        
-        /*
-        Task<OBJECT> IStoreWithKey<KEY, OBJECT>.this[KEY index] =>
-            GetObjectByID(index, false, false, CancellationToken.None);
-        */
-        
-        
+
         /*
         /// <summary>
         /// Get objects appearing on the section asynchronously.  Locally cached objects may be returned first.  Objects
@@ -821,6 +809,11 @@ namespace WebAnnotationModel.gRPC
             return true;
         }
 
+        /// <summary>
+        /// Fires collection events for a handler batch. Calls StoreBase.CallOnCollectionChanged
+        /// (not the virtual override), so StoreBaseWithKeyAndParent.WireParentsAndRoots does not run.
+        /// StructureTypeStore.GetAll uses this.CallOnCollectionChanged instead for that reason.
+        /// </summary>
         Task IStoreEditor<KEY, OBJECT>.EndBatch(ChangeInventory<OBJECT> inventory)
         {
             return base.CallOnCollectionChanged(inventory);
@@ -843,6 +836,10 @@ namespace WebAnnotationModel.gRPC
         }
 
         
+        /// <summary>
+        /// Cache insert used by Store.Add. Server GetAll / region queries do not call this;
+        /// they use IStoreEditor.GetOrAdd. Do not put parent/root side effects only here.
+        /// </summary>
         protected virtual ChangeInventory<OBJECT> InternalAdd(OBJECT[] newObjs)
         {
             List<OBJECT> listAddedObj = new List<OBJECT>(newObjs.Length);
@@ -1022,6 +1019,10 @@ namespace WebAnnotationModel.gRPC
             return IDToObject.TryGetValue(ID, out obj);
         }
 
+        /// <summary>
+        /// Server-ingest insert. Puts the object in IDToObject and subscribes PropertyChanged.
+        /// Does not fire CollectionChanged and does not update RootObjects or Parent.Children.
+        /// </summary>
         OBJECT IStoreEditor<KEY, OBJECT>.GetOrAdd(KEY key, Func<KEY, OBJECT> valueFactory)
         {
             return IDToObject.GetOrAdd(key, (k) =>
@@ -1038,21 +1039,20 @@ namespace WebAnnotationModel.gRPC
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        public virtual async Task<OBJECT> Refresh(KEY key, CancellationToken token)
+        public virtual async Task<OBJECT> Refresh(KEY key, CancellationToken token = default)
         {
-            var listForgotten = await Refresh(new KEY[] { key }, token);
-            return listForgotten.FirstOrDefault();
+            var result = await Refresh(new[] { key }, token);
+            return result.Found.Count > 0 ? result.Found[0] : default;
         }
 
-        /// <summary>
-        /// Delete data for an object from our client and request new data from the server
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        public virtual async Task<IList<OBJECT>> Refresh(KEY[] keys, CancellationToken token)
-        { 
-            ForgetLocally(keys);
-            return await GetObjectsByIDs(keys, true, token);
+        public virtual async Task<GetByIDResult<KEY, OBJECT>> Refresh(ICollection<KEY> keys, CancellationToken token = default)
+        {
+            if (keys == null || keys.Count == 0)
+                return GetByIDResult<KEY, OBJECT>.Empty;
+
+            KEY[] keyArray = keys as KEY[] ?? keys.ToArray();
+            ForgetLocally(keyArray);
+            return await GetObjectsByIDs(keys, token);
         }
 
         /// <summary>
@@ -1120,22 +1120,9 @@ namespace WebAnnotationModel.gRPC
             return GetObjectByID(ID, token);
         }
 
-        Task<OBJECT> IStoreWithKey<KEY, OBJECT>.GetObjectByID(KEY ID, bool AskServer, bool ForceRefreshFromServer, CancellationToken token)
+        Task<GetByIDResult<KEY, OBJECT>> IStoreWithKey<KEY, OBJECT>.GetObjectsByIDs(ICollection<KEY> IDs, CancellationToken token)
         {
-            return GetObjectByID(ID, AskServer, ForceRefreshFromServer, token);
-        }
-
-        Task<List<OBJECT>> IStoreWithKey<KEY, OBJECT>.GetObjectsByIDs(ICollection<KEY> IDs, bool AskServer, CancellationToken token)
-        {
-            return GetObjectsByIDs(IDs, AskServer, token);
-        }
-
-        /// <summary>
-        /// Synchronous convenience overload equivalent to GetObjectsByIDs(IDs, AskServer, CancellationToken.None).
-        /// </summary>
-        ICollection<OBJECT> IStoreWithKey<KEY, OBJECT>.GetObjectsByIDs(ICollection<KEY> IDs, bool AskServer)
-        {
-            return GetObjectsByIDs(IDs, AskServer, CancellationToken.None).Result;
+            return GetObjectsByIDs(IDs, token);
         }
 
         Task<OBJECT> IStoreWithKey<KEY, OBJECT>.Refresh(KEY key, CancellationToken token)
@@ -1143,9 +1130,9 @@ namespace WebAnnotationModel.gRPC
             return Refresh(key, token);
         }
 
-        async Task<IList<OBJECT>> IStoreWithKey<KEY, OBJECT>.Refresh(KEY[] keys, CancellationToken token)
+        Task<GetByIDResult<KEY, OBJECT>> IStoreWithKey<KEY, OBJECT>.Refresh(ICollection<KEY> keys, CancellationToken token)
         {
-            return await Refresh(keys, token);
+            return Refresh(keys, token);
         }
           
         #endregion

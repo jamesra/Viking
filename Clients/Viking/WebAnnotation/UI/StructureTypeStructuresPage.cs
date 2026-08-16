@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
@@ -34,13 +35,13 @@ namespace WebAnnotation.UI
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void listStructures_VisibleChanged(object sender, EventArgs e)
+        private async void listStructures_VisibleChanged(object sender, EventArgs e)
         {
             if (!listLoaded)
             {
                 UseWaitCursor = true;
 
-                ICollection<StructureObj> structureObjs = Store.Structures.GetStructuresOfType(Obj.ID).Result;
+                ICollection<StructureObj> structureObjs = await Store.Structures.GetStructuresOfType(Obj.ID);
 
                 List<Structure> structures = new(structureObjs.Count);
 

@@ -1,9 +1,9 @@
 using System;
-using Viking.AnnotationServiceTypes.Interfaces;
-using Annotation.ViewModels.Commands;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Threading;
+using System.Linq;
+using Annotation.ViewModels.Commands;
+using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel;
 
 namespace Annotation.ViewModels
@@ -51,7 +51,10 @@ namespace Annotation.ViewModels
         public FavoriteStructureIDsViewModel(ObservableCollection<ulong> Favorites = null, ObservableCollection<ulong> root_types = null) : this()
         {
             if (root_types is null)
-                _RootStructureTypes = new ObservableCollection<IStructureTypeReadOnly>(Store.StructureTypes.GetObjectsByIDs(Store.StructureTypes.RootObjects, true, CancellationToken.None).Result);
+            {
+                Store.StructureTypes.TryGetObjectsByIDs(Store.StructureTypes.RootObjects, out var found, out _);
+                _RootStructureTypes = new ObservableCollection<IStructureTypeReadOnly>(found.Cast<IStructureTypeReadOnly>());
+            }
 
             FavoriteStructureTypeIDs = Favorites;
         }

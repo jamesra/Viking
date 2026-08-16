@@ -18,16 +18,20 @@ using WebAnnotationModel.ServerInterface;
 namespace WebAnnotationModel.gRPC
 { 
 
+    /// <summary>
+    /// Location cache. Implements IRegionLoader for mosaic-bounds queries after the view exists.
+    /// </summary>
     public class LocationStore : StoreBaseWithKey<long, LocationObj, ILocation, ILocation, ILocation>, ILocationStore, IRegionLoader<LocationObj>
     {
         /// <summary>
-        /// Maps sections to a sorted list of locations on that section.
-        /// This collection is not guaranteed to match the ObjectToID collection.  Adding spin-locks to the Add/Remove functions could solve this if it becomes an issue.
+        /// Per-section index maintained from CollectionChanged, not from GetOrAdd.
+        /// Not guaranteed to match IDToObject until CallOnCollectionChanged has run.
         /// </summary>
         System.Collections.Concurrent.ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>> SectionToLocations = new ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>>();
 
         /// <summary>
-        /// Last successful region/section query time per section, used by FreeExcessSections.
+        /// Last successful region/section query time per section. Used by FreeExcessSections
+        /// and delta link sync. Stamp after success; stamping on send/failure skips the section.
         /// </summary>
         private readonly ConcurrentDictionary<long, DateTime> LastQueryForSection = new ConcurrentDictionary<long, DateTime>();
 
@@ -139,7 +143,7 @@ namespace WebAnnotationModel.gRPC
             if (missing.Length == 0)
                 return;
 
-            await _structureStore.GetObjectsByIDs(missing, true, token).ConfigureAwait(false);
+            await _structureStore.GetObjectsByIDs(missing, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -192,7 +196,7 @@ namespace WebAnnotationModel.gRPC
             if (queryTargets == QueryTargets.ClientCache)
             {
                 var cached = GetLocalObjectsForSection(SectionNumber).Values
-                    .Where(l => VolumeBounds.Contains(l.Position)).ToList();
+                    .Where(l => VolumeBounds.Covers(l.Position)).ToList();
                 foundObjectCallback?.Invoke(cached);
                 return cached;
             }
@@ -221,7 +225,7 @@ namespace WebAnnotationModel.gRPC
                         await CallOnCollectionChanged(chunkChanges);
                         await OnServerObjectsLoaded(update.NewOrUpdated, update.QueryTime);
                         var chunkObjs = chunkChanges.ObjectsInStore
-                            .Where(l => VolumeBounds.Contains(l.Position)).ToList();
+                            .Where(l => VolumeBounds.Covers(l.Position)).ToList();
                         progressiveResults.AddRange(chunkObjs);
                         foundObjectCallback?.Invoke(chunkObjs);
                     });
@@ -236,7 +240,7 @@ namespace WebAnnotationModel.gRPC
                     ? progressiveResults.Distinct().ToList()
                     : response.NewOrUpdated
                         .Select(l => ServerObjConverter.Convert(l))
-                        .Where(l => VolumeBounds.Contains(l.Position))
+                        .Where(l => VolumeBounds.Covers(l.Position))
                         .ToList();
             }
 
@@ -253,7 +257,7 @@ namespace WebAnnotationModel.gRPC
             TouchSectionQueryTime(SectionNumber);
 
             List<LocationObj> results = changes.ObjectsInStore
-                .Where(l => VolumeBounds.Contains(l.Position)).ToList();
+                .Where(l => VolumeBounds.Covers(l.Position)).ToList();
             foundObjectCallback?.Invoke(results);
             return results;
         }
@@ -280,11 +284,11 @@ namespace WebAnnotationModel.gRPC
         /// <param name="new_location"></param>
         /// <param name="linked_locations"></param>
         /// <returns></returns>
-        public LocationObj Create(LocationObj new_location, long[] linked_locations = null)
+        public async Task<LocationObj> Create(LocationObj new_location, long[] linked_locations = null)
         {
             var client = ClientFactory.GetOrCreate();
             var serverObj = ClientObjConverter.Convert(new_location);
-            var created = client.Create(serverObj, CancellationToken.None).Result;
+            var created = await client.Create(serverObj, CancellationToken.None).ConfigureAwait(false);
             if (created == null)
                 return null;
 
@@ -294,7 +298,7 @@ namespace WebAnnotationModel.gRPC
             {
                 foreach (long linkedId in linked_locations)
                 {
-                    Store.LocationLinks.CreateLink(created_location.ID, linkedId);
+                    await Store.LocationLinks.CreateLink(created_location.ID, linkedId).ConfigureAwait(false);
                 }
             }
 
@@ -313,17 +317,28 @@ namespace WebAnnotationModel.gRPC
 
         #region Add/Update/Remove
 
-        /// <summary>
-        /// Load missing parent structures in one batch before adding locations so
-        /// <see cref="LocationObj.Parent"/> can resolve from the structure store.
-        /// </summary>
-        protected override ChangeInventory<LocationObj> InternalAdd(LocationObj[] newObjs)
+        public override async Task<LocationObj> Add(LocationObj obj)
         {
-            long[] MissingParentIDs = newObjs.Where(loc => loc.ParentID.HasValue && _structureStore.Contains(loc.ParentID.Value) == false).Select(loc => loc.ParentID.Value).Distinct().ToArray();
-            if (MissingParentIDs.Length > 0)
-                _structureStore.GetObjectsByIDs(MissingParentIDs, true);
+            await EnsureParentsFromLocationObjs(new[] { obj }, CancellationToken.None).ConfigureAwait(false);
+            return await base.Add(obj).ConfigureAwait(false);
+        }
 
-            return base.InternalAdd(newObjs);
+        public override async Task<ICollection<LocationObj>> Add(ICollection<LocationObj> objs)
+        {
+            await EnsureParentsFromLocationObjs(objs, CancellationToken.None).ConfigureAwait(false);
+            return await base.Add(objs).ConfigureAwait(false);
+        }
+
+        private Task EnsureParentsFromLocationObjs(IEnumerable<LocationObj> locs, CancellationToken token)
+        {
+            var missing = locs
+                .Where(loc => loc?.ParentID != null && !_structureStore.Contains(loc.ParentID.Value))
+                .Select(loc => loc.ParentID.Value)
+                .Distinct()
+                .ToArray();
+            if (missing.Length == 0)
+                return Task.CompletedTask;
+            return _structureStore.GetObjectsByIDs(missing, token);
         }
 
         protected ICollection<LocationObj> InternalDelete(LocationObj[] objs)
@@ -336,7 +351,6 @@ namespace WebAnnotationModel.gRPC
 
             return InternalDelete(IDs);
         }
-         
 
         public async Task<ICollection<LocationObj>> GetStructureLocations(long structureID, QueryTargets targets)
         {
@@ -365,19 +379,12 @@ namespace WebAnnotationModel.gRPC
 
         public bool Contains(LocationObj o, Geometry.Rectangle bounds)
         {
-            return bounds.Contains(o.Position);
+            return bounds.Covers(o.Position);
         }
 
         /// <summary>
-        /// Synchronous convenience wrapper over GetStructureLocations(structureID, QueryTargets.Server).
-        /// </summary>
-        public ICollection<LocationObj> GetLocationsForStructure(long StructureID)
-        {
-            return GetStructureLocations(StructureID, QueryTargets.Server).Result;
-        }
-
-        /// <summary>
-        /// Objects known locally to belong to the given section, without contacting the server.
+        /// Objects in the section index, without contacting the server.
+        /// Empty until CollectionChanged has indexed those adds (GetOrAdd alone is not enough).
         /// </summary>
         public ConcurrentDictionary<long, LocationObj> GetLocalObjectsForSection(long SectionNumber)
         {
@@ -424,8 +431,6 @@ namespace WebAnnotationModel.gRPC
         /// <summary>
         /// Check the local cache only, without contacting the server.
         /// </summary>
-        public bool TryGetValue(long ID, out LocationObj obj) => IDToObject.TryGetValue(ID, out obj);
-          
         #region Callbacks
 
         /*

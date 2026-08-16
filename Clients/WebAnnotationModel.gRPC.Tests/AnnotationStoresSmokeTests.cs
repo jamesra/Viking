@@ -35,7 +35,7 @@ namespace WebAnnotationModel.gRPC.Tests
         [Test]
         public void Initialize_LoadsSeedStructureType()
         {
-            var type = _host.Stores.StructureTypes.GetObjectByID(1, AskServer: false);
+            Assert.That(_host.Stores.StructureTypes.TryGetObjectByID(1, out var type), Is.True);
             Assert.That(type, Is.Not.Null);
             Assert.That(type.ID, Is.EqualTo(1));
             Assert.That(type.Name, Does.Contain("Neuron").IgnoreCase);
@@ -68,8 +68,9 @@ namespace WebAnnotationModel.gRPC.Tests
         public async Task CreateMoveLinkDelete_RoundtripViaStores()
         {
             var stores = _host.Stores;
-            var type = stores.StructureTypes.GetObjectByID(1, AskServer: false)
-                       ?? await stores.StructureTypes.GetObjectByID(1, CancellationToken.None);
+            var type = stores.StructureTypes.TryGetObjectByID(1, out var cachedType)
+                       ? cachedType
+                       : await stores.StructureTypes.GetObjectByID(1, CancellationToken.None);
             Assert.That(type, Is.Not.Null);
 
             var section = 42;
@@ -91,7 +92,7 @@ namespace WebAnnotationModel.gRPC.Tests
 
             try
             {
-                var locationA = await stores.Locations.GetObjectByID(locationAId, true, true, CancellationToken.None);
+                var locationA = await stores.Locations.Refresh(locationAId, CancellationToken.None);
                 Assert.That(locationA, Is.Not.Null);
 
                 // Move
@@ -100,26 +101,26 @@ namespace WebAnnotationModel.gRPC.Tests
                 locationA.VolumeShape = moved;
                 Assert.That(await stores.Locations.Save(), Is.True);
 
-                var reloadedA = await stores.Locations.GetObjectByID(locationAId, true, true, CancellationToken.None);
+                var reloadedA = await stores.Locations.Refresh(locationAId, CancellationToken.None);
                 Assert.That(reloadedA.Position.X, Is.EqualTo(200).Within(0.5));
                 Assert.That(reloadedA.Position.Y, Is.EqualTo(210).Within(0.5));
 
                 // Second location + location link
                 var shapeB = new Vector2(220, 230);
                 var locationBDraft = new LocationObj(structure, shapeB, shapeB, section, LocationType.POINT);
-                var locationB = stores.Locations.Create(locationBDraft);
+                var locationB = await stores.Locations.Create(locationBDraft);
                 Assert.That(locationB, Is.Not.Null);
                 locationBId = locationB.ID;
 
-                var link = stores.LocationLinks.CreateLink(locationAId, locationB.ID);
+                var link = await stores.LocationLinks.CreateLink(locationAId, locationB.ID);
                 Assert.That(link, Is.Not.Null);
                 Assert.That(stores.LocationLinks.Contains(new LocationLinkKey(locationAId, locationB.ID)), Is.True);
 
-                Assert.That(stores.LocationLinks.DeleteLink(locationAId, locationB.ID), Is.True);
+                Assert.That(await stores.LocationLinks.DeleteLink(locationAId, locationB.ID), Is.True);
 
                 // Structure link to seed structure (id 1)
                 var structureLink = new StructureLinkObj(structureId, 1, Bidirectional: true);
-                var createdStructureLink = stores.StructureLinks.Create(structureLink);
+                var createdStructureLink = await stores.StructureLinks.Create(structureLink);
                 Assert.That(createdStructureLink, Is.Not.Null);
 
                 var linksForStructure = await stores.StructureLinks.GetLinks(structureId);
@@ -132,13 +133,13 @@ namespace WebAnnotationModel.gRPC.Tests
                 try
                 {
                     if (locationBId.HasValue)
-                        stores.LocationLinks.DeleteLink(locationAId, locationBId.Value);
+                        await stores.LocationLinks.DeleteLink(locationAId, locationBId.Value);
                 }
                 catch { /* best-effort cleanup */ }
 
                 try
                 {
-                    var toDelete = await stores.Structures.GetObjectByID(structureId, true, false, CancellationToken.None);
+                    var toDelete = await stores.Structures.GetObjectByID(structureId, CancellationToken.None);
                     if (toDelete != null)
                     {
                         await stores.Structures.Remove(toDelete);

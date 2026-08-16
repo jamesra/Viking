@@ -75,8 +75,8 @@ namespace WebAnnotationModel
                 if (link.SourceID == link.TargetID)
                     continue;
 
-                StructureObj SourceObj = Store.Structures.GetObjectByID(link.SourceID, false);
-                StructureObj TargetObj = Store.Structures.GetObjectByID(link.TargetID, false);
+                Store.Structures.TryGetObjectByID(link.SourceID, out StructureObj SourceObj);
+                Store.Structures.TryGetObjectByID(link.TargetID, out StructureObj TargetObj);
 
                 SourceObj?.AddLink(link);
 
@@ -98,8 +98,8 @@ namespace WebAnnotationModel
                     continue; 
                 */
 
-                StructureObj SourceObj = Store.Structures.GetObjectByID(key.SourceID, false);
-                StructureObj TargetObj = Store.Structures.GetObjectByID(key.TargetID, false);
+                Store.Structures.TryGetObjectByID(key.SourceID, out StructureObj SourceObj);
+                Store.Structures.TryGetObjectByID(key.TargetID, out StructureObj TargetObj);
 
                 SourceObj?.RemoveLink(key);
 

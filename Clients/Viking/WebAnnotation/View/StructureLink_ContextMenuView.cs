@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Viking.AnnotationServiceTypes;
 using System.Windows.Forms;
 using Viking.Common;
@@ -66,15 +67,15 @@ namespace WebAnnotation.View
             }
         }
 
-        protected void ContextMenu_OnFlip(object sender, EventArgs e)
+        protected async void ContextMenu_OnFlip(object sender, EventArgs e)
         {
-            Store.StructureLinks.Remove(modelObj);
+            await Store.StructureLinks.Remove(modelObj);
             try
             {
-                Store.StructureLinks.Save();
+                await Store.StructureLinks.Save();
 
                 StructureLinkObj newLink = new(TargetID, SourceID, Bidirectional);
-                Store.StructureLinks.Create(newLink);
+                await Store.StructureLinks.Create(newLink);
                 //              this.modelObj = newLink;
                 //CreateView(newLink);
             }
@@ -84,15 +85,15 @@ namespace WebAnnotation.View
             }
         }
 
-        protected void ContextMenu_OnBidirectional(object sender, EventArgs e)
+        protected async void ContextMenu_OnBidirectional(object sender, EventArgs e)
         {
-            Store.StructureLinks.Remove(modelObj);
+            await Store.StructureLinks.Remove(modelObj);
             try
             {
-                Store.StructureLinks.Save();
+                await Store.StructureLinks.Save();
 
                 StructureLinkObj newLink = new(SourceID, TargetID, !Bidirectional);
-                Store.StructureLinks.Create(newLink);
+                await Store.StructureLinks.Create(newLink);
                 //              this.modelObj = newLink;
                 //CreateView(newLink);
             }

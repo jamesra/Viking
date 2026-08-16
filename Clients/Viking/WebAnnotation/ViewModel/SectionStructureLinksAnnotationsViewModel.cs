@@ -42,7 +42,7 @@ namespace WebAnnotation.ViewModel
                     continue;
                 }
 
-                StructureObj parent = Store.Structures.GetObjectByID(locObj.ParentID.Value, true);//locObj.Parent;
+                Store.Structures.TryGetObjectByID(locObj.ParentID.Value, out StructureObj parent);
                 if (parent is null)
                 {
                     continue;

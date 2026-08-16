@@ -250,13 +250,13 @@ namespace WebAnnotationModel
             //Make sure the LocationObjects know about the new links we've pulled from the database
             foreach (LocationLinkObj link in newObj)
             {
-                LocationObj AObj = Store.Locations.GetObjectByID(link.A, false);
+                Store.Locations.TryGetObjectByID(link.A, out LocationObj AObj);
                 if (AObj != null)
                 {
                     AObj.AddLink(link.B);
                 }
 
-                LocationObj BObj = Store.Locations.GetObjectByID(link.B, false);
+                Store.Locations.TryGetObjectByID(link.B, out LocationObj BObj);
                 if (BObj != null)
                 {
                     BObj.AddLink(link.A);
@@ -296,13 +296,13 @@ namespace WebAnnotationModel
 
             foreach (LocationLinkObj link in deletedLinks)
             {
-                LocationObj AObj = Store.Locations.GetObjectByID(link.A, false);
+                Store.Locations.TryGetObjectByID(link.A, out LocationObj AObj);
                 if (AObj != null)
                 {
                     AObj.RemoveLink(link.B);
                 }
 
-                LocationObj BObj = Store.Locations.GetObjectByID(link.B, false);
+                Store.Locations.TryGetObjectByID(link.B, out LocationObj BObj);
                 if (BObj != null)
                 {
                     BObj.RemoveLink(link.A);

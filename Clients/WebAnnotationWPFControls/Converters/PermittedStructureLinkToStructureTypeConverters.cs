@@ -15,7 +15,8 @@ namespace WebAnnotation.WPF.Converters
             if (value is not IPermittedStructureLink link)
                 throw new ArgumentException(string.Format("Expected an IPermittedStructureLink, got {0}", value));
 
-            return Store.StructureTypes.GetObjectByID((long)link.SourceTypeID, CancellationToken.None).Result;
+            Store.StructureTypes.TryGetObjectByID((long)link.SourceTypeID, out var sourceType);
+            return sourceType;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
@@ -28,7 +29,8 @@ namespace WebAnnotation.WPF.Converters
             if (value is not IPermittedStructureLink link)
                 throw new ArgumentException(string.Format("Expected an IPermittedStructureLink, got {0}", value));
 
-            return Store.StructureTypes.GetObjectByID((long)link.TargetTypeID, CancellationToken.None).Result;
+            Store.StructureTypes.TryGetObjectByID((long)link.TargetTypeID, out var typeObj);
+            return typeObj;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
@@ -43,7 +45,8 @@ namespace WebAnnotation.WPF.Converters
 
             ulong myTypeID = System.Convert.ToUInt64(parameter);
             ulong otherTypeID = link.SourceTypeID == myTypeID ? link.TargetTypeID : link.SourceTypeID;
-            return Store.StructureTypes.GetObjectByID((long)otherTypeID, CancellationToken.None).Result;
+            Store.StructureTypes.TryGetObjectByID((long)otherTypeID, out var otherType);
+            return otherType;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
@@ -60,7 +63,7 @@ namespace WebAnnotation.WPF.Converters
             if (typeObj is null && (value is long || value is int || value is ulong || value is uint))
             {
                 long ID = System.Convert.ToInt64(value);
-                typeObj = Store.StructureTypes.GetObjectByID(ID, AskServer: true, ForceRefreshFromServer: false, CancellationToken.None).Result;
+                Store.StructureTypes.TryGetObjectByID(ID, out typeObj);
             }
 
             if (typeObj is null)

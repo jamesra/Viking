@@ -18,7 +18,7 @@ namespace WebAnnotation.WPF.Converters
             if (typeObj is null && (value is long || value is int || value is ulong || value is uint))
             {
                 long ID = System.Convert.ToInt64(value);
-                typeObj = Store.StructureTypes.GetObjectByID(ID, AskServer: true, ForceRefreshFromServer: false, CancellationToken.None).Result;
+                Store.StructureTypes.TryGetObjectByID(ID, out typeObj);
             }
 
             if (typeObj is null)

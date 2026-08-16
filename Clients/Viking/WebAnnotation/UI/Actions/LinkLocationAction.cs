@@ -51,11 +51,15 @@ namespace WebAnnotation.UI.Actions
 
         public void OnExecute()
         {
+            _ = OnExecuteAsync();
+        }
+
+        async System.Threading.Tasks.Task OnExecuteAsync()
+        {
             try
             {
-                Store.LocationLinks.CreateLink(A.ID, B.ID);
-                //This save was here when I added the exceptions... but it appears redundant looking at the code
-                Store.LocationLinks.Save();
+                await Store.LocationLinks.CreateLink(A.ID, B.ID);
+                await Store.LocationLinks.Save();
             }
             catch (System.ServiceModel.FaultException e)
             {

@@ -134,8 +134,8 @@
             }
 
             //Trace.WriteLine("Add Link " + key.A.ToString() + " -> " + key.B.ToString());
-            LocationObj AObj = Store.Locations.GetObjectByID(key.A, false);
-            LocationObj BObj = Store.Locations.GetObjectByID(key.B, false);
+            Store.Locations.TryGetObjectByID(key.A, out LocationObj AObj);
+            Store.Locations.TryGetObjectByID(key.B, out LocationObj BObj);
 
             if (AObj is null)
                 return false;

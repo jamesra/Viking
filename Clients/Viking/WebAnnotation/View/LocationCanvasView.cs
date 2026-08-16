@@ -358,7 +358,7 @@ namespace WebAnnotation.View
         {
             get
             {
-                ICollection<LocationObj> listLinkedLocations = Store.Locations.GetObjectsByIDs(Links, false);
+                Store.Locations.TryGetObjectsByIDs(Links, out var listLinkedLocations, out _);
                 return listLinkedLocations.Count == Links.Count;
             }
         }

@@ -14,6 +14,9 @@ using WebAnnotationModel.ServerInterface;
 
 namespace WebAnnotationModel.gRPC
 {
+    /// <summary>
+    /// Client cache of the structure-type table. Loaded in full at startup.
+    /// </summary>
     public class StructureTypeStore : StoreBaseWithKeyAndParent<long, StructureTypeObj,
                                         IStructureType, IStructureType, IStructureType>,
                                         IStructureTypeStore
@@ -35,7 +38,7 @@ namespace WebAnnotationModel.gRPC
         }
 
 
-        public async Task<StructureTypeObj> Create(StructureTypeObj new_type, CancellationToken token)
+        public async Task<StructureTypeObj> Create(StructureTypeObj new_type, CancellationToken token = default)
         {
             var client = ClientFactory.GetOrCreate();
 
@@ -62,13 +65,8 @@ namespace WebAnnotationModel.gRPC
         }
 
         /// <summary>
-        /// Synchronous convenience overload equivalent to Create(new_type, CancellationToken.None).
-        /// </summary>
-        public StructureTypeObj Create(StructureTypeObj new_type) => Create(new_type, CancellationToken.None).Result;
-
-        /// <summary>
-        /// At startup we load the entire structure types table since it is fairly static.
-        /// Failures must surface — swallowing them leaves StructureObj.Type null and crashes views.
+        /// Loads the entire type table. Failures must surface — swallowing them leaves StructureObj.Type null.
+        /// Uses this.CallOnCollectionChanged (not EndBatch) so RootObjects and Children are wired.
         /// </summary>
         public async Task<ICollection<StructureTypeObj>> GetAll()
         {
@@ -77,6 +75,7 @@ namespace WebAnnotationModel.gRPC
             var changes = await ServerQueryResultsHandler.ProcessServerUpdate(
                     new ServerUpdate<long, IStructureType[]>(DateTime.UtcNow, response, Array.Empty<long>()))
                 .ConfigureAwait(false);
+            // Virtual CallOnCollectionChanged (not IStoreEditor.EndBatch) so RootObjects/Children are wired.
             await CallOnCollectionChanged(changes).ConfigureAwait(false);
             Trace.WriteLine(
                 $"Loaded {changes.ObjectsInStore.Count} structure types (server returned {response.Length})",

@@ -107,7 +107,11 @@ namespace WebAnnotation.View
 
         public int VisualHeight => 0;
 
-        private void CreateViews() => linkViews = CalculateOverlappedLocationCircles(OuterCircle_VolumeSpace, ID, Store.Locations.GetObjectsByIDs(_OverlappedLinks, false), Z);
+        private void CreateViews()
+        {
+            Store.Locations.TryGetObjectsByIDs(_OverlappedLinks, out var overlapped, out _);
+            linkViews = CalculateOverlappedLocationCircles(OuterCircle_VolumeSpace, ID, overlapped.ToList(), Z);
+        }
 
         /// <summary>
         /// A linked location overlapping with our location is drawn as a small circle.  This function stores the position of those smaller circles along an arc

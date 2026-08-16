@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
@@ -31,13 +32,13 @@ namespace WebAnnotation.UI
             Debug.Assert(Obj != null);
         }
 
-        private void StructureLocationsPage_VisibleChanged(object sender, EventArgs e)
+        private async void StructureLocationsPage_VisibleChanged(object sender, EventArgs e)
         {
             if (!listLoaded)
             {
 
                 UseWaitCursor = true;
-                ICollection<LocationObj> locations = Store.Locations.GetLocationsForStructure(Obj.ID);
+                ICollection<LocationObj> locations = await Store.Locations.GetStructureLocations(Obj.ID, QueryTargets.Server);
                 List<Location_PropertyPageViewModel> listLocationViews = new(locations.Count);
 
                 foreach (LocationObj loc in locations)

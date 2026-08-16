@@ -33,10 +33,10 @@ namespace WebAnnotation.UI.ActionViews
         {
             Active = null;
 
-            LocationObj existing_loc = Store.Locations.GetObjectByID(model.ExistingLocID, true);
+            Store.Locations.TryGetObjectByID(model.ExistingLocID, out LocationObj existing_loc);
             if (existing_loc != null)
             {
-                StructureTypeObj structure_type = Store.StructureTypes.GetObjectByID(existing_loc.Parent.TypeID, false);
+                Store.StructureTypes.TryGetObjectByID(existing_loc.Parent.TypeID, out StructureTypeObj structure_type);
 
                 Color = model != null ? structure_type.Color.ToXNAColor() : Color.White;
             }

@@ -37,7 +37,7 @@ namespace WebAnnotation.UI.Actions
 
             AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), [AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation]);
 #else
-            Store.Structures.Create(newStruct, newLocation).GetAwaiter().GetResult();
+            _ = Store.Structures.Create(newStruct, newLocation);
 #endif
         }
     }
@@ -67,8 +67,7 @@ namespace WebAnnotation.UI.Actions
 
         public override void OnExecute()
         {
-            StructureTypeObj TypeObj = Store.StructureTypes.GetObjectByID(TypeID, true);
-            if (TypeObj is null)
+            if (!Store.StructureTypes.TryGetObjectByID(TypeID, out StructureTypeObj TypeObj) || TypeObj is null)
             {
                 //TODO: Prompt the user with a dialog/UI interface to choose the type
                 throw new ArgumentException($"StructureTypeID {TypeID} not found when assigning type to structure");
@@ -135,8 +134,7 @@ namespace WebAnnotation.UI.Actions
 
         public override void OnExecute()
         {
-            StructureTypeObj TypeObj = Store.StructureTypes.GetObjectByID(TypeID, true);
-            if (TypeObj is null)
+            if (!Store.StructureTypes.TryGetObjectByID(TypeID, out StructureTypeObj TypeObj) || TypeObj is null)
             {
                 //TODO: Prompt the user with a dialog/UI interface to choose the type
                 throw new ArgumentException($"StructureTypeID {TypeID} not found when assigning type to structure");

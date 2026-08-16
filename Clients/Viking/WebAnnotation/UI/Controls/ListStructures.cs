@@ -2,6 +2,7 @@ using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
@@ -33,12 +34,12 @@ namespace WebAnnotation.UI.Controls
             ListItems.DisplayObjects(_structures);
         }
 
-        protected override void OnObjectDoubleClick(IUIObject obj)
+        protected override async void OnObjectDoubleClick(IUIObject obj)
         {
             Structure s = obj as Structure;
             Debug.Assert(s != null);
 
-            LocationObj centerLoc = s.Center;
+            LocationObj centerLoc = await s.GetCenterAsync();
             if (centerLoc != null)
             {
                 AnnotationOverlay.GoToLocation(centerLoc);

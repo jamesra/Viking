@@ -36,8 +36,8 @@ namespace WebAnnotationModel.gRPC.Converters
                 LastModified = src.LastModified?.ToDateTime() ?? default,
             };
 
-            obj.SetAttributes(ObjAttributeParser.ParseAttributes(src.Attributes ?? string.Empty)).Wait();
-            obj.SetLinksFromServerAsync(src.Links).Wait();
+            obj.SetAttributes(ObjAttributeParser.ParseAttributes(src.Attributes ?? string.Empty)).ConfigureAwait(false).GetAwaiter().GetResult();
+            obj.SetLinksFromServerAsync(src.Links).ConfigureAwait(false).GetAwaiter().GetResult();
             return obj;
         }
 
@@ -60,8 +60,8 @@ namespace WebAnnotationModel.gRPC.Converters
                 LastModified = src.LastModified,
             };
 
-            obj.SetAttributes(ObjAttributeParser.ParseAttributes(src.TagsXml ?? string.Empty)).Wait();
-            obj.SetLinksFromServerAsync(src.Links).Wait();
+            obj.SetAttributes(ObjAttributeParser.ParseAttributes(src.TagsXml ?? string.Empty)).ConfigureAwait(false).GetAwaiter().GetResult();
+            obj.SetLinksFromServerAsync(src.Links).ConfigureAwait(false).GetAwaiter().GetResult();
             return obj;
         }
     }
@@ -76,7 +76,6 @@ namespace WebAnnotationModel.gRPC.Converters
             Location obj =
                 new Location
                 {
-                    ParentId = src.ParentID.Value,
                     Attributes = src.Attributes,
                     Id = src.ID,
                     Section = src.SectionNumber,
@@ -95,6 +94,9 @@ namespace WebAnnotationModel.gRPC.Converters
                     LastModified = src.LastModified.ToTimestamp(),
 
                 };
+
+            if (src.ParentID.HasValue)
+                obj.ParentId = src.ParentID.Value;
               
             return obj;
         }

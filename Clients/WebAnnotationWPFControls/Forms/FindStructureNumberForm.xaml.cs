@@ -1,5 +1,6 @@
 using System;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -14,7 +15,7 @@ namespace WebAnnotation.UI.Forms
         /// <summary>
         /// Called when the user clicks Go. Receives the structure ID and returns true if the structure was found and displayed.
         /// </summary>
-        public Func<long, bool> OnFindStructure { get; set; }
+        public Func<long, Task<bool>> OnFindStructure { get; set; }
 
         public FindStructureNumberForm()
         {
@@ -27,13 +28,13 @@ namespace WebAnnotation.UI.Forms
             return long.TryParse(text, out var id) ? id : 0;
         }
 
-        private void Go_Button_Click(object sender, RoutedEventArgs e)
+        private async void Go_Button_Click(object sender, RoutedEventArgs e)
         {
             var structureId = GetStructureId();
             if (structureId <= 0)
                 return;
 
-            if (OnFindStructure?.Invoke(structureId) == true)
+            if (OnFindStructure != null && await OnFindStructure(structureId))
                 Close();
         }
 

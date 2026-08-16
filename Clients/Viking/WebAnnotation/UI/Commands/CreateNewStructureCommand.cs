@@ -15,12 +15,16 @@ namespace WebAnnotation.UI.Commands
         private readonly StructureObj newStruct = structure;
         private readonly LocationObj newLoc = location;
 
-        public override void OnActivate() => Parent.BeginInvoke((Action)delegate () { Execute(); });
+        public override void OnActivate() => Parent.BeginInvoke((Action)delegate () { _ = ExecuteAsync(); });
 
         protected override void Execute()
         {
-            //Create the new structure
-            var result = Store.Structures.Create(newStruct, newLoc).Result;
+            _ = ExecuteAsync();
+        }
+
+        async System.Threading.Tasks.Task ExecuteAsync()
+        {
+            var result = await Store.Structures.Create(newStruct, newLoc);
             if (result.Location != null)
             {
                 Global.LastEditedAnnotationID = result.Location.ID;

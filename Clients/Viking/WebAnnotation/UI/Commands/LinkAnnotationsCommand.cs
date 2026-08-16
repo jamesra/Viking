@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Viking.AnnotationServiceTypes.Interfaces;
 using VikingXNAGraphics;
@@ -187,39 +188,11 @@ namespace WebAnnotation.UI.Commands
 
                 if (LocationLinkView.IsValidLocationLinkTarget(NearestTarget, OriginObj))
                 {
-                    try
-                    {
-                        Store.LocationLinks.CreateLink(OriginObj.ID, NearestTarget.ID);
-                    }
-                    catch (Exception except)
-                    {
-                        MessageBox.Show("Could not create link between locations: " + except.Message, "Recoverable Error");
-                    }
-                    finally
-                    {
-                        Deactivated = true;
-                    }
+                    _ = CreateLocationLinkAsync();
                 }
                 else if (StructureLinkViewModelBase.IsValidStructureLinkTarget(NearestTarget, OriginObj))
                 {
-                    try
-                    {
-                        bool Bidirectional = NearestTarget.Parent.Type.ID == OriginObj.Parent.Type.ID;
-                        StructureLinkObj linkStruct = new(OriginObj.ParentID.Value, NearestTarget.ParentID.Value, Bidirectional);
-                        linkStruct = Store.StructureLinks.Create(linkStruct);
-                    }
-                    catch (Exception except)
-                    {
-                        MessageBox.Show("Could not create link between structures: " + except.Message, "Recoverable Error");
-                    }
-                    finally
-                    {
-                        Deactivated = true;
-                    }
-
-                    //HACK: This updates the UI to show the new structure link.  It should be automatic, but force it for now...
-                    //sectionAnnotations.AddStructureLinks(OriginObj.Parent);
-                    //sectionAnnotations.AddStructureLinks(NearestTarget.Parent);
+                    _ = CreateStructureLinkAsync();
                 }
 
                 Execute();
@@ -228,9 +201,34 @@ namespace WebAnnotation.UI.Commands
             base.OnMouseUp(sender, e);
         }
 
-        public static bool TryCreateLink(SectionAnnotationsView sectionView, Geometry.Vector2 WorldPos, LocationObj OriginObj)
+        async Task CreateLocationLinkAsync()
         {
-            //Find if we are close enough to a location to "snap" the line to the target
+            try
+            {
+                await Store.LocationLinks.CreateLink(OriginObj.ID, NearestTarget.ID);
+            }
+            catch (Exception except)
+            {
+                MessageBox.Show("Could not create link between locations: " + except.Message, "Recoverable Error");
+            }
+        }
+
+        async Task CreateStructureLinkAsync()
+        {
+            try
+            {
+                bool Bidirectional = NearestTarget.Parent.Type.ID == OriginObj.Parent.Type.ID;
+                StructureLinkObj linkStruct = new(OriginObj.ParentID.Value, NearestTarget.ParentID.Value, Bidirectional);
+                await Store.StructureLinks.Create(linkStruct);
+            }
+            catch (Exception except)
+            {
+                MessageBox.Show("Could not create link between structures: " + except.Message, "Recoverable Error");
+            }
+        }
+
+        public static async Task<bool> TryCreateLink(SectionAnnotationsView sectionView, Geometry.Vector2 WorldPos, LocationObj OriginObj)
+        {
             IViewLocation nearest = FindBestLinkCandidate(sectionView, WorldPos, OriginObj, out Rectangle _);
             LocationObj NearestTarget = nearest != null ? Store.Locations[nearest.ID] : null;
             if (NearestTarget is null)
@@ -242,7 +240,7 @@ namespace WebAnnotation.UI.Commands
             {
                 try
                 {
-                    Store.LocationLinks.CreateLink(OriginObj.ID, NearestTarget.ID);
+                    await Store.LocationLinks.CreateLink(OriginObj.ID, NearestTarget.ID);
                     return true;
                 }
                 catch (Exception except)
@@ -256,17 +254,13 @@ namespace WebAnnotation.UI.Commands
                 {
                     bool Bidirectional = NearestTarget.Parent.Type.ID == OriginObj.Parent.Type.ID;
                     StructureLinkObj linkStruct = new(OriginObj.ParentID.Value, NearestTarget.ParentID.Value, Bidirectional);
-                    linkStruct = Store.StructureLinks.Create(linkStruct);
+                    await Store.StructureLinks.Create(linkStruct);
                     return true;
                 }
                 catch (Exception except)
                 {
                     MessageBox.Show("Could not create link between structures: " + except.Message, "Recoverable Error");
                 }
-
-                //HACK: This updates the UI to show the new structure link.  It should be automatic, but force it for now...
-                //sectionAnnotations.AddStructureLinks(OriginObj.Parent);
-                //sectionAnnotations.AddStructureLinks(NearestTarget.Parent);
             }
 
             return false;

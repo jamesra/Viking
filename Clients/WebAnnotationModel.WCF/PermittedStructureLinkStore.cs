@@ -74,8 +74,8 @@ namespace WebAnnotationModel
             foreach (PermittedStructureLinkObj link in newObjs)
             {
 
-                StructureTypeObj SourceObj = Store.StructureTypes.GetObjectByID(link.SourceTypeID, false);
-                StructureTypeObj TargetObj = Store.StructureTypes.GetObjectByID(link.TargetTypeID, false);
+                Store.StructureTypes.TryGetObjectByID(link.SourceTypeID, out StructureTypeObj SourceObj);
+                Store.StructureTypes.TryGetObjectByID(link.TargetTypeID, out StructureTypeObj TargetObj);
 
                 SourceObj?.TryAddPermittedLink(link);
 
@@ -98,8 +98,8 @@ namespace WebAnnotationModel
                     continue; 
                 */
 
-                StructureTypeObj SourceObj = Store.StructureTypes.GetObjectByID(key.SourceTypeID, false);
-                StructureTypeObj TargetObj = Store.StructureTypes.GetObjectByID(key.TargetTypeID, false);
+                Store.StructureTypes.TryGetObjectByID(key.SourceTypeID, out StructureTypeObj SourceObj);
+                Store.StructureTypes.TryGetObjectByID(key.TargetTypeID, out StructureTypeObj TargetObj);
 
                 SourceObj?.TryRemovePermittedLink(key);
 

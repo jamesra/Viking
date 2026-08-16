@@ -67,17 +67,23 @@ namespace WebAnnotationModel.gRPC
 
         private void OnStoreCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            //Todo, order by section number and optimize removal
-            foreach (var obj in e.OldItems)
+            // Add has OldItems == null; Remove has NewItems == null; Reset has both null.
+            if (e.OldItems != null)
             {
-                if (obj is OBJECT o)
-                    TryRemoveObjectFromSection(o);
+                foreach (var obj in e.OldItems)
+                {
+                    if (obj is OBJECT o)
+                        TryRemoveObjectFromSection(o);
+                }
             }
 
-            foreach (var obj in e.NewItems)
+            if (e.NewItems != null)
             {
-                if (obj is OBJECT o)
-                    TryAddObjectToSection(o);
+                foreach (var obj in e.NewItems)
+                {
+                    if (obj is OBJECT o)
+                        TryAddObjectToSection(o);
+                }
             }
         }
 

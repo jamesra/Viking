@@ -282,7 +282,7 @@ namespace Viking.AU
 
             WebAnnotationModel.State.Endpoint = State.Volume.Endpoint.EndpointURL;
             WebAnnotationModel.State.UserCredentials = credentials;
-            InitializeAnnotationStores(WebAnnotationModel.State.Endpoint);
+            await InitializeAnnotationStores(WebAnnotationModel.State.Endpoint);
 
             //Preload all structures
             Console.WriteLine("Begin preload all structures");
@@ -745,7 +745,7 @@ namespace Viking.AU
         /// <summary>
         /// Compose gRPC-backed annotation stores and bind them to <see cref="Store"/>.
         /// </summary>
-        static void InitializeAnnotationStores(Uri endpoint)
+        static async Task InitializeAnnotationStores(Uri endpoint)
         {
             if (endpoint is null)
                 throw new ArgumentNullException(nameof(endpoint));
@@ -767,7 +767,7 @@ namespace Viking.AU
             var grpcSettings = serviceProvider.GetRequiredService<IOptions<GrpcRepositorySettings>>();
             grpcSettings.Value.Endpoint = endpoint;
 
-            Store.Initialize(serviceProvider.GetRequiredService<IAnnotationStores>());
+            await Store.InitializeAsync(serviceProvider.GetRequiredService<IAnnotationStores>());
         }
 
 #if NETFRAMEWORK

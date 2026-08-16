@@ -159,8 +159,8 @@ namespace WebAnnotation.ViewModel
             if (mapProvider is null)
                 return false;
 
-            if (!Store.Locations.TryGetValue(key.A, out LocationObj locA) ||
-                !Store.Locations.TryGetValue(key.B, out LocationObj locB))
+            if (!Store.Locations.TryGetObjectByID(key.A, out LocationObj locA) ||
+                !Store.Locations.TryGetObjectByID(key.B, out LocationObj locB))
             {
                 return false;
             }
@@ -218,8 +218,8 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         private bool UpdatePropertiesFromLocations(IVolumeTransformProvider mapProvider)
         {
-            if (!Store.Locations.TryGetValue(Key.A, out LocationObj locA) ||
-                !Store.Locations.TryGetValue(Key.B, out LocationObj locB))
+            if (!Store.Locations.TryGetObjectByID(Key.A, out LocationObj locA) ||
+                !Store.Locations.TryGetObjectByID(Key.B, out LocationObj locB))
             {
                 return false;
             }
@@ -401,9 +401,12 @@ namespace WebAnnotation.ViewModel
         public override void Delete()
         {
             CallBeforeDelete();
+            _ = DeleteAsync();
+        }
 
-            Store.LocationLinks.DeleteLink(Key.A, Key.B);
-
+        async System.Threading.Tasks.Task DeleteAsync()
+        {
+            await Store.LocationLinks.DeleteLink(Key.A, Key.B);
             CallAfterDelete();
         }
 

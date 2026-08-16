@@ -19,6 +19,10 @@ using WebAnnotationModel.ServerInterface;
 namespace WebAnnotationModel.gRPC
 {
 
+    /// <summary>
+    /// Structure-to-structure links. Arrive with structure query payloads via
+    /// ProcessorForServerStructures. Not loaded in AnnotationStores.InitializeAsync.
+    /// </summary>
     internal class StructureLinkStore : StoreBaseWithKey<StructureLinkKey, StructureLinkObj, IStructureLink, StructureLinkObj, IStructureLink>, IStructureLinkStore 
     { 
         public StructureLinkStore(
@@ -59,11 +63,11 @@ namespace WebAnnotationModel.gRPC
         /// Synchronous wrapper so exceptions surface to the caller's try/catch, matching legacy WCF-store semantics.
         /// Creates the link on the server immediately (UI flip/delete paths also call Save for deletes).
         /// </summary>
-        public StructureLinkObj Create(StructureLinkObj obj)
+        public async Task<StructureLinkObj> Create(StructureLinkObj obj)
         {
             var client = ClientFactory.GetOrCreate();
-            var serverResult = client.Create(obj, CancellationToken.None).Result;
-            return Add(ServerObjConverter.Convert(serverResult)).Result;
+            var serverResult = await client.Create(obj, CancellationToken.None).ConfigureAwait(false);
+            return await Add(ServerObjConverter.Convert(serverResult)).ConfigureAwait(false);
         }
 
         /// <summary>

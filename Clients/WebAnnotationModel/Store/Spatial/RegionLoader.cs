@@ -214,7 +214,8 @@ namespace WebAnnotationModel
             }
 
             var localObjectKeys = SpatialSearch.Intersects(VolumeBounds.ToRTreeRect(sectionNumber));
-            var localsObjects = await objectStore.GetObjectsByIDs(localObjectKeys, false, token);
+            objectStore.TryGetObjectsByIDs(localObjectKeys, out var found, out _);
+            List<OBJECT> localsObjects = found.ToList();
             if (foundObjectsCallback != null)
                 foundObjectsCallback(localsObjects);
             return localsObjects;
@@ -289,7 +290,8 @@ namespace WebAnnotationModel
 
             //The locals should now include the new objects
             var localObjectKeys = SpatialSearch.Intersects(cell.Bounds.ToRTreeRect(sectionNumber));
-            var localsObjects = await objectStore.GetObjectsByIDs(localObjectKeys, false, aToken); 
+            objectStore.TryGetObjectsByIDs(localObjectKeys, out var found, out _);
+            List<OBJECT> localsObjects = found.ToList(); 
 
             await cell.OnLoadCompleted(localsObjects, serverResult.QueryTime);
         }

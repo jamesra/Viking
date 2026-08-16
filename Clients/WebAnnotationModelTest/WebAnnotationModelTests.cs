@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using Viking.Tokens;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
@@ -91,9 +92,9 @@ namespace WebAnnotationModelTest
         }
 
         [TestMethod]
-        public void TypesCreationTest()
+        public async Task TypesCreationTest()
         {
-            Store.StructureTypes.GetAll().Wait();
+            await Store.StructureTypes.GetAll();
 
             foreach (StructureTypeObj type in Store.StructureTypes.RootObjects.Select(id => Store.StructureTypes[id]))
             {
@@ -110,7 +111,7 @@ namespace WebAnnotationModelTest
             EventLogger EventLog = new EventLogger(); 
             EventLog.SubscribeToCollectionChangedEvents(Store.StructureTypes);
               
-            test_stype = Store.StructureTypes.Create(test_stype);
+            test_stype = await Store.StructureTypes.Create(test_stype);
 
             Assert.IsTrue(EventLog.listCollectionEvents.Count == 1);
             
@@ -120,7 +121,7 @@ namespace WebAnnotationModelTest
             
             //Make sure we can fetch the new ID
             Assert.IsTrue(test_stype.ID > 0);
-            StructureTypeObj queryOriginalObj = Store.StructureTypes.GetObjectByID(OriginalID);
+            StructureTypeObj queryOriginalObj = await Store.StructureTypes.GetObjectByID(OriginalID);
             Assert.IsNull(queryOriginalObj);
 
             //Test creating a structure with a parent
@@ -128,7 +129,7 @@ namespace WebAnnotationModelTest
             {
                 Name = "Child of test structure"
             };
-            testChildObj = Store.StructureTypes.Create(testChildObj);
+            testChildObj = await Store.StructureTypes.Create(testChildObj);
 
             EventLog.PopObjectAddedEvent(testChildObj);
             EventLog.SubscribeToPropertyChangingEvents(testChildObj);
@@ -140,21 +141,21 @@ namespace WebAnnotationModelTest
 
             testChildObj.DBAction = DBACTION.DELETE; 
             test_stype.DBAction = DBACTION.DELETE; 
-            Store.StructureTypes.Save().Wait();
+            await Store.StructureTypes.Save();
 
             Assert.IsTrue(EventLog.listCollectionEvents.Count == 1);
             EventLog.PopObjectRemovedEvent(new StructureTypeObj[] {test_stype, testChildObj} );
 
             //Make sure we can't fetch the deleted item
-            StructureTypeObj queryObj = Store.StructureTypes.GetObjectByID(test_stype.ID);
+            StructureTypeObj queryObj = await Store.StructureTypes.GetObjectByID(test_stype.ID);
             Assert.IsNull(queryObj);
 
-            queryObj = Store.StructureTypes.GetObjectByID(testChildObj.ID);
+            queryObj = await Store.StructureTypes.GetObjectByID(testChildObj.ID);
             Assert.IsNull(queryObj);
         }
 
         [TestMethod]
-        public void StructureChildCreationTest1()
+        public async Task StructureChildCreationTest1()
         {
             /*
             foreach (StructureTypeObj type in Store.StructureTypes.rootObjects.Values)
@@ -171,7 +172,7 @@ namespace WebAnnotationModelTest
             EventLogger LocationEventLog = new EventLogger();
             LocationEventLog.SubscribeToCollectionChangedEvents(Store.Locations);
 
-            StructureTypeObj cellType = Store.StructureTypes.GetObjectByID(1);
+            StructureTypeObj cellType = await Store.StructureTypes.GetObjectByID(1);
             StructureObj testObj = new StructureObj(cellType);
             LocationObj locObj = NewPopulatedLocation(testObj); 
             
@@ -179,7 +180,7 @@ namespace WebAnnotationModelTest
 
             long OriginalID = testObj.ID;
 
-            var createResult = Store.Structures.Create(testObj, locObj).Result;
+            var createResult = await Store.Structures.Create(testObj, locObj);
             testObj = createResult.Structure;
             locObj = createResult.Location;
             StructureEventLog.PopObjectAddedEvent(testObj);
@@ -187,7 +188,7 @@ namespace WebAnnotationModelTest
 
             //Make sure we can't fetch the new ID
             Assert.IsTrue(testObj.ID > 0);
-            StructureObj queryObj = Store.Structures.GetObjectByID(OriginalID);
+            StructureObj queryObj = await Store.Structures.GetObjectByID(OriginalID);
             Assert.IsNull(queryObj);
 
             //Test creating a structure with a parent
@@ -197,7 +198,7 @@ namespace WebAnnotationModelTest
             };
             LocationObj childLocObj = NewPopulatedLocation(testChildObj); 
             testChildObj.Label = "Child of test structure";
-            var childCreateResult = Store.Structures.Create(testChildObj, childLocObj).Result;
+            var childCreateResult = await Store.Structures.Create(testChildObj, childLocObj);
             testChildObj = childCreateResult.Structure;
             childLocObj = childCreateResult.Location;
             
@@ -210,9 +211,9 @@ namespace WebAnnotationModelTest
             testChildObj.DBAction = DBACTION.DELETE;
             
             //Delete the objects
-            Store.Structures.Save().Wait();
+            await Store.Structures.Save();
 
-            queryObj = Store.Structures.GetObjectByID(testChildObj.ID);
+            queryObj = await Store.Structures.GetObjectByID(testChildObj.ID);
             Assert.IsNull(queryObj);
 
             Assert.IsFalse(testObj.Children.Contains(testChildObj));
@@ -221,20 +222,20 @@ namespace WebAnnotationModelTest
              
             testObj.DBAction = DBACTION.DELETE;
 
-            Store.Structures.Save().Wait();
+            await Store.Structures.Save();
             StructureEventLog.PopObjectRemovedEvent(testObj);
 
             //Make sure we can't fetch the deleted item
-            queryObj = Store.Structures.GetObjectByID(testObj.ID);
+            queryObj = await Store.Structures.GetObjectByID(testObj.ID);
             Assert.IsNull(queryObj);
               
             //Make sure the child objects were deleted too
-            //Assert.IsNull(Store.Locations.GetObjectByID(locObj.ID, true));
-            //Assert.IsNull(Store.Locations.GetObjectByID(childLocObj.ID,true));
+            //Assert.IsNull(await Store.Locations.GetObjectByID(locObj.ID));
+            //Assert.IsNull(await Store.Locations.GetObjectByID(childLocObj.ID));
         }
 
         [TestMethod]
-        public void StructureLinkCreationTest1()
+        public async Task StructureLinkCreationTest1()
         { 
             EventLogger StructureEventLog = new EventLogger();
             StructureEventLog.SubscribeToCollectionChangedEvents(Store.Structures);
@@ -245,7 +246,7 @@ namespace WebAnnotationModelTest
             EventLogger LocationEventLog = new EventLogger();
             LocationEventLog.SubscribeToCollectionChangedEvents(Store.Locations);
 
-            StructureTypeObj cellType = Store.StructureTypes.GetObjectByID(1);
+            StructureTypeObj cellType = await Store.StructureTypes.GetObjectByID(1);
             StructureObj sourceStruct = new StructureObj(cellType);
             StructureObj targetStruct = new StructureObj(cellType);
 
@@ -253,21 +254,21 @@ namespace WebAnnotationModelTest
             LocationObj sourceLocObj = NewPopulatedLocation(sourceStruct);
             LocationObj targetLocObj = NewPopulatedLocation(targetStruct);
 
-            var sourceCreateResult = Store.Structures.Create(sourceStruct, sourceLocObj).Result;
+            var sourceCreateResult = await Store.Structures.Create(sourceStruct, sourceLocObj);
             sourceStruct = sourceCreateResult.Structure;
             sourceLocObj = sourceCreateResult.Location;
             StructureEventLog.PopObjectAddedEvent(sourceStruct);
             LocationEventLog.PopObjectAddedEvent(sourceLocObj);
-            var targetCreateResult = Store.Structures.Create(targetStruct, targetLocObj).Result;
+            var targetCreateResult = await Store.Structures.Create(targetStruct, targetLocObj);
             targetStruct = targetCreateResult.Structure;
             targetLocObj = targetCreateResult.Location;
             StructureEventLog.PopObjectAddedEvent(targetStruct);
             LocationEventLog.PopObjectAddedEvent(targetLocObj);
 
-            Store.Structures.Save().Wait();
+            await Store.Structures.Save();
 
             StructureLinkObj link = new StructureLinkObj(sourceStruct.ID, targetStruct.ID, false);
-            link = Store.StructureLinks.Create(link);
+            link = await Store.StructureLinks.Create(link);
             Assert.AreEqual(link.DBAction, DBACTION.NONE);
 
             StructureLinkEventLog.PopObjectAddedEvent(link);
@@ -282,7 +283,7 @@ namespace WebAnnotationModelTest
             /*We no longer toggle Bidirectional.  We delete and recreate the link.
              * link.Bidirectional = !link.Bidirectional;
             Assert.AreEqual(link.DBAction, DBACTION.UPDATE);
-            Store.StructureLinks.Save().Wait();
+            await Store.StructureLinks.Save();
             */
 
             //Ensure our change was submitted, this should reset DBAction
@@ -290,7 +291,7 @@ namespace WebAnnotationModelTest
             
 
             //Remove the link
-            Store.StructureLinks.Remove(link);
+            await Store.StructureLinks.Remove(link);
 
             StructureLinkEventLog.PopObjectRemovedEvent(link); 
 
@@ -300,21 +301,21 @@ namespace WebAnnotationModelTest
             Assert.IsFalse(sourceStruct.LinksCopy.Contains(link));
             Assert.IsFalse(targetStruct.LinksCopy.Contains(link));
 
-            Store.StructureLinks.Save().Wait();
+            await Store.StructureLinks.Save();
 
-            Store.Structures.Remove(sourceStruct);
-            Store.Structures.Remove(targetStruct);
+            await Store.Structures.Remove(sourceStruct);
+            await Store.Structures.Remove(targetStruct);
 
-            Store.Structures.Save().Wait();
+            await Store.Structures.Save();
 
             StructureEventLog.PopObjectRemovedEvent(new object[] {sourceStruct, targetStruct});
 
             //Make sure the child objects were deleted too
-            //Assert.IsNull(Store.Locations.GetObjectByID(sourceLocObj.ID, true));
-            //Assert.IsNull(Store.Locations.GetObjectByID(targetLocObj.ID, true));
+            //Assert.IsNull(await Store.Locations.GetObjectByID(sourceLocObj.ID));
+            //Assert.IsNull(await Store.Locations.GetObjectByID(targetLocObj.ID));
         }
         
-        public void TestLocationPropertyEvents(LocationObj obj)
+        public async Task TestLocationPropertyEvents(LocationObj obj)
         {
 
             EventLogger LocationEventLog = new EventLogger();
@@ -332,7 +333,7 @@ namespace WebAnnotationModelTest
 
             Assert.AreEqual(obj.DBAction, DBACTION.UPDATE);
             
-            Store.Locations.Save().Wait();
+            await Store.Locations.Save();
 
             Assert.AreEqual(obj.DBAction, DBACTION.NONE);
             Geometry.Vector2 oldPosition = obj.VolumePosition; 
@@ -347,7 +348,7 @@ namespace WebAnnotationModelTest
         }
         
         [TestMethod]
-        public void LocationCreationTest1()
+        public async Task LocationCreationTest1()
         {
             /*
             foreach (StructureTypeObj type in Store.StructureTypes.rootObjects.Values)
@@ -361,12 +362,12 @@ namespace WebAnnotationModelTest
             EventLogger LocationLinkEventLog = new EventLogger();
             LocationLinkEventLog.SubscribeToCollectionChangedEvents(Store.LocationLinks);
 
-            StructureTypeObj cellType = Store.StructureTypes.GetObjectByID(1);
+            StructureTypeObj cellType = await Store.StructureTypes.GetObjectByID(1);
             StructureObj structObj = new StructureObj(cellType); 
             LocationObj locObj = new LocationObj(structObj, SqlGeometry.Point(0,0,0).ToShape2D(), SqlGeometry.Point(0,0,0).ToShape2D(), 1, LocationType.POINT);
             try
             {
-                var structCreateResult = Store.Structures.Create(structObj, locObj).Result;
+                var structCreateResult = await Store.Structures.Create(structObj, locObj);
                 structObj = structCreateResult.Structure;
                 locObj = structCreateResult.Location;
 
@@ -375,11 +376,11 @@ namespace WebAnnotationModelTest
                 Assert.IsTrue(locObj.ID > 0);
                 Assert.IsTrue(structObj.ID > 0);
 
-                TestLocationPropertyEvents(locObj); 
+                await TestLocationPropertyEvents(locObj); 
 
                 //
                 LocationObj linkedLoc = new LocationObj(structObj, SqlGeometry.Point(1, 1, 0).ToShape2D(), SqlGeometry.Point(1, 1, 0).ToShape2D(), 2, LocationType.POINT);
-                linkedLoc = Store.Locations.Create(linkedLoc, new long[] { locObj.ID });
+                linkedLoc = await Store.Locations.Create(linkedLoc, new long[] { locObj.ID });
 
                 LocationEventLog.PopObjectAddedEvent(linkedLoc);
                 LocationLinkEventLog.PopObjectAddedEvent(new LocationLinkObj(locObj.ID, linkedLoc.ID));
@@ -390,7 +391,7 @@ namespace WebAnnotationModelTest
                 Assert.IsTrue(linkedLoc.Links.Contains(locObj.ID));
                 Assert.IsTrue(locObj.Links.Contains(linkedLoc.ID));
 
-                Store.LocationLinks.DeleteLink(locObj.ID, linkedLoc.ID);
+                await Store.LocationLinks.DeleteLink(locObj.ID, linkedLoc.ID);
 
                 LocationLinkEventLog.PopObjectRemovedEvent(new LocationLinkObj(locObj.ID, linkedLoc.ID));
 
@@ -400,28 +401,28 @@ namespace WebAnnotationModelTest
                 //Delete the structure
                 structObj.DBAction = DBACTION.DELETE;
 
-                bool result = Store.Structures.Save().Result;
+                bool result = await Store.Structures.Save();
 
                 locObj.DBAction = DBACTION.DELETE;
                 linkedLoc.DBAction = DBACTION.DELETE;
-                Store.Locations.Save().Wait();
+                await Store.Locations.Save();
 
                 LocationEventLog.PopObjectRemovedEvent(new object[] { locObj, linkedLoc });
 
                 structObj.DBAction = DBACTION.DELETE;
-                Store.Structures.Save().Wait();
+                await Store.Structures.Save();
 
                 //Make sure we can't fetch the deleted item
-                StructureObj queryStructObj = Store.Structures.GetObjectByID(structObj.ID);
+                StructureObj queryStructObj = await Store.Structures.GetObjectByID(structObj.ID);
                 Assert.IsNull(queryStructObj);
 
-                LocationObj queryLocObj = Store.Locations.GetObjectByID(locObj.ID);
+                LocationObj queryLocObj = await Store.Locations.GetObjectByID(locObj.ID);
                 Assert.IsNull(queryLocObj);
             }
             finally
             {
                 structObj.DBAction = DBACTION.DELETE; 
-                bool result = Store.Structures.Save().Result;
+                bool result = await Store.Structures.Save();
             }
 
             //OK, check that the location objects and structure objects have no references and are GC'ed.

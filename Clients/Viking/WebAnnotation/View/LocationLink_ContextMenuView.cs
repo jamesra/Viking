@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Viking.AnnotationServiceTypes;
 using Viking.Common;
@@ -38,13 +39,13 @@ namespace WebAnnotation.View
 
         private static void OnSplitFormClosed(object sender, FormClosedEventArgs e) => SplitForm = null;
 
-        protected void ContextMenu_OnDelete(object sender, EventArgs e)
+        protected async void ContextMenu_OnDelete(object sender, EventArgs e)
         {
             if (sender is ToolStripMenuItem menuItem)
             {
                 if (menuItem.Tag is LocationLinkKey linkKey)
                 {
-                    Store.LocationLinks.DeleteLink(linkKey.A, linkKey.B);
+                    await Store.LocationLinks.DeleteLink(linkKey.A, linkKey.B);
                 }
             }
         }

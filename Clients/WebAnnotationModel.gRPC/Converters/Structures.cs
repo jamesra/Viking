@@ -33,8 +33,12 @@ namespace WebAnnotationModel.gRPC.Converters
                 };
 
             obj.SetAttributes(ObjAttributeParser.ParseAttributes(src.Attributes ?? string.Empty)).Wait();
+            // Type stays null until StructureTypes is initialized; views that assume Type must wait for GetAll.
             if (Store.IsInitialized)
-                obj.Type = Store.StructureTypes.GetObjectByID(src.TypeId, false);
+            {
+                Store.StructureTypes.TryGetObjectByID(src.TypeId, out var type);
+                obj.Type = type;
+            }
             return obj;
         }
 
@@ -52,7 +56,10 @@ namespace WebAnnotationModel.gRPC.Converters
 
             obj.SetAttributes(ObjAttributeParser.ParseAttributes(src.Attributes ?? string.Empty)).Wait();
             if (Store.IsInitialized)
-                obj.Type = Store.StructureTypes.GetObjectByID(src.TypeID, false);
+            {
+                Store.StructureTypes.TryGetObjectByID(src.TypeID, out var type);
+                obj.Type = type;
+            }
             return obj;
         }
     }

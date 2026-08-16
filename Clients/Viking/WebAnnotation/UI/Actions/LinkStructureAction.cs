@@ -43,8 +43,13 @@ namespace WebAnnotation.UI.Actions
 
         public void OnExecute()
         {
+            _ = OnExecuteAsync();
+        }
+
+        async System.Threading.Tasks.Task OnExecuteAsync()
+        {
             StructureLinkObj linkStruct = new(Source.ParentID.Value, Target.ParentID.Value, Bidirectional);
-            linkStruct = Store.StructureLinks.Create(linkStruct);
+            await Store.StructureLinks.Create(linkStruct);
         }
 
         public void CreateDefaultVisuals()

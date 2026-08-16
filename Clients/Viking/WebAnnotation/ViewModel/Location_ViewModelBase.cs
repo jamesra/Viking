@@ -30,8 +30,7 @@ namespace WebAnnotation.ViewModel
 
         public Location_ViewModelBase(long LocationID)
         {
-            modelObj = Store.Locations.GetObjectByID(LocationID);
-            if (modelObj is null)
+            if (!Store.Locations.TryGetObjectByID(LocationID, out modelObj) || modelObj is null)
             {
                 throw new ArgumentException($"Could not load location {LocationID} from store");
             }
@@ -147,14 +146,12 @@ namespace WebAnnotation.ViewModel
 
                 if (this.modelObj.Parent is null)
                 {
-                    Action<long> GetParent = delegate(long ParentID)
+                    System.Threading.Tasks.Task.Run(async () =>
                     {
-                        StructureObj parent = Store.Structures.GetObjectByID(ParentID, true);
+                        StructureObj parent = await Store.Structures.GetObjectByID(this.modelObj.ParentID.Value);
                         if (parent != null)
                             NotifyPropertyChangedEventManager.AddListener(this.modelObj.Parent, this);
-                    };
-
-                    System.Threading.Tasks.Task.Run(() => GetParent(this.modelObj.ParentID.Value));
+                    });
                     //AnnotationOverlay.CurrentOverlay.Parent.BeginInvoke(GetParent, new object[] { this.modelObj.ParentID.Value });
                 }
                 else

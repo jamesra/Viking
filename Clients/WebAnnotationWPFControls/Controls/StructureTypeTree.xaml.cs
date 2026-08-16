@@ -1,7 +1,7 @@
 using Viking.AnnotationServiceTypes.Interfaces;
 using System;
 using System.Collections.ObjectModel;
-using System.Threading;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using WebAnnotationModel;
@@ -33,12 +33,24 @@ namespace WebAnnotation.UI.Controls
             InitializeComponent();
 
             if (Store.IsInitialized)
+                LoadRootTypes();
+
+            Store.StructureTypes.OnCollectionChanged += (_, _) =>
             {
-                RootStructureTypes = new System.Collections.ObjectModel.ObservableCollection<IStructureTypeReadOnly>(Store.StructureTypes.GetObjectsByIDs(Store.StructureTypes.RootObjects, true, CancellationToken.None).Result);
-                tree_view.ItemsSource = RootStructureTypes;
-            }
+                Dispatcher.BeginInvoke(LoadRootTypes);
+            };
 
             tree_view.SelectedItemChanged += OnSelectedItemChanged;
+        }
+
+        void LoadRootTypes()
+        {
+            if (!Store.IsInitialized)
+                return;
+
+            Store.StructureTypes.TryGetObjectsByIDs(Store.StructureTypes.RootObjects, out var found, out _);
+            RootStructureTypes = new ObservableCollection<IStructureTypeReadOnly>(
+                found.Cast<IStructureTypeReadOnly>());
         }
 
         void OnSelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)

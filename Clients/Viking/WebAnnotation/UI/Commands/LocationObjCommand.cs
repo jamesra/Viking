@@ -26,8 +26,9 @@ namespace WebAnnotation.UI.Commands
             {
                 if (selected.ParentID.HasValue)
                 {
-                    StructureObj structure = Store.Structures.GetObjectByID(selected.ParentID.Value, true);
-                    _LocType = Store.StructureTypes.GetObjectByID(structure.TypeID, true);
+                    Store.Structures.TryGetObjectByID(selected.ParentID.Value, out StructureObj structure);
+                    if (structure != null)
+                        Store.StructureTypes.TryGetObjectByID(structure.TypeID, out _LocType);
                 }
 
                 return _LocType;

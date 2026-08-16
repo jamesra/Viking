@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
@@ -58,69 +59,28 @@ namespace WebAnnotation.UI
             InitializeComponent();
         }
 
-        private bool IsIDValid(string Input, out string Reason)
+        private async Task<(bool Valid, string Reason)> IsIDValidAsync(string Input)
         {
-            Reason = null;
             try
             {
-                //Check if the string is empty, that is OK
                 if (Input.Length == 0)
-                {
-                    return true;
-                }
+                    return (true, null);
 
-                //If string is not empty it needs to be a number
                 int ID = int.Parse(Input);
-
-                LocationObj obj = Store.Locations.GetObjectByID(ID);
+                LocationObj obj = await Store.Locations.GetObjectByID(ID);
                 if (obj is null)
-                {
-                    Reason = "No Location found";
-                }
+                    return (true, "No Location found");
 
-                Reason = obj.Parent.Label;
-                return true;
+                return (true, obj.Parent.Label);
             }
             catch (FormatException)
             {
-                return false;
+                return (false, null);
             }
         }
 
-        private bool IsAllInputValid(out string Reason)
+        private async Task<(bool Valid, string Reason)> VerifyStructureMatchAsync()
         {
-            Reason = null;
-            long KeepID;
-            long SplitID;
-
-            try
-            {
-                KeepID = long.Parse(textKeepID.Text);
-                SplitID = long.Parse(textSplitID.Text);
-            }
-            catch (FormatException)
-            {
-                Reason = "Input ID is not a number";
-                return false;
-            }
-
-            if (KeepID == SplitID)
-            {
-                Reason = "Location ID's must not be equal";
-                return false;
-            }
-
-            return VerifyStructureMatch(out Reason);
-        }
-
-        /// <summary>
-        /// Return true if the structures in the Keep and Split are from the same structure
-        /// </summary>
-        /// <returns></returns>
-        private bool VerifyStructureMatch(out string Reason)
-        {
-            Reason = null;
-
             long KeepID;
             long SplitID;
             try
@@ -130,60 +90,62 @@ namespace WebAnnotation.UI
             }
             catch (FormatException)
             {
-                Reason = "Input ID must be a number";
-                return false;
+                return (false, "Input ID must be a number");
             }
 
-            LocationObj keepLoc = Store.Locations.GetObjectByID(KeepID);
-            LocationObj splitLoc = Store.Locations.GetObjectByID(SplitID);
+            LocationObj keepLoc = await Store.Locations.GetObjectByID(KeepID);
+            LocationObj splitLoc = await Store.Locations.GetObjectByID(SplitID);
 
             if (keepLoc is null && splitLoc is null)
-            {
-                Reason = "Input IDs must be a valid location";
-                return false;
-            }
-
+                return (false, "Input IDs must be a valid location");
             if (keepLoc is null)
-            {
-                Reason = "Keep Location ID must be a valid location";
-                return false;
-            }
-
+                return (false, "Keep Location ID must be a valid location");
             if (splitLoc is null)
-            {
-                Reason = "Split Location ID must be a valid location";
-                return false;
-            }
-
+                return (false, "Split Location ID must be a valid location");
             if (keepLoc.ParentID != splitLoc.ParentID)
+                return (false, $"Location IDs must be from the same structure. Structure {keepLoc.ParentID} not equal to {splitLoc.ParentID}");
+
+            return (true, null);
+        }
+
+        private async Task<(bool Valid, string Reason)> IsAllInputValidAsync()
+        {
+            long KeepID;
+            long SplitID;
+            try
             {
-                Reason =
-                    $"Location IDs must be from the same structure. Structure {keepLoc.ParentID} not equal to {splitLoc.ParentID}";
-                return false;
+                KeepID = long.Parse(textKeepID.Text);
+                SplitID = long.Parse(textSplitID.Text);
+            }
+            catch (FormatException)
+            {
+                return (false, "Input ID is not a number");
             }
 
-            return true;
+            if (KeepID == SplitID)
+                return (false, "Location ID's must not be equal");
+
+            return await VerifyStructureMatchAsync();
         }
 
-        private void textKeepID_TextChanged(object sender, EventArgs e)
+        private async void textKeepID_TextChanged(object sender, EventArgs e)
         {
-            bool IDValid = IsIDValid(textKeepID.Text, out string Reason);
+            var (IDValid, Reason) = await IsIDValidAsync(textKeepID.Text);
             textKeepLabel.Text = Reason;
-
-            UpdateUIForIDLabelTextChanged();
+            await UpdateUIForIDLabelTextChangedAsync();
         }
 
-        private void textSplitID_TextChanged(object sender, EventArgs e)
+        private async void textSplitID_TextChanged(object sender, EventArgs e)
         {
-            bool IDValid = IsIDValid(textSplitID.Text, out string Reason);
+            var (IDValid, Reason) = await IsIDValidAsync(textSplitID.Text);
             textSplitLabel.Text = Reason;
-
-            UpdateUIForIDLabelTextChanged();
+            await UpdateUIForIDLabelTextChangedAsync();
         }
 
-        private void UpdateUIForIDLabelTextChanged()
+        private async Task UpdateUIForIDLabelTextChangedAsync()
         {
-            if (!IsAllInputValid(out string Reason))
+            var (valid, Reason) = await IsAllInputValidAsync();
+            if (!valid)
             {
                 textInfo.Text = Reason;
                 btnSplit.Enabled = false;
@@ -195,7 +157,7 @@ namespace WebAnnotation.UI
             }
         }
 
-        private void btnSplit_Click(object sender, EventArgs e)
+        private async void btnSplit_Click(object sender, EventArgs e)
         {
             int KeepLocID;
             int MergeLocID;
@@ -212,7 +174,7 @@ namespace WebAnnotation.UI
 
             try
             {
-                Store.Structures.SplitAtLocationLink(KeepLocID, MergeLocID);
+                await Store.Structures.SplitStructureAtLocationLink(KeepLocID, MergeLocID);
 
             }
             catch (System.ServiceModel.FaultException<System.ServiceModel.ExceptionDetail> fe)
@@ -243,11 +205,12 @@ namespace WebAnnotation.UI
 
         private void btnCancel_Click(object sender, EventArgs e) => Close();
 
-        private void textKeepID_Validating(object sender, CancelEventArgs e)
+        private async void textKeepID_Validating(object sender, CancelEventArgs e)
         {
             e.Cancel = true;
 
-            if (!IsIDValid(textKeepID.Text, out string Reason))
+            var (valid, Reason) = await IsIDValidAsync(textKeepID.Text);
+            if (!valid)
             {
                 textKeepLabel.Text = Reason;
                 return;
@@ -256,14 +219,15 @@ namespace WebAnnotation.UI
             textKeepLabel.Text = "";
             e.Cancel = false;
 
-            ValidateSplitButton();
+            await ValidateSplitButtonAsync();
         }
 
-        private void textSplitID_Validating(object sender, CancelEventArgs e)
+        private async void textSplitID_Validating(object sender, CancelEventArgs e)
         {
             e.Cancel = true;
 
-            if (!IsIDValid(textSplitID.Text, out string Reason))
+            var (valid, Reason) = await IsIDValidAsync(textSplitID.Text);
+            if (!valid)
             {
                 textSplitLabel.Text = Reason;
                 return;
@@ -272,12 +236,13 @@ namespace WebAnnotation.UI
             textSplitLabel.Text = "";
             e.Cancel = false;
 
-            ValidateSplitButton();
+            await ValidateSplitButtonAsync();
         }
 
-        private void ValidateSplitButton()
+        private async Task ValidateSplitButtonAsync()
         {
-            if (!IsAllInputValid(out string reason))
+            var (valid, reason) = await IsAllInputValidAsync();
+            if (!valid)
             {
                 textInfo.Text = reason;
                 btnSplit.Enabled = false;

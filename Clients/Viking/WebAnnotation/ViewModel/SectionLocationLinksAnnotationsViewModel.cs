@@ -101,10 +101,10 @@ namespace WebAnnotation.ViewModel
             if (KnownLinks.Contains(key))
                 return true;
 
-            if (!Store.Locations.TryGetValue(key.A, out LocationObj AOBj))
+            if (!Store.Locations.TryGetObjectByID(key.A, out LocationObj AOBj))
                 return false;
 
-            if (!Store.Locations.TryGetValue(key.B, out LocationObj BOBj))
+            if (!Store.Locations.TryGetObjectByID(key.B, out LocationObj BOBj))
                 return false;
 
             if (!(AOBj.Z == SectionNumber || BOBj.Z == SectionNumber))

@@ -2,6 +2,7 @@ using Geometry;
 using SqlGeometryUtils;
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Viking.VolumeModel;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
@@ -28,7 +29,7 @@ namespace WebAnnotation.UI.Actions
 
         public LocationAction Type => LocationAction.CREATELINKEDLOCATION;
 
-        public Action Execute => OnExecute;
+        public Action Execute => () => _ = OnExecuteAsync();
 
         /// <summary>
         /// Section to create the new linked location upon
@@ -45,7 +46,7 @@ namespace WebAnnotation.UI.Actions
             NewVolumeShape = newVolumePolygon ?? Transform.TryMapShapeSectionToVolume(newMosaicPolygon.ToSqlGeometry()).ToIShape2D();
         }
 
-        public void OnExecute()
+        private async Task OnExecuteAsync()
         {
             try
             {
@@ -56,7 +57,7 @@ namespace WebAnnotation.UI.Actions
                                                      SectionNumber,
                                                      NewMosaicShape.ShapeType.IsClosed() ? Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON : Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYLINE);
 
-                LocationObj NewLocation = Store.Locations.Create(newLoc, [ExistingLocID]);
+                LocationObj NewLocation = await Store.Locations.Create(newLoc, [ExistingLocID]);
                 Global.LastEditedAnnotationID = NewLocation.ID;
             }
             catch (ArgumentOutOfRangeException)

@@ -36,7 +36,7 @@ namespace WebAnnotation.UI.ActionViews
             Color = Color.White;
             if (model != null)
             {
-                StructureTypeObj structure_type = Store.StructureTypes.GetObjectByID(model.TypeID, false);
+                Store.StructureTypes.TryGetObjectByID(model.TypeID, out StructureTypeObj structure_type);
                 if (structure_type != null)
                 {
                     Color = structure_type.Color.ToXNAColor();

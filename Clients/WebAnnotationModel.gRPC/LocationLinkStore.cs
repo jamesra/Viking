@@ -19,6 +19,9 @@ using WebAnnotationModel.ServerInterface;
 namespace WebAnnotationModel.gRPC
 {
 
+    /// <summary>
+    /// Location-to-location links. Not loaded at startup; they arrive with location query payloads.
+    /// </summary>
     internal class LocationLinkStore : StoreBaseWithKey<LocationLinkKey, LocationLinkObj, ILocationLink, ILocationLink, ILocationLink>, ILocationLinkStore
     { 
         public LocationLinkStore(
@@ -31,26 +34,20 @@ namespace WebAnnotationModel.gRPC
 
         protected override Task Init() => Task.CompletedTask;
 
-        /// <summary>
-        /// Synchronous wrapper so exceptions surface to the caller's try/catch, matching legacy WCF-store semantics.
-        /// </summary>
-        public LocationLinkObj CreateLink(long A, long B)
+        public async Task<LocationLinkObj> CreateLink(long A, long B)
         {
             var newLink = new LocationLinkObj(A, B);
             var client = ClientFactory.GetOrCreate();
-            var serverResult = client.Create(newLink, CancellationToken.None).Result;
-            return Add(ServerObjConverter.Convert(serverResult)).Result;
+            var serverResult = await client.Create(newLink, CancellationToken.None).ConfigureAwait(false);
+            return await Add(ServerObjConverter.Convert(serverResult)).ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// Synchronous wrapper so exceptions surface to the caller's try/catch, matching legacy WCF-store semantics.
-        /// </summary>
-        public bool DeleteLink(long A, long B)
+        public async Task<bool> DeleteLink(long A, long B)
         {
             var key = new LocationLinkKey(A, B);
             var client = ClientFactory.GetOrCreate();
-            client.Delete(key, CancellationToken.None).Wait();
-            var deleted = Remove(key).Result;
+            await client.Delete(key, CancellationToken.None).ConfigureAwait(false);
+            var deleted = await Remove(key).ConfigureAwait(false);
             return deleted != null;
         }
 

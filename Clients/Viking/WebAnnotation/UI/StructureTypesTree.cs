@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Viking.Common;
 using Viking.UI.Controls;
@@ -24,7 +25,7 @@ namespace WebAnnotation.UI
 
         protected override void InitializeTree()
         {
-            ICollection<StructureTypeObj> listTypes = Store.StructureTypes.GetObjectsByIDs(Store.StructureTypes.RootObjects, true);
+            Store.StructureTypes.TryGetObjectsByIDs(Store.StructureTypes.RootObjects, out var listTypes, out _);
             List<StructureType> listRootTypes = new(listTypes.Count);
             foreach (StructureTypeObj type in listTypes)
             {
@@ -192,7 +193,7 @@ namespace WebAnnotation.UI
             }
         }
 
-        private void OnNewStructureType(object sender, EventArgs e)
+        private async void OnNewStructureType(object sender, EventArgs e)
         {
             StructureTypeObj newTypeObj = new();
             StructureType newType = new(newTypeObj);
@@ -201,8 +202,8 @@ namespace WebAnnotation.UI
             {
                 try
                 {
-                    newTypeObj = Store.StructureTypes.Create(newTypeObj);
-                    Store.StructureTypes.Save();
+                    newTypeObj = await Store.StructureTypes.Create(newTypeObj);
+                    await Store.StructureTypes.Save();
                 }
                 catch (System.ServiceModel.FaultException ex)
                 {

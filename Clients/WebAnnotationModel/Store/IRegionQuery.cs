@@ -9,23 +9,15 @@ namespace WebAnnotationModel
         where OBJECT : class
     {  
         /// <summary>
-        /// Return only objects already known on the client
+        /// Cache-only region query. Does not contact the server.
+        /// Use <see cref="GetServerObjectsInRegion"/> to load missing objects from the server.
         /// </summary>
-        /// <param name="SectionNumber"></param>
-        /// <param name="bounds"></param>
-        /// <param name="MinRadius"></param>
-        /// <param name="LastQueryUtc"></param>
-        /// <returns></returns>
         Task<ICollection<OBJECT>> GetLocalObjectsInRegion(long SectionNumber, Geometry.Rectangle bounds, double MinRadius);
 
         /// <summary>
-        /// Return objects from the server
+        /// Loads objects in the region from the server and adds them to the local store.
         /// </summary>
-        /// <param name="SectionNumber"></param>
-        /// <param name="bounds"></param>
-        /// <param name="MinRadius"></param>
-        /// <param name="LastQueryUtc"></param>
-        /// <returns></returns>
-        Task<ICollection<OBJECT>> GetServerObjectsInRegion(long SectionNumber, Geometry.Rectangle bounds, double MinRadius, DateTime? LastQueryUtc, out DateTime queryCompletedTime); 
+        /// <returns>The objects now known for the region and the UTC time the server query completed.</returns>
+        Task<(ICollection<OBJECT> Objects, DateTime QueryCompletedTime)> GetServerObjectsInRegion(long SectionNumber, Geometry.Rectangle bounds, double MinRadius, DateTime? LastQueryUtc); 
     }
 }

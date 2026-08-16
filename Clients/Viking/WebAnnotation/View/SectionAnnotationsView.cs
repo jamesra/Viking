@@ -60,7 +60,20 @@ namespace WebAnnotation.ViewModel
                 return;
             }
 
-            _ = Store.LocationsByRegion.GetObjectsInRegionAsync(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, SectionNumber, QueryTargets.Server, token, AddLocationsInLocalCache); // this.AddLocations, null);
+            _ = ObserveRegionLoad(Store.LocationsByRegion.GetObjectsInRegionAsync(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, SectionNumber, QueryTargets.Server, token, AddLocationsInLocalCache));
+        }
+
+        /// <summary>
+        /// Region queries are fire-and-forget; log faults so a failed load is not silent.
+        /// </summary>
+        protected static Task ObserveRegionLoad(Task load)
+        {
+            _ = load.ContinueWith(
+                t => Trace.WriteLine(t.Exception),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted,
+                TaskScheduler.Default);
+            return load;
         }
 
         protected abstract void AddLocationsInLocalCache(IEnumerable<LocationObj> locations);
@@ -155,9 +168,17 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        private IEnumerable<LocationObj> LinkedLocationsOnPrimary(ICollection<long> LinkedIDs) => Store.Locations.GetObjectsByIDs(LinkedIDs, false).Where(l => (int)l.Z == PrimarySectionNumber);
+        private IEnumerable<LocationObj> LinkedLocationsOnPrimary(ICollection<long> LinkedIDs)
+        {
+            Store.Locations.TryGetObjectsByIDs(LinkedIDs, out var found, out _);
+            return found.Where(l => (int)l.Z == PrimarySectionNumber);
+        }
 
-        private IEnumerable<LocationObj> LinkedLocationsOnAdjacent(ICollection<long> LinkedIDs) => Store.Locations.GetObjectsByIDs(LinkedIDs, false).Where(l => (int)l.Z == AdjacentSection.Number);
+        private IEnumerable<LocationObj> LinkedLocationsOnAdjacent(ICollection<long> LinkedIDs)
+        {
+            Store.Locations.TryGetObjectsByIDs(LinkedIDs, out var found, out _);
+            return found.Where(l => (int)l.Z == AdjacentSection.Number);
+        }
 
         /// <summary>
         /// Load 
@@ -509,6 +530,8 @@ namespace WebAnnotation.ViewModel
 
             CollectionChangedEventManager.AddListener(Store.Structures, this);
             CollectionChangedEventManager.AddListener(Store.StructureLinks, this);
+            CollectionChangedEventManager.AddListener(Store.Locations, this);
+            CollectionChangedEventManager.AddListener(Store.LocationLinks, this);
 
             Init();
         }
@@ -576,7 +599,8 @@ namespace WebAnnotation.ViewModel
             //Update if a position or everything has changed
             if (LocationObj.IsGeometryProperty(e.PropertyName))
             {
-                IEnumerable<LocationObj> linkedLocs = Store.Locations.GetObjectsByIDs(loc.LinksCopy, false).Where(l => l != null);
+                Store.Locations.TryGetObjectsByIDs(loc.LinksCopy, out var linkedFound, out _);
+                IEnumerable<LocationObj> linkedLocs = linkedFound.Where(l => l != null);
                 SectionAbove?.RemoveLocations(linkedLocs.Where(l => l.Z == SectionAbove.SectionNumber));
                 SectionBelow?.RemoveLocations(linkedLocs.Where(l => l.Z == SectionBelow.SectionNumber));
                 //                Location locView = new Location(loc);
@@ -612,7 +636,8 @@ namespace WebAnnotation.ViewModel
                 LocationObj[] locs = [loc];
                 AddLocationBatch(locs);
 
-                IEnumerable<LocationObj> linkedLocs = Store.Locations.GetObjectsByIDs(loc.LinksCopy, false).Where(l => l != null);
+                Store.Locations.TryGetObjectsByIDs(loc.LinksCopy, out var linkedFound, out _);
+                IEnumerable<LocationObj> linkedLocs = linkedFound.Where(l => l != null);
                 SectionAbove?.AddLocations(linkedLocs.Where(l => l.Z == SectionAbove.SectionNumber));
                 SectionBelow?.AddLocations(linkedLocs.Where(l => l.Z == SectionBelow.SectionNumber));
             }
@@ -633,7 +658,8 @@ namespace WebAnnotation.ViewModel
         private List<LocationObj> LocationsOnOurSectionLinkedFromSet(IEnumerable<LocationObj> locations)
         {
             List<long> LocationIDs = [.. locations.SelectMany(l => l.LinksCopy).Where(id => KnownLocations.Contains(id)).Distinct()];
-            return [.. Store.Locations.GetObjectsByIDs(LocationIDs, false)];
+            Store.Locations.TryGetObjectsByIDs(LocationIDs, out var found, out _);
+            return [.. found];
         }
 
         private void AddLocationBatch(IEnumerable<LocationObj> locations)
@@ -936,12 +962,12 @@ namespace WebAnnotation.ViewModel
         /// <returns></returns>
         private static LocationObj GetLocationFromLinkOnThisSection(LocationLinkKey link, int SectionNumber)
         {
-            if (!Store.Locations.TryGetValue(link.A, out LocationObj AObj))
+            if (!Store.Locations.TryGetObjectByID(link.A, out LocationObj AObj))
             {
                 return null;
             }
 
-            if (!Store.Locations.TryGetValue(link.B, out LocationObj BObj))
+            if (!Store.Locations.TryGetObjectByID(link.B, out LocationObj BObj))
             {
                 return null;
             }
@@ -1301,7 +1327,7 @@ namespace WebAnnotation.ViewModel
 
             if (VisibleMosaicBounds.HasValue)
             {
-                _ = Store.LocationsByRegion.GetObjectsInRegionAsync(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, SectionNumber, QueryTargets.Server, token, AddLocationsInLocalCache);// this.AddLocationsInRegionCallback);
+                _ = ObserveRegionLoad(Store.LocationsByRegion.GetObjectsInRegionAsync(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, SectionNumber, QueryTargets.Server, token, AddLocationsInLocalCache));
             }
 
 
@@ -1337,6 +1363,16 @@ namespace WebAnnotation.ViewModel
                 else if (sender is IStructureLinkStore)
                 {
                     OnStructureLinksStoreChanged(sender, CollectionChangeArgs);
+                    return true;
+                }
+                else if (sender is ILocationStore)
+                {
+                    OnLocationsStoreChanged(sender, CollectionChangeArgs);
+                    return true;
+                }
+                else if (sender is ILocationLinkStore)
+                {
+                    OnLocationLinksStoreChanged(sender, CollectionChangeArgs);
                     return true;
                 }
             }

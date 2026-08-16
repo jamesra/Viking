@@ -727,7 +727,7 @@ namespace WebAnnotation
             if (_userSettingsDoc is null)
                 return false;
 
-            WebAnnotationModel.Objects.LocationObj lastLoc = WebAnnotationModel.Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, false);
+            WebAnnotationModel.Store.Locations.TryGetObjectByID(Global.LastEditedAnnotationID.Value, out WebAnnotationModel.Objects.LocationObj lastLoc);
             if (lastLoc is null)
                 return false;
 
@@ -825,16 +825,21 @@ namespace WebAnnotation
 
             var refreshedProvider = ServiceLocator.ServiceProvider ?? serviceProvider;
 
-            if (!InitializeModule(refreshedProvider))
+            if (!InitializeModule(refreshedProvider, out WebAnnotationModel.IAnnotationStores annotationStores))
             {
                 throw new InvalidOperationException("WebAnnotation initialization failed.");
             }
 
+            if (annotationStores != null)
+                return WebAnnotationModel.Store.InitializeAsync(annotationStores, cancellationToken);
+
             return Task.CompletedTask;
         }
 
-        private static bool InitializeModule(IServiceProvider serviceProvider)
+        private static bool InitializeModule(IServiceProvider serviceProvider, out WebAnnotationModel.IAnnotationStores annotationStores)
         {  
+            annotationStores = null;
+
             //Find the server hosting the volume.  Look for an XML file mapping the volume to an endpoint.
             Viking.ViewModels.VolumeViewModel volume = Viking.UI.State.volume;
 
@@ -874,9 +879,9 @@ namespace WebAnnotation
                     grpcSettings.Value.Endpoint = WebAnnotationModel.State.Endpoint;
                 }
 
-                if (serviceProvider?.GetService<WebAnnotationModel.IAnnotationStores>() is WebAnnotationModel.IAnnotationStores annotationStores)
+                if (serviceProvider?.GetService<WebAnnotationModel.IAnnotationStores>() is WebAnnotationModel.IAnnotationStores stores)
                 {
-                    WebAnnotationModel.Store.Initialize(annotationStores);
+                    annotationStores = stores;
                 }
                 else
                 {

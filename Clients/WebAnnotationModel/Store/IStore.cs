@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -79,46 +80,62 @@ namespace WebAnnotationModel
 
         Task<OBJECT> Remove(KEY key);
 
-        Task<OBJECT> GetObjectByID(KEY ID, CancellationToken token);
+        /// <summary>
+        /// Cache-only lookup. Throws if the key is not already in the store.
+        /// Use when the object is known to be loaded (on-screen view, clicked annotation).
+        /// Does not contact the server. For a possible miss, use <see cref="TryGetObjectByID"/>.
+        /// To fetch if missing, use <see cref="GetObjectByID(KEY, CancellationToken)"/>.
+        /// </summary>
+        /// <exception cref="KeyNotFoundException">The key is not in the local cache.</exception>
+        OBJECT this[KEY key] { get; }
 
         /// <summary>
-        /// Synchronous convenience accessor equivalent to GetObjectByID(ID, AskServer: true, ForceRefreshFromServer: false, CancellationToken.None).
-        /// Kept for the large amount of legacy UI call sites that expect synchronous access.
+        /// Cache-only lookup. Does not contact the server.
         /// </summary>
-        OBJECT this[KEY index] { get; }
+        /// <returns><c>true</c> if the object was in the local cache; otherwise <c>false</c> and <paramref name="obj"/> is null.</returns>
+        bool TryGetObjectByID(KEY key, [NotNullWhen(true)] out OBJECT obj);
 
         /// <summary>
-        /// Synchronous convenience overload equivalent to this[ID].
+        /// Cache-only bulk lookup. Does not contact the server.
+        /// <paramref name="found"/> and <paramref name="missing"/> are in request order.
         /// </summary>
-        OBJECT GetObjectByID(KEY ID);
+        /// <returns><c>true</c> if every key was in the cache (<paramref name="missing"/> empty).</returns>
+        bool TryGetObjectsByIDs(ICollection<KEY> keys, out IReadOnlyList<OBJECT> found, out IReadOnlyList<KEY> missing);
 
         /// <summary>
-        /// Synchronous convenience overload equivalent to GetObjectByID(ID, AskServer, ForceRefreshFromServer: false, CancellationToken.None).
+        /// Returns the object from the local cache, or fetches it from the server if it is not cached.
+        /// Does not replace an already-cached object; use <see cref="Refresh(KEY, CancellationToken)"/> for that.
         /// </summary>
-        OBJECT GetObjectByID(KEY ID, bool AskServer);
-
-        Task<OBJECT> GetObjectByID(KEY ID, bool AskServer, bool ForceRefreshFromServer, CancellationToken token);
-
-        Task<List<OBJECT>> GetObjectsByIDs(ICollection<KEY> IDs, bool AskServer, CancellationToken token);
+        /// <returns>The cached or fetched object, or <c>null</c> if the server has no such key.</returns>
+        /// <seealso cref="TryGetObjectByID"/>
+        /// <seealso cref="Refresh(KEY, CancellationToken)"/>
+        Task<OBJECT> GetObjectByID(KEY ID, CancellationToken token = default);
 
         /// <summary>
-        /// Synchronous convenience overload equivalent to GetObjectsByIDs(IDs, AskServer, CancellationToken.None).
+        /// Returns objects from the local cache, then fetches cache-miss keys from the server.
+        /// Does not replace already-cached objects; use <see cref="Refresh(ICollection{KEY}, CancellationToken)"/> for that.
+        /// <see cref="GetByIDResult{KEY, OBJECT}.Found"/> is hits plus newly fetched, in request order.
+        /// <see cref="GetByIDResult{KEY, OBJECT}.Missing"/> is requested keys the server does not have (deleted or never existed)
+        /// after this call — not a cache miss. Keys that were already cached are left as-is and listed in Found even if
+        /// another client has since deleted them; use <see cref="Refresh(ICollection{KEY}, CancellationToken)"/> to discover that.
+        /// If the by-ID RPC reports DeletedIds for requested keys, those keys are evicted and listed in Missing.
         /// </summary>
-        ICollection<OBJECT> GetObjectsByIDs(ICollection<KEY> IDs, bool AskServer);
+        /// <seealso cref="TryGetObjectsByIDs"/>
+        Task<GetByIDResult<KEY, OBJECT>> GetObjectsByIDs(ICollection<KEY> IDs, CancellationToken token = default);
 
         /// <summary>
-        /// Delete data for an object from the store and request the latest version from the server
+        /// Deletes the local row and reloads it from the server.
         /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        Task<OBJECT> Refresh(KEY key, CancellationToken token);
+        /// <returns>The refreshed object, or <c>null</c> if the server no longer has this key.</returns>
+        /// <seealso cref="GetObjectByID(KEY, CancellationToken)"/>
+        Task<OBJECT> Refresh(KEY key, CancellationToken token = default);
 
         /// <summary>
-        /// Delete data for an object from the store and request the latest version from the server
+        /// Deletes the local rows and reloads them from the server.
+        /// <see cref="GetByIDResult{KEY, OBJECT}.Missing"/> is keys the server no longer has.
         /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        Task<IList<OBJECT>> Refresh(KEY[] keys, CancellationToken token);
+        /// <seealso cref="GetObjectsByIDs"/>
+        Task<GetByIDResult<KEY, OBJECT>> Refresh(ICollection<KEY> keys, CancellationToken token = default);
 
         /// <summary>
         /// Forget the object on the client.  This will force a refresh from the
@@ -271,17 +288,16 @@ namespace WebAnnotationModel
     {
         Task<LocationObj> GetLastModifiedLocation();
 
+        /// <summary>
+        /// Loads all locations for a structure from the server and adds them to the local store.
+        /// </summary>
         Task<ICollection<LocationObj>> GetStructureLocations(long structureId, QueryTargets targets);
 
         /// <summary>
-        /// Synchronous convenience wrapper over GetStructureLocations(structureID, QueryTargets.Server).
+        /// Creates a new location on the server and adds it to the local store.
+        /// Optionally creates location links to <paramref name="linked_locations"/>.
         /// </summary>
-        ICollection<LocationObj> GetLocationsForStructure(long StructureID);
-
-        /// <summary>
-        /// Create a new location on the server.  Add the location to the local store.
-        /// </summary>
-        LocationObj Create(LocationObj new_location, long[] linked_locations = null);
+        Task<LocationObj> Create(LocationObj new_location, long[] linked_locations = null);
 
         List<LocationObj> GetStructureLocationChangeLog(long structureid);
 
@@ -299,24 +315,19 @@ namespace WebAnnotationModel
         /// Instruct the store to evict cached sections beyond the given limits to save memory.
         /// </summary>
         void FreeExcessSections(int LoadedSectionLimit, int LoadingSectionLimit);
-
-        /// <summary>
-        /// Check the local cache only, without contacting the server.
-        /// </summary>
-        bool TryGetValue(long ID, out LocationObj obj);
     }
 
     public interface ILocationLinkStore : IStoreWithKey<LocationLinkKey, LocationLinkObj>
     {
         /// <summary>
-        /// Create a link between two locations on the server and add it to the local store.
+        /// Creates a link between two locations on the server and adds it to the local store.
         /// </summary>
-        LocationLinkObj CreateLink(long A, long B);
+        Task<LocationLinkObj> CreateLink(long A, long B);
 
         /// <summary>
-        /// Delete a link between two locations on the server and remove it from the local store.
+        /// Deletes a link between two locations on the server and removes it from the local store.
         /// </summary>
-        bool DeleteLink(long A, long B);
+        Task<bool> DeleteLink(long A, long B);
 
         /// <summary>
         /// Load (or incrementally refresh) location links that touch <paramref name="section"/>,
@@ -332,14 +343,16 @@ namespace WebAnnotationModel
 
     public interface IStructureStore : IStoreWithParent<long, StructureObj>
     {
-        Task<StructureLinkObj> GetLinksForStructure(bool AskServer);
-
-        Task<long> SplitStructureAtLocationLink(long KeepLocID, long SplitLocID);
+        /// <summary>
+        /// Legacy interface member without a structure ID; returns null. Prefer StructureLinks.GetLinks(structureId).
+        /// </summary>
+        Task<StructureLinkObj> GetLinksForStructure();
 
         /// <summary>
-        /// Synchronous convenience overload equivalent to SplitStructureAtLocationLink(KeepLocID, SplitLocID).
+        /// Splits a structure at the location link between <paramref name="KeepLocID"/> and <paramref name="SplitLocID"/>.
+        /// Contacts the server.
         /// </summary>
-        long SplitAtLocationLink(long KeepLocID, long SplitLocID);
+        Task<long> SplitStructureAtLocationLink(long KeepLocID, long SplitLocID);
 
         Task<ICollection<StructureObj>> GetStructuresOfType(long StructureTypeID);
 
@@ -360,19 +373,14 @@ namespace WebAnnotationModel
         Task CheckForOrphan(long ID);
 
         /// <summary>
-        /// Synchronous convenience alias for GetChildStructures.
+        /// Location IDs for incomplete branches, loaded from the server.
         /// </summary>
-        ICollection<StructureObj> GetChildStructuresForStructure(long ID);
+        Task<long[]> GetUnfinishedBranches(long structureID);
 
         /// <summary>
-        /// Get the location IDs for branches that are incomplete.
+        /// Location IDs and positions for incomplete branches, loaded from the server.
         /// </summary>
-        long[] GetUnfinishedBranches(long structureID);
-
-        /// <summary>
-        /// Get the location IDs and positions for branches that are incomplete.
-        /// </summary>
-        LocationPositionOnly[] GetUnfinishedBranchesWithPosition(long structureID);
+        Task<LocationPositionOnly[]> GetUnfinishedBranchesWithPosition(long structureID);
     }
 
     /// <summary>
@@ -407,21 +415,19 @@ namespace WebAnnotationModel
         Task MergeServerLinksAsync(IEnumerable<IStructureLink> links, DateTime? queryTime = null, CancellationToken token = default);
 
         /// <summary>
-        /// Synchronous convenience wrapper over Add(obj).
+        /// Creates a structure link on the server and adds it to the local store.
         /// </summary>
-        StructureLinkObj Create(StructureLinkObj obj);
+        Task<StructureLinkObj> Create(StructureLinkObj obj);
     }
 
     public interface IStructureTypeStore : IStoreWithParent<long, StructureTypeObj>
     {
         Task<ICollection<StructureTypeObj>> GetAll();
 
-        Task<StructureTypeObj> Create(StructureTypeObj new_type, CancellationToken token);
-
         /// <summary>
-        /// Synchronous convenience overload equivalent to Create(new_type, CancellationToken.None).
+        /// Creates a structure type on the server and adds it to the local store.
         /// </summary>
-        StructureTypeObj Create(StructureTypeObj new_type);
+        Task<StructureTypeObj> Create(StructureTypeObj new_type, CancellationToken token = default);
     }
 
     public interface IPermittedStructureLinkStore : IStoreWithKey<PermittedStructureLinkKey, PermittedStructureLinkObj>

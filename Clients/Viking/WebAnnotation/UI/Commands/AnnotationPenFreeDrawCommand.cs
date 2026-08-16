@@ -95,7 +95,8 @@ namespace WebAnnotation.UI.Commands
                 return false;
             }
 
-            LocationObj obj = Store.Locations.GetObjectByID(Annotation.ID, false);
+            if (!Store.Locations.TryGetObjectByID(Annotation.ID, out LocationObj obj) || obj == null)
+                return false;
 
             Polygon mosaic_shape = obj.MosaicShape.ToPolygon();
             Polygon new_mosiac_hole = Parent.Section.ActiveSectionToVolumeTransform.TryMapShapeVolumeToSection(newVolumePoly);
@@ -133,11 +134,15 @@ namespace WebAnnotation.UI.Commands
 
             List<HitTestResult> listFinishHitTestResults = AnnotationOverlay.GetAnnotations(Parent.Section.Number, Finish);
 
-            LocationObj loc = Store.Locations.GetObjectByID(Annotation.ID, false);
+            if (!Store.Locations.TryGetObjectByID(Annotation.ID, out LocationObj loc) || loc == null)
+            {
+                Deactivated = true;
+                return;
+            }
             IViewLocation locationLinkCandidate = LinkAnnotationsCommand.FindBestLinkCandidate(AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number), Finish, loc, out Rectangle _);
             if (locationLinkCandidate != null)
             {
-                LinkAnnotationsCommand.TryCreateLink(AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number), Finish, loc);
+                _ = LinkAnnotationsCommand.TryCreateLink(AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number), Finish, loc);
                 Execute();
                 return;
             }
@@ -166,7 +171,8 @@ namespace WebAnnotation.UI.Commands
                 {
 
                     //intersectedPolyView.
-                    LocationObj Loc = Store.Locations.GetObjectByID(intersectedPolyView.ID, true);
+                    if (!Store.Locations.TryGetObjectByID(intersectedPolyView.ID, out LocationObj Loc) || Loc == null)
+                        return;
                     Geometry.Vector2 intersection_point;
 #if DEBUG
                     bool Intersection_found = move_line.Intersects(intersectedPolyView.VolumeShapeAsRendered.ToPolygon(), out intersection_point);

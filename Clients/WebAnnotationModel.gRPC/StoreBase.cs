@@ -11,7 +11,7 @@ namespace WebAnnotationModel.gRPC
 {
 
     /// <summary>
-    /// This base class implements the basic functionality to talk to a WCF Service
+    /// gRPC client-side store: local cache plus CollectionChanged for UI.
     /// </summary>
     public abstract class StoreBase<OBJECT> : INotifyCollectionChanged, IStore<OBJECT>
         where OBJECT : IEquatable<OBJECT> 
@@ -67,6 +67,10 @@ namespace WebAnnotationModel.gRPC
 
         #region Events
 
+        /// <summary>
+        /// Runs store UI events. When UseAsynchEvents is true this is Task.Run, so
+        /// subscribers must marshal to the dispatcher themselves if they touch WPF.
+        /// </summary>
         protected void InvokeEventAction(Action a, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
         {
 #if DEBUG
@@ -82,7 +86,13 @@ namespace WebAnnotationModel.gRPC
             }
         }
 
-        internal Task CallOnCollectionChanged(ChangeInventory<OBJECT> inventory)
+        /// <summary>
+        /// Notify listeners after a server batch is already in IDToObject.
+        /// StoreBaseWithKeyAndParent overrides this to wire RootObjects / Parent.Children
+        /// before the event. IStoreEditor.EndBatch calls this method on StoreBase directly
+        /// and skips that override — use this virtual on the concrete store for parented types.
+        /// </summary>
+        internal virtual Task CallOnCollectionChanged(ChangeInventory<OBJECT> inventory)
         {
             //Action a = new Action(() =>
             //    {
@@ -244,6 +254,9 @@ namespace WebAnnotationModel.gRPC
         #region INotifyCollectionChanged Members
 
 
+        /// <summary>
+        /// Raised after a batch is in IDToObject. May run on a thread-pool thread when UseAsynchEvents is true.
+        /// </summary>
         public event NotifyCollectionChangedEventHandler OnCollectionChanged;
         event NotifyCollectionChangedEventHandler INotifyCollectionChanged.CollectionChanged
         {

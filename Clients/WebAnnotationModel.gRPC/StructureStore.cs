@@ -16,6 +16,9 @@ using ProtoLocationPositionOnly = Viking.AnnotationServiceTypes.gRPC.V1.Protos.L
 
 namespace WebAnnotationModel.gRPC
 {
+    /// <summary>
+    /// Client cache of structures.
+    /// </summary>
     public class StructureStore : StoreBaseWithKeyAndParent<long, StructureObj, IStructure, ICreateStructureAndLocationRequestParameter, ICreateStructureResponseParameter>, IRegionQuery<long, StructureObj>, IStructureStore
     {
         private readonly IStructureLinkStore StructureLinkStore;
@@ -41,19 +44,16 @@ namespace WebAnnotationModel.gRPC
         /// Get the location ID's for branches that are incomplete
         /// </summary>
         /// <returns></returns>
-        public long[] GetUnfinishedBranches(long structureID)
+        public async Task<long[]> GetUnfinishedBranches(long structureID)
         {
             var client = StructureClientFactory.GetOrCreate();
-            return client.GetUnfinishedLocations(structureID).Result;
+            return await client.GetUnfinishedLocations(structureID).ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// Get unfinished branch tips with mosaic position and radius from the server.
-        /// </summary>
-        public WebAnnotationModel.LocationPositionOnly[] GetUnfinishedBranchesWithPosition(long structureID)
+        public async Task<WebAnnotationModel.LocationPositionOnly[]> GetUnfinishedBranchesWithPosition(long structureID)
         {
             var client = StructureClientFactory.GetOrCreate();
-            ProtoLocationPositionOnly[] tips = client.GetUnfinishedLocationsWithPosition(structureID).Result;
+            ProtoLocationPositionOnly[] tips = await client.GetUnfinishedLocationsWithPosition(structureID).ConfigureAwait(false);
             return tips.Select(t =>
             {
                 var z = t.Position?.HasZ == true ? t.Position.Z : 0;
@@ -68,12 +68,10 @@ namespace WebAnnotationModel.gRPC
         /// Fire-and-forget request to delete the structure on the server if it has no locations.
         /// </summary>
         public Task CheckForOrphan(long ID) => TryRemoveIfOrphan(ID);
-
-        /// <summary>
-        /// Synchronous convenience alias for GetChildStructures.
-        /// </summary>
-        public ICollection<StructureObj> GetChildStructuresForStructure(long ID) => GetChildStructures(ID).Result;
            
+        /// <summary>
+        /// Structures are not warmed at startup. They arrive from region/section queries after the view exists.
+        /// </summary>
         protected override Task Init()
         {
             
@@ -85,6 +83,9 @@ namespace WebAnnotationModel.gRPC
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Full table load. Uses this.CallOnCollectionChanged so Parent.Children is wired; EndBatch would skip that.
+        /// </summary>
         public async Task<ICollection<StructureObj>> GetAll()
         {
             Trace.WriteLine("GetAllStructures, Begin", "WebAnnotation");
@@ -226,7 +227,7 @@ namespace WebAnnotationModel.gRPC
             var client = StructureClientFactory.GetOrCreate();
             var splitStructureID = await client.SplitStructureAtLocationLink(KeepLocID, SplitLocID);
 
-            LocationObj keepLoc = await Store.Locations.GetObjectByID(KeepLocID, true, false, CancellationToken.None);
+            LocationObj keepLoc = await Store.Locations.GetObjectByID(KeepLocID, CancellationToken.None);
             if (keepLoc?.ParentID != null)
             {
                 var keepLocations = await Store.Locations.GetStructureLocations(keepLoc.ParentID.Value, QueryTargets.Server);
@@ -240,12 +241,6 @@ namespace WebAnnotationModel.gRPC
 
             return splitStructureID;
         }
-
-        /// <summary>
-        /// Synchronous convenience wrapper over SplitStructureAtLocationLink for legacy UI call sites.
-        /// </summary>
-        public long SplitAtLocationLink(long KeepLocID, long SplitLocID) => SplitStructureAtLocationLink(KeepLocID, SplitLocID).Result;
-
 
         public async Task<ICollection<StructureObj>> GetStructuresOfType(long StructureTypeID)
         {
@@ -268,21 +263,20 @@ namespace WebAnnotationModel.gRPC
             return Task.FromResult<ICollection<StructureObj>>(structures);
         }
 
-        public Task<ICollection<StructureObj>> GetServerObjectsInRegion(long SectionNumber, Rectangle bounds, double MinRadius, DateTime? LastQueryUtc, out DateTime queryCompletedTime)
+        public async Task<(ICollection<StructureObj> Objects, DateTime QueryCompletedTime)> GetServerObjectsInRegion(long SectionNumber, Rectangle bounds, double MinRadius, DateTime? LastQueryUtc)
         {
             var client = StructureClientFactory.GetOrCreate();
             string regionWkt = ToWktPolygon(bounds);
-            var update = ((IServerSpatialAnnotationsClient<long, IStructure>)client)
+            var update = await ((IServerSpatialAnnotationsClient<long, IStructure>)client)
                 .GetAsync(SectionNumber, regionWkt, MinRadius, LastQueryUtc, CancellationToken.None)
-                .GetAwaiter().GetResult();
+                .ConfigureAwait(false);
 
-            queryCompletedTime = update.QueryTime;
-            var changes = ServerQueryResultsHandler
+            var changes = await ServerQueryResultsHandler
                 .ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(update.QueryTime, update.NewOrUpdated, update.DeletedIDs))
-                .GetAwaiter().GetResult();
-            CallOnCollectionChanged(changes).GetAwaiter().GetResult();
-            OnServerObjectsLoaded(update.NewOrUpdated, update.QueryTime).GetAwaiter().GetResult();
-            return Task.FromResult<ICollection<StructureObj>>(changes.ObjectsInStore);
+                .ConfigureAwait(false);
+            await CallOnCollectionChanged(changes).ConfigureAwait(false);
+            await OnServerObjectsLoaded(update.NewOrUpdated, update.QueryTime).ConfigureAwait(false);
+            return (changes.ObjectsInStore, update.QueryTime);
         }
 
         /// <summary>
@@ -298,7 +292,7 @@ namespace WebAnnotationModel.gRPC
         /// <summary>
         /// Legacy interface member without a structure ID; returns null. Prefer StructureLinks.GetLinks(structureId).
         /// </summary>
-        public Task<StructureLinkObj> GetLinksForStructure(bool AskServer) =>
+        public Task<StructureLinkObj> GetLinksForStructure() =>
             Task.FromResult<StructureLinkObj>(null);
 
         private static string ToWktPolygon(Rectangle bounds)

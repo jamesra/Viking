@@ -219,7 +219,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     && loc.IsVisible(scene));
 
             var locationObjs = visibleSameType
-                .Select(loc => Store.Locations.GetObjectByID(loc.ID, false))
+                .Select(loc => Store.Locations.TryGetObjectByID(loc.ID, out var o) ? o : null)
                 .OfType<LocationObj>();
 
             var mosaicPoints = AnnotationPointExtensions.GetAnnotationRepresentativePoints(locationObjs);

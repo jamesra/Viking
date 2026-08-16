@@ -69,8 +69,8 @@ namespace WebAnnotationModel.gRPC
             if (link.A == link.B)
                 return false;
 
-            LocationStore.TryGetValue(link.A, out LocationObj SourceObj);
-            LocationStore.TryGetValue(link.B, out LocationObj TargetObj);
+            LocationStore.TryGetObjectByID(link.A, out LocationObj SourceObj);
+            LocationStore.TryGetObjectByID(link.B, out LocationObj TargetObj);
 
             var tOne = SourceObj?.AddLinkAsync(link.OtherKey(SourceObj.ID)) ?? Task.FromResult(false);
             var tTwo = TargetObj?.AddLinkAsync(link.OtherKey(TargetObj.ID)) ?? Task.FromResult(false);
@@ -87,8 +87,8 @@ namespace WebAnnotationModel.gRPC
             if (link.B == link.A)
                 return false;
 
-            LocationStore.TryGetValue(link.A, out LocationObj SourceObj);
-            LocationStore.TryGetValue(link.B, out LocationObj TargetObj);
+            LocationStore.TryGetObjectByID(link.A, out LocationObj SourceObj);
+            LocationStore.TryGetObjectByID(link.B, out LocationObj TargetObj);
 
             var tOne = SourceObj?.RemoveLinkAsync(link.OtherKey(SourceObj.ID)) ?? Task.FromResult(false);
             var tTwo = TargetObj?.RemoveLinkAsync(link.OtherKey(TargetObj.ID)) ?? Task.FromResult(false);

@@ -269,7 +269,9 @@ namespace WebAnnotation.UI.Actions
                         }
                     }
 
-                    LocationObj origin_loc = Store.Locations.GetObjectByID(origin_ID);
+                    LocationObj origin_loc;
+                    if (!Store.Locations.TryGetObjectByID(origin_ID, out origin_loc) || origin_loc == null)
+                        return actions;
 
                     //Remove the intersected interior polygons, add the new interior polygon
                     if (IntersectedInteriorPolygons.Count > 0)
@@ -310,7 +312,8 @@ namespace WebAnnotation.UI.Actions
         public static List<IAction> IdentifyPossibleReshapeAction(long origin_ID, IShape2D smooth_volume_shape, Path path)
         {
             List<IAction> actions = [];
-            LocationObj origin_loc = Store.Locations.GetObjectByID(origin_ID);
+            if (!Store.Locations.TryGetObjectByID(origin_ID, out LocationObj origin_loc) || origin_loc == null)
+                return actions;
 
             //2D Case: If we draw a loop around an annotation we should offer to replace that annotations contour's with the closed loop
             if (origin_loc.TypeCode.AllowsClosed2DShape() && path.HasSelfIntersection)

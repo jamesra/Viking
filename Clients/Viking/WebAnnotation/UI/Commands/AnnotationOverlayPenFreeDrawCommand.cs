@@ -68,7 +68,7 @@ namespace WebAnnotation.UI.Commands
                 }
                 else if (Global.CanContinueLastTrace(Parent.Section.Number))
                 {
-                    LocationObj lastObj = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, false);
+                    Store.Locations.TryGetObjectByID(Global.LastEditedAnnotationID.Value, out LocationObj lastObj);
                     if (lastObj != null && lastObj.TypeCode.AllowsClosed2DShape())
                     {
                         LocationObj newLoc = new(lastObj.Parent,
@@ -121,7 +121,8 @@ namespace WebAnnotation.UI.Commands
 
             LocationCircleView intersectedCircle = intersectedCircles.OrderByDescending(c => c.VolumeCircle.Area).First();
 
-            LocationObj obj = Store.Locations.GetObjectByID(intersectedCircle.ID, false);
+            if (!Store.Locations.TryGetObjectByID(intersectedCircle.ID, out LocationObj obj) || obj == null)
+                return false;
 
             SqlGeometry original_mosaic_shape = obj.MosaicShape.ToSqlGeometry();
             SqlGeometry original_volume_shape = obj.MosaicShape.ToSqlGeometry();
@@ -148,7 +149,8 @@ namespace WebAnnotation.UI.Commands
         {
             Polygon newVolumePoly = new(PenInput.SimplifiedFirstLoop);
 
-            StructureTypeObj type = Store.StructureTypes.GetObjectByID(1);//new StructureType(typeObj);
+            if (!Store.StructureTypes.TryGetObjectByID(1, out StructureTypeObj type) || type == null)
+                return;
             bool StructureNeedsParent = type.ParentID.HasValue;
 
             StructureObj newStruct = new(type);
@@ -201,7 +203,8 @@ namespace WebAnnotation.UI.Commands
                 {
 
                     //intersectedPolyView.
-                    LocationObj Loc = Store.Locations.GetObjectByID(intersectedPolyView.ID, true);
+                    if (!Store.Locations.TryGetObjectByID(intersectedPolyView.ID, out LocationObj Loc) || Loc == null)
+                        return;
 #if DEBUG
                     bool Intersection_found = move_line.Intersects(intersectedPolyView.VolumeShapeAsRendered.ToPolygon(), out Geometry.Vector2 intersection_point);
                     System.Diagnostics.Debug.Assert(Intersection_found, "Expected to find an intersection with the object boundary.");

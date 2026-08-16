@@ -35,31 +35,28 @@ namespace WebAnnotationModel
     /// ViewModels that can't easily accept constructor-injected dependencies).
     ///
     /// The composition root (currently the gRPC client bootstrap in WebAnnotationModel.gRPC) is responsible
-    /// for building the concrete, DI-composed store instances and calling <see cref="Initialize(IAnnotationStores)"/>
-    /// once at application startup, before any UI code touches Store.X.
+        /// for building the concrete, DI-composed store instances and calling <see cref="InitializeAsync"/>
+        /// once at application startup, before any UI code touches Store.X.
     /// </summary>
     public static class Store
     {
         private static IAnnotationStores _current;
 
-        /// <summary>
-        /// True once <see cref="Initialize(IAnnotationStores)"/> has been called.
-        /// </summary>
         public static bool IsInitialized => _current != null;
 
         /// <summary>
-        /// Called once by the composition root at application startup with the fully constructed,
-        /// gRPC-backed store implementations.
+        /// Async composition-root entry used by WPF (Jotunn) so splash/UI can keep pumping
+        /// while structure types and permitted links load over gRPC.
         /// </summary>
-        public static void Initialize(IAnnotationStores stores)
+        public static async Task InitializeAsync(IAnnotationStores stores, CancellationToken token = default)
         {
             _current = stores ?? throw new ArgumentNullException(nameof(stores));
-            stores.InitializeAsync().GetAwaiter().GetResult();
+            await stores.InitializeAsync(token).ConfigureAwait(false);
         }
 
         private static IAnnotationStores Current =>
             _current ?? throw new InvalidOperationException(
-                "WebAnnotationModel.Store has not been initialized. The application's composition root must call Store.Initialize(...) with the gRPC-backed stores before any UI code accesses Store.X.");
+                "WebAnnotationModel.Store has not been initialized. The application's composition root must call Store.InitializeAsync(...) with the gRPC-backed stores before any UI code accesses Store.X.");
 
         public static ILocationStore Locations => Current.Locations;
 

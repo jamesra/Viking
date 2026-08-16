@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
@@ -16,12 +17,10 @@ namespace WebAnnotation.UI
         /// Return true if the structures in the Keep and Merge text boxes have the same type
         /// </summary>
         /// <returns></returns>
-        private bool VerifyTypeMatch(out string Reason)
+        private async Task<(bool Valid, string Reason)> VerifyTypeMatchAsync()
         {
-            Reason = null;
             int KeepID;
             int MergeID;
-
             try
             {
                 KeepID = int.Parse(textKeepID.Text);
@@ -29,41 +28,25 @@ namespace WebAnnotation.UI
             }
             catch (FormatException)
             {
-                Reason = "Could not parse ID number";
-                return false;
+                return (false, "Could not parse ID number");
             }
 
-            StructureObj mergeStruct = Store.Structures.GetObjectByID(MergeID);
-            StructureObj keepStruct = Store.Structures.GetObjectByID(KeepID);
+            StructureObj mergeStruct = await Store.Structures.GetObjectByID(MergeID);
+            StructureObj keepStruct = await Store.Structures.GetObjectByID(KeepID);
 
             if (keepStruct is null && mergeStruct is null)
-            {
-                Reason = "Input IDs must be a valid structures";
-                return false;
-            }
-
+                return (false, "Input IDs must be a valid structures");
             if (keepStruct is null)
-            {
-                Reason = "No structure matches Keep ID";
-                return false;
-            }
-
+                return (false, "No structure matches Keep ID");
             if (mergeStruct is null)
-            {
-                Reason = "No structure matches Merge ID";
-                return false;
-            }
-
+                return (false, "No structure matches Merge ID");
             if (keepStruct.TypeID != mergeStruct.TypeID)
-            {
-                Reason = string.Format("Merged structures must have the same type. Merged {1} is not a {0}", keepStruct.Type.Name, mergeStruct.Type.Name);
-                return false;
-            }
+                return (false, string.Format("Merged structures must have the same type. Merged {1} is not a {0}", keepStruct.Type.Name, mergeStruct.Type.Name));
 
-            return true;
+            return (true, null);
         }
 
-        private void btnMerge_Click(object sender, EventArgs e)
+        private async void btnMerge_Click(object sender, EventArgs e)
         {
             int KeepID;
             int MergeID;
@@ -80,7 +63,7 @@ namespace WebAnnotation.UI
 
             try
             {
-                Store.Structures.Merge(KeepID, MergeID);
+                await Store.Structures.Merge(KeepID, MergeID);
             }
             catch (System.ServiceModel.FaultException<System.ServiceModel.ExceptionDetail> fe)
             {
@@ -105,42 +88,30 @@ namespace WebAnnotation.UI
 
         private void btnCancel_Click(object sender, EventArgs e) => Close();
 
-        private bool IsIDValid(string Input, out string Reason)
+        private async Task<(bool Valid, string Reason)> IsIDValidAsync(string Input)
         {
-            Reason = null;
             try
             {
-                //Check if the string is empty, that is OK
                 if (Input.Length == 0)
-                {
-                    return true;
-                }
+                    return (true, null);
 
-                //If string is not empty it needs to be a number
                 int ID = int.Parse(Input);
-
-                StructureObj obj = Store.Structures.GetObjectByID(ID, true);
+                StructureObj obj = await Store.Structures.GetObjectByID(ID);
                 if (obj is null)
-                {
-                    Reason = "No structure found";
-                    return false;
-                }
+                    return (false, "No structure found");
 
-                Reason = obj.Label;
-                return true;
+                return (true, obj.Label);
             }
             catch (FormatException)
             {
-                return false;
+                return (false, null);
             }
         }
 
-        private bool IsAllInputValid(out string Reason)
+        private async Task<(bool Valid, string Reason)> IsAllInputValidAsync()
         {
-            Reason = null;
             long KeepID;
             long SplitID;
-
             try
             {
                 KeepID = long.Parse(textKeepID.Text);
@@ -148,52 +119,38 @@ namespace WebAnnotation.UI
             }
             catch (FormatException)
             {
-                Reason = "Input ID is not a number";
-                return false;
+                return (false, "Input ID is not a number");
             }
 
             if (KeepID == SplitID)
-            {
-                Reason = "Cannot merge structure to itself";
-                return false;
-            }
+                return (false, "Cannot merge structure to itself");
 
-            return VerifyTypeMatch(out Reason);
+            return await VerifyTypeMatchAsync();
         }
 
-        private void textIDLabel_TextChanged(object sender, EventArgs e)
+        private async void textIDLabel_TextChanged(object sender, EventArgs e)
         {
-            if (!IsAllInputValid(out string Reason))
-            {
-                textValidation.Text = Reason;
-                btnMerge.Enabled = false;
-            }
-            else
-            {
-                textValidation.Text = null;
-                btnMerge.Enabled = true;
-            }
+            await UpdateUIForIDLabelTextChangedAsync();
         }
 
-        private void textKeepIDLabel_TextChanged(object sender, EventArgs e)
+        private async void textKeepIDLabel_TextChanged(object sender, EventArgs e)
         {
-            bool IDValid = IsIDValid(textKeepID.Text, out string Reason);
+            var (IDValid, Reason) = await IsIDValidAsync(textKeepID.Text);
             textKeepLabel.Text = Reason;
-
-            UpdateUIForIDLabelTextChanged();
+            await UpdateUIForIDLabelTextChangedAsync();
         }
 
-        private void textMergeIDLabel_TextChanged(object sender, EventArgs e)
+        private async void textMergeIDLabel_TextChanged(object sender, EventArgs e)
         {
-            bool IDValid = IsIDValid(textMergeID.Text, out string Reason);
+            var (IDValid, Reason) = await IsIDValidAsync(textMergeID.Text);
             textMergeLabel.Text = Reason;
-
-            UpdateUIForIDLabelTextChanged();
+            await UpdateUIForIDLabelTextChangedAsync();
         }
 
-        private void UpdateUIForIDLabelTextChanged()
+        private async Task UpdateUIForIDLabelTextChangedAsync()
         {
-            if (!IsAllInputValid(out string Reason))
+            var (valid, Reason) = await IsAllInputValidAsync();
+            if (!valid)
             {
                 textValidation.Text = Reason;
                 btnMerge.Enabled = false;

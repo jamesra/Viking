@@ -71,21 +71,25 @@ namespace WebAnnotation.WPF.Converters
                     }
                 }
 
-                return Store.StructureTypes.GetObjectsByIDs(IDs, true, CancellationToken.None).Result;
+                Store.StructureTypes.TryGetObjectsByIDs(IDs, out var found, out _);
+                return found;
             }
             else if (value is IEnumerable<long>)
             {
                 IEnumerable<long> values = value as IEnumerable<long>;
-                return Store.StructureTypes.GetObjectsByIDs([.. values], true, CancellationToken.None).Result;
+                Store.StructureTypes.TryGetObjectsByIDs([.. values], out var foundLong, out _);
+                return foundLong;
             }
             else if (value is IEnumerable<ulong>)
             {
                 IEnumerable<ulong> values = value as IEnumerable<ulong>;
-                return Store.StructureTypes.GetObjectsByIDs([.. values.Select(i => (long)i)], true, CancellationToken.None).Result;
+                Store.StructureTypes.TryGetObjectsByIDs([.. values.Select(i => (long)i)], out var foundUlong, out _);
+                return foundUlong;
             }
-            else if (value is IEnumerable<int>)
+            else if (value is IEnumerable<int> intIds)
             {
-                return Store.StructureTypes.GetObjectsByIDs([.. ((IEnumerable<int>)IDs).Select(i => (long)i)], true, CancellationToken.None).Result;
+                Store.StructureTypes.TryGetObjectsByIDs([.. intIds.Select(i => (long)i)], out var foundInt, out _);
+                return foundInt;
             }
             else if (value is IEnumerable<IStructureTypeReadOnly>)
             {
@@ -130,7 +134,8 @@ namespace WebAnnotation.WPF.Converters
 
                 try
                 {
-                    return Store.StructureTypes.GetObjectByID(ID, AskServer: true, ForceRefreshFromServer: false, CancellationToken.None).Result;
+                    Store.StructureTypes.TryGetObjectByID(ID, out var type);
+                    return type;
                 }
                 catch (ArgumentException)
                 {

@@ -309,11 +309,11 @@ namespace WebAnnotationModel.Objects
         {
             if (Interlocked.Exchange(ref Initialized, 1) == 0)
             {
-                _Type = await stores.StructureTypes.GetObjectByID(TypeID, true, false, token);
+                _Type = await stores.StructureTypes.GetObjectByID(TypeID, token);
 
                 List<Task> tasks = new List<Task>();
                 if (ParentID.HasValue)
-                    this.Parent = await stores.Structures.GetObjectByID(ParentID.Value, true, false, token); 
+                    this.Parent = await stores.Structures.GetObjectByID(ParentID.Value, token); 
             }
         }
           
@@ -354,7 +354,6 @@ namespace WebAnnotationModel.Objects
         }
 
         private StructureTypeObj _Type = null;
-        private static int TypesReloadAttempted;
 
         /// <summary>
         /// Structure type from the table loaded at startup. gRPC conversion only sets TypeID, so this
@@ -370,13 +369,7 @@ namespace WebAnnotationModel.Objects
                 if (!Store.IsInitialized || TypeID == 0)
                     return null;
 
-                _Type = Store.StructureTypes.GetObjectByID(TypeID, false);
-                if (_Type == null && Interlocked.Exchange(ref TypesReloadAttempted, 1) == 0)
-                {
-                    Store.StructureTypes.GetAll().ConfigureAwait(false).GetAwaiter().GetResult();
-                    _Type = Store.StructureTypes.GetObjectByID(TypeID, false);
-                }
-
+                Store.StructureTypes.TryGetObjectByID(TypeID, out _Type);
                 return _Type;
             }
             internal set => _Type = value;

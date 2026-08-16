@@ -1,4 +1,7 @@
 using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using Geometry;
 using Viking.AnnotationServiceTypes.Interfaces;
@@ -43,7 +46,7 @@ namespace WebAnnotation
 
             if (button == MouseButton.Right && hit is LocationCanvasView rightView)
             {
-                GoToRequested?.Invoke(this, Store.Locations.GetObjectByID(rightView.ID, false));
+                GoToRequested?.Invoke(this, Store.Locations.TryGetObjectByID(rightView.ID, out var rightLoc) ? rightLoc : null);
                 return;
             }
 
@@ -52,8 +55,7 @@ namespace WebAnnotation
 
             if (clickCount > 1 && hit is LocationCanvasView jumpView)
             {
-                LocationObj loc = Store.Locations.GetObjectByID(jumpView.ID, false);
-                if (loc != null)
+                if (Store.Locations.TryGetObjectByID(jumpView.ID, out LocationObj loc) && loc != null)
                     GoToRequested?.Invoke(this, loc);
                 return;
             }
@@ -65,8 +67,7 @@ namespace WebAnnotation
 
                 if (action == LocationAction.TRANSLATE || action == LocationAction.SCALETRANSLATE)
                 {
-                    _dragLocation = Store.Locations.GetObjectByID(locationId, false);
-                    if (_dragLocation != null)
+                    if (Store.Locations.TryGetObjectByID(locationId, out _dragLocation) && _dragLocation != null)
                     {
                         _dragWorldOrigin = world;
                         _dragMosaicOrigin = _dragLocation.Position;
@@ -75,55 +76,90 @@ namespace WebAnnotation
                     return;
                 }
 
-                if (action == LocationAction.CREATELINK && hit is IViewLocationLink linkView)
+                if (action == LocationAction.CREATELINK && hit is IViewLocationLink)
                 {
                     return;
                 }
 
                 if (action == LocationAction.CREATELINKEDLOCATION)
                 {
-                    LocationObj existing = Store.Locations.GetObjectByID(locationId, true);
-                    if (existing is null || !mapper.TryVolumeToSection(world, out Vector2 mosaic))
-                        return;
-
-                    LocationObj created = new(existing.Parent, (int)Math.Round(existing.Z) == sectionNumber ? sectionNumber : sectionNumber, LocationType.CIRCLE);
-                    LocationActions.UpdateCircleLocationNoSaveCallback(created, world, mosaic, Math.Max(existing.Radius, Global.MinRadius));
-                    Store.Locations.Create(created, [existing.ID]);
-                    Global.LastEditedAnnotationID = created.ID;
-                    _host.Invalidate();
+                    _ = CreateLinkedLocationAsync(locationId, world, sectionNumber, mapper);
                     return;
                 }
 
                 if (action == LocationAction.CREATELINK && hit is LocationCanvasView other)
                 {
                     if (Global.LastEditedAnnotationID.HasValue)
-                    {
-                        Store.LocationLinks.CreateLink(Global.LastEditedAnnotationID.Value, other.ID);
-                        _host.Invalidate();
-                    }
+                        _ = CreateLocationLinkAsync(Global.LastEditedAnnotationID.Value, other.ID);
                     return;
                 }
             }
 
-            if (hit is null)
+            if (hit is null && clickCount == 1)
             {
                 if (!SelectedStructureTypeId.HasValue && Store.IsInitialized && Store.StructureTypes.RootObjects.Count > 0)
                     SelectedStructureTypeId = (long)Store.StructureTypes.RootObjects[0];
 
                 if (SelectedStructureTypeId.HasValue && mapper.TryVolumeToSection(world, out Vector2 sectionPos))
-                {
-                    StructureTypeObj type = Store.StructureTypes.GetObjectByID(SelectedStructureTypeId.Value, true);
-                    if (type is null)
-                        return;
+                    _ = CreateStructureAtAsync(SelectedStructureTypeId.Value, world, sectionPos, sectionNumber);
+            }
+        }
 
-                    StructureObj structure = new(type);
-                    LocationObj location = new(structure, sectionNumber, LocationType.CIRCLE);
-                    LocationActions.UpdateCircleLocationNoSaveCallback(location, world, sectionPos, 16);
-                    var result = Store.Structures.Create(structure, location).GetAwaiter().GetResult();
-                    if (result.Location != null)
-                        Global.LastEditedAnnotationID = result.Location.ID;
-                    _host.Invalidate();
-                }
+        async Task CreateLinkedLocationAsync(long locationId, Vector2 world, int sectionNumber, IVolumeToSectionTransform mapper)
+        {
+            try
+            {
+                LocationObj existing = await Store.Locations.GetObjectByID(locationId);
+                if (existing is null || !mapper.TryVolumeToSection(world, out Vector2 mosaic))
+                    return;
+
+                int existingSection = (int)Math.Round(existing.Z);
+                if (existingSection == sectionNumber)
+                    return;
+
+                LocationObj created = new(existing.Parent, sectionNumber, LocationType.CIRCLE);
+                LocationActions.UpdateCircleLocationNoSaveCallback(created, world, mosaic, Math.Max(existing.Radius, Global.MinRadius));
+                await Store.Locations.Create(created, [existing.ID]);
+                Global.LastEditedAnnotationID = created.ID;
+                _host.Invalidate();
+            }
+            catch (Exception ex)
+            {
+                ReportAnnotationFault("Create linked location", ex);
+            }
+        }
+
+        async Task CreateLocationLinkAsync(long a, long b)
+        {
+            try
+            {
+                await Store.LocationLinks.CreateLink(a, b);
+                _host.Invalidate();
+            }
+            catch (Exception ex)
+            {
+                ReportAnnotationFault("Create location link", ex);
+            }
+        }
+
+        async Task CreateStructureAtAsync(long typeId, Vector2 world, Vector2 sectionPos, int sectionNumber)
+        {
+            try
+            {
+                if (!Store.StructureTypes.TryGetObjectByID(typeId, out StructureTypeObj type) || type == null)
+                    return;
+
+                StructureObj structure = new(type);
+                LocationObj location = new(structure, sectionNumber, LocationType.CIRCLE);
+                LocationActions.UpdateCircleLocationNoSaveCallback(location, world, sectionPos, 16);
+                var result = await Store.Structures.Create(structure, location);
+                if (result.Location != null)
+                    Global.LastEditedAnnotationID = result.Location.ID;
+                _host.Invalidate();
+            }
+            catch (Exception ex)
+            {
+                ReportAnnotationFault("Create structure", ex);
             }
         }
 
@@ -146,11 +182,39 @@ namespace WebAnnotation
             if (_dragLocation is null)
                 return;
 
-            Store.Locations.Save();
-            Global.LastEditedAnnotationID = _dragLocation.ID;
+            LocationObj saved = _dragLocation;
             _dragLocation = null;
             _host.ReleasePointer();
-            _host.Invalidate();
+            _ = SaveDraggedLocationAsync(saved);
+        }
+
+        async Task SaveDraggedLocationAsync(LocationObj location)
+        {
+            try
+            {
+                await Store.Locations.Save();
+                Global.LastEditedAnnotationID = location.ID;
+                _host.Invalidate();
+            }
+            catch (Exception ex)
+            {
+                ReportAnnotationFault("Save location", ex);
+            }
+        }
+
+        static void ReportAnnotationFault(string action, Exception ex)
+        {
+            Trace.WriteLine($"{action} failed: {ex}");
+            string message = $"{action} failed:\n{ex.Message}";
+            Application app = Application.Current;
+            if (app?.Dispatcher != null)
+            {
+                app.Dispatcher.BeginInvoke(new Action(() =>
+                    MessageBox.Show(message, "Annotations", MessageBoxButton.OK, MessageBoxImage.Warning)));
+                return;
+            }
+
+            MessageBox.Show(message, "Annotations", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 }

@@ -110,12 +110,16 @@ namespace WebAnnotation.ViewModel
             structObj.ToggleAttribute(tag).Wait();
         }
 
-        public LocationObj Center
-        {
-            get
-            {
-                LocationObj[] locations = [.. Store.Locations.GetLocationsForStructure(ID)];
+        public LocationObj Center => CenterFromLocations(Store.Locations.GetLocalObjectsForStructure(ID));
 
+        public async System.Threading.Tasks.Task<LocationObj> GetCenterAsync()
+        {
+            var locations = await Store.Locations.GetStructureLocations(ID, QueryTargets.Server);
+            return CenterFromLocations(locations?.ToArray() ?? []);
+        }
+
+        static LocationObj CenterFromLocations(LocationObj[] locations)
+        {
                 if (locations != null && locations.Length > 0)
                 {
                     double sumX = 0;
@@ -141,7 +145,6 @@ namespace WebAnnotation.ViewModel
 
                     Geometry.Vector3 MeanPosition = new(meanX, meanY, meanZ);
 
-                    //Find the location closest to the mean position
                     double minDistance = double.MaxValue;
                     int iClosest = 0;
                     for (int iLoc = 0; iLoc < locations.Length; iLoc++)
@@ -162,7 +165,6 @@ namespace WebAnnotation.ViewModel
                 }
 
                 return null;
-            }
         }
 
         #region IUIObject Members : IUIObject
@@ -223,7 +225,7 @@ namespace WebAnnotation.ViewModel
 
         public override Type[] AssignableParentTypes => [typeof(StructureObj)];
 
-        public long[] UnfinishedBranches() => Store.Structures.GetUnfinishedBranches(ID);
+        public System.Threading.Tasks.Task<long[]> UnfinishedBranches() => Store.Structures.GetUnfinishedBranches(ID);
 
         #endregion
 
@@ -245,26 +247,18 @@ namespace WebAnnotation.ViewModel
             return menu;
         }
 
-        private void OnDropDownOpeningUnverifiedBranchTerminals(object sender, EventArgs e)
+        private async void OnDropDownOpeningUnverifiedBranchTerminals(object sender, EventArgs e)
         {
             ToolStripMenuItem menuUnverifiedBranchTerminals = sender as ToolStripMenuItem;
             menuUnverifiedBranchTerminals.DropDownItems.Clear();
-            bool HasMenuItems = _PopulateUnverifiedBranchTerminalsContextMenu(menuUnverifiedBranchTerminals);
+            bool HasMenuItems = await PopulateUnverifiedBranchTerminalsContextMenuAsync(menuUnverifiedBranchTerminals);
 
             menuUnverifiedBranchTerminals.Enabled = HasMenuItems;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="rootMenuItem"></param>
-        /// <returns>True if the menu was populated, otherwise false.</returns>
-        protected bool _PopulateUnverifiedBranchTerminalsContextMenu(ToolStripMenuItem rootMenuItem)
+        protected async System.Threading.Tasks.Task<bool> PopulateUnverifiedBranchTerminalsContextMenuAsync(ToolStripMenuItem rootMenuItem)
         {
-            //            long[] Loc_Ids = Store.Structures.GetUnfinishedBranches(this.ID);
-            //            List<LocationObj> listLocations = Store.Locations.GetObjectsByIDs(Loc_Ids, true);
-
-            WebAnnotationModel.LocationPositionOnly[] LocationArray = Store.Structures.GetUnfinishedBranchesWithPosition(ID);
+            WebAnnotationModel.LocationPositionOnly[] LocationArray = await Store.Structures.GetUnfinishedBranchesWithPosition(ID);
 
             Dictionary<double, List<WebAnnotationModel.LocationPositionOnly>> dictSectionToLocations = MapLocationsToSections(LocationArray);
 
@@ -329,18 +323,18 @@ namespace WebAnnotation.ViewModel
             return dictSectionToLocations;
         }
 
-        protected void ContextMenu_SelectUnbranchedLocation(object sender, EventArgs e)
+        protected async void ContextMenu_SelectUnbranchedLocation(object sender, EventArgs e)
         {
             ToolStripMenuItem menu = sender as ToolStripMenuItem;
             long locationID = (long)menu.Tag;
 
-            LocationObj loc = Store.Locations.GetObjectByID(locationID);
+            LocationObj loc = await Store.Locations.GetObjectByID(locationID);
 
             AnnotationOverlay.GoToLocation(loc);
         }
 #endif
 
-        public override void Delete() => Store.Structures.Remove(modelObj);/*
+        public override void Delete() => _ = Store.Structures.Remove(modelObj);/*
             Structure OriginalParent = this.Parent;
             this.Parent = null;
 

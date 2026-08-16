@@ -14,7 +14,7 @@ using WebAnnotationModel.ServerInterface;
 namespace WebAnnotationModel.gRPC
 {
     /// <summary>
-    /// This base class implements the basic functionality to talk to a WCF Service
+    /// Keyed store whose objects form a parent/child tree (structure types, structures).
     /// </summary>
     public abstract class StoreBaseWithKeyAndParent<KEY, OBJECT, SERVER_OBJECT, CREATION_DATA_PARAM, CREATION_RESULT> : StoreBaseWithKey<KEY, OBJECT, SERVER_OBJECT, CREATION_DATA_PARAM, CREATION_RESULT>,
         INotifyPropertyChanged, IStoreWithParent<KEY, OBJECT>
@@ -28,7 +28,8 @@ namespace WebAnnotationModel.gRPC
         private readonly ObservableCollection<KEY> _rootObjects = new ObservableCollection<KEY>();
 
         /// <summary>
-        /// Known objects with no parent object
+        /// IDs of objects with no parent. Filled by WireParentsAndRoots from CallOnCollectionChanged,
+        /// not by IStoreEditor.GetOrAdd. Empty RootObjects with a full IDToObject means the notify step was skipped.
         /// </summary>
         public readonly ReadOnlyObservableCollection<KEY> RootObjects;
 
@@ -44,7 +45,41 @@ namespace WebAnnotationModel.gRPC
         {
             RootObjects = new ReadOnlyObservableCollection<KEY>(_rootObjects);
         }
-         
+
+        /// <summary>
+        /// gRPC GetAll uses IStoreEditor.GetOrAdd, which never called the old InternalAdd
+        /// that populated RootObjects and Parent.Children. Wire that here when the batch is applied.
+        /// </summary>
+        internal override Task CallOnCollectionChanged(ChangeInventory<OBJECT> inventory)
+        {
+            if (inventory?.AddedObjects != null && inventory.AddedObjects.Count > 0)
+                WireParentsAndRoots(inventory.AddedObjects);
+
+            return base.CallOnCollectionChanged(inventory);
+        }
+
+        /// <summary>
+        /// ParentID == null → RootObjects. Otherwise set Parent (which AddChilds).
+        /// Parents must already be in IDToObject; GetAll loads the full table first so one pass is enough.
+        /// Setting Parent when ParentID already matches does not mark DBAction.UPDATE.
+        /// </summary>
+        void WireParentsAndRoots(IEnumerable<OBJECT> objects)
+        {
+            foreach (OBJECT obj in objects)
+            {
+                if (obj == null)
+                    continue;
+
+                if (!obj.ParentID.HasValue)
+                {
+                    TryAddRootObject(obj.ID);
+                    continue;
+                }
+
+                if (IDToObject.TryGetValue(obj.ParentID.Value, out OBJECT parent))
+                    obj.Parent = parent;
+            }
+        }
 
         protected bool TryAddRootObject(KEY key)
         {
@@ -58,10 +93,8 @@ namespace WebAnnotationModel.gRPC
         }
 
         /// <summary>
-        /// 
+        /// Adds several keys to RootObjects under one lock, then raises PropertyChanged once if any were new.
         /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
         protected bool[] TryAddRootObjects(KEY[] keys)
         {
             bool[] results = new bool[keys.Length];
@@ -149,6 +182,11 @@ namespace WebAnnotationModel.gRPC
             }
         }
         /*
+        DEAD WCF-era path. Server ingest uses IStoreEditor.GetOrAdd, not InternalAdd.
+        Hierarchy wiring now lives in CallOnCollectionChanged → WireParentsAndRoots.
+        Do not uncomment without also routing GetAll through InternalAdd, or you will
+        double-wire and fight the live path.
+
         /// <summary>
         /// Used to populate cache when a call returns from the server
         /// </summary>
@@ -197,7 +235,7 @@ namespace WebAnnotationModel.gRPC
             //Go find all of the missing parent objects and make sure they are downloadedfs
             if (listMissingParents.Count > 0)
             {
-                var parentInventory = await InternalGetObjectsByIDs(listMissingParents.ToArray(), true, CancellationToken.None);
+                var parentInventory = await InternalGetObjectsByIDs(listMissingParents.ToArray(), CancellationToken.None);
                 changeInventory.Add(parentInventory);
             }
             
@@ -347,11 +385,6 @@ namespace WebAnnotationModel.gRPC
         Task<OBJECT> IStoreWithKey<KEY, OBJECT>.Remove(KEY key)
         {
             return Remove(key);
-        }
-
-        Task<IList<OBJECT>> IStoreWithKey<KEY, OBJECT>.Refresh(KEY[] keys, CancellationToken token)
-        {
-            return Refresh(keys, token);
         }
 
         OBJECT IStoreWithKey<KEY, OBJECT>.ForgetLocally(KEY key)

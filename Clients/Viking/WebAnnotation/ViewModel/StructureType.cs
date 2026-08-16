@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Specialized;
+using System.Threading.Tasks;
 #if NETFRAMEWORK
 using System.Windows.Forms;
 #endif
@@ -187,7 +188,7 @@ namespace WebAnnotation.ViewModel
         #endregion
 
 #if NETFRAMEWORK
-        protected void ContextMenu_OnNewStructureType(object sender, EventArgs e)
+        protected async void ContextMenu_OnNewStructureType(object sender, EventArgs e)
         {
             StructureTypeObj newType = new(modelObj);
             StructureType newTypeView = new(newType);
@@ -197,8 +198,8 @@ namespace WebAnnotation.ViewModel
             {
                 try
                 {
-                    newType = Store.StructureTypes.Create(newType);
-                    Store.StructureTypes.Save();
+                    newType = await Store.StructureTypes.Create(newType);
+                    await Store.StructureTypes.Save();
                 }
                 catch (System.ServiceModel.FaultException ex)
                 {

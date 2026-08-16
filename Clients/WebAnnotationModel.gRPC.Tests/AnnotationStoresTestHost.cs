@@ -95,7 +95,7 @@ namespace WebAnnotationModel.gRPC.Tests
 
             var stores = sp.GetRequiredService<IAnnotationStores>();
             // Bind static Store so LocationStore.Create(... linked ...) and similar paths work.
-            Store.Initialize(stores);
+            await Store.InitializeAsync(stores);
 
             return new AnnotationStoresTestHost(
                 sp, stores, accessToken, grpcUrl, identityUrl, userIdentity.UserName);

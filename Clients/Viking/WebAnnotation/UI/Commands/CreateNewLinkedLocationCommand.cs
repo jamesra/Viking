@@ -18,9 +18,14 @@ namespace WebAnnotation.UI.Commands
         private readonly LocationObj NewLoc = newLoc;
         private readonly LocationObj ExistingLoc = existingLoc;
 
-        public override void OnActivate() => Parent.BeginInvoke((Action)delegate () { Execute(); });
+        public override void OnActivate() => Parent.BeginInvoke((Action)delegate () { _ = ExecuteAsync(); });
 
         protected override void Execute()
+        {
+            _ = ExecuteAsync();
+        }
+
+        async System.Threading.Tasks.Task ExecuteAsync()
         {
             try
             {
@@ -31,7 +36,7 @@ namespace WebAnnotation.UI.Commands
                     return;
                 }
 
-                LocationObj NewLocation = Store.Locations.Create(NewLoc, [ExistingLoc.ID]);
+                LocationObj NewLocation = await Store.Locations.Create(NewLoc, [ExistingLoc.ID]);
                 Global.LastEditedAnnotationID = NewLocation.ID;
             }
             catch (ArgumentOutOfRangeException)

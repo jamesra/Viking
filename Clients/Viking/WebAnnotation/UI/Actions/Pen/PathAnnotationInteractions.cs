@@ -47,7 +47,7 @@ namespace WebAnnotation.UI
                 return;
             }
 
-            location = Store.Locations.GetObjectByID(loc.ID);
+            Store.Locations.TryGetObjectByID(loc.ID, out location);
         }
 
         public override string ToString() => $"{Interaction} {(Annotation is null ? "null" : Annotation.ToString())} @ {Index}";

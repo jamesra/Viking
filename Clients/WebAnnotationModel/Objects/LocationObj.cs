@@ -190,7 +190,7 @@ namespace WebAnnotationModel.Objects
                 if (ParentID.HasValue == false)
                     return null;
 
-                _Parent = Store.Structures.GetObjectByID(ParentID.Value, false);
+                Store.Structures.TryGetObjectByID(ParentID.Value, out _Parent);
                 return _Parent;
             }
             internal set => _Parent = value;
@@ -496,7 +496,7 @@ namespace WebAnnotationModel.Objects
         /// </summary>
         internal async Task SetLinksFromServerAsync(IEnumerable<long> peers)
         {
-            await _Links.ClearAsync();
+            await _Links.ClearAsync().ConfigureAwait(false);
             if (peers == null)
                 return;
 
@@ -504,7 +504,7 @@ namespace WebAnnotationModel.Objects
             {
                 if (peer == ID)
                     continue;
-                await _Links.AddAsync(peer);
+                await _Links.AddAsync(peer).ConfigureAwait(false);
             }
         }
 

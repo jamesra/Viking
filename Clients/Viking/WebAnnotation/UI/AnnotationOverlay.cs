@@ -157,48 +157,43 @@ namespace WebAnnotation
 
         int Viking.Common.ISectionOverlayExtension.DrawOrder() => 10;
 
-        public static void GoToStructure(long locID)
+        public static async Task GoToStructure(long locID)
         {
-            StructureObj s = Store.Structures.GetObjectByID(locID);
+            StructureObj s = await Store.Structures.GetObjectByID(locID);
             if (s is null)
             {
                 return;
             }
 
-            GoToStructure(s);
+            await GoToStructure(s);
         }
 
-        public static void GoToStructure(StructureObj s)
+        public static async Task GoToStructure(StructureObj s)
         {
             if (s is null)
             {
                 return;
             }
 
-            ICollection<LocationObj> locations = Store.Locations.GetLocationsForStructure(s.ID);
+            ICollection<LocationObj> locations = await Store.Locations.GetStructureLocations(s.ID, QueryTargets.Server);
             if (!locations.Any())
             {
                 return;
             }
 
             {
-                //ICanvasView lastObj = 
                 Geometry.Vector2 lastObjCenter = WebAnnotation.AnnotationOverlay.CurrentOverlay.LastMouseDownCoords;
                 Geometry.Vector3 origin = new(lastObjCenter.X * Global.Scale.X, lastObjCenter.Y * Global.Scale.Y, WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.Number * Global.Scale.Z);
 
-                //Sort locations by distance
                 List<LocationObj> nearest = [.. locations.OrderBy(l => l.DistanceToPoint3D(origin))];
-
-                List<double> Distance = [.. nearest.Select(l => l.DistanceToPoint3D(origin))];
-                List<double> Depth = [.. nearest.Select(l => l.Z)];
 
                 GoToLocation(nearest.First());
             }
         }
 
-        public static void GoToLocation(long locID)
+        public static async Task GoToLocation(long locID)
         {
-            LocationObj loc = Store.Locations.GetObjectByID(locID);
+            LocationObj loc = await Store.Locations.GetObjectByID(locID);
             if (loc is null)
             {
                 return;
@@ -307,9 +302,9 @@ namespace WebAnnotation
         {
             Debug.Print("Open Last Modified Location");
 
-            Task task = new(() =>
+            Task task = new(async () =>
             {
-                WebAnnotationModel.Objects.LocationObj lastLocation = WebAnnotationModel.Store.Locations.GetLastModifiedLocation().Result;
+                WebAnnotationModel.Objects.LocationObj lastLocation = await WebAnnotationModel.Store.Locations.GetLastModifiedLocation();
                 if (lastLocation != null)
                 {
                     Viking.UI.State.MainThreadDispatcher.Invoke(() => AnnotationOverlay.GoToLocation(lastLocation));
@@ -652,8 +647,11 @@ namespace WebAnnotation
                                 actionSupportedObj.GetMouseClickActionForPositionOnAnnotation(WorldPosition,
                                     CurrentSectionNumber, Viking.Input.ModifierKeysConverter.FromWinFormsKeys((int)Control.ModifierKeys), out long LocationID);
 
+                            if (!Store.Locations.TryGetObjectByID(LocationID, out LocationObj clickedLoc))
+                                return;
+
                             Viking.UI.Commands.Command command = action.CreateCommand(Parent,
-                                Store.Locations.GetObjectByID(LocationID), WorldPosition);
+                                clickedLoc, WorldPosition);
                             if (command != null)
                             {
                                 _Parent.CurrentCommand = command;
@@ -726,8 +724,11 @@ namespace WebAnnotation
 
                         if (actionSupportedObj is LocationCanvasView viewObj)
                         {
+                            if (!Store.Locations.TryGetObjectByID(LocationID, out LocationObj clickedLoc))
+                                return;
+
                             Viking.UI.Commands.Command command =
-                                action.CreateCommand(Parent, Store.Locations.GetObjectByID(LocationID), WorldPosition);
+                                action.CreateCommand(Parent, clickedLoc, WorldPosition);
                             if (command != null)
                             {
                                 _Parent.CurrentCommand = command;
@@ -998,8 +999,8 @@ break;
                 GoToStructureForm = new UI.Forms.GoToActionForm
                 {
                     Title = "Enter Structure ID",
-                    IsValidInput = (ID) => Store.Structures.GetObjectByID(ID, true) != null,
-                    OnGo = GoToStructure
+                    IsValidInput = async (ID, token) => await Store.Structures.GetObjectByID(ID, token) != null,
+                    OnGo = id => _ = GoToStructure(id)
                 };
                 SetFormOwner(GoToStructureForm);
                 GoToStructureForm.Closed += GoToStructureForm_Closed;
@@ -1018,9 +1019,9 @@ break;
             {
                 FindStructureNumberForm = new UI.Forms.FindStructureNumberForm
                 {
-                    OnFindStructure = (structureId) =>
+                    OnFindStructure = async (structureId) =>
                     {
-                        var structure = Store.Structures.GetObjectByID(structureId);
+                        var structure = await Store.Structures.GetObjectByID(structureId);
                         if (structure is null)
                         {
                             System.Windows.MessageBox.Show("No structure found with that ID", "Error", System.Windows.MessageBoxButton.OK);
@@ -1051,8 +1052,8 @@ break;
                 GoToLocationForm = new UI.Forms.GoToActionForm
                 {
                     Title = "Enter Location ID",
-                    IsValidInput = (ID) => Store.Locations.GetObjectByID(ID, true) != null,
-                    OnGo = GoToLocation
+                    IsValidInput = async (ID, token) => await Store.Locations.GetObjectByID(ID, token) != null,
+                    OnGo = id => _ = GoToLocation(id)
                 };
                 SetFormOwner(GoToLocationForm);
                 GoToLocationForm.Closed += GoToLocationForm_Closed;
@@ -1113,16 +1114,14 @@ break;
                 case Keys.Back:
                     if (Global.LastEditedAnnotationID.HasValue)
                     {
-                        LocationObj loc = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value);
+                        if (!Store.Locations.TryGetObjectByID(Global.LastEditedAnnotationID.Value, out LocationObj loc) || loc == null)
+                            return;
 
-                        if (loc != null)
-                        {
-                            Parent.GoToLocation(new Microsoft.Xna.Framework.Vector2((float)loc.Position.X,
+                        Parent.GoToLocation(new Microsoft.Xna.Framework.Vector2((float)loc.Position.X,
                                                                                 (float)loc.Position.Y),
                                                                                 (int)loc.Z,
                                                                                 true,
                                                                                 (double)((loc.VolumeShape.BoundingBox.Width) / Parent.Width) * 2);
-                        }
                     }
                     else
                     {
@@ -1271,8 +1270,12 @@ break;
 
         protected void OnCreateStructure(long TypeID, IEnumerable<string> attributes, LocationType AnnotationType)
         {
-            StructureTypeObj typeObj = Store.StructureTypes.GetObjectByID(TypeID);
-            if (typeObj != null)
+            if (!Store.StructureTypes.TryGetObjectByID(TypeID, out StructureTypeObj typeObj) || typeObj == null)
+            {
+                Trace.WriteLine("Could not find hotkey ID for type: " + TypeID.ToString());
+                return;
+            }
+
             {
                 StructureType type = new(typeObj);
                 bool StructureNeedsParent = type.ParentID.HasValue;
@@ -1327,10 +1330,6 @@ break;
                 }
 
                 Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStruct, newLocation });
-            }
-            else
-            {
-                Trace.WriteLine("Could not find hotkey ID for type: " + TypeID.ToString());
             }
         }
 
@@ -1569,14 +1568,18 @@ break;
 
         protected void OnContinueLastTrace(Geometry.Vector2 WorldPos)
         {
+            _ = ContinueLastTraceAsync(WorldPos);
+        }
+
+        private async Task ContinueLastTraceAsync(Geometry.Vector2 WorldPos)
+        {
             if (!Global.LastEditedAnnotationID.HasValue)
             {
                 return;
             }
 
-            LocationObj lastLoc = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, true);
+            LocationObj lastLoc = await Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value);
             {
-                //This can occur if we deleted the last location we editted.
                 if (lastLoc == null)
                 {
                     return;
@@ -1591,7 +1594,6 @@ break;
                     }
 
                     Viking.UI.State.SelectedObject = null;
-                    //LastMouseOverObject = null; 
                     Global.LastEditedAnnotationID = null;
                 }
             }
@@ -1736,8 +1738,8 @@ break;
                 for (int iObj = 0; iObj < listObjs.Count; iObj++)
                 {
                     LocationLinkObj locLink = listObjs[iObj] as LocationLinkObj;
-                    LocationObj locA = Store.Locations.GetObjectByID(locLink.A, false);
-                    LocationObj locB = Store.Locations.GetObjectByID(locLink.B, false);
+                    Store.Locations.TryGetObjectByID(locLink.A, out LocationObj locA);
+                    Store.Locations.TryGetObjectByID(locLink.B, out LocationObj locB);
 
                     if (locA != null && !changedSections.Contains((int)locA.Section))
                     {
@@ -1841,8 +1843,8 @@ break;
                 if (listObjs[iObj] is not LocationLinkObj locLink)
                     continue;
 
-                LocationObj locA = Store.Locations.GetObjectByID(locLink.A, false);
-                LocationObj locB = Store.Locations.GetObjectByID(locLink.B, false);
+                Store.Locations.TryGetObjectByID(locLink.A, out LocationObj locA);
+                Store.Locations.TryGetObjectByID(locLink.B, out LocationObj locB);
                 if (locA == null || locB == null)
                     return true;
             }

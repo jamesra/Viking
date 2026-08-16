@@ -118,7 +118,7 @@ namespace Annotation.ViewModels
 
             PermittedStructureLinkKey key = new(ID, Model.ID, false);
 
-            var obj = Store.PermittedStructureLinks.GetObjectByID(key, AskServer: false, ForceRefreshFromServer: false, CancellationToken.None).Result;
+            Store.PermittedStructureLinks.TryGetObjectByID(key, out var obj);
             if (NewPermits.Contains(obj))
                 NewPermits.Remove(obj);
 
@@ -141,7 +141,7 @@ namespace Annotation.ViewModels
             }
 
             PermittedStructureLinkKey key = new(Model.ID, ID, false);
-            var obj = Store.PermittedStructureLinks.GetObjectByID(key, AskServer: false, ForceRefreshFromServer: false, CancellationToken.None).Result;
+            Store.PermittedStructureLinks.TryGetObjectByID(key, out var obj);
             if (NewPermits.Contains(obj))
                 NewPermits.Remove(obj);
 
@@ -164,7 +164,7 @@ namespace Annotation.ViewModels
             }
 
             PermittedStructureLinkKey key = new(Model.ID, ID, true);
-            var obj = Store.PermittedStructureLinks.GetObjectByID(key, AskServer: false, ForceRefreshFromServer: false, CancellationToken.None).Result;
+            Store.PermittedStructureLinks.TryGetObjectByID(key, out var obj);
             if (NewPermits.Contains(obj))
                 NewPermits.Remove(obj);
 
@@ -261,6 +261,6 @@ namespace Annotation.ViewModels
 
         private bool CanRestoreModel(object item) => Model.DBAction != DBACTION.NONE;
 
-        private void RestoreModel(object item) => Store.StructureTypes.GetObjectByID(Model.ID, AskServer: true, ForceRefreshFromServer: true, CancellationToken.None);
+        private void RestoreModel(object item) => _ = Store.StructureTypes.Refresh(Model.ID);
     }
 }

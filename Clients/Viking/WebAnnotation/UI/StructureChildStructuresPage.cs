@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
@@ -29,13 +30,13 @@ namespace WebAnnotation.UI
             Debug.Assert(Obj != null);
         }
 
-        private void StructureChildStructuresPage_VisibleChanged(object sender, EventArgs e)
+        private async void StructureChildStructuresPage_VisibleChanged(object sender, EventArgs e)
         {
             if (!listLoaded)
             {
 
                 UseWaitCursor = true;
-                ICollection<StructureObj> childStructureObjs = Store.Structures.GetChildStructuresForStructure(Obj.ID);
+                ICollection<StructureObj> childStructureObjs = await Store.Structures.GetChildStructures(Obj.ID);
                 List<Structure> childStructures = new(childStructureObjs.Count);
 
                 foreach (StructureObj s in childStructureObjs)

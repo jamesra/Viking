@@ -196,7 +196,8 @@ namespace WebAnnotationModel
                     else
                     {
                         //Added the false for dynamic structure loading change, may cause bugs
-                        OBJECT parent = GetObjectByID(newObj.ParentID.Value, false);
+                        OBJECT parent;
+                        TryGetObjectByID(newObj.ParentID.Value, out parent);
                         //Don't use newObj.Parent in if test because get method will fetch parent
                         if (parent is null)
                         {
@@ -225,7 +226,7 @@ namespace WebAnnotationModel
             //Go find all of the missing parent objects and make sure they have been downloaded
             if (listMissingParents.Count > 0)
             {
-                ChangeInventory<OBJECT> parent_inventory = InternalGetObjectsByIDs([.. listMissingParents], true);
+                ChangeInventory<OBJECT> parent_inventory = InternalGetObjectsByIDs([.. listMissingParents]);
                 inventory.Add(parent_inventory);
             }
 
@@ -240,7 +241,8 @@ namespace WebAnnotationModel
             foreach (OBJECT newObj in listObjNeedingParents)
             {
                 //Added the false for dynamic structure loading change, may cause bugs
-                newObj.Parent = GetObjectByID(newObj.ParentID.Value, false);
+                TryGetObjectByID(newObj.ParentID.Value, out OBJECT parent);
+                newObj.Parent = parent;
                 if (newObj.Parent != null)
                 {
                     //TODO: This shouldn't happen unless the parent was somehow deleted from the server...
@@ -301,7 +303,7 @@ namespace WebAnnotationModel
                 else if (LoadParent)
                 {
                     //Make sure the structure object points to the correct parent
-                    existingObj.Parent = GetObjectByID(existingObj.ParentID.Value);
+                    existingObj.Parent = GetObjectByID(existingObj.ParentID.Value).GetAwaiter().GetResult();
 
                     //If it returns null we couldn't find the parent on the server, what the hell?
                     Debug.Assert(existingObj.Parent != null, "Couldn't locate parent of the structureType, Hit continue to reload all structure types in a panic");
