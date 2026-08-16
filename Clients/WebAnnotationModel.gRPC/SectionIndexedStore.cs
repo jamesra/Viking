@@ -15,21 +15,24 @@ using WebAnnotationModel.ServerInterface;
 
 namespace WebAnnotationModel.gRPC
 {
+    /// <summary>
+    /// Per-section cache fed from Store.CollectionChanged.
+    /// </summary>
     internal abstract class SectionIndexedStore<KEY, OBJECT, SERVER_OBJECT> : ISectionIndexedStore<KEY, OBJECT>
         where KEY : struct, IEquatable<KEY>, IComparable<KEY>
         where OBJECT : IDataObjectWithKey<KEY>
         where SERVER_OBJECT : IEquatable<SERVER_OBJECT>, IDataObjectWithKey<KEY>
     {
         /// <summary>
-        /// Maps sections to a sorted list of locations on that section.
-        /// This collection is not guaranteed to match the ObjectToID collection.  Adding spin-locks to the Add/Remove functions could solve this if it becomes an issue.
+        /// Per-section index of cached objects. Not guaranteed to match the store dictionary until CollectionChanged has run.
         /// </summary>
         readonly ConcurrentDictionary<long, ConcurrentDictionary<KEY, OBJECT>> SectionToObjects =
             new ConcurrentDictionary<long, ConcurrentDictionary<KEY, OBJECT>>();
 
         /// <summary>
-        /// When we query the database for objects on a section we store the query time for the section
-        /// That way on the next query we only need to store the updates.
+        /// Last successful query time per section so the next request can ask for deltas only.
+        /// Stamp this after the query succeeds. Stamping on send or on failure makes the
+        /// next call skip the section as if it were already up to date.
         /// </summary>
         private readonly ConcurrentDictionary<long, DateTime> LastQueryForSection =
             new ConcurrentDictionary<long, DateTime>();

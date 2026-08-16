@@ -13,6 +13,7 @@ namespace Viking
 
         public static TileViewModelCache TileViewModelCache => TileLoadEnvironment.TileViewModelCache;
 
+        // Linked TileView / TextureReader sources call these; Scene has no viewer-side leak tracker.
         public static void AddTexture(Microsoft.Xna.Framework.Graphics.Texture tex, string msg)
         {
         }

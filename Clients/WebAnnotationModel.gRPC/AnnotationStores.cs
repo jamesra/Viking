@@ -23,6 +23,9 @@ namespace WebAnnotationModel.gRPC
 
         public IPermittedStructureLinkStore PermittedStructureLinks { get; }
 
+        /// <summary>
+        /// Same instance as <see cref="Locations"/>, exposed as IRegionLoader for mosaic-bounds queries.
+        /// </summary>
         public IRegionLoader<LocationObj> LocationsByRegion { get; }
 
         public AnnotationStores(ILocationStore locations,
@@ -40,9 +43,14 @@ namespace WebAnnotationModel.gRPC
             LocationLinks = locationLinks;
             PermittedStructureLinks = permittedStructureLinks;
             LocationsByRegion = locations as IRegionLoader<LocationObj>;
+            // Constructed for its CollectionChanged subscription; keep the instance alive via DI.
             _ = locationLinkToLocationUpdater;
         }
 
+        /// <summary>
+        /// Warm static tables. Types before permitted links (updater attaches to types).
+        /// Locations are not loaded here — they arrive from region/section queries after the view exists.
+        /// </summary>
         public async Task InitializeAsync(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();

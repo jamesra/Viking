@@ -9,8 +9,7 @@ using WebAnnotationModel.ServerInterface;
 namespace WebAnnotationModel.gRPC.Converters
 {
     /// <summary>
-    /// An IStructure combines a structure and links.  This result processor
-    /// handles updating both stores when these results arrive
+    /// Splits an IStructure payload into StructureStore and StructureLinkStore updates.
     /// </summary>
     class ProcessorForServerStructures : IServerQuerySingleAddOrUpdateHandler<IStructure>, IServerQueryMultipleAddsOrUpdatesHandler< IStructure>
     {
@@ -29,6 +28,10 @@ namespace WebAnnotationModel.gRPC.Converters
             return StructureProcessor.ProcessServerUpdate(new ServerUpdate<long, IStructure[]>(deleted: deletedID));
         }
 
+        /// <summary>
+        /// Applies one structure and its links, then EndBatch. EndBatch does not wire Parent.Children;
+        /// use StructureStore.CallOnCollectionChanged if the tree must be populated.
+        /// </summary>
         public async Task ProcessServerResult(DateTime queryTime, IStructure obj)
         {
             var links = await StructureLinkProcessor.ProcessServerUpdate(new ServerUpdate<StructureLinkKey, IStructureLink[]>(queryTime, obj.Links, Array.Empty<StructureLinkKey>()));
@@ -39,6 +42,7 @@ namespace WebAnnotationModel.gRPC.Converters
             await StructureProcessor.EndBatch(structures);
         }
 
+        /// <summary>Dictionary only. Caller must EndBatch or CallOnCollectionChanged.</summary>
         public async Task ProcessServerResults(DateTime queryTime, IStructure[] input)
         {
             var links = await StructureLinkProcessor.ProcessServerUpdate(new ServerUpdate<StructureLinkKey, IStructureLink[]>(queryTime, input.SelectMany(o => o.Links).ToArray(), Array.Empty<StructureLinkKey>()));

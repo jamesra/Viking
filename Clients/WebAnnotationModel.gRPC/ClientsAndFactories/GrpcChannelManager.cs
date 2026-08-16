@@ -34,6 +34,9 @@ namespace WebAnnotationModel.gRPC
         GrpcChannel GetOrCreate(Uri endpoint); 
     }
 
+    /// <summary>
+    /// One GrpcChannel per normalized endpoint.
+    /// </summary>
     public class GrpcChannelManager : IGrpcChannelManager
     {
         private readonly ConcurrentDictionary<Uri, GrpcChannel> _channels =
@@ -55,6 +58,9 @@ namespace WebAnnotationModel.gRPC
             return _channels.GetOrAdd(endpoint, CreateChannel);
         }
 
+        /// <summary>
+        /// TLS handshake runs before Authorization is sent. UntrustedRoot is a cert problem, not a bad token.
+        /// </summary>
         private GrpcChannel CreateChannel(Uri endpoint)
         {
             var channelOptions = CloneOptions(_options);

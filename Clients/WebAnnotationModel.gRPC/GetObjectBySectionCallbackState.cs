@@ -4,6 +4,9 @@ using System.Threading;
 
 namespace WebAnnotationModel
 {
+    /// <summary>
+    /// In-flight section query plus its cancellation source. Presence of a key in OutstandingSectionQueries means a query is running.
+    /// </summary>
     readonly struct TaskAndToken<T>
     {
         public readonly System.Threading.Tasks.Task<T> Task;
@@ -44,9 +47,16 @@ namespace WebAnnotationModel
         }
     }
 
+    /// <summary>
+    /// WCF-era async callback bag for a section query.
+    /// </summary>
     public readonly struct GetObjectBySectionCallbackState<T> : IEquatable<GetObjectBySectionCallbackState<T>>
     { 
         public readonly long SectionNumber;
+
+        /// <summary>
+        /// Watermark sent with the request. Do not treat this as proof the query succeeded.
+        /// </summary>
         public readonly DateTime LastQueryExecutedTime;
         public readonly DateTime StartTime;
         public readonly Action<ICollection<T>> OnLoadCompletedCallBack;

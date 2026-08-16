@@ -11,6 +11,10 @@ using System.Threading;
 
 namespace WebAnnotationModel.gRPC
 { 
+    /// <summary>
+    /// Allowed type-to-type link rules. Loaded after StructureTypes so the updater
+    /// can attach each rule to the type objects already in the store.
+    /// </summary>
     public class PermittedStructureLinkStore : StoreBaseWithKey<PermittedStructureLinkKey, PermittedStructureLinkObj, IPermittedStructureLink, PermittedStructureLinkObj, IPermittedStructureLink>, IPermittedStructureLinkStore
     {
         public PermittedStructureLinkStore(IServerAnnotationsClientFactory<IServerAnnotationsClient<PermittedStructureLinkKey, IPermittedStructureLink, PermittedStructureLinkObj, IPermittedStructureLink>> clientFactory,

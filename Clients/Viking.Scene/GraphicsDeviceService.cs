@@ -13,7 +13,7 @@ using ServiceContainer = System.ComponentModel.Design.ServiceContainer;
 namespace Viking.Rendering
 {
     /// <summary>
-    /// Shared GraphicsDevice singleton keyed by HWND. No WinForms types.
+    /// Process-wide GraphicsDevice shared by MonoGameHwndHost instances.
     /// </summary>
     public class GraphicsDeviceService : IGraphicsDeviceService
     {
@@ -57,6 +57,9 @@ namespace Viking.Rendering
             GlobalPrimitives.CircleXTexture = Content.LoadTextureWithAlpha("CircleX", "CircleX");
         }
 
+        /// <summary>
+        /// First caller creates the device; later hosts share the same instance until the last Release.
+        /// </summary>
         public static GraphicsDeviceService? AddRef(IntPtr windowHandle, int width, int height)
         {
             if (Interlocked.Increment(ref referenceCount) == 1)
@@ -81,6 +84,9 @@ namespace Viking.Rendering
             }
         }
 
+        /// <summary>
+        /// Recreates the backbuffer. Clears DeviceEffectsStore caches first because those effects hold the old device.
+        /// </summary>
         public void ResetDevice(int width, int height)
         {
             if (graphicsDevice is null)
@@ -121,6 +127,9 @@ namespace Viking.Rendering
 
         Microsoft.Xna.Framework.Content.ContentManager? _Content;
 
+        /// <summary>
+        /// Content folder next to the exe. Also assigned to VikingXNAGraphics.Global.Content so annotation effects can load.
+        /// </summary>
         public Microsoft.Xna.Framework.Content.ContentManager Content
         {
             get

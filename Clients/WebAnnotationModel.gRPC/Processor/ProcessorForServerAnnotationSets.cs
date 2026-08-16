@@ -7,8 +7,7 @@ using WebAnnotationModel.Objects;
 namespace WebAnnotationModel.gRPC.Converters
 {
     /// <summary>
-    /// An annotation set combines both structures and locations in a single result set.  This result processor
-    /// handles updating both stores when these results arrive
+    /// Applies one RPC result that contains both structures and locations.
     /// </summary>
     class ProcessorForServerAnnotationSets : IServerQuerySingleAddOrUpdateHandler<AnnotationSet>
     { 
@@ -22,6 +21,10 @@ namespace WebAnnotationModel.gRPC.Converters
             LocationProcessor = locationProcessor;
         }
 
+        /// <summary>
+        /// EndBatch notifies both stores. Structure parent/root wiring still requires
+        /// StructureStore.CallOnCollectionChanged.
+        /// </summary>
         public async Task ProcessServerResult(DateTime queryTime, AnnotationSet obj)
         {
             var structures = await StructureProcessor.ProcessServerUpdate(obj.Structures.ToArray(), null);

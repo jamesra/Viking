@@ -8,6 +8,9 @@ using WebAnnotationModel.ServerInterface;
 
 namespace WebAnnotationModel.gRPC
 {
+    /// <summary>
+    /// Applies a server add/update/delete payload to the store dictionary without raising store events.
+    /// </summary>
     public class StoreServerQueryResultsHandler<KEY, OBJECT, SERVER_OBJECT> : IStoreServerQueryResultsHandler<KEY, OBJECT, SERVER_OBJECT>
         where KEY : struct, IEquatable<KEY>, IComparable<KEY> 
         where OBJECT : AnnotationModelObjBaseWithKey<KEY, SERVER_OBJECT>, IEquatable<OBJECT>, IDataObjectWithKey<KEY>
@@ -51,6 +54,9 @@ namespace WebAnnotationModel.gRPC
                 update.DeletedIDs);
         }
 
+        /// <summary>
+        /// Mutates the store, then returns an inventory. Does not raise store events.
+        /// </summary>
         public async Task<ChangeInventory<OBJECT>> ProcessServerObjects(SERVER_OBJECT[] addorupdateObjs, KEY[] deletedIds)
         {
             var inventory = new ChangeInventory<OBJECT>();
@@ -73,6 +79,7 @@ namespace WebAnnotationModel.gRPC
             async Task<OBJECT> GetOrAddTask(SERVER_OBJECT u, int i)
             {
                 var added = false;
+                // IStoreEditor.GetOrAdd: cache only. Events fire when the store calls CallOnCollectionChanged.
                 var co = _StoreEditor.GetOrAdd(u.ID, (k) =>
                 {
                     added = true;
@@ -170,6 +177,10 @@ namespace WebAnnotationModel.gRPC
             return listDeleted;
         }
 
+        /// <summary>
+        /// Forwards to IStoreEditor.EndBatch, which skips parent/root wiring.
+        /// Use the store's CallOnCollectionChanged for StructureTypeStore / StructureStore.
+        /// </summary>
         public Task EndBatch(ChangeInventory<OBJECT> changes)
         {
             return _StoreEditor.EndBatch(changes);
