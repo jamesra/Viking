@@ -31,6 +31,7 @@ namespace Geometry
             Max = max;
         }
 
+        /// <summary>Closed interval: true when <paramref name="value"/> is in [<see cref="Min"/>, <see cref="Max"/>]. Not OGC Contains.</summary>
         public bool Contains(double value) => value >= Min && value <= Max;
 
         public double Normalize(double value, bool clip = false)

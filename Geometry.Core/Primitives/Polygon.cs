@@ -14,23 +14,22 @@ namespace Geometry
     }
 
     /// <summary>
-    /// A polygon with interior rings representing holes
-    /// Rings are described by points.  The first and last point should match
-    /// Uses Counter-Clockwise winding order
+    /// A polygon with interior rings representing holes.
+    /// Rings are closed (first vertex equals last) and counter-clockwise.
     /// </summary>
     [Serializable()]
     public class Polygon : ICloneable, IPolygon2D, IHasControlPoints, IEquatable<Polygon>, IEquatable<IPolygon2D>
     {
         /// <summary>
-        /// Cached area of ExteriorRing, not subtracting any interior holes.
-        /// Must be updated if ExteriorRing changes
+        /// Exterior ring area only (holes not subtracted). Keep in sync when <see cref="_ExteriorRing"/> changes.
         /// </summary>
         double _ExteriorRingArea;
 
 
+        /// <summary>Authoritative vertices. <see cref="ExteriorRing"/> get/set copies this; mutators must write here.</summary>
         Vector2[] _ExteriorRing;
 
-        /// <summary>Live vertex storage. Internal indexers and mutators must use this, not <see cref="ExteriorRing"/>.</summary>
+        /// <summary>Internal alias of <see cref="_ExteriorRing"/>. Do not use <see cref="ExteriorRing"/> for in-place edits (that copies).</summary>
         internal Vector2[] RingStorage => _ExteriorRing;
 
         /// <summary>
@@ -63,32 +62,27 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Bounding box of the Polygon.
-        /// Must be updated if the verticies change
+        /// Cached AABB of current vertices. Mutators that change vertices must recompute or grow/shrink this.
         /// </summary>
         Rectangle _BoundingRect;
 
-        /// <summary>
-        /// Bounding box of the Polygon verticies
-        /// </summary>
         public Rectangle BoundingBox => _BoundingRect;
 
         /// <summary>
-        /// Exterior segments of the polygon, this must be updated if verticies change. The ordering of these segments matches the ordering of ExteriorRing
+        /// Cached exterior edges in ring order. Mutators that change vertices must rebuild or patch this.
         /// </summary>
         LineSegment[] _ExteriorSegments;
 
-        /// <summary>
-        /// Read only array of Exterior segment of the polygon. The ordering of these segments matches the ordering of ExteriorRing
-        /// </summary>
         public LineSegment[] ExteriorSegments => _ExteriorSegments;
 
+        /// <summary>
+        /// Spatial index of every segment (exterior and holes). Null means dirty.
+        /// Mutators must null this field or patch it; do not assign <see cref="SegmentRTree"/>.
+        /// </summary>
         [NonSerialized]
         BoundingBoxIndex<PolygonIndex> _SegmentRTree = null;
 
-        /// <summary>
-        /// An RTree containing every segment, exterior and interior, of this polygon
-        /// </summary>
+        /// <summary>Rebuilds from current rings when <see cref="_SegmentRTree"/> is null.</summary>
         internal BoundingBoxIndex<PolygonIndex> SegmentRTree
         {
             get
@@ -127,11 +121,13 @@ namespace Geometry
         public bool IsExteriorOrInteriorSegment(LineSegment segment) => SegmentRTree.Intersects(Rectangle.Pad(segment.BoundingBox, Tolerance.Epsilon)).Any(p => p.Segment(this).EquivalentUndirected(segment));
 
         /// <summary>
-        /// Cached centroid of the polygon
+        /// Cached area-weighted centroid of the exterior ring (holes ignored). Null means dirty; the getter recomputes.
+        /// Mutators that change vertices must set this to null.
         /// </summary>
         [NonSerialized]
         Vector2? _Centroid;
 
+        /// <summary>Area-weighted centroid of the exterior ring; holes do not pull the center.</summary>
         public Vector2 Centroid
         {
             get
@@ -147,14 +143,10 @@ namespace Geometry
 
         readonly List<Polygon> _InteriorPolygons = [];
 
-        /// <summary>
-        /// Read only please
-        /// </summary>
+        /// <summary>Holes. Mutate via Add/Remove/Replace interior-ring methods, not this list.</summary>
         public IReadOnlyList<Polygon> InteriorPolygons => _InteriorPolygons.AsReadOnly();
 
-        /// <summary>
-        /// Read only please
-        /// </summary>
+        /// <summary>Copies of each hole's exterior ring.</summary>
         public IReadOnlyList<Vector2[]> InteriorRings => [.. _InteriorPolygons.Select(p => p._ExteriorRing)];
 
         /// <summary>
@@ -950,22 +942,13 @@ namespace Geometry
         }
 
 
-        /// <summary>
-        /// Grow a bounding box if an added point falls outside it's boundaries
-        /// </summary>
-        /// <param name="bbox"></param>
-        /// <param name="oldPoint"></param>
-        /// <param name="newPoint"></param>
-        /// <returns>True if the bounding box changed</returns>
+        /// <summary>Expands <see cref="_BoundingRect"/> to include <paramref name="point"/>.</summary>
         private void UpdateBoundingBoxForAdd(Vector2 point) => _BoundingRect += point;
 
         /// <summary>
-        /// Shrink a bounding box if a removed point was on the boundaries
+        /// If <paramref name="removed_point"/> sat on the AABB, recompute <see cref="_BoundingRect"/> from the ring.
         /// </summary>
-        /// <param name="bbox"></param>
-        /// <param name="oldPoint"></param>
-        /// <param name="newPoint"></param>
-        /// <returns>True if the bounding box changed</returns>
+        /// <returns>True if the box changed.</returns>
         private bool UpdateBoundingBoxForRemove(Vector2 removed_point)
         {
             if (_BoundingRect.GetRelation(removed_point) == ShapeRelation.Touching)
@@ -1456,6 +1439,9 @@ namespace Geometry
 
         public bool Covers(in IPoint2D point_param) => GetRelation(point_param).IsCovers();
 
+        /// <summary>
+        /// Point-in-polygon via winding number. Holes are exterior of this polygon (Contained inside a hole is None).
+        /// </summary>
         public ShapeRelation GetRelation(in IPoint2D point_param)
         {
             if (!_BoundingRect.Covers(point_param))
@@ -1595,12 +1581,13 @@ namespace Geometry
 
 
         /// <summary>
-        /// Return true if the polygon completely contains the circle
+        /// OGC Contains: the disk's interior lies in this polygon's interior (boundary contact is false).
         /// </summary>
-        /// <param name="other"></param>
-        /// <returns></returns>
         public bool Contains(Circle other) => GetRelation(other).IsContains();
 
+        /// <summary>
+        /// OGC Covers: the closed disk lies in this closed polygon.
+        /// </summary>
         public bool Covers(Circle other) => GetRelation(other).IsCovers();
 
         /// <summary>
@@ -1659,12 +1646,13 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Return true if the polygon is completely inside the other
+        /// OGC Contains: <paramref name="other"/> lies in this polygon's interior.
         /// </summary>
-        /// <param name="poly"></param>
-        /// <returns></returns>
         public bool Contains(in Polygon other) => GetRelation(other).IsContains();
 
+        /// <summary>
+        /// OGC Covers: <paramref name="other"/> lies in this closed polygon.
+        /// </summary>
         public bool Covers(in Polygon other) => GetRelation(other).IsCovers();
 
         /// <summary>
@@ -1767,6 +1755,10 @@ namespace Geometry
             return false;
         }
 
+        /// <summary>
+        /// Not the true incircle (tangent to every edge). Center is the centroid; radius is the
+        /// distance to the nearest vertex, so the disk can extend past edges.
+        /// </summary>
         public Circle InscribedCircle()
         {
             Vector2 center = this.Centroid;
@@ -1789,9 +1781,7 @@ namespace Geometry
             /// </summary>
             public readonly int B_is_left = b_is_left;
 
-            /// <summary>
-            /// The polygon segment that was tested.  (Not the 
-            /// </summary>
+            /// <summary>The polygon segment that was tested, not the test line.</summary>
             public readonly LineSegment S = seg;
 
             public readonly int? IsPLeftOfSeg = is_p_left_of_seg;
@@ -1851,6 +1841,14 @@ namespace Geometry
             return IsLeft;
         }*/
 
+        /// <summary>
+        /// Winding-number point-in-polygon. Non-zero winding is Contained; a point on an edge is Touching.
+        /// </summary>
+        /// <remarks>
+        /// Hormann and Agathos, "The point in polygon problem for arbitrary polygons,"
+        /// Computational Geometry 20(3):131–144 (2001). Adjacent edges that only touch the
+        /// test line are merged so a vertex on the ray is not counted twice.
+        /// </remarks>
         private static ShapeRelation IsPointInsidePolygonByWindingTest(List<LineSegment> polygonSegments, Line test_line)
         {
             Vector2 test_point = test_line.Origin;
@@ -1986,6 +1984,14 @@ namespace Geometry
             return wind_count != 0 ? ShapeRelation.Contained : ShapeRelation.None;
         }
 
+        /// <summary>
+        /// Even-odd (crossing-number) test. Duplicate intersections at vertices are collapsed so a ray
+        /// through a vertex is not counted twice.
+        /// </summary>
+        /// <remarks>
+        /// Haines, "Point in Polygon Strategies," in Graphics Gems IV, Academic Press, 1994.
+        /// Prefer <see cref="IsPointInsidePolygonByWindingTest"/> for the public point predicate.
+        /// </remarks>
         private static bool IsPointInsidePolygonByRayTest(ICollection<LineSegment> polygonSegments, LineSegment test_line)
         {
             //In cases where our test line passes exactly through a vertex on the other polygon we double count the line.  
@@ -2163,11 +2169,8 @@ namespace Geometry
         public Polygon Scale(double scalar, Vector2? origin = null) => this.Scale(new Vector2(scalar, scalar), origin);
 
         /// <summary>
-        /// Scale the polygon by the specified factor from the specified origin
+        /// Scale from <paramref name="origin"/> (centroid if omitted).
         /// </summary>
-        /// <param name="scalar"></param>
-        /// <param name="origin">Defaults to Centroid if not specified</param>
-        /// <returns>A scaled copy of this polygon</returns>
         public Polygon Scale(Vector2 scalar, Vector2? origin = null)
         {
             if (!origin.HasValue)
@@ -2208,6 +2211,9 @@ namespace Geometry
             return poly;
         }
 
+        /// <summary>
+        /// Area-weighted centroid of a closed ring. Translates to the mean first so large coordinates do not overflow.
+        /// </summary>
         public static Vector2 CalculateCentroid(Vector2[] ExteriorRing, bool ValidateRing = true)
         {
             double accumulator_X = 0;
@@ -2939,7 +2945,7 @@ namespace Geometry
                 walkedPoints.Add(SimplifiedPath[iCut]);
             }
             /////////////////////////////////////
-            ///
+            //
             //walkedPoints.AddRange(cutLine);
 #if DEBUG
             //Ensure we do not have duplicates in our list

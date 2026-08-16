@@ -3,7 +3,7 @@
 namespace Geometry
 {
     /// <summary>
-    /// A List<Polygon> with an indexing operator that understands Polygon indicies
+    /// A list of polygons with an indexer that understands <see cref="PolygonIndex"/>.
     /// </summary>
     public class PolygonList : List<Polygon>
     {

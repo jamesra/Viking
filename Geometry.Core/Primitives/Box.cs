@@ -6,6 +6,7 @@ using System.Text;
 
 namespace Geometry
 {
+    /// <summary>Axis-aligned 3D box. <see cref="MinVals"/> and <see cref="MaxVals"/> return copies.</summary>
     [Serializable]
     public readonly struct Box : IBox3D
     {
@@ -193,30 +194,21 @@ namespace Geometry
         }
 
 
-        /// <summary>
-        /// Scale outer dimensions without changing center point
-        /// </summary>
-        /// <param name="scalar"></param>
+        /// <summary>Scale outer dimensions without changing the center.</summary>
         public Box Scale(double scalar)
         {
             double[] scalars = [scalar, scalar, scalar];
             return this.Scale(scalars);
         }
 
-        /// <summary>
-        /// Scale outer dimensions without changing center point
-        /// </summary>
-        /// <param name="scalar"></param>
+        /// <summary>Scale outer dimensions without changing the center.</summary>
         public Box Scale(Vector3 scalar)
         {
             double[] scalars = [scalar.X, scalar.Y, scalar.Z];
             return this.Scale(scalars);
         }
 
-        /// <summary>
-        /// Scale outer dimensions without changing center point
-        /// </summary>
-        /// <param name="scalar"></param>
+        /// <summary>Scale outer dimensions without changing the center.</summary>
         private Box Scale(double[] scalars)
         {
             Debug.Assert(scalars.Length == this.dimensions.Length, "Scalar dimension and shape dimension do not match");

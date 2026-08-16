@@ -40,13 +40,7 @@ namespace Geometry
             return extendedArray;
         }
 
-        /// <summary>
-        /// Creates a new array with the new values appended on to the end
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="existing"></param>
-        /// <param name="newValues"></param>
-        /// <returns></returns>
+        /// <summary>Copy of the array with <paramref name="newValue"/> appended.</summary>
         public static T[] Add<T>(this T[] existing, T newValue)
         {
             /////////////////////////
@@ -58,13 +52,7 @@ namespace Geometry
             return extendedArray;
         }
 
-        /// <summary>
-        /// Creates a new array with the new values appended on to the end
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="existing"></param>
-        /// <param name="newValues"></param>
-        /// <returns></returns>
+        /// <summary>Copy of the array with the element at <paramref name="index"/> removed.</summary>
         public static T[] RemoveAt<T>(this T[] existing, int index)
         {
             /////////////////////////
@@ -76,13 +64,7 @@ namespace Geometry
             return output;
         }
 
-        /// <summary>
-        /// Creates a new array with the new value inserted
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="existing"></param>
-        /// <param name="newValues"></param>
-        /// <returns></returns>
+        /// <summary>Copy of the array with <paramref name="newValue"/> inserted at <paramref name="index"/>.</summary>
         public static T[] Insert<T>(this T[] existing, int index, T newValue)
         {
             /////////////////////////
@@ -98,12 +80,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Creates a new array with the new value inserted, but the input is a closed ring, where the first entry == last entry
+        /// Insert into a closed ring (first equals last). Inserting at 0 also updates the duplicate tail.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="existing"></param>
-        /// <param name="newValues"></param>
-        /// <returns></returns>
         public static T[] InsertIntoClosedRing<T>(this T[] existing, int index, T newValue)
         {
             System.Diagnostics.Debug.Assert(existing[0].Equals(existing[existing.Length - 1]), "Input must be a closed array with first == last");
@@ -126,12 +104,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Creates a new array with the new value inserted, but the input is a closed ring, where the first entry == last entry
+        /// Remove from a closed ring (first equals last). Removing index 0 also updates the duplicate tail.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="existing"></param>
-        /// <param name="newValues"></param>
-        /// <returns></returns>
         public static T[] RemoveFromClosedRing<T>(this T[] existing, int index)
         {
             System.Diagnostics.Debug.Assert(existing[0].Equals(existing[existing.Length - 1]), "Input must be a closed array with first == last");

@@ -4,8 +4,8 @@ namespace Geometry
 {
     /// <summary>
     /// Shared numeric tolerance for Core geometry. Equality uses <see cref="Epsilon"/>;
-    /// <see cref="GetHashCode"/> rounds coordinates to <see cref="SignificantDigits"/> so
-    /// values equal within epsilon share a hash except at rounding-bin boundaries.
+    /// hash codes round coordinates to <see cref="SignificantDigits"/> so values equal
+    /// within epsilon share a hash except at rounding-bin boundaries.
     /// Comparers remain exact (see <see cref="Vector2ComparerXY"/>).
     /// </summary>
     public static class Tolerance

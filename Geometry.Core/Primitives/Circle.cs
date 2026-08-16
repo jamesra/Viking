@@ -5,6 +5,9 @@ using System.Linq;
 
 namespace Geometry
 {
+    /// <summary>
+    /// Disk in the plane. <see cref="RadiusSquared"/> is derived in the constructor; do not treat it as independently settable.
+    /// </summary>
     [Serializable]
     public readonly struct Circle : IShape2D, ICircle2D, IHasControlPoints, IEquatable<ICircle2D>
     {
@@ -51,6 +54,10 @@ namespace Geometry
             return CircleFromThreePoints(A, B, C);
         }
 
+        /// <summary>
+        /// Circumcircle of three non-collinear points (intersection of perpendicular bisectors).
+        /// Collinear triples throw.
+        /// </summary>
         public static Circle CircleFromThreePoints(Vector2 One, Vector2 Two, Vector2 Three)
         {
             if (One.X == Two.X && Two.X == Three.X)
@@ -157,11 +164,9 @@ namespace Geometry
             [.. cp.Select(v => CreateDeterminateMatrixRow(v))];
 
         /// <summary>
-        /// Given a center and radius, returns true if p1 is contained in the circle
+        /// Relation of <paramref name="p1"/> to the disk of center <paramref name="cp"/> and <paramref name="radius"/>.
+        /// Interior is Contained; on the circumference is Touching.
         /// </summary>
-        /// <param name="cp">Circle center</param>
-        /// <param name="radius">Circle radius </param>
-        /// <param name="p1">Test point position</param>
         public static ShapeRelation Contains(Vector2 cp, double radius, Vector2 p1)
         {
             var distance = Vector2.Distance(cp, p1);
@@ -185,10 +190,16 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Given three points on a circle, return true if the p1 is inside the circle.  Exactly on the circle is not 
+        /// In-circle test: relation of <paramref name="p1"/> to the circumcircle of the three points in <paramref name="cp"/>.
+        /// Named Contains for historical Delaunay call sites; it is not the instance <see cref="Contains(in IPoint2D)"/> predicate.
         /// </summary>
-        /// <param name="cp"></param>
-        /// <param name="p1"></param>
+        /// <remarks>
+        /// Uses the 4×4 determinant of Guibas and Stolfi, "Primitives for the manipulation of general
+        /// subdivisions and the computation of Voronoi diagrams," ACM Trans. Graphics 4(2):74–123 (1985).
+        /// Positive determinant (CCW triangle) is interior. This implementation is ordinary double arithmetic;
+        /// for floating-point robustness see Shewchuk, "Adaptive Precision Floating-Point Arithmetic and Fast
+        /// Robust Geometric Predicates," Discrete Comput. Geom. 18:305–363 (1997).
+        /// </remarks>
         public static ShapeRelation Contains(Vector2[] cp, Vector2 p1)
         {
             double[][] cmat = CreateContainsDeterminateMatrixComponents(cp);
@@ -203,10 +214,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Given three points on a circle, return true if the p1 is inside the circle.  Exactly on the circle is not 
+        /// In-circle test for each point against the circumcircle of <paramref name="cp"/> (same determinant as the scalar overload).
         /// </summary>
-        /// <param name="cp"></param>
-        /// <param name="p1"></param>
         public static ShapeRelation[] Contains(Vector2[] cp, IEnumerable<Vector2> points)
         {
             double[][] cmat = CreateContainsDeterminateMatrixComponents(cp);
@@ -421,11 +430,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// True if the circle intersects the circle with center c and radius r
+        /// True if the circle intersects the disk of center <paramref name="p"/> and <paramref name="radius"/>.
         /// </summary>
-        /// <param name="c"></param>
-        /// <param name="radius"></param>
-        /// <returns></returns>
         public bool Intersects(in Vector2 p, double radius)
         {
 
@@ -473,10 +479,8 @@ namespace Geometry
         public bool Intersects(in Rectangle rect) => CircleIntersectionExtensions.Intersects(in this, in rect);
 
         /// <summary>
-        /// Distance to the nearest point on circle if outside, otherwise zero if anywhere inside the circle
+        /// Distance to the circumference if outside; zero if the point is inside or on the circle.
         /// </summary>
-        /// <param name="Position"></param>
-        /// <returns></returns>
         public double Distance(in Vector2 position)
         {
             double Distance = Vector2.Distance(position, this.Center) - Radius;
@@ -526,10 +530,8 @@ namespace Geometry
         public static bool operator !=(in Circle A, in Circle B) => !(A == B);
 
         /// <summary>
-        /// Given a normalized height in the range -1,1 on the Y-axis return how wide the circle is in the X-axis
+        /// Half-width of the unit circle at normalized height <paramref name="n"/> in [-1, 1] (chord length / 2).
         /// </summary>
-        /// <param name=""></param>
-        /// <returns></returns>
         public static double WidthAtHeight(double n)
         {
             double angle = Math.Asin(n);

@@ -14,6 +14,7 @@ namespace Geometry
 
         public readonly bool AllowsSelfIntersection = false;
 
+        /// <summary>First crossing found when <see cref="AllowsSelfIntersection"/> is true; unused otherwise.</summary>
         private LineSegment? KnownSelfIntersection;
 
         public bool HasSelfIntersection
@@ -30,6 +31,7 @@ namespace Geometry
             }
         }
 
+        /// <summary>Spatial index of current segments; created on first <see cref="Add"/>.</summary>
         private BoundingBoxIndex<LineSegment> rTree = null;
 
         public int PointCount => _Points.Count;
@@ -91,10 +93,8 @@ namespace Geometry
         public Vector2 this[PolylineIndex index] => _Points[index.VertexIndex].ToVector2();
 
         /// <summary>
-        /// Returns true if the point can be added without violating self-intersection restrictions
+        /// True if <paramref name="next"/> can be appended without violating self-intersection rules.
         /// </summary>
-        /// <param name="next"></param>
-        /// <returns></returns>
         public bool CanAdd(in IPoint2D next)
         {
             if (_Points.Count == 0)
@@ -358,10 +358,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Return true if the point is one of the polygon verticies
+        /// Indices of polyline vertices that match any of <paramref name="points"/>.
         /// </summary>
-        /// <param name="point"></param>
-        /// <returns></returns>
         public List<PolylineIndex> TryGetIndices(ICollection<Vector2> points)
         {
             List<PolylineIndex> found = new(points.Count);
@@ -399,8 +397,13 @@ namespace Geometry
 
         public ShapeType2D ShapeType => ShapeType2D.Polyline;
 
+        /// <summary>
+        /// Cached segments. Null or wrong count means dirty; <see cref="LineSegments"/> rebuilds from <see cref="_Points"/>.
+        /// Explicit <see cref="IPolyLine2D.LineSegments"/> must use that getter, not this field.
+        /// </summary>
         private List<LineSegment> _LineSegments;
 
+        /// <summary>Rebuilds from points when the cache is null or stale. Returns a copy.</summary>
         public List<LineSegment> LineSegments
         {
             get
@@ -421,6 +424,7 @@ namespace Geometry
             }
         }
 
+        /// <summary>Uses the public getter so a null/stale <see cref="_LineSegments"/> cache is rebuilt.</summary>
         IReadOnlyList<ILineSegment2D> IPolyLine2D.LineSegments => [.. LineSegments.Cast<ILineSegment2D>()];
 
 
@@ -481,10 +485,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Round all coordinates in the clone of the Polygon to the nearest precision
+        /// Clone with coordinates rounded to <paramref name="precision"/> decimal places; consecutive duplicates are dropped.
         /// </summary>
-        /// <param name="precision"></param>
-        /// <returns></returns>
         public Polyline Round(int precision)
         {
             Vector2[] roundedPoints = [.. this.Points.Select(e => e.Round(precision))];

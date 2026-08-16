@@ -4,6 +4,11 @@ using System.Diagnostics;
 
 namespace Geometry
 {
+    /// <summary>
+    /// Incremental Bowyer–Watson Delaunay returning triangle indices.
+    /// For a mesh (polygon CDT, medial axis) use <see cref="GenericDelaunayMeshGenerator2D{VERTEX}"/>
+    /// (polygon rings: MeshExtensions.Triangulate).
+    /// </summary>
     public static class Delaunay2D
     {
         public static int[] Triangulate(Vector2[] points)
@@ -35,13 +40,17 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Generates the delaunay triangulation for a list of points. 
-        /// Requires the points to be sorted on the X-axis coordinate!
-        /// Every the integers in the returned array are the indicies in the passes array of triangles. 
-        /// Implemented based upon: http://local.wasp.uwa.edu.au/~pbourke/papers/triangulate/
-        /// "Triangulate: Efficient Triangulation Algorithm Suitable for Terrain Modelling"
-        /// by Paul Bourke
+        /// Incremental Bowyer–Watson Delaunay triangulation. Vertex indices in the result refer to
+        /// the input <paramref name="points"/> array (plus four bounding-box corners used internally).
         /// </summary>
+        /// <remarks>
+        /// Bowyer, "Computing Dirichlet tessellations," Comput. J. 24(2):162–166 (1981);
+        /// Watson, "Computing the n-dimensional Delaunay tessellation with application to Voronoi
+        /// polytopes," Comput. J. 24(2):167–172 (1981). Implementation follows Paul Bourke,
+        /// "Triangulate: Efficient Triangulation Algorithm Suitable for Terrain Modelling,"
+        /// https://paulbourke.net/papers/triangulate/
+        /// Points are sorted on X internally; duplicates closer than <see cref="Global.Epsilon"/> throw.
+        /// </remarks>
         public static int[] Triangulate(Vector2[] points, Vector2[] BoundingPoints)
         {
             if (BoundingPoints is null)

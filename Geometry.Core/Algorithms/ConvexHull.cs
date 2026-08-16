@@ -25,11 +25,14 @@ namespace Geometry
         public static Vector2[] ConvexHull(this IReadOnlyList<Vector2> points) => ConvexHull(points, out var _);
 
         /// <summary>
-        /// Return the convex hull of a set of points
+        /// Convex hull of a point set via Andrew's monotone chain (sort by X, then upper and lower hulls).
+        /// <paramref name="originalIndices"/> lists hull vertices in the input list, matching hull order.
         /// </summary>
-        /// <param name="points"></param>
-        /// <param name="originalIndices"></param>
-        /// <returns></returns>
+        /// <remarks>
+        /// Andrew, "Another efficient algorithm for convex hulls in two dimensions,"
+        /// Inform. Process. Lett. 9(5):216–219 (1979). Large absolute coordinates have historically
+        /// produced incorrect hulls (orientation tests); this method does not recenter the input.
+        /// </remarks>
         public static Vector2[] ConvexHull(this IReadOnlyList<Vector2> points, out int[] originalIndices)
         {
             int[] ordered_idx = [.. points.Select((p, i) => i)];
@@ -70,7 +73,8 @@ namespace Geometry
 
 
 
-            //I've seen bugs with this code for very large numbers.  So I center the points on the centroid
+            // Large absolute coordinates have produced incorrect hulls (floating-point orientation).
+            // This path does not recenter; MeshExtensions.Triangulate does when triangulating polygons.
 
 
             //Sort and return the index of original points

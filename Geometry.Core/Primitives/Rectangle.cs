@@ -6,7 +6,8 @@ using System.Linq;
 namespace Geometry
 {
     /// <summary>
-    /// Double-precision axis-aligned rectangle. Distinct from <c>System.Drawing.Rectangle</c> (integer) and not a drop-in replacement.
+    /// Double-precision axis-aligned rectangle, Y-up (<see cref="Top"/> &gt; <see cref="Bottom"/>).
+    /// Distinct from <c>System.Drawing.Rectangle</c> (integer, often Y-down) and not a drop-in replacement.
     /// </summary>
     [Serializable]
     public readonly struct Rectangle : IRectangle2D, IHasControlPoints, ICloneable, IEquatable<IRectangle2D>, IEquatable<Rectangle>
@@ -21,15 +22,7 @@ namespace Geometry
 
         public readonly double Left;
         public readonly double Right;
-
-        /// <summary>
-        /// Top has a larger value than bottom
-        /// </summary>
         public readonly double Top;
-
-        /// <summary>
-        /// Bottom has a smaller value than top
-        /// </summary>
         public readonly double Bottom;
 
         IPoint2D IRectangle2D.Center => Center;
@@ -98,10 +91,7 @@ namespace Geometry
             _HashCode = CalcHashCode(Left, Bottom, Right, Top);
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="borders">[MinX, MaxX, MinY, MaxY]</param>
+        /// <summary>Axis-aligned box from [MinX, MaxX, MinY, MaxY].</summary>
         public Rectangle(in double[] borders)
         {
             Left = borders[0];
@@ -207,10 +197,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Returns true if the passed rectangle in inside or overlaps this rectangle
+        /// True if the rectangles are not disjoint (overlap or shared boundary).
         /// </summary>
-        /// <param name="rect"></param>
-        /// <returns></returns>
         public bool Intersects(in Rectangle rect)
         {
             //Find out if the rectangles can't possibly intersect
@@ -306,6 +294,9 @@ namespace Geometry
         /// </summary>
         public bool Contains(in Rectangle rect) => GetRelation(rect).IsContains();
 
+        /// <summary>
+        /// OGC Covers: <paramref name="rect"/> lies in this closed rectangle.
+        /// </summary>
         public bool Covers(in Rectangle rect) => GetRelation(rect).IsCovers();
 
         public bool Contains(in IPoint2D pos) => GetRelation(pos).IsContains();
@@ -499,36 +490,16 @@ namespace Geometry
 
         public static bool operator !=(in Rectangle A, in Rectangle B) => !(A == B);
 
-        /// <summary>
-        /// Pads the border by the specified amount
-        /// </summary>
-        /// <param name="A"></param>
-        /// <param name="scalar"></param>
-        /// <returns></returns>
+        /// <summary>Expands each edge of <paramref name="A"/> outward by <paramref name="scalar"/>.</summary>
         public static Rectangle operator +(in Rectangle A, double scalar) => Rectangle.Scale(A, scalar);
 
-        /// <summary>
-        /// Performs a union of the rectangle and the point
-        /// </summary>
-        /// <param name="A"></param>
-        /// <param name="scalar"></param>
-        /// <returns></returns>
+        /// <summary>Bounding box of the rectangle and the point.</summary>
         public static Rectangle operator +(in Rectangle A, in Vector2 p) => Rectangle.Union(A, p);
 
-        /// <summary>
-        /// Performs a union of the rectangle and the bounding box of the shape
-        /// </summary>
-        /// <param name="A"></param>
-        /// <param name="scalar"></param>
-        /// <returns></returns>
+        /// <summary>Bounding box of the rectangle and <paramref name="shape"/>'s AABB.</summary>
         public static Rectangle operator +(in Rectangle A, in IShape2D shape) => Rectangle.Union(A, shape.BoundingBox);
 
-        /// <summary>
-        /// Performs a union of both rectangles and returns the bounding box of both
-        /// </summary>
-        /// <param name="A"></param>
-        /// <param name="scalar"></param>
-        /// <returns></returns>
+        /// <summary>Bounding box of both rectangles.</summary>
         public static Rectangle operator +(in Rectangle A, in Rectangle B) => Rectangle.Union(A, B);
 
         public static Rectangle operator *(in Rectangle A, in double scalar) => Rectangle.Scale(A, scalar);

@@ -5,6 +5,10 @@ using System.Linq;
 
 namespace Geometry
 {
+    /// <summary>
+    /// Finite segment. <see cref="A"/> and <see cref="B"/> keep the caller's order (not sorted).
+    /// Endpoints are boundary for <see cref="GetRelation(in IPoint2D)"/>.
+    /// </summary>
     [Serializable]
     public readonly struct LineSegment : IComparable, ICloneable, IComparer<LineSegment>, ILineSegment2D, IHasControlPoints, IEquatable<LineSegment>, IEquatable<IPolyLine2D>, IEquatable<ILineSegment2D>
     {
@@ -17,11 +21,7 @@ namespace Geometry
 
         public LineSegment(Vector2 A, Vector2 B)
         {
-            /* This is a bad idea because callers expect A and B to maintain position
-            int diff = A.Compare(A, B);
-            this.A = diff <= 0 ? A : B;
-            this.B = diff <= 0 ? B : A;
-            */
+            // Callers rely on A/B order (path "newer vs older", directed edges). Do not sort.
             this.A = A;
             this.B = B;
 
@@ -197,12 +197,7 @@ namespace Geometry
             }
         }
 
-        /// <summary>
-        /// Return true if either point at each end of the line matches an endpoint of the passed segment
-        /// </summary>
-        /// <param name="seg"></param>
-        /// <param name="Endpoint"></param>
-        /// <returns></returns>
+        /// <summary>True if this segment and <paramref name="seg"/> share an endpoint.</summary>
         public bool SharedEndPoint(in LineSegment seg)
         {
             bool AMatch = A == seg.A || A == seg.B;
@@ -211,12 +206,7 @@ namespace Geometry
             return AMatch || BMatch;
         }
 
-        /// <summary>
-        /// Return true if either point at each end of the line matches an endpoint of the passed segment
-        /// </summary>
-        /// <param name="seg"></param>
-        /// <param name="Endpoint"></param>
-        /// <returns></returns>
+        /// <summary>True if the segments share an endpoint; <paramref name="Endpoint"/> is that point.</summary>
         public bool SharedEndPoint(in LineSegment seg, out Vector2 Endpoint)
         {
             bool AMatch = A == seg.A || A == seg.B;
@@ -302,6 +292,10 @@ namespace Geometry
 
         public bool Contains(in Vector2 p) => GetRelation((IPoint2D)p).IsContains();
 
+        /// <summary>
+        /// Closed-set test via clamped segment distance. Must not call <see cref="GetRelation(in IPoint2D)"/>:
+        /// that method uses this Covers overload, so a GetRelation-based Covers would recurse.
+        /// </summary>
         public bool Covers(in Vector2 p) => Math.Abs(DistanceToPoint(p)) < Tolerance.Epsilon;
 
         /// <summary>
@@ -328,10 +322,8 @@ namespace Geometry
         public double DistanceToPoint(in Vector2 point) => DistanceToPoint(point, out Vector2 temp);
 
         /// <summary>
-        /// The point on the segment at a fractional distance between A & B
+        /// The point on the segment at a fractional distance between A and B
         /// </summary>
-        /// <param name="fraction"></param>
-        /// <returns></returns>
         public Vector2 PointAlongLine(double fraction)
         {
             Vector2 delta = B - A;
@@ -698,6 +690,10 @@ namespace Geometry
 
         public bool Covers(in IPoint2D p) => GetRelation(p).IsCovers();
 
+        /// <summary>
+        /// Endpoints are <see cref="ShapeRelation.Touching"/>; a point on the open segment is <see cref="ShapeRelation.Contained"/>.
+        /// Uses <see cref="Covers(in Vector2)"/> for the closed-set test (do not invert that call).
+        /// </summary>
         public ShapeRelation GetRelation(in IPoint2D p)
         {
             Vector2 v = new(p.X, p.Y);

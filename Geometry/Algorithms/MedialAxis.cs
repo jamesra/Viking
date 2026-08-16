@@ -74,7 +74,8 @@ namespace Geometry
         /// Approximate the medial axis using the Chordal Axis Transform (CAT).
         /// </summary>
         /// <remarks>
-        /// The Chordal Axis (Prasad 1997) is extracted directly from the constrained Delaunay triangulation
+        /// The Chordal Axis Transform (Prasad, "Morphological Analysis of Shapes," CNLS Newsletter
+        /// 139:1–18, 1997) is extracted from the constrained Delaunay triangulation
         /// produced by <see cref="MeshExtensions.Triangulate(Polygon, int, TriangulationMesh{IVertex2D{PolygonIndex}}.ProgressUpdate)"/>.
         /// Each interior triangle is classified by how many of its edges lie on the polygon boundary and the
         /// midpoints of its interior edges (plus a centroid at junctions) are connected.  Because adjacent

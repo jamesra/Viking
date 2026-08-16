@@ -15,6 +15,14 @@ namespace Geometry
     /// <see cref="IShape2D.Contains"/>, <see cref="IShape2D.Covers"/>, and <see cref="IShape2D.Intersects"/>
     /// are wrappers over this.
     /// </summary>
+    /// <remarks>
+    /// Flags so a collection can OR child results.
+    /// Spatial predicates follow OGC Simple Features (DE-9IM): Open Geospatial Consortium,
+    /// OpenGIS Implementation Standard for Geographic information — Simple feature access —
+    /// Part 1: Common architecture, OGC 06-103r4 (2011). See also Egenhofer and Franzosa,
+    /// "Point-Set Topological Spatial Relations," Int. J. Geographical Information Systems
+    /// 5(2):161–174 (1991).
+    /// </remarks>
     [Flags]
     public enum ShapeRelation
     {
@@ -25,7 +33,7 @@ namespace Geometry
     }
 
     /// <summary>
-    /// Maps <see cref="ShapeRelation"/> onto OGC Contains / Covers.
+    /// Maps <see cref="ShapeRelation"/> onto OGC Contains / Covers (OGC 06-103r4).
     /// Crossing (<see cref="ShapeRelation.Intersecting"/>) is neither.
     /// </summary>
     public static class ShapeRelationExtensions
@@ -71,6 +79,9 @@ namespace Geometry
             };
         }
 
+        /// <summary>
+        /// Bounded area types, including a degenerate point. Line, polyline, and infinite line are open.
+        /// </summary>
         public static bool IsClosed(this ShapeType2D type)
         {
             return type switch
@@ -98,6 +109,7 @@ namespace Geometry
         double[] Coords { get; }
     }
 
+    /// <summary>Center of mass of a 2D shape.</summary>
     public interface ICentroid
     {
         IPoint2D Centroid { get; }
@@ -122,6 +134,10 @@ namespace Geometry
         double Z { get; }
     }
 
+    /// <summary>
+    /// 2D geometry with OGC-style predicates. <see cref="GetRelation(in IPoint2D)"/> is the
+    /// source of truth; <see cref="Contains"/> and <see cref="Covers"/> are wrappers.
+    /// </summary>
     public interface IShape2D : IEquatable<IShape2D>
     {
         Rectangle BoundingBox { get; }
@@ -129,17 +145,15 @@ namespace Geometry
 
         /// <summary>
         /// OGC Contains: true when <paramref name="p"/> lies in this shape's interior.
-        /// Boundary points are false. Hit-testing, AABB culling, and Delaunay in-circle
-        /// should use <see cref="Covers"/>; use <see cref="GetRelation"/> when the caller
-        /// must distinguish interior, boundary, and exterior.
-        /// A line segment's endpoints are boundary; the open segment is interior.
-        /// An infinite line has empty boundary, so every on-line point is interior.
+        /// Boundary points are false. For hit-testing, AABB culling, or Delaunay in-circle use
+        /// <see cref="Covers"/>; use <see cref="GetRelation(in IPoint2D)"/> to distinguish interior, boundary, and exterior.
         /// </summary>
         bool Contains(in IPoint2D p);
 
         /// <summary>
-        /// OGC Covers / closed-set test: true when <paramref name="p"/> is in the interior
-        /// or on the boundary. Equivalent to <c>GetRelation(p) != ShapeRelation.None</c> for a point.
+        /// OGC Covers / closed-set test: true when <paramref name="p"/> is in the interior or on the boundary.
+        /// Use this for hit-testing, AABB culling, and Delaunay in-circle.
+        /// For a point this is <c>GetRelation(p) != ShapeRelation.None</c>.
         /// </summary>
         bool Covers(in IPoint2D p);
 
@@ -147,9 +161,13 @@ namespace Geometry
         /// Classifies <paramref name="p"/> as outside (<see cref="ShapeRelation.None"/>),
         /// interior (<see cref="ShapeRelation.Contained"/>), or boundary (<see cref="ShapeRelation.Touching"/>).
         /// Source of truth for <see cref="Contains"/> and <see cref="Covers"/>.
+        /// Point tests return exactly one of those three flags, never <see cref="ShapeRelation.Intersecting"/>.
         /// </summary>
         ShapeRelation GetRelation(in IPoint2D p);
 
+        /// <summary>
+        /// Classifies how <paramref name="line"/> sits relative to this shape (disjoint, interior, boundary, or crossing).
+        /// </summary>
         ShapeRelation GetRelation(in ILineSegment2D line);
 
         /// <summary>
@@ -160,24 +178,25 @@ namespace Geometry
 
         ShapeType2D ShapeType { get; }
 
-        /// <summary>
-        /// Return a new object with the provided offset
-        /// </summary>
-        /// <param name="offset"></param>
-        /// <returns></returns>
+        /// <summary>Copy translated by <paramref name="offset"/>; this instance is unchanged.</summary>
         IShape2D Translate(in IPoint2D offset);
     }
 
     /// <summary>
-    /// Vertex list plus <see cref="IShape2D.ShapeType"/> so callers can
-    /// interpret control points without casting to ILineSegment2D / IPolyLine2D / IPolygon2D.
-    /// ControlPoints is the primary/exterior ring only; polygon holes stay on <see cref="IPolygon2D"/>.
+    /// Vertex list plus <see cref="IShape2D.ShapeType"/> so callers can interpret control points
+    /// without casting to ILineSegment2D / IPolyLine2D / IPolygon2D.
     /// </summary>
     public interface IHasControlPoints : IShape2D
     {
+        /// <summary>
+        /// Primary/exterior vertices only. Polygon holes stay on <see cref="IPolygon2D.InteriorRings"/>.
+        /// </summary>
         IReadOnlyList<IPoint2D> ControlPoints { get; }
     }
 
+    /// <summary>
+    /// Closed CCW rings (first vertex equals last). Holes are <see cref="InteriorPolygons"/>, not extra ControlPoints.
+    /// </summary>
     public interface IPolygon2D : IShape2D, IEquatable<IPolygon2D>, ICentroid
     {
         IReadOnlyList<IPoint2D> ExteriorRing { get; }
@@ -206,7 +225,13 @@ namespace Geometry
     public interface IPolyLine2D : IShape2D, IEquatable<IPolyLine2D>
     {
         IReadOnlyList<IPoint2D> Points { get; }
+
+        /// <summary>
+        /// Consecutive segments. Implementations must rebuild from <see cref="Points"/> if a cache is null or stale;
+        /// do not return a null backing field.
+        /// </summary>
         IReadOnlyList<ILineSegment2D> LineSegments { get; }
+
         double Length { get; }
     }
 
@@ -215,6 +240,9 @@ namespace Geometry
         IPoint2D[] Points { get; }
     }
 
+    /// <summary>
+    /// Finite segment. Endpoints are boundary (<see cref="ShapeRelation.Touching"/>); the open segment is interior.
+    /// </summary>
     public interface ILineSegment2D : IShape2D, IEquatable<ILineSegment2D>, ICentroid
     {
         IPoint2D A { get; }
@@ -223,6 +251,9 @@ namespace Geometry
         double Length { get; }
     }
 
+    /// <summary>
+    /// Infinite line. Empty boundary: every on-line point is interior (<see cref="ShapeRelation.Contained"/>).
+    /// </summary>
     public interface ILine2D : IShape2D, IEquatable<ILine2D>
     {
         IPoint2D Origin { get; }

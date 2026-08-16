@@ -54,9 +54,9 @@ namespace Geometry
     }
 
     /// <summary>
-    /// A line of infinite length
+    /// Infinite line through <see cref="Origin"/> along unit <see cref="Direction"/>.
+    /// Empty boundary: on-line points are <see cref="ShapeRelation.Contained"/>, never Touching.
     /// </summary>
-    /// 
     [Serializable]
     public readonly struct Line : ILine2D, IEquatable<ILine2D>
     {
@@ -229,6 +229,9 @@ namespace Geometry
 
         public bool Covers(in IPoint2D p) => GetRelation(p).IsCovers();
 
+        /// <summary>
+        /// On the line is Contained (no boundary). Off the line is None.
+        /// </summary>
         public ShapeRelation GetRelation(in IPoint2D p) => ContainsOnLine(p) ? ShapeRelation.Contained : ShapeRelation.None;
 
         bool ContainsOnLine(in IPoint2D p) => IsLeft(new Vector2(p.X, p.Y)) == 0;

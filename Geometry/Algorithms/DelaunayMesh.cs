@@ -32,14 +32,13 @@ namespace Geometry
     public static class DelaunayMeshGenerator2D
     {
         /// <summary>
-        /// Generates the delaunay triangulation for a list of points. 
-        /// Requires the points to be sorted on the X-axis coordinate!
-        /// Every the integers in the returned array are the indicies in the passes array of triangles. 
-        /// Implemented based upon: http://local.wasp.uwa.edu.au/~pbourke/papers/triangulate/
-        /// "Triangulate: Efficient Triangulation Algorithm Suitable for Terrain Modelling"
-        /// by Paul Bourke
+        /// Divide-and-conquer Delaunay triangulation. Vertex indices in the mesh match the input array.
         /// </summary>
-        /// <returns>A Mesh2D whose vertex indicies match the input points</returns>
+        /// <remarks>
+        /// Guibas and Stolfi, "Primitives for the manipulation of general subdivisions and the
+        /// computation of Voronoi diagrams," ACM Trans. Graphics 4(2):74–123 (1985).
+        /// </remarks>
+        /// <returns>A mesh whose vertex indices match the input points</returns>
         public static TriangulationMesh<TriangulationVertex> TriangulateToMesh(Vector2[] points)
         {
             TriangulationVertex[] verts = [.. points.Select(p => new TriangulationVertex(p))];
@@ -49,20 +48,22 @@ namespace Geometry
 
     internal enum CutDirection { NONE = 0, HORIZONTAL, VERTICAL };
     /// <summary>
-    /// Generates constrained Delaunay triangulations
+    /// Divide-and-conquer Delaunay triangulation (Guibas and Stolfi 1985). Unconstrained: polygon
+    /// edges are not inserted here. For a polygon with holes, call
+    /// <see cref="MeshExtensions.Triangulate(Polygon, int, TriangulationMesh{IVertex2D{PolygonIndex}}.ProgressUpdate)"/>,
+    /// which wraps this type then inserts constrained ring edges.
     /// </summary>
     public static class GenericDelaunayMeshGenerator2D<VERTEX>
         where VERTEX : IVertex2D
     {
         /// <summary>
-        /// Generates the delaunay triangulation for a list of points. 
-        /// Requires the points to be sorted on the X-axis coordinate!
-        /// Integers in the triangulated mesh verticies are the indicies into the original passed array of verticies.
-        /// Implemented based upon: http://local.wasp.uwa.edu.au/~pbourke/papers/triangulate/
-        /// "Triangulate: Efficient Triangulation Algorithm Suitable for Terrain Modelling"
-        /// by Paul Bourke
+        /// Divide-and-conquer Delaunay triangulation. Vertex indices in the mesh match the input array.
         /// </summary>
-        /// <returns>A Mesh2D whose vertex indicies match the input points</returns>
+        /// <remarks>
+        /// Guibas and Stolfi, "Primitives for the manipulation of general subdivisions and the
+        /// computation of Voronoi diagrams," ACM Trans. Graphics 4(2):74–123 (1985).
+        /// </remarks>
+        /// <returns>A mesh whose vertex indices match the input points</returns>
         public static TriangulationMesh<VERTEX> TriangulateToMesh(VERTEX[] verts, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
         {
             if (verts is null)
@@ -129,11 +130,8 @@ namespace Geometry
 
 
         /// <summary>
-        /// Divides the mesh verticies into two halves and triangulates the halves
+        /// Recursively splits the vertex set, triangulates each half, then stitches along the cut.
         /// </summary>
-        /// <param name="mesh"></param>
-        /// <param name="VertSet">Indices of verticies in the half.  Sorted on either X or Y axis</param>
-        /// <returns></returns>
         private static TriangulationMesh<VERTEX> RecursiveDivideAndConquerDelaunay(TriangulationMesh<VERTEX> mesh, MeshCut VertSet = null, IVertex2D[] verts = null, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
         {
             //The first recursion we populate variables to include all the verticies in the mesh
@@ -1183,12 +1181,14 @@ namespace Geometry
         }
 
         /// <summary>
-        /// 
+        /// Lawson flip: if the opposite vertex of an adjacent triangle lies in this face's circumcircle,
+        /// swap the shared edge. <paramref name="AlreadyFlipped"/> records pairs already tested so a flip
+        /// is not immediately reversed.
         /// </summary>
-        /// <param name="mesh"></param>
-        /// <param name="f"></param>
-        /// <param name="ReportProgress"></param>
-        /// <param name="AlreadyFlipped">Lists combination of faces and edges we've already flipped, so we should flip them over and over</param>
+        /// <remarks>
+        /// Lawson, "Software for C1 Surface Interpolation," in Rice (ed.), Mathematical Software III,
+        /// Academic Press, 1977.
+        /// </remarks>
         static void CheckEdgeFlip(TriangulationMesh<VERTEX> mesh, TriangleFace f, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null, Dictionary<IFace, SortedSet<IFace>> AlreadyFlipped = null)
         {
             //Check if the face has already been removed.

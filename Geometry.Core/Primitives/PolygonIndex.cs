@@ -27,7 +27,8 @@ namespace Geometry
         /// </summary>
         public readonly int VertexIndex;
 
-        public readonly int NumUniqueInRing; //The total number of verticies in the ring VertexIndex indexes into
+        /// <summary>Unique vertices in this ring (closed ring: first equals last is not counted).</summary>
+        public readonly int NumUniqueInRing;
 
         int? IShapeIndex.InnerShapeIndex => InnerShapeIndex;
         int IShapeIndex.ShapeIndex => ShapeIndex;

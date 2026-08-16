@@ -4,6 +4,9 @@ using System.Linq;
 
 namespace Geometry
 {
+    /// <summary>
+    /// Heterogeneous set of 2D shapes. Point/line <see cref="GetRelation"/> ORs child flags.
+    /// </summary>
     public class Shape2DCollection : IShapeCollection2D
     {
         readonly List<IShape2D> _shapes;
@@ -49,6 +52,10 @@ namespace Geometry
             return _shapes.Any(s => s.Covers(pnt));
         }
 
+        /// <summary>
+        /// ORs child relations so a collection can report interior, boundary, and crossing together.
+        /// Walks every child.
+        /// </summary>
         public ShapeRelation GetRelation(in IPoint2D p)
         {
             Trace.WriteLine("GetRelation on a Shape2DCollection is computationally expensive");
@@ -62,6 +69,9 @@ namespace Geometry
             return output;
         }
 
+        /// <summary>
+        /// ORs child relations for a line. Walks every child.
+        /// </summary>
         public ShapeRelation GetRelation(in ILineSegment2D line)
         {
             Trace.WriteLine("GetRelation on a Shape2DCollection is computationally expensive");

@@ -536,7 +536,7 @@ namespace Geometry
                     return true;
             }
 
-            ///Check in case a triangle vertex falls inside an interior polygon
+            // A triangle vertex may sit inside an interior hole.
             foreach (LineSegment line in tri.Segments)
             {
                 if (poly.Intersects(line))
@@ -794,14 +794,9 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Return true if the passed test line intersects any of the set of other lines, which may be part of a closed or polyline.
-        /// In the case of a polyline or closed line, the test line is considered to be the last element of the set, and the set 
-        /// is assumed to not have any self-intersections already.
+        /// True if appending <paramref name="addition"/> as the last segment of <paramref name="lines"/> would self-intersect.
+        /// On true, <paramref name="intersected"/> is the first existing segment that crosses <paramref name="addition"/>.
         /// </summary>
-        /// <param name="test">The line being checked</param>
-        /// <param name="lines">A set of lines</param>
-        /// <param name="order">Information as to how the lines are connected. </param>
-        /// <returns></returns>
         public static bool SelfIntersects(this in LineSegment addition, in IReadOnlyList<LineSegment> lines, LineSetOrdering order, out LineSegment? intersected)
         {
             intersected = null;
@@ -832,22 +827,15 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Return true if the passed test line intersects any of the set of other lines, which may be part of a closed or polyline.
-        /// In the case of a polyline or closed line, the test line is considered to be the last element of the set, and the set 
-        /// is assumed to not have any self-intersections already.
+        /// True if appending <paramref name="addition"/> as the last segment of <paramref name="lines"/> would self-intersect.
+        /// Adjacent polyline or closed-ring endpoints are allowed to meet.
         /// </summary>
-        /// <param name="test">The line being checked</param>
-        /// <param name="lines">A set of lines</param>
-        /// <param name="order">Information as to how the lines are connected. </param>
-        /// <returns></returns>
         public static bool SelfIntersects(this in LineSegment addition, in IReadOnlyList<LineSegment> lines, LineSetOrdering order) => SelfIntersects(in addition, in lines, order, out LineSegment? intersected);
 
         /// <summary>
-        /// Return true if the passed Polyline intersects itself. 
+        /// True if any pair of segments in <paramref name="lines"/> intersects, respecting <paramref name="order"/>
+        /// (a closed ring may share the first and last vertex).
         /// </summary>
-        /// <param name="lines"></param>
-        /// <param name="IsClosedRing">True if the polyline forms a closed ring, in which case the first and last points are allowed to overlap</param>
-        /// <returns></returns>
         public static bool SelfIntersects(this IReadOnlyList<LineSegment> lines, LineSetOrdering order)
         {
             for (int iLine = 0; iLine < lines.Count; iLine++)
@@ -893,10 +881,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Given a set of lines, return a new set of lines where line-line intersections only occur at line endpoints by splitting lines at intersections.
+        /// Split segments so intersections occur only at endpoints. <paramref name="AddedPoints"/> receives the new vertices.
         /// </summary>
-        /// <param name="lines"></param>
-        /// <returns></returns>
         public static SortedSet<LineSegment> SplitLinesAtIntersections(this IEnumerable<LineSegment> lines, out SortedSet<Vector2> AddedPoints)
         {
             BoundingBoxIndex<LineSegment> rTree = lines.ToBoundingBoxIndex();
@@ -912,7 +898,7 @@ namespace Geometry
             {
                 LineSegment A = linesToTest.Pop();
 
-                ///Find lines that intersect A, but not on an endpoint of A
+                // Find lines that intersect A, but not on an endpoint of A
                 IEnumerable<LineSegment> intersections = rTree.Intersects(A.BoundingBox).Where(B =>
                     {
                         if (B == A)
@@ -1096,14 +1082,7 @@ namespace Geometry
             return NonIntersecting;
         }
 
-        /// <summary>
-        /// Return all segments of the polygons that do not intersect any border of the other polygons
-        /// </summary>
-        /// <param name="Polygons"></param>
-        /// <param name="B"></param>
-        /// <param name="AIntersections"></param>
-        /// <param name="BIntersections"></param>
-        /// <returns></returns>
+        /// <summary>All exterior and interior segments of the polygons.</summary>
         public static List<LineSegment> Segments(this IEnumerable<Polygon> Polygons)
         {
             //BoundingBoxIndex<LineSegment> SegmentRTree = new BoundingBoxIndex<LineSegment>();
@@ -1120,13 +1099,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Return all segments of the polygons that do not intersect any border of the other polygons
+        /// Segments that do not intersect any other polygon's border (shared endpoints are allowed).
         /// </summary>
-        /// <param name="Polygons"></param>
-        /// <param name="B"></param>
-        /// <param name="AIntersections"></param>
-        /// <param name="BIntersections"></param>
-        /// <returns></returns>
         public static List<LineSegment> NonIntersectingSegments(this Polygon[] Polygons)
         {
             BoundingBoxIndex<LineSegment> SegmentRTree = new();
@@ -1215,9 +1189,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Add verticies at intersection points for all intersection points
+        /// Insert vertices at every pairwise polyline intersection so corresponding points exist on both polylines.
         /// </summary>
-        /// <param name="Polys"></param>
         public static List<Vector2> AddCorrespondingVertices(this IReadOnlyList<Polyline> lines)
         {
             List<Vector2> added_intersections = [];

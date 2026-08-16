@@ -29,18 +29,10 @@ namespace Geometry.Meshing
             return iClosedRing;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="iVerts"></param>
-        /// <returns>True if the first and last index are identical</returns>
+        /// <summary>True if the first and last index are the same (closed ring).</summary>
         public static bool IsClosedRing(this IEnumerable<int> iVerts) => iVerts.First() == iVerts.Last();
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="iVerts"></param>
-        /// <returns>True if the first and last index are identical</returns>
+        /// <summary>True if the first and last index are the same (closed ring).</summary>
         public static bool IsClosedRing(this IReadOnlyList<int> iVerts) => iVerts[0] == iVerts[iVerts.Count - 1];
 
         public static bool IsValidClosedRing(this IEnumerable<int> iVerts) => iVerts.ToArray().IsValidClosedRing(out string Reason);
@@ -182,6 +174,16 @@ namespace Geometry.Meshing
 
         public static TriangulationMesh<IVertex2D<PolygonIndex>> Triangulate(this IReadOnlyList<Polygon> polys, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null) => throw new NotImplementedException();
 
+        /// <summary>
+        /// Constrained Delaunay triangulation of a polygon (including holes). Vertices are translated
+        /// to the centroid first to reduce floating-point error, then an unconstrained Delaunay mesh
+        /// is built and each ring edge is inserted as a constrained edge; edges whose midpoint lies
+        /// outside the polygon are removed.
+        /// </summary>
+        /// <remarks>
+        /// Constraint insertion follows the usual delete-and-retriangulate approach of Chew,
+        /// "Constrained Delaunay triangulations," Algorithmica 4:97–108 (1989).
+        /// </remarks>
         public static TriangulationMesh<IVertex2D<PolygonIndex>> Triangulate(this Polygon poly, int iPoly = 0, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null)
         {
             //var polyCopy = (Polygon)poly.Clone();
@@ -330,12 +332,11 @@ namespace Geometry.Meshing
         }
 
         /// <summary>
-        /// Triangulate a set of points on a face, that include a set of points inside the faces.
+        /// Constrained Delaunay triangulation of a face ring plus optional interior Steiner points.
+        /// Vertices far from the origin are translated to reduce floating-point error; ring edges
+        /// are then inserted as constrained edges (Chew 1989, same approach as the polygon overload).
         /// </summary>
-        /// <param name="verts">Exterior ring of a polygon</param>
-        /// <param name="InteriorPoints">These points must be contained by the polygon defined by face</param>
-        /// <param name="OnProgress"></param>
-        /// <returns></returns>
+        /// <param name="InteriorPoints">Must lie inside the polygon defined by <paramref name="verts"/>.</param>
         public static TriangulationMesh<IVertex2D<int>> Triangulate(IVertex2D[] verts, IVertex2D[] InteriorPoints = null, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
         {
             if (verts.Last() == verts.First())

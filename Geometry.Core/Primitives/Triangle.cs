@@ -5,6 +5,9 @@ using System.Linq;
 
 namespace Geometry
 {
+    /// <summary>
+    /// Cached dots for barycentric coordinates (Ericson, Real-Time Collision Detection, 2005, §3.4).
+    /// </summary>
     [Serializable]
     readonly struct BaryCoefs
     {
@@ -34,9 +37,8 @@ namespace Geometry
     }
 
     /// <summary>
-    /// Grid triangle uses pointers to nodes in the grid.  This means any alteration to nodes automatically affects the triangle
+    /// Three vertices stored by value. Mutating a copy of <see cref="Points"/> does not change the triangle.
     /// </summary>
-    /// 
     [Serializable]
     public readonly struct Triangle : ICloneable, IShape2D, ITriangle2D, IHasControlPoints, IEquatable<Triangle>, IEquatable<ITriangle2D>
     {
@@ -148,10 +150,12 @@ namespace Geometry
 
         public static bool operator !=(in Triangle A, in Triangle B) => !(A == B);
 
+        /// <summary>Barycenter (u = v = 1/3).</summary>
         public Vector2 Centroid => Vector2.FromBarycentric(P1, P2, P3, 1 / 3.0, 1 / 3.0);
 
         IPoint2D ICentroid.Centroid => Centroid;
 
+        /// <summary>Circumcircle of the three vertices. Collinear triangles throw from <see cref="Circle.CircleFromThreePoints(Vector2, Vector2, Vector2)"/>.</summary>
         public Circle Circle => Circle.CircleFromThreePoints([P1, P2, P3]);
 
         object ICloneable.Clone() => this.MemberwiseClone();
@@ -227,17 +231,16 @@ namespace Geometry
 
         public bool Covers(in IPoint2D point) => GetRelation(point).IsCovers();
 
+        /// <summary>
+        /// Barycentric classification. A bounding-box miss is None; bbox false positives from
+        /// unrounded GridTransform results should be fixed at the transform, not by skipping this cull.
+        /// On-edge (a barycentric coordinate of 0) is Touching.
+        /// </summary>
         public ShapeRelation GetRelation(in IPoint2D p)
         {
             if (false == BoundingBox.Covers(p))
-            {
-                //False positives can happen in cases where the points have floating point precision issues.
-                //Particularly in GridTransforms.  This should be handled by rounding the transform results. 
-                //However it may be worth the computation cost to do Barycentric calculation instead.
                 return ShapeRelation.None;
-            }
 
-            //Find out if the point is on any line segment of the triangle
             Vector2 uv = Barycentric(p);
             Vector3 uvw = new(uv.X, uv.Y, 1 - uv.X - uv.Y);
 
@@ -245,7 +248,6 @@ namespace Geometry
             {
                 if (uvw.X + uvw.Y + uvw.Z <= 1.0)
                 {
-                    //The point is on or inside the triangle if any barycentric coordinate is 0
                     if (uvw.Coords.Any(c => c == 0))
                         return ShapeRelation.Touching;
 
@@ -302,11 +304,12 @@ namespace Geometry
         public Vector2 Barycentric(in IPoint2D p) => Barycentric(p.Convert());
 
         /// <summary>
-        /// Returns u,v coordinate of point in triangle.  Calculates areas and returns fractions of area.  This can return 0,0 if the point is well outside the 
-        /// triangle because the math hits the limit of the double data-type
+        /// Barycentric (u, v) of <paramref name="point"/> relative to P1, with w = 1 − u − v.
+        /// Far-outside points can collapse to (0, 0) when the double-precision denominator overflows.
         /// </summary>
-        /// <param name="point"></param>
-        /// <returns></returns>
+        /// <remarks>
+        /// Area coordinates (Möbius). Implementation matches Ericson, Real-Time Collision Detection (2005), §3.4.
+        /// </remarks>
         public Vector2 Barycentric(in Vector2 point)
         {
             Vector2 vPA = point - P1;
@@ -336,11 +339,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Returns u,v coordinate of point in triangle.  Calculates areas and returns fractions of area.  This can return 0,0 if the point is well outside the 
-        /// triangle because the math hits the limit of the double data-type
+        /// Barycentric (u, v) for each point. Far-outside points can collapse to (0, 0) at double-precision limits.
         /// </summary>
-        /// <param name="point"></param>
-        /// <returns></returns>
         public Vector2[] Barycentric(in Vector2[] points)
         {
             Vector2[] uv = new Vector2[points.Length];

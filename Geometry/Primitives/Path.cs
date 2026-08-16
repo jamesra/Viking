@@ -40,12 +40,16 @@ namespace Geometry
 
         public double Length => Segments.Sum(s => s.Length);
 
+        /// <summary>Catmull-Rom samples per span when building <see cref="SimplifiedPath"/>.</summary>
         private readonly uint _SimplifiedPathInterpolations = 5;
-        /// <summary>
-        /// Sets how far from the actual path is a simplified path is allowed to stray.
-        /// </summary>
+
+        /// <summary>Backing store for <see cref="SimplifiedPathTolerance"/>.</summary>
         private double _SimplifiedPathTolerance = 1.0;
 
+        /// <summary>
+        /// Max deviation of the Catmull-Rom simplified path from <see cref="Points"/>.
+        /// Changing this nulls <see cref="SimplifiedPath"/> and simplified-loop caches.
+        /// </summary>
         public double SimplifiedPathTolerance
         {
             get => _SimplifiedPathTolerance;
@@ -62,6 +66,7 @@ namespace Geometry
         }
 
 
+        /// <summary>Null means dirty; rebuilt from <see cref="Points"/> and <see cref="SimplifiedPathTolerance"/>.</summary>
         private Vector2[] _SimplifiedPath;
         public Vector2[] SimplifiedPath
         {
@@ -92,6 +97,7 @@ namespace Geometry
             }
         }
 
+        /// <summary>Last two points as a segment (A = newest, B = previous), matching <see cref="_Segments"/> order.</summary>
         public LineSegment NewestSegment
         {
             get
@@ -102,47 +108,35 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Segments are ordered so that A is the newer control point and B is the older control point in the path
+        /// Segments stored with A = newer control point and B = older. Keep this order; hit-testing and loop detection depend on it.
         /// </summary>
         private readonly List<LineSegment> _Segments = [];
         public IReadOnlyList<LineSegment> Segments => _Segments;
 
         /// <summary>
-        /// True if the path has at least two points
+        /// True if the path has at least two points (one segment).
         /// </summary>
         public bool HasSegment => Points.Count >= 2;
 
         public bool HasSelfIntersection => _Loop != null;
 
-        /// <summary>
-        /// Segments are ordered so that A is the newer control point and B is the older control point in the path
-        /// </summary>
+        /// <summary>Vertices of the first self-intersection loop; null if none. Invalidated when the path changes.</summary>
         private Vector2[] _Loop = null;
 
-        /// <summary>
-        /// Returns the line segments composing the first loop described by the path, or null if no self-intersection exists
-        /// </summary>
+        /// <summary>Vertices of the first loop, or null if the path does not self-intersect.</summary>
         public Vector2[] Loop => _Loop;
 
-        /// <summary>
-        /// Segments are ordered so that A is the newer control point and B is the older control point in the path
-        /// </summary>
+        /// <summary>Segments of <see cref="_Loop"/>; null if no loop. Same A-newer/B-older order as <see cref="_Segments"/>.</summary>
         private LineSegment[] _LoopSegments = null;
 
-        /// <summary>
-        /// Returns the line segments composing the first loop described by the path, or null if no self-intersection exists
-        /// </summary>
+        /// <summary>Segments of <see cref="Loop"/>, or null if none.</summary>
         public LineSegment[] LoopSegments => _LoopSegments;
 
 
-        /// <summary>
-        /// Segments are ordered so that A is the newer control point and B is the older control point in the path
-        /// </summary>
+        /// <summary>Catmull-Rom simplification of <see cref="_Loop"/>; null means dirty.</summary>
         private Vector2[] _SimplifiedLoop = null;
 
-        /// <summary>
-        /// Returns the line segments composing the first loop described by the path, or null if no self-intersection exists
-        /// </summary>
+        /// <summary>Simplified vertices of the first loop, or null if none.</summary>
         public Vector2[] SimplifiedFirstLoop
         {
             get
@@ -160,14 +154,10 @@ namespace Geometry
         }
 
 
-        /// <summary>
-        /// Segments are ordered so that A is the newer control point and B is the older control point in the path
-        /// </summary>
+        /// <summary>Segments of <see cref="_SimplifiedLoop"/>; null means dirty.</summary>
         private LineSegment[] _SimplifiedLoopSegments = null;
 
-        /// <summary>
-        /// Returns the line segments composing the first loop described by the path, or null if no self-intersection exists
-        /// </summary>
+        /// <summary>Segments of <see cref="SimplifiedFirstLoop"/>, or null if none.</summary>
         public LineSegment[] SimplifiedLoopSegments
         {
             get
@@ -364,7 +354,7 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Resets the lopos stored in this path
+        /// Resets the loops stored in this path
         /// </summary>
         private void SetLoop(List<Vector2> loopPoints)
         {
@@ -376,7 +366,7 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Resets the lopos stored in this path
+        /// Resets the loops stored in this path
         /// </summary>
         private void ResetLoop()
         {

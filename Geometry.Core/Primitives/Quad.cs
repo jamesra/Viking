@@ -4,13 +4,15 @@ using System.Collections.Generic;
 namespace Geometry
 {
     /// <summary>
-    /// Two triangles that make a rectangle
+    /// Two triangles sharing a diagonal. Axis-aligned when built from a position/size or <see cref="Rectangle"/>;
+    /// the four-corner constructor accepts a general quadrilateral.
     /// </summary>
-    /// 
     [Serializable]
     public readonly struct Quad : IShape2D, IHasControlPoints, IEquatable<Quad>
     {
+        /// <summary>p1–p2–p3 triangle. Shares diagonal p2–p3 with <see cref="T1"/>.</summary>
         readonly Triangle T0;
+        /// <summary>p2–p4–p3 triangle.</summary>
         readonly Triangle T1;
 
         public Quad(Vector2 pos, double Width, double Height)
@@ -18,13 +20,9 @@ namespace Geometry
         { }
 
         /// <summary>
-        /// 
+        /// Corners in T0/T1 order: p1–p2–p3 and p2–p4–p3 (shared diagonal p2–p3).
+        /// For an axis-aligned rectangle that is bottom-left, bottom-right, top-left, top-right.
         /// </summary>
-        /// <param name="p1">BottomLeft</param>
-        /// <param name="p2">BottomRight</param>
-        /// <param name="p3">TopLeft</param>
-        /// <param name="p4">TopRight</param>
-        /// <param name="color"></param>
         public Quad(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4)
         {
             T0 = new Triangle(p1, p2, p3);

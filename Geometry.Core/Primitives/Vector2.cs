@@ -20,7 +20,7 @@ namespace Geometry
     {
         public static int CompareYX(in IPoint2D A, in IPoint2D B)
         {
-            //We need to use the same equality standard as our epsilon value
+            // Exact compare (no Tolerance.Epsilon): same reason as Vector2ComparerXY — Delaunay splits.
             double diffY = A.Y - B.Y;
 
             if (diffY == 0)//Math.Abs(diffY) <= Tolerance.Epsilon)
@@ -59,25 +59,11 @@ namespace Geometry
     /// </summary>
     public class Vector2ComparerXY : IComparer<Vector2>, IComparer<IPoint2D>
     {
-        /// <summary>
-        /// Sorts points on the X-Axis first, then Y-Axis
-        /// 
-
-        /// </summary>
-        /// <param name="A"></param>
-        /// <param name="B"></param>
-        /// <returns></returns>
         public static int CompareXY(in IPoint2D A, in IPoint2D B)
         {
-            /// I struggled with how this code should behave.  For now it is the expected behaviour,
-            /// however there is a global.epsilon value that is used to limit the precision of point 
-            /// position to help with rounding errors in equality tests.  However that means two points
-            /// can be equal according to the Viking code but still sort as non-equal.  That can be 
-            /// an issue when using classes such as SortedSet to avoid duplicate points.  If we check 
-            /// for the epsilon based equality first it breaks the delaunay implementation where point
-            /// sets are divided equally into two parts. 
-            /// 
-            //We need to use the same equality standard as our epsilon value
+            // Exact compare (no Tolerance.Epsilon): epsilon equality would collapse nearby points and
+            // break Delaunay divide-and-conquer, which splits sorted sets into equal halves.
+            // SortedSet uniqueness therefore does not match Vector2.Equals.
             double diffX = A.X - B.X;
 
             if (diffX == 0)//Math.Abs(diffX) <= Tolerance.Epsilon)
@@ -168,19 +154,13 @@ namespace Geometry
         public readonly Vector3 ToVector3(in double z) => new Vector3(this.X, this.Y, z);
 
         /// <summary>
-        /// Compares two vectors, assumes they have the same position if they are within the epsilon squared distance of each other
+        /// True when the points coincide within <see cref="Tolerance.Epsilon"/>.
         /// </summary>
-        /// <param name="B"></param>
-        /// <param name="Epsilon"></param>
-        /// <returns></returns>
         public readonly bool Equals(Vector2 B) => Vector2.Equals(this, B);
 
         /// <summary>
-        /// Compares two vectors, assumes they have the same position if they are within the epsilon squared distance of each other
+        /// True when the points coincide within <see cref="Tolerance.Epsilon"/>.
         /// </summary>
-        /// <param name="B"></param>
-        /// <param name="Epsilon"></param>
-        /// <returns></returns>
         public static bool Equals(in Vector2 A, in Vector2 B)
         {
             double XDelta = A.X - B.X;
@@ -338,23 +318,14 @@ namespace Geometry
             return (dX * dX) + (dY * dY);
         }
 
-        /// <summary>
-        /// Rounds coordinates to nearest precision
-        /// </summary>
-        /// <param name="precision">Number of decimal places in the result</param>
-        /// <returns></returns>
+        /// <summary>Coordinates rounded to <paramref name="precision"/> decimal places.</summary>
         public readonly Vector2 Round(int precision) => new Vector2(Math.Round(this.X, precision), Math.Round(this.Y, precision));
 
         public static double Dot(in Vector2 A, in Vector2 B) => (A.X * B.X) + (A.Y * B.Y);
 
         /// <summary>
-        /// Angle of arc from A to B measured at Origin. 
-        /// A -negative value is a counter-clockwise arc
+        /// Signed arc from A to B about Origin. Negative is counter-clockwise when <paramref name="Clockwise"/> is false.
         /// </summary>
-        /// <param name="Origin"></param>
-        /// <param name="A"></param>
-        /// <param name="B"></param>
-        /// <returns></returns>
         public static double ArcAngle(in Vector2 Origin, in Vector2 A, in Vector2 B, bool Clockwise = false)
         {
             var U = A - Origin;
@@ -372,12 +343,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Angle of arc between A & B with Origin
+        /// Signed arc from A to B about Origin. Negative is counter-clockwise when <paramref name="Clockwise"/> is false.
         /// </summary>
-        /// <param name="Origin"></param>
-        /// <param name="A"></param>
-        /// <param name="B"></param>
-        /// <returns></returns>
         public static double ArcAngle(in IPoint2D Origin, IPoint2D A, IPoint2D B, bool Clockwise = false)
         {
             A = new Vector2(A.X - Origin.X, A.Y - Origin.Y);
@@ -395,12 +362,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Angle of arc between A & B with Origin.  Measures only in one direction, no neegative angles will be returned
+        /// Unsigned arc from A to B about Origin in [0, 2π). Direction follows <paramref name="Clockwise"/>.
         /// </summary>
-        /// <param name="Origin"></param>
-        /// <param name="A"></param>
-        /// <param name="B"></param>
-        /// <returns></returns>
         public static double AbsArcAngle(in Vector2 Origin, Vector2 A, Vector2 B, bool Clockwise = false)
         {
             A = new Vector2(A.X - Origin.X, A.Y - Origin.Y);
@@ -418,12 +381,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Angle of arc between A & B with Origin.  Measures only in one direction, no neegative angles will be returned
+        /// Unsigned angle from <paramref name="BaseLine"/>'s direction to <paramref name="P"/>, in [0, 2π).
         /// </summary>
-        /// <param name="Origin"></param>
-        /// <param name="A"></param>
-        /// <param name="B"></param>
-        /// <returns></returns>
         public static double AbsArcAngle(in Line BaseLine, Vector2 P, bool Clockwise = false)
         {
             Vector2 A = new(P.X - BaseLine.Origin.X, P.Y - BaseLine.Origin.Y);
@@ -441,12 +400,8 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Angle of arc between A & B with Origin.  Measures only in one direction, no neegative angles will be returned
+        /// Unsigned arc from A to B about Origin in [0, 2π). Direction follows <paramref name="Clockwise"/>.
         /// </summary>
-        /// <param name="Origin"></param>
-        /// <param name="A"></param>
-        /// <param name="B"></param>
-        /// <returns></returns>
         public static double AbsArcAngle(in IPoint2D Origin, IPoint2D A, IPoint2D B, bool Clockwise = false)
         {
             A = new Vector2(A.X - Origin.X, A.Y - Origin.Y);
@@ -508,6 +463,9 @@ namespace Geometry
             _ => throw new IndexOutOfRangeException($"Axis not supported for {nameof(Vector2)}"),
         };
 
+        /// <summary>
+        /// Point in triangle (v1, v2, v3) from barycentric (u, v), with w = 1 − u − v at v1.
+        /// </summary>
         public static Vector2 FromBarycentric(in Vector2 v1, in Vector2 v2, in Vector2 v3, in double u, in double v)
         {
             double x = (v1.X * (1 - u - v)) + (v2.X * u) + (v3.X * v);
@@ -555,6 +513,9 @@ namespace Geometry
         readonly bool IShape2D.Covers(in IPoint2D p) =>
             ((IShape2D)this).GetRelation(p).IsCovers();
 
+        /// <summary>
+        /// Equal points are Contained. A point has no boundary, so this never returns Touching.
+        /// </summary>
         readonly ShapeRelation IShape2D.GetRelation(in Geometry.IPoint2D p)
         {
             return p is not null && Equals(p) ? ShapeRelation.Contained : ShapeRelation.None;
