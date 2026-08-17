@@ -35,6 +35,7 @@ namespace WebAnnotation.View
         /// <param name="obj"></param>
         /// <param name="OnAdjacentSection">Indicates the location is not on the section being displayed.</param>
         /// <returns></returns>
+        /// <summary>On-section view matching TypeCode. POINT uses LocationCircleView.</summary>
         public static LocationCanvasView Create(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapping)
         {
             switch (obj.TypeCode)
@@ -67,6 +68,9 @@ namespace WebAnnotation.View
         /// <param name="obj"></param>
         /// <param name="OnAdjacentSection">Indicates the location is not on the section being displayed.</param>
         /// <returns></returns>
+        /// <summary>
+        /// Adjacent-section proxy. Polygons and closed curves become an inscribed-circle AdjacentLocationCircleView, not a full polygon.
+        /// </summary>
         public static LocationCanvasView CreateAdjacent(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapping)
         {
 

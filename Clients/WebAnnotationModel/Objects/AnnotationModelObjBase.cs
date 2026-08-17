@@ -8,7 +8,8 @@ using System.Threading.Tasks;
 namespace WebAnnotationModel.Objects
 {
     /// <summary>
-    /// 
+    /// Local annotation object with a pending DBAction. INSERT does not promote to UPDATE — the setter ignores that transition.
+    /// Property change events fire on the calling thread; the comments below about the UI thread are intent, not enforcement.
     /// </summary>
     /// <typeparam name="SERVER_INTERFACE">Object sent to us by the server with data</typeparam>
     public abstract class AnnotationModelObjBase<SERVER_INTERFACE> : INotifyPropertyChanged, INotifyPropertyChanging, IChangeAction
@@ -64,6 +65,7 @@ namespace WebAnnotationModel.Objects
             }
         }
 
+        /// <summary>Marks a local edit for the next save. No-op when DBAction is already INSERT.</summary>
         protected void SetDBActionForChange()
         {
             DBAction = Viking.AnnotationServiceTypes.Interfaces.DBACTION.UPDATE;
@@ -81,8 +83,7 @@ namespace WebAnnotationModel.Objects
 
         protected void OnPropertyChanging(string property)
         {
-            //We need to ensure these events are invoked on the main thread since UI controls listen to them and they can only 
-            //change state on the main thread 
+            // Invoked on the calling thread. UI subscribers must marshal if they touch controls.
             _PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(property));
         }
 
@@ -112,8 +113,7 @@ namespace WebAnnotationModel.Objects
 
         protected void OnPropertyChanged(string property)
         {
-            //We need to ensure these events are invoked on the main thread since UI controls listen to them and they can only 
-            //change state on the main thread 
+            // Invoked on the calling thread. UI subscribers must marshal if they touch controls.
             _PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property)); 
         }
 

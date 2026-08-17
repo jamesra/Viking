@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace WebAnnotationModel
 {
+    /// <summary>
+    /// Thread-safe wrapper around Observable. Mutate only through the lock helpers; do not add/remove on Observable directly.
+    /// </summary>
     public class ConcurrentObservableSet<T> 
         where T : IEquatable<T>
     {

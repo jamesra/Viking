@@ -57,11 +57,11 @@ namespace WebAnnotation
         /// </summary>
         CREATESTRUCTURE,
         /// <summary>
-        /// Create a link to an adjacent location or structure,
+        /// Link two existing locations (or a structure). Does not create a new location.
         /// </summary>
         CREATELINK,
         /// <summary>
-        /// Create a new location and link to it
+        /// Create a new location on another section and link it to the source. WinForms CreateCommand is #if NETFRAMEWORK only.
         /// </summary>
         CREATELINKEDLOCATION,
         /// <summary>
@@ -110,7 +110,7 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Create a command for this action.
+        /// WinForms-only. Jotunn uses ViewportAnnotationController instead of these Command types.
         /// </summary>
         /// <param name="action">The action</param>
         /// <param name="Parent">The control hosting the command we are creating</param>

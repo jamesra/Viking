@@ -12,11 +12,8 @@ using WebAnnotation.UI.Actions;
 namespace WebAnnotation.View
 {
     /// <summary>
-    /// Represents a hole in an annotation. 
+    /// Interior hole of a polygon. Click is REMOVEHOLE. Contains() is true inside the hole so the parent can still offer that action.
     /// </summary>
-    /// <remarks>
-    /// 
-    /// </remarks>
     /// <param name="LocationID"></param>
     /// <param name="innerPoly"></param>
     /// <param name="volumePolygon">The interior polygon</param>

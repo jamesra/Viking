@@ -21,6 +21,10 @@ namespace WebAnnotation.View
     public delegate ContextMenuStrip ContextMenuGeneratorDelegate(IViewLocation locationID);
 #endif
 
+    /// <summary>
+    /// On-canvas location. ParentDepth is structure nesting for draw/hit order, not Z.
+    /// OverlappedLinks creates child overlap views. Hit-test uses VolumeShapeAsRendered (volume), not MosaicShape.
+    /// </summary>
     public abstract class LocationCanvasView(LocationObj obj) : IComparable<LocationCanvasView>, IUIObjectBasic, ICanvasGeometryView, IEquatable<LocationCanvasView>,
                                                IMouseActionSupport, IPenActionSupport, IViewLocation, IHelpStrings
 #if NETFRAMEWORK
@@ -73,9 +77,7 @@ namespace WebAnnotation.View
 
         public int VisualHeight => ParentDepth;
 
-        /// <summary>
-        /// The number of parent structures until we hit a root structure
-        /// </summary>
+        /// <summary>Structure nesting depth for VisualHeight. Not section Z.</summary>
         private int? _ParentDepth = new int?();
         public int ParentDepth
         {
@@ -161,6 +163,7 @@ namespace WebAnnotation.View
 
         public ICollection<long> Links => modelObj.Links;
 
+        /// <summary>Off-section peer IDs that already overlap this location. Setter builds nested overlap views.</summary>
         public abstract ICollection<long> OverlappedLinks
         {
             protected get;

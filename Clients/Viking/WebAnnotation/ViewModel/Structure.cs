@@ -111,6 +111,9 @@ namespace WebAnnotation.ViewModel
             return structObj.ToggleAttribute(tag);
         }
 
+        /// <summary>
+        /// Navigation heuristic: radius-weighted volume mean, then nearest location. Not a morphology centroid. Cache-only; use GetCenterAsync to include the server.
+        /// </summary>
         public LocationObj Center => CenterFromLocations(Store.Locations.GetLocalObjectsForStructure(ID));
 
         public async System.Threading.Tasks.Task<LocationObj> GetCenterAsync()

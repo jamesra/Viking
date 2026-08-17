@@ -38,6 +38,11 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation
 {
+    /// <summary>
+    /// WinForms annotation overlay. Views report LocationAction; this class creates commands.
+    /// GetAnnotations filters to LocationCanvasView; ObjectAtPosition also walks links and ICanvasViewContainer children.
+    /// Hit-test positions are volume/world, not screen. IsCommandDefault false means a command owns input — skip overlay handlers.
+    /// </summary>
     [Viking.Common.SectionOverlay("Annotation")]
     internal class AnnotationOverlay : Viking.Common.ISectionOverlayExtension, Viking.Common.IHelpStrings, IPenActionSupport, ICanvasViewHitTesting
     {
@@ -62,15 +67,11 @@ namespace WebAnnotation
         private Geometry.Vector2 LastMouseDownCoords;
         private Geometry.Vector2 LastMouseMoveVolumeCoords;
 
-        /// <summary>
-        /// The last object the mouse was over, if any
-        /// </summary>
+        /// <summary>Live hover target used for cursors and click actions.</summary>
         internal static ICanvasView LastMouseOverObject = null;
         private Viking.UI.PenInputHelper PenPath = null;
 
-        /// <summary>
-        /// The last object the mouse was over, if any
-        /// </summary>
+        /// <summary>Unused leftover. Hover and click use LastMouseOverObject.</summary>
         internal static ICanvasGeometryView LastIntersectedObject = null;
 
         private readonly MouseOverLocationCanvasViewEffect mouseOverEffect = new();
@@ -329,10 +330,8 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Returns the location nearest to the mouse, prefers the locations on the current section
+        /// LocationCanvasView hits only (no links). Position is volume/world. Null if the section view is not cached yet.
         /// </summary>
-        /// <param name="position"></param>
-        /// <returns></returns>
         public static List<HitTestResult> GetAnnotations(int sectionNumber, Geometry.Vector2 position)
         {
             SectionAnnotationsView locView = GetAnnotationsForSection(sectionNumber);
@@ -347,10 +346,8 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Returns the location nearest to the mouse, prefers the locations on the current section
+        /// LocationCanvasView hits on the current section. Use ObjectAtPosition when links or nested overlap views must win.
         /// </summary>
-        /// <param name="position"></param>
-        /// <returns></returns>
         public List<HitTestResult> GetAnnotations(Geometry.Vector2 position)
         {
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
@@ -365,10 +362,8 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Find the annotations intersecting the provided point on the section, using annotation locations on the screen, not anatomical positions
+        /// Best hit including links and ICanvasViewContainer children. Position is volume/world, not screen pixels.
         /// </summary>
-        /// <param name="position"></param>
-        /// <returns></returns>
         public object ObjectAtPosition(Geometry.Vector2 position, out double distance)
         {
             distance = double.MaxValue;
@@ -548,6 +543,7 @@ namespace WebAnnotation
             }
         }
 
+        /// <summary>False when a non-default command owns input — overlay must not start a competing command.</summary>
         protected bool IsCommandDefault()
         {
             if (_Parent.CurrentCommand == null)

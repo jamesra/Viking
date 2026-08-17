@@ -21,7 +21,8 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 namespace WebAnnotation.View
 {
     /// <summary>
-    /// Renders arrows for location links that are overlapped by an annotation on the section
+    /// Overlap arrow for a link hidden under an on-section location.
+    /// IViewLocation.ID is the off-section peer. LocationID is the on-section anchor. Click is CREATELINKEDLOCATION.
     /// </summary>
     internal class OverlappedLocationLinkView : ICanvasGeometryView, IColorView, ILabelView,
                                        IMouseActionSupport, IPenActionSupport, IViewLocationLink, IViewLocation, Viking.Common.IHelpStrings

@@ -32,6 +32,7 @@ namespace WebAnnotation
     }
 
 
+    /// <summary>Mouse click maps to one LocationAction. Pen uses IPenActionSupport, which can return several IAction items.</summary>
     public interface IMouseActionSupport
     {
         /// <summary>
@@ -103,7 +104,7 @@ namespace WebAnnotation
         bool IsVisible(VikingXNA.Scene scene);
 
         /// <summary>
-        /// Indicates what level the CanvasViewObject occupies for selection and rendering purposes
+        /// Tie-break for overlapping hits. Locations use structure nesting (ParentDepth), not Z. Links use 0 so locations win.
         /// </summary>
         int VisualHeight { get; }
 
@@ -122,10 +123,8 @@ namespace WebAnnotation
         double Distance(Geometry.Vector2 Position);
 
         /// <summary>
-        /// Assumes Position is within the annotation.  Returns a number from 0 to 1 indicating how close the position is between the center and edge of the annotation.
+        /// 0 at center, 1 at the edge. Values above 1 mean the point is not truly inside (holes use 1.01 so REMOVEHOLE still hits but selection prefers the interior annotation).
         /// </summary>
-        /// <param name="Position"></param>
-        /// <returns></returns>
         double DistanceFromCenterNormalized(Geometry.Vector2 Position);
     }
 
@@ -143,13 +142,10 @@ namespace WebAnnotation
     }
 
     /// <summary>
-    /// An interface for canvas views that represent any 2D shape we want to represent as a polygon
+    /// Mosaic is section-space source. Volume is stos-mapped. SmoothedVolume is the drawn outline — hit-test against that, not Mosaic.
     /// </summary>
     public interface IPolygonShape
     {
-        /// <summary>
-        /// The 
-        /// </summary>
         Polygon MosaicPolygon { get; }
         Polygon VolumePolygon { get; }
         Polygon SmoothedVolumePolygon { get; }
@@ -163,8 +159,7 @@ namespace WebAnnotation
     public interface ICanvasViewContainer
     {
         /// <summary>
-        /// Some annotations can nest annotations inside, such as the stylized mini-circles for overlapped locations that are embedded in circle annotations.
-        /// This function returns which annotation the mouse is over, or the parent if the mouse is not over a nested annotation.
+        /// Nested overlap arrows/circles win over the parent when the pointer is on a child. LocationID from the child may not be the parent's ID.
         /// </summary>
         /// <param name="position"></param>
         /// <param name="distanceToCenterNormalized"></param>

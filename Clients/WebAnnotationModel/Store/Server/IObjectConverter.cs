@@ -3,6 +3,7 @@ using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel.ServerInterface
 {
+    /// <summary>Creates a new TARGET from SOURCE. Use IObjectUpdater when the instance already exists.</summary>
     public interface IObjectConverter<in SOURCE, out TARGET>
     {
         /// <summary>
@@ -13,7 +14,8 @@ namespace WebAnnotationModel.ServerInterface
     }
 
     /// <summary>
-    /// Provides spatial information for an object
+    /// Bounding box for the region-loader RTree. Must match the space of the query rectangle.
+    /// Location store wires mosaic; callers pass ApproximateVisibleMosaicBounds.
     /// </summary>
     /// <typeparam name="SOURCE"></typeparam>
     public interface IBoundingBoxConverter<in SOURCE>

@@ -9,6 +9,10 @@ using Nito.AsyncEx;
 
 namespace WebAnnotationModel.Objects
 {  
+    /// <summary>
+    /// Parent/child tree in memory only — adding or removing children does not set DBAction (tables store ParentID).
+    /// Parent rejects INSERT parents. ChildChanged and CollectionChanged are the same list; subscribe to one.
+    /// </summary>
     abstract public class AnnotationModelObjBaseWithParent<KEY, SERVER_INTERFACE, THISTYPE> : AnnotationModelObjBaseWithKey<KEY, SERVER_INTERFACE>,
         System.Collections.Specialized.INotifyCollectionChanged,
         IEquatable<AnnotationModelObjBaseWithParent<KEY, SERVER_INTERFACE, THISTYPE>>,

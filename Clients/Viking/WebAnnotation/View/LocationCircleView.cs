@@ -90,6 +90,7 @@ namespace WebAnnotation.View
         public abstract bool IsLabelVisible(Scene scene);
     }
 
+    /// <summary>Adjacent-section circle or inscribed-circle proxy. Click is CREATELINKEDLOCATION, not the on-section concentric zones.</summary>
     internal class AdjacentLocationCircleView : LocationCircleViewBase, IColorView
     {
         public TextureCircleView upCircleView;
@@ -276,6 +277,7 @@ namespace WebAnnotation.View
         #endregion 
     }
 
+    /// <summary>On-section circle. OverlappedLinkCircleView children win hit-test over this parent.</summary>
     internal class LocationCircleView : LocationCircleViewBase, ICanvasViewContainer, ISelectable, IColorView, ILabelView
     {
         protected readonly Circle _VolumeCircle;
@@ -446,7 +448,10 @@ namespace WebAnnotation.View
             return listActions;
         }
 
-
+        /// <summary>
+        /// Concentric zones on this section: overlap child, then SCALE (outer), CREATELINK, TRANSLATE (center).
+        /// Throws if VisibleSectionNumber is not this location's section — adjacent circles use AdjacentLocationCircleView.
+        /// </summary>
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
             LocationID = ID;

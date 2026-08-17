@@ -9,6 +9,9 @@ using Viking.AnnotationServiceTypes;
 namespace WebAnnotationModel.Objects
 {
 
+    /// <summary>
+    /// Undirected edge between two locations. Constructor always stores A &lt; B.
+    /// </summary>
     public class LocationLinkObj : AnnotationModelObjBaseWithKey<LocationLinkKey, ILocationLink>, IEquatable<LocationLinkObj>, ILocationLinkKey, ILocationLink
     {
         public override LocationLinkKey ID => new LocationLinkKey(this.A, this.B);

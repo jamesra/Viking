@@ -94,6 +94,7 @@ namespace WebAnnotation.View
 
         public bool IsLabelVisible(Scene scene) => linkViews.Any(l => l.IsLabelVisible(scene));
 
+        /// <summary>Child overlap arrow if the point is inside one; otherwise null so the parent circle keeps the hit.</summary>
         public ICanvasView GetAnnotationAtPosition(Geometry.Vector2 position)
         {
             ICanvasView annotation = linkViews.FirstOrDefault(l => l.Contains(position));

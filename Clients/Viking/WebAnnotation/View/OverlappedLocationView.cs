@@ -20,7 +20,7 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 namespace WebAnnotation.View
 {
     /// <summary>
-    /// Represents a location on an adjacent section that is overlapped by an annotation on the visible section.
+    /// Unused leftover. Live overlap arrows are OverlappedLocationLinkView inside OverlappedLinkCircleView.
     /// </summary>
     public class OverlappedLocationView : LocationCanvasView, IColorView, ILabelView, IViewLocation
     {

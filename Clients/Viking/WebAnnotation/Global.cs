@@ -37,6 +37,9 @@ using SegmentationGrpcChannelManager = Viking.Services.Grpc.IGrpcChannelManager;
 
 namespace WebAnnotation
 {
+    /// <summary>
+    /// Viking WinForms module entry (settings, credentials, overlay cache size). Jotunn/net10 store init is AnnotationBootstrap.
+    /// </summary>
     public class Global
 #if NETFRAMEWORK
         : IModuleServiceRegistrar, IModuleInitializer
@@ -47,9 +50,7 @@ namespace WebAnnotation
         /// </summary>
         internal static double DefaultLocationJumpDownsample => AnnotationSettings.DefaultLocationJumpDownsample;
 
-        /// <summary>
-        /// Number of sections we should be attempting to load at the same time before cancelling a request
-        /// </summary>
+        /// <summary>Max concurrent section loads. Distinct from NumSectionsInMemory (how many section views stay cached).</summary>
         internal static int NumSectionsLoading => AnnotationSettings.NumSectionsLoading;
 
         internal static Export? Export = null;
@@ -714,8 +715,8 @@ namespace WebAnnotation
         public static long? LastEditedAnnotationID;
 
         /// <summary>
-        /// Return true if the last annotation can be continued on the section number. 
-        /// Continuation creates a new annotation on the section and links to the last.
+        /// True only when LastEditedAnnotationID is on a different section. Same-section last edit cannot continue (that would duplicate on the same Z).
+        /// LastEditedAnnotationID can point at a deleted location — TryGetObjectByID then returns null and this is false.
         /// </summary>
         /// <param name="SectionNumber"></param>
         /// <returns></returns>

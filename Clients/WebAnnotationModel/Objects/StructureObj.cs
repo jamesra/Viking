@@ -12,6 +12,9 @@ using Viking.AnnotationServiceTypes;
 
 namespace WebAnnotationModel.Objects
 {
+    /// <summary>
+    /// One traced object spanning sections. Locations live in Store.Locations by ParentID, not on this instance.
+    /// </summary>
     public class StructureObj : AnnotationModelObjBaseWithParent<long, IStructure, StructureObj>, IDataObjectLinks<StructureLinkKey, StructureLinkObj>, IEquatable<StructureObj>, IStructureReadOnly
     {
         private readonly long _ID;
@@ -28,7 +31,7 @@ namespace WebAnnotationModel.Objects
                     OnPropertyChanging(nameof(ParentID));
 
                     _ParentID = value;
-                    Parent = null;
+                    Parent = null; // Drop the cached object so the next Parent get re-resolves.
 
                     SetDBActionForChange();
                     OnPropertyChanged(nameof(ParentID));
@@ -36,6 +39,7 @@ namespace WebAnnotationModel.Objects
             }
         }
 
+        /// <summary>Immutable after construction. Change type by creating a new structure, not by assigning here.</summary>
         public long TypeID
         {
             get;
@@ -375,6 +379,7 @@ namespace WebAnnotationModel.Objects
             internal set => _Type = value;
         }
 
+        // Recursive getter — do not treat as a working export of attributes.
         public string TagsXML => this.TagsXML;
 
         ulong IStructureReadOnly.ID => (ulong)ID;

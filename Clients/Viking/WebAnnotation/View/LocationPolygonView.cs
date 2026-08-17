@@ -24,6 +24,9 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
+    /// <summary>
+    /// On-section polygon. Holes still Contains() for REMOVEHOLE, but DistanceFromCenterNormalized is 1.01 so selection prefers the annotation inside the hole.
+    /// </summary>
     internal class LocationPolygonView : LocationCanvasView, ILabelView, ICanvasViewContainer, Viking.Common.IHelpStrings, IColorView
     {
         private StructureCircleLabels curveLabels;

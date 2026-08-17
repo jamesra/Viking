@@ -13,6 +13,10 @@ using WebAnnotationModel;
 namespace WebAnnotationModel.Objects
 {
 
+    /// <summary>
+    /// Which LocationType values support radius, width, closed/open shapes, or holes.
+    /// Check these before reading or writing those fields.
+    /// </summary>
     public static class LocationTypeExtensions
     {
         public static bool HasRadius(this LocationType value)
@@ -77,12 +81,19 @@ namespace WebAnnotationModel.Objects
         }
     }
 
+    /// <summary>
+    /// One annotation on one section. Edit MosaicShape for the viewer; VolumeShape is a DB hint so
+    /// export tools need not implement stos. Position/Radius are derived from MosaicShape.
+    /// </summary>
     public class LocationObj : AnnotationModelObjBaseWithKey<long, ILocation>, ISectionIndex, IDataObjectLinks<long, long>, IEquatable<LocationObj>, ILocationReadOnly
     {
         private readonly long _ID;
 
         public override long ID => _ID;
 
+        /// <summary>
+        /// True when a PropertyChanged name should trigger a spatial redraw. Empty name means all properties in this category.
+        /// </summary>
         public static bool IsPositionProperty(string propertyName)
         {
             if (string.IsNullOrEmpty(propertyName))
@@ -105,6 +116,7 @@ namespace WebAnnotationModel.Objects
             }
         }
 
+        /// <summary>True when the change affects MosaicShape / Radius / Width (not just centroid).</summary>
         public static bool IsGeometryProperty(string propertyName)
         {
             if (string.IsNullOrEmpty(propertyName))
@@ -125,6 +137,7 @@ namespace WebAnnotationModel.Objects
             }
         }
 
+        /// <summary>True when Terminal / OffEdge / Attributes changed (branch styling, not geometry).</summary>
         public static bool IsTerminalProperty(string propertyName)
         {
             if (string.IsNullOrEmpty(propertyName))
@@ -199,6 +212,9 @@ namespace WebAnnotationModel.Objects
 
         private Vector2? _MosaicPosition;
 
+        /// <summary>
+        /// Mosaic/section centroid, lazily from MosaicShape. Not persisted separately — edit MosaicShape.
+        /// </summary>
         public Vector2 Position
         {
             get
@@ -265,6 +281,10 @@ namespace WebAnnotationModel.Objects
         public double Z => Section;
 
         private IShape2D _VolumeShape;
+
+        /// <summary>
+        /// Volume-space geometry for the database. Do not drive the viewer from this — transform MosaicShape.
+        /// </summary>
         public IShape2D VolumeShape
         {
             get => _VolumeShape;
@@ -296,6 +316,10 @@ namespace WebAnnotationModel.Objects
         }
 
         private IShape2D _MosaicShape;
+
+        /// <summary>
+        /// Authoritative 2D geometry in mosaic/section space. Setter updates Position and Radius.
+        /// </summary>
         public IShape2D MosaicShape
         {
             get => _MosaicShape;
@@ -696,15 +720,15 @@ namespace WebAnnotationModel.Objects
             //this.Data.MosaicShape = mosaicShape.ToDbGeometry();
             //this.Data.VolumeShape = volumeShape.ToDbGeometry();
 
+            // Parameter names are mosaic then volume; assignment is swapped. Callers that pass
+            // two different shapes must keep this pairing — do not fix one side only.
             this._VolumeShape = mosaicShape;
             this._MosaicShape = volumeShape; 
         }
 
         /// <summary>
-        /// Creates an instance but does not send change events
+        /// Incomplete (Debug.Assert). Prefer Update(ILocation) or the gRPC converter.
         /// </summary>
-        /// <param name="newData"></param>
-        /// <returns></returns>
         internal static async Task<LocationObj> CreateFromServerAsync(ILocation newData)
         {
             LocationObj obj = new LocationObj(newData.ID)
@@ -734,9 +758,8 @@ namespace WebAnnotationModel.Objects
         }
 
         /// <summary>
-        /// Override and write each property individually so we send specific property changed events
+        /// Server merge: sets DBAction.NONE and replaces attributes/links/WKT. Do not call from UI edit paths.
         /// </summary>
-        /// <param name="newdata"></param>
         internal override async Task Update(ILocation newdata)
         {
             Debug.Assert(this.ID == newdata.ID);

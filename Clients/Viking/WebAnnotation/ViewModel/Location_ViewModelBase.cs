@@ -652,6 +652,7 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Update the location's shape from the segmented polygon and save
         /// </summary>
+        /// <summary>Writes mosaic geometry, then stos-maps volume. Use this when the editor produced section-space points.</summary>
         private async Task UpdateLocationShapeFromMosaicPolygon(Polygon mosaic_poly)
         {
             try
@@ -677,6 +678,7 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Update the location's shape from the segmented polygon and save
         /// </summary>
+        /// <summary>Writes volume geometry, then inverse-maps mosaic. Use this when the editor produced world-space points.</summary>
         private async Task UpdateLocationShapeFromVolumePolygon(Polygon volume_poly)
         {
             try

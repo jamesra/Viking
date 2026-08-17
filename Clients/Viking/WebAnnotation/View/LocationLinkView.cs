@@ -27,8 +27,8 @@ namespace WebAnnotation.ViewModel
 #endif
 
     /// <summary>
-    /// This class represents a link between locations. This object is a little unique because it is
-    /// not tied to the database object like the other *obj classes
+    /// Drawn line between two locations in volume space. VisualHeight is 0 so location hits win.
+    /// Not a store object — built from LocationLinkKey plus the two endpoint views.
     /// </summary>
     public class LocationLinkView : Viking.Objects.UIObjBase, ICanvasGeometryView, IEquatable<LocationLinkView>, IColorView, IViewLocationLink
 #if NETFRAMEWORK

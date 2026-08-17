@@ -7,7 +7,8 @@ using WebAnnotation.ViewModel;
 namespace WebAnnotation
 {
     /// <summary>
-    /// net10 stand-in so shared Actions can resolve a transform without WinForms AnnotationOverlay.
+    /// Same type name as the WinForms overlay so shared Actions compile. No input or draw.
+    /// AnnotationScene must set SectionViewLookup or GetAnnotationsForSection returns null.
     /// </summary>
     internal static class AnnotationOverlay
     {

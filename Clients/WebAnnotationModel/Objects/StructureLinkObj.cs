@@ -7,6 +7,9 @@ using WebAnnotationModel.Objects;
 namespace WebAnnotationModel.Objects
 {
 
+    /// <summary>
+    /// Client uses Bidirectional; server uses Directional == !Bidirectional. Invert on every conversion.
+    /// </summary>
     public class StructureLinkObj : AnnotationModelObjBaseWithKey<StructureLinkKey, IStructureLink>, IEquatable<StructureLinkObj>, IDataObjectWithKey<StructureLinkKey>, IStructureLinkKey
     {
         public override StructureLinkKey ID => new StructureLinkKey(SourceID, TargetID, Bidirectional);
