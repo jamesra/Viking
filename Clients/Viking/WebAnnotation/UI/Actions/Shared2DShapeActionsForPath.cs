@@ -39,13 +39,13 @@ namespace WebAnnotation.UI.Actions
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //This can probably be simplified to checking the first and last segment in the path against the smoothed shape displayed in UI since we are using events
 
-            SortedDictionary<double, PolygonIndex> intersectedSegments = OriginalVolumePolygon.IntersectingSegments(subpath.ToLineSegments());
+            SortedDictionary<double, PolygonIndex> intersectedSegments = OriginalVolumePolygon.IntersectingSegmentIndices(subpath.ToLineSegments());
 
             if (intersectedSegments.Count < 2)
             {
                 //TODO: This is a hack, but I want this to work for a beta.  We shouldn't have to give up and search the entire path like this
                 subpath = [.. path];
-                intersectedSegments = OriginalVolumePolygon.IntersectingSegments(subpath.ToLineSegments());
+                intersectedSegments = OriginalVolumePolygon.IntersectingSegmentIndices(subpath.ToLineSegments());
 
                 if (intersectedSegments.Count < 2)
                 {

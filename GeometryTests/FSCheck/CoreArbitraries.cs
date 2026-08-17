@@ -165,7 +165,7 @@ namespace GeometryTests.FSCheck
             if (line.PointCount <= 2)
                 yield break;
 
-            Vector2[] pts = [.. line.Points.Select(p => p.Convert())];
+            Vector2[] pts = [.. line.Points.Select(p => p.ToVector2())];
             yield return new Polyline(pts.Take(pts.Length - 1), line.AllowsSelfIntersection);
             if (pts.Length > 3)
                 yield return new Polyline(new[] { pts[0] }.Concat(pts.Skip(2)), line.AllowsSelfIntersection);

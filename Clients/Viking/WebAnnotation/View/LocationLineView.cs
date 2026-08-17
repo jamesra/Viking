@@ -344,7 +344,7 @@ namespace WebAnnotation.View
                     nameof(obj));
             }
 
-            MosaicControlPoints = [.. controlPoints.ControlPoints.Select(p => p.Convert())];
+            MosaicControlPoints = [.. controlPoints.ControlPoints.Select(p => p.ToVector2())];
             VolumeControlPoints = mapper.SectionToVolume(MosaicControlPoints);
         }
     }

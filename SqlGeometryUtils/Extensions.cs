@@ -713,7 +713,7 @@ namespace SqlGeometryUtils
 
         public static Vector2[] ToPoints(this IShape2D shape) =>
             shape is IHasControlPoints cps
-                ? [.. cps.ControlPoints.Select(p => p.Convert())]
+                ? [.. cps.ControlPoints.Select(p => p.ToVector2())]
                 : shape.ToSqlGeometry().ToPoints();
 
         public static Vector2 Centroid(this IShape2D shape) => shape.ToSqlGeometry().Centroid();

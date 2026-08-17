@@ -76,11 +76,26 @@ namespace GeometryTests
                 nameof(CoversImpliesIntersectsForPoints));
 
         [TestMethod]
-        public void IntersectsAgreesWithShapeExtensionsDispatch() =>
+        public void IntersectsIffGetRelationNotNoneForNonCollections() =>
             CoreCheck.Run(
-                Prop.ForAll(CoreArbitraries.ArbMixedShape(), CoreArbitraries.ArbMixedShape(),
-                    (a, b) => a.Intersects(b) == ShapeExtensions.Intersects(a, b)),
-                nameof(IntersectsAgreesWithShapeExtensionsDispatch));
+                Prop.ForAll(CoreArbitraries.ArbMixedShape(), CoreArbitraries.ArbMixedShape(), (a, b) =>
+                    a.ShapeType == ShapeType2D.Collection ||
+                    b.ShapeType == ShapeType2D.Collection ||
+                    a.Intersects(b) == (a.GetRelation(b) != ShapeRelation.None)),
+                nameof(IntersectsIffGetRelationNotNoneForNonCollections));
+
+        [TestMethod]
+        public void ContainsAndCoversMatchGetRelationForShapes() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbMixedShape(), CoreArbitraries.ArbMixedShape(), (a, b) =>
+                {
+                    if (a.ShapeType == ShapeType2D.Collection)
+                        return true;
+
+                    ShapeRelation rel = a.GetRelation(b);
+                    return a.Contains(b) == rel.IsContains() && a.Covers(b) == rel.IsCovers();
+                }),
+                nameof(ContainsAndCoversMatchGetRelationForShapes));
 
         [TestMethod]
         public void BoundingBoxCoversControlPointsOrSamples() =>

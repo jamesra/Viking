@@ -269,7 +269,7 @@ namespace Geometry
 
         public bool Covers(in Vector2 p) => GetRelation(p).IsCovers();
 
-        public ShapeRelation GetRelation(in IPoint2D p) => GetRelation(p.Convert());
+        public ShapeRelation GetRelation(in IPoint2D p) => GetRelation(p.ToVector2());
 
         public ShapeRelation GetRelation(in Vector2 p)
         {
@@ -291,7 +291,7 @@ namespace Geometry
 
         public bool Covers(in LineSegment line) => GetRelation(line).IsCovers();
 
-        ShapeRelation IShape2D.GetRelation(in ILineSegment2D line) => GetRelation(line.Convert());
+        ShapeRelation IShape2D.GetRelation(in ILineSegment2D line) => GetRelation(line.ToLineSegment());
 
         public ShapeRelation GetRelation(in LineSegment line)
         {
@@ -336,11 +336,25 @@ namespace Geometry
             return ShapeRelation.None;
         }
 
-        public ShapeRelation GetRelation(in Rectangle rect) =>
-            ClassifyCoveredVertices(rect.Corners, rect.Center);
+        public ShapeRelation GetRelation(in Rectangle rect)
+        {
+            ShapeRelation covered = ClassifyCoveredVertices(rect.Corners, rect.Center);
+            if (covered != ShapeRelation.None)
+                return covered;
+            return CircleIntersectionExtensions.Intersects(this, rect)
+                ? ShapeRelation.Intersecting
+                : ShapeRelation.None;
+        }
 
-        public ShapeRelation GetRelation(in Triangle tri) =>
-            ClassifyCoveredVertices(tri.Points, tri.Centroid);
+        public ShapeRelation GetRelation(in Triangle tri)
+        {
+            ShapeRelation covered = ClassifyCoveredVertices(tri.Points, tri.Centroid);
+            if (covered != ShapeRelation.None)
+                return covered;
+            return CircleIntersectionExtensions.Intersects(this, tri)
+                ? ShapeRelation.Intersecting
+                : ShapeRelation.None;
+        }
 
         ShapeRelation ClassifyCoveredVertices(IReadOnlyList<Vector2> vertices, Vector2 centroid)
         {
@@ -366,14 +380,14 @@ namespace Geometry
         /// <summary>
         /// OGC Contains: every point of <paramref name="shape"/> lies in this disk's interior.
         /// </summary>
-        public bool Contains(in IShape2D shape) => RelationTo(shape).IsContains();
+        public bool Contains(in IShape2D shape) => GetRelation(shape).IsContains();
 
         /// <summary>
         /// OGC Covers: every point of <paramref name="shape"/> lies in this closed disk.
         /// </summary>
-        public bool Covers(in IShape2D shape) => RelationTo(shape).IsCovers();
+        public bool Covers(in IShape2D shape) => GetRelation(shape).IsCovers();
 
-        ShapeRelation RelationTo(in IShape2D shape)
+        public ShapeRelation GetRelation(in IShape2D shape)
         {
             if (shape is null)
                 throw new ArgumentNullException(nameof(shape));
@@ -383,25 +397,21 @@ namespace Geometry
             {
                 ShapeType2D.Point => self.GetRelation((IPoint2D)shape),
                 ShapeType2D.Circle => self.RelationToCircle((ICircle2D)shape),
-                ShapeType2D.Rectangle => self.GetRelation(((IRectangle2D)shape).Convert()),
-                ShapeType2D.Triangle => self.GetRelation(((ITriangle2D)shape).Convert()),
-                ShapeType2D.Quad => self.ClassifyCoveredVertices(
-                    [((Quad)shape).BottomLeft, ((Quad)shape).BottomRight, ((Quad)shape).TopLeft, ((Quad)shape).TopRight],
-                    ((Quad)shape).BoundingBox.Center),
-                ShapeType2D.Line => self.GetRelation(((ILineSegment2D)shape).Convert()),
-                ShapeType2D.Polyline => self.ClassifyCoveredVertices(
-                    [.. ((IPolyLine2D)shape).Points.Select(p => p.Convert())],
-                    ((IPolyLine2D)shape).Points[0].Convert()),
-                ShapeType2D.Polygon => self.GetRelation(((IPolygon2D)shape).Convert()),
-                ShapeType2D.Collection => RelationToCollection((IShapeCollection2D)shape),
-                ShapeType2D.InfiniteLine => ShapeRelation.None,
+                ShapeType2D.Rectangle => self.GetRelation(((IRectangle2D)shape).ToRectangle()),
+                ShapeType2D.Triangle => self.GetRelation(((ITriangle2D)shape).ToTriangle()),
+                ShapeType2D.Quad => self.RelationToQuad((Quad)shape),
+                ShapeType2D.Line => self.GetRelation(((ILineSegment2D)shape).ToLineSegment()),
+                ShapeType2D.Polyline => self.RelationToPolyline((IPolyLine2D)shape),
+                ShapeType2D.Polygon => self.GetRelation(((IPolygon2D)shape).ToPolygon()),
+                ShapeType2D.Collection => ShapeRelationHelpers.RelationToCollection(self, (IShapeCollection2D)shape),
+                ShapeType2D.InfiniteLine => self.RelationToInfiniteLine((Line)shape),
                 _ => ShapeRelation.None,
             };
         }
 
         ShapeRelation RelationToCircle(ICircle2D other)
         {
-            double distance = Vector2.Distance(Center, other.Center.Convert());
+            double distance = Vector2.Distance(Center, other.Center.ToVector2());
             double sum = distance + other.Radius;
             if (Math.Abs(sum - Radius) <= Tolerance.Epsilon)
                 return ShapeRelation.Touching;
@@ -412,21 +422,38 @@ namespace Geometry
             return ShapeRelation.None;
         }
 
-        ShapeRelation RelationToCollection(IShapeCollection2D collection)
+        ShapeRelation RelationToQuad(in Quad quad)
         {
-            ShapeRelation combined = ShapeRelation.Contained;
-            foreach (IShape2D g in collection.Geometries)
-            {
-                ShapeRelation rel = RelationTo(g);
-                if (rel == ShapeRelation.None)
-                    return ShapeRelation.None;
-                if (rel == ShapeRelation.Intersecting)
-                    return ShapeRelation.Intersecting;
-                if (rel == ShapeRelation.Touching)
-                    combined = ShapeRelation.Touching;
-            }
+            Vector2[] verts = [quad.BottomLeft, quad.BottomRight, quad.TopRight, quad.TopLeft];
+            ShapeRelation covered = ClassifyCoveredVertices(verts, quad.BoundingBox.Center);
+            if (covered != ShapeRelation.None)
+                return covered;
+            return Intersects(ShapeRelationHelpers.QuadAsPolygon(quad))
+                ? ShapeRelation.Intersecting
+                : ShapeRelation.None;
+        }
 
-            return combined;
+        ShapeRelation RelationToPolyline(IPolyLine2D line)
+        {
+            Circle self = this;
+            Vector2[] verts = [.. line.Points.Select(p => p.ToVector2())];
+            ShapeRelation covered = ClassifyCoveredVertices(verts, verts[0]);
+            if (covered != ShapeRelation.None)
+                return covered;
+            return line.LineSegments.Any(s => self.Intersects(s.ToLineSegment()))
+                ? ShapeRelation.Intersecting
+                : ShapeRelation.None;
+        }
+
+        ShapeRelation RelationToInfiniteLine(in Line line)
+        {
+            double dist = Math.Abs((line.Direction.X * (Center.Y - line.Origin.Y)) -
+                                   (line.Direction.Y * (Center.X - line.Origin.X)));
+            if (Math.Abs(dist - Radius) <= Tolerance.Epsilon)
+                return ShapeRelation.Touching;
+            if (dist < Radius)
+                return ShapeRelation.Intersecting;
+            return ShapeRelation.None;
         }
 
         /// <summary>
@@ -442,7 +469,7 @@ namespace Geometry
             return (XDist * XDist) + (YDist * YDist) <= CombinedRadiusSquared;
         }
 
-        public bool Intersects(in ICircle2D c) => this.Intersects(c.Convert());
+        public bool Intersects(in ICircle2D c) => this.Intersects(c.ToCircle());
 
         public bool Intersects(in Circle c)
         {
@@ -454,17 +481,17 @@ namespace Geometry
             return (XDist * XDist) + (YDist * YDist) <= CombinedRadiusSquared;
         }
 
-        public bool Intersects(in ILineSegment2D l) => Intersects(l.Convert());
+        public bool Intersects(in ILineSegment2D l) => Intersects(l.ToLineSegment());
 
         public bool Intersects(in LineSegment line) => CircleIntersectionExtensions.Intersects(in this, in line);
 
-        public bool Intersects(in ITriangle2D t) => this.Intersects(t.Convert());
+        public bool Intersects(in ITriangle2D t) => this.Intersects(t.ToTriangle());
 
         public bool Intersects(in Triangle tri) => CircleIntersectionExtensions.Intersects(in this, in tri);
 
         public bool Intersects(in IPolygon2D p)
         {
-            Polygon poly = p.Convert();
+            Polygon poly = p.ToPolygon();
             return this.Intersects(in poly);
         }
 
@@ -472,7 +499,7 @@ namespace Geometry
 
         public bool Intersects(in IRectangle2D r)
         {
-            Rectangle rect = r.Convert();
+            Rectangle rect = r.ToRectangle();
             return this.Intersects(in rect);
         }
 
@@ -515,9 +542,9 @@ namespace Geometry
             GeometryHashCode.Combine(Center.GetHashCode(), GeometryHashCode.QuantizedCoord(Radius));
 
 
-        public bool Intersects(in IShape2D shape) => ShapeExtensions.CircleIntersects(in this, in shape);
+        public bool Intersects(in IShape2D shape) => GetRelation(shape) != ShapeRelation.None;
 
-        public IShape2D Translate(in IPoint2D offset) => this.Translate(offset.Convert());
+        public IShape2D Translate(in IPoint2D offset) => this.Translate(offset.ToVector2());
 
         public Circle Translate(in Vector2 offset) => new Circle(this.Center + offset, this.Radius);
 

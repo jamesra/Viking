@@ -43,7 +43,7 @@ namespace GeometryTests.FSCheck
             }
 
             if (shape is IHasControlPoints control)
-                return control.ControlPoints.All(p => shape.BoundingBox.Covers(p.Convert()));
+                return control.ControlPoints.All(p => shape.BoundingBox.Covers(p.ToVector2()));
 
             return true;
         }

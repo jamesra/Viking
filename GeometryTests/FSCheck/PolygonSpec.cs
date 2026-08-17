@@ -254,8 +254,8 @@ namespace GeometryTests
             CoreCheck.Run(
                 Prop.ForAll(CoreArbitraries.ArbOpenPolyline(), line =>
                 {
-                    Vector2 first = line.Points[0].Convert();
-                    Vector2 last = line.Points[line.PointCount - 1].Convert();
+                    Vector2 first = line.Points[0].ToVector2();
+                    Vector2 last = line.Points[line.PointCount - 1].ToVector2();
                     Vector2 mid = line.LineSegments[0].Bisect();
                     return line.GetRelation((IPoint2D)first) == ShapeRelation.Touching &&
                            line.GetRelation((IPoint2D)last) == ShapeRelation.Touching &&

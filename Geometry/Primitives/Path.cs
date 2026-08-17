@@ -609,7 +609,7 @@ namespace Geometry
             if (!this.Segments.Any(line => line.Covers(pnt)))
                 return ShapeRelation.None;
 
-            Vector2 v = pnt.Convert();
+            Vector2 v = pnt.ToVector2();
             if (Points.Count > 0 &&
                 (Vector2.DistanceSquared(v, Points[0]) <= Tolerance.EpsilonSquared ||
                  Vector2.DistanceSquared(v, Points[Points.Count - 1]) <= Tolerance.EpsilonSquared))
@@ -635,11 +635,29 @@ namespace Geometry
             return output;
         }
 
-        bool IShape2D.Intersects(in IShape2D shape)
+        bool IShape2D.Contains(in IShape2D other) => ((IShape2D)this).GetRelation(other).IsContains();
+
+        bool IShape2D.Covers(in IShape2D other) => ((IShape2D)this).GetRelation(other).IsCovers();
+
+        ShapeRelation IShape2D.GetRelation(in IShape2D other)
         {
-            IShape2D shp = shape;
-            return this.Segments.Any(line => line.Intersects(shp));
+            if (other is null)
+                throw new ArgumentNullException(nameof(other));
+
+            IShape2D self = this;
+            if (other.ShapeType == ShapeType2D.Point)
+                return self.GetRelation((IPoint2D)other);
+            if (other.ShapeType == ShapeType2D.Line)
+                return self.GetRelation((ILineSegment2D)other);
+
+            List<ShapeRelation> parts = new(Segments.Count);
+            foreach (LineSegment seg in Segments)
+                parts.Add(seg.GetRelation(other));
+            return ShapeRelationHelpers.CombineParts(parts);
         }
+
+        bool IShape2D.Intersects(in IShape2D shape) =>
+            ((IShape2D)this).GetRelation(shape) != ShapeRelation.None;
 
         IShape2D IShape2D.Translate(in IPoint2D offset)
         {

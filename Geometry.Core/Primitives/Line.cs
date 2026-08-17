@@ -229,6 +229,63 @@ namespace Geometry
 
         public bool Covers(in IPoint2D p) => GetRelation(p).IsCovers();
 
+        public bool Contains(in Vector2 p) => GetRelation((IPoint2D)p).IsContains();
+
+        public bool Contains(in IShape2D other) => GetRelation(other).IsContains();
+
+        public bool Covers(in IShape2D other) => GetRelation(other).IsCovers();
+
+        public ShapeRelation GetRelation(in IShape2D other)
+        {
+            if (other is null)
+                throw new ArgumentNullException(nameof(other));
+
+            Line self = this;
+            return other.ShapeType switch
+            {
+                ShapeType2D.Point => self.GetRelation((IPoint2D)other),
+                ShapeType2D.Line => self.GetRelation((ILineSegment2D)other),
+                ShapeType2D.InfiniteLine => RelationToInfiniteLine((Line)other),
+                ShapeType2D.Circle => RelationToCircle((ICircle2D)other),
+                ShapeType2D.Collection => ShapeRelationHelpers.RelationToCollection(self, (IShapeCollection2D)other),
+                _ => CrossingOrNone(other),
+            };
+        }
+
+        ShapeRelation RelationToInfiniteLine(in Line other)
+        {
+            if (Covers((IPoint2D)other.Origin) && Covers((IPoint2D)(other.Origin + other.Direction)))
+                return ShapeRelation.Contained;
+            return Intersects(other, out _) ? ShapeRelation.Intersecting : ShapeRelation.None;
+        }
+
+        ShapeRelation RelationToCircle(ICircle2D other)
+        {
+            double dist = Math.Abs((Direction.X * (other.Center.Y - Origin.Y)) -
+                                   (Direction.Y * (other.Center.X - Origin.X)));
+            double radius = other.Radius;
+            if (Math.Abs(dist - radius) <= Tolerance.Epsilon)
+                return ShapeRelation.Touching;
+            if (dist < radius)
+                return ShapeRelation.Intersecting;
+            return ShapeRelation.None;
+        }
+
+        ShapeRelation CrossingOrNone(IShape2D other)
+        {
+            Line self = this;
+            bool hits = other.ShapeType switch
+            {
+                ShapeType2D.Rectangle => self.IntersectsRectangle(((IRectangle2D)other).ToRectangle()),
+                ShapeType2D.Triangle => ((ITriangle2D)other).ToTriangle().Segments.Any(s => self.Intersects(s, out _)),
+                ShapeType2D.Quad => self.IntersectsQuad((Quad)other),
+                ShapeType2D.Polygon => ((IPolygon2D)other).ToPolygon().AllSegments.Any(s => self.Intersects(s, out _)),
+                ShapeType2D.Polyline => ((IPolyLine2D)other).LineSegments.Any(s => self.Intersects(s.ToLineSegment(), out _)),
+                _ => false,
+            };
+            return hits ? ShapeRelation.Intersecting : ShapeRelation.None;
+        }
+
         /// <summary>
         /// On the line is Contained (no boundary). Off the line is None.
         /// </summary>
@@ -238,7 +295,7 @@ namespace Geometry
 
         public ShapeRelation GetRelation(in ILineSegment2D line)
         {
-            LineSegment seg = line.Convert();
+            LineSegment seg = line.ToLineSegment();
             bool aOn = Covers((IPoint2D)seg.A);
             bool bOn = Covers((IPoint2D)seg.B);
             if (aOn && bOn)
@@ -248,29 +305,9 @@ namespace Geometry
             return ShapeRelation.None;
         }
 
-        public bool Intersects(in IShape2D shape)
-        {
-            if (shape is null)
-                throw new ArgumentNullException(nameof(shape));
+        public bool Intersects(in IShape2D shape) => GetRelation(shape) != ShapeRelation.None;
 
-            Line self = this;
-            return shape.ShapeType switch
-            {
-                ShapeType2D.Point => self.Covers((IPoint2D)shape),
-                ShapeType2D.Line => self.Intersects(((ILineSegment2D)shape).Convert(), out _),
-                ShapeType2D.InfiniteLine => shape is Line otherLine && self.Intersects(otherLine, out _),
-                ShapeType2D.Circle => self.DistanceToPoint(((ICircle2D)shape).Center.Convert()) <= ((ICircle2D)shape).Radius,
-                ShapeType2D.Rectangle => self.IntersectsRectangle(((IRectangle2D)shape).Convert()),
-                ShapeType2D.Triangle => ((ITriangle2D)shape).Convert().Segments.Any(s => self.Intersects(s, out _)),
-                ShapeType2D.Quad => self.IntersectsQuad((Quad)shape),
-                ShapeType2D.Polygon => ((IPolygon2D)shape).Convert().AllSegments.Any(s => self.Intersects(s, out _)),
-                ShapeType2D.Polyline => ((IPolyLine2D)shape).LineSegments.Any(s => self.Intersects(s.Convert(), out _)),
-                ShapeType2D.Collection => ((IShapeCollection2D)shape).Geometries.Any(g => self.Intersects(g)),
-                _ => false,
-            };
-        }
-
-        public IShape2D Translate(in IPoint2D offset) => new Line(Origin + offset.Convert(), Direction);
+        public IShape2D Translate(in IPoint2D offset) => new Line(Origin + offset.ToVector2(), Direction);
 
         public bool Equals(IShape2D other) => other is ILine2D line && Equals(line);
 

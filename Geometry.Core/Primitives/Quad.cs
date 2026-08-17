@@ -143,6 +143,25 @@ namespace Geometry
 
         public bool Covers(in IPoint2D p) => GetRelation(p).IsCovers();
 
+        public bool Contains(in IShape2D other) => GetRelation(other).IsContains();
+
+        public bool Covers(in IShape2D other) => GetRelation(other).IsCovers();
+
+        public ShapeRelation GetRelation(in IShape2D other)
+        {
+            if (other is null)
+                throw new ArgumentNullException(nameof(other));
+
+            if (other.ShapeType == ShapeType2D.Point)
+                return GetRelation((IPoint2D)other);
+            if (other.ShapeType == ShapeType2D.Line)
+                return GetRelation((ILineSegment2D)other);
+            if (other.ShapeType == ShapeType2D.Polyline)
+                return ShapeRelationHelpers.RelationToPolyline(this, (IPolyLine2D)other);
+
+            return ShapeRelationHelpers.QuadAsPolygon(this).GetRelation(other);
+        }
+
         public ShapeRelation GetRelation(in IPoint2D p)
         {
             Vector2 v = new(p.X, p.Y);
@@ -169,7 +188,7 @@ namespace Geometry
 
         public ShapeRelation GetRelation(in ILineSegment2D line)
         {
-            LineSegment seg = line.Convert();
+            LineSegment seg = line.ToLineSegment();
             ShapeRelation a = GetRelation((IPoint2D)seg.A);
             ShapeRelation b = GetRelation((IPoint2D)seg.B);
             if (a != ShapeRelation.None && b != ShapeRelation.None)
@@ -179,11 +198,11 @@ namespace Geometry
             return ShapeRelation.None;
         }
 
-        public bool Intersects(in IShape2D shape) => T0.Intersects(shape) || T1.Intersects(shape);
+        public bool Intersects(in IShape2D shape) => GetRelation(shape) != ShapeRelation.None;
 
         public IShape2D Translate(in IPoint2D offset)
         {
-            Vector2 o = offset.Convert();
+            Vector2 o = offset.ToVector2();
             return new Quad(BottomLeft + o, BottomRight + o, TopLeft + o, TopRight + o);
         }
 

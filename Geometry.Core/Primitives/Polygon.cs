@@ -177,7 +177,7 @@ namespace Geometry
             set => SetVertex(index, value);
         }
 
-        public Polygon(IEnumerable<IPoint2D> exteriorRing) : this(exteriorRing.Select(p => p.Convert()).ToArray())
+        public Polygon(IEnumerable<IPoint2D> exteriorRing) : this(exteriorRing.Select(p => p.ToVector2()).ToArray())
         { }
 
         public Polygon(IEnumerable<Vector2> exteriorRing) : this(exteriorRing.ToArray())
@@ -209,8 +209,8 @@ namespace Geometry
 
 
         public Polygon(IEnumerable<IPoint2D> exteriorRing, IEnumerable<IPoint2D[]> interiorRings)
-            : this([.. exteriorRing.Select(p => p.Convert())],
-                   [.. interiorRings.Select(inner_ring => inner_ring.Select(p => p.Convert()).ToArray())])
+            : this([.. exteriorRing.Select(p => p.ToVector2())],
+                   [.. interiorRings.Select(inner_ring => inner_ring.Select(p => p.ToVector2()).ToArray())])
         {
         }
 
@@ -951,7 +951,7 @@ namespace Geometry
         /// <returns>True if the box changed.</returns>
         private bool UpdateBoundingBoxForRemove(Vector2 removed_point)
         {
-            if (_BoundingRect.GetRelation(removed_point) == ShapeRelation.Touching)
+            if (_BoundingRect.GetRelation((IPoint2D)removed_point) == ShapeRelation.Touching)
             {
                 _BoundingRect = _ExteriorRing.BoundingBox();
                 return true;
@@ -1013,7 +1013,7 @@ namespace Geometry
             do
             {
                 LineSegment ls = Index.Segment(poly);
-                var candidates = poly.IntersectingSegments(ls);
+                var candidates = poly.IntersectingSegmentIndices(ls);
 
                 foreach (var candidate in candidates.Values)
                 {
@@ -1439,6 +1439,12 @@ namespace Geometry
 
         public bool Covers(in IPoint2D point_param) => GetRelation(point_param).IsCovers();
 
+        public bool Contains(in Vector2 p) => GetRelation((IPoint2D)p).IsContains();
+
+        public bool Covers(in Vector2 p) => GetRelation((IPoint2D)p).IsCovers();
+
+        public ShapeRelation GetRelation(in Vector2 p) => GetRelation((IPoint2D)p);
+
         /// <summary>
         /// Point-in-polygon via winding number. Holes are exterior of this polygon (Contained inside a hole is None).
         /// </summary>
@@ -1471,7 +1477,7 @@ namespace Geometry
             {
                 foreach (Polygon inner in this.InteriorPolygons)
                 {
-                    ShapeRelation inner_result = inner.GetRelation(p);
+                    ShapeRelation inner_result = inner.GetRelation((IPoint2D)p);
                     //if (inner_result != ShapeRelation.None) //Including TOUCHING results probably breaks Bajaj generation, but it is correct
                     if (inner_result == ShapeRelation.Contained)
                         return ShapeRelation.None; //The point is in the inner polygon, therefore not part of this polygon
@@ -1547,7 +1553,7 @@ namespace Geometry
 
         public bool Covers(in LineSegment line) => GetRelation(line).IsCovers();
 
-        ShapeRelation IShape2D.GetRelation(in ILineSegment2D line) => GetRelation(line.Convert());
+        ShapeRelation IShape2D.GetRelation(in ILineSegment2D line) => GetRelation(line.ToLineSegment());
 
         public ShapeRelation GetRelation(in LineSegment line)
         {
@@ -1600,7 +1606,7 @@ namespace Geometry
                 return ShapeRelation.None;
 
             bool boundary = CircleIntersectsBoundary(circle);
-            ShapeRelation centerRel = GetRelation(circle.Center);
+            ShapeRelation centerRel = GetRelation((IPoint2D)circle.Center);
             bool centerInside = centerRel.IsContains();
 
             if (centerInside && !boundary)
@@ -1655,6 +1661,50 @@ namespace Geometry
         /// </summary>
         public bool Covers(in Polygon other) => GetRelation(other).IsCovers();
 
+        public bool Contains(in IShape2D other) => GetRelation(other).IsContains();
+
+        public bool Covers(in IShape2D other) => GetRelation(other).IsCovers();
+
+        public ShapeRelation GetRelation(in IShape2D other)
+        {
+            if (other is null)
+                throw new ArgumentNullException(nameof(other));
+
+            return other.ShapeType switch
+            {
+                ShapeType2D.Point => GetRelation((IPoint2D)other),
+                ShapeType2D.Line => GetRelation(((ILineSegment2D)other).ToLineSegment()),
+                ShapeType2D.Circle => GetRelation(((ICircle2D)other).ToCircle()),
+                ShapeType2D.Polygon => GetRelation(((IPolygon2D)other).ToPolygon()),
+                ShapeType2D.Rectangle => GetRelation(ShapeRelationHelpers.RectangleAsPolygon(((IRectangle2D)other).ToRectangle())),
+                ShapeType2D.Triangle => GetRelation(ShapeRelationHelpers.TriangleAsPolygon(((ITriangle2D)other).ToTriangle())),
+                ShapeType2D.Quad => GetRelation(ShapeRelationHelpers.QuadAsPolygon((Quad)other)),
+                ShapeType2D.Polyline => RelationToPolyline((IPolyLine2D)other),
+                ShapeType2D.InfiniteLine => RelationToInfiniteLine((Line)other),
+                ShapeType2D.Collection => ShapeRelationHelpers.RelationToCollection(this, (IShapeCollection2D)other),
+                _ => ShapeRelation.None,
+            };
+        }
+
+        ShapeRelation RelationToPolyline(IPolyLine2D line)
+        {
+            List<ShapeRelation> parts = new(line.LineSegments.Count);
+            foreach (ILineSegment2D seg in line.LineSegments)
+                parts.Add(GetRelation(seg.ToLineSegment()));
+            return ShapeRelationHelpers.CombineParts(parts);
+        }
+
+        ShapeRelation RelationToInfiniteLine(in Line line)
+        {
+            foreach (LineSegment seg in AllSegments)
+            {
+                if (line.Intersects(seg, out _))
+                    return ShapeRelation.Intersecting;
+            }
+
+            return ShapeRelation.None;
+        }
+
         /// <summary>
         /// How <paramref name="other"/> relates to this polygon: nested interior, shared boundary, crossing, or disjoint.
         /// </summary>
@@ -1707,8 +1757,14 @@ namespace Geometry
             if (anyContained && !anyExterior)
                 return anyTouching || boundaryContact ? ShapeRelation.Touching : ShapeRelation.Contained;
 
+            if (anyContained)
+                return ShapeRelation.Intersecting;
+
             if (anyTouching || boundaryContact)
                 return ShapeRelation.Touching;
+
+            if (other.Covers(ExteriorRing[0]))
+                return ShapeRelation.Intersecting;
 
             return ShapeRelation.None;
         }
@@ -2141,6 +2197,180 @@ namespace Geometry
         }
 
         /// <summary>
+        /// True if a disk of <paramref name="controlPointRadius"/> around <paramref name="worldPosition"/>
+        /// covers an exterior or hole vertex. Recurses into holes.
+        /// </summary>
+        public bool PointIntersectsAnyPolygonVertex(Vector2 worldPosition, double controlPointRadius, out Polygon intersectingPoly)
+        {
+            if (!PaddedBoundingBoxCovers(controlPointRadius, worldPosition))
+            {
+                intersectingPoly = null;
+                return false;
+            }
+
+            foreach (Polygon innerPoly in InteriorPolygons)
+            {
+                if (innerPoly.PointIntersectsAnyPolygonVertex(worldPosition, controlPointRadius, out intersectingPoly))
+                    return true;
+            }
+
+            Circle testCircle = new(worldPosition, controlPointRadius);
+            if (ExteriorRing.Any(v => testCircle.Covers(v)))
+            {
+                intersectingPoly = this;
+                return true;
+            }
+
+            intersectingPoly = null;
+            return false;
+        }
+
+        /// <summary>
+        /// True if <paramref name="worldPosition"/> is within half <paramref name="lineWidth"/> of an
+        /// exterior or hole segment. Recurses into holes.
+        /// </summary>
+        public bool PointIntersectsAnyPolygonSegment(Vector2 worldPosition, double lineWidth, out Polygon intersectingPoly)
+        {
+            if (!PaddedBoundingBoxCovers(lineWidth / 2.0, worldPosition))
+            {
+                intersectingPoly = null;
+                return false;
+            }
+
+            foreach (Polygon innerPoly in InteriorPolygons)
+            {
+                if (innerPoly.PointIntersectsAnyPolygonSegment(worldPosition, lineWidth, out intersectingPoly))
+                    return true;
+            }
+
+            ExteriorSegments.NearestSegment(worldPosition, out double minDistance);
+            if (minDistance < lineWidth / 2.0)
+            {
+                intersectingPoly = this;
+                return true;
+            }
+
+            intersectingPoly = null;
+            return false;
+        }
+
+        bool PaddedBoundingBoxCovers(double padding, Vector2 position)
+        {
+            Rectangle padded = BoundingBox + padding;
+            return padded.Covers(position);
+        }
+
+        /// <summary>
+        /// Ring vertex indices of segments that meet <paramref name="line"/>, keyed by distance from <paramref name="line"/>.A.
+        /// Distinct from <see cref="GetIntersectingSegments(LineSegment)"/>, which returns the segments themselves.
+        /// </summary>
+        public SortedDictionary<double, PolygonIndex> IntersectingSegmentIndices(in LineSegment line)
+        {
+            SortedDictionary<double, PolygonIndex> output = [];
+
+            PolygonIndex[] candidates = [.. SegmentRTree.Intersects(line.BoundingBox)];
+            List<PolygonIndex> addedVertices = [];
+
+            foreach (PolygonIndex index in candidates)
+            {
+                if (addedVertices.Contains(index))
+                    continue;
+
+                LineSegment segment = index.Segment(this);
+                if (!segment.Intersects(in line, false, out IShape2D intersection))
+                    continue;
+
+                if (intersection is not IPoint2D p)
+                {
+                    if (output.ContainsKey(0))
+                        continue;
+
+                    AddSegmentIndex(output, 0, index);
+                    addedVertices.Add(index);
+                    continue;
+                }
+
+                Vector2 p2 = new(p.X, p.Y);
+                double distance = Vector2.Distance(line.A, p2);
+
+                if (segment.IsEndpoint(p2))
+                {
+                    if (output.ContainsKey(distance))
+                        continue;
+
+                    PolygonIndex intersectionIndex = index;
+                    if (p2 == segment.B)
+                    {
+                        intersectionIndex = index.Next;
+                        if (addedVertices.Contains(intersectionIndex))
+                            continue;
+                    }
+
+                    AddSegmentIndex(output, distance, intersectionIndex);
+                    addedVertices.Add(intersectionIndex);
+                }
+                else
+                {
+                    AddSegmentIndex(output, distance, index);
+                    addedVertices.Add(index);
+                }
+            }
+
+            return output;
+        }
+
+        /// <summary>
+        /// Ring vertex indices of segments that meet <paramref name="path"/>, keyed by distance along the path.
+        /// </summary>
+        public SortedDictionary<double, PolygonIndex> IntersectingSegmentIndices(LineSegment[] path)
+        {
+            SortedDictionary<double, PolygonIndex> output = [];
+
+            for (int iRing = 0; iRing < InteriorRings.Count; iRing++)
+            {
+                Polygon innerPoly = InteriorPolygons[iRing];
+                SortedDictionary<double, PolygonIndex> ringIntersections = innerPoly.IntersectingSegmentIndices(path);
+                foreach (var item in ringIntersections)
+                    AddSegmentIndex(output, item.Key, new PolygonIndex(0, iRing, item.Value.VertexIndex, innerPoly.ExteriorRing.Length - 1));
+            }
+
+            double totalLength = 0;
+            for (int iPath = 0; iPath < path.Length; iPath++)
+            {
+                LineSegment line = path[iPath];
+
+                for (int iSegment = 0; iSegment < ExteriorSegments.Length; iSegment++)
+                {
+                    LineSegment segment = ExteriorSegments[iSegment];
+                    if (!segment.Intersects(line, false, out IShape2D intersection))
+                        continue;
+
+                    IPoint2D p = intersection as IPoint2D;
+                    Vector2 p2 = new(p.X, p.Y);
+                    double distance = Vector2.Distance(line.A, p2) + totalLength;
+                    if (segment.IsEndpoint(p2))
+                    {
+                        if (p2 == segment.B)
+                            iSegment++;
+
+                        AddSegmentIndex(output, distance, new PolygonIndex(0, iSegment, ExteriorSegments.Length));
+                    }
+                    else
+                    {
+                        AddSegmentIndex(output, distance, new PolygonIndex(0, iSegment, ExteriorSegments.Length));
+                    }
+                }
+
+                totalLength += line.Length;
+            }
+
+            return output;
+        }
+
+        static void AddSegmentIndex(SortedDictionary<double, PolygonIndex> dict, double key, PolygonIndex index) =>
+            dict.Add(key, index);
+
+        /// <summary>
         /// Rotate the polygon by the spefied angle around the specified origin
         /// </summary>
         /// <param name="angle"></param>
@@ -2384,12 +2614,12 @@ namespace Geometry
             }
         }
 
-        public bool Intersects(in IShape2D shape) => ShapeExtensions.PolygonIntersects(this, shape);
+        public bool Intersects(in IShape2D shape) => GetRelation(shape) != ShapeRelation.None;
 
 
         public bool Intersects(in ICircle2D c)
         {
-            Circle circle = c.Convert();
+            Circle circle = c.ToCircle();
             return this.Intersects(circle);
         }
 
@@ -2400,7 +2630,7 @@ namespace Geometry
 
         public bool Intersects(in ILineSegment2D l)
         {
-            LineSegment line = l.Convert();
+            LineSegment line = l.ToLineSegment();
             return this.Intersects(line);
         }
 
@@ -2408,7 +2638,7 @@ namespace Geometry
 
         public bool Intersects(in ITriangle2D t)
         {
-            Triangle tri = t.Convert();
+            Triangle tri = t.ToTriangle();
             return this.Intersects(tri);
         }
 
@@ -2416,7 +2646,7 @@ namespace Geometry
 
         public bool Intersects(in IPolygon2D p)
         {
-            Polygon poly = p.Convert();
+            Polygon poly = p.ToPolygon();
             return this.Intersects(poly);
         }
 
@@ -2469,13 +2699,9 @@ namespace Geometry
             return false;
         }
 
-        bool IShape2D.Contains(in IPoint2D p) => this.Contains(p.Convert());
-
-        bool IShape2D.Covers(in IPoint2D p) => this.Covers(p.Convert());
-
         IShape2D IShape2D.Translate(in IPoint2D offset)
         {
-            Vector2 v = offset.Convert();
+            Vector2 v = offset.ToVector2();
             return this.Translate(v);
         }
 
@@ -2818,7 +3044,7 @@ namespace Geometry
             {
                 LineSegment segment = new(cutLine[iVert], cutLine[iVert + 1]);
 
-                var intersections = output.IntersectingSegments(segment);
+                var intersections = output.IntersectingSegmentIndices(segment);
 
                 if (FirstCutIntersectionFound)
                 {

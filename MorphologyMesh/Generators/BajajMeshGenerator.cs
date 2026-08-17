@@ -1628,7 +1628,7 @@ return;
         public static bool Theorem4(IShape2D shape, LineSegment line)
         {
             if (shape is Polygon poly)
-                return !LineIntersectionExtensions.Intersects(line, poly, true, out List<Vector2> intersections);
+                return !line.Intersects(poly, true, out List<Vector2> intersections);
 
             if (shape is Polyline polyline)
                 return !polyline.Intersects(line);

@@ -253,7 +253,7 @@ namespace WebAnnotation.UI.Commands
                 return RetraceCommandAction.NONE;
             }
 
-            SortedDictionary<double, PolygonIndex> intersectedSegments = OriginalVolumePolygon.IntersectingSegments(path.ToLineSegments());
+            SortedDictionary<double, PolygonIndex> intersectedSegments = OriginalVolumePolygon.IntersectingSegmentIndices(path.ToLineSegments());
 
             if (intersectedSegments.Count < 2)
             {

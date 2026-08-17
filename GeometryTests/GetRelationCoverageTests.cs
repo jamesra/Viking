@@ -139,7 +139,7 @@ namespace GeometryTests
             Assert.IsTrue(circle.Covers((IShape2D)tri));
 
             Rectangle inscribedCorners = new(-10, 10, -10, 10);
-            Assert.AreEqual(ShapeRelation.None, circle.GetRelation(inscribedCorners));
+            Assert.AreEqual(ShapeRelation.Intersecting, circle.GetRelation(inscribedCorners));
             Assert.IsFalse(circle.Contains(inscribedCorners));
             Assert.IsFalse(circle.Covers((IShape2D)inscribedCorners));
         }
@@ -174,5 +174,58 @@ namespace GeometryTests
             {
                 double unused = new Polyline([new Vector2(0, 0), new Vector2(1, 0)]).Area;
             });
+
+        [TestMethod]
+        public void PointAsShapeVersusPolygonUsesShapeOverload()
+        {
+            Polygon box = Primitives.BoxPolygon(10);
+            IShape2D interior = new Vector2(0, 0);
+            Assert.AreEqual(ShapeRelation.Contained, box.GetRelation(interior));
+            Assert.IsTrue(box.Contains(interior));
+            Assert.IsTrue(box.Covers(interior));
+
+            IShape2D onEdge = new Vector2(10, 0);
+            Assert.AreEqual(ShapeRelation.Touching, box.GetRelation(onEdge));
+            Assert.IsFalse(box.Contains(onEdge));
+            Assert.IsTrue(box.Covers(onEdge));
+        }
+
+        [TestMethod]
+        public void CollectionGetRelationOrsFlagsWhileContainsIsAnyChild()
+        {
+            Polygon outer = Primitives.BoxPolygon(10);
+            Polygon nested = Primitives.BoxPolygon(0.5);
+            Shape2DCollection coll = new();
+            coll.Add(outer);
+            coll.Add(nested);
+
+            Circle query = new(Vector2.Zero, 1);
+            Assert.AreEqual(ShapeRelation.Contained, outer.GetRelation(query));
+            Assert.AreEqual(ShapeRelation.Intersecting, nested.GetRelation(query));
+
+            ShapeRelation rel = coll.GetRelation(query);
+            Assert.AreEqual(ShapeRelation.Contained | ShapeRelation.Intersecting, rel);
+            Assert.IsFalse(rel.IsContains());
+            Assert.IsFalse(rel.IsCovers());
+            Assert.IsTrue(coll.Contains(query));
+            Assert.IsTrue(coll.Covers(query));
+            Assert.IsTrue(coll.Intersects(query));
+        }
+
+        [TestMethod]
+        public void InfiniteLineContainsColinearSegment()
+        {
+            Line line = new(new Vector2(0, 0), Vector2.UnitX);
+            LineSegment onLine = new(new Vector2(5, 0), new Vector2(15, 0));
+            Assert.AreEqual(ShapeRelation.Contained, line.GetRelation((IShape2D)onLine));
+            Assert.IsTrue(line.Contains(onLine));
+            Assert.IsTrue(line.Covers(onLine));
+            Assert.IsTrue(line.Intersects(onLine));
+
+            LineSegment crossing = new(new Vector2(0, -1), new Vector2(0, 1));
+            Assert.AreEqual(ShapeRelation.Intersecting, line.GetRelation((IShape2D)crossing));
+            Assert.IsFalse(line.Contains(crossing));
+            Assert.IsTrue(line.Intersects(crossing));
+        }
     }
 }

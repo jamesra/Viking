@@ -88,7 +88,13 @@ namespace Geometry
     {
         public static Vector2 Round(this IPoint2D p, int precision) => new Vector2(Math.Round(p.X, precision), Math.Round(p.Y, precision));
 
-        public static Vector2 ToVector2(this IPoint2D p) => new Vector2(p.X, p.Y);
+        public static Vector2 ToVector2(this IPoint2D p)
+        {
+            if (p is Vector2 v)
+                return v;
+
+            return new Vector2(p.X, p.Y);
+        }
 
         public static Vector2[] ToVector2(this IEnumerable<IPoint2D> points)
         {
@@ -96,6 +102,31 @@ namespace Geometry
                 throw new ArgumentNullException(nameof(points));
 
             return points.Select(p => p.ToVector2()).ToArray();
+        }
+
+        public static LineSegment ToLineSegment(this ILineSegment2D line)
+        {
+            if (line is LineSegment l)
+                return l;
+
+            return new LineSegment(line.A, line.B);
+        }
+
+        public static Circle ToCircle(this ICircle2D c)
+        {
+            if (c is Circle circle)
+                return circle;
+
+            return new Circle(c.Center, c.Radius);
+        }
+
+        public static Triangle ToTriangle(this ITriangle2D t)
+        {
+            if (t is Triangle tri)
+                return tri;
+
+            Vector2[] points = [.. t.Points.Select(p => p.ToVector2())];
+            return new Triangle(points[0], points[1], points[2]);
         }
 
         public static Rectangle ToRectangle(this IRectangle2D rectangle)
@@ -107,6 +138,14 @@ namespace Geometry
                 return r;
 
             return new Rectangle(rectangle.Left, rectangle.Right, rectangle.Bottom, rectangle.Top);
+        }
+
+        public static Polygon ToPolygon(this IPolygon2D poly)
+        {
+            if (poly is Polygon p)
+                return p;
+
+            return new Polygon(poly.ExteriorRing, poly.InteriorRings);
         }
     }
 
@@ -1127,331 +1166,6 @@ namespace Geometry
             }
         }
 
-        /// <summary>
-        /// Returns the Polygon vertex which intersects the point, if any.  May return interior polygons
-        /// </summary>
-        /// <param name="polygon"></param>
-        /// <param name="WorldPosition"></param>
-        /// <param name="ControlPointRadius"></param>
-        /// <param name="intersectingPoly"></param>
-        /// <returns></returns>
-        public static bool PointIntersectsAnyPolygonVertex(this Polygon polygon, Vector2 WorldPosition, double ControlPointRadius, out Polygon intersectingPoly)
-        {
-            //Quick check to see if it is possible for a vertex to intersect
-            if (!PaddedPolygonContains(polygon, ControlPointRadius, WorldPosition))
-            {
-                intersectingPoly = null;
-                return false;
-            }
-
-            foreach (Polygon innerPoly in polygon.InteriorPolygons)
-            {
-                if (PointIntersectsAnyPolygonVertex(innerPoly, WorldPosition, ControlPointRadius, out intersectingPoly))
-                {
-                    return true;
-                }
-            }
-
-            Circle testCircle = new(WorldPosition, ControlPointRadius);
-            if (polygon.ExteriorRing.Any(v => testCircle.Covers(v)))
-            {
-                intersectingPoly = polygon;
-                return true;
-            }
-
-            intersectingPoly = null;
-            return false;
-        }
-
-        /// <summary>
-        /// Returns the Polygon segment which intersects the point, if any.  May return interior polygons
-        /// </summary>
-        /// <param name="polygon"></param>
-        /// <param name="WorldPosition"></param>
-        /// <param name="LineWidth"></param>
-        /// <param name="intersectingPoly"></param>
-        /// <returns></returns>
-        public static bool PointIntersectsAnyPolygonSegment(this Polygon polygon, Vector2 WorldPosition, double LineWidth, out Polygon intersectingPoly)
-        {
-            //Quick check to see if it is possible for a segment to intersect
-            if (!PaddedPolygonContains(polygon, LineWidth / 2.0f, WorldPosition))
-            {
-                intersectingPoly = null;
-                return false;
-            }
-
-            foreach (Polygon innerPoly in polygon.InteriorPolygons)
-            {
-                if (innerPoly.PointIntersectsAnyPolygonSegment(WorldPosition, LineWidth, out intersectingPoly))
-                {
-                    return true;
-                }
-            }
-
-            polygon.ExteriorSegments.NearestSegment(WorldPosition, out double MinDistance);
-            if (MinDistance < LineWidth / 2.0f)
-            {
-                intersectingPoly = polygon;
-                return true;
-            }
-
-            intersectingPoly = null;
-            return false;
-        }
-
-
-
-
-        /*
-     /// <summary>
-     /// Returns the Polygon segment which intersects the point, if any.  May return interior polygons
-     /// </summary>
-     /// <param name="polygon"></param>
-     /// <param name="WorldPosition"></param>
-     /// <param name="intersectingPoly"></param>
-     /// <returns></returns>
-     public static double NearestPolygonSegment(this Polygon polygon, Vector2 WorldPosition, out Polygon nearestPoly)
-     {
-         nearestPoly = null;
-         double nearestPolyDistance = double.MaxValue;
-
-         foreach (Polygon innerPoly in polygon.InteriorPolygons)
-         {
-             Polygon foundPolygon;
-             double distance = innerPoly.NearestPolygonSegment(WorldPosition, out foundPolygon);
-             if (distance < nearestPolyDistance)
-             {
-                 nearestPoly = innerPoly;
-                 nearestPolyDistance = distance;
-             }
-         }
-
-         double MinDistance;
-         polygon.ExteriorSegments.NearestSegment(WorldPosition, out MinDistance);
-         if (MinDistance < nearestPolyDistance)
-         {
-             nearestPoly = polygon;
-             nearestPolyDistance = MinDistance;
-         }
-
-         return nearestPolyDistance;
-     }
-     */
-        private static void AddIntersection(SortedDictionary<double, PolygonIndex> dict, double key, PolygonIndex index)
-        {
-            dict.Add(key, index);
-            /*
-            if(dict.ContainsKey(key))
-            {
-                throw new ArgumentException("Intersection dictionary already contains key: " + key.ToString());
-            }
-
-            dict[key] = index;*/
-
-            /*if (!dict.ContainsKey(key))
-            {
-                dict.Add(key, new List<PointIndex>());
-            }
-            
-            if (!dict[key].Contains(index))
-            {
-                dict[key].Add(index);
-            }
-            */
-            return;
-        }
-
-        /// <summary>
-        /// Returns point indicies of the segments of the polygon that intersect the line.
-        /// </summary>
-        /// <param name="polygon"></param>
-        /// <param name="WorldPosition"></param>
-        /// <param name="A"></param>
-        /// <param name="B"></param>
-        /// <returns>A dictionary of Polygon vertex indicies and a distance from that vertex.  </returns>
-        public static SortedDictionary<double, PolygonIndex> IntersectingSegments(this Polygon polygon, in LineSegment line)
-        {
-            SortedDictionary<double, PolygonIndex> output = [];
-
-            PolygonIndex[] candidates = [.. polygon.SegmentRTree.Intersects(line.BoundingBox)];
-
-            //Due to epsilon factors a single line may intersect the same vertex twice when a line passes near the vertex.
-            //We control this by keeping a list of verticies we've already added and not adding them again
-
-            List<PolygonIndex> AddedVerticies = [];
-
-            foreach (PolygonIndex index in candidates)
-            {
-                if (AddedVerticies.Contains(index)) //There is an error if we add a vertex twice, so don't.
-                    continue;
-
-                LineSegment segment = index.Segment(polygon);
-                if (segment.Intersects(in line, false, out IShape2D intersection))
-                {
-                    double distance;
-                    if (intersection is not IPoint2D p) //It is not a point, it is a line.  Therefore distance is zero
-                    {
-                        distance = 0;
-                        if (output.ContainsKey(distance)) //There is an error if we add an endpoint twice, so don't
-                            continue;
-
-                        ILineSegment2D seg = intersection as ILineSegment2D;
-                        AddIntersection(output, 0, index);
-                        AddedVerticies.Add(index);
-                    }
-                    else //Intersection is a point
-                    {
-                        Vector2 p2 = new(p.X, p.Y);
-                        distance = Vector2.Distance(line.A, p2);
-
-                        if (segment.IsEndpoint(p2))
-                        {
-                            if (output.ContainsKey(distance)) //There is an error if we add an endpoint twice, so don't
-                                continue;
-
-                            PolygonIndex intersection_index = index;
-                            //If the endpoint is equal to segment.B it will be added on the next loop iteration
-                            if (p2 == segment.B)
-                            {
-                                //If it is the next segment we can increment to the next segment and skip that iteration
-                                intersection_index = index.Next;
-                                if (AddedVerticies.Contains(intersection_index))
-                                    continue; //Skip if we've already added this index.  (Should we check for a different distance?)
-                            }
-
-                            AddIntersection(output, distance, intersection_index);
-                            AddedVerticies.Add(intersection_index);
-                        }
-                        else
-                        {
-                            AddIntersection(output, distance, index);
-                            AddedVerticies.Add(index);
-                        }
-                    }
-                }
-            }
-
-            /*
-            for (int iRing = 0; iRing < polygon.InteriorRings.Count; iRing++)
-            {
-                Polygon innerPoly = polygon.InteriorPolygons[iRing];// new Polygon(polygon.InteriorRings.ToArray()[iRing]);
-                SortedDictionary<double, PointIndex> ring_intersections = innerPoly.IntersectingSegments(line);
-                foreach (var item in ring_intersections)
-                {
-                    //foreach (var instance in item.Value)
-                    //{
-                    AddIntersection(output, item.Key, new PointIndex(0, iRing, item.Value.VertexIndex, innerPoly.ExteriorRing.Length - 1));
-                    //}
-                }
-            }
-            
-            for(int iSegment = 0; iSegment < polygon.ExteriorSegments.Length; iSegment++)
-            {
-                LineSegment segment = polygon.ExteriorSegments[iSegment];
-                if (segment.Intersects(line, false, out IShape2D intersection))
-                {
-                    IPoint2D p = intersection as IPoint2D;
-                    Vector2 p2 = new Vector2(p.X, p.Y);
-                    double distance = Vector2.Distance(line.A, p2);
-                    if (segment.IsEndpoint(p2))
-                    {
-                        //If the endpoint is equal to segment.B it will be added on the next loop iteration
-                        if (p2 == segment.B)
-                        {
-                            //If it is the next segment we can increment to the next segment and skip that iteration
-                            iSegment = iSegment + 1;
-                        }
-
-                        AddIntersection(output, distance, new PointIndex(0, iSegment, polygon.ExteriorSegments.Length));
-                    }
-                    else
-                    {
-                        
-                        AddIntersection(output, distance, new PointIndex(0, iSegment, polygon.ExteriorSegments.Length));
-                    }
-                }
-            } 
-            */
-            return output;
-        }
-
-        /// <summary>
-        /// Returns point indicies of the segments of the polygon that intersect the line.
-        /// </summary>
-        /// <param name="polygon"></param>
-        /// <param name="WorldPosition"></param>
-        /// <param name="A"></param>
-        /// <param name="B"></param>
-        /// <returns></returns>
-        public static SortedDictionary<double, PolygonIndex> IntersectingSegments(this Polygon polygon, LineSegment[] path)
-        {
-            SortedDictionary<double, PolygonIndex> output = [];
-
-            for (int iRing = 0; iRing < polygon.InteriorRings.Count; iRing++)
-            {
-                Polygon innerPoly = polygon.InteriorPolygons[iRing];// new Polygon(polygon.InteriorRings.ToArray()[iRing]);
-                SortedDictionary<double, PolygonIndex> ring_intersections = innerPoly.IntersectingSegments(path);
-                foreach (var item in ring_intersections)
-                {
-                    //foreach (var instance in item.Value)
-                    //{
-                    AddIntersection(output, item.Key, new PolygonIndex(0, iRing, item.Value.VertexIndex, innerPoly.ExteriorRing.Length - 1));
-                    //}
-                }
-            }
-
-            double total_length = 0;
-            for (int iPath = 0; iPath < path.Length; iPath++)
-            {
-                LineSegment line = path[iPath];
-
-                for (int iSegment = 0; iSegment < polygon.ExteriorSegments.Length; iSegment++)
-                {
-                    LineSegment segment = polygon.ExteriorSegments[iSegment];
-                    if (segment.Intersects(line, false, out IShape2D intersection))
-                    {
-                        IPoint2D p = intersection as IPoint2D;
-                        Vector2 p2 = new(p.X, p.Y);
-                        double distance = Vector2.Distance(line.A, p2) + total_length;
-                        if (segment.IsEndpoint(p2))
-                        {
-                            //If the endpoint is equal to segment.B it will be added on the next loop iteration
-                            if (p2 == segment.B)
-                            {
-                                //If it is the next segment we can increment to the next segment and skip that iteration
-                                iSegment++;
-                            }
-
-                            AddIntersection(output, distance, new PolygonIndex(0, iSegment, polygon.ExteriorSegments.Length));
-                        }
-                        else
-                        {
-
-                            AddIntersection(output, distance, new PolygonIndex(0, iSegment, polygon.ExteriorSegments.Length));
-                        }
-                    }
-                }
-
-                total_length += line.Length;
-            }
-
-            return output;
-        }
-
-
-        /// <summary>
-        /// A bounding box of a polygon padded to account for line width or point radius
-        /// </summary>
-        /// <param name="polygon"></param>
-        /// <param name="padding"></param>
-        /// <param name="Position"></param>
-        /// <returns></returns>
-        public static bool PaddedPolygonContains(Polygon polygon, double padding, Vector2 position)
-        {
-            Rectangle padded_bbox = polygon.BoundingBox + padding;
-            return padded_bbox.Covers(position);
-        }
-
         public static Rectangle BoundingBox(this IReadOnlyList<Polygon> polygons)
         {
             if (polygons is null)
@@ -1472,8 +1186,6 @@ namespace Geometry
 
             return bbox;
         }
-
-
     }
 
 }

@@ -5,7 +5,8 @@ using System.Linq;
 namespace Geometry
 {
     /// <summary>
-    /// Heterogeneous set of 2D shapes. Point/line <see cref="GetRelation"/> ORs child flags.
+    /// Heterogeneous set of 2D shapes. <see cref="GetRelation"/> ORs child flags;
+    /// <see cref="Contains"/>, <see cref="Covers"/>, and <see cref="Intersects"/> are any-child.
     /// </summary>
     public class Shape2DCollection : IShapeCollection2D
     {
@@ -52,6 +53,20 @@ namespace Geometry
             return _shapes.Any(s => s.Covers(pnt));
         }
 
+        public bool Contains(in Vector2 p) => Contains((IPoint2D)p);
+
+        public bool Contains(in IShape2D other)
+        {
+            IShape2D shp = other;
+            return _shapes.Any(s => s.Contains(shp));
+        }
+
+        public bool Covers(in IShape2D other)
+        {
+            IShape2D shp = other;
+            return _shapes.Any(s => s.Covers(shp));
+        }
+
         /// <summary>
         /// ORs child relations so a collection can report interior, boundary, and crossing together.
         /// Walks every child.
@@ -85,6 +100,21 @@ namespace Geometry
             return output;
         }
 
+        /// <summary>
+        /// ORs child relations for a shape. Walks every child. Contains/Covers/Intersects stay any-child.
+        /// </summary>
+        public ShapeRelation GetRelation(in IShape2D other)
+        {
+            Trace.WriteLine("GetRelation on a Shape2DCollection is computationally expensive");
+            ShapeRelation output = ShapeRelation.None;
+            foreach (var s in _shapes)
+            {
+                output |= s.GetRelation(other);
+            }
+
+            return output;
+        }
+
         public bool Intersects(in IShape2D shape)
         {
             IShape2D shp = shape;
@@ -100,6 +130,12 @@ namespace Geometry
             }
 
             return translated_shapes;
+        }
+
+        public override string ToString()
+        {
+            string types = string.Join(", ", _shapes.Select(s => s.ShapeType.ToString()));
+            return $"Collection[{_shapes.Count}: {types}]";
         }
 
         public bool Equals(IShape2D other)

@@ -15,7 +15,7 @@ namespace Geometry
         public readonly Vector2 A;
         public readonly Vector2 B;
 
-        public LineSegment(IPoint2D A, IPoint2D B) : this(A.Convert(), B.Convert())
+        public LineSegment(IPoint2D A, IPoint2D B) : this(A.ToVector2(), B.ToVector2())
         {
         }
 
@@ -632,25 +632,27 @@ namespace Geometry
             return seg.Any(ls => line.Intersects(ls));
         }
 
-        public bool Intersects(in IShape2D shape) => ShapeExtensions.LineIntersects(this, shape);
+        public bool Intersects(in IShape2D shape) => GetRelation(shape) != ShapeRelation.None;
 
         public bool Intersects(in ICircle2D c)
         {
-            Circle circle = c.Convert();
+            Circle circle = c.ToCircle();
             return this.Intersects(circle);
         }
 
         public bool Intersects(in Circle circle) => LineIntersectionExtensions.Intersects(this, circle);
 
+        public bool Intersects(in Rectangle rect) => LineIntersectionExtensions.Intersects(this, rect);
+
         public bool Intersects(in ILineSegment2D l)
         {
-            LineSegment line = l.Convert();
+            LineSegment line = l.ToLineSegment();
             return this.Intersects(line);
         }
 
         public bool Intersects(in ITriangle2D t)
         {
-            Triangle tri = t.Convert();
+            Triangle tri = t.ToTriangle();
             return this.Intersects(tri);
         }
 
@@ -658,11 +660,68 @@ namespace Geometry
 
         public bool Intersects(in IPolygon2D p)
         {
-            Polygon poly = p.Convert();
+            Polygon poly = p.ToPolygon();
             return this.Intersects(poly);
         }
 
-        public bool Intersects(in Polygon poly) => LineIntersectionExtensions.Intersects(this, poly);
+        public bool Intersects(in Polygon poly) => Intersects(poly, false, out List<Vector2> _);
+
+        public bool Intersects(in Polygon poly, out Vector2 intersection)
+        {
+            intersection = Vector2.Zero;
+            bool intersected = Intersects(poly, false, out List<Vector2> intersections);
+            if (intersected)
+                intersection = intersections.First();
+
+            return intersected;
+        }
+
+        public bool Intersects(in Polygon poly, bool endpointsOnRingDoNotIntersect) =>
+            Intersects(poly, endpointsOnRingDoNotIntersect, out List<Vector2> _);
+
+        /// <summary>
+        /// True if this segment meets any polygon ring segment. Optional endpoint filtering for closed-ring self-tests.
+        /// </summary>
+        public bool Intersects(in Polygon poly, bool endpointsOnRingDoNotIntersect, out List<Vector2> intersections)
+        {
+            intersections = [];
+
+            if (false == BoundingBox.Intersects(poly.BoundingBox))
+                return false;
+
+            Polygon polygon = poly;
+            List<LineSegment> listCandidates = [.. polygon.SegmentRTree.Intersects(BoundingBox).Select(p => p.Segment(polygon))];
+            LineSegment self = this;
+            foreach (LineSegment polyLine in listCandidates)
+            {
+                if (self.Intersects(polyLine, out Vector2 intersection))
+                    intersections.Add(intersection);
+            }
+
+            intersections = [.. intersections.Distinct()];
+            if (endpointsOnRingDoNotIntersect)
+                intersections = [.. intersections.Where(i => !self.IsEndpoint(i))];
+
+            return intersections.Count > 0;
+        }
+
+        /// <summary>
+        /// True if any portion of this segment lies in the polygon interior, or the segment is covered by the polygon.
+        /// </summary>
+        public bool Crosses(in Polygon poly) => Crosses(poly, out List<Vector2> _);
+
+        public bool Crosses(in Polygon poly, out List<Vector2> intersections)
+        {
+            intersections = [];
+
+            if (false == BoundingBox.Intersects(poly.BoundingBox))
+                return false;
+
+            if (Intersects(poly, true, out intersections))
+                return true;
+
+            return poly.Covers(this);
+        }
 
         public double MinX => A.X < B.X ? A.X : B.X;
 
@@ -690,6 +749,43 @@ namespace Geometry
 
         public bool Covers(in IPoint2D p) => GetRelation(p).IsCovers();
 
+        public bool Contains(in IShape2D other) => GetRelation(other).IsContains();
+
+        public bool Covers(in IShape2D other) => GetRelation(other).IsCovers();
+
+        public ShapeRelation GetRelation(in IShape2D other)
+        {
+            if (other is null)
+                throw new ArgumentNullException(nameof(other));
+
+            LineSegment self = this;
+            return other.ShapeType switch
+            {
+                ShapeType2D.Point => self.GetRelation((IPoint2D)other),
+                ShapeType2D.Line => self.GetRelation((ILineSegment2D)other),
+                ShapeType2D.Polyline => RelationToPolyline((IPolyLine2D)other),
+                ShapeType2D.Circle => RelationToClosedIfIntersects(self.Intersects(((ICircle2D)other).ToCircle())),
+                ShapeType2D.Rectangle => RelationToClosedIfIntersects(self.Intersects(((IRectangle2D)other).ToRectangle())),
+                ShapeType2D.Triangle => RelationToClosedIfIntersects(self.Intersects(((ITriangle2D)other).ToTriangle())),
+                ShapeType2D.Quad => RelationToClosedIfIntersects(((Quad)other).GetRelation(self) != ShapeRelation.None),
+                ShapeType2D.Polygon => RelationToClosedIfIntersects(((IPolygon2D)other).ToPolygon().GetRelation(self) != ShapeRelation.None),
+                ShapeType2D.InfiniteLine => RelationToClosedIfIntersects(((Line)other).Intersects(self, out _)),
+                ShapeType2D.Collection => ShapeRelationHelpers.RelationToCollection(self, (IShapeCollection2D)other),
+                _ => ShapeRelation.None,
+            };
+        }
+
+        static ShapeRelation RelationToClosedIfIntersects(bool intersects) =>
+            intersects ? ShapeRelation.Intersecting : ShapeRelation.None;
+
+        ShapeRelation RelationToPolyline(IPolyLine2D line)
+        {
+            List<ShapeRelation> parts = new(line.LineSegments.Count);
+            foreach (ILineSegment2D seg in line.LineSegments)
+                parts.Add(GetRelation(seg));
+            return ShapeRelationHelpers.CombineParts(parts);
+        }
+
         /// <summary>
         /// Endpoints are <see cref="ShapeRelation.Touching"/>; a point on the open segment is <see cref="ShapeRelation.Contained"/>.
         /// Uses <see cref="Covers(in Vector2)"/> for the closed-set test (do not invert that call).
@@ -707,9 +803,15 @@ namespace Geometry
             return ShapeRelation.Contained;
         }
 
-        public ShapeRelation GetRelation(in ILineSegment2D l) => GetRelation(l.Convert());
+        /// <summary>
+        /// Must use <see cref="GetRelation(LineSegment, out IShape2D)"/>. A one-arg
+        /// <c>GetRelation(ToLineSegment())</c> binds to <see cref="GetRelation(in ILineSegment2D)"/> and recurses.
+        /// </summary>
+        public ShapeRelation GetRelation(in LineSegment other) => GetRelation(other, out _);
 
-        public IShape2D Translate(in IPoint2D offset) => this.Translate(offset.Convert());
+        public ShapeRelation GetRelation(in ILineSegment2D l) => GetRelation(l.ToLineSegment());
+
+        public IShape2D Translate(in IPoint2D offset) => this.Translate(offset.ToVector2());
 
         public LineSegment Translate(in Vector2 offset) => new(this.A + offset, this.B + offset);
     }

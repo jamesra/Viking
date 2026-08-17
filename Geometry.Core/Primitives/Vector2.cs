@@ -513,6 +513,12 @@ namespace Geometry
         readonly bool IShape2D.Covers(in IPoint2D p) =>
             ((IShape2D)this).GetRelation(p).IsCovers();
 
+        readonly bool IShape2D.Contains(in IShape2D other) =>
+            ((IShape2D)this).GetRelation(other).IsContains();
+
+        readonly bool IShape2D.Covers(in IShape2D other) =>
+            ((IShape2D)this).GetRelation(other).IsCovers();
+
         /// <summary>
         /// Equal points are Contained. A point has no boundary, so this never returns Touching.
         /// </summary>
@@ -521,11 +527,23 @@ namespace Geometry
             return p is not null && Equals(p) ? ShapeRelation.Contained : ShapeRelation.None;
         }
 
-        readonly ShapeRelation IShape2D.GetRelation(in Geometry.ILineSegment2D l) => l.GetRelation(this);
+        readonly ShapeRelation IShape2D.GetRelation(in Geometry.ILineSegment2D l) => l.GetRelation((IPoint2D)this);
 
-        readonly bool IShape2D.Intersects(in IShape2D shape) => shape.Covers(this);
+        readonly ShapeRelation IShape2D.GetRelation(in IShape2D other)
+        {
+            if (other is null)
+                throw new ArgumentNullException(nameof(other));
 
-        readonly IShape2D IShape2D.Translate(in IPoint2D offset) => this + offset.Convert();
+            if (other.ShapeType == ShapeType2D.Point)
+                return ((IShape2D)this).GetRelation((IPoint2D)other);
+
+            return other.Covers((IPoint2D)this) ? ShapeRelation.Intersecting : ShapeRelation.None;
+        }
+
+        readonly bool IShape2D.Intersects(in IShape2D shape) =>
+            ((IShape2D)this).GetRelation(shape) != ShapeRelation.None;
+
+        readonly IShape2D IShape2D.Translate(in IPoint2D offset) => this + offset.ToVector2();
 
         public readonly int IsLeftSide(Vector2[] pqr) => Vector2.IsLeftSide(this, pqr);
 

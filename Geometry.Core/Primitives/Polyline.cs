@@ -436,6 +436,43 @@ namespace Geometry
 
         public bool Covers(in IPoint2D p) => GetRelation(p).IsCovers();
 
+        public bool Contains(in Vector2 p) => GetRelation((IPoint2D)p).IsContains();
+
+        public bool Contains(in IShape2D other) => GetRelation(other).IsContains();
+
+        public bool Covers(in IShape2D other) => GetRelation(other).IsCovers();
+
+        public ShapeRelation GetRelation(in IShape2D other)
+        {
+            if (other is null)
+                throw new ArgumentNullException(nameof(other));
+
+            return other.ShapeType switch
+            {
+                ShapeType2D.Point => GetRelation((IPoint2D)other),
+                ShapeType2D.Line => GetRelation(((ILineSegment2D)other).ToLineSegment()),
+                ShapeType2D.Polyline => RelationToPolyline((IPolyLine2D)other),
+                ShapeType2D.Collection => ShapeRelationHelpers.RelationToCollection(this, (IShapeCollection2D)other),
+                _ => RelationFromSegments(other),
+            };
+        }
+
+        ShapeRelation RelationToPolyline(IPolyLine2D other)
+        {
+            List<ShapeRelation> parts = new(other.LineSegments.Count);
+            foreach (ILineSegment2D seg in other.LineSegments)
+                parts.Add(GetRelation(seg.ToLineSegment()));
+            return ShapeRelationHelpers.CombineParts(parts);
+        }
+
+        ShapeRelation RelationFromSegments(IShape2D other)
+        {
+            List<ShapeRelation> parts = new(LineSegments.Count);
+            foreach (LineSegment seg in LineSegments)
+                parts.Add(seg.GetRelation(other));
+            return ShapeRelationHelpers.CombineParts(parts);
+        }
+
         public ShapeRelation GetRelation(in IPoint2D p)
         {
             if (_Points.Count == 0)
@@ -453,7 +490,7 @@ namespace Geometry
             return ShapeRelation.Contained;
         }
 
-        ShapeRelation IShape2D.GetRelation(in Geometry.ILineSegment2D line) => GetRelation(line.Convert());
+        ShapeRelation IShape2D.GetRelation(in Geometry.ILineSegment2D line) => GetRelation(line.ToLineSegment());
 
         public ShapeRelation GetRelation(in LineSegment line)
         {
@@ -469,11 +506,7 @@ namespace Geometry
             return output;
         }
 
-        public bool Intersects(in IShape2D shape)
-        {
-            IShape2D shp = shape;
-            return this.LineSegments.Any(line => line.Intersects(shp));
-        }
+        public bool Intersects(in IShape2D shape) => GetRelation(shape) != ShapeRelation.None;
 
         IShape2D IShape2D.Translate(in IPoint2D offset) => this.Translate(offset);
 

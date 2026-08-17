@@ -251,21 +251,21 @@ namespace Geometry
             //throw new ArgumentException(string.Format("Unexpected rectangle intersection case {0} {1}", rect, this));
         }
 
-        public bool Intersects(in IShape2D shape) => ShapeExtensions.RectangleIntersects(this, shape);
+        public bool Intersects(in IShape2D shape) => GetRelation(shape) != ShapeRelation.None;
 
-        public bool Intersects(in ICircle2D c) => Intersects(c.Convert());
+        public bool Intersects(in ICircle2D c) => Intersects(c.ToCircle());
 
         public bool Intersects(in Circle circle) => RectangleIntersectionExtensions.Intersects(this, circle);
 
-        public bool Intersects(in ILineSegment2D l) => Intersects(l.Convert());
+        public bool Intersects(in ILineSegment2D l) => Intersects(l.ToLineSegment());
 
         public bool Intersects(in LineSegment line) => RectangleIntersectionExtensions.Intersects(this, line);
 
-        public bool Intersects(in ITriangle2D t) => Intersects(t.Convert());
+        public bool Intersects(in ITriangle2D t) => Intersects(t.ToTriangle());
 
         public bool Intersects(in Triangle tri) => RectangleIntersectionExtensions.Intersects(this, tri);
 
-        public bool Intersects(in IPolygon2D p) => Intersects(p.Convert());
+        public bool Intersects(in IPolygon2D p) => Intersects(p.ToPolygon());
 
         public bool Intersects(in Polygon poly) => RectangleIntersectionExtensions.Intersects(this, poly);
 
@@ -302,6 +302,48 @@ namespace Geometry
         public bool Contains(in IPoint2D pos) => GetRelation(pos).IsContains();
 
         public bool Covers(in IPoint2D pos) => GetRelation(pos).IsCovers();
+
+        public ShapeRelation GetRelation(in Vector2 p) => GetRelation((IPoint2D)p);
+
+        public bool Contains(in Vector2 p) => GetRelation((IPoint2D)p).IsContains();
+
+        public bool Contains(in IShape2D other) => GetRelation(other).IsContains();
+
+        public bool Covers(in IShape2D other) => GetRelation(other).IsCovers();
+
+        public ShapeRelation GetRelation(in IShape2D other)
+        {
+            if (other is null)
+                throw new ArgumentNullException(nameof(other));
+
+            return other.ShapeType switch
+            {
+                ShapeType2D.Point => GetRelation((IPoint2D)other),
+                ShapeType2D.Line => GetRelation((ILineSegment2D)other),
+                ShapeType2D.Rectangle => GetRelation(((IRectangle2D)other).ToRectangle()),
+                ShapeType2D.Circle => RelationToCircle(((ICircle2D)other).ToCircle()),
+                ShapeType2D.Triangle => ShapeRelationHelpers.RectangleAsPolygon(this)
+                    .GetRelation(ShapeRelationHelpers.TriangleAsPolygon(((ITriangle2D)other).ToTriangle())),
+                ShapeType2D.Quad => ShapeRelationHelpers.RectangleAsPolygon(this)
+                    .GetRelation(ShapeRelationHelpers.QuadAsPolygon((Quad)other)),
+                ShapeType2D.Polygon => ShapeRelationHelpers.RectangleAsPolygon(this)
+                    .GetRelation(((IPolygon2D)other).ToPolygon()),
+                ShapeType2D.Polyline => ShapeRelationHelpers.RelationToPolyline(this, (IPolyLine2D)other),
+                ShapeType2D.InfiniteLine => ShapeRelationHelpers.RectangleAsPolygon(this).GetRelation(other),
+                ShapeType2D.Collection => ShapeRelationHelpers.RelationToCollection(this, (IShapeCollection2D)other),
+                _ => ShapeRelation.None,
+            };
+        }
+
+        ShapeRelation RelationToCircle(in Circle circle)
+        {
+            ShapeRelation bboxRel = GetRelation(circle.BoundingBox);
+            if (bboxRel.IsContains() || bboxRel.IsCovers())
+                return bboxRel;
+            return RectangleIntersectionExtensions.Intersects(this, circle)
+                ? ShapeRelation.Intersecting
+                : ShapeRelation.None;
+        }
 
         public ShapeRelation GetRelation(in IPoint2D pos)
         {
@@ -347,7 +389,7 @@ namespace Geometry
             {
                 //Check if the line is touching the same segment in two places
                 foreach (LineSegment e in this.Segments)
-                    if (e.Intersects(line.A.Convert()) && e.Intersects(line.B.Convert()))
+                    if (e.Intersects(line.A.ToVector2()) && e.Intersects(line.B.ToVector2()))
                         return ShapeRelation.Touching;
 
                 return ShapeRelation.Contained;
@@ -591,7 +633,7 @@ namespace Geometry
             return new Rectangle(MinX, MaxX, MinY, MaxY);
         }
 
-        public IShape2D Translate(in IPoint2D offset) => this.Translate(offset.Convert());
+        public IShape2D Translate(in IPoint2D offset) => this.Translate(offset.ToVector2());
 
         public Rectangle Translate(in Vector2 offset) => new Rectangle(this.LowerLeft + offset, this.UpperRight + offset);
 

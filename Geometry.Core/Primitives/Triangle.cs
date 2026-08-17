@@ -231,6 +231,73 @@ namespace Geometry
 
         public bool Covers(in IPoint2D point) => GetRelation(point).IsCovers();
 
+        public bool Contains(in Vector2 p) => GetRelation((IPoint2D)p).IsContains();
+
+        public bool Covers(in Vector2 p) => GetRelation((IPoint2D)p).IsCovers();
+
+        public ShapeRelation GetRelation(in Vector2 p) => GetRelation((IPoint2D)p);
+
+        public bool Contains(in IShape2D other) => GetRelation(other).IsContains();
+
+        public bool Covers(in IShape2D other) => GetRelation(other).IsCovers();
+
+        public ShapeRelation GetRelation(in IShape2D other)
+        {
+            if (other is null)
+                throw new ArgumentNullException(nameof(other));
+
+            return other.ShapeType switch
+            {
+                ShapeType2D.Point => GetRelation((IPoint2D)other),
+                ShapeType2D.Line => GetRelation(((ILineSegment2D)other).ToLineSegment()),
+                ShapeType2D.Circle => RelationToCircle(((ICircle2D)other).ToCircle()),
+                ShapeType2D.Triangle => RelationToTriangle(((ITriangle2D)other).ToTriangle()),
+                ShapeType2D.Rectangle => ShapeRelationHelpers.TriangleAsPolygon(this)
+                    .GetRelation(ShapeRelationHelpers.RectangleAsPolygon(((IRectangle2D)other).ToRectangle())),
+                ShapeType2D.Quad => ShapeRelationHelpers.TriangleAsPolygon(this)
+                    .GetRelation(ShapeRelationHelpers.QuadAsPolygon((Quad)other)),
+                ShapeType2D.Polygon => ShapeRelationHelpers.TriangleAsPolygon(this)
+                    .GetRelation(((IPolygon2D)other).ToPolygon()),
+                ShapeType2D.Polyline => ShapeRelationHelpers.RelationToPolyline(this, (IPolyLine2D)other),
+                ShapeType2D.InfiniteLine => ShapeRelationHelpers.TriangleAsPolygon(this).GetRelation(other),
+                ShapeType2D.Collection => ShapeRelationHelpers.RelationToCollection(this, (IShapeCollection2D)other),
+                _ => ShapeRelation.None,
+            };
+        }
+
+        ShapeRelation RelationToCircle(in Circle circle)
+        {
+            Circle c = circle;
+            if (!Intersects(c))
+                return ShapeRelation.None;
+
+            ShapeRelation center = GetRelation((IPoint2D)c.Center);
+            bool boundary = false;
+            foreach (LineSegment s in Segments)
+            {
+                if (c.Intersects(s))
+                {
+                    boundary = true;
+                    break;
+                }
+            }
+            if (center.IsContains() && !boundary)
+                return ShapeRelation.Contained;
+            if (center.IsCovers() && !boundary)
+                return ShapeRelation.Touching;
+            return ShapeRelation.Intersecting;
+        }
+
+        ShapeRelation RelationToTriangle(in Triangle other)
+        {
+            bool allCovered = Covers((IPoint2D)other.P1) && Covers((IPoint2D)other.P2) && Covers((IPoint2D)other.P3);
+            if (allCovered)
+                return GetRelation((IPoint2D)other.Centroid).IsContains()
+                    ? ShapeRelation.Contained
+                    : ShapeRelation.Touching;
+            return Intersects(other) ? ShapeRelation.Intersecting : ShapeRelation.None;
+        }
+
         /// <summary>
         /// Barycentric classification. A bounding-box miss is None; bbox false positives from
         /// unrounded GridTransform results should be fixed at the transform, not by skipping this cull.
@@ -238,7 +305,7 @@ namespace Geometry
         /// </summary>
         public ShapeRelation GetRelation(in IPoint2D p)
         {
-            if (false == BoundingBox.Covers(p))
+            if (false == BoundingBox.Covers((IPoint2D)p))
                 return ShapeRelation.None;
 
             Vector2 uv = Barycentric(p);
@@ -299,9 +366,9 @@ namespace Geometry
             return ShapeRelation.None;
         }
 
-        ShapeRelation IShape2D.GetRelation(in Geometry.ILineSegment2D line) => GetRelation(line.Convert());
+        ShapeRelation IShape2D.GetRelation(in Geometry.ILineSegment2D line) => GetRelation(line.ToLineSegment());
 
-        public Vector2 Barycentric(in IPoint2D p) => Barycentric(p.Convert());
+        public Vector2 Barycentric(in IPoint2D p) => Barycentric(p.ToVector2());
 
         /// <summary>
         /// Barycentric (u, v) of <paramref name="point"/> relative to P1, with w = 1 − u − v.
@@ -354,19 +421,19 @@ namespace Geometry
 
         public Vector2 BaryToVector(in Vector2 bary) => Vector2.FromBarycentric(P1, P2, P3, bary.X, bary.Y);
 
-        public bool Intersects(in IShape2D shape) => ShapeExtensions.TriangleIntersects(this, in shape);
+        public bool Intersects(in IShape2D shape) => GetRelation(shape) != ShapeRelation.None;
 
         public bool Intersects(in Rectangle r) => RectangleIntersectionExtensions.Intersects(r, this);
 
-        public bool Intersects(in ICircle2D c) => Intersects(c.Convert());
+        public bool Intersects(in ICircle2D c) => Intersects(c.ToCircle());
 
         public bool Intersects(in Circle circle) => TriangleIntersectionExtensions.Intersects(this, circle);
 
-        public bool Intersects(in ILineSegment2D l) => Intersects(l.Convert());
+        public bool Intersects(in ILineSegment2D l) => Intersects(l.ToLineSegment());
 
         public bool Intersects(in LineSegment line) => TriangleIntersectionExtensions.Intersects(this, line);
 
-        public bool Intersects(in ITriangle2D t) => Intersects(t.Convert());
+        public bool Intersects(in ITriangle2D t) => Intersects(t.ToTriangle());
 
         public bool Intersects(in Triangle other)
         {
@@ -397,13 +464,13 @@ namespace Geometry
             return false;
         }
 
-        public bool Intersects(in IPolygon2D p) => Intersects(p.Convert());
+        public bool Intersects(in IPolygon2D p) => Intersects(p.ToPolygon());
 
         public bool Intersects(in Polygon poly) => TriangleIntersectionExtensions.Intersects(this, poly);
 
         public IShape2D Translate(in IPoint2D offset)
         {
-            Vector2 vector = offset.Convert();
+            Vector2 vector = offset.ToVector2();
             return new Triangle([.. this.Points.Select(p => p + vector)]);
         }
 

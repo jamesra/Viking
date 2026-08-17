@@ -117,7 +117,7 @@ namespace MorphologyMesh
                 IEnumerable<IShape2D> lowersAtZ = ctx.ShapesAtZ
                     .Where(s => s.IsUpper == false && Math.Abs(s.Z - faceZ) <= zTol)
                     .Select(s => s.Shape);
-                if (lowersAtZ.Any(p => p.GetRelation(faceCenter) == ShapeRelation.Contained))
+                if (lowersAtZ.Any(p => p.GetRelation((IPoint2D)faceCenter) == ShapeRelation.Contained))
                     return false;
                 return true;
             }
@@ -125,7 +125,7 @@ namespace MorphologyMesh
             IEnumerable<IShape2D> uppersAtZ = ctx.ShapesAtZ
                 .Where(s => s.IsUpper && Math.Abs(s.Z - faceZ) <= zTol)
                 .Select(s => s.Shape);
-            if (uppersAtZ.Any(p => p.GetRelation(faceCenter) == ShapeRelation.Contained))
+            if (uppersAtZ.Any(p => p.GetRelation((IPoint2D)faceCenter) == ShapeRelation.Contained))
                 return false;
             return true;
         }

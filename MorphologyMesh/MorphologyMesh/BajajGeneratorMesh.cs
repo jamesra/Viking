@@ -581,14 +581,14 @@ namespace MorphologyMesh
 
             if (CheckAgainstUpperPolygons == false)
             {
-                if (this.LowerShapes.Any(p => p.GetRelation(face_center) == ShapeRelation.Contained))
+                if (this.LowerShapes.Any(p => p.GetRelation((IPoint2D)face_center) == ShapeRelation.Contained))
                     return false;
 
                 return true;
             }
             else
             {
-                if (this.UpperShapes.Any(p => p.GetRelation(face_center) == ShapeRelation.Contained))
+                if (this.UpperShapes.Any(p => p.GetRelation((IPoint2D)face_center) == ShapeRelation.Contained))
                     return false;
 
                 return true;

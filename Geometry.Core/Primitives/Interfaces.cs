@@ -135,8 +135,9 @@ namespace Geometry
     }
 
     /// <summary>
-    /// 2D geometry with OGC-style predicates. <see cref="GetRelation(in IPoint2D)"/> is the
-    /// source of truth; <see cref="Contains"/> and <see cref="Covers"/> are wrappers.
+    /// 2D geometry with OGC-style predicates. <see cref="GetRelation(in IPoint2D)"/> and
+    /// <see cref="GetRelation(in IShape2D)"/> are the source of truth; <see cref="Contains"/>,
+    /// <see cref="Covers"/>, and (except collections) <see cref="Intersects"/> are wrappers.
     /// </summary>
     public interface IShape2D : IEquatable<IShape2D>
     {
@@ -171,8 +172,34 @@ namespace Geometry
         ShapeRelation GetRelation(in ILineSegment2D line);
 
         /// <summary>
+        /// Classifies how <paramref name="other"/> sits relative to this shape.
+        /// Source of truth for shape–shape <see cref="Contains(in IShape2D)"/> and <see cref="Covers(in IShape2D)"/>.
+        /// For non-collection types, <see cref="Intersects"/> is <c>GetRelation(other) != ShapeRelation.None</c>.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Shape2DCollection"/> ORs child flags here, but <see cref="Contains(in IShape2D)"/>,
+        /// <see cref="Covers(in IShape2D)"/>, and <see cref="Intersects"/> stay any-child so a disjoint
+        /// sibling does not hide a hit.
+        /// </remarks>
+        ShapeRelation GetRelation(in IShape2D other);
+
+        /// <summary>
+        /// OGC Contains: <paramref name="other"/>'s interior lies in this shape's interior.
+        /// Boundary-only contact is false. Wrapper over <see cref="GetRelation(in IShape2D)"/> except
+        /// <see cref="Shape2DCollection"/> (any child Contains).
+        /// </summary>
+        bool Contains(in IShape2D other);
+
+        /// <summary>
+        /// OGC Covers: no point of <paramref name="other"/> is outside this closed shape.
+        /// Wrapper over <see cref="GetRelation(in IShape2D)"/> except <see cref="Shape2DCollection"/> (any child Covers).
+        /// </summary>
+        bool Covers(in IShape2D other);
+
+        /// <summary>
         /// True when this shape and <paramref name="shape"/> are not disjoint (interiors or boundaries meet).
-        /// Containment counts as intersecting.
+        /// Containment counts as intersecting. Non-collection types: <c>GetRelation(shape) != None</c>.
+        /// <see cref="Shape2DCollection"/> is any-child, not the OR of <see cref="GetRelation(in IShape2D)"/>.
         /// </summary>
         bool Intersects(in IShape2D shape);
 

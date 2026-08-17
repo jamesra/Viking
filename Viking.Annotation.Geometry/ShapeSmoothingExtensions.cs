@@ -33,7 +33,7 @@ namespace Viking.Annotation.Geometry
             switch (shapeType)
             {
                 case LocationType.POINT:
-                    return points[0].Convert();
+                    return points[0].ToVector2();
                 case LocationType.CIRCLE:
                     return points.ToCircle();
                 case LocationType.OPENCURVE:

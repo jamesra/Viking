@@ -1874,7 +1874,7 @@ namespace GeometryTests
         /// <param name="poly"></param>
         /// <param name="line"></param>
         /// <returns></returns>
-        public static bool Theorem4(Polygon poly, LineSegment line) => !LineIntersectionExtensions.Intersects(line, poly, true, out List<Vector2> intersections);
+        public static bool Theorem4(Polygon poly, LineSegment line) => !line.Intersects(poly, true, out List<Vector2> intersections);
 
     }
 }
