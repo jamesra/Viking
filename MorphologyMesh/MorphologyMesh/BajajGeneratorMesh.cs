@@ -529,23 +529,24 @@ namespace MorphologyMesh
 
             bool CheckAgainstUpperPolygons; //True if we check if the centroid is contained in upper polygons, false if centroid needs to be checked against lower polygons
             //Check if the normal is oriented up or down.  If it is up, then check that the face centroid is not contained within the upper polygons, and vice versa.
-            if (n.Z == 0)
+            if (Math.Abs(n.Z) < Global.Epsilon)
             {
-                //Todo: Special case
-                if (f.IsTriangle())
-                {
-                    //First find the vertex that is not part of the corresponding pair that created this face.  Note that corresponding verts can be adjacent within a polygon,
-                    //so if the vertex is corresponding it could stil be the extra vertex of the triangle if its corresponding vertex is not part of the face.
-                    MorphMeshVertex noncorresponding = verts.Where(v => v.Corresponding.HasValue == false || f.iVerts.Contains(v.Corresponding.Value) == false).First();
-                    int iNonCorresponding = Array.IndexOf(verts, noncorresponding);
-                    bool NonCorrespondingIsUpper = IsUpperShape[noncorresponding.ShapeIndex.ShapeIndex];
+                if (f.IsTriangle() == false)
+                    return true;
+
+                //First find the vertex that is not part of the corresponding pair that created this face.  Note that corresponding verts can be adjacent within a polygon,
+                //so if the vertex is corresponding it could stil be the extra vertex of the triangle if its corresponding vertex is not part of the face.
+                MorphMeshVertex noncorresponding = verts.Where(v => v.Corresponding.HasValue == false || f.iVerts.Contains(v.Corresponding.Value) == false).First();
+                if (noncorresponding.ShapeIndex is null)
+                    return true;
+
+                int iNonCorresponding = Array.IndexOf(verts, noncorresponding);
+                bool NonCorrespondingIsUpper = IsUpperShape[noncorresponding.ShapeIndex.ShapeIndex];
 
                     InfiniteSequentialIndexSet faceIndexer = new(0, f.iVerts.Length, 0);
 
                     MorphMeshVertex nextVert = verts[faceIndexer[iNonCorresponding + 1]];
                     MorphMeshVertex prevVert = verts[faceIndexer[iNonCorresponding - 1]];
-                    //Find the line segment between the two adjacent verts on the same Z level
-                    LineSegment seg;
                     bool output;
                     if (nextVert.ShapeIndex == noncorresponding.ShapeIndex.Next)
                     {
@@ -562,11 +563,6 @@ namespace MorphologyMesh
                     }
 
                     return noncorresponding.ShapeIndex.IsInner ? !output : output;
-                }
-                else
-                {
-                    return true; //Not implemented
-                }
             }
             else if (n.Z < 0)
             {

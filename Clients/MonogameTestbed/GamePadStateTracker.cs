@@ -31,8 +31,8 @@ namespace MonogameTestbed
 
             try
             {
-                var padcaps = GamePad.GetCapabilities(PlayerIndex.One);
-                if (GamePad.GetCapabilities(PlayerIndex.One).IsConnected)
+                var padcaps = GamePad.GetCapabilities(index);
+                if (padcaps.IsConnected)
                 {
                     return padcaps.HasLeftXThumbStick && padcaps.HasLeftYThumbStick && padcaps.HasRightXThumbStick &&
                            padcaps.HasRightYThumbStick;

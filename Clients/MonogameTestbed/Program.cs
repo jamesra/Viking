@@ -9,7 +9,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using MathNet.Numerics;
 using VikingXNAGraphics;
 
@@ -127,63 +126,40 @@ namespace MonogameTestbed
 
             private static readonly Regex IntegerRegex = MyRegex();
             private static readonly Regex IntegerRangeRegex = new(@"^(\d+)\-(\d+)$");
-            private static readonly Regex IntegerOrIntegerRangeRegex = new(@"^((\d+)\-(\d+))|(\d+)$");
+            private static readonly Regex IntegerOrIntegerRangeRegex = new(@"^(\d+-\d+|\d+)$");
 
             /// <summary>
-            /// Convert a number string, or a string of two integers seperated by a hyphen to a list of integers
+            /// Convert a number string, or a string of two integers separated by a hyphen, to a list of integers.
             /// </summary>
-            /// <param name="input"></param>
-            /// <returns></returns>
             private static List<ulong> NumberRangeToList(string input)
             {
-                List<ulong> listNumbers;
+                if (IsInteger(input))
+                    return [Convert.ToUInt64(input)];
 
-                try
-                {
-                    ulong SectionNumber = System.Convert.ToUInt64(input);
-                    listNumbers =
-                    [
-                        SectionNumber
-                    ];
-                    return listNumbers;
-                }
-                catch (FormatException e)
-                {
-                    Match m = IntegerRangeRegex.Match(input);
+                Match m = IntegerRangeRegex.Match(input);
+                if (!m.Success)
+                    throw new ArgumentException($"'{input}' is not an integer or integer range");
 
-                    ulong start = System.Convert.ToUInt64(m.Groups[1].Value);
-                    ulong end = System.Convert.ToUInt64(m.Groups[2].Value);
+                ulong start = Convert.ToUInt64(m.Groups[1].Value);
+                ulong end = Convert.ToUInt64(m.Groups[2].Value);
+                if (start > end)
+                    (start, end) = (end, start);
 
-                    listNumbers = new List<ulong>((int)(end - start) + 1);
+                var listNumbers = new List<ulong>((int)(end - start) + 1);
+                for (ulong val = start; val <= end; val++)
+                    listNumbers.Add(val);
 
-                    for (ulong val = start; val <= end; val++)
-                    {
-                        listNumbers.Add(val);
-                    }
-
-                    return listNumbers;
-                }
+                return listNumbers;
             }
 
-            private static bool IsIntegerRange(string input)
-            {
-                var match = IntegerRangeRegex.Match(input);
-                return match.Success;
-            }
+            private static bool IsIntegerRange(string input) => IntegerRangeRegex.IsMatch(input);
 
-            private static bool IsInteger(string input)
-            {
-                var match = IntegerRegex.Match(input);
-                return match.Success;
-            }
+            private static bool IsInteger(string input) => IntegerRegex.IsMatch(input);
 
-            private static bool IsIntegerOrIntegerRange(string input)
-            {
-                var match = IntegerRegex.Match(input);
-                return match.Success;
-            }
+            private static bool IsIntegerOrIntegerRange(string input) => IntegerOrIntegerRangeRegex.IsMatch(input);
 
-            private static List<ulong> InputParameterListToIDs(IEnumerable<string> input) => [.. input.SelectMany(param => InputParameterListToIDs(param))];
+            private static List<ulong> InputParameterListToIDs(IEnumerable<string> input) =>
+                [.. (input ?? []).SelectMany(InputParameterListToIDs)];
 
             private static List<ulong> InputParameterListToIDs(string input)
             {
@@ -196,15 +172,15 @@ namespace MonogameTestbed
                     {
                         if (IsInteger(chunk))
                         {
-                            listNumbers.Add(System.Convert.ToUInt64(chunk));
+                            listNumbers.Add(Convert.ToUInt64(chunk));
                         }
                         else if (IsIntegerRange(chunk))
                         {
-                            listNumbers.AddRange(NumberRangeToList(input));
+                            listNumbers.AddRange(NumberRangeToList(chunk));
                         }
                         else
                         {
-                            throw new ArgumentException($"Unexpected argument in ID list ${chunk}");
+                            throw new ArgumentException($"Unexpected argument in ID list {chunk}");
                         }
                     }
                     else
@@ -219,24 +195,20 @@ namespace MonogameTestbed
             private static List<ulong> ParseFile(string filename)
             {
                 List<ulong> results = [];
-                if (System.IO.File.Exists(filename))
-                {
-                    try
-                    {
-                        foreach (string line in System.IO.File.ReadLines(filename))
-                        {
-                            var IDs = InputParameterListToIDs(line);
-                            results.AddRange(IDs);
-                        }
-                    }
-                    catch
-                    {
+                if (!File.Exists(filename))
+                    throw new ArgumentException($"File argument {filename} was not found, is it in the path?");
 
+                try
+                {
+                    foreach (string line in File.ReadLines(filename))
+                    {
+                        results.AddRange(InputParameterListToIDs(line));
                     }
                 }
-                else
+                catch (Exception e) when (e is not ArgumentException)
                 {
-                    throw new ArgumentException($"File argument ${filename} was not found, is it in the path?");
+                    Console.WriteLine($"Failed to parse ID file {filename}: {e.Message}");
+                    throw;
                 }
 
                 return results;
@@ -258,8 +230,8 @@ namespace MonogameTestbed
             /// </summary>
             internal void ProcessStrings()
             {
-                this.LocationIDs = InputParameterListToIDs(LocationIDParams);
-                this.StructureIDs = InputParameterListToIDs(StructureIDParams);
+                this.LocationIDs = InputParameterListToIDs(LocationIDParams ?? []);
+                this.StructureIDs = InputParameterListToIDs(StructureIDParams ?? []);
             }
 
             [GeneratedRegex(@"^(\d+)$")]
@@ -275,7 +247,7 @@ namespace MonogameTestbed
         static string LogFullPath => System.IO.Path.Combine(LogPath, LogFile);
 
         static TextWriter SynchronizedLogWriter = null;
-        static readonly TextWriterTraceListener LogListener = null;
+        static TextWriterTraceListener LogListener = null;
         static ILoggerFactory LoggerFactory = null;
         static ILogger Logger = null;
 
@@ -293,11 +265,6 @@ namespace MonogameTestbed
 
 #if DEBUG
                 Console.WriteLine($"App Domain Base Directory: {AppDomain.CurrentDomain.BaseDirectory}");
-                //Console.WriteLine("Press any key to continue");
-                //while (Console.Read() < 0)
-                {
-                    System.Threading.Tasks.Task.Delay(10000).Wait();
-                }
 #endif
 
                 var result = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
@@ -353,7 +320,7 @@ namespace MonogameTestbed
                     CreateLogger();
                 }
 
-                if (Program.options.Verbose)
+                if (Program.options.Verbose && LoggerFactory is null)
                 {
                     LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
                     {
@@ -416,9 +383,13 @@ namespace MonogameTestbed
             if (!Directory.Exists(LogPath))
                 Directory.CreateDirectory(LogPath);
 
-            DebugLogFile = System.IO.File.CreateText(LogFullPath);
+            DebugLogFile = File.CreateText(LogFullPath);
+            DebugLogFile.AutoFlush = true;
 
-            SynchronizedLogWriter = StreamWriter.Synchronized(DebugLogFile);
+            SynchronizedLogWriter = TextWriter.Synchronized(DebugLogFile);
+            LogListener = new TextWriterTraceListener(SynchronizedLogWriter, "MonogameTestbedLog");
+            Trace.Listeners.Add(LogListener);
+            Trace.AutoFlush = true;
 
             LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
             {
@@ -431,6 +402,14 @@ namespace MonogameTestbed
 
         private static void StopLogger()
         {
+            if (LogListener != null)
+            {
+                Trace.Listeners.Remove(LogListener);
+                LogListener.Flush();
+                LogListener.Dispose();
+                LogListener = null;
+            }
+
             if (LoggerFactory != null)
             {
                 LoggerFactory.Dispose();
@@ -440,6 +419,7 @@ namespace MonogameTestbed
 
             SynchronizedLogWriter?.Close();
             SynchronizedLogWriter = null;
+            DebugLogFile = null;
         }
 
 

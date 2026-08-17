@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
@@ -79,6 +80,7 @@ namespace MonogameTestbed
         readonly VikingDelaunay2DTest constrainedDelaunay2DTest = new();
         readonly PolygonIntersectionTest polygonIntersectionTest = new();
         readonly LabeledRectangleTests labeledRectangleTests = new();
+        readonly PolywrappingTest polywrappingTest = new();
         readonly SortedDictionary<TestMode, IGraphicsTest> listTests = [];
 
         /// <summary>
@@ -86,7 +88,9 @@ namespace MonogameTestbed
         /// </summary>
         private TestMode Mode = TestMode.BAJAJMULTITEST;
 
+        private readonly object _initLock = new();
         private readonly HashSet<TestMode> _initStartedModes = [];
+        private readonly HashSet<TestMode> _initFailedModes = [];
 
         LabelView testLabel = null;
 
@@ -231,6 +235,7 @@ namespace MonogameTestbed
             listTests.Add(TestMode.CLOSEDCURVE, closedCurveTest);
             listTests.Add(TestMode.POLYGON2D, polygon2DTest);
             listTests.Add(TestMode.MESH, meshTest);
+            listTests.Add(TestMode.POLYWRAPPING, polywrappingTest);
             listTests.Add(TestMode.GEOMETRY, geometryTest);
             listTests.Add(TestMode.MORPHOLOGY, morphologyTest);
             listTests.Add(TestMode.TRIANGLEALGORITHM, triangleTest);
@@ -343,16 +348,72 @@ namespace MonogameTestbed
                 return;
             }
 
-            if (!listTests[Mode].Initialized && !_initStartedModes.Contains(Mode))
-            {
-                _initStartedModes.Add(Mode);
-                _ = listTests[Mode].Init(this);
-            }
-
             if (StartMode != this.Mode)
             {
+                AllowInitRetry(Mode);
                 testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperRight, anchor: Anchor.TopRight, scaleFontWithScene: true);
             }
+
+            BeginTestInit(Mode);
+        }
+
+        /// <summary>
+        /// Starts Init once per mode. Faults are logged and the mode can be retried after switching away and back.
+        /// Synchronous throws from Init are caught so the game loop is not aborted.
+        /// </summary>
+        private void BeginTestInit(TestMode mode)
+        {
+            IGraphicsTest test;
+            lock (_initLock)
+            {
+                if (!listTests.TryGetValue(mode, out test) || test.Initialized)
+                    return;
+                if (_initStartedModes.Contains(mode) || _initFailedModes.Contains(mode))
+                    return;
+                _initStartedModes.Add(mode);
+            }
+
+            try
+            {
+                Task initTask = test.Init(this);
+                _ = initTask.ContinueWith(t =>
+                {
+                    lock (_initLock)
+                    {
+                        _initStartedModes.Remove(mode);
+                        _initFailedModes.Add(mode);
+                    }
+
+                    Exception ex = t.Exception?.GetBaseException() ?? t.Exception;
+                    string msg = $"Init failed for {mode}: {ex}";
+                    Console.WriteLine(msg);
+                    Trace.WriteLine(msg);
+                }, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+            }
+            catch (Exception ex)
+            {
+                lock (_initLock)
+                {
+                    _initStartedModes.Remove(mode);
+                    _initFailedModes.Add(mode);
+                }
+
+                string msg = $"Init failed for {mode}: {ex}";
+                Console.WriteLine(msg);
+                Trace.WriteLine(msg);
+            }
+        }
+
+        private bool IsInitFailed(TestMode mode)
+        {
+            lock (_initLock)
+                return _initFailedModes.Contains(mode);
+        }
+
+        private void AllowInitRetry(TestMode mode)
+        {
+            lock (_initLock)
+                _initFailedModes.Remove(mode);
         }
 
         private void UpdateEffectMatricies(Scene drawnScene)
@@ -388,18 +449,17 @@ namespace MonogameTestbed
         {
             if (!listTests[Mode].Initialized)
             {
-                if (!_initStartedModes.Contains(Mode))
-                {
-                    _initStartedModes.Add(Mode);
-                    _ = listTests[Mode].Init(this);
-                }
+                BeginTestInit(Mode);
             }
             else
             {
                 listTests[Mode].Update();
             }
 
-            Window.Title = listTests[Mode].Initialized ? listTests[Mode].Title : listTests[Mode].Title + " (loading...)";
+            IGraphicsTest current = listTests[Mode];
+            Window.Title = current.Initialized
+                ? current.Title
+                : IsInitFailed(Mode) ? current.Title + " (init failed)" : current.Title + " (loading...)";
 
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape))
             {
@@ -445,11 +505,7 @@ namespace MonogameTestbed
             // spriteBatch.Begin();
             if (!listTests[Mode].Initialized)
             {
-                if (!_initStartedModes.Contains(Mode))
-                {
-                    _initStartedModes.Add(Mode);
-                    _ = listTests[Mode].Init(this);
-                }
+                BeginTestInit(Mode);
             }
             else
             {

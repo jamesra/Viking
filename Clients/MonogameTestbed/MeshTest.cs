@@ -27,6 +27,8 @@ namespace MonogameTestbed
         LabelView labelCamera;
 
 
+        readonly GamePadStateTracker Gamepad = new();
+
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
@@ -89,7 +91,7 @@ namespace MonogameTestbed
     private Mesh3D CreateTetrahedronMeshModel(Geometry.Vector3 offset)
     {
         Mesh3D mesh = new Mesh3D();
-        mesh.AddVerticies(CreateTetrahedronVerts(new Geometry.Vector3(0, 0, 0)));
+        mesh.AddVerticies(CreateTetrahedronVerts(offset));
         Face[] faces = CreateTetrahedronFaces();
         foreach (Face f in faces)
         {
@@ -239,12 +241,13 @@ public void Update()
 {
     StandardCameraManipulator.Update(this.Scene.Camera);
     GamePadState state = GamePad.GetState(PlayerIndex.One);
+    Gamepad.Update(state);
 
-    if (state.Buttons.Y == ButtonState.Pressed)
+    if (Gamepad.Y_Clicked)
     {
         meshView.WireFrame = !meshView.WireFrame;
         meshViewWithLighting.WireFrame = meshView.WireFrame;
-    }            
+    }
 
     labelCamera.Text = string.Format("{0} {2}", Scene.Camera.Position, Scene.Camera.LookAt, Scene.Camera.Rotation);
 }

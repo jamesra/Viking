@@ -109,8 +109,6 @@ namespace MonogameTestbed
 
         public Task Init(MonoTestbed window)
         {
-            _initialized = true;
-
             this.Scene = new Scene3D(window.GraphicsDevice.Viewport, new Camera3D())
             {
                 MaxDrawDistance = 1000000,
@@ -127,7 +125,7 @@ namespace MonogameTestbed
             //meshes = InitSmallSmoothModelFromOData(new long[] { 144302 }, ENDPOINT.TEST);
             //meshes = InitSmallSmoothModelFromOData(476, ENDPOINT.RC1);
             //meshes = InitSmallSmoothModelFromOData(new long[] { 192 }, ENDPOINT.RPC1);
-            meshes = InitSmallSmoothModelFromOData([2713], Endpoint.RPC1);
+            meshes = InitSmallSmoothModelFromOData([2713], Endpoint.RPC1) ?? [];
             //meshes = InitSmallSmoothModelFromOData(5554, ENDPOINT.RC2);
             //meshes = InitSmallSmoothModelFromOData(new long[] { 1650, 858 }, ENDPOINT.INFERIORMONKEY);
 
@@ -144,6 +142,13 @@ namespace MonogameTestbed
             //meshes = InitSmallSmoothModelFromOData(207, ENDPOINT.TEMPORALMONKEY);
             //meshes = InitSmallModelFromOData(476);
             //meshes = InitSmallModelFromOData(1);
+
+            if (meshes.Count == 0)
+            {
+                const string message = "MorphologyTest has no meshes to display (SmoothMeshGenerator is unavailable). Use BajajMultiTest for contour-to-mesh.";
+                Console.WriteLine(message);
+                throw new InvalidOperationException(message);
+            }
 
             Box bbox = meshes.First().BoundingBox;
 
@@ -162,6 +167,7 @@ namespace MonogameTestbed
             {
                 meshView.models.Add(mesh.ToVertexPositionNormalColorMeshModel(new Color((float)r.NextDouble(), (float)r.NextDouble(), (float)r.NextDouble())));
             }
+            _initialized = true;
             return Task.CompletedTask;
         }
 

@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using TriangleNet;
 using TriangleNet.Meshing;
 using VikingXNA;
+using VikingXNAGraphics;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -338,7 +339,6 @@ namespace MonogameTestbed
         }
     }
     */
-    /*
     class PolywrapView
     {
         public Polygon A;
@@ -430,15 +430,14 @@ namespace MonogameTestbed
         readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
 
         //TriangulationShapeWrapView wrapView = null;
-        MeshMergeIncrementalView wrapView = null; 
+        PolywrapView wrapView = null; 
 
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
          
         public Task Init(MonoTestbed window)
         {
-            _initialized = true;
-
+            window.Scene.RestoreCamera(TestMode.POLYWRAPPING);
             this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
 
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
@@ -453,20 +452,15 @@ namespace MonogameTestbed
             Points_A.Points = new PointSet(A.ExteriorRing);
             Points_B.Points = new PointSet(B.ExteriorRing);
 
-            Polygon SimpleA = StandardGeometryModels.CreateTestPolygon(false);
-            //Polygon SimpleB = StandardGeometryModels.CreateBoxPolygon(new Rectangle(-5, 5, -10, 10));
-            Polygon SimpleB = StandardGeometryModels.CreateBoxPolygon(new Rectangle(-30, -20, -10, 10));
+            wrapView = new PolywrapView(A, B);
 
-            //wrapView = new TriangulationShapeWrapView(A, B);
-            //wrapView = new TriangulationShapeWrapView(StandardModels.SharedModelPolygons[0], StandardModels.SharedModelPolygons[1]);
-            wrapView = new MeshMergeIncrementalView(StandardModels.SharedModelPolygons, StandardModels.SharedModelEdges, StandardModels.SharedModelZ);
-
+            _initialized = true;
             return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)
         {
-            this.scene.SaveCamera(TestMode.MESH);
+            this.scene?.SaveCamera(TestMode.POLYWRAPPING);
         }
 
         public void Update()
@@ -475,21 +469,6 @@ namespace MonogameTestbed
             Gamepad.Update(state);
 
             CameraManipulator.Update(scene.Camera);
-            
-            if(Gamepad.RightShoulder_Clicked)
-            {
-                wrapView.NumLinesToDraw++;
-            }
-
-            if (Gamepad.LeftShoulder_Clicked)
-            {
-                wrapView.NumLinesToDraw--;
-            }
-
-            if (Gamepad.Y_Clicked)
-            {
-                wrapView.ShowFinalLines = !wrapView.ShowFinalLines;
-            }
         }
 
         public void Draw(MonoTestbed window)
@@ -497,5 +476,4 @@ namespace MonogameTestbed
             wrapView?.Draw(window, scene);
         }
     }
-    */
 }

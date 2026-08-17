@@ -98,16 +98,20 @@ namespace MonogameTestbed
 
         public IndexLabelType VertexLabelType
         {
-            get => PolyViews.PointLabelType;
-            set => PolyViews.PointLabelType = value;
+            get => PolyViews?.PointLabelType ?? IndexLabelType.NONE;
+            set
+            {
+                if (PolyViews is not null)
+                    PolyViews.PointLabelType = value;
+            }
         }
 
-        public bool ShowPolyIndexLabels => PolyViews.LabelPolygonIndex;
+        public bool ShowPolyIndexLabels => PolyViews?.LabelPolygonIndex ?? false;
 
-        public bool ShowMeshIndexLabels => PolyViews.LabelIndex;
+        public bool ShowMeshIndexLabels => PolyViews?.LabelIndex ?? false;
 
 
-        public bool ShowPolyPositionLabels => PolyViews.LabelPosition;
+        public bool ShowPolyPositionLabels => PolyViews?.LabelPosition ?? false;
 
         readonly System.Threading.Tasks.Task BajajMeshGenerationTask = null;
 
@@ -387,15 +391,11 @@ namespace MonogameTestbed
         {
             lock (ViewsLock)
             {
-                //If we have fewer region views, reset the region view index
-                if (iShownRegion.HasValue && iShownRegion.Value > RegionViews.Count)
-                {
-                    iShownRegion = null;
-                }
-
-                iShownLineView ??= listLineViews.Count - 1;
-
-                iShownMesh ??= MeshViews.Count - 1;
+                ViewIndex.ClampOrClear(ref iShownRegion, RegionViews.Count);
+                iShownLineView ??= ViewIndex.LastOrNull(listLineViews.Count);
+                iShownMesh ??= ViewIndex.LastOrNull(MeshViews.Count);
+                ViewIndex.ClampOrClear(ref iShownLineView, listLineViews.Count);
+                ViewIndex.ClampOrClear(ref iShownMesh, MeshViews.Count);
             }
         }
 
@@ -741,13 +741,13 @@ namespace MonogameTestbed
             window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
             StringBuilder ViewLabels = new();
 
-            if (RegionViews != null && ShowRegionPolygons)
+            if (RegionViews != null && ViewIndex.InRange(iShownRegion, RegionViews.Count))
             {
                 RegionViews[iShownRegion.Value].Draw(window, scene);
                 ViewLabels.AppendLine("Y: Region Pass #" + iShownRegion.Value);
             }
 
-            if (MeshViews != null && ShowMesh)
+            if (MeshViews != null && ViewIndex.InRange(iShownMesh, MeshViews.Count))
             {
                 DeviceStateManager.SaveDeviceState(window.GraphicsDevice);
 
@@ -785,7 +785,7 @@ namespace MonogameTestbed
                 triView.Draw(window, scene, window.lineManager);
                 ViewLabels.AppendLine("B: Trianglulation View");
             }
-            else if (listLineViews != null && ShowLines)
+            else if (listLineViews != null && ViewIndex.InRange(iShownLineView, listLineViews.Count))
             {
                 int iShownLine = iShownLineView.Value;
                 LineSetView lineView = listLineViews[iShownLine];
@@ -853,7 +853,7 @@ namespace MonogameTestbed
                 ViewLabels.AppendLine("Incomplete Vertices");
             }
 
-            if (MeshVertsView != null && (this.VertexLabelType & IndexLabelType.MESH) > 0 && iShownLineView.HasValue)
+            if (MeshVertsView != null && (this.VertexLabelType & IndexLabelType.MESH) > 0 && ViewIndex.InRange(iShownLineView, listLineViews.Count))
             {
                 MeshVertsView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha);
                 ViewLabels.AppendLine("Mesh verticies");
@@ -906,7 +906,7 @@ namespace MonogameTestbed
             //window.GraphicsDevice.BlendState = BlendState.Opaque;
 
 
-            if (iShownMesh.HasValue)
+            if (ViewIndex.InRange(iShownMesh, MeshViews.Count))
             {
                 double maxZ = this.ShapeZ.Max();
                 double minZ = this.ShapeZ.Min();

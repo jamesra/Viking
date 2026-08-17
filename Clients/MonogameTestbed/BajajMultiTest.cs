@@ -18,48 +18,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
-using MonogameTestbed;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 
 namespace MonogameTestbed
 {
-    static class DebugSessionLog
-    {
-        const string LogPath = @"d:\src\git\VikingLegacy\debug-84f952.log";
-
-        public static void Write(string location, string message, string hypothesisId, object data, string runId = "pre-fix")
-        {
-            #region agent log
-            try
-            {
-                long ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                string dataJson = data != null ? System.Text.Json.JsonSerializer.Serialize(data) : "null";
-                File.AppendAllText(LogPath,
-                    $"{{\"sessionId\":\"84f952\",\"timestamp\":{ts},\"location\":\"{location}\",\"message\":\"{message}\",\"hypothesisId\":\"{hypothesisId}\",\"runId\":\"{runId}\",\"data\":{dataJson}}}\n");
-            }
-            catch { }
-            #endregion
-        }
-
-        public static object WindingStats(Mesh3D<MorphMeshVertex> mesh)
-        {
-            if (mesh == null)
-                return null;
-            var s = MeshWindingDiagnostics.Analyze(mesh);
-            return new
-            {
-                faces = mesh.Faces.Count,
-                verts = mesh.Vertices.Count,
-                s.ManifoldEdges,
-                s.InconsistentManifoldEdges,
-                s.NonManifoldEdges,
-                s.BoundaryEdges
-            };
-        }
-    }
-
     class BajajMultiOTVAssignmentView
     {
         public readonly Polygon[] Polygons = null;
@@ -149,12 +113,12 @@ namespace MonogameTestbed
             }
         }
 
-        public bool ShowPolyIndexLabels => PolyViews.LabelPolygonIndex;
+        public bool ShowPolyIndexLabels => PolyViews?.LabelPolygonIndex ?? false;
 
-        public bool ShowMeshIndexLabels => PolyViews.LabelIndex;
+        public bool ShowMeshIndexLabels => PolyViews?.LabelIndex ?? false;
 
 
-        public bool ShowPolyPositionLabels => PolyViews.LabelPosition;
+        public bool ShowPolyPositionLabels => PolyViews?.LabelPosition ?? false;
 
         public readonly MorphologyGraph Graph;
 
@@ -163,6 +127,11 @@ namespace MonogameTestbed
         /// </summary>
         private readonly SemaphoreSlim drawlock = new(1);
         readonly System.Threading.Thread BuildCompositeThread = null;
+        private int _meshGeneration;
+        private int _generateRunning;
+
+        /// <summary>True while ConvertToMesh is in flight for this view.</summary>
+        internal bool IsGeneratingMesh => Volatile.Read(ref _generateRunning) != 0;
         //SliceGraph sliceGraph;
 
         public BajajMultiOTVAssignmentView(MorphologyGraph graph)
@@ -197,7 +166,7 @@ namespace MonogameTestbed
         private void OnSliceCompleted(Slice slice, BajajGeneratorMesh mesh, bool Success) => this.AddMesh(slice, mesh, Success);
 
         private void AddMesh(Slice slice, BajajGeneratorMesh mesh, bool Success) =>
-                meshAssemblyPlan.OnMeshCompleted(slice, mesh, Success);
+            meshAssemblyPlan?.OnMeshCompleted(slice, mesh, Success);
 
 
         /// <summary>
@@ -231,60 +200,88 @@ namespace MonogameTestbed
             _assembledDisplayModel = null;
         }
 
+        /// <summary>
+        /// Rebuilds the slice graph and Bajaj mesh. Overlapping Start clicks are ignored until the current run finishes
+        /// so completed slices cannot land on a planner that was replaced mid-run.
+        /// </summary>
         internal async Task GenerateMesh()
         {
-            if (MeshViews.Count > 0)
-                ResetMesh();
-
-            //CompositeMeshModel = new SliceGraphMeshModel();
-            //CompositeMeshView.models.Add(CompositeMeshModel.model);
-
-            Trace.WriteLine("Begin Slice graph construction");
-            SliceGraph sliceGraph = await SliceGraph.Create(Graph, 2.0);
-            Trace.WriteLine("End Slice graph construction");
-
-            if (!sliceGraph.Nodes.Any())
-            {
-                Trace.WriteLine("No nodes in Slice graph {sliceGraph}");
+            if (Interlocked.CompareExchange(ref _generateRunning, 1, 0) != 0)
                 return;
-            }
 
-            meshAssemblyPlan = MeshAssemblyPlanner.Create(sliceGraph);
+            int generation = Interlocked.Increment(ref _meshGeneration);
+            bool IsCurrent() => generation == Volatile.Read(ref _meshGeneration);
 
-            meshIncompleteView = new MeshAssemblyPlannerIncompleteView(meshAssemblyPlan, sliceGraph);
-            meshCompletedView = new MeshAssemblyPlannerCompletedView(meshAssemblyPlan)
+            try
             {
-                Color = ColorExtensions.Random()
-            };
+                if (MeshViews.Count > 0)
+                    ResetMesh();
 
-            List<BajajGeneratorMesh> meshes = await BajajMeshGenerator.ConvertToMesh(sliceGraph, OnSliceCompleted).ConfigureAwait(false);
+                Trace.WriteLine("Begin Slice graph construction");
+                SliceGraph sliceGraph = await SliceGraph.Create(Graph, 2.0);
+                Trace.WriteLine("End Slice graph construction");
 
-            //If we have fewer region views, reset the region view index
-            if (iShownRegion.HasValue && iShownRegion.Value > RegionViews.Count)
-            {
-                iShownRegion = null;
-            }
+                if (!IsCurrent())
+                    return;
 
-            iShownLineView ??= listLineViews.Count - 1;
-
-            if (iShownMesh is null)
-            {
-                try
+                if (!sliceGraph.Nodes.Any())
                 {
-                    await drawlock.WaitAsync();
-                    iShownMesh = MeshViews.Count - 1;
+                    Trace.WriteLine($"No nodes in Slice graph {sliceGraph}");
+                    return;
                 }
-                finally
+
+                var plan = MeshAssemblyPlanner.Create(sliceGraph);
+                if (!IsCurrent())
+                    return;
+
+                meshAssemblyPlan = plan;
+                meshIncompleteView = new MeshAssemblyPlannerIncompleteView(meshAssemblyPlan, sliceGraph);
+                meshCompletedView = new MeshAssemblyPlannerCompletedView(meshAssemblyPlan)
                 {
-                    drawlock.Release();
+                    Color = ColorExtensions.Random()
+                };
+
+                await BajajMeshGenerator.ConvertToMesh(sliceGraph, (slice, mesh, success) =>
+                {
+                    if (!IsCurrent())
+                        return;
+                    OnSliceCompleted(slice, mesh, success);
+                }).ConfigureAwait(false);
+
+                if (!IsCurrent())
+                    return;
+
+                ViewIndex.ClampOrClear(ref iShownRegion, RegionViews.Count);
+                iShownLineView ??= ViewIndex.LastOrNull(listLineViews.Count);
+                ViewIndex.ClampOrClear(ref iShownLineView, listLineViews.Count);
+
+                if (iShownMesh is null)
+                {
+                    try
+                    {
+                        await drawlock.WaitAsync();
+                        iShownMesh = ViewIndex.LastOrNull(MeshViews.Count);
+                    }
+                    finally
+                    {
+                        drawlock.Release();
+                    }
+                }
+                else
+                {
+                    ViewIndex.ClampOrClear(ref iShownMesh, MeshViews.Count);
+                }
+
+                if (meshAssemblyPlan.MeshAssembledEvent.IsSet
+                    && meshAssemblyPlan.Root?.MeshModel?.composite is { } composite
+                    && composite.Faces.Count > 0)
+                {
+                    _assembledDisplayModel = BuildDisplayModelFromComposite(composite, meshCompletedView.Color);
                 }
             }
-
-            if (meshAssemblyPlan.MeshAssembledEvent.IsSet
-                && meshAssemblyPlan.Root?.MeshModel?.composite is { } composite
-                && composite.Faces.Count > 0)
+            finally
             {
-                _assembledDisplayModel = BuildDisplayModelFromComposite(composite, meshCompletedView.Color);
+                Interlocked.Exchange(ref _generateRunning, 0);
             }
         }
 
@@ -304,7 +301,7 @@ namespace MonogameTestbed
             //window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
             StringBuilder ViewLabels = new();
 
-            if (RegionViews != null && ShowRegionPolygons && (iShownRegion.HasValue && iShownRegion.Value < RegionViews.Count))
+            if (RegionViews != null && ViewIndex.InRange(iShownRegion, RegionViews.Count))
             {
                 RegionViews[iShownRegion.Value].Draw(window, scene);
                 ViewLabels.AppendLine("Region Pass #" + iShownRegion.Value);
@@ -316,7 +313,7 @@ namespace MonogameTestbed
             */
             if (ShowCompositeMesh == false)
             {
-                if (MeshViews != null && ShowMesh && (iShownMesh.HasValue && iShownMesh.Value < MeshViews.Count))
+                if (MeshViews != null && ViewIndex.InRange(iShownMesh, MeshViews.Count))
                 {
                     try
                     {
@@ -341,7 +338,7 @@ namespace MonogameTestbed
             //}
 
 
-            if (listLineViews != null && ShowLines && (iShownLineView.HasValue && iShownLineView.Value < listLineViews.Count))
+            if (listLineViews != null && ViewIndex.InRange(iShownLineView, listLineViews.Count))
             {
                 int iShownLine = iShownLineView.Value;
                 LineSetView lineView = listLineViews[iShownLine];
@@ -456,46 +453,6 @@ namespace MonogameTestbed
         {
             scene.Viewport = window.GraphicsDevice.Viewport;
 
-            #region agent log
-            if (BajajMultiAssignmentTest.DebugDrawLogCount < 3)
-            {
-                bool assembledBuffersOk = _assembledDisplayModel?.EnsureBuffers(window.GraphicsDevice) ?? false;
-                int completedModelCount = meshCompletedView?.MeshModels?.Length ?? 0;
-                int completedVertCount = meshCompletedView?.MeshModels?.Where(m => m?.Vertices != null).Sum(m => m.Vertices.Length) ?? 0;
-                int incompleteModelCount = meshIncompleteView?.MeshModels?.Length ?? 0;
-                bool assemblyComplete = meshAssemblyPlan?.MeshAssembledEvent.IsSet ?? false;
-                int rootVertCount = meshAssemblyPlan?.Root?.MeshModel?.model?.Vertices?.Length ?? 0;
-                DebugSessionLog.Write(
-                    "BajajMultiTest.cs:Draw3D",
-                    "Draw3D frame",
-                    "A,B,D,E,F",
-                    new
-                    {
-                        frame = BajajMultiAssignmentTest.DebugDrawLogCount,
-                        showCompositeMesh = ShowCompositeMesh,
-                        showAssemblyBoundingBoxes = ShowAssemblyBoundingBoxes,
-                        assemblyComplete,
-                        incompleteModelCount,
-                        hasAssembledDisplayModel = _assembledDisplayModel != null,
-                        assembledVertCount = _assembledDisplayModel?.Vertices?.Length ?? 0,
-                        assembledEdgeCount = _assembledDisplayModel?.Edges?.Length ?? 0,
-                        assembledBuffersOk,
-                        rootVertCount,
-                        completedModelCount,
-                        completedVertCount,
-                        cullMode = CullMode.ToString(),
-                        cameraPos = new { scene.Camera.Position.X, scene.Camera.Position.Y, scene.Camera.Position.Z },
-                        cameraLookAt = new { scene.Camera.LookAt.X, scene.Camera.LookAt.Y, scene.Camera.LookAt.Z },
-                        viewportW = scene.Viewport.Width,
-                        viewportH = scene.Viewport.Height,
-                        minDraw = scene.MinDrawDistance,
-                        maxDraw = scene.MaxDrawDistance,
-                        graphStructureId = Graph?.StructureID
-                    },
-                    "post-fix-v2");
-                BajajMultiAssignmentTest.DebugDrawLogCount++;
-            }
-            #endregion
 
             DepthStencilState dstate = new()
             {
@@ -514,7 +471,7 @@ namespace MonogameTestbed
                 drawlock.Wait();
                 if (ShowCompositeMesh == false)
                 {
-                    if (iShownMesh.HasValue && iShownMesh.Value < MeshViews.Count)
+                    if (ViewIndex.InRange(iShownMesh, MeshViews.Count))
                     {
                         MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, scene, CullMode);
                     }
@@ -629,8 +586,6 @@ namespace MonogameTestbed
             return any;
         }
     }
-}
-
 
 /// <summary>
 /// Generates a single mesh for a cell or a subset of a cell based on a Z range.  Used to debug the generation of whole cells and the merging of multiple slice meshes.
@@ -661,7 +616,6 @@ class BajajMultiAssignmentTest : IGraphicsTest
 
     bool _initialized = false;
     public bool Initialized => _initialized;
-    internal static int DebugDrawLogCount;
 
     public async Task Init(MonoTestbed window)
     {
@@ -765,7 +719,7 @@ class BajajMultiAssignmentTest : IGraphicsTest
         }
         */
 
-        if (window.Scene.RestoreCamera(TestMode.BAJAJTEST) == false)
+        if (window.Scene.RestoreCamera(TestMode.BAJAJMULTITEST) == false)
         {
             // 2D overlays use the same centered XY space as SliceGraph mesh geometry.
             window.Scene.Camera.LookAt = Vector2.Zero;
@@ -818,50 +772,7 @@ class BajajMultiAssignmentTest : IGraphicsTest
         Console.WriteLine($"All rendering complete");
 
         _initialized = true;
-        DebugDrawLogCount = 0;
 
-        #region agent log
-        Box bbox = graph.BoundingBox;
-        var compositeVerts = wrapViews.FirstOrDefault()?.meshAssemblyPlan?.Root?.MeshModel?.composite?.Vertices;
-        object meshBounds = null;
-        if (compositeVerts != null && compositeVerts.Count > 0)
-        {
-            meshBounds = new
-            {
-                minX = compositeVerts.Min(v => v.Position.X),
-                maxX = compositeVerts.Max(v => v.Position.X),
-                minY = compositeVerts.Min(v => v.Position.Y),
-                maxY = compositeVerts.Max(v => v.Position.Y),
-                minZ = compositeVerts.Min(v => v.Position.Z),
-                maxZ = compositeVerts.Max(v => v.Position.Z)
-            };
-        }
-
-        DebugSessionLog.Write(
-            "BajajMultiTest.cs:Init",
-            "Init complete",
-            "A,B,E",
-            new
-            {
-                wrapViewCount = wrapViews.Count,
-                bboxCenter = new { bbox.CenterPoint.X, bbox.CenterPoint.Y, bbox.CenterPoint.Z },
-                bboxWidth = bbox.Width,
-                cameraPos = new { scene3D.Camera.Position.X, scene3D.Camera.Position.Y, scene3D.Camera.Position.Z },
-                cameraLookAt = new { scene3D.Camera.LookAt.X, scene3D.Camera.LookAt.Y, scene3D.Camera.LookAt.Z },
-                meshBounds,
-                viewportW = window.GraphicsDevice.Viewport.Width,
-                viewportH = window.GraphicsDevice.Viewport.Height,
-                draw3D = Draw3D,
-                views = wrapViews.Select(wv => new
-                {
-                    structureId = wv.Graph?.StructureID,
-                    meshAssembled = wv.meshAssemblyPlan?.MeshAssembledEvent.IsSet ?? false,
-                    compositeFaces = wv.meshAssemblyPlan?.Root?.MeshModel?.composite?.Faces?.Count ?? 0,
-                    completedModelCount = wv.meshCompletedView?.MeshModels?.Length ?? 0
-                }).ToArray()
-            },
-            "post-fix");
-        #endregion
 
         if (Program.options.Quiet)
         {
@@ -940,9 +851,8 @@ class BajajMultiAssignmentTest : IGraphicsTest
                 wrapView.ShowCompletedVerticies = !wrapView.ShowCompletedVerticies;
             }
 
-            if (Gamepad.Start_Clicked)
+            if (Gamepad.Start_Clicked && wrapView.IsGeneratingMesh == false)
             {
-                //Recalculate the mesh from scratch
                 _ = wrapView.GenerateMesh();
             }
 
@@ -975,36 +885,12 @@ class BajajMultiAssignmentTest : IGraphicsTest
             if (Gamepad.LeftStick_Clicked)
             {
                 wrapView.CullMode = wrapView.CullMode == CullMode.None ? CullMode.CullCounterClockwiseFace : CullMode.None;
-                #region agent log
-                DebugSessionLog.Write(
-                    "BajajMultiTest.cs:LeftStick",
-                    "Cull mode toggled",
-                    "D,E",
-                    new
-                    {
-                        cullMode = wrapView.CullMode.ToString(),
-                        showCompositeMesh = wrapView.ShowCompositeMesh,
-                        compositeWinding = DebugSessionLog.WindingStats(wrapView.meshAssemblyPlan?.Root?.MeshModel?.composite)
-                    });
-                #endregion
             }
 
             if (Gamepad.LeftShoulder_Clicked)
             {
                 //this.Draw3D = !this.Draw3D;
                 wrapView.ShowCompositeMesh = !wrapView.ShowCompositeMesh;
-                #region agent log
-                DebugSessionLog.Write(
-                    "BajajMultiTest.cs:LeftShoulder",
-                    "Composite mesh visibility toggled",
-                    "D,E",
-                    new
-                    {
-                        showCompositeMesh = wrapView.ShowCompositeMesh,
-                        cullMode = wrapView.CullMode.ToString(),
-                        compositeWinding = DebugSessionLog.WindingStats(wrapView.meshAssemblyPlan?.Root?.MeshModel?.composite)
-                    });
-                #endregion
             }
 
             if (Gamepad.Back_Clicked || keyboard.Pressed(Keys.PrintScreen))
@@ -1042,24 +928,6 @@ class BajajMultiAssignmentTest : IGraphicsTest
         scene3D.Viewport = window.GraphicsDevice.Viewport;
         window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, 1.0f, 0);
 
-        #region agent log
-        if (DebugDrawLogCount < 3)
-        {
-            DebugSessionLog.Write(
-                "BajajMultiTest.cs:Draw",
-                "BajajMulti Draw entry",
-                "C,E",
-                new
-                {
-                    initialized = _initialized,
-                    wrapViewCount = wrapViews.Count,
-                    draw3D = Draw3D,
-                    backBufferW = window.GraphicsDevice.Viewport.Width,
-                    backBufferH = window.GraphicsDevice.Viewport.Height,
-                    renderTargetIsNull = window.GraphicsDevice.GetRenderTargets().Length == 0
-                });
-        }
-        #endregion
 
         foreach (var wrapView in wrapViews)
         {
@@ -1176,12 +1044,25 @@ class BajajMultiAssignmentTest : IGraphicsTest
             wrapView?.OnUnloadContent();
         }
 
-        window.Scene?.SaveCamera(TestMode.BAJAJTEST);
+        window.Scene?.SaveCamera(TestMode.BAJAJMULTITEST);
     }
 
     private string CleanOutputPath(string outputPath) => throw new NotImplementedException();
 
     private static string DefaultOutputPath => System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Morphology");
+
+    /// <summary>
+    /// Offset applied to boundary type IDs so they cannot collide with cell structure IDs on Collada export.
+    /// Two extra decimal digits past the largest structure ID.
+    /// </summary>
+    private static ulong StructureTypeIdOffset(ulong maxId)
+    {
+        if (maxId == 0)
+            return 100UL;
+
+        int digits = (int)Math.Floor(Math.Log10(maxId)) + 1;
+        return (ulong)Math.Pow(10, digits + 2);
+    }
 
     public void SaveMeshes(string title, string outputDir = null)
     {
@@ -1192,8 +1073,8 @@ class BajajMultiAssignmentTest : IGraphicsTest
             SceneTitle = title
         };
 
-        ulong max_id = wrapViews.Max(wv => wv.Graph.StructureID);
-        ulong structure_type_id_adjustment = (ulong)Math.Pow(Math.Log10(max_id) + 2, 10);
+        ulong max_id = wrapViews.Count == 0 ? 0UL : wrapViews.Max(wv => wv.Graph.StructureID);
+        ulong structure_type_id_adjustment = StructureTypeIdOffset(max_id);
 
         foreach (var boundary in boundaryViewModels)
         {
@@ -1288,5 +1169,6 @@ class BajajMultiAssignmentTest : IGraphicsTest
         };
         return mesh_model;
     }
+}
 }
 
