@@ -56,6 +56,18 @@ namespace Viking
         public static int MaxWorkers => _current_max_workers;
 
         /// <summary>
+        /// True when queued or in-flight texture requests remain. Used to keep the WPF present loop alive until uploads finish.
+        /// </summary>
+        public static bool HasPending
+        {
+            get
+            {
+                lock (_lock)
+                    return _requests.Count > 0 || _pendingTileViews.Count > 0;
+            }
+        }
+
+        /// <summary>
         /// True if this TileView has a pending request in the queue (or being processed).
         /// Used by TileView to avoid duplicate loads and by callers of PendingTextureQueue.IsTileViewPending.
         /// </summary>

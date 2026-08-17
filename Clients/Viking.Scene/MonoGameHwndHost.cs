@@ -29,8 +29,14 @@ namespace Viking.Rendering
 
         public Camera Camera { get; } = new();
 
+        /// <summary>
+        /// Created in BuildWindowCore once the device exists. Null until the HWND is built.
+        /// </summary>
         public VikingXNA.Scene? Scene { get; private set; }
 
+        /// <summary>
+        /// Hosts draw here; this class Presents after the handler returns.
+        /// </summary>
         public event EventHandler<DrawingEventArgs>? Drawing;
 
         protected override HandleRef BuildWindowCore(HandleRef hwndParent)
@@ -56,17 +62,23 @@ namespace Viking.Rendering
             }
         }
 
+        /// <summary>
+        /// Must call base for unhandled messages. Returning Zero without base swallows WM_MOUSE* and the view cannot pan.
+        /// </summary>
         protected override IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             if (msg == WmSize)
                 _deviceResetPending = true;
             else if (msg == WmPaint)
             {
+                _renderRequested = true;
                 DrawFrame();
                 handled = true;
+                return IntPtr.Zero;
             }
 
-            return IntPtr.Zero;
+            // Returning Zero without base.WndProc swallows WM_MOUSE* and the view cannot pan.
+            return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
         }
 
         protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
@@ -77,9 +89,26 @@ namespace Viking.Rendering
 
         void OnRendering(object sender, EventArgs e) => DrawFrame();
 
+        /// <summary>
+        /// Marks the next CompositionTarget tick as needing Present. Texture uploads and camera changes call this so the loop can idle.
+        /// </summary>
+        public void RequestRender() => _renderRequested = true;
+
+        bool _renderRequested = true;
+        long _lastPresentTicks;
+        const long MinFrameIntervalTicks = TimeSpan.TicksPerMillisecond * 16;
+
         void DrawFrame()
         {
             if (_deviceService?.GraphicsDevice is null || _hwnd == IntPtr.Zero)
+                return;
+
+            bool pipelineWork = global::Viking.TileLoadEnvironment.HasTexturePipelineWork;
+            if (!_deviceResetPending && !_renderRequested && !pipelineWork)
+                return;
+
+            long now = DateTime.UtcNow.Ticks;
+            if (!_deviceResetPending && now - _lastPresentTicks < MinFrameIntervalTicks)
                 return;
 
             int width = Math.Max(1, (int)ActualWidth);
@@ -92,10 +121,19 @@ namespace Viking.Rendering
                 _deviceResetPending = false;
             }
 
+            _renderRequested = false;
             GraphicsDevice device = _deviceService.GraphicsDevice;
             device.Clear(Microsoft.Xna.Framework.Color.Black);
-            Drawing?.Invoke(this, new DrawingEventArgs(device, Scene));
+            try
+            {
+                Drawing?.Invoke(this, new DrawingEventArgs(device, Scene));
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine($"Section view draw failed: {ex}");
+            }
             device.Present();
+            _lastPresentTicks = DateTime.UtcNow.Ticks;
         }
 
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]

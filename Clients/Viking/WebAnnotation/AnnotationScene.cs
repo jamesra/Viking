@@ -17,15 +17,17 @@ using Rectangle = Geometry.Rectangle;
 namespace WebAnnotation
 {
     /// <summary>
-    /// Draws and hit-tests section annotations on a shared MonoGame device.
+    /// Shared draw/hit-test for Jotunn and net10. Sets AnnotationOverlay.SectionViewLookup so Actions can resolve section views without WinForms.
+    /// LoadVisibleAsync skips an in-flight load when bounds and LOD match. HitTest is the scene equivalent of overlay ObjectAtPosition.
     /// </summary>
     public sealed class AnnotationScene : IAnnotationScene
     {
         readonly Volume _volume;
         readonly VolumeTransformProvider _transforms;
         readonly Dictionary<int, SectionAnnotationsView> _sections = new();
-        readonly Dictionary<int, CancellationTokenSource> _loadBySection = new();
         readonly Dictionary<int, (Rectangle Bounds, double PixelSize)> _loadTarget = new();
+        readonly Dictionary<int, Task> _loadBySection = new();
+        readonly Dictionary<int, CancellationTokenSource> _loadCtsBySection = new();
         readonly object _loadLock = new();
         SpriteBatch _spriteBatch;
         SpriteFont _font;
@@ -75,32 +77,45 @@ namespace WebAnnotation
 
             Rectangle bounds = scene.VisibleWorldBounds;
             double pixel = scene.ScreenPixelSizeInVolume;
-            CancellationToken token;
+            Task load;
             CancellationTokenSource cts;
             lock (_loadLock)
             {
                 if (_loadTarget.TryGetValue(sectionNumber, out (Rectangle Bounds, double PixelSize) previous)
                     && previous.Bounds == bounds
-                    && previous.PixelSize == pixel
-                    && _loadBySection.TryGetValue(sectionNumber, out CancellationTokenSource live)
-                    && live != null
-                    && !live.IsCancellationRequested)
+                    && RegionQueryBounds.SameLod(previous.PixelSize, pixel)
+                    && _loadBySection.TryGetValue(sectionNumber, out Task inflight)
+                    && inflight is { IsCompleted: false }
+                    && _loadCtsBySection.TryGetValue(sectionNumber, out CancellationTokenSource live)
+                    && live is { IsCancellationRequested: false })
                 {
                     return;
                 }
 
-                if (_loadBySection.TryGetValue(sectionNumber, out CancellationTokenSource old))
+                if (_loadCtsBySection.TryGetValue(sectionNumber, out CancellationTokenSource old))
+                {
                     old.Cancel();
+                    if (!_loadBySection.TryGetValue(sectionNumber, out Task previousLoad) || previousLoad.IsCompleted)
+                        old.Dispose();
+                }
 
-                cts = new();
-                _loadBySection[sectionNumber] = cts;
+                cts = new CancellationTokenSource();
+                _loadCtsBySection[sectionNumber] = cts;
                 _loadTarget[sectionNumber] = (bounds, pixel);
-                token = cts.Token;
+                load = view.LoadAnnotationsInRegion(scene, cts.Token);
+                _loadBySection[sectionNumber] = load;
             }
 
             try
             {
-                await view.LoadAnnotationsInRegion(scene, token).ConfigureAwait(false);
+                await load.ConfigureAwait(false);
+                lock (_loadLock)
+                {
+                    if (!_loadCtsBySection.TryGetValue(sectionNumber, out CancellationTokenSource current) || !ReferenceEquals(current, cts))
+                        return;
+                }
+
+                TileLoadEnvironment.RequestRender?.Invoke();
             }
             catch (OperationCanceledException)
             {
@@ -109,7 +124,7 @@ namespace WebAnnotation
             {
                 lock (_loadLock)
                 {
-                    if (!_loadBySection.TryGetValue(sectionNumber, out CancellationTokenSource live) || !ReferenceEquals(live, cts))
+                    if (!_loadCtsBySection.TryGetValue(sectionNumber, out CancellationTokenSource current) || !ReferenceEquals(current, cts))
                         cts.Dispose();
                 }
             }
@@ -139,13 +154,14 @@ namespace WebAnnotation
             return bestObj;
         }
 
-        public void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, int sectionNumber, Texture backgroundLuma, Texture backgroundColors, ref int nextStencilValue)
+        public void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, int sectionNumber, Texture backgroundLuma, Texture backgroundColors, ref int nextStencilValue, bool requestLoad = true)
         {
             SectionAnnotationsView current = GetOrCreate(sectionNumber);
             if (current is null || scene is null)
                 return;
 
-            LoadVisible(scene, sectionNumber);
+            if (requestLoad)
+                LoadVisible(scene, sectionNumber);
 
             ContentManager content = VikingXNAGraphics.Global.Content;
             OverlayShaderEffect overlayEffect = DeviceEffectsStore<OverlayShaderEffect>.GetOrCreateForDevice(graphicsDevice, content);

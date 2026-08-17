@@ -144,7 +144,9 @@ namespace Viking.ViewModels
             !ServerTextureNotFound
             && !IsTextureUsable
             && !_loadQueued
-            && TextureLoadCancellationTokenSource is null;
+            && TextureLoadCancellationTokenSource is null
+            && !PendingTextureQueue.IsTileViewPending(this)
+            && !TextureRequestQueue.IsTileViewPending(this);
 
         internal bool TextureIsLoading => TextureLoadCancellationTokenSource != null;
 
@@ -323,42 +325,46 @@ namespace Viking.ViewModels
         /// <returns></returns>
         public async Task<Texture2D> GetOrLoadTextureAsync(GraphicsDevice graphicsDevice, CancellationToken token)
         {
-            _loadQueued = false;
             _SectionLoadingToken = token;
 
             if (token.IsCancellationRequested)
             {
+                _loadQueued = false;
                 return null;
             }
 
-            //Check if the texture's graphics device has been disposed, in which case load a new texture
-
-            //Don't bother asking if we've already tried
             if (this.ServerTextureNotFound)
             {
 #if DEBUG
                 {
-                    //Don't know how this could happen, but we should not have a texture if the server does not.  This indicates the code will leak resources
-                    //Debug.Assert(TexReader is null);
                     Debug.Assert(texture is null);
                 }
 #endif
-
+                _loadQueued = false;
                 return null;
             }
 
             var currentTexture = texture;
             if (currentTexture != null)
-                return currentTexture;
-
-            // Already in the queue (or dequeued but not yet completed); don't start another load.
-            if (PendingTextureQueue.IsTileViewPending(this) || TextureRequestQueue.IsTileViewPending(this))
             {
-                return null;
+                _loadQueued = false;
+                return currentTexture;
             }
 
-            // Enqueue to priority-sorted request queue (both HTTP and local paths)
-            return await TextureRequestQueue.EnqueueRequest(this, graphicsDevice, token).ConfigureAwait(false);
+            if (PendingTextureQueue.IsTileViewPending(this) || TextureRequestQueue.IsTileViewPending(this))
+                return null;
+
+            try
+            {
+                Texture2D loaded = await TextureRequestQueue.EnqueueRequest(this, graphicsDevice, token).ConfigureAwait(false);
+                return loaded;
+            }
+            finally
+            {
+                bool pending = PendingTextureQueue.IsTileViewPending(this) || TextureRequestQueue.IsTileViewPending(this);
+                if (!pending)
+                    _loadQueued = false;
+            }
         }
 
         private Texture2D CompleteTextureReadTask(TextureReaderV2 texReader, Task<Texture2D> texTask)

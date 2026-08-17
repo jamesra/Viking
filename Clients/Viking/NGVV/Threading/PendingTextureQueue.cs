@@ -395,6 +395,9 @@ namespace Viking
                 _pendingLock.ExitReadLock();
             }
 
+            if (texturesLoaded > 0)
+                TileLoadEnvironment.RequestRender?.Invoke();
+
             if (empty)
             {
                 QueueBecameEmpty?.Invoke();
@@ -462,6 +465,5 @@ namespace Viking
             if (_sortTimer != null)
                 _sortTimer.Interval = TimeSpan.FromMilliseconds(intervalMs);
         }
-         
     }
 }

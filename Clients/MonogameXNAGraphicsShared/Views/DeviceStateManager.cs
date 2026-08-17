@@ -26,6 +26,7 @@ namespace VikingXNAGraphics
         static int? CachedStencilReference;
         static CompareFunction? CachedStencilFunction;
         static bool? CachedStencilEnable;
+        static bool? CachedSourceDepthEnable;
 
         public static void SaveDeviceState(GraphicsDevice graphicsDevice)
         {
@@ -127,7 +128,9 @@ namespace VikingXNAGraphics
 
         public static void SetDepthBuffer(GraphicsDevice device, CompareFunction depthFunction = CompareFunction.LessEqual)
         {
-            if (depthstencilState is null || depthstencilState.IsDisposed || CachedDepthFunction != depthFunction)
+            bool sourceDepthEnable = device.DepthStencilState?.DepthBufferEnable ?? true;
+            if (depthstencilState is null || depthstencilState.IsDisposed || CachedDepthFunction != depthFunction
+                || CachedSourceDepthEnable != sourceDepthEnable)
             {
                 DepthStencilState previous = depthstencilState;
                 depthstencilState = new DepthStencilState();
@@ -136,6 +139,7 @@ namespace VikingXNAGraphics
                 depthstencilState.DepthBufferWriteEnable = true;
                 depthstencilState.DepthBufferFunction = depthFunction;
                 CachedDepthFunction = depthFunction;
+                CachedSourceDepthEnable = true;
                 CachedStencilReference = depthstencilState.ReferenceStencil;
                 CachedStencilFunction = depthstencilState.StencilFunction;
                 CachedStencilEnable = depthstencilState.StencilEnable;
@@ -152,14 +156,22 @@ namespace VikingXNAGraphics
 
         public static void SetDepthStencilValue(GraphicsDevice device, int StencilValue, CompareFunction stencilFunction = CompareFunction.GreaterEqual, bool stencilEnable = true)
         {
+            bool sourceDepthEnable = device.DepthStencilState?.DepthBufferEnable ?? true;
             if (depthstencilState is null || depthstencilState.IsDisposed
                 || CachedStencilReference != StencilValue
                 || CachedStencilFunction != stencilFunction
-                || CachedStencilEnable != stencilEnable)
+                || CachedStencilEnable != stencilEnable
+                || CachedSourceDepthEnable != sourceDepthEnable)
             {
                 DepthStencilState previous = depthstencilState;
                 depthstencilState = new DepthStencilState();
                 CopyDepthSettings(depthstencilState, device.DepthStencilState);
+                if (!depthstencilState.DepthBufferEnable)
+                {
+                    depthstencilState.DepthBufferEnable = true;
+                    depthstencilState.DepthBufferWriteEnable = true;
+                    depthstencilState.DepthBufferFunction = CompareFunction.LessEqual;
+                }
                 depthstencilState.StencilEnable = stencilEnable;
                 depthstencilState.StencilFunction = stencilFunction;
                 depthstencilState.ReferenceStencil = StencilValue;
@@ -168,6 +180,7 @@ namespace VikingXNAGraphics
                 CachedStencilFunction = stencilFunction;
                 CachedStencilEnable = stencilEnable;
                 CachedDepthFunction = depthstencilState.DepthBufferFunction;
+                CachedSourceDepthEnable = depthstencilState.DepthBufferEnable;
                 device.DepthStencilState = depthstencilState;
                 if (previous is not null && !previous.IsDisposed)
                     previous.Dispose();

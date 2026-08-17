@@ -2,6 +2,7 @@ using Microsoft.Xna.Framework.Graphics;
 using RoundCurve;
 using RoundLineCode;
 using System;
+using System.IO;
 using System.Threading;
 using VikingXNAGraphics;
 using ServiceContainer = System.ComponentModel.Design.ServiceContainer;
@@ -138,7 +139,8 @@ namespace Viking.Rendering
                 {
                     ServiceContainer tempContainer = new();
                     tempContainer.AddService(typeof(IGraphicsDeviceService), this);
-                    _Content = new Microsoft.Xna.Framework.Content.ContentManager(tempContainer, "Content");
+                    string contentRoot = Path.Combine(AppContext.BaseDirectory, "Content");
+                    _Content = new Microsoft.Xna.Framework.Content.ContentManager(tempContainer, contentRoot);
                     VikingXNAGraphics.Global.Content = _Content;
                 }
 

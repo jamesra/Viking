@@ -306,7 +306,7 @@ class TextureReaderV2 : IDisposable
                 while (nRetries >= 0)
                 {
                     response = await client
-                        .GetAsync(textureUri, HttpCompletionOption.ResponseContentRead).ConfigureAwait(false);
+                        .GetAsync(textureUri, HttpCompletionOption.ResponseContentRead, token).ConfigureAwait(false);
                     if (false == response.IsSuccessStatusCode)
                     {
                         if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
@@ -314,7 +314,7 @@ class TextureReaderV2 : IDisposable
                         {
                             nRetries--;
                             Debug.WriteLine($"Failed to load {textureUri} : Delaying for retry");
-                            await Task.Delay(Geometry.Global.GetRandomRequestDelay());
+                            await Task.Delay(Geometry.Global.GetRandomRequestDelay(), token);
                             continue;
                         }
                         else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -353,6 +353,10 @@ class TextureReaderV2 : IDisposable
         {
             Trace.WriteLine("HttpRequestException: " + textureUri + " " + e.Message);
             //this.SetTexture(null);
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
         }
 
         return null;

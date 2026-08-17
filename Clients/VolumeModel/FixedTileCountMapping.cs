@@ -262,24 +262,8 @@ namespace Viking.VolumeModel
                 }
             }
 
-            // Only include tiles already completed (cached hits via Task.FromResult).
-            // Background CreateTile tasks continue asynchronously; they will populate
-            // Global.TileCache and appear on the next draw cycle.
-            // Wait for in-flight CreateTile tasks so the first draw after a cache miss
-            // still enumerates visible tiles (regression fix for 9b1e065a removing Task.WaitAll).
-            Task[] incompleteTasks = tileTasks.Where(t => !t.IsCompleted).Cast<Task>().ToArray();
-            if (incompleteTasks.Length > 0)
-            {
-                try
-                {
-                    Task.WaitAll(incompleteTasks);
-                }
-                catch (AggregateException)
-                {
-                    // Individual task faults are handled below when adding tiles.
-                }
-            }
-
+            // Include tiles already completed (cached hits via Task.FromResult).
+            // In-flight CreateTile tasks populate Global.TileCache and appear on the next draw.
             foreach (var task in tileTasks)
             {
                 if (task.Status == System.Threading.Tasks.TaskStatus.RanToCompletion)
