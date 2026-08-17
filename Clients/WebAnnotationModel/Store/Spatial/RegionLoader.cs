@@ -157,61 +157,63 @@ namespace WebAnnotationModel
             IRegionPyramidLevel<RegionRequestData<OBJECT>> level = RegionPyramid.GetLevel(screenPixelSizeInVolume);
             GridRange<RegionRequestData<OBJECT>> gridRange = level.SubGridForRegion(VolumeBounds);
 
-            DateTime currentTime = DateTime.UtcNow;
+            List<Task> regionTasks = new List<Task>();
 
-            List<Tuple<GridIndex, Task>> listTasks = new List<Tuple<GridIndex, Task>>();
-
-            List<OBJECT> localObjects = new List<OBJECT>();
-
-            foreach (GridIndex iCell in gridRange.Indices)
+            try
             {
-                int iX = iCell.X;
-                int iY = iCell.Y;
-
-                if (token.IsCancellationRequested)
-                    return new List<OBJECT>();
-                
-                //Trace.WriteLine(string.Format("Grid Region Loading Z:{0} L:{1} X:{2} Y:{3}", SectionNumber, level.Level, iX, iY));
-                //Something I learned debugging why multiple requests for the same region being launched is that the delegate for GetOrAddCell can
-                //be called multiple times if no value is in the dictionary and multiple threads all attempt to add a value before a thread inserts 
-                //a value.  So make GetOrAdd calls cheap.
-                RegionRequestData<OBJECT> cell = level.GetOrAddCell(iCell, (icell) => new RegionRequestData<OBJECT>(bounds: level.CellBounds(iCell.X, iCell.Y)));
-                try
+                foreach (GridIndex iCell in gridRange.Indices)
                 {
-                    await cell.Lock.WaitAsync(token);
                     if (token.IsCancellationRequested)
-                        return new List<OBJECT>();
+                        break;
 
-                    if ((queryTargets & QueryTargets.Server) > 0)
+                    //Something I learned debugging why multiple requests for the same region being launched is that the delegate for GetOrAddCell can
+                    //be called multiple times if no value is in the dictionary and multiple threads all attempt to add a value before a thread inserts 
+                    //a value.  So make GetOrAdd calls cheap.
+                    RegionRequestData<OBJECT> cell = level.GetOrAddCell(iCell, (icell) => new RegionRequestData<OBJECT>(bounds: level.CellBounds(iCell.X, iCell.Y)));
+                    await cell.Lock.WaitAsync(token);
+                    try
                     {
-                        if (RegionIsDueForRefresh(cell))
+                        if ((queryTargets & QueryTargets.Server) > 0)
                         {
-                            //Trace.WriteLine(string.Format("Grid Region Loading Z:{0} L:{1} X:{2} Y:{3}", SectionNumber, level.Level, iX, iY));
-                            CreateRegionServerRequest(cell, level, iCell, sectionNumber, token,
-                                foundObjectsCallback);
-                        }
-                        else
-                        {
-                            //Add our callback to the list, and return any known local objects
-                            //If we are waiting on results, add our callback to the list of functions to call when the request is complete
-                            if (cell.OutstandingQuery)
+                            if (RegionIsDueForRefresh(cell))
+                            {
+                                regionTasks.Add(CreateRegionServerRequest(cell, level, iCell, sectionNumber, token,
+                                    foundObjectsCallback));
+                            }
+                            else if (cell.CurrentQuery != null)
                             {
                                 cell.AddCallback(foundObjectsCallback);
+                                regionTasks.Add(cell.CurrentQuery);
                             }
                         }
                     }
-
-                    if ((queryTargets & QueryTargets.ClientCache) > 0 && foundObjectsCallback != null)
+                    finally
                     {
-                        //Begin a task to load the local objects and perform the callback
-                        //await ReportLocalObjectsInRegion(cell, level, sectionNumber, aToken, foundObjectsCallback); 
+                        cell.Lock.Release();
                     }
                 }
-                finally
-                {
-                    cell.Lock.Release();
-                }
+
+                if (regionTasks.Count > 0)
+                    await Task.WhenAll(regionTasks);
             }
+            catch (Exception)
+            {
+                if (regionTasks.Count > 0)
+                {
+                    try
+                    {
+                        await Task.WhenAll(regionTasks);
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+
+                token.ThrowIfCancellationRequested();
+                throw;
+            }
+
+            token.ThrowIfCancellationRequested();
 
             var localObjectKeys = SpatialSearch.Intersects(VolumeBounds.ToRTreeRect(sectionNumber));
             objectStore.TryGetObjectsByIDs(localObjectKeys, out var found, out _);

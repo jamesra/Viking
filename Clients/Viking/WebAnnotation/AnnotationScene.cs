@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Viking;
@@ -22,6 +24,9 @@ namespace WebAnnotation
         readonly Volume _volume;
         readonly VolumeTransformProvider _transforms;
         readonly Dictionary<int, SectionAnnotationsView> _sections = new();
+        readonly Dictionary<int, CancellationTokenSource> _loadBySection = new();
+        readonly Dictionary<int, (Rectangle Bounds, double PixelSize)> _loadTarget = new();
+        readonly object _loadLock = new();
         SpriteBatch _spriteBatch;
         SpriteFont _font;
         BasicEffect _basicEffect;
@@ -40,21 +45,74 @@ namespace WebAnnotation
 
         internal SectionAnnotationsView GetOrCreate(int sectionNumber)
         {
-            if (_sections.TryGetValue(sectionNumber, out SectionAnnotationsView existing))
-                return existing;
+            lock (_loadLock)
+            {
+                if (_sections.TryGetValue(sectionNumber, out SectionAnnotationsView existing))
+                    return existing;
 
-            if (!_volume.Sections.TryGetValue(sectionNumber, out Section section))
-                return null;
+                if (!_volume.Sections.TryGetValue(sectionNumber, out Section section))
+                    return null;
 
-            SectionAnnotationsView view = new(section, _transforms, _volume);
-            _sections[sectionNumber] = view;
-            return view;
+                SectionAnnotationsView view = new(section, _transforms, _volume);
+                _sections[sectionNumber] = view;
+                return view;
+            }
         }
 
         public void LoadVisible(VikingXNA.Scene scene, int sectionNumber)
         {
+            _ = LoadVisibleAsync(scene, sectionNumber);
+        }
+
+        async Task LoadVisibleAsync(VikingXNA.Scene scene, int sectionNumber)
+        {
+            if (scene is null)
+                return;
+
             SectionAnnotationsView view = GetOrCreate(sectionNumber);
-            view?.LoadAnnotationsInRegion(scene, System.Threading.CancellationToken.None);
+            if (view is null)
+                return;
+
+            Rectangle bounds = scene.VisibleWorldBounds;
+            double pixel = scene.ScreenPixelSizeInVolume;
+            CancellationToken token;
+            CancellationTokenSource cts;
+            lock (_loadLock)
+            {
+                if (_loadTarget.TryGetValue(sectionNumber, out (Rectangle Bounds, double PixelSize) previous)
+                    && previous.Bounds == bounds
+                    && previous.PixelSize == pixel
+                    && _loadBySection.TryGetValue(sectionNumber, out CancellationTokenSource live)
+                    && live != null
+                    && !live.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                if (_loadBySection.TryGetValue(sectionNumber, out CancellationTokenSource old))
+                    old.Cancel();
+
+                cts = new();
+                _loadBySection[sectionNumber] = cts;
+                _loadTarget[sectionNumber] = (bounds, pixel);
+                token = cts.Token;
+            }
+
+            try
+            {
+                await view.LoadAnnotationsInRegion(scene, token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            finally
+            {
+                lock (_loadLock)
+                {
+                    if (!_loadBySection.TryGetValue(sectionNumber, out CancellationTokenSource live) || !ReferenceEquals(live, cts))
+                        cts.Dispose();
+                }
+            }
         }
 
         public object HitTest(int sectionNumber, Geometry.Vector2 worldPosition, out double distance)

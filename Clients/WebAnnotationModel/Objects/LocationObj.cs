@@ -480,9 +480,9 @@ namespace WebAnnotationModel.Objects
         } 
 
         /// <summary>
-        /// Synchronous convenience wrapper over CopyLinksAsync() for legacy UI call sites.
+        /// Snapshot of peer location IDs. Uses a sync lock, not <see cref="CopyLinksAsync"/>.
         /// </summary>
-        public long[] LinksCopy => CopyLinksAsync().Result;
+        public long[] LinksCopy => _Links.CreateCopy();
 
         /// <summary>
         /// This needs sorting out.  Do we need this as an observable collection or should 

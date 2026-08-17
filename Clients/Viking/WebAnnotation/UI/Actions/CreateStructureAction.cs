@@ -1,6 +1,7 @@
 using Geometry;
 using SqlGeometryUtils;
 using System;
+using System.Threading.Tasks;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
 using WebAnnotationModel;
@@ -27,7 +28,7 @@ namespace WebAnnotation.UI.Actions
 
         public abstract void OnExecute();
 
-        protected static void CommitNewStructure(StructureTypeObj typeObj, StructureObj newStruct, LocationObj newLocation)
+        protected static async Task CommitNewStructure(StructureTypeObj typeObj, StructureObj newStruct, LocationObj newLocation)
         {
 #if NETFRAMEWORK
             if (typeObj.Parent != null)
@@ -37,7 +38,7 @@ namespace WebAnnotation.UI.Actions
 
             AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), [AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation]);
 #else
-            _ = Store.Structures.Create(newStruct, newLocation);
+            await Store.Structures.Create(newStruct, newLocation);
 #endif
         }
     }
@@ -65,7 +66,9 @@ namespace WebAnnotation.UI.Actions
             TypeID = StructureTypeID;
         }
 
-        public override void OnExecute()
+        public override void OnExecute() => _ = OnExecuteAsync();
+
+        async Task OnExecuteAsync()
         {
             if (!Store.StructureTypes.TryGetObjectByID(TypeID, out StructureTypeObj TypeObj) || TypeObj is null)
             {
@@ -83,7 +86,7 @@ namespace WebAnnotation.UI.Actions
 
 
             newLocation.SetShapeFromGeometryInSection(Transform, mosaic_polygon.ToSqlGeometry());
-            CommitNewStructure(TypeObj, newStruct, newLocation);
+            await CommitNewStructure(TypeObj, newStruct, newLocation);
         }
 
         public override bool Equals(IAction other)
@@ -132,7 +135,9 @@ namespace WebAnnotation.UI.Actions
 
         }
 
-        public override void OnExecute()
+        public override void OnExecute() => _ = OnExecuteAsync();
+
+        async Task OnExecuteAsync()
         {
             if (!Store.StructureTypes.TryGetObjectByID(TypeID, out StructureTypeObj TypeObj) || TypeObj is null)
             {
@@ -153,7 +158,7 @@ namespace WebAnnotation.UI.Actions
 
 
             newLocation.SetShapeFromGeometryInSection(Transform, mosaic_polygon.ToSqlGeometry());
-            CommitNewStructure(TypeObj, newStruct, newLocation);
+            await CommitNewStructure(TypeObj, newStruct, newLocation);
         }
 
         public override bool Equals(IAction other)

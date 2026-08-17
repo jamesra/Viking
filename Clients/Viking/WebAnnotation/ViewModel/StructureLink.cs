@@ -7,6 +7,7 @@ using System;
 using Viking.AnnotationServiceTypes;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 #if NETFRAMEWORK
 using System.Windows.Forms;
 #endif
@@ -168,25 +169,28 @@ namespace WebAnnotation.ViewModel
         }
 #endif
 
-        public override void Delete()
+        public override void Delete() => _ = DeleteAsync();
+
+        async Task DeleteAsync()
         {
-            Store.StructureLinks.Remove(modelObj);
+            await Store.StructureLinks.Remove(modelObj);
             try
             {
-                Store.StructureLinks.Save();
+                await Store.StructureLinks.Save();
             }
             catch (System.ServiceModel.FaultException e)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(e);
             }
-
         }
 
-        public override void Save()
+        public override void Save() => _ = SaveAsync();
+
+        async Task SaveAsync()
         {
             try
             {
-                Store.StructureLinks.Save();
+                await Store.StructureLinks.Save();
             }
             catch (System.ServiceModel.FaultException e)
             {

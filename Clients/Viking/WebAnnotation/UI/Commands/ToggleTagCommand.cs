@@ -1,5 +1,5 @@
 using System;
-using System.ServiceModel;
+using System.Threading.Tasks;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 
@@ -17,17 +17,15 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute()
         {
-            target.ToggleAttribute(tag, value);
+            _ = ExecuteAsync();
+        }
 
-            try
-            {
-                Store.Structures.Save();
-            }
-            catch (FaultException ex)
-            {
-                AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
-                target.ToggleAttribute(tag, value);
-            }
+        async Task ExecuteAsync()
+        {
+            await target.ToggleAttribute(tag, value);
+
+            if (!await AnnotationOverlay.SaveStructuresWithMessageBoxOnError())
+                await target.ToggleAttribute(tag, value);
 
             base.Execute();
         }
@@ -45,16 +43,15 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute()
         {
-            target.ToggleAttribute(tag, value);
-            try
-            {
-                Store.Locations.Save();
-            }
-            catch (System.ServiceModel.FaultException ex)
-            {
-                AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
-                target.ToggleAttribute(tag, value);
-            }
+            _ = ExecuteAsync();
+        }
+
+        async Task ExecuteAsync()
+        {
+            await target.ToggleAttribute(tag, value);
+
+            if (!await AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
+                await target.ToggleAttribute(tag, value);
 
             base.Execute();
         }

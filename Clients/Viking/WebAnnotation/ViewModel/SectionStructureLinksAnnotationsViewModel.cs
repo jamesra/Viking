@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using Viking.Common;
 using WebAnnotation.View;
 using WebAnnotationModel;
@@ -154,15 +155,7 @@ namespace WebAnnotation.ViewModel
             if (structLinkObj.SourceID == structLinkObj.TargetID)
             {
                 Trace.WriteLine("Something is wrong on the server, struct ID links to itself: " + structLinkObj.SourceID.ToString());
-                Store.StructureLinks.Remove(structLinkObj);
-                try
-                {
-                    Store.StructureLinks.Save();
-                }
-                catch (System.ServiceModel.FaultException e)
-                {
-                    AnnotationOverlay.ShowFaultExceptionMsgBox(e);
-                }
+                _ = RemoveSelfLinkAsync(structLinkObj);
                 return null;
             }
 
@@ -190,6 +183,19 @@ namespace WebAnnotation.ViewModel
 
             //OK, create a StructureLink between the locations
             return AnnotationViewFactory.Create(linkViewKey, PrimarySection.mapper);
+        }
+
+        static async Task RemoveSelfLinkAsync(StructureLinkObj structLinkObj)
+        {
+            await Store.StructureLinks.Remove(structLinkObj);
+            try
+            {
+                await Store.StructureLinks.Save();
+            }
+            catch (System.ServiceModel.FaultException e)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(e);
+            }
         }
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks() => StructureLinks.Values;

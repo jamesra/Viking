@@ -105,10 +105,12 @@ namespace WebAnnotation.View
 
         protected void ContextMenu_OnDelete(object sender, EventArgs e) => Delete();
 
-        public void Delete()
+        public void Delete() => _ = DeleteAsync();
+
+        async Task DeleteAsync()
         {
-            Store.StructureLinks.Remove(modelObj);
-            Store.StructureLinks.Save();
+            await Store.StructureLinks.Remove(modelObj);
+            await Store.StructureLinks.Save();
         }
     }
 }

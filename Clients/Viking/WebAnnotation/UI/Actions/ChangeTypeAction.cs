@@ -2,6 +2,7 @@ using Geometry;
 using Microsoft.Xna.Framework;
 using SqlGeometryUtils;
 using System;
+using System.Threading.Tasks;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
@@ -55,7 +56,7 @@ namespace WebAnnotation.UI.Actions
             CreateDefaultVisuals();
         }
 
-        public void OnExecute()
+        public async void OnExecute()
         {
             Microsoft.SqlServer.Types.SqlGeometry original_mosaic_polygon = Location.MosaicShape.ToSqlGeometry();
             Polygon mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
@@ -64,7 +65,7 @@ namespace WebAnnotation.UI.Actions
 
             try
             {
-                Store.Locations.Save();
+                await Store.Locations.Save();
             }
             catch (System.ServiceModel.FaultException e)
             {
@@ -154,13 +155,13 @@ namespace WebAnnotation.UI.Actions
             CreateDefaultVisuals();
         }
 
-        public void OnExecute()
+        public async void OnExecute()
         {
             Polyline mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolyline);
             Location.TypeCode = LocationType.POLYLINE;
             Location.SetShapeFromGeometryInSection(Transform, mosaic_polygon.ToSqlGeometry());
 
-            Store.Locations.Save();
+            await Store.Locations.Save();
         }
 
         public void CreateDefaultVisuals()

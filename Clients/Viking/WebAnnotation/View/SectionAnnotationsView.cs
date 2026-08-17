@@ -47,12 +47,35 @@ namespace WebAnnotation.ViewModel
 
         public abstract void Init();
 
-        public virtual void LoadAnnotationsInRegion(VikingXNA.Scene scene, CancellationToken token)
-        {
-            //We get an exception if the rectangle cannot be mapped to mosaic space, for example if it is out of bounds.  
-            //We should fallback by mapping as many points as possible, and then using those to make an equivalent sized rectangle.
-            //If we cannot map any points we shouldn't bother with the request.
+        private readonly object _regionLoadLock = new();
+        private CancellationTokenSource _regionLoadCts;
+        private Task _regionLoadTask = Task.CompletedTask;
+        private Rectangle? _regionLoadBounds;
+        private double _regionLoadPixelSize;
 
+        protected CancellationToken RegionLoadToken
+        {
+            get
+            {
+                lock (_regionLoadLock)
+                {
+                    CancellationTokenSource cts = _regionLoadCts;
+                    if (cts is null)
+                        return CancellationToken.None;
+                    try
+                    {
+                        return cts.Token;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        return CancellationToken.None;
+                    }
+                }
+            }
+        }
+
+        public virtual async Task LoadAnnotationsInRegion(VikingXNA.Scene scene, CancellationToken token)
+        {
             Rectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(mapper);
 
             if (!VisibleMosaicBounds.HasValue)
@@ -60,20 +83,90 @@ namespace WebAnnotation.ViewModel
                 return;
             }
 
-            _ = ObserveRegionLoad(Store.LocationsByRegion.GetObjectsInRegionAsync(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, SectionNumber, QueryTargets.Server, token, AddLocationsInLocalCache));
+            double pixel = scene.ScreenPixelSizeInVolume;
+            Task load = null;
+            CancellationTokenSource oldCts = null;
+            Task previousTask = null;
+            lock (_regionLoadLock)
+            {
+                bool equivalentInFlight = _regionLoadBounds.HasValue
+                    && _regionLoadBounds.Value.Equals(VisibleMosaicBounds.Value)
+                    && _regionLoadPixelSize == pixel
+                    && _regionLoadTask is { IsCompleted: false }
+                    && _regionLoadCts is { IsCancellationRequested: false };
+
+                if (equivalentInFlight)
+                {
+                    oldCts = null;
+                    previousTask = null;
+                    load = AwaitExistingRegionLoadAsync(scene, token, _regionLoadTask);
+                }
+                else
+                {
+                    oldCts = _regionLoadCts;
+                    previousTask = _regionLoadTask;
+                    oldCts?.Cancel();
+                    CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(token);
+                    _regionLoadCts = linked;
+                    _regionLoadBounds = VisibleMosaicBounds;
+                    _regionLoadPixelSize = pixel;
+                    load = Store.LocationsByRegion.GetObjectsInRegionAsync(
+                        VisibleMosaicBounds.Value,
+                        pixel,
+                        SectionNumber,
+                        QueryTargets.Server,
+                        linked.Token,
+                        AddLocationsInLocalCache);
+                    _regionLoadTask = load;
+                }
+            }
+
+            if (oldCts != null)
+                _ = DisposeCtsWhenCompleteAsync(previousTask, oldCts);
+
+            try
+            {
+                await load.ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
+            }
+            catch (OperationCanceledException)
+            {
+                token.ThrowIfCancellationRequested();
+                throw;
+            }
         }
 
-        /// <summary>
-        /// Region queries are fire-and-forget; log faults so a failed load is not silent.
-        /// </summary>
-        protected static Task ObserveRegionLoad(Task load)
+        private async Task AwaitExistingRegionLoadAsync(VikingXNA.Scene scene, CancellationToken token, Task existing)
         {
-            _ = load.ContinueWith(
-                t => Trace.WriteLine(t.Exception),
-                CancellationToken.None,
-                TaskContinuationOptions.OnlyOnFaulted,
-                TaskScheduler.Default);
-            return load;
+            try
+            {
+                await existing.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                token.ThrowIfCancellationRequested();
+                await LoadAnnotationsInRegion(scene, token).ConfigureAwait(false);
+            }
+        }
+
+        private static async Task DisposeCtsWhenCompleteAsync(Task task, CancellationTokenSource cts)
+        {
+            try
+            {
+                if (task != null)
+                    await task.ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+            }
+
+            try
+            {
+                cts.Dispose();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
         protected abstract void AddLocationsInLocalCache(IEnumerable<LocationObj> locations);
@@ -481,6 +574,9 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         private readonly RTree.RTree<long> LocationViewSearch = new();
         protected readonly ConcurrentDictionary<long, LocationCanvasView> LocationViews = new();
+        private readonly object _linkHydrateLock = new();
+        private Task _linkHydrateTask = Task.CompletedTask;
+        private readonly ConcurrentDictionary<long, byte> _inFlightMissingLinkIds = new();
 
         /// <summary>
         /// Maps a structureID to all the locations for that structure on the visible section
@@ -662,16 +758,68 @@ namespace WebAnnotation.ViewModel
             return [.. found];
         }
 
-        private void AddLocationBatch(IEnumerable<LocationObj> locations)
+        private void AddLocationBatch(IEnumerable<LocationObj> locations, CancellationToken token = default)
         {
-            AddLocations(locations);
-            IEnumerable<LocationObj> locsOnOurSection = locations.Where(l => l.Z == SectionNumber);
+            LocationObj[] arr = locations as LocationObj[] ?? [.. locations];
+            AddLocations(arr);
+            IEnumerable<LocationObj> locsOnOurSection = arr.Where(l => l.Z == SectionNumber);
             SectionStructureLinks.AddStructureLinks(locsOnOurSection);
 
-            IEnumerable<LocationObj> locsOnOurSectionOrLinkedByInputLocations = locsOnOurSection.Union(LocationsOnOurSectionLinkedFromSet(locations));
+            IEnumerable<LocationObj> locsOnOurSectionOrLinkedByInputLocations = locsOnOurSection.Union(LocationsOnOurSectionLinkedFromSet(arr));
             SectionLocationLinks.AddLocationLinks(locsOnOurSectionOrLinkedByInputLocations);
             SectionLocationLinks.RetryPendingLinks();
             AddOverlappedLocations(locsOnOurSectionOrLinkedByInputLocations);
+            EnqueueMissingLinkHydration(arr, token);
+        }
+
+        private void EnqueueMissingLinkHydration(IEnumerable<LocationObj> locations, CancellationToken token)
+        {
+            List<long> ids = [];
+            foreach (LocationObj loc in locations)
+            {
+                foreach (long id in loc.LinksCopy)
+                {
+                    if (Store.Locations.Contains(id))
+                        continue;
+                    if (_inFlightMissingLinkIds.TryAdd(id, 0))
+                        ids.Add(id);
+                }
+            }
+
+            if (ids.Count == 0)
+                return;
+
+            lock (_linkHydrateLock)
+            {
+                _linkHydrateTask = HydrateMissingLinksAfterAsync(_linkHydrateTask, ids, token);
+            }
+        }
+
+        private async Task HydrateMissingLinksAfterAsync(Task previous, List<long> ids, CancellationToken token)
+        {
+            try
+            {
+                await previous.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                token.ThrowIfCancellationRequested();
+            }
+
+            try
+            {
+                await Store.Locations.GetObjectsByIDs(ids, token).ConfigureAwait(false);
+                SectionLocationLinks.RetryPendingLinks();
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                Trace.WriteLine($"{nameof(SectionAnnotationsView)}.{nameof(HydrateMissingLinksAfterAsync)}: {ex}");
+            }
+            finally
+            {
+                foreach (long id in ids)
+                    _inFlightMissingLinkIds.TryRemove(id, out _);
+            }
         }
 
         private void RemoveLocationBatch(IEnumerable<LocationObj> locations)
@@ -698,13 +846,13 @@ namespace WebAnnotation.ViewModel
             {
                 case NotifyCollectionChangedAction.Add:
                     listNewObjs = e.NewItems.Cast<LocationObj>();
-                    AddLocationBatch(listNewObjs);
+                    AddLocationBatch(listNewObjs, CancellationToken.None);
                     break;
                 case NotifyCollectionChangedAction.Replace:
                     IEnumerable<LocationObj> OldItems = e.OldItems.Cast<LocationObj>();
                     IEnumerable<LocationObj> NewItems = e.NewItems.Cast<LocationObj>();
                     RemoveLocationBatch(OldItems);
-                    AddLocationBatch(NewItems);
+                    AddLocationBatch(NewItems, CancellationToken.None);
                     break;
 
                 case NotifyCollectionChangedAction.Remove:
@@ -1320,20 +1468,24 @@ namespace WebAnnotation.ViewModel
 
         #endregion
 
-        public override void LoadAnnotationsInRegion(VikingXNA.Scene scene, CancellationToken token)
+        public override async Task LoadAnnotationsInRegion(VikingXNA.Scene scene, CancellationToken token)
         {
-            //Store.LocationsByRegion.LoadSectionAnnotationsInRegion(scene.VisibleWorldBounds, scene.ScreenPixelSizeInVolume, this.SectionNumber, this.AddLocationsInRegionCallback);
-            Rectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(mapper);
-
-            if (VisibleMosaicBounds.HasValue)
+            Task primary = base.LoadAnnotationsInRegion(scene, token);
+            Task above = SectionAbove != null ? SectionAbove.LoadAnnotationsInRegion(scene, token) : Task.CompletedTask;
+            Task below = SectionBelow != null ? SectionBelow.LoadAnnotationsInRegion(scene, token) : Task.CompletedTask;
+            try
             {
-                _ = ObserveRegionLoad(Store.LocationsByRegion.GetObjectsInRegionAsync(VisibleMosaicBounds.Value, scene.ScreenPixelSizeInVolume, SectionNumber, QueryTargets.Server, token, AddLocationsInLocalCache));
+                await Task.WhenAll(primary, above, below).ConfigureAwait(false);
+                Task hydrate;
+                lock (_linkHydrateLock)
+                    hydrate = _linkHydrateTask;
+                await hydrate.ConfigureAwait(false);
             }
-
-
-            SectionAbove?.LoadAnnotationsInRegion(scene, token);
-
-            SectionBelow?.LoadAnnotationsInRegion(scene, token);
+            catch (OperationCanceledException)
+            {
+                token.ThrowIfCancellationRequested();
+                throw;
+            }
         }
 
         /// <summary>
@@ -1345,7 +1497,7 @@ namespace WebAnnotation.ViewModel
             LocationObj[] unknownObjs = [.. locationObjs.Where(l => !KnownLocations.Contains(l.ID))];
             if (unknownObjs.Length > 0)
             {
-                AddLocationBatch(unknownObjs);
+                AddLocationBatch(unknownObjs, RegionLoadToken);
             }
         }
 

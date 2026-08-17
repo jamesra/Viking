@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Threading.Tasks;
 using Viking.UI.Controls;
 using Viking.VolumeModel;
 using WebAnnotation.View;
@@ -44,7 +45,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override bool CanCommandComplete() => true;
 
-        protected override void OnPathLoop(object sender, bool HasLoop)
+        protected override async void OnPathLoop(object sender, bool HasLoop)
         {
             //TODO: Prompt the user to create a closed curve type
             if (HasLoop)
@@ -61,7 +62,7 @@ namespace WebAnnotation.UI.Commands
                 //2. If we do not enclose a circle, check if we can continue an annotation
                 //3. Create a new structure using the loop.
 
-                if (TryConvertEnclosedCircle(newVolumePoly))
+                if (await TryConvertEnclosedCircle(newVolumePoly))
                 {
                     Deactivated = true;
                     return;
@@ -106,7 +107,7 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        private bool TryConvertEnclosedCircle(Polygon newVolumePoly)
+        private async Task<bool> TryConvertEnclosedCircle(Polygon newVolumePoly)
         {
             if (!PenInput.HasSelfIntersection)
             {
@@ -133,7 +134,7 @@ namespace WebAnnotation.UI.Commands
                 obj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON;
                 obj.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, newVolumePoly.ToSqlGeometry());
 
-                Store.Locations.Save();
+                await Store.Locations.Save();
             }
             catch (System.ServiceModel.FaultException e)
             {
@@ -226,7 +227,7 @@ namespace WebAnnotation.UI.Commands
                             System.Windows.Forms.MessageBox.Show(Parent, r.Message, "Could not save Polygon", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
                         }
 
-                        AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                        _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
                     }
                     );
 

@@ -6,6 +6,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Viking.Common;
 using Viking.Common.UI;
@@ -181,14 +182,16 @@ namespace WebAnnotation.ViewModel
         */
         #region IUIObject Members
 
-        public override void Delete()
+        public override void Delete() => _ = DeleteAsync();
+
+        async Task DeleteAsync()
         {
-            Store.Locations.Remove(modelObj);
-            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+            await Store.Locations.Remove(modelObj);
+            await AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
 
             if (ParentID.HasValue)
             {
-                Store.Structures.CheckForOrphan(ParentID.Value);
+                await Store.Structures.CheckForOrphan(ParentID.Value);
             }
         }
 
@@ -391,25 +394,18 @@ namespace WebAnnotation.ViewModel
 
         public override string ToolTip => modelObj.Label;
 
-        public override void Save() => AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+        public override void Save() => _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
 
         #endregion
 
 
         protected void ContextMenu_OnProperties(object sender, EventArgs e) => Viking.UI.Forms.PropertySheetForm.Show(Parent);
 
-        protected void ContextMenu_OnTerminal(object sender, EventArgs e)
+        protected async void ContextMenu_OnTerminal(object sender, EventArgs e)
         {
             modelObj.Terminal = !modelObj.Terminal;
-            try
-            {
-                Store.Locations.Save();
-            }
-            catch (System.ServiceModel.FaultException ex)
-            {
-                AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
+            if (!await AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
                 modelObj.Terminal = !modelObj.Terminal;
-            }
         }
 
         protected void ContextMenu_CopyLocationID(object sender, EventArgs e) => System.Windows.Forms.Clipboard.SetText(ID.ToString());
@@ -449,7 +445,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        public void ContextMenu_SimplifyPolygon(object sender, EventArgs e)
+        public async void ContextMenu_SimplifyPolygon(object sender, EventArgs e)
         {
             //If tag is None, we simplify the exterior.  If tag is a number, we simplify that internal polygon
             ToolStripMenuItem item = sender as ToolStripMenuItem;
@@ -480,7 +476,7 @@ namespace WebAnnotation.ViewModel
                     modelObj.MosaicShape = poly.ToSqlGeometry().ToShape2D();
                 }
 
-                Store.Locations.Save();
+                await Store.Locations.Save();
             }
             catch (Exception)
             {
@@ -493,7 +489,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        public void ContextMenu_RemoveInnerPolygon(object sender, EventArgs e)
+        public async void ContextMenu_RemoveInnerPolygon(object sender, EventArgs e)
         {
             //If tag is None, we simplify the exterior.  If tag is a number, we simplify that internal polygon
             ToolStripMenuItem item = sender as ToolStripMenuItem;
@@ -519,7 +515,7 @@ namespace WebAnnotation.ViewModel
                     modelObj.MosaicShape = poly.ToSqlGeometry().ToShape2D();
                 }
 
-                Store.Locations.Save();
+                await Store.Locations.Save();
             }
             catch (Exception)
             {
@@ -566,7 +562,7 @@ namespace WebAnnotation.ViewModel
                 // Create callback to update location shape
                 void callback(Polygon outputPolygon)
                 {
-                    UpdateLocationShapeFromVolumePolygon(outputPolygon);
+                    _ = UpdateLocationShapeFromVolumePolygon(outputPolygon);
                 }
 
                 // Launch segmentation command
@@ -611,7 +607,7 @@ namespace WebAnnotation.ViewModel
                 // Create callback to update location shape
                 void callback(Polygon volume_poly)
                 {
-                    UpdateLocationShapeFromVolumePolygon(volume_poly);
+                    _ = UpdateLocationShapeFromVolumePolygon(volume_poly);
                 }
 
                 // Launch segmentation command
@@ -656,7 +652,7 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Update the location's shape from the segmented polygon and save
         /// </summary>
-        private void UpdateLocationShapeFromMosaicPolygon(Polygon mosaic_poly)
+        private async Task UpdateLocationShapeFromMosaicPolygon(Polygon mosaic_poly)
         {
             try
             {
@@ -666,7 +662,7 @@ namespace WebAnnotation.ViewModel
 
                 modelObj.SetShapeFromGeometryInSection(parent.Section.ActiveSectionToVolumeTransform, mosaic_poly.ToSqlGeometry());
                 // Save the location
-                Store.Locations.Save();
+                await Store.Locations.Save();
 
                 Debug.WriteLine($"Successfully converted circle location {modelObj.ID} to polygon");
             }
@@ -681,7 +677,7 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Update the location's shape from the segmented polygon and save
         /// </summary>
-        private void UpdateLocationShapeFromVolumePolygon(Polygon volume_poly)
+        private async Task UpdateLocationShapeFromVolumePolygon(Polygon volume_poly)
         {
             try
             {
@@ -694,7 +690,7 @@ namespace WebAnnotation.ViewModel
                 modelObj.SetShapeFromGeometryInVolume(parent.Section.ActiveSectionToVolumeTransform, volume_poly.ToSqlGeometry());
 
                 // Save the location
-                Store.Locations.Save();
+                await Store.Locations.Save();
 
                 Debug.WriteLine($"Successfully converted circle location {modelObj.ID} to polygon");
             }
@@ -706,12 +702,12 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        protected void ContextMenu_OnOffEdge(object sender, EventArgs e)
+        protected async void ContextMenu_OnOffEdge(object sender, EventArgs e)
         {
             modelObj.OffEdge = !modelObj.OffEdge;
             try
             {
-                Store.Locations.Save();
+                await Store.Locations.Save();
             }
             catch (System.ServiceModel.FaultException ex)
             {

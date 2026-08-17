@@ -218,9 +218,9 @@ namespace WebAnnotationModel.Objects
         }
 
         /// <summary>
-        /// Synchronous convenience wrapper over CopyLinksAsync() for legacy UI call sites.
+        /// Snapshot of structure links. Uses a sync lock, not <see cref="CopyLinksAsync"/>.
         /// </summary>
-        public StructureLinkObj[] LinksCopy => CopyLinksAsync().Result;
+        public StructureLinkObj[] LinksCopy => _Links.CreateCopy();
 
 
         /// <summary>

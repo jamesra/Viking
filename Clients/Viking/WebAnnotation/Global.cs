@@ -825,21 +825,22 @@ namespace WebAnnotation
 
             var refreshedProvider = ServiceLocator.ServiceProvider ?? serviceProvider;
 
-            if (!InitializeModule(refreshedProvider, out WebAnnotationModel.IAnnotationStores annotationStores))
+            return InitializeModuleAndStoresAsync(refreshedProvider, cancellationToken);
+        }
+
+        static async Task InitializeModuleAndStoresAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        {
+            if (!await InitializeModuleAsync(serviceProvider, cancellationToken).ConfigureAwait(false))
             {
                 throw new InvalidOperationException("WebAnnotation initialization failed.");
             }
 
-            if (annotationStores != null)
-                return WebAnnotationModel.Store.InitializeAsync(annotationStores, cancellationToken);
-
-            return Task.CompletedTask;
+            if (serviceProvider.GetService<WebAnnotationModel.IAnnotationStores>() is WebAnnotationModel.IAnnotationStores annotationStores)
+                await WebAnnotationModel.Store.InitializeAsync(annotationStores, cancellationToken).ConfigureAwait(false);
         }
 
-        private static bool InitializeModule(IServiceProvider serviceProvider, out WebAnnotationModel.IAnnotationStores annotationStores)
+        private static async Task<bool> InitializeModuleAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
         {  
-            annotationStores = null;
-
             //Find the server hosting the volume.  Look for an XML file mapping the volume to an endpoint.
             Viking.ViewModels.VolumeViewModel volume = Viking.UI.State.volume;
 
@@ -864,14 +865,14 @@ namespace WebAnnotation
             {
                 try
                 {
-                    // Use Task.Run to avoid blocking the thread pool, with proper synchronization
-                    var loadTask = Task.Run(async () => await LoadUserPreferencesAsync().ConfigureAwait(false));
-                    loadTask.GetAwaiter().GetResult();
+                    await LoadUserPreferencesAsync().ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
                     Trace.WriteLine("LoadUserPreferences timed out during initialization.");
                 }
+
+                cancellationToken.ThrowIfCancellationRequested();
 
                 if (serviceProvider?.GetService<IOptions<GrpcRepositorySettings>>() is IOptions<GrpcRepositorySettings> grpcSettings
                     && WebAnnotationModel.State.Endpoint != null)
@@ -879,11 +880,7 @@ namespace WebAnnotation
                     grpcSettings.Value.Endpoint = WebAnnotationModel.State.Endpoint;
                 }
 
-                if (serviceProvider?.GetService<WebAnnotationModel.IAnnotationStores>() is WebAnnotationModel.IAnnotationStores stores)
-                {
-                    annotationStores = stores;
-                }
-                else
+                if (serviceProvider?.GetService<WebAnnotationModel.IAnnotationStores>() is null)
                 {
                     Trace.WriteLine("WebAnnotationModel.IAnnotationStores is not registered with the service provider. Store.X will throw until the gRPC composition root is completed.", "WebAnnotation");
                 }
@@ -893,36 +890,6 @@ namespace WebAnnotation
             return false;
         }
 #endif
-
-        private static XDocument GetAboutXML(Uri AboutURI)
-        {
-            // Use Task.Run to avoid blocking the thread pool when called from synchronous context
-            return Task.Run(async () => await GetAboutXMLAsync(AboutURI).ConfigureAwait(false)).GetAwaiter().GetResult();
-        }
-
-        private static async Task<XDocument> GetAboutXMLAsync(Uri AboutURI)
-        {
-            using HttpClient httpClient = HttpClientFactory.CreateClient(AboutURI,
-#if NETFRAMEWORK
-                Viking.UI.State.UserCredentials
-#else
-                WebAnnotationModel.State.UserCredentials
-#endif
-                );
-            try
-            {
-                var response = await httpClient.GetAsync(AboutURI).ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
-
-                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                return XDocument.Parse(content);
-            }
-            catch (HttpRequestException)
-            {
-                Trace.WriteLine("Could not locate WebAnnotationMapping.XML, disabling WebAnnotations.", "WebAnnotation");
-                return null;
-            }
-        }
 
         private static bool GetEndpointFromXML(XElement elem)
         {

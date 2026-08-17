@@ -80,6 +80,10 @@ namespace WebAnnotation
         /// </summary>
         private readonly Dictionary<int, CancellationTokenSource> _sectionAnnotationLoadBySection = new();
         /// <summary>
+        /// World bounds and downsample last requested or in-flight per section. Equivalent requests are ignored.
+        /// </summary>
+        private readonly Dictionary<int, (Rectangle Bounds, double Downsample)> _sectionLoadTarget = new();
+        /// <summary>
         /// Sections that need loading; worker picks by min distance from current Z.
         /// </summary>
         private readonly HashSet<int> _requestedSectionNumbers = new();
@@ -123,20 +127,40 @@ namespace WebAnnotation
                 $"Server did not send proper response to save request.  The change was probably not saved.\nException:\n{e}", "Client <-> Server Error", MessageBoxButtons.OK);
         }
 
+        public static void ShowSaveFailedMsgBox()
+        {
+            MessageBox.Show(
+                "Server did not confirm the save. The change was probably not saved.",
+                "Client <-> Server Error",
+                MessageBoxButtons.OK);
+        }
+
         /// <summary>
         /// Updates the maximum cache size for section annotations
         /// </summary>
         /// <param name="maxSize">The new maximum cache size</param>
         public static void UpdateCacheSize(int maxSize) => cacheSectionAnnotations.MaxCacheSize = maxSize;
 
-        public static bool SaveLocationsWithMessageBoxOnError()
+        public static async Task<bool> SaveLocationsWithMessageBoxOnError() =>
+            await SaveWithMessageBoxOnError(() => Store.Locations.Save());
+
+        public static async Task<bool> SaveStructuresWithMessageBoxOnError() =>
+            await SaveWithMessageBoxOnError(() => Store.Structures.Save());
+
+        static async Task<bool> SaveWithMessageBoxOnError(Func<Task<bool>> save)
         {
             try
             {
-                Store.Locations.Save();
-                return true;
+                if (await save())
+                    return true;
+
+                ShowSaveFailedMsgBox();
             }
             catch (System.ServiceModel.FaultException e)
+            {
+                ShowFaultExceptionMsgBox(e);
+            }
+            catch (Exception e)
             {
                 ShowFaultExceptionMsgBox(e);
             }
@@ -271,15 +295,6 @@ namespace WebAnnotation
             return null;
         }
 
-        /// <summary>
-        /// Returns annotations for section if they exist or creates new SectionLocationsViewModel if they do not (synchronous; can block the calling thread).
-        /// Prefer GetOrCreateAnnotationsForSectionAsync when calling from UI or async code.
-        /// </summary>
-        public static SectionAnnotationsView GetOrCreateAnnotationsForSection(int SectionNumber)
-        {
-            return GetOrCreateAnnotationsForSectionAsync(SectionNumber).GetAwaiter().GetResult();
-        }
-
         public string[] HelpStrings
         {
             get
@@ -323,6 +338,7 @@ namespace WebAnnotation
             SectionAnnotationsView locView = GetAnnotationsForSection(sectionNumber);
             if (locView == null)
             {
+                _ = GetOrCreateAnnotationsForSectionAsync(sectionNumber);
                 return null;
             }
 
@@ -340,6 +356,7 @@ namespace WebAnnotation
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
             {
+                _ = GetOrCreateAnnotationsForSectionAsync(CurrentSectionNumber);
                 return null;
             }
 
@@ -358,6 +375,7 @@ namespace WebAnnotation
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
             {
+                _ = GetOrCreateAnnotationsForSectionAsync(CurrentSectionNumber);
                 return null;
             }
 
@@ -1268,7 +1286,10 @@ break;
 
 
 
-        protected void OnCreateStructure(long TypeID, IEnumerable<string> attributes, LocationType AnnotationType)
+        protected void OnCreateStructure(long TypeID, IEnumerable<string> attributes, LocationType AnnotationType) =>
+            _ = OnCreateStructureAsync(TypeID, attributes, AnnotationType);
+
+        protected async Task OnCreateStructureAsync(long TypeID, IEnumerable<string> attributes, LocationType AnnotationType)
         {
             if (!Store.StructureTypes.TryGetObjectByID(TypeID, out StructureTypeObj typeObj) || typeObj == null)
             {
@@ -1298,7 +1319,7 @@ break;
                 {
                     foreach (string attrib in attributes)
                     {
-                        newStruct.ToggleAttribute(attrib);
+                        await newStruct.ToggleAttribute(attrib);
                     }
                 }
 
@@ -1345,7 +1366,7 @@ break;
                                         radius);
                                     newLocation.Width = null;
 
-                                    if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } })});
+                                    if(SaveToStore) { _ = SaveLocationsWithMessageBoxOnError(); } })});
         }
 
         public static void QueuePlacementCommandForOpenCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, Geometry.Vector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
@@ -1359,7 +1380,7 @@ break;
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, cmd.PenInput.SimplifiedPath, null);
-                                                                    if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } }) });
+                                                                    if(SaveToStore) { _ = SaveLocationsWithMessageBoxOnError(); } }) });
             }
             else
             {
@@ -1368,7 +1389,7 @@ break;
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
-                                                                    if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } }) });
+                                                                    if(SaveToStore) { _ = SaveLocationsWithMessageBoxOnError(); } }) });
             }
         }
 
@@ -1382,7 +1403,7 @@ break;
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
-                                                                    if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } }) });
+                                                                    if(SaveToStore) { _ = SaveLocationsWithMessageBoxOnError(); } }) });
             }
             else
             {
@@ -1391,7 +1412,7 @@ break;
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
-                                                                    if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } }) });
+                                                                    if(SaveToStore) { _ = SaveLocationsWithMessageBoxOnError(); } }) });
             }
 
         }
@@ -1406,7 +1427,7 @@ break;
                                                                     PlaceClosedCurveWithPenCommand cmd = sender as PlaceClosedCurveWithPenCommand;
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
-                                                                    if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } }) });
+                                                                    if(SaveToStore) { _ = SaveLocationsWithMessageBoxOnError(); } }) });
             }
             else
             {
@@ -1416,7 +1437,7 @@ break;
                                                             new ControlPointCommandBase.OnCommandSuccess((object sender, Geometry.Vector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
-                                                                    if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } }) });
+                                                                    if(SaveToStore) { _ = SaveLocationsWithMessageBoxOnError(); } }) });
             }
         }
 
@@ -1633,12 +1654,14 @@ break;
                 }
                 foreach (int s in toRemove)
                 {
-                    _requestedSectionNumbers.Remove(s);
+                    bool stillQueued = _requestedSectionNumbers.Remove(s);
+                    _sectionLoadTarget.Remove(s);
                     if (_sectionAnnotationLoadBySection.TryGetValue(s, out var cts))
                     {
                         cts.Cancel();
-                        cts.Dispose();
                         _sectionAnnotationLoadBySection.Remove(s);
+                        if (stillQueued)
+                            cts.Dispose();
                     }
                 }
             }
@@ -1788,7 +1811,7 @@ break;
 
             foreach (int section in changedSections)
             {
-                SectionAnnotationsView SLVModel = GetOrCreateAnnotationsForSection(section);
+                SectionAnnotationsView SLVModel = GetAnnotationsForSection(section);
                 SLVModel?.OnLocationsStoreChanged(sender, e);
             }
 
@@ -1796,7 +1819,7 @@ break;
             {
                 if (!changedSections.Contains(section))
                 {
-                    SectionAnnotationsView SLVModel = GetOrCreateAnnotationsForSection(section);
+                    SectionAnnotationsView SLVModel = GetAnnotationsForSection(section);
                     SLVModel?.OnLocationsStoreChanged(sender, e);
                 }
             }
@@ -1819,7 +1842,7 @@ break;
 
             foreach (int section in changedSections)
             {
-                SectionAnnotationsView SLVModel = GetOrCreateAnnotationsForSection(section);
+                SectionAnnotationsView SLVModel = GetAnnotationsForSection(section);
                 SLVModel?.OnLocationLinksStoreChanged(sender, e);
             }
         }
@@ -1956,52 +1979,72 @@ break;
         /// <summary>
         /// Load annotations for a single section (primary + SectionAbove + SectionBelow). Only update last-load state when sectionNumber is the current section.
         /// </summary>
-        protected Task LoadSectionAnnotationsForSection(int sectionNumber, CancellationToken token)
+        protected async Task LoadSectionAnnotationsForSection(int sectionNumber, CancellationToken token)
         {
             if (Parent?.Scene is null)
-                return Task.CompletedTask;
-            SectionAnnotationsView sectionAnnotations = GetOrCreateAnnotationsForSection(sectionNumber);
+                return;
+            SectionAnnotationsView sectionAnnotations = await GetOrCreateAnnotationsForSectionAsync(sectionNumber).ConfigureAwait(false);
             if (sectionAnnotations is null)
-                return Task.CompletedTask;
+                return;
             try
             {
-                sectionAnnotations.LoadAnnotationsInRegion(Parent.Scene, token);
+                await sectionAnnotations.LoadAnnotationsInRegion(Parent.Scene, token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
-                return Task.CompletedTask;
+                return;
             }
 
-            // Update last-load state only when the loaded section is the current section
             if (!token.IsCancellationRequested && sectionNumber == _currentSectionNumber && Parent?.Scene != null)
             {
+                Rectangle bounds = Parent.Scene.VisibleWorldBounds;
+                double downsample = Parent.Camera.Downsample;
                 Parent.BeginInvoke(new System.Action(() =>
                 {
                     if (Parent?.Scene != null && sectionNumber == _currentSectionNumber)
                     {
-                        LastLoadVisibleWorldBounds = Parent.Scene.VisibleWorldBounds;
-                        LastLoadDownsample = Parent.Camera.Downsample;
+                        LastLoadVisibleWorldBounds = bounds;
+                        LastLoadDownsample = downsample;
                     }
                 }));
             }
-            return Task.CompletedTask;
         }
 
         /// <summary>
         /// Add a section to the requested set and signal the worker. Worker picks by min distance from current Z.
+        /// Re-request of an equivalent in-flight or queued load is a no-op. A changed camera replaces the CTS so the in-flight region RPC cancels.
         /// </summary>
         private void RequestSectionAnnotationsLoad(int sectionNumber)
         {
             if (Parent?.Scene is null || sectionNumber <= 0)
                 return;
+            Rectangle bounds = Parent.Scene.VisibleWorldBounds;
+            double downsample = Parent.Camera.Downsample;
             lock (_sectionAnnotationLoadLock)
             {
-                if (!_sectionAnnotationLoadBySection.TryGetValue(sectionNumber, out var cts) || cts.IsCancellationRequested)
+                bool queued = _requestedSectionNumbers.Contains(sectionNumber);
+                bool hasLiveCts = _sectionAnnotationLoadBySection.TryGetValue(sectionNumber, out var cts)
+                    && cts != null
+                    && !cts.IsCancellationRequested;
+
+                if (hasLiveCts
+                    && _sectionLoadTarget.TryGetValue(sectionNumber, out var previous)
+                    && previous.Bounds == bounds
+                    && previous.Downsample == downsample)
                 {
-                    cts?.Dispose();
-                    cts = new CancellationTokenSource();
-                    _sectionAnnotationLoadBySection[sectionNumber] = cts;
+                    return;
                 }
+
+                _sectionLoadTarget[sectionNumber] = (bounds, downsample);
+
+                if (queued)
+                    return;
+
+                if (hasLiveCts)
+                    cts.Cancel();
+
+                cts = new CancellationTokenSource();
+                _sectionAnnotationLoadBySection[sectionNumber] = cts;
                 if (_requestedSectionNumbers.Add(sectionNumber))
                     _annotationLoadWorkerSignal.Release();
             }
@@ -2026,6 +2069,7 @@ break;
 
                 int sectionToLoad;
                 CancellationToken sectionToken;
+                CancellationTokenSource sectionCts;
                 lock (_sectionAnnotationLoadLock)
                 {
                     // Drain cancelled sections upfront so we don't waste cycles iterating over them
@@ -2047,7 +2091,8 @@ break;
                     if (best < 0)
                         continue;
                     _requestedSectionNumbers.Remove(best);
-                    sectionToken = _sectionAnnotationLoadBySection[best].Token;
+                    sectionCts = _sectionAnnotationLoadBySection[best];
+                    sectionToken = sectionCts.Token;
                     sectionToLoad = best;
                 }
 
@@ -2071,6 +2116,14 @@ break;
                 catch (Exception ex)
                 {
                     Trace.WriteLine($"{nameof(AnnotationOverlay)}.{nameof(RunAnnotationLoadWorkerAsync)}: unexpected exception loading section {sectionToLoad}: {ex.Message}");
+                }
+                finally
+                {
+                    lock (_sectionAnnotationLoadLock)
+                    {
+                        if (!_sectionAnnotationLoadBySection.TryGetValue(sectionToLoad, out var live) || !ReferenceEquals(live, sectionCts))
+                            sectionCts.Dispose();
+                    }
                 }
             }
         }
@@ -2201,8 +2254,12 @@ break;
             basicEffect.Alpha = 1;
 
             RasterizerState OriginalRasterState = graphicsDevice.RasterizerState;
-            SectionAnnotationsView currentSectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number);
-            Debug.Assert(currentSectionAnnotations != null);
+            SectionAnnotationsView currentSectionAnnotations = GetAnnotationsForSection(_Parent.Section.Number);
+            if (currentSectionAnnotations is null)
+            {
+                _ = GetOrCreateAnnotationsForSectionAsync(_Parent.Section.Number);
+                return;
+            }
 
             int SectionNumber = _Parent.Section.Number;
 

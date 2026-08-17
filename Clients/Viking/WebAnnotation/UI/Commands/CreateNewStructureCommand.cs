@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
@@ -14,8 +15,9 @@ namespace WebAnnotation.UI.Commands
     {
         private readonly StructureObj newStruct = structure;
         private readonly LocationObj newLoc = location;
+        int _started;
 
-        public override void OnActivate() => Parent.BeginInvoke((Action)delegate () { _ = ExecuteAsync(); });
+        public override void OnActivate() => Parent.BeginInvoke((Action)Execute);
 
         protected override void Execute()
         {
@@ -24,6 +26,9 @@ namespace WebAnnotation.UI.Commands
 
         async System.Threading.Tasks.Task ExecuteAsync()
         {
+            if (Interlocked.Exchange(ref _started, 1) != 0)
+                return;
+
             var result = await Store.Structures.Create(newStruct, newLoc);
             if (result.Location != null)
             {

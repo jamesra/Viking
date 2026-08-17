@@ -27,6 +27,19 @@ namespace WebAnnotationModel
             ReadOnlyObservable = new ReadOnlyObservableCollection<T>(Observable);
         }
 
+        public T[] CreateCopy()
+        {
+            LinkLock.Wait();
+            try
+            {
+                return Observable.ToArray();
+            }
+            finally
+            {
+                LinkLock.Release();
+            }
+        }
+
         public async Task<T[]> CreateCopyAsync()
         {
             try

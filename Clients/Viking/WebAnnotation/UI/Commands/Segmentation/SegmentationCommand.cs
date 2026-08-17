@@ -207,7 +207,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         private void AddBackgroundPointsFromStructureType(long structureTypeId, HashSet<long> exemptStructureIds, VikingXNA.Scene scene)
         {
-            var sectionAnnotations = AnnotationOverlay.GetOrCreateAnnotationsForSection(Parent.Section.Number);
+            var sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
             if (sectionAnnotations is null)
                 return;
 

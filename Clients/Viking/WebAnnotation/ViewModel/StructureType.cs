@@ -144,11 +144,13 @@ namespace WebAnnotation.ViewModel
 
         public override string ToolTip => Name;
 
-        public override void Save()
+        public override void Save() => _ = SaveAsync();
+
+        async Task SaveAsync()
         {
             try
             {
-                Store.StructureTypes.Save();
+                await Store.StructureTypes.Save();
             }
             catch (System.ServiceModel.FaultException ex)
             {
@@ -215,38 +217,22 @@ namespace WebAnnotation.ViewModel
         protected void ContextMenu_OnDelete(object sender, EventArgs e) => Delete();
 #endif
 
-        public override void Delete()
+        public override void Delete() => _ = DeleteAsync();
+
+        async Task DeleteAsync()
         {
-            //            StructureTypeObj OriginalParent = this.Parent;
-            //            this.Parent = null;
-
-            /*
-            DBACTION originalAction = this.DBAction;
-            this.DBAction = DBACTION.DELETE;
-
-            bool success = Store.StructureTypes.Save();
-            if (!success)
-            {
-                //Write straight to data since we have an assert to check whether an object is being deleted, but
-                //in this case we know it is ok
-                this.Data.DBAction = originalAction;
-                this.Parent = OriginalParent;
-            }
-             */
-
             //This is a hack because not every control may be subscribing to the same object, but the 
             //alternative is a huge rewrite which I am doing with Jotunn
             CallBeforeDelete();
 
-            Store.StructureTypes.Remove(modelObj);
-            Store.StructureTypes.Save();
+            await Store.StructureTypes.Remove(modelObj);
+            await Store.StructureTypes.Save();
 
             CallAfterDelete();
 
 #if NETFRAMEWORK
             Viking.UI.State.SelectedObject = null;
 #endif
-
         }
     }
 }

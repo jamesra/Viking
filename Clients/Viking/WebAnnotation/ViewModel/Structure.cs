@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 #if NETFRAMEWORK
 using System.Windows.Forms;
 #endif
@@ -90,7 +91,7 @@ namespace WebAnnotation.ViewModel
         public IEnumerable<ObjAttribute> Attributes
         {
             get => modelObj.Attributes;
-            set => modelObj.SetAttributes(value).Wait();
+            set => _ = modelObj.SetAttributes(value);
         }
 
         [Column("Notes")]
@@ -105,9 +106,9 @@ namespace WebAnnotation.ViewModel
 
 
 
-        public static void ToggleAttribute(StructureObj structObj, string tag)
+        public static Task ToggleAttribute(StructureObj structObj, string tag)
         {
-            structObj.ToggleAttribute(tag).Wait();
+            return structObj.ToggleAttribute(tag);
         }
 
         public LocationObj Center => CenterFromLocations(Store.Locations.GetLocalObjectsForStructure(ID));
@@ -202,21 +203,23 @@ namespace WebAnnotation.ViewModel
 
 #endif
 
-        public override void Save()
+        public override void Save() => _ = SaveAsync();
+
+        async Task SaveAsync()
         {
+#if NETFRAMEWORK
+            await AnnotationOverlay.SaveStructuresWithMessageBoxOnError();
+#else
             try
             {
-                Store.Structures.Save();
+                if (!await Store.Structures.Save())
+                    System.Diagnostics.Trace.WriteLine("Structure save was not confirmed by the server.");
             }
-            catch (System.ServiceModel.FaultException e)
+            catch (Exception e)
             {
-#if NETFRAMEWORK
-                AnnotationOverlay.ShowFaultExceptionMsgBox(e);
-#else
                 System.Diagnostics.Trace.WriteLine(e);
-#endif
             }
-
+#endif
         }
 
 #if NETFRAMEWORK
@@ -334,22 +337,12 @@ namespace WebAnnotation.ViewModel
         }
 #endif
 
-        public override void Delete() => _ = Store.Structures.Remove(modelObj);/*
-            Structure OriginalParent = this.Parent;
-            this.Parent = null;
+        public override void Delete() => _ = DeleteAsync();
 
-            DBACTION originalAction = this.DBAction;
-            this.DBAction = DBACTION.DELETE;
-
-            bool success = Store.Structures.Save();
-            if (!success)
-            {
-                //Write straight to data since we have an assert to check whether an object is being deleted, but
-                //in this case we know it is ok
-                this.Data.DBAction = originalAction;
-                this.Parent = OriginalParent;
-            }
-            */
+        async Task DeleteAsync()
+        {
+            await Store.Structures.Remove(modelObj);
+        }
 
         bool IEquatable<Structure>.Equals(Structure other) => modelObj.ID == other.modelObj.ID;
 

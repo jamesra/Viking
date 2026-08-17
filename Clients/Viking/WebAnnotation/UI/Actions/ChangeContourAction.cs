@@ -2,6 +2,7 @@ using Geometry;
 using SqlGeometryUtils;
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using WebAnnotationModel;
@@ -85,7 +86,7 @@ namespace WebAnnotation.UI.Actions
             NewSmoothedVolumePolygon = NewVolumePolygon;//newVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
         }
 
-        public void OnExecute()
+        public async void OnExecute()
         {
             Microsoft.SqlServer.Types.SqlGeometry original_mosaic_polygon = Location.MosaicShape.ToSqlGeometry();
             //var mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
@@ -93,7 +94,7 @@ namespace WebAnnotation.UI.Actions
 
             try
             {
-                Store.Locations.Save();
+                await Store.Locations.Save();
             }
             catch (System.ServiceModel.FaultException e)
             {
@@ -162,12 +163,12 @@ namespace WebAnnotation.UI.Actions
             return a.Execute;
         }
 
-        public void OnExecute()
+        public async void OnExecute()
         {
             Polyline mosaic_shape = Transform.TryMapShapeVolumeToSection(NewVolumePolyline);
             Location.SetShapeFromGeometryInSection(Transform, mosaic_shape.ToSqlGeometry());
 
-            Store.Locations.Save();
+            await Store.Locations.Save();
         }
 
         public bool Equals(IAction other)

@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Threading.Tasks;
 using Viking.UI.Controls;
 using Viking.VolumeModel;
 using WebAnnotation.View;
@@ -47,7 +48,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override bool CanCommandComplete() => true;
 
-        protected override void OnPathLoop(object sender, bool HasLoop)
+        protected override async void OnPathLoop(object sender, bool HasLoop)
         {
             //TODO: Prompt the user to create a closed curve type
             if (HasLoop)
@@ -62,7 +63,7 @@ namespace WebAnnotation.UI.Commands
                 //We created a loop, here are our steps:
                 //1. If our loop is entirely contained within a polygon, cut a hole.
 
-                if (TryCutHole(newVolumePoly))
+                if (await TryCutHole(newVolumePoly))
                 {
                     Deactivated = true;
                     return;
@@ -74,7 +75,7 @@ namespace WebAnnotation.UI.Commands
         }
 
 
-        private bool TryCutHole(Polygon newVolumePoly)
+        private async Task<bool> TryCutHole(Polygon newVolumePoly)
         {
             if (!PenInput.HasSelfIntersection)
             {
@@ -111,7 +112,7 @@ namespace WebAnnotation.UI.Commands
 
             try
             {
-                Store.Locations.Save();
+                await Store.Locations.Save();
             }
             catch (System.ServiceModel.FaultException e)
             {
@@ -195,7 +196,7 @@ namespace WebAnnotation.UI.Commands
                             System.Windows.Forms.MessageBox.Show(Parent, r.Message, "Could not save Polygon", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
                         }
 
-                        Store.Locations.Save();
+                        _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
                     }
                     );
 

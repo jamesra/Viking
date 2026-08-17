@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Windows.Forms;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
@@ -17,8 +18,9 @@ namespace WebAnnotation.UI.Commands
     {
         private readonly LocationObj NewLoc = newLoc;
         private readonly LocationObj ExistingLoc = existingLoc;
+        int _started;
 
-        public override void OnActivate() => Parent.BeginInvoke((Action)delegate () { _ = ExecuteAsync(); });
+        public override void OnActivate() => Parent.BeginInvoke((Action)Execute);
 
         protected override void Execute()
         {
@@ -27,6 +29,9 @@ namespace WebAnnotation.UI.Commands
 
         async System.Threading.Tasks.Task ExecuteAsync()
         {
+            if (Interlocked.Exchange(ref _started, 1) != 0)
+                return;
+
             try
             {
                 if (!LocationLinkView.IsValidLocationLinkTarget(NewLoc, ExistingLoc))

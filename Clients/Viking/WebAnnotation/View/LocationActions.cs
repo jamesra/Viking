@@ -390,7 +390,7 @@ namespace WebAnnotation
                                                                (mosaicPolygon, points) =>
                                                                     {
                                                                         loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, mosaicPolygon.ToSqlGeometry());
-                                                                        AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                                                                        _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
                                                                     });
                 case LocationAction.SCALE:
                     return null;
@@ -402,7 +402,7 @@ namespace WebAnnotation
                                                                            try
                                                                            {
                                                                                loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                                                               Store.Locations.Save();
+                                                                               _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
                                                                            }
                                                                            catch (ArgumentException e)
                                                                            {
@@ -423,7 +423,7 @@ namespace WebAnnotation
                                                           try
                                                           {
                                                               loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                                              Store.Locations.Save();
+                                                              _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
                                                           }
                                                           catch (ArgumentException e)
                                                           {
@@ -442,7 +442,7 @@ namespace WebAnnotation
                                                           try
                                                           {
                                                               loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                                              Store.Locations.Save();
+                                                              _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
                                                           }
                                                           catch (ArgumentException e)
                                                           {
@@ -477,7 +477,7 @@ namespace WebAnnotation
                                                                         MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                                                     }
 
-                                                                    AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                                                                    _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
                                                                 }
                                                                 );
 
@@ -498,7 +498,7 @@ namespace WebAnnotation
                                     MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                 }
 
-                                AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                                _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
                             }
                             );
                         }
@@ -510,7 +510,7 @@ namespace WebAnnotation
                                                         (MosaicPolygon, VolumePolygon) =>
                                                         {
                                                             loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                                            Store.Locations.Save();
+                                                            _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
                                                         }
                                                         );
                 case LocationAction.CREATELINKEDLOCATION:
@@ -611,7 +611,7 @@ namespace WebAnnotation
                                                                      }
 
 
-                                                                     AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                                                                     _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
 
                                                                  }
                                                                  );
@@ -647,7 +647,7 @@ namespace WebAnnotation
         private static void UpdateLineLocationCallback(LocationObj loc, Vector2[] VolumeControlPoints, Vector2[] MosaicControlPoints)
         {
             UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints);
-            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+            _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
         private static void UpdateLineLocationNoSaveCallback(LocationObj loc, Vector2[] VolumeControlPoints, Vector2[] MosaicControlPoints)
@@ -662,7 +662,7 @@ namespace WebAnnotation
         private static void UpdateLineLocationCallback(LocationObj loc, Vector2[] VolumeControlPoints, Vector2[] MosaicControlPoints, double NewWidth)
         {
             UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints, NewWidth);
-            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+            _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
         private static void UpdateLineLocationNoSaveCallback(LocationObj loc, Vector2[] VolumeControlPoints, Vector2[] MosaicControlPoints, double NewWidth)
@@ -674,13 +674,13 @@ namespace WebAnnotation
         public static void UpdateCircleLocationCallback(LocationObj loc, Vector2 WorldPosition, Vector2 MosaicPosition, double NewRadius)
         {
             UpdateCircleLocationNoSaveCallback(loc, WorldPosition, MosaicPosition, NewRadius);
-            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+            _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
         public static void UpdateCircleLocationCallback(LocationObj loc, Vector2 WorldPosition, Vector2 MosaicPosition)
         {
             UpdateCircleLocationNoSaveCallback(loc, WorldPosition, MosaicPosition);
-            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+            _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
 #endif

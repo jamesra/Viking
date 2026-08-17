@@ -1,6 +1,5 @@
 using System;
-
-using WebAnnotationModel;
+using System.Threading.Tasks;
 using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Commands
@@ -10,12 +9,18 @@ namespace WebAnnotation.UI.Commands
     {
         private readonly LocationObj target = loc;
 
-        public override void OnActivate() => Parent.BeginInvoke((Action)delegate () { Execute(); });
+        public override void OnActivate() => Parent.BeginInvoke((Action)Execute);
 
         protected override void Execute()
         {
+            _ = ExecuteAsync();
+        }
+
+        async Task ExecuteAsync()
+        {
             target.Terminal = !target.Terminal;
-            System.Threading.Tasks.Task t = new(() => WebAnnotation.AnnotationOverlay.SaveLocationsWithMessageBoxOnError());
+            if (!await AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
+                target.Terminal = !target.Terminal;
             base.Execute();
         }
     }

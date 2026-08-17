@@ -47,6 +47,8 @@ namespace WebAnnotationModel
         public bool OutstandingQuery => QueryTask != null
                                         && QueryCancellationToken.IsCancellationRequested == false;
 
+        public Task CurrentQuery => QueryTask;
+
         private Task QueryTask = null;
         private CancellationToken QueryCancellationToken = CancellationToken.None;
 

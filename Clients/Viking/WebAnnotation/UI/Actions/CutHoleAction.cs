@@ -3,6 +3,7 @@ using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
 using SqlGeometryUtils;
 using System;
+using System.Threading.Tasks;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using WebAnnotationModel;
@@ -55,7 +56,7 @@ namespace WebAnnotation.UI.Actions
             CreateDefaultVisuals();
         }
 
-        public void OnExecute()
+        public async void OnExecute()
         {
             SqlGeometry original_mosaic_shape = Location.MosaicShape.ToSqlGeometry();
             Geometry.Vector2[] mosaic_points = Transform.VolumeToSection(NewVolumeInteriorPolygon.ExteriorRing);
@@ -65,7 +66,7 @@ namespace WebAnnotation.UI.Actions
 
             try
             {
-                Store.Locations.Save();
+                await Store.Locations.Save();
             }
             catch (System.ServiceModel.FaultException e)
             {

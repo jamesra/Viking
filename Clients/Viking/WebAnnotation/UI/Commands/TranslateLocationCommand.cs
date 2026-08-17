@@ -356,7 +356,7 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
         public static void DefaultSuccessCallback(LocationObj loc, Vector2 WorldPosition, Vector2 MosaicPosition)
         {
             DefaultSuccessNoSaveCallback(loc, WorldPosition, MosaicPosition);
-            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+            _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
         public static void DefaultSuccessNoSaveCallback(LocationObj loc, Vector2 WorldPosition, Vector2 MosaicPosition)
