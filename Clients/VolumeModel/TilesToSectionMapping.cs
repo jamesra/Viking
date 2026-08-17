@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace Viking.VolumeModel
 {
     /// <summary>
-    /// Map tiles to a section, as in a .mosaic file
+    /// Pyramid mosaic (.mosaic). Try* is identity (mosaic == volume) until MappingManager wraps it in SectionToVolumeMapping.
     /// </summary>
     class TilesToSectionMapping(Section section, string name, string rootPath, string mosaicPath, string tilePrefix, string tilePostfix) : FixedTileCountMapping(section, name, tilePrefix, tilePostfix)
     {

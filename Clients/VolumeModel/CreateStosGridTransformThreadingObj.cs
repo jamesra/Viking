@@ -8,6 +8,9 @@ using System.Xml.Linq;
 
 namespace Viking.VolumeModel
 {
+    /// <summary>
+    /// One VikingXML &lt;stos&gt; parse. controlSection is the volume/reference; mappedSection is the moving slice.
+    /// </summary>
     internal class LoadStosResult
     {
         public ITransform Transform;

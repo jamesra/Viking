@@ -18,6 +18,9 @@ namespace Viking.VolumeModel
         /// </summary>
         public SortedList<int, RegistrationTreeNode> RootNodes = [];
 
+        /// <summary>
+        /// Stos pair: ControlSection is the parent/reference (volume side); MappedSection is the child being registered.
+        /// </summary>
         public void AddPair(int ControlSection, int MappedSection)
         {
             if (!Nodes.TryGetValue(ControlSection, out RegistrationTreeNode ControlNode))

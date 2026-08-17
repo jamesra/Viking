@@ -1,10 +1,31 @@
 ---
 name: coordinate-spaces
 description: Coordinate spaces (mosaic vs volume vs screen) used in imaging and annotations
-globs: ["**/Geometry/**", "**/Annotation*/**", "**/WebAnnotation/**", "**/Morphology*/**", "Clients/MonogameXNAGraphicsShared/**", "**/*[V|v]iew*/**", "**/*ViewModel*/**"]
+globs: ["**/Geometry/**", "**/Annotation*/**", "**/WebAnnotation/**", "**/Morphology*/**", "Clients/MonogameXNAGraphicsShared/**", "Clients/VolumeModel/**", "**/*[V|v]iew*/**", "**/*ViewModel*/**"]
 alwaysApply: false
 ---
 
 # Overview
 
-There are two coordinate spaces commonly used. The first is "mosaic space" which is the position on a specific section's 2D image. The second is "Volume Space" which is the position after a section has been transformed into a volume. In a drawing context there may also be a screen coordinate space.
+There are two coordinate spaces commonly used. The first is "mosaic space" (also called section space) which is the position on a specific section's 2D image. The second is "Volume Space" which is the position after a section has been transformed into a volume. In a drawing context there may also be a screen coordinate space.
+
+# Mosaic vs volume
+
+- **Mosaic / section space** — pixels on one section's assembled image (a `.mosaic` or a tileset grid).
+- **Volume space** — that section after a slice-to-slice (stos) warp into the volume. When the volume transform is `None` or missing, mosaic == volume (identity).
+- **Screen space** — pixels in the viewer. Camera / downsample convert volume ↔ screen.
+
+`IVolumeToSectionTransform.SectionToVolume` is mosaic → volume. `VolumeToSection` is volume → mosaic. The copy-pasted comments that said both methods map "volume to section" were wrong.
+
+On a stos `ITransform`, `Transform` is section → volume (mapped → control). `ControlBounds` is volume; `MappedBounds` is mosaic.
+
+# Tileset vs pyramid
+
+- **Tileset** — warp is already in the tile images. `MappingManager` cache key uses the **channel name**. `Initialized` is immediately true. `ControlBounds` is the mosaic grid even after `TileGridToVolumeMapping` applies a stos for annotations.
+- **Pyramid** — raw tiles plus a mosaic stos in `Section.WarpedTo`. Cache key uses the **section transform name**; `CurrentPyramid` is then set to the channel. `Initialized` stays false until `Initialize` / Warp finishes. `SectionSceneRenderer` must start that work or `DrawTiles` returns every frame.
+
+# Which type to use
+
+- **Draw tiles** — `MappingManager.GetMapping` (picks tileset vs pyramid and optional volume stos).
+- **Annotation hit-test / region queries** — `VolumeTransformProvider` / `IVolumeToSectionTransform` (stos only, no tiles).
+- **Region queries** — map the visible volume rect with `ApproximateVisibleMosaicBounds`. Null means skip the request, not "empty region".

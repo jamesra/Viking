@@ -93,8 +93,8 @@ namespace Viking.VolumeModel
 
 
     /// <summary>
-    /// Collection of volumes, sections and tiles. There is only one dataset loaded at a time.
-    /// TODO: Split parsing the VikingXML into a separate class
+    /// One open dataset: VikingXML, sections, and stos groups. CreateAsync parses the XML;
+    /// Initialize loads sections and stos. Only one Volume is open at a time.
     /// </summary>
     public class Volume
     {
@@ -104,22 +104,22 @@ namespace Viking.VolumeModel
         public string Name = "";
 
         /// <summary>
-        /// Name of the volume transform to use by default
+        /// Volume.Transforms key passed to MappingManager / VolumeTransformProvider. "None" is mosaic-only.
         /// </summary>
         public string DefaultVolumeTransform = null;
 
         /// <summary>
-        /// Name of the default stos group
+        /// VikingXML stosgroup used when DefaultVolumeTransform is not set.
         /// </summary>
         public string DefaultStosGroup = null;
 
         /// <summary>
-        /// Name of the default image pyramid
+        /// Fallback pyramid name when a section has no DefaultPyramid.
         /// </summary>
         public string DefaultImagePyramid = null;
 
         /// <summary>
-        /// Name of the default tile-to-mosaic transform when using pyramids
+        /// Fallback mosaic stos name (Section.DefaultPyramidTransform) for pyramid channels.
         /// </summary>
         public string DefaultMosaicTransform = null;
 
@@ -133,6 +133,9 @@ namespace Viking.VolumeModel
         /// </summary>
         public bool UpdateServerVolumePositions = false;
 
+        /// <summary>
+        /// Annotation / identity / export URLs from VikingXML. Tile HTTP still uses Host + UserCredentials.
+        /// </summary>
         public EndpointInformation Endpoint = null;
 
         private string _UniqueID = "";
@@ -149,7 +152,7 @@ namespace Viking.VolumeModel
         public bool IsLocal => _IsLocal;
 
         /// <summary>
-        /// Credentials to use during web requests
+        /// HTTP credentials for VikingXML, stos, and tiles. Annotation gRPC uses IAnnotationAccessTokenProvider, not this.
         /// </summary>
         public System.Net.NetworkCredential UserCredentials = new("anonymous", "connectome");
 
@@ -201,9 +204,8 @@ namespace Viking.VolumeModel
         public bool IsInitialized => Interlocked.Read(ref _Initialized) > 0;
 
         /// <summary>
-        /// Sorted list containing the transforms for each volume transform we find
-        /// Key = Downsample level
-        /// Value = Dictionary mapping each section number to a stos transform.  This is because section numbers may not be continuos
+        /// Stos groups: outer key is the volume-transform / stosgroup name (not downsample).
+        /// Inner key is section number — numbers may have gaps.
         /// </summary>
         public SortedList<string, SortedList<int, ITransform>> Transforms = [];
 
@@ -219,10 +221,8 @@ namespace Viking.VolumeModel
         public Task InitializationTask { get; private set; }
 
         /// <summary>
-        /// Returns the section that the passed section was registered to
+        /// Nearest loaded section with a smaller number. Not the stos parent — use RegistrationTree for that.
         /// </summary>
-        /// <param name="?"></param>
-        /// <returns></returns>
         public Section GetReferenceSectionBelow(Section section)
         {
             if (section is null)
@@ -242,10 +242,8 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
-        /// Returns the section that the passed section was registered to
+        /// Nearest loaded section with a larger number. Not the stos parent — use RegistrationTree for that.
         /// </summary>
-        /// <param name="?"></param>
-        /// <returns></returns>
         public Section GetReferenceSectionAbove(Section section)
         {
             if (section is null)
@@ -275,8 +273,7 @@ namespace Viking.VolumeModel
         private XDocument VolumeXML;
 
         /// <summary>
-        /// Loads the .xml file describing the volume and populates the name, number of sections, and other top-level information.
-        /// Does not load details for each section or each transform until Volume.Initialize() is called.
+        /// Reads VikingXML defaults only. Sections and stos stay empty until Initialize.
         /// </summary>
         /// <param name="path"></param>
         /// <param name="localCachePath"></param>
@@ -719,6 +716,11 @@ namespace Viking.VolumeModel
         /// Only allow one initialization at a time
         /// </summary>
         private readonly SemaphoreSlim InitializeLock = new(1);
+
+        /// <summary>
+        /// Loads sections and stos into Sections / Transforms. Safe to call twice — returns if IsInitialized.
+        /// CreateAsync does not call this.
+        /// </summary>
         public async Task Initialize(CancellationToken token, IProgress<ProgressInfo> workerThread = null)
         {
 

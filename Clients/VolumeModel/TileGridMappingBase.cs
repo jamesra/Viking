@@ -8,8 +8,7 @@ using System.Threading.Tasks;
 namespace Viking.VolumeModel
 {
     /// <summary>
-    /// Tile grid mappings refer to a pre-assembled set of tiles, where the tile size is fixed
-    /// to the same value at every level of the pyramid, so the area must change
+    /// Fixed-size tiles; area covered grows with downsample. ControlBounds is the mosaic grid, even after a volume wrap.
     /// </summary>
     public abstract class TileGridMappingBase : MappingBase
     {

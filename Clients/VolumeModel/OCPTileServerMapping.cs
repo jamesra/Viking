@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Viking.VolumeModel
 {
     /// <summary>
-    /// Handles mapping tiles that are fetched from an Open Connectome Project server.  Repurposed from nornir-web tile server code.
+    /// OCP/nornir-web tileset. Tile path uses log2(downsample) and a Z section in the filename.
     /// </summary>
     public class OCPTileServerMapping : TileGridMappingBase
     {

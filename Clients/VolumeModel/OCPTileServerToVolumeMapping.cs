@@ -5,8 +5,7 @@ using System.Collections.Generic;
 namespace Viking.VolumeModel
 {
     /// <summary>
-    /// For this mapping the tiles are registered into the volume and we can use simple math to figure out which tiles to load.  However our transform mapping 
-    /// needs to be able to map points to mosaic space for annotations
+    /// OCP tileset plus volume stos. Tile selection stays grid math; Try* uses the stos for annotations.
     /// </summary>
     public class OCPTileServerToVolumeMapping(Section section, string name, OCPTileServerMapping ToWarp, ITransform Transform) : OCPTileServerMapping(ToWarp, section, name)
     {
@@ -17,11 +16,6 @@ namespace Viking.VolumeModel
         /// </summary>
         public readonly ITransform VolumeTransform = Transform;
 
-        /// <summary>
-        /// Maps a point from volume space into the section space
-        /// </summary>
-        /// <param name="?"></param>
-        /// <returns></returns>
         public override bool TrySectionToVolume(Vector2 P, out Vector2 transformedP) => this.VolumeTransform.TryTransform(P, out transformedP);
 
         public override bool TryVolumeToSection(Vector2 P, out Vector2 transformedP) => this.VolumeTransform.TryInverseTransform(P, out transformedP);

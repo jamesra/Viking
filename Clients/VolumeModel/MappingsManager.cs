@@ -13,6 +13,9 @@ namespace Viking.VolumeModel
 
     }
 
+    /// <summary>
+    /// Per-section mapping cache. Evicting an entry calls FreeMemory on every mapping for that section.
+    /// </summary>
     public class SectionTransformsCache : TimeQueueCache<int, SectionMappingsCacheEntry, SectionTransformsDictionary, SectionTransformsDictionary>
     {
         public long NumSectionsToKeepInMemory
@@ -24,7 +27,7 @@ namespace Viking.VolumeModel
 
         public SectionTransformsCache()
         {
-            this.NumSectionsToKeepInMemory = 6; //Total number of sections we will keep loaded by default
+            this.NumSectionsToKeepInMemory = 6;
         }
 
         protected override SectionTransformsDictionary Fetch(SectionMappingsCacheEntry entry) => entry.TransformsForSection;
@@ -76,8 +79,7 @@ namespace Viking.VolumeModel
 
 
     /// <summary>
-    /// This class holds references to all of the Mapping objects that are created during runtime and 
-    /// creates mappings on the fly as needed
+    /// Creates and caches MappingBase instances. Tileset vs pyramid keys differ — see GetMapping.
     /// </summary>
     public class MappingManager(Volume Volume)
     {
@@ -97,12 +99,11 @@ namespace Viking.VolumeModel
 
 
         /// <summary>
-        /// Find the Mapping for the requested transform, section, sectiontransform tuple
+        /// Tileset: cache key uses ChannelName (warp is baked into the tiles).
+        /// Pyramid: cache key uses SectionTransformName (mosaic stos); CurrentPyramid is then set to ChannelName.
+        /// Null VolumeTransformName is mosaic-only. Missing stos falls back to mosaic so the view is not blank.
+        /// Returns null when the section or channel does not exist.
         /// </summary>
-        /// <param name="VolumeTransformName"></param>
-        /// <param name="SectionNumber"></param>
-        /// <param name="SectionTransformName"></param>
-        /// <returns></returns>
         public MappingBase GetMapping(string VolumeTransformName, int SectionNumber, string ChannelName, string SectionTransformName)
         {
             if (!volume.Sections.ContainsKey(SectionNumber))

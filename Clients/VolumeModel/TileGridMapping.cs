@@ -8,8 +8,7 @@ using Utils;
 namespace Viking.VolumeModel
 {
     /// <summary>
-    /// Tile grid mappings refer to a pre-assembled set of tiles, where the tile size is fixed
-    /// to the same value at every level of the pyramid, so the area must change
+    /// Tileset: warp is already in the tile images. Initialized is always true; Try* is identity until wrapped by TileGridToVolumeMapping.
     /// </summary>
     public class TileGridMapping : TileGridMappingBase
     {
@@ -67,6 +66,7 @@ namespace Viking.VolumeModel
         {
         }
 
+        /// <summary>Tilesets need no mosaic load. DrawTiles can run immediately.</summary>
         public override bool Initialized => true;
 
         public override Task Initialize(CancellationToken token) => Task.CompletedTask;
@@ -126,6 +126,7 @@ namespace Viking.VolumeModel
             return mapping;
         }
 
+        /// <summary>Identity: tileset pixels are already in this mapping's output space.</summary>
         public override bool TrySectionToVolume(Vector2 P, out Vector2 transformedP)
         {
             transformedP = P;

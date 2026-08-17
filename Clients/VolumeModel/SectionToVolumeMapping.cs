@@ -11,9 +11,8 @@ using System.Threading.Tasks;
 namespace Viking.VolumeModel
 {
     /// <summary>
-    /// This class represents the warped version of a single section into volume space by passing a .mosaic transform through a slice-to-volume transform
+    /// Pyramid tiles: mosaic stos composed with a volume stos. Initialized is false until Initialize/Warp finishes.
     /// </summary>
-    /// 
     public class SectionToVolumeMapping(Section section, string name, FixedTileCountMapping sourceMapping, ITransform volumeTransform) : FixedTileCountMapping(section, name, sourceMapping.TilePrefix, sourceMapping.TilePostfix)
     {
         protected ITransform[] _TileTransforms = null;
@@ -76,7 +75,7 @@ namespace Viking.VolumeModel
         }*/
 
         /// <summary>
-        /// .mosaic files load as being warped.  Volume sections have to passed through a volume transform first, which we do in a lazy fashion
+        /// Mosaic mappings report loaded as soon as the .mosaic is parsed. This type stays false until WarpTransforms runs.
         /// </summary>
         private bool HasBeenWarped => _Initialized > 0;
 

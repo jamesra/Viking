@@ -10,6 +10,10 @@ namespace Viking.VolumeModel
 {
     public static class RectangleMappingExtensions
     {
+        /// <summary>
+        /// Volume-space view rect → mosaic rect for region queries. Null means skip the request
+        /// (outside the hull). Partial corner maps estimate; do not treat null as empty-but-valid.
+        /// </summary>
         public static Rectangle? ApproximateVisibleMosaicBounds(this Rectangle VisibleWorldBounds, IVolumeToSectionTransform mapper)
         {
             Vector2[] VolumeRectCorners = [VisibleWorldBounds.LowerLeft, VisibleWorldBounds.LowerRight, VisibleWorldBounds.UpperLeft, VisibleWorldBounds.UpperRight];

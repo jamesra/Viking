@@ -2,6 +2,9 @@ using Geometry;
 
 namespace Viking.VolumeModel
 {
+    /// <summary>
+    /// Wraps one section's stos. ITransform.Transform is section→volume; ControlBounds is volume, MappedBounds is mosaic.
+    /// </summary>
     public class VolumeToSectionTransform(string Name, ITransform transform) : IVolumeToSectionTransform
     {
         readonly string _Name = Name;
@@ -11,6 +14,7 @@ namespace Viking.VolumeModel
 
         public long ID => _Name.GetHashCode();
 
+        /// <summary>Mosaic-space hull (stos MappedBounds). Null when the transform is continuous.</summary>
         public Rectangle? SectionBounds
         {
             get
@@ -26,6 +30,7 @@ namespace Viking.VolumeModel
             }
         }
 
+        /// <summary>Volume-space hull (stos ControlBounds). Null when the transform is continuous.</summary>
         public Rectangle? VolumeBounds
         {
             get

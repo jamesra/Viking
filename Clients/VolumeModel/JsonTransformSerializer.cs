@@ -7,6 +7,9 @@ using System.Text.Json.Serialization;
 
 namespace VolumeModel
 {
+    /// <summary>
+    /// Mosaic/stos cache on disk. Files older than Global.OldestValidCachedTransform must be rebuilt.
+    /// </summary>
     public static class JsonTransformSerializer
     {
         internal static JsonSerializerOptions ReadOptions { get; } = CreateOptions();

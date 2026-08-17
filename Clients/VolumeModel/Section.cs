@@ -11,6 +11,9 @@ using Viking.Common.UI;
 
 namespace Viking.VolumeModel
 {
+    /// <summary>
+    /// One Z slice. Channels are either tilesets (warp baked in) or pyramids (need a mosaic stos from WarpedTo).
+    /// </summary>
     public class Section
     {
         /// <summary>
@@ -86,8 +89,15 @@ namespace Viking.VolumeModel
 
         public string DefaultPyramid = "";
         public string DefaultTileset = "";
+
+        /// <summary>
+        /// Mosaic stos name in WarpedTo for pyramid channels. Unused for tilesets — MappingManager keys those by channel.
+        /// </summary>
         public string DefaultPyramidTransform = "";
 
+        /// <summary>
+        /// Prefers DefaultTileset when both exist. MappingManager treats this name as tileset or pyramid.
+        /// </summary>
         public string DefaultChannel
         {
             get
@@ -107,7 +117,7 @@ namespace Viking.VolumeModel
         #endregion
 
         /// <summary>
-        /// This maps a transform name to a MappingBase object which knows how to position the individual tiles into the transform space
+        /// Mosaic-space mappings keyed by tileset name or mosaic stos name. MappingManager wraps these with a volume stos.
         /// </summary>
         public System.Collections.Generic.Dictionary<string, MappingBase> WarpedTo = [];
 
@@ -462,11 +472,12 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
-        /// Adds a new transform to the section that maps it to the volume space. Returns 
-        /// true if section had a grid-refine mapping that could be mapped. Otherwise false
+        /// Wraps WarpedTo[SectionMapping] with a volume stos. Does not add to WarpedTo — MappingManager caches the result.
+        /// Picks SectionToVolumeMapping, TileGridToVolumeMapping, or OCPTileServerToVolumeMapping from the mosaic type.
         /// </summary>
-        /// <param name="transform">Tranformation to appy. If null is passed then a copy is made unmodified and added under the volume name</param>
-        /// <param name="volumeName">Name of the transform</param>
+        /// <param name="transform">Volume stos. Null is treated as mosaic-only by the caller, not here.</param>
+        /// <param name="SectionMapping">Key in WarpedTo (tileset name or mosaic stos name).</param>
+        /// <param name="UniqueName">Cache key MappingManager already built.</param>
         public MappingBase CreateSectionToVolumeMapping(ITransform transform, string SectionMapping, string UniqueName)
         {
             MappingBase mapBase = this.WarpedTo[SectionMapping];

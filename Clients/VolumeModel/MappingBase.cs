@@ -7,92 +7,66 @@ using System.Threading.Tasks;
 
 namespace Viking.VolumeModel
 {
+    /// <summary>
+    /// Resolves the stos used to place a section in volume space. Annotation hit-test uses this,
+    /// not MappingManager — MappingManager also picks tiles.
+    /// </summary>
     public interface IVolumeTransformProvider
     {
         IVolumeToSectionTransform GetSectionToVolumeTransform(int SectionNumber);
     }
 
+    /// <summary>
+    /// Mosaic/section ↔ volume. Mosaic-only mappings are identity. Stos ITransform.Transform
+    /// is section→volume (mapped→control); InverseTransform is volume→section.
+    /// </summary>
     public interface IVolumeToSectionTransform
     {
         /// <summary>
-        /// A unique ID for the transforming object
+        /// Stable per mapping instance. Views use this to skip recomputing positions when the transform has not changed.
         /// </summary>
-        /// <returns></returns>
         long ID
         {
             get;
         }
 
-        /// <summary>
-        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
-        /// </summary>
-        /// <param name="P"></param>
-        /// <returns></returns>
+        /// <summary>Mosaic/section → volume. False when the point is outside a discrete stos hull.</summary>
         bool TrySectionToVolume(Vector2 P, out Vector2 transformedP);
 
-        /// <summary>
-        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
-        /// </summary>
-        /// <param name="P"></param>
-        /// <returns></returns>
+        /// <summary>Volume → mosaic/section. False when the point is outside a discrete stos hull.</summary>
         bool TryVolumeToSection(Vector2 P, out Vector2 transformedP);
 
-        /// <summary>
-        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
-        /// </summary>
-        /// <param name="P"></param>
-        /// <returns></returns>
+        /// <summary>Per-point mosaic/section → volume. Output array is always allocated; use the bools.</summary>
         bool[] TrySectionToVolume(in Vector2[] Points, out Vector2[] transformedP);
 
-        /// <summary>
-        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
-        /// </summary>
-        /// <param name="P"></param>
-        /// <returns></returns>
+        /// <summary>Per-point volume → mosaic/section. Output array is always allocated; use the bools.</summary>
         bool[] TryVolumeToSection(in Vector2[] Points, out Vector2[] transformedP);
 
-        /// <summary>
-        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
-        /// </summary>
-        /// <param name="P"></param>
-        /// <returns></returns>
+        /// <summary>Mosaic/section → volume. Throws if the point cannot be mapped; prefer Try* for hull edges.</summary>
         Vector2 SectionToVolume(Vector2 P);
 
-        /// <summary>
-        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
-        /// </summary>
-        /// <param name="P"></param>
-        /// <returns></returns>
+        /// <summary>Volume → mosaic/section. Throws if the point cannot be mapped; prefer Try* for hull edges.</summary>
         Vector2 VolumeToSection(Vector2 P);
 
-        /// <summary>
-        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
-        /// </summary>
-        /// <param name="P"></param>
-        /// <returns></returns>
         Vector2[] SectionToVolume(Vector2[] Points);
 
-        /// <summary>
-        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
-        /// </summary>
-        /// <param name="P"></param>
-        /// <returns></returns>
         Vector2[] VolumeToSection(Vector2[] Points);
 
         /// <summary>
-        /// Bounding box of section space. Returns no value if a continuous transform
+        /// Mosaic/section-space bounds. Null for a continuous transform with no hull.
         /// </summary>
         Rectangle? SectionBounds { get; }
 
         /// <summary>
-        /// Bounding box of volume space.  Returns no value if a continuous transform.
+        /// Volume-space bounds. Null for a continuous transform with no hull.
         /// </summary>
         Rectangle? VolumeBounds { get; }
 
     }
 
     /// <summary>
-    /// Mapping base encapsulates the transforms required to map all tiles in a section to mosaic or volume space
+    /// Tiles for one section plus mosaic↔volume. Tileset mappings are Initialized immediately;
+    /// pyramid+stos mappings stay false until Initialize completes — DrawTiles must start that work.
     /// </summary>
     public abstract class MappingBase(Section section, string name, string Prefix, string Postfix) : IVolumeToSectionTransform
     {
@@ -132,6 +106,10 @@ namespace Viking.VolumeModel
         /// </summary>
         internal readonly string TilePostfix = Postfix;
 
+        /// <summary>
+        /// Bounds used to fit the camera. Volume-space after a stos warp (SectionToVolumeMapping);
+        /// mosaic grid for tilesets, including TileGridToVolumeMapping which does not recompute this.
+        /// </summary>
         public abstract Rectangle ControlBounds
         {
             get;
@@ -219,8 +197,15 @@ namespace Viking.VolumeModel
         /// </summary>
         protected readonly Section Section = section;
 
+        /// <summary>
+        /// Loads mosaic/stos math. Tileset mappings no-op and report Initialized immediately.
+        /// SectionSceneRenderer starts this; skipping it leaves DrawTiles returning every frame.
+        /// </summary>
         public abstract Task Initialize(CancellationToken token);
 
+        /// <summary>
+        /// True when VisibleTiles and ControlBounds are usable. False is not an error — call Initialize.
+        /// </summary>
         public abstract bool Initialized { get; }
 
         /// <summary>
@@ -242,10 +227,8 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
-        /// Returns a set of tiles which should be rendered in the order returned
+        /// Tiles overlapping the camera. VisibleBounds is volume/world space (Scene.VisibleWorldBounds), not mosaic.
         /// </summary>
-        /// <param name="VisibleBounds">Visible region of the section</param>
-        /// <returns></returns>
         public abstract TilePyramid VisibleTiles(Rectangle VisibleBounds,
                                                  double DownSample
                                                  );
@@ -260,11 +243,6 @@ namespace Viking.VolumeModel
                                                  ) => System.Threading.Tasks.Task<TilePyramid>.Run(() => VisibleTiles(VisibleBounds, DownSample));
 
 
-        /// <summary>
-        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
-        /// </summary>
-        /// <param name="P"></param>
-        /// <returns></returns>
         public Vector2 SectionToVolume(Vector2 P)
         {
             return TrySectionToVolume(P, out Vector2 transformedP)
@@ -272,11 +250,6 @@ namespace Viking.VolumeModel
                 : throw new ArgumentException("Could not map section point to volume");
         }
 
-        /// <summary>
-        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
-        /// </summary>
-        /// <param name="P"></param>
-        /// <returns></returns>
         public Vector2 VolumeToSection(Vector2 P)
         {
             return TryVolumeToSection(P, out Vector2 transformedP)
@@ -284,13 +257,6 @@ namespace Viking.VolumeModel
                 : throw new ArgumentException("Could not map volume point to section");
         }
 
-
-        /// <summary>
-        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
-        /// </summary>
-        /// <param name="P"></param>
-        /// <returns></returns>
-        /// 
         public abstract Vector2[] SectionToVolume(Vector2[] P);
         /*
         public Vector2[] SectionToVolume(Vector2[] P)
@@ -303,13 +269,6 @@ namespace Viking.VolumeModel
             return transformedP;
         }
         */
-        /// <summary>
-        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
-        /// </summary>
-        /// <param name="P"></param>
-        /// <returns></returns>
-        /// 
-
         public abstract Vector2[] VolumeToSection(Vector2[] P);
 
         /*
@@ -351,33 +310,12 @@ namespace Viking.VolumeModel
         public abstract Rectangle? SectionBounds { get; }
         public abstract Rectangle? VolumeBounds { get; }
 
-        /// <summary>
-        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
-        /// </summary>
-        /// <param name="P"></param>
-        /// <returns></returns>
         public abstract bool TrySectionToVolume(Vector2 P, out Vector2 transformedP);
 
-        /// <summary>
-        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
-        /// </summary>
-        /// <param name="P"></param>
-        /// <returns></returns>
         public abstract bool TryVolumeToSection(Vector2 P, out Vector2 transformedP);
 
-        /// <summary>
-        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
-        /// </summary>
-        /// <param name="P"></param>
-        /// <returns></returns>
         public abstract bool[] TrySectionToVolume(in Vector2[] Points, out Vector2[] transformedP);
 
-
-        /// <summary>
-        /// Maps the point from the volume to the section if this is overriden by a volume mapping class
-        /// </summary>
-        /// <param name="P"></param>
-        /// <returns></returns>
         public abstract bool[] TryVolumeToSection(in Vector2[] Points, out Vector2[] transformedP);
     }
 }

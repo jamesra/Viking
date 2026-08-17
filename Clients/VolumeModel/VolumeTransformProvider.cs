@@ -5,13 +5,15 @@ using Geometry.Transforms;
 namespace Viking.VolumeModel
 {
     /// <summary>
-    /// Maps section numbers onto volume space using a <see cref="Volume"/> transform group.
-    /// Shared by Viking's VolumeViewModel and Jotunn's annotation scene.
+    /// Stos-only mapping for annotations. Does not select tiles — use MappingManager for draw.
     /// </summary>
     public sealed class VolumeTransformProvider : IVolumeTransformProvider
     {
         readonly Volume _volume;
 
+        /// <summary>
+        /// Volume.Transforms group name. Empty or "None" is identity (mosaic == volume).
+        /// </summary>
         public string TransformName { get; }
 
         public VolumeTransformProvider(Volume volume, string transformName = null)
@@ -20,6 +22,9 @@ namespace Viking.VolumeModel
             TransformName = string.IsNullOrEmpty(transformName) ? volume?.DefaultVolumeTransform : transformName;
         }
 
+        /// <summary>
+        /// Missing stos for this section returns identity so hit-test still works on the reference section.
+        /// </summary>
         public IVolumeToSectionTransform GetSectionToVolumeTransform(int SectionNumber)
         {
             string keyBase = string.IsNullOrEmpty(TransformName) || TransformName == "None" ? "Identity" : TransformName;

@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Viking.VolumeModel
 {
+    /// <summary>
+    /// Tileset plus volume stos for annotation mapping. ControlBounds stays the mosaic grid — do not use it to fit a volume camera.
+    /// </summary>
     public class TileGridToVolumeMapping : TileGridMapping
     {
         //protected GridTransform GridToVolumeTransform;
@@ -65,20 +68,10 @@ namespace Viking.VolumeModel
              */
         }
 
-        /// <summary>
-        /// Maps a point from volume space into the section space
-        /// </summary>
-        /// <param name="?"></param>
-        /// <returns></returns>
         public override bool TrySectionToVolume(Vector2 P, out Vector2 transformedP) => this.VolumeTransform.TryTransform(P, out transformedP);
 
         public override bool TryVolumeToSection(Vector2 P, out Vector2 transformedP) => this.VolumeTransform.TryInverseTransform(P, out transformedP);
 
-        /// <summary>
-        /// Maps a point from volume space into the section space
-        /// </summary>
-        /// <param name="?"></param>
-        /// <returns></returns>
         public override bool[] TrySectionToVolume(in Vector2[] P, out Vector2[] transformedP) => this.VolumeTransform.TryTransform(P, out transformedP);
 
         public override bool[] TryVolumeToSection(in Vector2[] P, out Vector2[] transformedP) => this.VolumeTransform.TryInverseTransform(P, out transformedP);

@@ -12,8 +12,8 @@ using VolumeModel;
 namespace Viking.VolumeModel
 {
     /// <summary>
-    /// This is the base class for transforms that use the original tiles where the number of tiles is 
-    /// fixed at each resolution and the size varies
+    /// Pyramid channel: tile count is fixed per level, tile size changes. MappingManager must set CurrentPyramid
+    /// or AvailableLevels throws.
     /// </summary>
     public abstract class FixedTileCountMapping(Section section, string name, string Prefix, string Postfix) : MappingBase(section, name, Prefix, Postfix)
     {
@@ -22,13 +22,12 @@ namespace Viking.VolumeModel
         public abstract Task<ITransform[]> GetOrCreateTransforms(CancellationToken token);
 
         /// <summary>
-        /// Returns NULL if transforms are not loaded
+        /// Null until Initialize has loaded the mosaic. VisibleTiles must tolerate that.
         /// </summary>
-        /// <returns></returns>
         public abstract ITransform[] GetLoadedTransformsOrNull();
 
         /// <summary>
-        /// We need to know which pyramid we are working against so we know how many levels are available
+        /// Pyramid for AvailableLevels. Same mosaic stos can draw several pyramids; MappingManager swaps this on cache hit.
         /// </summary>
         public Pyramid CurrentPyramid { get; set; } = null;
 
