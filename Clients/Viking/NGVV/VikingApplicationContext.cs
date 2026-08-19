@@ -59,7 +59,18 @@ namespace Viking
             if (Splash.TrackedTask.IsFaulted)
             {
                 Trace.WriteLine($"Viking launch cancelled after exception:\n {Splash.TrackedTask.Exception}");
-                MessageBox.Show($"Viking launch cancelled after exception:\n {Splash.TrackedTask.Exception}");
+
+                // Unwrap to the innermost exception for the clearest message.
+                Exception? rootCause = Splash.TrackedTask.Exception?.Flatten().InnerException
+                                       ?? Splash.TrackedTask.Exception;
+
+                string friendlyMessage =
+                    $"Could not load the volume from:\n{_settings.VolumeURL}\n\n" +
+                    $"Reason: {rootCause?.Message ?? "Unknown error"}\n\n" +
+                    "Please check that the server is reachable and the URL is correct.";
+
+                MessageBox.Show(friendlyMessage, "Volume Load Failed",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
                 ExitThread();
                 return;
             }
@@ -95,11 +106,9 @@ namespace Viking
             Trace.WriteLine("Volume Load Time: " + elapsedTime.ToString());
 
             await Volume.Initialize(token, progressReporter);
-            int pref = Viking.Properties.Settings.Default.MaxConcurrentTextureRequests;
-            if (pref > 0)
-                TextureReaderV2.SetMaxConcurrentRequestLimit(pref);
-            else
-                TextureReaderV2.SetMaxConcurrentRequestLimit(Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel.DefaultMaxConcurrentTextureRequests);
+            TextureReaderV2.ApplyMaxConcurrentRequestPreference(
+                Viking.Properties.Settings.Default.MaxConcurrentTextureRequests,
+                Volume.DefaultTileWidth);
 
             UI.State.volume = new Viking.ViewModels.VolumeViewModel(Volume);
 

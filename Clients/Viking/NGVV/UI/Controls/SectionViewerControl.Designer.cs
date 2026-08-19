@@ -43,6 +43,8 @@ namespace Viking.UI.Controls
             this.timer = new System.Windows.Forms.Timer(this.components);
             this.timerTileCacheCheckpoint = new System.Windows.Forms.Timer(this.components);
             this.menuStrip = new System.Windows.Forms.MenuStrip();
+            this.menuEdit = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuViewerPreferences = new System.Windows.Forms.ToolStripMenuItem();
             this.menuVolume = new System.Windows.Forms.ToolStripMenuItem();
             this.menuVolumeTransforms = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
@@ -61,14 +63,13 @@ namespace Viking.UI.Controls
             this.menuExportTiles = new System.Windows.Forms.ToolStripMenuItem();
             this.timerHelpTextChange = new System.Windows.Forms.Timer(this.components);
             this.menuShowCommandHelp = new System.Windows.Forms.ToolStripMenuItem();
-            this.menuViewerPreferences = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip.SuspendLayout();
             this.SuspendLayout();
             // 
             // timer
             // 
             this.timer.Enabled = true;
-            this.timer.Interval = 20;
+            this.timer.Interval = 25;
             this.timer.Tick += new System.EventHandler(this.timer_Tick);
             // 
             // timerTileCacheCheckpoint
@@ -80,6 +81,7 @@ namespace Viking.UI.Controls
             // menuStrip
             // 
             this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.menuEdit,
             this.menuVolume,
             this.menuSection,
             this.menuCommands});
@@ -89,6 +91,21 @@ namespace Viking.UI.Controls
             this.menuStrip.TabIndex = 1;
             this.menuStrip.Text = "menuStrip1";
             this.menuStrip.Visible = false;
+            // 
+            // menuEdit
+            // 
+            this.menuEdit.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.menuViewerPreferences});
+            this.menuEdit.Name = "menuEdit";
+            this.menuEdit.Size = new System.Drawing.Size(39, 20);
+            this.menuEdit.Text = "Edit";
+            // 
+            // menuViewerPreferences
+            // 
+            this.menuViewerPreferences.Name = "menuViewerPreferences";
+            this.menuViewerPreferences.Size = new System.Drawing.Size(191, 22);
+            this.menuViewerPreferences.Text = "Viewer Preferences";
+            this.menuViewerPreferences.Click += new System.EventHandler(this.menuViewerPreferences_Click);
             // 
             // menuVolume
             // 
@@ -181,8 +198,7 @@ namespace Viking.UI.Controls
             this.menuCaptureScreen,
             this.menuExportFrames,
             this.menuExportTiles,
-            this.menuShowCommandHelp,
-            this.menuViewerPreferences});
+            this.menuShowCommandHelp});
             this.menuCommands.Name = "menuCommands";
             this.menuCommands.Size = new System.Drawing.Size(81, 20);
             this.menuCommands.Text = "Commands";
@@ -231,13 +247,6 @@ namespace Viking.UI.Controls
             this.menuShowCommandHelp.Text = "Show Command Help";
             this.menuShowCommandHelp.Click += new System.EventHandler(this.menuShowCommandHelp_Click);
             // 
-            // menuViewerPreferences
-            // 
-            this.menuViewerPreferences.Name = "menuViewerPreferences";
-            this.menuViewerPreferences.Size = new System.Drawing.Size(191, 22);
-            this.menuViewerPreferences.Text = "Viewer Preferences...";
-            this.menuViewerPreferences.Click += new System.EventHandler(this.menuViewerPreferences_Click);
-            // 
             // SectionViewerControl
             // 
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.SectionViewerControl_KeyDown);
@@ -253,6 +262,7 @@ namespace Viking.UI.Controls
         private System.Windows.Forms.Timer timer;
         private System.Windows.Forms.Timer timerTileCacheCheckpoint;
         private System.Windows.Forms.MenuStrip menuStrip;
+        private System.Windows.Forms.ToolStripMenuItem menuEdit;
         private System.Windows.Forms.ToolStripMenuItem menuVolume;
         private System.Windows.Forms.ToolStripMenuItem menuVolumeTransforms;
         private System.Windows.Forms.ToolStripMenuItem menuSection;

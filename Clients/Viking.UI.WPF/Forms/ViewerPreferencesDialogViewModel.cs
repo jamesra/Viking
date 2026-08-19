@@ -78,9 +78,9 @@ namespace Viking.UI.WPF.Forms
         public const int MinVisibleTileSortIntervalMs = 200;
         public const int MaxVisibleTileSortIntervalMs = 10000;
         /// <summary>
-        /// Default number of concurrent texture loads: cores * 2, minimum 1.
+        /// Stored preference default. 0 means Auto (tile-size formula) at runtime.
         /// </summary>
-        public static int DefaultMaxConcurrentTextureRequests => Math.Max(1, Environment.ProcessorCount * 2);
+        public const int DefaultMaxConcurrentTextureRequests = 0;
         public const int MinMaxConcurrentTextureRequests = 0;
         public const int MaxMaxConcurrentTextureRequests = 256;
         #endregion
@@ -505,9 +505,7 @@ namespace Viking.UI.WPF.Forms
             int clampedTextureLoadingWindow = Clamp(textureLoadingWindow, MinTextureLoadingWindow, MaxTextureLoadingWindow);
             int clampedMinTexturesToLoadFromQueue = Clamp(minTexturesToLoadFromQueue, MinMinTexturesToLoadFromQueue, MaxMinTexturesToLoadFromQueue);
             int clampedVisibleTileSortIntervalMs = Clamp(visibleTileSortIntervalMs, MinVisibleTileSortIntervalMs, MaxVisibleTileSortIntervalMs);
-            // When stored value is 0 (unset), use cores*2 as the effective default for display
-            int effectiveMaxConcurrent = maxConcurrentTextureRequests > 0 ? maxConcurrentTextureRequests : DefaultMaxConcurrentTextureRequests;
-            int clampedMaxConcurrentTextureRequests = Clamp(effectiveMaxConcurrent, MinMaxConcurrentTextureRequests, MaxMaxConcurrentTextureRequests);
+            int clampedMaxConcurrentTextureRequests = Clamp(maxConcurrentTextureRequests, MinMaxConcurrentTextureRequests, MaxMaxConcurrentTextureRequests);
 
             // Store original values for Cancel revert (use clamped values)
             _originalSectionNumberOverlayEnabled = sectionNumberOverlayEnabled;

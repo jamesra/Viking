@@ -7,9 +7,9 @@
              mc:Ignorable="d" 
              d:DesignHeight="100" d:DesignWidth="350"
              SizeToContent="WidthAndHeight"
+             WindowStartupLocation="Manual"
              MinWidth="350" MinHeight="120"
              FontSize="14"
-             Topmost="True"
              Title="Enter ID"
              FocusManager.FocusedElement="{Binding ElementName=NumberTextbox}">
     <Grid>

@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -131,10 +132,18 @@ namespace Geometry.Transforms
 
             //File format may not contain downsample number, if it does record the value
 
+            
             if (fileparts.Length >= 4)
             {
-                pixelSpacing = System.Convert.ToInt32(fileparts[3]);
+                try { 
+                    pixelSpacing = System.Convert.ToInt32(fileparts[3]);
+                }
+                catch(FormatException)
+                {
+                    //If the file is not formatted correctly, just ignore the value;
+                }
             }
+            
 
             using Stream transformStream = File.OpenRead(stosfile);
             ITransform transform = await ParseStos(transformStream, Info, pixelSpacing).ConfigureAwait(false);
@@ -246,7 +255,13 @@ namespace Geometry.Transforms
             GridRectangle ControlBounds = new(ControlLeft, ControlRight, ControlBottom, ControlTop);
             GridRectangle MappedBounds = new(MappedLeft, MappedRight, MappedBottom, MappedTop);
 
-            //Check the parts to make sure they are actually numbers
+            // ITK stos files can emit "nan"; Convert.ToDouble throws FormatException on .NET Framework.
+            if (lines[6].IndexOf("nan", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                Trace.WriteLine($"Skipping stos transform containing NaN for {info}", "Geometry");
+                return null;
+            }
+
             TransformParameters transform_parts = TransformParameters.Parse(lines[6]);
 
             Debug.Assert(transform_parts.FixedParameters.Length > 0 && transform_parts.VariableParameters.Length > 0, "StosGridTransform::ParseGridTransform");

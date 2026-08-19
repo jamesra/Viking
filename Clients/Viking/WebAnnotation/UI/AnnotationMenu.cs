@@ -36,10 +36,6 @@ namespace WebAnnotation
             menuFavoriteTypes.Click += OnChooseFavoriteStructureTypes;
             menuRoot.DropDownItems.Add(menuFavoriteTypes);
 
-            ToolStripMenuItem menuPreferences = new("Preferences...");
-            menuPreferences.Click += OnPreferences;
-            menuRoot.DropDownItems.Add(menuPreferences);
-
             if (Global.Export != null)
             {
                 //Create the option to hide bookmarks on the display
@@ -583,5 +579,12 @@ namespace WebAnnotation
         public static void Export(object sender, EventArgs e) => Debug.Print("Export");
 
 
+    }
+
+    [MenuAttribute("menuEdit")]
+    internal class AnnotationEditMenu
+    {
+        [MenuItem("Annotation Preferences")]
+        public static void OnAnnotationPreferences(object sender, EventArgs e) => AnnotationMenu.OnPreferences(sender, e);
     }
 }
