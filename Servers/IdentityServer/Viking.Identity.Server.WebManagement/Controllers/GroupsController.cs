@@ -29,11 +29,20 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // GET: Organizations
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Group
+            var allGroups = await _context.Group
                 .Include(g => g.MemberUsers)
                 .Include(g => g.MemberGroups)
                 .Include(g => g.Parent)
-                .ToListAsync());
+                .ToListAsync();
+
+            var visible = new List<Group>();
+            foreach (var group in allGroups)
+            {
+                if (await CanAdministerGroup(group))
+                    visible.Add(group);
+            }
+
+            return View(visible);
         }
 
         // GET: Organizations/Details/5
@@ -63,14 +72,28 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return NotFound();
             }
 
+            if (false == await CanAdministerGroup(organization))
+            {
+                return Forbid();
+            }
+
             ViewBag.AccessManagers = await _context.GetGroupAccessManagers(id.Value).Select(u => u.UserName).ToListAsync();
 
             return View(organization);
         }
 
         // GET: Organizations/Create
-        public IActionResult Create(long? parentOrgId = null)
+        public async Task<IActionResult> Create(long? parentOrgId = null)
         {
+            if (parentOrgId.HasValue && parentOrgId.Value > 0)
+            {
+                var probe = new Group { ParentID = parentOrgId.Value, ResourceTypeId = nameof(Group) };
+                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, probe))
+                {
+                    return Forbid();
+                }
+            }
+
             CreateGroupViewModel groupModel = new CreateGroupViewModel()
             {
                 Members = new GroupMembershipViewModel()
@@ -228,18 +251,19 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 })
                 .SingleOrDefaultAsync(g => g.Group.Id == id);
 
-            var authResult = await _authorization.AuthorizeAsync(HttpContext.User, groupEditDetails.Group, Operations.GroupAccessManager);
-            if(authResult.Succeeded == false)
-            {
-                return Unauthorized();
-            }
-
-            ViewBag.AvailableParents = _context.OrgUnit.Select(ou => new SelectListItem(ou.Name, ou.Id.ToString())).ToList();
-
             if (groupEditDetails == null)
             {
                 return NotFound();
             }
+
+            var authResult = await _authorization.AuthorizeAsync(HttpContext.User, groupEditDetails.Group, Operations.GroupAccessManager);
+            if(authResult.Succeeded == false)
+            {
+                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, groupEditDetails.Group))
+                    return Unauthorized();
+            }
+
+            ViewBag.AvailableParents = _context.OrgUnit.Select(ou => new SelectListItem(ou.Name, ou.Id.ToString())).ToList();
 
             return View(groupEditDetails);
         }
@@ -282,6 +306,19 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, group))
             {
                 return Unauthorized();
+            }
+
+            if (groupDetails.Group.ParentID != group.ParentID)
+            {
+                var reparentProbe = new Group
+                {
+                    ParentID = groupDetails.Group.ParentID,
+                    ResourceTypeId = nameof(Group)
+                };
+                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, reparentProbe))
+                {
+                    return Forbid();
+                }
             }
              
             if (ModelState.IsValid)
@@ -370,6 +407,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return NotFound();
             }
 
+            if (false == await CanAdministerGroup(organization))
+            {
+                return Forbid();
+            }
+
             return View(organization);
         }
 
@@ -413,6 +455,16 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         private bool OrganizationExists(long id)
         {
             return _context.Group.Any(e => e.Id == id);
+        }
+
+        private async Task<bool> CanAdministerGroup(Group group)
+        {
+            if (group == null)
+                return false;
+            if (User.IsInRole(Special.Roles.Admin))
+                return true;
+            return await _authorization.IsGroupAccessManagerAsync(HttpContext.User, group)
+                || await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, group);
         }
           
     }

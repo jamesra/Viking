@@ -1,4 +1,4 @@
-using Viking.Identity.Data;
+﻿using Viking.Identity.Data;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -58,7 +58,8 @@ namespace Viking.Identity.Data
         {
             if (long.TryParse(resourceIdOrName, out var resourceId))
             {
-                return await context.Resource.FirstOrDefaultAsync(r => r.Id == resourceId);
+                return await context.Resource.FirstOrDefaultAsync(r =>
+                    r.Id == resourceId && ApiFacingResourceTypeIds.Contains(r.ResourceTypeId));
             }
 
             return await context.Resource
@@ -81,7 +82,7 @@ namespace Viking.Identity.Data
                 where permit.PermissionId == PermissionId && permit.ResourceId == ResourceId && permit.UserId == UserId
                 select user;
 
-            if (permitted_users.Any())
+            if (await permitted_users.AnyAsync())
                 return true;
 
             var group_memberships = await context.RecursiveMemberOfGroups(UserId);
@@ -107,7 +108,7 @@ namespace Viking.Identity.Data
         /// <returns></returns>
         public static async Task<Dictionary<long, string[]>> UserResourcePermissionsByType(this ApplicationDbContext context, [NotNull] string userId, [NotNull] string[] resourceTypeIds = null)
         {
-            if (!resourceTypeIds.Any())
+            if (resourceTypeIds == null || resourceTypeIds.Length == 0)
             {
                 return new Dictionary<long, string[]>();
             }
@@ -136,19 +137,19 @@ namespace Viking.Identity.Data
                 where gup.UserId == userId
                 select new { gup.ResourceId, gup.Resource.Name, gup.PermissionId, gup.Resource.ResourceTypeId};
             
-            var group_memberships = (await context.RecursiveMemberOfGroups(userId)).Select(g => g.Id);
+            var group_memberships = (await context.RecursiveMemberOfGroups(userId)).Select(g => g.Id).ToList();
              
-            var group_permissions = from ggp in await context.GrantedGroupPermissions.Include(nameof(GrantedGroupPermission.Resource)).ToListAsync()
-                join groupMembership in group_memberships on ggp.GroupId equals groupMembership 
+            var group_permissions = from ggp in context.GrantedGroupPermissions.Include(nameof(GrantedGroupPermission.Resource))
+                where group_memberships.Contains(ggp.GroupId)
                 select new { ggp.ResourceId, ggp.Resource.Name, ggp.PermissionId, ggp.Resource.ResourceTypeId };
 
             var upl = await user_permissions.ToListAsync();
-            var gpl = group_permissions.ToList();
+            var gpl = await group_permissions.ToListAsync();
 
             var permissions = upl.Union(gpl);
             permissions = permissions.Where(p => resourceTypeIds.Contains(p.ResourceTypeId)); 
 
-            var result = permissions.GroupBy(p => p.ResourceId, p => p.PermissionId).ToDictionary(d => d.Key, d => d.ToArray());
+            var result = permissions.GroupBy(p => p.ResourceId, p => p.PermissionId).ToDictionary(d => d.Key, d => d.Distinct().ToArray());
 
                 //var result = new SortedSet<string>(user_permissions);
 //            result.UnionWith(group_permissions);
@@ -198,7 +199,7 @@ namespace Viking.Identity.Data
             return permissions.Select(p => p.PermissionId);
         }
 
-        public static IQueryable<ApplicationUser> GetPermittedUsers(this ApplicationDbContext context, long ResourceId, string PermissionId)
+        public static async Task<IQueryable<ApplicationUser>> GetPermittedUsersAsync(this ApplicationDbContext context, long ResourceId, string PermissionId)
         {
             var permitted_users = from user in context.Users
                                   join permit in context.GrantedUserPermissions on user.Id equals permit.UserId
@@ -209,11 +210,9 @@ namespace Viking.Identity.Data
                                    where ggp.PermissionId == PermissionId && ggp.ResourceId == ResourceId
                                    select ggp.GroupId;
 
-            var recursive_permitted_groups = context.RecursiveMemberOfGroups(permitted_groups, true).Result;
+            var recursive_permitted_groups = await context.RecursiveMemberOfGroups(permitted_groups, true);
 
             var recursive_permitted_group_Ids = recursive_permitted_groups.Select(g => g.Id);
-
-            //Return all members of the groups
 
             var recursive_permitted_users = from u_to_g in context.UserToGroupAssignments
                                             join g in context.Group on u_to_g.GroupId equals g.Id
@@ -221,16 +220,12 @@ namespace Viking.Identity.Data
                                             where recursive_permitted_group_Ids.Contains(g.Id)
                                             select u;
 
-            /*
-            var permitted_group_users = from ggp in context.GrantedGroupPermissions
-                                        join usersInGroup in context.UserToGroupAssignments on ggp.GroupId equals usersInGroup.GroupId
-                                        join user in context.ApplicationUser on usersInGroup.UserId equals user.Id
-                                        where ggp.PermissionId == PermissionId && ggp.ResourceIds == ResourceIds
-                                        select user;
-            */
-
-
             return permitted_users.Union(recursive_permitted_users).Distinct();
+        }
+
+        public static IQueryable<ApplicationUser> GetPermittedUsers(this ApplicationDbContext context, long ResourceId, string PermissionId)
+        {
+            return context.GetPermittedUsersAsync(ResourceId, PermissionId).GetAwaiter().GetResult();
         }
          
         public static IQueryable<ApplicationUser> GetGroupAccessManagers(this ApplicationDbContext context, IEnumerable<long> ResourceIds, string PermissionId)
@@ -288,72 +283,20 @@ namespace Viking.Identity.Data
        /// <param name="OrgIds"></param>
        /// <param name="context"></param>
        /// <returns></returns>
-       public static Dictionary<long, List<ApplicationUser>> GetOrganizationAdminMap(this ApplicationDbContext context, string PermissionId)
+       public static async Task<Dictionary<long, List<ApplicationUser>>> GetOrganizationAdminMapAsync(this ApplicationDbContext context, string PermissionId)
        {
             Dictionary<long, List<ApplicationUser>> result = new Dictionary<long, List<ApplicationUser>>();
            foreach(var org in context.OrgUnit)
            {
-                result[org.Id] = context.GetPermittedUsers(org.Id, PermissionId).ToList();
+                result[org.Id] = await (await context.GetPermittedUsersAsync(org.Id, PermissionId)).ToListAsync();
            }
 
             return result;
-           /*
-           Dictionary<long, List<ApplicationUser>> OrgAdminMap = new Dictionary<long, List<ApplicationUser>>();
-               var AdminUsers = context.GetUsersInAdminRole();
-            
-               if(AdminUsers.Any() == false)
-               {
-                   return OrgAdminMap;
-               }
-            
-            var permitted_users = from user in context.Users
-                                  join permit in context.GrantedUserPermissions on user.Id equals permit.UserId
-                                  where permit.PermissionId == PermissionId
-                                  select new
-                                  {
-                                      User = user,
-                                      Group = permit.Resource
-                                  };
+       }
 
-            var permitted_group_users = from pg in context.GrantedGroupPermissions
-                                        join usersInGroup in context.UserToGroupAssignments on pg.GroupId equals usersInGroup.GroupId
-                                        join user in context.ApplicationUser on usersInGroup.UserId equals user.Id
-                                        where pg.PermissionId == PermissionId
-                                        select new
-                                        {
-                                            User = user,
-                                            Group = pg.Resource
-                                        };
-
-           var all_permitted_users = permitted_users.Union(permitted_group_users).GroupBy(g => g.Group.Id);
-
-            foreach(var group in all_permitted_users)
-            {
-                OrgAdminMap.Add(group.Key, group.Select(g => g.User).ToList());
-            }
-
-            return OrgAdminMap;
-           */
-            /*
-
-            IQueryable<GroupAssignment> AdminOrgAssignments;
-           if (OrgIds != null)
-           {
-               AdminOrgAssignments = context.GroupAssignments.Include("User").Include("Group").Where(oa => OrgIds.Contains(oa.GroupId) && AdminUsers.Any(a => oa.UserId == a.Id));
-           }
-           else
-           {
-               AdminOrgAssignments = context.GroupAssignments.Include("User").Include("Group").Where(oa => AdminUsers.Any(a => oa.UserId == a.Id));
-           }
-
-           foreach (Group org in AdminOrgAssignments.Select(oa => oa.Group).Distinct())
-           {
-               var OrgAdmins = AdminOrgAssignments.Where(a => a.GroupId == org.Id).Select(oa => oa.User).ToList();
-               OrgAdminMap.Add(org.Id, OrgAdmins);
-           }
-            
-           return OrgAdminMap;
-            */
+       public static Dictionary<long, List<ApplicationUser>> GetOrganizationAdminMap(this ApplicationDbContext context, string PermissionId)
+       {
+           return context.GetOrganizationAdminMapAsync(PermissionId).GetAwaiter().GetResult();
        }
 
         /// <summary>
@@ -507,15 +450,19 @@ namespace Viking.Identity.Data
                 .FirstOrDefaultAsync(o => o.Id == Id);
 
             List<OrganizationalUnit> parents = new List<OrganizationalUnit>();
+            if (ou == null)
+                return parents;
 
             while (ou.ParentID.HasValue)
             {
-                parents.Add(ou.Parent);
-
                 var parent = await context.OrgUnit
-                .Include(o => o.Parent)
-                .FirstOrDefaultAsync(o => o.Id == ou.Id);
+                    .Include(o => o.Parent)
+                    .FirstOrDefaultAsync(o => o.Id == ou.ParentID.Value);
 
+                if (parent == null)
+                    break;
+
+                parents.Add(parent);
                 ou = parent;
             }
 

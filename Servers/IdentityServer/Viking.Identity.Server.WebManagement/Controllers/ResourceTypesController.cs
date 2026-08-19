@@ -8,7 +8,7 @@ using Viking.Identity.Models;
 
 namespace Viking.Identity.Server.WebManagement.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = Special.Roles.Admin)]
     public class ResourceTypesController : Controller
     {
         private readonly ApplicationDbContext _context;

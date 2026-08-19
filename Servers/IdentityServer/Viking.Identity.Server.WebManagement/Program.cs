@@ -41,13 +41,12 @@ namespace Viking.Identity.Server.WebManagement
     {
         public static void Main(string[] args)
         {
-            IdentityModelEventSource.ShowPII = true; // Enable detailed error messages for development
-
             var envFile = ".env";
             Env.TraversePath().Load(envFile);
 
             var aspnetCoreEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
             var hostingEnv = Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") ?? "Local";
+            IdentityModelEventSource.ShowPII = string.Equals(aspnetCoreEnv, "Development", StringComparison.OrdinalIgnoreCase);
             
             var buildEnvFile = $".env.{aspnetCoreEnv}";
             Env.TraversePath().Load(buildEnvFile);
@@ -199,9 +198,6 @@ namespace Viking.Identity.Server.WebManagement
                     options.ForwardDefaultSelector = PolicySchemeSelector.SchemeSelector;
                 });
 
-            // Add custom token request validator
-            services.AddTransient<Duende.IdentityServer.Validation.ICustomTokenRequestValidator, UserScopeTokenRequestValidator>();
-
             // Add authorization handlers
             services.AddScoped<IAuthorizationHandler, ResourceIdPermissionsAuthorizationHandler>();
             services.AddScoped<IAuthorizationHandler, ResourcePermissionsAuthorizationHandler>();
@@ -235,9 +231,6 @@ namespace Viking.Identity.Server.WebManagement
 
             // Add HTTP context accessor
             services.AddHttpContextAccessor();
-
-            // Add profile service
-            services.AddTransient<Duende.IdentityServer.Services.IProfileService, IdentityWithExtendedClaimsProfileService>();
 
             // Add authorization policy evaluator
             services.AddAuthorizationPolicyEvaluator();

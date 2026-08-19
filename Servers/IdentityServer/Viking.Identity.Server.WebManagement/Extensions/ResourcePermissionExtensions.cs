@@ -28,10 +28,7 @@ namespace Viking.Identity.Server.WebManagement.Extensions
             if(model.Permissions is null)
                 return;
 
-            foreach(var permission in model.Permissions)
-            {
-                resource.UpdateUserPermissions(model.GranteeId, model.Permissions);
-            }
+            resource.UpdateUserPermissions(model.GranteeId, model.Permissions);
         }
 
         /// <summary>
@@ -74,10 +71,7 @@ namespace Viking.Identity.Server.WebManagement.Extensions
             if(model.Permissions is null)
                 return;
 
-            foreach (var permission in model.Permissions)
-            {
-                resource.UpdateGroupPermissions(model.GranteeId, model.Permissions);
-            }
+            resource.UpdateGroupPermissions(model.GranteeId, model.Permissions);
         }
 
         /// <summary>

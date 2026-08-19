@@ -96,10 +96,15 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return NotFound();
             }
 
-            var resource = await _context.Resource.Include(r => r.UsersWithPermissions).Include(r => r.GroupsWithPermissions).FirstAsync(r => r.Id == ResourceId.Value);
+            var resource = await _context.Resource.Include(r => r.UsersWithPermissions).Include(r => r.GroupsWithPermissions).FirstOrDefaultAsync(r => r.Id == ResourceId.Value);
             if (resource == null)
             {
                 return NotFound();
+            }
+
+            if (false == await CanEditResourcePermissions(resource))
+            {
+                return Forbid();
             }
 
             var viewData = new CreateGrantedResourcePermissionViewModel()
@@ -138,6 +143,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 if (false == await CanEditResourcePermissions(resource))
                 {
                     return Unauthorized();
+                }
+
+                if (false == await TryFilterToAllowedPermissions(resource, grantedPermissions.Permissions))
+                {
+                    return BadRequest("One or more submitted permissions are not valid for this resource type.");
                 }
 
                 resource.AddGrantedUserPermissions(grantedPermissions.Permissions, grantedPermissions.Users);
@@ -214,6 +224,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             if (false == await CanEditResourcePermissions(resource))
             {
                 return Unauthorized();
+            }
+
+            if (false == await TryFilterToAllowedPermissions(resource, grantedPermissions.UserPermissions, grantedPermissions.GroupPermissions))
+            {
+                return BadRequest("One or more submitted permissions are not valid for this resource type.");
             }
 
             if (ModelState.IsValid)
@@ -298,6 +313,73 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         {
             var resource = await _context.Resource.Include(r => r.Parent).FirstAsync(r => r.Id == id);
             return await CanEditResourcePermissions(resource);
+        }
+
+        private async Task<HashSet<string>> GetAllowedPermissionIds(Resource resource)
+        {
+            return (await _context.Permissions
+                .Where(p => p.ResourceTypeId == resource.ResourceTypeId)
+                .Select(p => p.PermissionId)
+                .ToListAsync()).ToHashSet();
+        }
+
+        /// <summary>
+        /// Rejects selected permissions that are not defined for the resource type.
+        /// Unknown permission IDs are stripped so they cannot be granted.
+        /// </summary>
+        private async Task<bool> TryFilterToAllowedPermissions(Resource resource, IEnumerable<NamedItemSelectedViewModel<string>> permissions)
+        {
+            if (permissions == null)
+                return true;
+
+            var allowed = await GetAllowedPermissionIds(resource);
+            if (permissions.Any(p => p.Selected && (p.Id == null || !allowed.Contains(p.Id))))
+                return false;
+
+            foreach (var permission in permissions.Where(p => p.Id == null || !allowed.Contains(p.Id)).ToList())
+            {
+                permission.Selected = false;
+            }
+
+            return true;
+        }
+
+        private async Task<bool> TryFilterToAllowedPermissions(
+            Resource resource,
+            IEnumerable<UserResourcePermissionsViewModel> userPermissions,
+            IEnumerable<GroupResourcePermissionsViewModel> groupPermissions)
+        {
+            var allowed = await GetAllowedPermissionIds(resource);
+
+            bool HasDisallowedGrant(IEnumerable<ItemSelectedViewModel<string>> perms) =>
+                perms != null && perms.Any(p => p.Selected && (p.Id == null || !allowed.Contains(p.Id)));
+
+            if (userPermissions != null && userPermissions.Any(u => HasDisallowedGrant(u.Permissions)))
+                return false;
+            if (groupPermissions != null && groupPermissions.Any(g => HasDisallowedGrant(g.Permissions)))
+                return false;
+
+            void StripUnknown(IEnumerable<ItemSelectedViewModel<string>> perms)
+            {
+                if (perms == null)
+                    return;
+                foreach (var permission in perms.Where(p => p.Id == null || !allowed.Contains(p.Id)))
+                    permission.Selected = false;
+            }
+
+            if (userPermissions != null)
+            {
+                foreach (var user in userPermissions)
+                    StripUnknown(user.Permissions);
+            }
+
+            if (groupPermissions != null)
+            {
+                foreach (var group in groupPermissions)
+                    StripUnknown(group.Permissions);
+            }
+
+            return true;
         }
 
         private async Task<bool> CanEditResourcePermissions(Resource resource)
@@ -511,6 +593,12 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 if (!await CanEditResourcePermissions(resource))
                 {
                     TempData["ErrorMessage"] = $"You do not have permission to edit permissions for {resourceDisplayName.ToLower().TrimEnd('s')}: {resource.Name}";
+                    return RedirectToAction("Index", returnController);
+                }
+
+                if (false == await TryFilterToAllowedPermissions(resource, model.UserPermissions, model.GroupPermissions))
+                {
+                    TempData["ErrorMessage"] = "One or more submitted permissions are not valid for this resource type.";
                     return RedirectToAction("Index", returnController);
                 }
             }

@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Duende.IdentityServer.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,13 @@ namespace Viking.Identity.Server.WebManagement.Extensions
             foreach (var s in context.Result.ValidatedRequest.ValidatedResources.Resources.ApiScopes)
             {
                 Trace.WriteLine(s.Name);
+                if (string.Equals(s.Name, "Viking.Annotation", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(s.Name, "openid", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(s.Name, "profile", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 var parts = s.Name.Split('.');
                 string ResourceName;
                 string ScopeName;

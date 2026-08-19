@@ -64,12 +64,12 @@ namespace Viking.Identity.Server.Extensions.Services
                 Enabled = _globalRuntimeOverride ?? _options.Enabled,
                 Categories = new DebugCategoryOptions
                 {
-                    Authentication = GetCategoryEnabled(DebugLogCategory.Authentication),
-                    Permissions = GetCategoryEnabled(DebugLogCategory.Permissions),
-                    Database = GetCategoryEnabled(DebugLogCategory.Database),
-                    Email = GetCategoryEnabled(DebugLogCategory.Email),
-                    Api = GetCategoryEnabled(DebugLogCategory.Api),
-                    Configuration = GetCategoryEnabled(DebugLogCategory.Configuration)
+                    Authentication = IsEnabled(DebugLogCategory.Authentication),
+                    Permissions = IsEnabled(DebugLogCategory.Permissions),
+                    Database = IsEnabled(DebugLogCategory.Database),
+                    Email = IsEnabled(DebugLogCategory.Email),
+                    Api = IsEnabled(DebugLogCategory.Api),
+                    Configuration = IsEnabled(DebugLogCategory.Configuration)
                 }
             };
 

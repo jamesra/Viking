@@ -77,7 +77,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             {
                 // This doesn't count login failures towards account lockout
                 // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-                var result = await _signInManager.PasswordSignInAsync(model.Username, model.Password, model.RememberMe, lockoutOnFailure: false);
+                var result = await _signInManager.PasswordSignInAsync(model.Username, model.Password, model.RememberMe, lockoutOnFailure: true);
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User logged in.");
@@ -356,7 +356,17 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                         AddErrors(IdentityResult.Failed( new IdentityError() { Description = "SMTP server could not send confirmation E-mail", Code = "500" } ));
                     }
 
-                    await _signInManager.SignInAsync(user, isPersistent: false);
+                    if (_env != null && _env.IsDevelopment() && !user.EmailConfirmed)
+                    {
+                        user.EmailConfirmed = true;
+                        await _userManager.UpdateAsync(user);
+                    }
+
+                    if (user.EmailConfirmed)
+                    {
+                        await _signInManager.SignInAsync(user, isPersistent: false);
+                    }
+
                     _logger.LogInformation("User created a new account with password.");
                     return RedirectToLocal(returnUrl);
                 }
@@ -404,11 +414,15 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             }
 
             // Sign in the user with this external login provider if the user already has a login.
-            var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
+            var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: false);
             if (result.Succeeded)
             {
                 _logger.LogInformation("User logged in with {Name} provider.", info.LoginProvider);
                 return RedirectToLocal(returnUrl);
+            }
+            if (result.RequiresTwoFactor)
+            {
+                return RedirectToAction(nameof(LoginWith2fa), new { returnUrl, rememberMe = false });
             }
             if (result.IsLockedOut)
             {
@@ -437,10 +451,25 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 {
                     throw new ApplicationException("Error loading external login information during confirmation.");
                 }
-                var user = new ApplicationUser { UserName = model.Email, Email = model.Email };
+                bool firstUser = _userManager.Users.Any() == false;
+                var user = new ApplicationUser { UserName = model.Email, Email = model.Email, EmailConfirmed = true };
                 var result = await _userManager.CreateAsync(user);
                 if (result.Succeeded)
                 {
+                    if (firstUser)
+                    {
+                        await _userManager.AddToRoleAsync(user, Special.Roles.Admin);
+                        _logger.LogInformation("First user registered via external login - automatically assigned admin role.");
+                    }
+
+                    var everyoneGroupAssignment = new UserToGroupAssignment
+                    {
+                        UserId = user.Id,
+                        GroupId = Special.Groups.Everyone
+                    };
+                    _context.UserToGroupAssignments.Add(everyoneGroupAssignment);
+                    await _context.SaveChangesAsync();
+
                     result = await _userManager.AddLoginAsync(user, info);
                     if (result.Succeeded)
                     {

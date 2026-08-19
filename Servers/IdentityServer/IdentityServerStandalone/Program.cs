@@ -43,13 +43,12 @@ namespace Viking.Identity.Server.Standalone
     {
         public static void Main(string[] args)
         {
-            IdentityModelEventSource.ShowPII = true; // Enable detailed error messages for development
-
             var envFile = ".env";
             Env.TraversePath().Load(envFile);
 
             var aspnetCoreEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
             var hostingEnv = Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") ?? "Local";
+            IdentityModelEventSource.ShowPII = string.Equals(aspnetCoreEnv, "Development", StringComparison.OrdinalIgnoreCase);
             
             var buildEnvFile = $".env.{aspnetCoreEnv}";
             Env.TraversePath().Load(buildEnvFile);
@@ -201,7 +200,7 @@ namespace Viking.Identity.Server.Standalone
             if (serverOptions != null)
             {
                 Log.Information("Authority: {Authority}", serverOptions.Authority);
-                Log.Information("Secret: {Secret}", serverOptions.Secret);
+                Log.Information("Secret configured: {HasSecret}", !string.IsNullOrEmpty(serverOptions.Secret));
                 var apiscopes = serverOptions.ApiScopes ?? Array.Empty<ApiScope>();
                 Log.Information("ApiScopes count: {Count}", apiscopes.Length);
                 foreach (var scope in apiscopes)

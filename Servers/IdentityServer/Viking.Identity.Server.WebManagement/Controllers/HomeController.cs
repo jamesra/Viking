@@ -28,7 +28,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             {
                 IsAuthenticated = User.Identity?.IsAuthenticated ?? false,
                 Username = User.Identity?.Name ?? "Guest",
-                IsAdmin = User.IsInRole("Admin")
+                IsAdmin = User.IsInRole(Special.Roles.Admin)
             };
 
             if (model.IsAuthenticated)

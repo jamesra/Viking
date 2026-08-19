@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Viking.Identity.Data;
@@ -132,32 +133,36 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RequestClaims([Bind("UserId, UserComments, AvailableOrganizations, NewOrganization")] UserClaimRequestViewModel requestor)
+        public async Task<IActionResult> RequestClaims([Bind("UserComments, AvailableOrganizations, NewOrganization")] UserClaimRequestViewModel requestor)
         {
-            //Send an E-mail to the admins requesting new claims
-            var User = _context.ApplicationUser.FirstOrDefault(u => u.Id == requestor.UserId);
+            var userId = _userManager.GetUserId(User);
+            var user = await _context.ApplicationUser.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+            {
+                return Challenge();
+            }
 
             var Organizations = requestor.AvailableOrganizations;
 
             var AdminUsers = _context.GetUsersInAdminRole();
 
-            UserClaimRequestViewModel ExistingClaims = await User.CreateUserClaimsRequest(_context);
+            UserClaimRequestViewModel ExistingClaims = await user.CreateUserClaimsRequest(_context);
 
             var ExistingOrganziationClaims = ExistingClaims.AvailableOrganizations.Where(o => o.Selected).ToList(); 
 
             List<string> InvolvedAdmins = new List<string>();
 
-            Dictionary<long, List<ApplicationUser>> OrgAdmins = _context.GetOrganizationAdminMap(Special.Permissions.Group.AccessManager);
+            Dictionary<long, List<ApplicationUser>> OrgAdmins = await _context.GetOrganizationAdminMapAsync(Special.Permissions.Group.AccessManager);
 
             //Create the message
-            string message = string.Format("<p><b>{0}</b> is requesting additional claims:</p>", User.UserName);
+            string message = string.Format("<p><b>{0}</b> is requesting additional claims:</p>", System.Net.WebUtility.HtmlEncode(user.UserName));
             string UserMessage = "";
             string OrgMessage = "";
             string NewOrgMessage = "";
 
             if(string.IsNullOrEmpty(requestor.UserComments) == false)
             {
-                UserMessage = $"<dl><dt>User Message</dt><dd>{requestor.UserComments}</dd></dl>";
+                UserMessage = $"<dl><dt>User Message</dt><dd>{System.Net.WebUtility.HtmlEncode(requestor.UserComments)}</dd></dl>";
             }
 
             if(Organizations != null && Organizations.Any(o => o.Selected))
@@ -166,14 +171,14 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 foreach (var org in Organizations.Where(o => o.Selected && !ExistingOrganziationClaims.Any(oa => oa.Id == o.Id)))
                 {
                     InvolvedAdmins.AddRange(OrgAdmins[org.Id].Select(u => u.Email));
-                    OrgMessage += $"<li>{org.Name}</li>";
+                    OrgMessage += $"<li>{System.Net.WebUtility.HtmlEncode(org.Name)}</li>";
                 }
                 OrgMessage += "</ul>";
             }
 
             if(!string.IsNullOrWhiteSpace(requestor.NewOrganization))
             {
-                NewOrgMessage = string.Format("<p>New Organization: {0}</p>", requestor.NewOrganization);
+                NewOrgMessage = string.Format("<p>New Organization: {0}</p>", System.Net.WebUtility.HtmlEncode(requestor.NewOrganization));
             }
 
             message += UserMessage + OrgMessage + NewOrgMessage;
@@ -193,12 +198,12 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             }
 
             _logger.LogDebug("Claims request email details - From user: {UserName} ({UserId}), Subject: {Subject}, Message length: {MessageLength} characters", 
-                User.UserName, User.Id, string.Format("{0} claim request", User.UserName), message.Length);
+                user.UserName, user.Id, string.Format("{0} claim request", user.UserName), message.Length);
 
             try
             {
                 _logger.LogInformation("Claims request email: Attempting to send email to SMTP server...");
-                await this._emailSender.SendEmailAsync(recipientEmails, string.Format("{0} claim request", User.UserName), message);
+                await this._emailSender.SendEmailAsync(recipientEmails, string.Format("{0} claim request", user.UserName), message);
                 _logger.LogInformation("Claims request email: Successfully sent email to {Count} recipient(s): {Recipients}", 
                     recipientEmails.Length, string.Join(", ", recipientEmails));
             }

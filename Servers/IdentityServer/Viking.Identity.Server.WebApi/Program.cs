@@ -172,6 +172,8 @@ public class Program
                     options.ClientId = "api";
                     options.ClientCredentialStyle = IdentityModel.Client.ClientCredentialStyle.AuthorizationHeader;
                     options.EnableCaching = true;
+                    options.NameClaimType = "name";
+                    options.RoleClaimType = "role";
                 });
 
             // Configure Authorization — require bearer token on all endpoints unless [AllowAnonymous]
@@ -183,7 +185,6 @@ public class Program
                     .Build();
             });
 
-            builder.Services.AddTransient<Duende.IdentityServer.Validation.ICustomTokenRequestValidator, Viking.Identity.Server.WebManagement.Extensions.UserScopeTokenRequestValidator>();
             builder.Services.AddScoped<IAuthorizationHandler, ResourceIdPermissionsAuthorizationHandler>();
             builder.Services.AddScoped<IAuthorizationHandler, ResourcePermissionsAuthorizationHandler>();
 
@@ -233,7 +234,7 @@ public class Program
             app.UseAuthentication();
             app.UseAuthorization();
 
-            app.MapHealthChecks("/health");
+            app.MapHealthChecks("/health").AllowAnonymous();
             app.MapControllers();
             app.MapRazorPages();
             app.MapDefaultControllerRoute();

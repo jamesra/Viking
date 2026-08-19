@@ -28,7 +28,7 @@ namespace TestIdentityModel
 
         internal static string RandomLetters(int stringLength)
         {
-            const string allowedChars = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789!@$?_-";
+            const string allowedChars = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789";
             char[] chars = new char[stringLength];
 
             for (int i = 0; i < stringLength; i++)
@@ -43,7 +43,7 @@ namespace TestIdentityModel
         {
             var connStringTemplate = configuration.GetRequiredSection("DataContext").GetConnectionString("IdentityConnection");
 
-            DatabaseName = RandomLetters(6);
+            DatabaseName = "IdentityTest" + RandomLetters(8);
             var connString = string.Format(connStringTemplate, DatabaseName);
 
             DbContextOptionsBuilder<ApplicationDbContext> builder = new DbContextOptionsBuilder<ApplicationDbContext>();

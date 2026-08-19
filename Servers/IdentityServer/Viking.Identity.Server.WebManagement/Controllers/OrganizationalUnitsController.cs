@@ -37,8 +37,15 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // GET: OrganizationalUnits
         public async Task<IActionResult> Index()
         {
-            var applicationDbContext = _context.OrgUnit.Include(o => o.Parent).Include(o => o.ResourceType);
-            return View(await applicationDbContext.ToListAsync());
+            var allOrgs = await _context.OrgUnit.Include(o => o.Parent).Include(o => o.ResourceType).ToListAsync();
+            var visible = new List<OrganizationalUnit>();
+            foreach (var org in allOrgs)
+            {
+                if (await CanAdministerOrgUnit(org))
+                    visible.Add(org);
+            }
+
+            return View(visible);
         }
 
         // GET: OrganizationalUnits/Details/5
@@ -58,6 +65,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             if (organizationalUnit == null)
             {
                 return NotFound();
+            }
+
+            if (false == await CanAdministerOrgUnit(organizationalUnit))
+            {
+                return Forbid();
             }
 
             // Load volumes in this org
@@ -166,6 +178,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return NotFound();
             }
 
+            if (false == await CanAdministerOrgUnit(organizationalUnit))
+            {
+                return Forbid();
+            }
+
             ViewBag.ParentID = new SelectList(_context.OrgUnit.Where(ou => ou.Id != organizationalUnit.Id), "Id", "Name", organizationalUnit.ParentID);
             ViewBag.AvailableParents = new SelectList(await GetAvailableParents(id.Value), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), organizationalUnit.Id);
             return View(organizationalUnit);
@@ -176,23 +193,44 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(long id, [Bind("Id,Name,Description,ParentID,ResourceTypeId")] OrganizationalUnit organizationalUnit)
+        public async Task<IActionResult> Edit(long id, [Bind("Id,Name,Description,ParentID")] OrganizationalUnit organizationalUnit)
         {
             if (id != organizationalUnit.Id)
             {
                 return NotFound();
             }
+
+            var existing = await _context.OrgUnit.FirstOrDefaultAsync(o => o.Id == id);
+            if (existing == null)
+            {
+                return NotFound();
+            }
+
+            if (false == await CanAdministerOrgUnit(existing))
+            {
+                return Unauthorized();
+            }
+
+            if (organizationalUnit.ParentID != existing.ParentID)
+            {
+                var reparentProbe = new OrganizationalUnit
+                {
+                    ParentID = organizationalUnit.ParentID,
+                    ResourceTypeId = nameof(OrganizationalUnit)
+                };
+                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, reparentProbe))
+                {
+                    return Forbid();
+                }
+            }
               
             if (ModelState.IsValid)
             {
-                if (false == await _authorization.IsOrgUnitAdminAsync(HttpContext.User, organizationalUnit))
-                {
-                    return Unauthorized();
-                }
-
                 try
                 {
-                    _context.Update(organizationalUnit);
+                    existing.Name = organizationalUnit.Name;
+                    existing.Description = organizationalUnit.Description;
+                    existing.ParentID = organizationalUnit.ParentID;
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
@@ -227,6 +265,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             if (organizationalUnit == null)
             {
                 return NotFound();
+            }
+
+            if (false == await CanAdministerOrgUnit(organizationalUnit))
+            {
+                return Forbid();
             }
 
             return View(organizationalUnit);
@@ -265,6 +308,15 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             var children = (await _context.RecursiveChildrenOfOrg(Id)).Select(ou => ou.Id);
 
             return await _context.OrgUnit.Where(ou => ou.Id != Id && children.Contains(ou.Id) == false).ToListAsync();
+        }
+
+        private async Task<bool> CanAdministerOrgUnit(OrganizationalUnit orgUnit)
+        {
+            if (orgUnit == null)
+                return false;
+            if (User.IsInRole(Special.Roles.Admin))
+                return true;
+            return await _authorization.IsOrgUnitAdminAsync(HttpContext.User, orgUnit);
         }
     }
 }

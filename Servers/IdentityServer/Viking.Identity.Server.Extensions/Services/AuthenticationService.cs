@@ -32,7 +32,7 @@ namespace Viking.Identity.Server.Extensions.Services
             {
                 // Debug: Check if there's an Authorization header
                 var authHeader = httpContext.Request.Headers["Authorization"].FirstOrDefault();
-                _logger.LogDebugIfEnabled(_debugLoggingService, DebugLogCategory.Authentication, "Authorization header: {Header}", authHeader);
+                _logger.LogDebugIfEnabled(_debugLoggingService, DebugLogCategory.Authentication, "Authorization header: {Header}", RedactAuthorizationHeader(authHeader));
                 
                 // Debug: List available authentication schemes
                 _logger.LogDebugIfEnabled(_debugLoggingService, DebugLogCategory.Authentication, "Trying to authenticate with available schemes...");
@@ -70,26 +70,49 @@ namespace Viking.Identity.Server.Extensions.Services
                 return null;
             }
             
-            var username = user.Identity.GetUsername();
-            _logger.LogDebugIfEnabled(_debugLoggingService, DebugLogCategory.Authentication, "Username from identity: {Username}", username);
-            if (username == null)
-                return null; // Return null if username cannot be determined
-            
-            var appUser = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+            var appUser = await FindApplicationUserAsync(user);
             _logger.LogDebugIfEnabled(_debugLoggingService, DebugLogCategory.Authentication, "Found user in database: {Found}", appUser != null);
-            return appUser; // Return null if user not found
+            return appUser;
         }
 
         public async Task<string> GetCurrentUserIdAsync(ClaimsPrincipal user)
         {
-            // This method requires HttpContext for authentication, so it should be called with HttpContext
-            // For now, we'll try to get the user from the claims directly
-            var username = user.Identity?.GetUsername();
-            if (username == null)
-                return "Anonymous";
-            
-            var appUser = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+            var appUser = await FindApplicationUserAsync(user);
             return appUser?.Id ?? "Anonymous";
+        }
+
+        private async Task<ApplicationUser> FindApplicationUserAsync(ClaimsPrincipal user)
+        {
+            var username = user.Identity?.GetUsername();
+            _logger.LogDebugIfEnabled(_debugLoggingService, DebugLogCategory.Authentication, "Username from identity: {Username}", username);
+            if (!string.IsNullOrEmpty(username))
+            {
+                var byName = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+                if (byName != null)
+                    return byName;
+            }
+
+            var subjectId = user.FindFirst("sub")?.Value
+                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(subjectId))
+                return null;
+
+            _logger.LogDebugIfEnabled(_debugLoggingService, DebugLogCategory.Authentication, "Falling back to subject claim: {SubjectId}", subjectId);
+            return await _context.Users.FirstOrDefaultAsync(u => u.Id == subjectId);
+        }
+
+        private static string RedactAuthorizationHeader(string header)
+        {
+            if (string.IsNullOrEmpty(header))
+                return "(none)";
+
+            var space = header.IndexOf(' ');
+            if (space <= 0)
+                return $"present (length {header.Length})";
+
+            var scheme = header.Substring(0, space);
+            var tokenLength = header.Length - space - 1;
+            return $"{scheme} token length {tokenLength}";
         }
     }
 }

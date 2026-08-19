@@ -9,11 +9,9 @@ namespace Viking.Identity.Server.Authorization
 {
     public interface IAuthorizationHelper
     {
-        bool IsOrgUnitAdmin(long? Id);
         Task<bool> IsOrgUnitAdminAsync(long? Id, ClaimsPrincipal user=null);
         Task<bool> IsOrgUnitAdminAsync(OrganizationalUnit orgUnit, ClaimsPrincipal user = null);
         Task<bool> IsParentOrgUnitAdminAsync(Resource model);
-        bool IsGroupAccessManagerAsync(long Id);
         Task<bool> IsGroupAccessManagerAsync(long Id, ClaimsPrincipal user = null);
         Task<bool> IsGroupAccessManagerAsync(Group group, ClaimsPrincipal user = null);
     }
@@ -34,11 +32,6 @@ namespace Viking.Identity.Server.Authorization
             _principal = principal;
         }
 
-        public bool IsOrgUnitAdmin(long? Id)
-        {
-            return IsOrgUnitAdminAsync(Id, _principal).Result;
-        }
-
         public async Task<bool> IsOrgUnitAdminAsync(long? Id, ClaimsPrincipal user=null)
         {
             OrganizationalUnit orgUnit = Id.HasValue ? _context.OrgUnit.FirstOrDefault(o => o.Id == Id) : null;
@@ -56,11 +49,6 @@ namespace Viking.Identity.Server.Authorization
         public async Task<bool> IsParentOrgUnitAdminAsync(Resource model)
         {
             return await _authorization.IsParentOrgUnitAdminAsync(_principal, model);
-        }
-
-        public bool IsGroupAccessManagerAsync(long Id)
-        {
-            return IsGroupAccessManagerAsync(Id, _principal).Result;
         }
 
         public async Task<bool> IsGroupAccessManagerAsync(long Id, ClaimsPrincipal user = null)
