@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using Duende.IdentityModel.Client;
 using Viking.Common;
@@ -84,6 +85,10 @@ namespace Viking.UI.WPF.ViewModels
                 if (_selectedVolume != value)
                 {
                     _selectedVolume = value;
+                    // Tree/recent selection must win over a pre-filled default (Jotunn/Viking
+                    // InitialVolumeUrl). Same pattern as SegmentationServiceSelectionViewModel.
+                    if (!string.IsNullOrWhiteSpace(_manualVolumeUrl) && value?.Volume != null)
+                        ManualVolumeUrl = string.Empty;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(SelectedVolumeUrl));
                     OnPropertyChanged(nameof(SelectedVolumeDescription));
@@ -110,13 +115,11 @@ namespace Viking.UI.WPF.ViewModels
             get
             {
                 if (!string.IsNullOrWhiteSpace(ManualVolumeUrl))
-                {
                     return AppendDefaultVolumeFilenameIfMissing(ManualVolumeUrl);
-                }
-                else if (SelectedVolume?.Volume != null)
-                {
+
+                if (SelectedVolume?.Volume != null)
                     return SelectedVolume.Volume.VolumeXmlUrl;
-                }
+
                 return string.Empty;
             }
         }
@@ -366,34 +369,10 @@ namespace Viking.UI.WPF.ViewModels
                 Name = resourcePermissions.Name ?? $"Volume {resourcePermissions.Id}"
             };
 
-            // Extract Endpoint and Description from Metadata
             if (resourcePermissions.Metadata != null)
             {
-                // Extract Endpoint (volume URL)
-                if (resourcePermissions.Metadata.TryGetValue("Endpoint", out object endpointObj))
-                {
-                    if (endpointObj is string endpointStr)
-                    {
-                        volumeInfo.VolumeXmlUrl = endpointStr;
-                    }
-                    else if (endpointObj != null)
-                    {
-                        volumeInfo.VolumeXmlUrl = endpointObj.ToString();
-                    }
-                }
-
-                // Extract Description
-                if (resourcePermissions.Metadata.TryGetValue("Description", out object descObj))
-                {
-                    if (descObj is string descStr)
-                    {
-                        volumeInfo.Description = descStr;
-                    }
-                    else if (descObj != null)
-                    {
-                        volumeInfo.Description = descObj.ToString();
-                    }
-                }
+                volumeInfo.VolumeXmlUrl = TryGetMetadataString(resourcePermissions.Metadata, "Endpoint");
+                volumeInfo.Description = TryGetMetadataString(resourcePermissions.Metadata, "Description");
             }
 
             System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Converted VolumeInfo: Id={volumeInfo.Id}, Name={volumeInfo.Name}, VolumeXmlUrl={volumeInfo.VolumeXmlUrl ?? "(null)"}, Description={volumeInfo.Description ?? "(null)"}");
@@ -428,11 +407,10 @@ namespace Viking.UI.WPF.ViewModels
             string selectedUrl = null;
             string selectedName = null;
 
-            // Prioritize manual entry if provided
             if (!string.IsNullOrWhiteSpace(ManualVolumeUrl))
             {
                 selectedUrl = ManualVolumeUrl;
-                selectedName = null; // Will be loaded from XML
+                selectedName = null;
                 System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Using manually entered volume: {selectedUrl}");
             }
             else if (SelectedVolume?.Volume != null)
@@ -458,6 +436,11 @@ namespace Viking.UI.WPF.ViewModels
             {
                 System.Diagnostics.Trace.WriteLine($"[VolumeSelection] ERROR: selectedUrl is null or empty, cannot raise VolumeSelected event");
                 StatusMessage = "Error: Volume URL is not available. Please enter URL manually.";
+                MessageBox.Show(
+                    "This volume has no VikingXML URL. Select a different volume or enter a volume.vikingxml URL under Advanced.",
+                    "Select Volume",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
             }
         }
 
@@ -504,6 +487,50 @@ namespace Viking.UI.WPF.ViewModels
             }
 
             return url;
+        }
+
+        /// <summary>
+        /// Reads a metadata value from Identity volume-tree JSON. System.Text.Json stores
+        /// Dictionary&lt;string, object&gt; values as JsonElement, and ASP.NET may camelCase keys.
+        /// </summary>
+        internal static string TryGetMetadataString(IDictionary<string, object> metadata, string key)
+        {
+            if (metadata == null || string.IsNullOrEmpty(key))
+                return null;
+
+            if (!metadata.TryGetValue(key, out object value))
+            {
+                value = null;
+                foreach (var pair in metadata)
+                {
+                    if (string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase))
+                    {
+                        value = pair.Value;
+                        break;
+                    }
+                }
+            }
+
+            return UnwrapMetadataValue(value);
+        }
+
+        static string UnwrapMetadataValue(object value)
+        {
+            if (value is null)
+                return null;
+            if (value is string text)
+                return string.IsNullOrWhiteSpace(text) ? null : text;
+            if (value is JsonElement element)
+            {
+                return element.ValueKind switch
+                {
+                    JsonValueKind.String => element.GetString(),
+                    JsonValueKind.Null or JsonValueKind.Undefined => null,
+                    _ => element.ToString()
+                };
+            }
+
+            return value.ToString();
         }
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

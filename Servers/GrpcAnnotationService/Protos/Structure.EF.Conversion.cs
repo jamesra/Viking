@@ -1,5 +1,9 @@
 namespace gRPCAnnotationService.Protos
 {
+    /// <summary>
+    /// Structure proto ↔ EF. Links are not mapped here — StructureService.AttachStructureLinksAsync
+    /// fills Structure.Links. ParentId 0 then ClearParentId so proto3 optional stays unset for roots.
+    /// </summary>
     public static class StructureEFExtensions
     {
         public static Viking.DataModel.Annotation.Structure ToStructure(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Structure src)
@@ -17,6 +21,7 @@ namespace gRPCAnnotationService.Protos
                 TypeId = src.TypeId, 
                 Verified = src.Verified,
                 Username = src.Username,
+                Tags = string.IsNullOrWhiteSpace(src.Attributes) ? null : src.Attributes,
             }; 
 
             /*
@@ -48,8 +53,10 @@ namespace gRPCAnnotationService.Protos
                 TypeId = src.TypeId,
                 Verified = src.Verified,
                 Username = src.Username ?? string.Empty,
+                Attributes = src.Tags ?? string.Empty,
             };
 
+            // Proto3 optional: assigning 0 then clearing keeps HasParentId false for roots.
             if(false == src.ParentId.HasValue)
                 value.ClearParentId();
             

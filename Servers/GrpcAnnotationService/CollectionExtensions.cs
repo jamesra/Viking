@@ -16,12 +16,8 @@ namespace gRPCAnnotationService
     public static class CollectionExtensions<T>
     {
         /// <summary>
-        /// SQL queries using a CONTAINS clause have a limit to the collection they can be compared against.  This helper function
-        /// chunks input collection into a set of smaller collections no longer than the chunk size.  Each chunk can then be sent to the database as a query
+        /// Splits ID lists so SQL IN / Contains stays under the parameter limit. Default 2000 matches the services.
         /// </summary>
-        /// <param name="input"></param>
-        /// <param name="ChunkSize"></param>
-        /// <returns></returns>
         public static IEnumerable<T[]> Chunk(T[] input, int ChunkSize = 2000)
         { 
             if (input.Length <= ChunkSize)

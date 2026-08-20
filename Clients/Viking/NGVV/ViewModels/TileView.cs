@@ -390,46 +390,27 @@ namespace Viking.ViewModels
         private static bool NullGridWarningPrinted = false;
 #endif
 
-        public void Draw(GraphicsDevice graphicsDevice, VikingXNA.TileLayoutEffect effect, bool AsynchTextureLoad, bool UseColor)
+        /// <summary>
+        /// Draws this tile with TileLayoutEffect. Viking's SectionViewerControl draws into a
+        /// depth RT and relies on the effect's ZEnable/DEPTH0; Jotunn draws to the HWND
+        /// backbuffer and must pass <paramref name="ignoreEffectDepth"/> so those states
+        /// cannot discard color.
+        /// </summary>
+        /// <param name="ignoreEffectDepth">
+        /// When true, DepthStencilState.None is applied after each pass so TileLayout.fx
+        /// ZEnable/DEPTH0 cannot discard pixels on a depth backbuffer.
+        /// </param>
+        public void Draw(GraphicsDevice graphicsDevice, VikingXNA.TileLayoutEffect effect, bool AsynchTextureLoad, bool UseColor, bool ignoreEffectDepth = false)
         {
-            if (TriangleIndicies is null)
-            {
-#if DEBUG
-                if (!NullGridWarningPrinted)
-                {
-                    NullGridWarningPrinted = true;
-                    Trace.WriteLine("Null Grid Indices for " + this.TextureFileName, "Tile");
-                }
-#endif
-
+            if (TriangleIndicies is null || TriangleIndicies.Length == 0)
                 return;
-            }
-
-            if (TriangleIndicies.Length == 0)
-            {
-#if DEBUG
-                if (!NullGridWarningPrinted)
-                {
-                    NullGridWarningPrinted = true;
-                    Trace.WriteLine("No Grid Indices for " + this.TextureFileName, "Tile");
-                }
-#endif
-                return;
-            }
 
             Texture2D currentTexture = null;
             try
             {
-                //rwTextureLock.EnterReadLock();
-
-                //Texture2D currentTexture = GetOrRequestTexture(graphicsDevice);  
                 currentTexture = this.texture;
 
-                //Do not draw if we don't have a texture
-                if (currentTexture is null)
-                    return;
-
-                if (currentTexture.IsDisposed)
+                if (currentTexture is null || currentTexture.IsDisposed)
                     return;
 
                 //Create the verticies if they don't exist or if they've been disposed (device reset)
@@ -477,9 +458,9 @@ namespace Viking.ViewModels
 
             foreach (EffectPass pass in effect.effect.CurrentTechnique.Passes)
             {
-                //PORT XNA 4
-                //pass.Begin();
                 pass.Apply();
+                if (ignoreEffectDepth)
+                    graphicsDevice.DepthStencilState = DepthStencilState.None;
 
                 graphicsDevice.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, TriangleIndicies.Length / 3);
                 /*

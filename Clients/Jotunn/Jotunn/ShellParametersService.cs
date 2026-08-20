@@ -2,7 +2,12 @@
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Linq;
+using Viking.Common;
+using Viking.VolumeModel;
 
 namespace Jotunn
 {
@@ -48,12 +53,23 @@ namespace Jotunn
             return null;
         }
 
+        /// <summary>
+        /// Blocking load of volume XML. Must not run on the WPF UI thread (deadlocks on HTTP).
+        /// App uses <see cref="FromVolumeUrlAsync"/> instead.
+        /// </summary>
         public static ShellParameterService FromCommandLine(string[] args)
         {
-            return FromVolumeUrl(FirstVolumeUrlFromArgs(args) ?? DefaultVolumeUrl);
+            return FromVolumeUrlAsync(FirstVolumeUrlFromArgs(args) ?? DefaultVolumeUrl)
+                .ConfigureAwait(false)
+                .GetAwaiter()
+                .GetResult();
         }
 
-        public static ShellParameterService FromVolumeUrl(string volumeUrl)
+        public static Task<ShellParameterService> FromVolumeUrlAsync(
+            string volumeUrl,
+            NetworkCredential credentials = null,
+            CancellationToken cancellationToken = default,
+            IProgress<ProgressInfo> progress = null)
         {
             if (string.IsNullOrWhiteSpace(volumeUrl))
                 volumeUrl = DefaultVolumeUrl;
@@ -71,7 +87,23 @@ namespace Jotunn
                 { "HostPath", hostPath }
             };
 
-            XDocument xDoc = Utils.IO.Load(websiteUri);
+            return LoadAsync(websiteUri, hostPath, argTable, credentials, cancellationToken, progress);
+        }
+
+        static async Task<ShellParameterService> LoadAsync(
+            Uri websiteUri,
+            string hostPath,
+            NameValueCollection argTable,
+            NetworkCredential credentials,
+            CancellationToken cancellationToken,
+            IProgress<ProgressInfo> progress)
+        {
+            XDocument xDoc = await Volume.LoadXDocumentAsync(
+                websiteUri.ToString(),
+                cancellationToken,
+                credentials,
+                progress).ConfigureAwait(false);
+
             return new ShellParameterService(argTable, xDoc, websiteUri.ToString(), hostPath);
         }
 

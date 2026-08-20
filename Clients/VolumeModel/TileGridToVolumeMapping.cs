@@ -171,38 +171,29 @@ namespace Viking.VolumeModel
             int ExpectedTileCount = (iMaxX - iMinX) * (iMaxY - iMinY);
             List<TileViewModel> TilesToDraw = new(ExpectedTileCount);
 
-
             for (int iX = iMinX; iX < iMaxX; iX++)
             {
                 for (int iY = iMinY; iY < iMaxY; iY++)
                 {
                     TileKey tilekey = new(iX, iY, roundedDownsample);
                     if (TileTasks.ContainsKey(tilekey))
-                        continue; //We are already getting this tile, so continue
+                        continue;
 
-                    //Figure out if the tile would be visible
                     Rectangle tileBorder = TileBoundingBox(iX, iY, (int)roundedDownsample);
                     if (tileBorder.Intersects(SectionVisibleBounds) == false)
                         continue;
 
-                    //If we have a visble quad see if the tile intersects that too
-                    if (VisibleQuad.HasValue)
-                    {
-                        if (VisibleQuad.Value.Contains(tileBorder) == false)
-                            continue;
-                    }
+                    if (VisibleQuad.HasValue && VisibleQuad.Value.Contains(tileBorder) == false)
+                        continue;
 
                     var UniqueID = TileUniqueKey.Create(Section.Number, "Grid to Volume", Name, roundedDownsample, this.TileTextureFileName(iX, iY));
-
-                    //                   Trace.WriteLine(TextureFileName, "VolumeModel"); 
-                    ;
-                    if (Global.TileCache.TryGetValue(UniqueID, out TileViewModel tileViewModel) && tileViewModel != null)
+                    if (Global.TileCache.TryGetValue(UniqueID, out TileViewModel tileViewModel))
                     {
-                        TilesToDraw.Add(tileViewModel);
+                        if (tileViewModel != null)
+                            TilesToDraw.Add(tileViewModel);
                     }
                     else
                     {
-                        //Create a task to fetch the tile
                         Task<CreateTileTaskResult> tileTask = Task.Run<CreateTileTaskResult>(() =>
                             CreateTile(UniqueID, tilekey, this.Name));
                         TileTasks.TryAdd(tilekey, tileTask);

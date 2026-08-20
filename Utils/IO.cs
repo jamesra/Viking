@@ -45,21 +45,32 @@ namespace Utils
         /// <param name="path"></param>
         public static XDocument Load(Uri path)
         {
-            XDocument XDoc = path.Scheme == "http" || path.Scheme == "https" ? LoadHTTP(path) : XDocument.Load(path.LocalPath);
-            return XDoc;
+            if (path.Scheme == "http" || path.Scheme == "https")
+                return LoadHTTP(path);
+
+            return XDocument.Load(path.LocalPath);
         }
 
-        private static XDocument LoadHTTP(Uri path) => LoadHTTPAsync(path).GetAwaiter().GetResult();
+        public static Task<XDocument> LoadAsync(Uri path)
+        {
+            if (path.Scheme == "http" || path.Scheme == "https")
+                return LoadHTTPAsync(path);
+
+            return Task.FromResult(XDocument.Load(path.LocalPath));
+        }
+
+        private static XDocument LoadHTTP(Uri path) =>
+            LoadHTTPAsync(path).ConfigureAwait(false).GetAwaiter().GetResult();
 
         private static async Task<XDocument> LoadHTTPAsync(Uri path)
         {
             using HttpClient httpClient = new();
             try
             {
-                var response = await httpClient.GetAsync(path);
+                var response = await httpClient.GetAsync(path).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
 
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return XDocument.Parse(content);
             }
             catch (HttpRequestException e)

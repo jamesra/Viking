@@ -18,6 +18,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Viking.ico" />
+    <Resource Include="Viking.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Velopack" Version="0.0.1298" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
   </ItemGroup>
@@ -48,15 +53,29 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\Monographics\bin\MonoGame\Debug\net10.0-windows\Content\**\*.*" Link="Content\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\Monographics\bin\MonoGame\Debug\net10.0-windows\Content')" />
-    <None Include="..\..\Monographics\bin\MonoGame\Debug\Content\**\*.*" Link="Content\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\Monographics\bin\MonoGame\Debug\Content')" />
-    <None Include="..\..\VikingXNAGraphics\Content\bin\Windows\**\*.xnb" Link="Content\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\VikingXNAGraphics\Content\bin\Windows')" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Include="..\..\Viking\Viking\SqlServerTypes\**\*.*" LinkBase="SqlServerTypes" CopyToOutputDirectory="PreserveNewest" />
     <None Include="SqlServerTypes\x64\*.dll" CopyToOutputDirectory="PreserveNewest" Condition="Exists('SqlServerTypes\x64')" />
     <None Include="SqlServerTypes\x86\*.dll" CopyToOutputDirectory="PreserveNewest" Condition="Exists('SqlServerTypes\x86')" />
   </ItemGroup>
+
+  <!-- SDK DefaultItemExcludes drops **\bin\**, so None Include of Content\bin\...\*.xnb never copies.
+       Viking uses the same AfterBuild copy. Prefer 3.8 WindowsDX xnb from Monographics. -->
+  <Target Name="CopyGraphicsContent" AfterTargets="Build" BeforeTargets="PrepareForRun" Condition="'$(DesignTimeBuild)' != 'true'">
+    <PropertyGroup>
+      <_MgContentDir>$(MSBuildThisFileDirectory)..\..\Monographics\Content\bin\Windows\Content\</_MgContentDir>
+      <_LegacyContentDir>$(MSBuildThisFileDirectory)..\..\VikingXNAGraphics\Content\bin\Windows\</_LegacyContentDir>
+      <_DestContentDir>$(TargetDir)Content\</_DestContentDir>
+    </PropertyGroup>
+    <ItemGroup Condition="Exists('$(_MgContentDir)TileLayout.xnb')">
+      <GraphicsContent Include="$(_MgContentDir)*.xnb" />
+    </ItemGroup>
+    <ItemGroup Condition="'@(GraphicsContent)' == '' and Exists('$(_LegacyContentDir)TileLayout.xnb')">
+      <GraphicsContent Include="$(_LegacyContentDir)*.xnb" />
+    </ItemGroup>
+    <MakeDir Directories="$(_DestContentDir)" />
+    <Copy SourceFiles="@(GraphicsContent)" DestinationFolder="$(_DestContentDir)" SkipUnchangedFiles="true" />
+    <Error Text="No graphics content (.xnb) was copied to Jotunn output. Build Clients\Monographics so Content\bin\Windows\Content\TileLayout.xnb exists." Condition="'@(GraphicsContent)' == ''" />
+    <Message Text="Copied @(GraphicsContent-&gt;Count()) graphics content file(s) to $(_DestContentDir)" Importance="high" />
+  </Target>
 
 </Project>

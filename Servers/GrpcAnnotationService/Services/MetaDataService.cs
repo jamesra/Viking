@@ -28,12 +28,13 @@ namespace gRPCAnnotationService
         {
             try
             {
+                var ct = context.CancellationToken;
                 // The scale lives in scalar SQL functions rather than a table, so it is read
                 // directly instead of through a DbSet.
-                var xyValue = await ScalarAsync<double?>("SELECT dbo.XYScale()");
-                var zValue = await ScalarAsync<double?>("SELECT dbo.ZScale()");
-                var xyUnits = await ScalarAsync<string>("SELECT dbo.XYScaleUnits()");
-                var zUnits = await ScalarAsync<string>("SELECT dbo.ZScaleUnits()");
+                var xyValue = await ScalarAsync<double?>("SELECT dbo.XYScale()", ct);
+                var zValue = await ScalarAsync<double?>("SELECT dbo.ZScale()", ct);
+                var xyUnits = await ScalarAsync<string>("SELECT dbo.XYScaleUnits()", ct);
+                var zUnits = await ScalarAsync<string>("SELECT dbo.ZScaleUnits()", ct);
 
                 var scale = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Scale
                 {
@@ -53,9 +54,9 @@ namespace gRPCAnnotationService
             }
         }
 
-        private async Task<T> ScalarAsync<T>(string sql)
+        private async Task<T> ScalarAsync<T>(string sql, System.Threading.CancellationToken ct)
         {
-            var results = await _context.Database.SqlQueryRaw<T>(sql).ToListAsync();
+            var results = await _context.Database.SqlQueryRaw<T>(sql).ToListAsync(ct);
             return results.FirstOrDefault();
         }
     }

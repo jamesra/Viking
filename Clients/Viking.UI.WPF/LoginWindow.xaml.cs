@@ -75,7 +75,7 @@ namespace Viking.UI.WPF
                 return;
             ShowVolumeStage(apiToken);
             if (!string.IsNullOrWhiteSpace(InitialVolumeUrl) && _volumeSelectionViewModel != null)
-                _volumeSelectionViewModel.ManualVolumeUrl = InitialVolumeUrl;
+                _volumeSelectionViewModel.SelectMostRecentVolumeIfAvailable();
         }
 
         /// <summary>Creates a minimal TokenResponse from a raw access token (e.g. from launch code exchange).</summary>
@@ -129,7 +129,7 @@ namespace Viking.UI.WPF
         public string SegmentationServiceUrl { get; private set; }
         public NetworkCredential Credentials { get; private set; }
         public TokenResponse BearerToken { get; private set; }
-        /// <summary>Identity server URL used for login (needed so WCF TokenInjector can send Bearer token to AnnotationService).</summary>
+        /// <summary>Identity server URL used for login so TokenStore can attach a Bearer token to annotation requests.</summary>
         public string IdentityServerUrl => _loginViewModel?.IdentityServerUrl;
         public TokenResponse ApiToken { get; private set; }
 
@@ -175,7 +175,6 @@ namespace Viking.UI.WPF
             if (!string.IsNullOrWhiteSpace(InitialVolumeUrl))
             {
                 _volumeSelectionViewModel.AddRecentVolume(InitialVolumeUrl, null);
-                _volumeSelectionViewModel.ManualVolumeUrl = InitialVolumeUrl;
                 _volumeSelectionViewModel.SelectMostRecentVolumeIfAvailable();
             }
 
@@ -242,24 +241,26 @@ namespace Viking.UI.WPF
                 VolumeURL = e.Url;
                 VolumeName = e.Name;
 
-                // Validate the volume endpoint before proceeding
                 bool isValid = await ValidateVolumeEndpointAsync(VolumeURL);
 
                 if (!isValid)
                 {
-                    // Validation failed - error message already displayed in UI
-                    // User stays on volume selection stage
+                    var message = string.IsNullOrWhiteSpace(_volumeSelectionViewModel?.StatusMessage)
+                        ? "The selected volume URL could not be reached."
+                        : _volumeSelectionViewModel.StatusMessage;
+                    MessageBox.Show(message, "Volume Selection", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
                 await PrepareSegmentationStageAsync(e.Name, VolumeURL);
 
-                // Update the recent volumes list in the UI (remove duplicates and add to top)
                 _volumeSelectionViewModel?.AddRecentVolume(VolumeURL, VolumeName);
             }
             catch (Exception ex)
             {
                 Trace.WriteLine($"OnVolumeSelected failed: {ex}", "LoginWindow");
+                UpdateViewModelStatus(false, $"Error: {ex.Message}");
+                MessageBox.Show(ex.Message, "Volume Selection", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -325,7 +326,7 @@ namespace Viking.UI.WPF
                 BearerToken = volumeToken;
 
                 Task<Dictionary<long, object>> segmentationTask = FetchSegmentationServicesAsync(apiToken, identityApiUrl);
-                // Set TokenInjector immediately so WCF AnnotationService calls use the volume-scoped token (critical for non-anonymous users after pre-load segmentation flow).
+                // Publish the volume-scoped token before segmentation pre-load so annotation requests are authorized.
                 TokenStore.BearerToken = volumeToken;
                 TokenStore.BearerTokenAuthority = identityServerUrl?.ToString() ?? _loginViewModel?.IdentityServerUrl;
 
@@ -467,42 +468,24 @@ namespace Viking.UI.WPF
                         UseDefaultCredentials = true
                     };
                 using HttpClient httpClient = new(handler);
-                // Set timeout to prevent hanging
                 httpClient.Timeout = TimeSpan.FromSeconds(10);
 
-                // Try HEAD request first (more efficient)
-                try
-                {
-                    using HttpRequestMessage request = new(HttpMethod.Head, volumeUri);
-                    var response = await httpClient.SendAsync(request);
+                using HttpRequestMessage request = new(HttpMethod.Get, volumeUri);
+#if !NETFRAMEWORK
+                request.Version = new Version(1, 1);
+                request.VersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
+#endif
+                using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
 
-                    if (response.StatusCode == HttpStatusCode.OK)
-                    {
-                        UpdateViewModelStatus(false, "Volume endpoint validated successfully");
-                        return true;
-                    }
-                    else
-                    {
-                        UpdateViewModelStatus(false, $"Volume endpoint returned error: {(int)response.StatusCode} {response.StatusCode}");
-                        return false;
-                    }
-                }
-                catch (NotSupportedException)
+                int status = (int)response.StatusCode;
+                if (status >= 200 && status < 300)
                 {
-                    // HEAD not supported, fall back to GET
-                    var response = await httpClient.GetAsync(volumeUri);
-
-                    if (response.StatusCode == HttpStatusCode.OK)
-                    {
-                        UpdateViewModelStatus(false, "Volume endpoint validated successfully");
-                        return true;
-                    }
-                    else
-                    {
-                        UpdateViewModelStatus(false, $"Volume endpoint returned error: {(int)response.StatusCode} {response.StatusCode}");
-                        return false;
-                    }
+                    UpdateViewModelStatus(false, "Volume endpoint validated successfully");
+                    return true;
                 }
+
+                UpdateViewModelStatus(false, $"Volume endpoint returned error: {status} {response.StatusCode}");
+                return false;
             }
             catch (TaskCanceledException)
             {

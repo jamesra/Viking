@@ -5,6 +5,9 @@ using Microsoft.Extensions.Hosting;
 
 namespace gRPCAnnotationService
 {
+    /// <summary>
+    /// Kestrel host. Docker binds h2c :80 and HTTPS :443 separately — gRPC clients do not follow redirects.
+    /// </summary>
     public class Program
     {
         public static void Main(string[] args)
@@ -20,6 +23,7 @@ namespace gRPCAnnotationService
                 {
                     webBuilder.ConfigureKestrel((context, options) =>
                     {
+                        // UseDockerPorts is set in the container. Local launch uses launchSettings endpoints.
                         if (context.Configuration.GetValue("Kestrel:UseDockerPorts", false))
                         {
                             options.ListenAnyIP(80, listen => listen.Protocols = HttpProtocols.Http2);

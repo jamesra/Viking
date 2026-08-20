@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 using Viking.Common;
@@ -7,24 +8,21 @@ namespace Jotunn
 {
     public partial class SplashScreen : Window
     {
-        public BackgroundWorker InitializeWorker;
+        /// <summary>
+        /// Set by App.OnStartup so Cancel stops volume and annotation load instead of racing Shutdown.
+        /// </summary>
+        public CancellationTokenSource LoadCancellation { get; set; }
 
         public SplashScreen()
         {
             InitializeComponent();
-            InitializeWorker = new BackgroundWorker
-            {
-                WorkerReportsProgress = true,
-                WorkerSupportsCancellation = true
-            };
-            InitializeWorker.ProgressChanged += InitializeWorker_ProgressChanged;
         }
 
         public void Report(ProgressInfo info)
         {
             if (!Dispatcher.CheckAccess())
             {
-                Dispatcher.Invoke(() => Report(info));
+                Dispatcher.BeginInvoke(new Action(() => Report(info)));
                 return;
             }
 
@@ -38,18 +36,18 @@ namespace Jotunn
 
         private void buttonCancel_Click(object sender, RoutedEventArgs e)
         {
+            LoadCancellation?.Cancel();
             Close();
-            Application.Current.Shutdown();
         }
 
-        private void InitializeWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        private void OnChromeMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            progressBar.Value = e.ProgressPercentage;
-            TextProgress.Text = e.UserState as string ?? string.Empty;
-        }
+            if (e.ChangedButton != MouseButton.Left || e.ButtonState != MouseButtonState.Pressed)
+                return;
 
-        private void Grid_MouseDown(object sender, MouseButtonEventArgs e)
-        {
+            if (buttonCancel.IsMouseOver)
+                return;
+
             DragMove();
         }
     }

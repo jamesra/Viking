@@ -225,9 +225,12 @@
               Background="#80FFFFFF"
               Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="Loading volumes..." 
+                <TextBlock Text="{Binding StatusMessage, FallbackValue=Loading...}" 
                            FontSize="16" 
                            FontWeight="Bold"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxWidth="360"
                            Margin="0,0,0,10"/>
                 <ProgressBar IsIndeterminate="True" 
                              Width="200" 

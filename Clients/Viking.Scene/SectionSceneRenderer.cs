@@ -50,20 +50,18 @@ namespace Viking.Rendering
 
         MappingManager? _mappingManager;
         Volume? _volume;
-        RenderTarget2D? _tileTarget;
-        SpriteBatch? _tileBlitBatch;
         readonly ConcurrentDictionary<int, Task> _mappingInitTasks = new();
         int _mappingReadyNotified;
         int _loggedNullMapping;
-        int _loggedNoTextures;
         int _loggedEffectNull;
-        RenderTarget2D? _cachedComposite;
-        int _cachedSection = int.MinValue;
-        Rectangle _cachedBounds;
-        double _cachedDownsample;
-        int _cachedVpW;
-        int _cachedVpH;
-        bool _lastDrawTilesComplete;
+        int _emptyVisiblePasses;
+        ChannelOverlayEffect? ChannelOverlayEffect;
+        RenderTarget2D? _sectionTarget;
+        DepthStencilState? _overlayBackgroundDepthState;
+        readonly Dictionary<int, DepthStencilState> _rtDownsampleDepthStateCache = new();
+        bool _drawTilesToSectionTarget;
+        int _activeDrawSection = int.MinValue;
+        static readonly short[] OverlayIndices = [0, 1, 2, 2, 1, 3];
 
         /// <summary>
         /// Open volume. Replaces MappingManager; seeds VolumeTransformName from DefaultVolumeTransform when empty.
@@ -76,13 +74,13 @@ namespace Viking.Rendering
                 _volume = value;
                 _mappingManager = value == null ? null : new MappingManager(value);
                 _mappingInitTasks.Clear();
-                _cachedComposite?.Dispose();
-                _cachedComposite = null;
-                _cachedSection = int.MinValue;
                 _mappingReadyNotified = 0;
                 _loggedNullMapping = 0;
-                _loggedNoTextures = 0;
                 _loggedEffectNull = 0;
+                _emptyVisiblePasses = 0;
+                _activeDrawSection = int.MinValue;
+                _sectionTarget?.Dispose();
+                _sectionTarget = null;
                 if (value != null && string.IsNullOrEmpty(VolumeTransformName))
                     VolumeTransformName = value.DefaultVolumeTransform ?? string.Empty;
             }
@@ -114,6 +112,20 @@ namespace Viking.Rendering
             {
                 WorldViewProjMatrix = scene.WorldViewProj
             };
+            try
+            {
+                Effect overlay = content.Load<Effect>("ChannelOverlayShader");
+                ChannelOverlayEffect = new ChannelOverlayEffect(overlay)
+                {
+                    WorldViewProjMatrix = scene.WorldViewProj
+                };
+            }
+            catch (Exception ex)
+            {
+                ChannelOverlayEffect = null;
+                Trace.WriteLine($"ChannelOverlayShader not loaded; tiles will draw to the HWND backbuffer: {ex.GetBaseException().Message}");
+            }
+            TileGridMappingBase.TileMeshCreated = () => TileLoadEnvironment.RequestRender?.Invoke();
         }
 
         /// <summary>
@@ -130,13 +142,18 @@ namespace Viking.Rendering
             bool loadFullResolution = true,
             bool queueTextureLoads = true)
         {
-            _lastDrawTilesComplete = false;
             if (_volume is null || _mappingManager is null || section is null)
             {
                 return -1;
             }
 
             PrepareDeviceForTiles(graphicsDevice);
+            if (TileLayoutEffect != null)
+            {
+                TileLayoutEffect.RenderToGreyscale();
+                if (!ColorizeTiles)
+                    TileLayoutEffect.TileColor = Microsoft.Xna.Framework.Color.White;
+            }
 
             string volumeTransform = string.IsNullOrEmpty(VolumeTransformName) ? _volume.DefaultVolumeTransform : VolumeTransformName;
             string sectionTransform = string.IsNullOrEmpty(SectionTransformName) ? section.DefaultPyramidTransform : SectionTransformName;
@@ -152,6 +169,8 @@ namespace Viking.Rendering
             if (!mapping.Initialized)
             {
                 StartMappingInitIfNeeded(section.Number, mapping, textureLoadToken);
+                TileLoadEnvironment.FollowUpPresents = 1;
+                TileLoadEnvironment.RequestRender?.Invoke();
                 return -1;
             }
 
@@ -162,6 +181,12 @@ namespace Viking.Rendering
                 if (Interlocked.Exchange(ref _loggedEffectNull, 1) == 0)
                     Trace.WriteLine("DrawTiles: TileLayoutEffect is null (TileLayout.xnb not loaded)");
                 return -1;
+            }
+
+            if (_activeDrawSection != section.Number)
+            {
+                _activeDrawSection = section.Number;
+                _emptyVisiblePasses = 0;
             }
 
             int[] downsamplesToRender = CalculateDownsamplesToRender(mapping, scene.Camera.Downsample);
@@ -186,10 +211,10 @@ namespace Viking.Rendering
                 downsamplesToRender = [downsamplesToRender.Last()];
 
             int texturedDrawn = 0;
+            int totalVisible = 0;
+            int totalQueued = 0;
+            int totalNotFound = 0;
             bool complete = true;
-
-            if (downsamplesToRender.Length == 0 && Interlocked.Exchange(ref _loggedNoTextures, 1) == 0)
-                Trace.WriteLine($"DrawTiles: mapping ready for section {section.Number} but 0 tiles in view bounds={scene.VisibleWorldBounds} ds={scene.Camera.Downsample}");
 
             for (int iLevel = 0; iLevel < downsamplesToRender.Length; iLevel++)
             {
@@ -199,8 +224,11 @@ namespace Viking.Rendering
                 graphicsDevice.DepthStencilState = CreateDepthStateForDownsampleLevel(iLevel);
 
                 SortedDictionary<TileUniqueKey, TileViewModel> tileList = visibleTiles.GetTilesForLevel(level);
+                totalVisible += tileList.Count;
                 List<TileView> tileViewsToDraw = [];
                 int queuedLoad = 0;
+                int hasTex = 0;
+                int notFound = 0;
 
                 foreach (TileViewModel t in tileList.Values)
                 {
@@ -209,6 +237,8 @@ namespace Viking.Rendering
                         continue;
 
                     if (tileView.HasTexture == false && tileView.Downsample > scene.Camera.Downsample * 8 && iLevel < downsamplesToRender.Length - 1)
+                        continue;
+                    if (tileView.ServerTextureNotFound && iLevel < downsamplesToRender.Length - 1)
                         continue;
 
                     if (queueTextureLoads && tileView.TextureNeedsLoading && !tileView.TextureIsLoading)
@@ -225,6 +255,10 @@ namespace Viking.Rendering
                     }
                     else if (tileView.TextureReadComplete)
                     {
+                        if (tileView.HasTexture)
+                            hasTex++;
+                        if (tileView.ServerTextureNotFound)
+                            notFound++;
                         tileViewsToDraw.Add(tileView);
                     }
                     else
@@ -235,17 +269,17 @@ namespace Viking.Rendering
 
                 if (queuedLoad > 0)
                     complete = false;
-
-                if (tileViewsToDraw.Count == 0 && tileList.Count > 0 && Interlocked.Exchange(ref _loggedNoTextures, 1) == 0)
-                    Trace.WriteLine($"DrawTiles: {tileList.Count} visible tiles at level {level} but none have textures yet");
+                totalQueued += queuedLoad;
+                totalNotFound += notFound;
 
                 TileLayoutEffect.WorldViewProjMatrix = scene.WorldViewProj;
                 foreach (TileView tileView in tileViewsToDraw)
-                    tileView.Draw(graphicsDevice, TileLayoutEffect, AsynchTextureLoad, ColorizeTiles);
-                texturedDrawn += tileViewsToDraw.Count;
+                    tileView.Draw(graphicsDevice, TileLayoutEffect, AsynchTextureLoad, ColorizeTiles, ignoreEffectDepth: !_drawTilesToSectionTarget);
+                texturedDrawn += hasTex;
             }
 
-            _lastDrawTilesComplete = complete && texturedDrawn > 0;
+            int uncovered = Math.Max(0, totalVisible - texturedDrawn - totalNotFound);
+            RequestFollowUpPresentIfNeeded(totalQueued, texturedDrawn, complete, uncovered, mapping.HasPendingTileConstruction);
             return texturedDrawn;
         }
 
@@ -281,17 +315,17 @@ namespace Viking.Rendering
         static void PrepareDeviceForTiles(GraphicsDevice graphicsDevice)
         {
             graphicsDevice.BlendState = BlendState.Opaque;
-            graphicsDevice.DepthStencilState = DepthStencilState.Default;
+            graphicsDevice.DepthStencilState = DepthStencilState.None;
             graphicsDevice.RasterizerState = RasterizerState.CullNone;
             graphicsDevice.SamplerStates[0] = SamplerState.LinearClamp;
             graphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Microsoft.Xna.Framework.Color.Black, 1f, 0);
         }
 
         /// <summary>
-        /// Draws tiles into an off-screen target (luma for overlay shaders), restores the
-        /// caller's render targets, blits in viewport-local space, then draws annotations.
-        /// Matches Viking SectionViewerControl: save GetRenderTargets, draw tiles, restore,
-        /// then overlay with a live depth/stencil buffer. Called per visible grid cell.
+        /// Viking DrawSection: tiles into a Depth24Stencil8 RT, then ChannelOverlayEffect
+        /// composites that RT onto the HWND backbuffer as a world-space quad. WM_PAINT/Present
+        /// copies the backbuffer to the control. If ChannelOverlayShader is missing, tiles
+        /// draw directly to the backbuffer (Taurine path).
         /// </summary>
         public void Draw(
             GraphicsDevice graphicsDevice,
@@ -304,35 +338,34 @@ namespace Viking.Rendering
             bool loadAnnotations = true)
         {
             Viewport destViewport = graphicsDevice.Viewport;
-            RenderTargetBinding[] originalTargets = graphicsDevice.GetRenderTargets();
-            bool usedCache = loadFullResolution
-                && scene != null
-                && TryBlitCachedComposite(graphicsDevice, destViewport, section.Number, scene);
-
-            if (!usedCache)
+            bool blitFromSectionTarget = ChannelOverlayEffect != null && scene != null;
+            _drawTilesToSectionTarget = blitFromSectionTarget;
+            if (blitFromSectionTarget)
             {
-                RenderTarget2D tileTarget = EnsureTileTarget(graphicsDevice, destViewport);
-
-                graphicsDevice.SetRenderTarget(tileTarget);
-                graphicsDevice.Viewport = new Viewport(0, 0, tileTarget.Width, tileTarget.Height);
-                graphicsDevice.Clear(Microsoft.Xna.Framework.Color.Black);
-                DrawTiles(graphicsDevice, scene, section, channel, textureLoadToken, loadFullResolution, queueTextureLoads);
-
-                graphicsDevice.SetRenderTargets(originalTargets);
-                graphicsDevice.Viewport = destViewport;
-                if (scene != null)
-                    scene.Viewport = destViewport;
-
-                BlitTileTarget(graphicsDevice, tileTarget, destViewport);
-                if (loadFullResolution && _lastDrawTilesComplete && scene != null)
-                    CaptureComposite(graphicsDevice, tileTarget, destViewport, section.Number, scene);
+                EnsureSectionTarget(graphicsDevice, destViewport);
+                graphicsDevice.SetRenderTarget(_sectionTarget);
             }
             else
+                graphicsDevice.SetRenderTarget(null);
+
+            graphicsDevice.Viewport = destViewport;
+            if (scene != null)
+                scene.Viewport = destViewport;
+            if (blitFromSectionTarget)
+                graphicsDevice.Clear(Microsoft.Xna.Framework.Color.Black);
+
+            DrawTiles(graphicsDevice, scene, section, channel, textureLoadToken, loadFullResolution, queueTextureLoads);
+
+            graphicsDevice.SetRenderTarget(null);
+            graphicsDevice.Viewport = destViewport;
+            if (scene != null)
+                scene.Viewport = destViewport;
+            _drawTilesToSectionTarget = false;
+
+            if (blitFromSectionTarget)
             {
-                graphicsDevice.SetRenderTargets(originalTargets);
-                graphicsDevice.Viewport = destViewport;
-                if (scene != null)
-                    scene.Viewport = destViewport;
+                graphicsDevice.Clear(ClearOptions.Target | ClearOptions.DepthBuffer | ClearOptions.Stencil, Microsoft.Xna.Framework.Color.Black, 1f, 0);
+                CompositeSectionOntoBackbuffer(graphicsDevice, scene);
             }
 
             PrepareDeviceForOverlay(graphicsDevice);
@@ -342,7 +375,7 @@ namespace Viking.Rendering
                 try
                 {
                     int nextStencil = 2;
-                    Texture luma = _tileTarget;
+                    Texture luma = blitFromSectionTarget ? _sectionTarget : null;
                     Annotations.Draw(graphicsDevice, scene, section.Number, luma, null, ref nextStencil, loadAnnotations);
                 }
                 catch (Exception ex)
@@ -352,102 +385,56 @@ namespace Viking.Rendering
             }
         }
 
-        bool TryBlitCachedComposite(GraphicsDevice graphicsDevice, Viewport destViewport, int sectionNumber, VikingXNA.Scene scene)
+        void EnsureSectionTarget(GraphicsDevice device, Viewport vp)
         {
-            if (_cachedComposite is null || _cachedComposite.IsDisposed)
-                return false;
-            if (_cachedSection != sectionNumber
-                || _cachedVpW != destViewport.Width
-                || _cachedVpH != destViewport.Height
-                || _cachedDownsample != scene.Camera.Downsample
-                || !_cachedBounds.Equals(scene.VisibleWorldBounds))
-            {
-                return false;
-            }
-
-            BlitTileTarget(graphicsDevice, _cachedComposite, destViewport);
-            return true;
+            int w = Math.Max(1, vp.Width);
+            int h = Math.Max(1, vp.Height);
+            if (_sectionTarget != null && !_sectionTarget.IsDisposed && _sectionTarget.Width == w && _sectionTarget.Height == h)
+                return;
+            _sectionTarget?.Dispose();
+            _sectionTarget = new RenderTarget2D(device, w, h, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
         }
 
-        void CaptureComposite(GraphicsDevice graphicsDevice, RenderTarget2D source, Viewport destViewport, int sectionNumber, VikingXNA.Scene scene)
+        void CompositeSectionOntoBackbuffer(GraphicsDevice device, VikingXNA.Scene scene)
         {
-            int width = Math.Max(1, destViewport.Width);
-            int height = Math.Max(1, destViewport.Height);
-            if (_cachedComposite is null || _cachedComposite.IsDisposed
-                || _cachedComposite.Width != width || _cachedComposite.Height != height)
+            ChannelOverlayEffect.WorldViewProjMatrix = scene.WorldViewProj;
+            ChannelOverlayEffect.SetEffectTextures(_sectionTarget, null);
+            if (_overlayBackgroundDepthState is null || _overlayBackgroundDepthState.IsDisposed)
             {
-                _cachedComposite?.Dispose();
-                _cachedComposite = new RenderTarget2D(
-                    graphicsDevice,
-                    width,
-                    height,
-                    false,
-                    SurfaceFormat.Color,
-                    DepthFormat.Depth24Stencil8,
-                    0,
-                    RenderTargetUsage.PreserveContents);
+                _overlayBackgroundDepthState = new DepthStencilState
+                {
+                    DepthBufferEnable = false,
+                    DepthBufferWriteEnable = true,
+                    DepthBufferFunction = CompareFunction.LessEqual,
+                    StencilEnable = true,
+                    StencilFunction = CompareFunction.Greater,
+                    ReferenceStencil = 1
+                };
             }
 
-            RenderTargetBinding[] original = graphicsDevice.GetRenderTargets();
-            graphicsDevice.SetRenderTarget(_cachedComposite);
-            graphicsDevice.Viewport = new Viewport(0, 0, width, height);
-            graphicsDevice.Clear(Microsoft.Xna.Framework.Color.Black);
-            BlitTileTarget(graphicsDevice, source, new Viewport(0, 0, width, height));
-            graphicsDevice.SetRenderTargets(original);
+            device.BlendState = BlendState.Opaque;
+            device.DepthStencilState = _overlayBackgroundDepthState;
+            DeviceStateManager.SetDepthStencilValue(device, 1);
+            device.RasterizerState = RasterizerState.CullNone;
+            device.SamplerStates[0] = SamplerState.PointClamp;
 
-            _cachedSection = sectionNumber;
-            _cachedBounds = scene.VisibleWorldBounds;
-            _cachedDownsample = scene.Camera.Downsample;
-            _cachedVpW = width;
-            _cachedVpH = height;
-        }
-
-        RenderTarget2D EnsureTileTarget(GraphicsDevice graphicsDevice, Viewport viewport)
-        {
-            int width = Math.Max(1, viewport.Width);
-            int height = Math.Max(1, viewport.Height);
-            if (_tileTarget != null && !_tileTarget.IsDisposed
-                && _tileTarget.Width == width && _tileTarget.Height == height)
+            Rectangle bounds = scene.VisibleWorldBounds;
+            double halfWidth = bounds.Width / 2;
+            double halfHeight = bounds.Height / 2;
+            Geometry.Vector2 botLeft = new(bounds.Center.X - halfWidth, bounds.Center.Y + halfHeight);
+            Geometry.Vector2 topRight = new(bounds.Center.X + halfWidth, bounds.Center.Y - halfHeight);
+            VertexPositionNormalTexture[] mesh =
+            [
+                new(new Vector3((float)botLeft.X, (float)botLeft.Y, 0), Vector3.UnitZ, new Vector2(0, 0)),
+                new(new Vector3((float)topRight.X, (float)botLeft.Y, 0), Vector3.UnitZ, new Vector2(1, 0)),
+                new(new Vector3((float)botLeft.X, (float)topRight.Y, 0), Vector3.UnitZ, new Vector2(0, 1)),
+                new(new Vector3((float)topRight.X, (float)topRight.Y, 0), Vector3.UnitZ, new Vector2(1, 1))
+            ];
+            foreach (EffectPass pass in ChannelOverlayEffect.effect.CurrentTechnique.Passes)
             {
-                return _tileTarget;
+                pass.Apply();
+                device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, mesh, 0, 4, OverlayIndices, 0, 2);
             }
-
-            _tileTarget?.Dispose();
-            _tileTarget = new RenderTarget2D(
-                graphicsDevice,
-                width,
-                height,
-                false,
-                SurfaceFormat.Color,
-                DepthFormat.Depth24Stencil8,
-                0,
-                RenderTargetUsage.PreserveContents);
-            return _tileTarget;
-        }
-
-        /// <summary>
-        /// Copies the tile target into the current viewport. SpriteBatch projection is
-        /// viewport-local, so the destination rect is (0,0,width,height) — using destViewport.X/Y
-        /// double-offsets cells that are not at the origin.
-        /// </summary>
-        void BlitTileTarget(GraphicsDevice graphicsDevice, RenderTarget2D tileTarget, Viewport destViewport)
-        {
-            if (_tileBlitBatch is null || _tileBlitBatch.GraphicsDevice.IsDisposed)
-                _tileBlitBatch = new SpriteBatch(graphicsDevice);
-
-            graphicsDevice.BlendState = BlendState.Opaque;
-            graphicsDevice.DepthStencilState = DepthStencilState.None;
-            _tileBlitBatch.Begin(
-                SpriteSortMode.Immediate,
-                BlendState.Opaque,
-                SamplerState.LinearClamp,
-                DepthStencilState.None,
-                RasterizerState.CullNone);
-            _tileBlitBatch.Draw(
-                tileTarget,
-                new Microsoft.Xna.Framework.Rectangle(0, 0, destViewport.Width, destViewport.Height),
-                Microsoft.Xna.Framework.Color.White);
-            _tileBlitBatch.End();
         }
 
         /// <summary>
@@ -568,24 +555,66 @@ namespace Viking.Rendering
             return best;
         }
 
+        /// <summary>
+        /// Per-level stencil so coarser tiles do not overwrite finer ones. Depth is off:
+        /// tiles rasterized into a DepthFormat.None RT (GetData luma 156) but were invisible
+        /// on the Depth24Stencil8 backbuffer with LessEqual.
+        /// </summary>
         DepthStencilState CreateDepthStateForDownsampleLevel(int stencilValue)
         {
-            if (_downsampleDepthStateCache.TryGetValue(stencilValue, out var cached) && cached != null && !cached.IsDisposed)
+            Dictionary<int, DepthStencilState> cache = _drawTilesToSectionTarget
+                ? _rtDownsampleDepthStateCache
+                : _downsampleDepthStateCache;
+            if (cache.TryGetValue(stencilValue, out var cached) && cached != null && !cached.IsDisposed)
                 return cached;
 
             cached?.Dispose();
             var state = new DepthStencilState
             {
-                DepthBufferEnable = true,
-                DepthBufferWriteEnable = true,
+                DepthBufferEnable = _drawTilesToSectionTarget,
+                DepthBufferWriteEnable = _drawTilesToSectionTarget,
                 DepthBufferFunction = CompareFunction.LessEqual,
                 StencilEnable = true,
                 StencilFunction = CompareFunction.GreaterEqual,
                 ReferenceStencil = stencilValue,
                 StencilPass = StencilOperation.Replace
             };
-            _downsampleDepthStateCache[stencilValue] = state;
+            cache[stencilValue] = state;
             return state;
+        }
+
+        /// <summary>
+        /// The on-demand present loop idles when HasTexturePipelineWork is false. Task.Run
+        /// loads are not in that flag until EnqueueRequest, and VisibleTiles can return 0
+        /// on the first pass, so we must request another Present until tiles actually draw.
+        /// </summary>
+        void RequestFollowUpPresentIfNeeded(int totalQueued, int texturedDrawn, bool complete, int uncovered, bool pendingTileConstruction)
+        {
+            bool needsFollowUp;
+            if (totalQueued > 0 || !complete || uncovered > 0 || pendingTileConstruction)
+            {
+                _emptyVisiblePasses = 0;
+                needsFollowUp = true;
+            }
+            else if (texturedDrawn == 0)
+            {
+                _emptyVisiblePasses++;
+                needsFollowUp = _emptyVisiblePasses <= 600;
+            }
+            else
+            {
+                _emptyVisiblePasses = 0;
+                needsFollowUp = false;
+            }
+
+            if (!needsFollowUp)
+            {
+                TileLoadEnvironment.FollowUpPresents = 0;
+                return;
+            }
+
+            TileLoadEnvironment.FollowUpPresents = 1;
+            TileLoadEnvironment.RequestRender?.Invoke();
         }
     }
 }

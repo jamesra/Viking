@@ -66,6 +66,7 @@ IF OBJECT_ID(N'dbo.DeletedLocations', N'U') IS NULL
 BEGIN
     CREATE TABLE [dbo].[DeletedLocations] (
         [ID]        BIGINT NOT NULL,
+        [Z]         BIGINT NULL,
         [DeletedOn] DATETIME CONSTRAINT [DF_DeletedLocations_DeletedOn] DEFAULT (getutcdate()) NOT NULL,
         CONSTRAINT [PK_DeletedLocations] PRIMARY KEY CLUSTERED ([ID] ASC)
     );
@@ -87,10 +88,24 @@ BEGIN
     CREATE TABLE [dbo].[DeletedLocationLinks] (
         [A]         BIGINT NOT NULL,
         [B]         BIGINT NOT NULL,
+        [AZ]        BIGINT NULL,
+        [BZ]        BIGINT NULL,
         [DeletedOn] DATETIME CONSTRAINT [DF_DeletedLocationLinks_DeletedOn] DEFAULT (getutcdate()) NOT NULL,
         CONSTRAINT [PK_DeletedLocationLinks] PRIMARY KEY CLUSTERED ([A] ASC, [B] ASC)
     );
 END
+GO
+
+IF COL_LENGTH(N'dbo.DeletedLocations', N'Z') IS NULL
+    ALTER TABLE dbo.DeletedLocations ADD [Z] BIGINT NULL;
+GO
+
+IF COL_LENGTH(N'dbo.DeletedLocationLinks', N'AZ') IS NULL
+    ALTER TABLE dbo.DeletedLocationLinks ADD [AZ] BIGINT NULL;
+GO
+
+IF COL_LENGTH(N'dbo.DeletedLocationLinks', N'BZ') IS NULL
+    ALTER TABLE dbo.DeletedLocationLinks ADD [BZ] BIGINT NULL;
 GO
 
 IF OBJECT_ID(N'dbo.Location', N'U') IS NULL
@@ -196,9 +211,11 @@ BEGIN
     FROM dbo.Structure
     WHERE ID = @DeleteID OR ParentID = @DeleteID;
 
-    INSERT INTO dbo.DeletedLocationLinks (A, B)
-    SELECT LL.A, LL.B
+    INSERT INTO dbo.DeletedLocationLinks (A, B, AZ, BZ)
+    SELECT LL.A, LL.B, LA.Z, LB.Z
     FROM dbo.LocationLink LL
+    INNER JOIN dbo.Location LA ON LA.ID = LL.A
+    INNER JOIN dbo.Location LB ON LB.ID = LL.B
     WHERE (LL.A IN (SELECT ID FROM dbo.Location WHERE ParentID IN (SELECT ID FROM #StructuresToDelete))
         OR LL.B IN (SELECT ID FROM dbo.Location WHERE ParentID IN (SELECT ID FROM #StructuresToDelete)))
       AND NOT EXISTS (SELECT 1 FROM dbo.DeletedLocationLinks DL WHERE DL.A = LL.A AND DL.B = LL.B);
@@ -207,8 +224,8 @@ BEGIN
     WHERE A IN (SELECT ID FROM dbo.Location WHERE ParentID IN (SELECT ID FROM #StructuresToDelete))
        OR B IN (SELECT ID FROM dbo.Location WHERE ParentID IN (SELECT ID FROM #StructuresToDelete));
 
-    INSERT INTO dbo.DeletedLocations (ID)
-    SELECT L.ID
+    INSERT INTO dbo.DeletedLocations (ID, Z)
+    SELECT L.ID, L.Z
     FROM dbo.Location L
     WHERE L.ParentID IN (SELECT ID FROM #StructuresToDelete)
       AND NOT EXISTS (SELECT 1 FROM dbo.DeletedLocations DL WHERE DL.ID = L.ID);

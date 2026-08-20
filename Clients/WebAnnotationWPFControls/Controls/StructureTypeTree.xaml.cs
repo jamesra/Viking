@@ -50,7 +50,8 @@ namespace WebAnnotation.UI.Controls
 
             Store.StructureTypes.TryGetObjectsByIDs(Store.StructureTypes.RootObjects, out var found, out _);
             RootStructureTypes = new ObservableCollection<IStructureTypeReadOnly>(
-                found.Cast<IStructureTypeReadOnly>());
+                found.Cast<IStructureTypeReadOnly>()
+                    .OrderBy(t => t.Code ?? string.Empty, StringComparer.OrdinalIgnoreCase));
         }
 
         void OnSelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)

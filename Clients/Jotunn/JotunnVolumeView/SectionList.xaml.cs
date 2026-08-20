@@ -1,6 +1,9 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using VolumeVM = Viking.VolumeViewModel.VolumeViewModel;
+using SectionVM = Viking.VolumeViewModel.SectionViewModel;
 
 namespace Viking.VolumeView
 {
@@ -21,6 +24,38 @@ namespace Viking.VolumeView
             VolumeVM volume = e.NewValue as VolumeVM;
             if (volume != null)
                 SectionsList.ItemsSource = volume.SectionViewModels.Values;
+        }
+
+        /// <summary>
+        /// Jump the volume view to the double-clicked section, matching Viking's section list.
+        /// Channel ComboBox clicks are ignored so channel changes do not retarget the view.
+        /// </summary>
+        void OnSectionRowDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (FindAncestor<ComboBox>(e.OriginalSource as DependencyObject) != null)
+                return;
+
+            DataGridRow row = FindAncestor<DataGridRow>(e.OriginalSource as DependencyObject);
+            SectionVM section = row?.Item as SectionVM ?? SectionsList.SelectedItem as SectionVM;
+            if (section == null)
+                return;
+
+            VolumeVM volume = DataContext as VolumeVM;
+            if (volume == null || !volume.SectionViewModels.ContainsKey(section.Number))
+                return;
+
+            volume.CenterIndex = volume.SectionViewModels.IndexOfKey(section.Number);
+        }
+
+        static T FindAncestor<T>(DependencyObject source) where T : DependencyObject
+        {
+            while (source != null)
+            {
+                if (source is T match)
+                    return match;
+                source = VisualTreeHelper.GetParent(source);
+            }
+            return null;
         }
     }
 }

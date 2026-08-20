@@ -230,6 +230,15 @@ namespace WebAnnotationModel.gRPC
                         queryTime ?? DateTime.UtcNow, locations.ToArray(), deletedIds.ToArray());
                 }
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (RpcException ex) when (IsClientCancel(ex, token))
+            {
+                token.ThrowIfCancellationRequested();
+                throw new OperationCanceledException("gRPC call canceled by the client", ex, token);
+            }
             catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)
             {
                 var response = await Client.GetLocationChangesInMosaicRegionAsync(request, cancellationToken: token);
@@ -287,6 +296,15 @@ namespace WebAnnotationModel.gRPC
                     return new ServerUpdate<long, AnnotationSet[]>(
                         queryTime ?? DateTime.UtcNow, new AnnotationSet[] { merged }, deletedIds.ToArray());
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (RpcException ex) when (IsClientCancel(ex, token))
+            {
+                token.ThrowIfCancellationRequested();
+                throw new OperationCanceledException("gRPC call canceled by the client", ex, token);
             }
             catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)
             {
@@ -374,6 +392,13 @@ namespace WebAnnotationModel.gRPC
             return new UpdateResults<long, ILocation>(added.ToArray(), updated.ToArray(), deleted.ToArray());
         }
           
+        /// <summary>
+        /// Pan/zoom cancels the previous region stream. Grpc.Net.Client surfaces that as
+        /// <see cref="RpcException"/> Cancelled rather than <see cref="OperationCanceledException"/>.
+        /// </summary>
+        static bool IsClientCancel(RpcException ex, CancellationToken token) =>
+            ex.StatusCode == StatusCode.Cancelled || token.IsCancellationRequested;
+
         public async Task<ILocation> GetLastModifiedLocation()
         {
             var request = new GetLastModifiedLocationRequest();

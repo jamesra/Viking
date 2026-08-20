@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using IdentityModel;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
@@ -15,9 +15,7 @@ namespace Viking.Identity
 {   
 
     public class Config
-    {
-        //internal const string Secret = "CorrectHorseBatteryStaple"; 
-
+    {  
         public const string AuthenticationSchemes = "Bearer, Introspection, Cookies, idsrv";
 
         

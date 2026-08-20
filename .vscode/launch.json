@@ -21,6 +21,62 @@
       "stopAtEntry": false
     },
     {
+      "name": "MonogameTestbed (RC1 MullerCells)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-monogame-testbed",
+      "program": "${workspaceFolder}/Clients/MonogameTestbed/bin/x64/Debug/net9.0-windows/MonogameTestbed.dll",
+      "args": [
+        "-s",
+        "1724",
+        "-e",
+        "http://websvc.codepharm.net/RC1/OData",
+        "-o",
+        "E:\\Documents\\Cell_DAEs\\VikingMeshFiles\\RC1\\MullerCells",
+        "-v"
+      ],
+      "cwd": "${workspaceFolder}/Clients/MonogameTestbed/bin/x64/Debug/net9.0-windows",
+      "console": "integratedTerminal",
+      "stopAtEntry": false
+    },
+    {
+      "name": "Jotunn (Debug)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-jotunn",
+      "program": "${workspaceFolder}/Clients/Jotunn/Jotunn/bin/Debug/net10.0-windows/Jotunn.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/Clients/Jotunn/Jotunn/bin/Debug/net10.0-windows",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "stopAtEntry": false
+    },
+    {
+      "name": "Jotunn (Launch, no rebuild)",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/Clients/Jotunn/Jotunn/bin/Debug/net10.0-windows/Jotunn.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/Clients/Jotunn/Jotunn/bin/Debug/net10.0-windows",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "stopAtEntry": false
+    },
+    {
+      "name": "Jotunn (Attach)",
+      "type": "coreclr",
+      "request": "attach",
+      "processName": "Jotunn",
+      "justMyCode": false
+    },
+    {
+      "name": "Jotunn (Attach: pick process)",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "${command:pickProcess}",
+      "justMyCode": false
+    },
+    {
       "name": "Viking (Debug)",
       "type": "clr",
       "request": "launch",

@@ -45,6 +45,10 @@ namespace gRPCAnnotationService
         }
     }
 
+    /// <summary>
+    /// AnnotationContext + JWT/introspection auth. Every mapped gRPC service requires Viking.Annotation.
+    /// Do not add UseHttpsRedirection — gRPC clients will not follow it.
+    /// </summary>
     public class Startup
     {
         /// <summary>Scope a caller must hold to reach any annotation service.</summary>
@@ -54,18 +58,26 @@ namespace gRPCAnnotationService
 
         public IConfiguration Configuration { get; }
 
-        public Startup(IConfiguration configuration)
+        private readonly IWebHostEnvironment _env;
+
+        public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
             Configuration = configuration;
+            _env = env;
         }
 
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddDbContext<Viking.DataModel.Annotation.AnnotationContext>(options =>
+            {
                 options.UseSqlServer(Configuration.GetConnectionString("AnnotationConnection"),
-                                     sql => sql.UseNetTopologySuite())
-                       .EnableDetailedErrors()
-                       .EnableSensitiveDataLogging());
+                                     sql => sql.UseNetTopologySuite());
+                if (_env.IsDevelopment())
+                {
+                    options.EnableDetailedErrors();
+                    options.EnableSensitiveDataLogging();
+                }
+            });
 
             services.AddHttpContextAccessor();
 

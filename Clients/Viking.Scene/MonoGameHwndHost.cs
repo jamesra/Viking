@@ -103,6 +103,8 @@ namespace Viking.Rendering
             if (_deviceService?.GraphicsDevice is null || _hwnd == IntPtr.Zero)
                 return;
 
+            global::Viking.TileLoadEnvironment.PumpPendingTexturesOnUiThread();
+
             bool pipelineWork = global::Viking.TileLoadEnvironment.HasTexturePipelineWork;
             if (!_deviceResetPending && !_renderRequested && !pipelineWork)
                 return;

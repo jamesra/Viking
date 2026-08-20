@@ -4,6 +4,11 @@
       "commandName": "Project",
       "commandLineArgs": "-s 1 -e http://websvc.codepharm.net/RC2/OData -o C:\\Temp\\Cell_DAEs\\VikingMeshFiles\\RC2\\Vasculature",
       "workingDirectory": "$(TargetDir)"
+    },
+    "MonogameTestbed (RC1 MullerCells)": {
+      "commandName": "Project",
+      "commandLineArgs": "-s 1724 -e http://websvc.codepharm.net/RC1/OData -o E:\\Documents\\Cell_DAEs\\VikingMeshFiles\\RC1\\MullerCells -v",
+      "workingDirectory": "$(TargetDir)"
     }
   }
 }

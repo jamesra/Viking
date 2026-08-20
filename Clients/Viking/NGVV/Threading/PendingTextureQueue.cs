@@ -51,6 +51,7 @@ namespace Viking
         /// 1 when a ProcessQueue invocation is scheduled or running; 0 when the pump is paused.
         /// </summary>
         private static int _pumpScheduled;
+        static int _inProcessQueue;
 
         /// <summary>
         /// Claims the file for loading. Returns true if this call claimed it (caller may create TextureReaderV2); false if already loading (do not create another reader).
@@ -196,7 +197,7 @@ namespace Viking
             if (msDelay > 0)
                 await Task.Delay(msDelay).ConfigureAwait(false);
 
-            TileLoadEnvironment.UiDispatcher.BeginInvoke(new Action(ProcessQueue), priority: DispatcherPriority.Background);
+            TileLoadEnvironment.UiDispatcher.BeginInvoke(new Action(ProcessQueue), DispatcherPriority.Normal);
         }
 
         /// <summary>
@@ -213,7 +214,7 @@ namespace Viking
                 return;
             }
 
-            TileLoadEnvironment.UiDispatcher.BeginInvoke(new Action(ProcessQueue), priority: DispatcherPriority.Background);
+            TileLoadEnvironment.UiDispatcher.BeginInvoke(new Action(ProcessQueue), DispatcherPriority.Normal);
         }
 
         /// <summary>
@@ -227,7 +228,20 @@ namespace Viking
                 return;
             }
 
-            TileLoadEnvironment.UiDispatcher.BeginInvoke(new Action(ProcessQueue), priority: DispatcherPriority.Background);
+            TileLoadEnvironment.UiDispatcher.BeginInvoke(new Action(ProcessQueue), DispatcherPriority.Normal);
+        }
+
+        /// <summary>
+        /// Create pending Texture2Ds on the UI thread before Present. Jotunn's
+        /// CompositionTarget.Rendering loop otherwise starves Background dispatcher
+        /// work, HTTP workers block on GPU upload, and tiles appear in one dump.
+        /// </summary>
+        public static void PumpOnUiThread()
+        {
+            Dispatcher? dispatcher = TileLoadEnvironment.UiDispatcher;
+            if (dispatcher is null || !dispatcher.CheckAccess() || IsEmpty)
+                return;
+            ProcessQueue();
         }
 
         /// <summary>
@@ -241,14 +255,13 @@ namespace Viking
         }
 
         /// <summary>
-        /// Returns true when both the elapsed time and texture count thresholds
-        /// have been met.  Because both conditions use AND, the larger of the
-        /// two requirements is the effective limit.
+        /// Stop this pump slice after a few textures or the time budget so each
+        /// Present can show newly uploaded tiles instead of dumping a 30ms backlog.
         /// </summary>
         private static bool LoadingWindowClosed(int texturesLoaded, long elapsedMs)
         {
             return texturesLoaded >= TileLoadEnvironment.MinTexturesToLoadFromQueue
-                && elapsedMs >= TileLoadEnvironment.TextureLoadingWindowMs;
+                || elapsedMs >= TileLoadEnvironment.TextureLoadingWindowMs;
         }
 
         /// <summary>
@@ -284,13 +297,26 @@ namespace Viking
         }
 
         /// <summary>
-        /// Runs on the main thread. Dequeues and creates textures until both the
-        /// configured time and minimum texture count are met, then re-posts the pump if work remains.
+        /// Runs on the main thread. Dequeues and creates textures until the slice
+        /// budget is met, then re-posts the pump if work remains.
         /// If the queue is empty the pump pauses until Enqueue wakes it.
         /// </summary>
         private static void ProcessQueue()
         {
-            const int msSliceTime = 50;
+            if (Interlocked.CompareExchange(ref _inProcessQueue, 1, 0) != 0)
+                return;
+            try
+            {
+                ProcessQueueCore();
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _inProcessQueue, 0);
+            }
+        }
+
+        private static void ProcessQueueCore()
+        {
             if (IsEmpty)
             {
                 PausePumpUnlessWorkPending();

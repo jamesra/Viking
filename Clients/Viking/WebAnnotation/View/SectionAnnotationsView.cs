@@ -25,6 +25,7 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.ViewModel
 {
+    /// <summary>Per-section annotation set used by both the WinForms overlay and AnnotationScene.</summary>
     public interface ISectionAnnotationsView
     {
         void AddLocations(ICollection<LocationObj> locations);
@@ -48,32 +49,13 @@ namespace WebAnnotation.ViewModel
         public abstract void Init();
 
         private readonly object _regionLoadLock = new();
-        private CancellationTokenSource _regionLoadCts;
         private Task _regionLoadTask = Task.CompletedTask;
         private Rectangle? _regionLoadBounds;
         private double _regionLoadPixelSize;
 
-        protected CancellationToken RegionLoadToken
-        {
-            get
-            {
-                lock (_regionLoadLock)
-                {
-                    CancellationTokenSource cts = _regionLoadCts;
-                    if (cts is null)
-                        return CancellationToken.None;
-                    try
-                    {
-                        return cts.Token;
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        return CancellationToken.None;
-                    }
-                }
-            }
-        }
-
+        /// <summary>
+        /// Region query uses mosaic bounds (ApproximateVisibleMosaicBounds). Null mosaic bounds means skip, not an empty region.
+        /// </summary>
         public virtual async Task LoadAnnotationsInRegion(VikingXNA.Scene scene, CancellationToken token)
         {
             Rectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(mapper);
@@ -84,30 +66,20 @@ namespace WebAnnotation.ViewModel
             }
 
             double pixel = scene.ScreenPixelSizeInVolume;
-            Task load = null;
-            CancellationTokenSource oldCts = null;
-            Task previousTask = null;
+            Task load;
             lock (_regionLoadLock)
             {
                 bool equivalentInFlight = _regionLoadBounds.HasValue
                     && _regionLoadBounds.Value.Equals(VisibleMosaicBounds.Value)
                     && _regionLoadPixelSize == pixel
-                    && _regionLoadTask is { IsCompleted: false }
-                    && _regionLoadCts is { IsCancellationRequested: false };
+                    && _regionLoadTask is { IsCompleted: false };
 
                 if (equivalentInFlight)
                 {
-                    oldCts = null;
-                    previousTask = null;
                     load = AwaitExistingRegionLoadAsync(scene, token, _regionLoadTask);
                 }
                 else
                 {
-                    oldCts = _regionLoadCts;
-                    previousTask = _regionLoadTask;
-                    oldCts?.Cancel();
-                    CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(token);
-                    _regionLoadCts = linked;
                     _regionLoadBounds = VisibleMosaicBounds;
                     _regionLoadPixelSize = pixel;
                     load = Store.LocationsByRegion.GetObjectsInRegionAsync(
@@ -115,14 +87,11 @@ namespace WebAnnotation.ViewModel
                         pixel,
                         SectionNumber,
                         QueryTargets.Server,
-                        linked.Token,
+                        token,
                         AddLocationsInLocalCache);
                     _regionLoadTask = load;
                 }
             }
-
-            if (oldCts != null)
-                _ = DisposeCtsWhenCompleteAsync(previousTask, oldCts);
 
             try
             {
@@ -146,26 +115,6 @@ namespace WebAnnotation.ViewModel
             {
                 token.ThrowIfCancellationRequested();
                 await LoadAnnotationsInRegion(scene, token).ConfigureAwait(false);
-            }
-        }
-
-        private static async Task DisposeCtsWhenCompleteAsync(Task task, CancellationTokenSource cts)
-        {
-            try
-            {
-                if (task != null)
-                    await task.ConfigureAwait(false);
-            }
-            catch (Exception)
-            {
-            }
-
-            try
-            {
-                cts.Dispose();
-            }
-            catch (ObjectDisposedException)
-            {
             }
         }
 
@@ -546,8 +495,8 @@ namespace WebAnnotation.ViewModel
     }
 
     /// <summary>
-    /// This class manages LocationViewModels used on a canvas.  
-    /// It handles hit detection, search, and positioning using canvas transforms
+    /// Primary section plus adjacent ±1. AddLocationBatch order is locations, then structure links, then location links, then overlap views.
+    /// Adjacent hits are dropped when they already appear as overlap children on this section.
     /// </summary>
     internal class SectionAnnotationsView : SectionAnnotationsViewBase, System.Windows.IWeakEventListener
     {
@@ -1468,6 +1417,7 @@ namespace WebAnnotation.ViewModel
 
         #endregion
 
+        /// <summary>Loads this section and the adjacent ±1 views for the same mosaic region.</summary>
         public override async Task LoadAnnotationsInRegion(VikingXNA.Scene scene, CancellationToken token)
         {
             Task primary = base.LoadAnnotationsInRegion(scene, token);
@@ -1497,7 +1447,7 @@ namespace WebAnnotation.ViewModel
             LocationObj[] unknownObjs = [.. locationObjs.Where(l => !KnownLocations.Contains(l.ID))];
             if (unknownObjs.Length > 0)
             {
-                AddLocationBatch(unknownObjs, RegionLoadToken);
+                AddLocationBatch(unknownObjs);
             }
         }
 

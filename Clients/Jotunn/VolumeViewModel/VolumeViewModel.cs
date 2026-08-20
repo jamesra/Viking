@@ -130,6 +130,9 @@ namespace Viking.VolumeViewModel
 
         public int? NextLowerSectionNumber(int sectionNumber)
         {
+            if (SectionViewModels == null || SectionViewModels.Count == 0)
+                return null;
+
             int LowestKey = SectionViewModels.Keys.Min();
             while (false == SectionViewModels.ContainsKey(sectionNumber))
             {
@@ -144,6 +147,9 @@ namespace Viking.VolumeViewModel
 
         public int? NextHigherSectionNumber(int sectionNumber)
         {
+            if (SectionViewModels == null || SectionViewModels.Count == 0)
+                return null;
+
             int HighestKey = SectionViewModels.Keys.Max();
             while (false == SectionViewModels.ContainsKey(sectionNumber))
             {

@@ -10,6 +10,11 @@ using ProtoGeometry = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry;
 
 namespace gRPCAnnotationService.Protos
 {
+    /// <summary>
+    /// Location proto ↔ EF. Circles are POINT in EF (NTS cannot read SQL CurvePolygon);
+    /// PersistCircleShapesAsync writes the real CURVEPOLYGON after SaveChanges.
+    /// ToProtobufMessage rebuilds circle WKT from X/Y/Radius because the interceptor stripped the shape.
+    /// </summary>
     public static class LocationEFExtensions
     {
         private static readonly Regex CircularStringKeyword = new(
@@ -54,12 +59,8 @@ namespace gRPCAnnotationService.Protos
                 Username = src.Username,
             };
 
-            converted.LocationLinkANavigations = src.Links.Where(l => l > src.Id)
-                                                                 .Select(x => new Viking.DataModel.Annotation.LocationLink() { A = src.Id, B = x })
-                                                                 .ToList();
-            converted.LocationLinkBNavigations = src.Links.Where(l => l < src.Id)
-                                                                 .Select(x => new Viking.DataModel.Annotation.LocationLink() { A = x, B = src.Id })
-                                                                 .ToList();
+            // Links are persisted after identity is assigned (CreateLocation / AddLinkIfMissing).
+            // Mapping them here on create (Id == 0) would insert LocationLink rows keyed by 0.
 
             return converted;
         }

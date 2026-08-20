@@ -16,7 +16,8 @@
              GridLinesVisibility="None"
              IsReadOnly="True"
              CanUserAddRows="False"
-             CanUserDeleteRows="False" AutoGenerateColumns="False">
+             CanUserDeleteRows="False" AutoGenerateColumns="False"
+             MouseDoubleClick="OnSectionRowDoubleClick">
         <DataGrid.Columns >
             <DataGridTextColumn Header="#" Binding="{Binding Number}"/>
             <DataGridTextColumn Header="Name" Binding="{Binding Name}"/>

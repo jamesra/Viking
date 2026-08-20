@@ -139,8 +139,8 @@ GO
 			   ON  [dbo].[Location]
 			   FOR DELETE
 			 AS 
-				INSERT INTO [dbo].[DeletedLocations] (ID)
-				SELECT deleted.ID FROM deleted
+				INSERT INTO [dbo].[DeletedLocations] (ID, Z)
+				SELECT deleted.ID, deleted.Z FROM deleted
 				
 				delete from LocationLink 
 					where A in  (SELECT deleted.ID FROM deleted)

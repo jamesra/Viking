@@ -1,4 +1,5 @@
 ﻿using Jotunn.Common;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
@@ -349,7 +350,8 @@ namespace Jotunn.Controls
                 }
             }
 
-            CleanUpItems(ifirstVisibleItemIndex, ilastVisibleItemIndex); 
+            CleanUpItems(ifirstVisibleItemIndex, ilastVisibleItemIndex);
+            TrimExtraChildren(generator, numCells); 
 
             return base.MeasureOverride(availableSize);
         }
@@ -373,8 +375,6 @@ namespace Jotunn.Controls
                 iChild = CenterNumber - (numCells / 2);
             }
 
-            Debug.Assert(Children.Count <= NumRows * NumCols); 
-
             for (int iY = 0; iY < NumRows; iY++)
             {
                 for (int iX = 0; iX < NumCols; iX++, iChild++ )
@@ -387,17 +387,6 @@ namespace Jotunn.Controls
                         Children[iChild].Arrange(childRect);
                 }
             }
-
-            double Aspect = LastValidCellHeight / LastValidCellWidth;
-            double visWidth = LastValidCellWidth * VisibleRegion.Downsample;
-            double visHeight = LastValidCellWidth * Aspect * VisibleRegion.Downsample;
-
-            Rect visRect = new Rect(VisibleRegion.Center.X - (visWidth / 2),
-                                    VisibleRegion.Center.Y - (visHeight / 2),
-                                    visWidth,
-                                    visHeight);
-
-            VisibleRegion = new VisibleRegionInfo(visRect, VisibleRegion.Downsample); 
 
             return finalSize;
         }
@@ -414,6 +403,25 @@ namespace Jotunn.Controls
             return value;
         }
 
+        void TrimExtraChildren(IItemContainerGenerator generator, int maxChildren)
+        {
+            if (generator == null || maxChildren < 1)
+                return;
+            while (Children.Count > maxChildren)
+            {
+                int i = Children.Count - 1;
+                GeneratorPosition pos = new GeneratorPosition(i, 0);
+                try
+                {
+                    generator.Remove(pos, 1);
+                }
+                catch
+                {
+                }
+                RemoveInternalChildRange(i, 1);
+            }
+        }
+
         public IReadOnlyList<GridCellLayout> GetVisibleCells()
         {
             List<GridCellLayout> cells = new List<GridCellLayout>(Children.Count);
@@ -425,10 +433,24 @@ namespace Jotunn.Controls
                     continue;
 
                 object item = generator?.ItemFromContainer(child);
+                if (item == DependencyProperty.UnsetValue)
+                    item = null;
+                if (item == null && child is FrameworkElement fe)
+                    item = fe.DataContext;
                 GeneratorPosition pos = new GeneratorPosition(i, 0);
                 int itemIndex = ItemContainerGenerator.IndexFromGeneratorPosition(pos);
-                GeneralTransform transform = child.TransformToAncestor(this);
-                Rect bounds = transform.TransformBounds(new Rect(child.RenderSize));
+                Rect bounds;
+                try
+                {
+                    if (VisualTreeHelper.GetParent(child) == null)
+                        continue;
+                    GeneralTransform transform = child.TransformToAncestor(this);
+                    bounds = transform.TransformBounds(new Rect(child.RenderSize));
+                }
+                catch (InvalidOperationException)
+                {
+                    continue;
+                }
                 cells.Add(new GridCellLayout(item, itemIndex, bounds));
             }
 

@@ -3,6 +3,10 @@ using System.Linq;
 
 namespace gRPCAnnotationService.Protos
 {
+    /// <summary>
+    /// Proto Geometry ↔ NTS. Inbound accepts WKT or WKB; outbound always writes WKB.
+    /// Circles must not go through this path — use LocationEFExtensions / PersistCircleShapesAsync.
+    /// </summary>
     public static class NetTopologyGeometryExtensions
     {
         public static NetTopologySuite.Geometries.Geometry ToNetTopologyGeometry(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry src)

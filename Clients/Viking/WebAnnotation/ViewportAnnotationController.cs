@@ -14,8 +14,9 @@ using WebAnnotationModel.Objects;
 namespace WebAnnotation
 {
     /// <summary>
-    /// Toolkit-agnostic create/move/link/save on an <see cref="IViewportHost"/>.
-    /// Active cell only. WPF hosts map mouse into this controller.
+    /// Reduced vs WinForms overlay: no pen, CREATELINK on a link view is a no-op.
+    /// LocationID from the view may not be the hit object (overlap children). Drag writes mosaic+volume; save is on mouse-up.
+    /// Linked create is CIRCLE only.
     /// </summary>
     public sealed class ViewportAnnotationController
     {
@@ -42,7 +43,16 @@ namespace WebAnnotation
             Vector2 world = _host.ScreenToWorld(screen);
             int sectionNumber = _host.SectionNumber;
             IVolumeToSectionTransform mapper = _transforms.GetSectionToVolumeTransform(sectionNumber);
-            object hit = _scene.HitTest(sectionNumber, world, out _);
+            object hit;
+            try
+            {
+                hit = _scene.HitTest(sectionNumber, world, out _);
+            }
+            catch (Exception ex)
+            {
+                ReportAnnotationFault("Annotation hit test", ex);
+                return;
+            }
 
             if (button == MouseButton.Right && hit is LocationCanvasView rightView)
             {
@@ -62,35 +72,43 @@ namespace WebAnnotation
 
             if (hit is IMouseActionSupport support)
             {
-                LocationAction action = support.GetMouseClickActionForPositionOnAnnotation(
-                    world, sectionNumber, _host.CurrentModifiers, out long locationId);
-
-                if (action == LocationAction.TRANSLATE || action == LocationAction.SCALETRANSLATE)
+                try
                 {
-                    if (Store.Locations.TryGetObjectByID(locationId, out _dragLocation) && _dragLocation != null)
+                    LocationAction action = support.GetMouseClickActionForPositionOnAnnotation(
+                        world, sectionNumber, _host.CurrentModifiers, out long locationId);
+
+                    if (action == LocationAction.TRANSLATE || action == LocationAction.SCALETRANSLATE)
                     {
-                        _dragWorldOrigin = world;
-                        _dragMosaicOrigin = _dragLocation.Position;
-                        _host.CapturePointer();
+                        if (Store.Locations.TryGetObjectByID(locationId, out _dragLocation) && _dragLocation != null)
+                        {
+                            _dragWorldOrigin = world;
+                            _dragMosaicOrigin = _dragLocation.Position;
+                            _host.CapturePointer();
+                        }
+                        return;
                     }
-                    return;
-                }
 
-                if (action == LocationAction.CREATELINK && hit is IViewLocationLink)
-                {
-                    return;
-                }
+                    if (action == LocationAction.CREATELINK && hit is IViewLocationLink)
+                    {
+                        return;
+                    }
 
-                if (action == LocationAction.CREATELINKEDLOCATION)
-                {
-                    _ = CreateLinkedLocationAsync(locationId, world, sectionNumber, mapper);
-                    return;
-                }
+                    if (action == LocationAction.CREATELINKEDLOCATION)
+                    {
+                        _ = CreateLinkedLocationAsync(locationId, world, sectionNumber, mapper);
+                        return;
+                    }
 
-                if (action == LocationAction.CREATELINK && hit is LocationCanvasView other)
+                    if (action == LocationAction.CREATELINK && hit is LocationCanvasView other)
+                    {
+                        if (Global.LastEditedAnnotationID.HasValue)
+                            _ = CreateLocationLinkAsync(Global.LastEditedAnnotationID.Value, other.ID);
+                        return;
+                    }
+                }
+                catch (Exception ex)
                 {
-                    if (Global.LastEditedAnnotationID.HasValue)
-                        _ = CreateLocationLinkAsync(Global.LastEditedAnnotationID.Value, other.ID);
+                    ReportAnnotationFault("Annotation click action", ex);
                     return;
                 }
             }
@@ -205,16 +223,6 @@ namespace WebAnnotation
         static void ReportAnnotationFault(string action, Exception ex)
         {
             Trace.WriteLine($"{action} failed: {ex}");
-            string message = $"{action} failed:\n{ex.Message}";
-            Application app = Application.Current;
-            if (app?.Dispatcher != null)
-            {
-                app.Dispatcher.BeginInvoke(new Action(() =>
-                    MessageBox.Show(message, "Annotations", MessageBoxButton.OK, MessageBoxImage.Warning)));
-                return;
-            }
-
-            MessageBox.Show(message, "Annotations", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 }

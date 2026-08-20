@@ -209,6 +209,13 @@ namespace Viking.VolumeModel
         public abstract bool Initialized { get; }
 
         /// <summary>
+        /// True while <see cref="VisibleTiles"/> has started mesh builds that are not in the
+        /// tile cache yet. Those tiles are missing from this frame's pyramid; Jotunn must keep
+        /// presenting until this is false or an overview 404 idles the view.
+        /// </summary>
+        public virtual bool HasPendingTileConstruction => false;
+
+        /// <summary>
         /// Maps the provided visible bounds in volume space back to section space with the provided transform.
         /// </summary>
         /// <param name="transform"></param>

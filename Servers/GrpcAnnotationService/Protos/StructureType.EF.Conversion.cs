@@ -1,5 +1,9 @@
 namespace gRPCAnnotationService.Protos
 {
+    /// <summary>
+    /// StructureType proto ↔ EF. HasParentId distinguishes "no parent" from proto3 default 0.
+    /// Color is stored signed in SQL and sent unsigned on the wire (unchecked cast).
+    /// </summary>
     public static class StructureTypeEFExtensions
     {
         public static Viking.DataModel.Annotation.StructureType ToStructureType(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.StructureType src)

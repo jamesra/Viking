@@ -51,10 +51,26 @@ namespace Viking
         public static Action? RequestRender { get; set; }
 
         /// <summary>
-        /// True while HTTP/decode or GPU upload work is outstanding.
+        /// True while HTTP/decode or GPU upload work is outstanding, or DrawTiles asked
+        /// for another Present because visible tiles were empty or still loading.
         /// </summary>
         public static bool HasTexturePipelineWork =>
-            !PendingTextureQueue.IsEmpty || TextureRequestQueue.HasPending;
+            FollowUpPresents > 0
+            || !PendingTextureQueue.IsEmpty
+            || TextureRequestQueue.HasPending;
+
+        /// <summary>
+        /// Set by DrawTiles when the current pass is not a finished textured frame.
+        /// HasTexturePipelineWork includes this so the on-demand present loop cannot idle
+        /// before RequestRender is hooked or Task.Run has called EnqueueRequest.
+        /// </summary>
+        public static int FollowUpPresents { get; set; }
+
+        /// <summary>
+        /// Upload decoded tiles on the UI thread before Present so HTTP workers
+        /// are not blocked behind CompositionTarget.Rendering.
+        /// </summary>
+        public static void PumpPendingTexturesOnUiThread() => PendingTextureQueue.PumpOnUiThread();
 
         public static TileViewModelCache TileViewModelCache { get; } = new();
 
@@ -78,6 +94,7 @@ namespace Viking
         public static void BindVolume(Volume volume)
         {
             Volume = volume;
+            FollowUpPresents = 0;
             if (volume == null)
                 return;
 

@@ -969,7 +969,10 @@ class TextureReaderV2 : IDisposable
     }*/
 
     /// <summary>
-    /// Creates a Texture2D from decoded pixel data. All creation from decoded data is intended to go through PendingTextureQueue (via GetTextureFromTextureDataAsync); this method is called from the queue pump on the main thread.
+    /// Creates a Texture2D from decoded greyscale bytes. Always uses SurfaceFormat.Color with
+    /// luminance in the alpha channel so TileLayoutToGreyscaleEffect (reads .a) matches both
+    /// Reach and newer MonoGame DirectX, where Alpha8 does not sample into .a the same way as XNA 3.7.
+    /// Called from PendingTextureQueue on the device thread.
     /// </summary>
     public static Texture2D? TextureFromData(GraphicsDevice graphicsDevice, in TextureData texdata, bool mipmap)
     {
@@ -982,21 +985,12 @@ class TextureReaderV2 : IDisposable
         if (texdata.pixelBytes is null)
             return null;
 
-        //Trace.WriteLine("TextureFromData: " + this.Filename.ToString()); 
         Texture2D? tex = null;
         try
         {
             Debug.Assert(texdata.width * texdata.height == texdata.pixelBytes.Length);
-            if (graphicsDevice.GraphicsProfile == GraphicsProfile.Reach)
-            {
-                tex = new Texture2D(graphicsDevice, texdata.width, texdata.height, mipmap, SurfaceFormat.Color);
-                tex.SetData<int>(Array.ConvertAll<byte, int>(texdata.pixelBytes, new Converter<byte, int>((x) => (int)x << 24)));
-            }
-            else
-            {
-                tex = new Texture2D(graphicsDevice, texdata.width, texdata.height, mipmap, SurfaceFormat.Alpha8);
-                tex.SetData<Byte>(texdata.pixelBytes);
-            }
+            tex = new Texture2D(graphicsDevice, texdata.width, texdata.height, mipmap, SurfaceFormat.Color);
+            tex.SetData<int>(Array.ConvertAll<byte, int>(texdata.pixelBytes, x => (int)x << 24));
         }
         catch (Exception e)
         {

@@ -31,44 +31,59 @@ namespace Jotunn
             ViewHost.Content = _sectionGrid;
 
             NavigationHost.Items.Clear();
-            NavigationHost.Items.Add(new TabItem { Header = "Sections", Content = new SectionList { DataContext = volume } });
+            NavigationHost.Items.Add(new SectionList { DataContext = volume });
 
-            StatusHost.Content = new MousePositionStatus();
+            MousePositionStatus status = new MousePositionStatus();
+            StatusHost.Content = status;
+            _sectionGrid.StatusDisplay = status;
 
             Viking.VolumeModel.Volume model = volume.Volume;
             if (model != null)
                 _sectionGrid.SceneHostControl.Volume = model;
 
-            if (model != null && WebAnnotation.AnnotationBootstrap.TryInitialize(model, App.UserCredentials, App.SegmentationServiceUrl))
-            {
-                WebAnnotation.AnnotationScene scene = new(model);
-                _sectionGrid.SceneHostControl.Annotations = scene;
-                WebAnnotation.ViewportAnnotationController controller = new(_sectionGrid.SceneHostControl, scene);
-                controller.GoToRequested += (_, loc) =>
-                {
-                    if (loc == null || volume.VisibleRegion == null)
-                        return;
-                    System.Windows.Rect region = volume.VisibleRegion.VisibleRect;
-                    double width = Math.Max(region.Width, 1);
-                    double height = Math.Max(region.Height, 1);
-                    volume.VisibleRegion = new Jotunn.Common.VisibleRegionInfo(
-                        new System.Windows.Rect(loc.VolumePosition.X - width / 2, loc.VolumePosition.Y - height / 2, width, height),
-                        volume.VisibleRegion.Downsample);
-                    int z = (int)Math.Round(loc.Z);
-                    if (volume.SectionViewModels.ContainsKey(z))
-                        volume.CenterIndex = volume.SectionViewModels.IndexOfKey(z);
-                };
-                _sectionGrid.SceneHostControl.AnnotationController = controller;
+            TryAttachAnnotations();
+        }
 
-                if (Store.IsInitialized)
-                {
-                    StructureTypeTree typeTree = new();
-                    typeTree.StructureTypeSelected += (_, id) => controller.SelectedStructureTypeId = (long)id;
-                    NavigationHost.Items.Add(new TabItem { Header = "Types", Content = typeTree });
-                    if (Store.StructureTypes.RootObjects.Count > 0)
-                        controller.SelectedStructureTypeId = (long)Store.StructureTypes.RootObjects[0];
-                }
-            }
+        /// <summary>
+        /// Wires AnnotationScene after Store.InitializeAsync. Safe to call from splash while tiles already draw.
+        /// </summary>
+        public void TryAttachAnnotations()
+        {
+            if (_sectionGrid?.SceneHostControl == null || !Store.IsInitialized)
+                return;
+            if (_sectionGrid.SceneHostControl.Annotations != null)
+                return;
+
+            Viking.VolumeModel.Volume model = (_sectionGrid.DataContext as VolumeVM)?.Volume;
+            if (model == null)
+                return;
+
+            VolumeVM volume = (VolumeVM)_sectionGrid.DataContext;
+            WebAnnotation.AnnotationScene scene = new(model);
+            _sectionGrid.SceneHostControl.Annotations = scene;
+            WebAnnotation.ViewportAnnotationController controller = new(_sectionGrid.SceneHostControl, scene);
+            controller.GoToRequested += (_, loc) =>
+            {
+                if (loc == null || volume.VisibleRegion == null)
+                    return;
+                System.Windows.Rect region = volume.VisibleRegion.VisibleRect;
+                double width = Math.Max(region.Width, 1);
+                double height = Math.Max(region.Height, 1);
+                volume.VisibleRegion = new Jotunn.Common.VisibleRegionInfo(
+                    new System.Windows.Rect(loc.VolumePosition.X - width / 2, loc.VolumePosition.Y - height / 2, width, height),
+                    volume.VisibleRegion.Downsample);
+                int z = (int)Math.Round(loc.Z);
+                if (volume.SectionViewModels.ContainsKey(z))
+                    volume.CenterIndex = volume.SectionViewModels.IndexOfKey(z);
+            };
+            _sectionGrid.SceneHostControl.AnnotationController = controller;
+
+            StructureTypeTree typeTree = new();
+            typeTree.StructureTypeSelected += (_, id) => controller.SelectedStructureTypeId = (long)id;
+            NavigationHost.Items.Add(new TabItem { Header = "Types", Content = typeTree });
+            if (Store.StructureTypes.RootObjects.Count > 0)
+                controller.SelectedStructureTypeId = (long)Store.StructureTypes.RootObjects[0];
+            _sectionGrid.SceneHostControl.Invalidate();
         }
 
         protected void OnKeyDownPreview(object sender, KeyEventArgs e)

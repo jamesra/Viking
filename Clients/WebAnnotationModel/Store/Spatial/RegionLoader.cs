@@ -40,7 +40,8 @@ namespace WebAnnotationModel
     }
 
     /// <summary>
-    /// Loads objects from a section based on region queries
+    /// Section-scoped region queries. SpatialSearch is cached objects only; a miss still requires a store or server read.
+    /// Pan/zoom token cancels waiting. Streams for cells still in the padded viewport keep running.
     /// </summary>
     public class RegionLoader<KEY, OBJECT, SERVER_OBJECT> : IRegionLoader<OBJECT>
         where KEY : struct, IEquatable<KEY>, IComparable<KEY>
@@ -49,7 +50,8 @@ namespace WebAnnotationModel
     {
         readonly GridCellDimensions CellDimensions;
         private readonly double PowerScale;
-        static double RegionUpdateInterval = 180;
+        static double RegionUpdateInterval = RegionQueryBounds.RefreshIntervalSeconds;
+
         readonly IStoreWithKey<KEY, OBJECT> objectStore;
 
         private readonly RTree.RTree<KEY> SpatialSearch = new RTree<KEY>();
@@ -63,6 +65,7 @@ namespace WebAnnotationModel
         /// </summary>
           
         ConcurrentDictionary<int, RegionPyramid<OBJECT>> sectionPyramids = new ConcurrentDictionary<int, RegionPyramid<OBJECT>>();
+        readonly ConcurrentDictionary<RegionQueryKey, RegionRequestData<OBJECT>> liveQueries = new ConcurrentDictionary<RegionQueryKey, RegionRequestData<OBJECT>>();
          
         private readonly IServerAnnotationsClientFactory<IServerSpatialAnnotationsClient<KEY, SERVER_OBJECT>> ServerClient;
 
@@ -132,12 +135,11 @@ namespace WebAnnotationModel
         }
 
         /// <summary>
-        /// 
+        /// Loads cells covering the visible region plus <see cref="VisibleRegionPadFactor"/>.
+        /// In-flight streams for this section are cancelled only when their cell no longer
+        /// intersects that padded rectangle. The wait <paramref name="token"/> stops this
+        /// method from blocking on pan; it does not abort still-visible cell streams.
         /// </summary>
-        /// <param name="VolumeBounds"></param>
-        /// <param name="ScreenPixelSizeInVolume"></param>
-        /// <param name="SectionNumber"></param>
-        /// <param name="callback">A thread-safe callback function to hand the loaded objects to</param>
         public async Task<List<OBJECT>> GetObjectsInRegionAsync(Geometry.Rectangle VolumeBounds,
                                                     double screenPixelSizeInVolume,
                                                     int sectionNumber,
@@ -152,10 +154,11 @@ namespace WebAnnotationModel
             */
 
             RegionPyramid<OBJECT> RegionPyramid = GetOrAddRegionPyramidForSection(sectionNumber);
-            //If we change the magnification factor we should stop loading regions
-
             IRegionPyramidLevel<RegionRequestData<OBJECT>> level = RegionPyramid.GetLevel(screenPixelSizeInVolume);
-            GridRange<RegionRequestData<OBJECT>> gridRange = level.SubGridForRegion(VolumeBounds);
+            Geometry.Rectangle paddedBounds = RegionQueryBounds.PadVisible(VolumeBounds);
+            GridRange<RegionRequestData<OBJECT>> gridRange = level.SubGridForRegion(paddedBounds);
+
+            CancelQueriesOutsidePaddedView(sectionNumber, paddedBounds);
 
             List<Task> regionTasks = new List<Task>();
 
@@ -175,15 +178,17 @@ namespace WebAnnotationModel
                     {
                         if ((queryTargets & QueryTargets.Server) > 0)
                         {
-                            if (RegionIsDueForRefresh(cell))
-                            {
-                                regionTasks.Add(CreateRegionServerRequest(cell, level, iCell, sectionNumber, token,
-                                    foundObjectsCallback));
-                            }
-                            else if (cell.CurrentQuery != null)
+                            if (cell.CurrentQuery != null && !cell.CurrentQuery.IsCompleted)
                             {
                                 cell.AddCallback(foundObjectsCallback);
                                 regionTasks.Add(cell.CurrentQuery);
+                            }
+                            else if (RegionIsDueForRefresh(cell))
+                            {
+                                if (cell.CurrentQuery != null)
+                                    cell.SetQueryCompletedOrAborted();
+                                regionTasks.Add(CreateRegionServerRequest(cell, level, iCell, sectionNumber,
+                                    foundObjectsCallback));
                             }
                         }
                     }
@@ -193,22 +198,13 @@ namespace WebAnnotationModel
                     }
                 }
 
+                token.ThrowIfCancellationRequested();
+
                 if (regionTasks.Count > 0)
                     await Task.WhenAll(regionTasks);
             }
             catch (Exception)
             {
-                if (regionTasks.Count > 0)
-                {
-                    try
-                    {
-                        await Task.WhenAll(regionTasks);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                }
-
                 token.ThrowIfCancellationRequested();
                 throw;
             }
@@ -249,14 +245,8 @@ namespace WebAnnotationModel
         } 
         */
 
-        private Task CreateRegionServerRequest(RegionRequestData<OBJECT> cell, IRegionPyramidLevel<RegionRequestData<OBJECT>> level, GridIndex iCell, int sectionNumber, CancellationToken aToken, Action<ICollection<OBJECT>> foundObjectsCallback)
+        private Task CreateRegionServerRequest(RegionRequestData<OBJECT> cell, IRegionPyramidLevel<RegionRequestData<OBJECT>> level, GridIndex iCell, int sectionNumber, Action<ICollection<OBJECT>> foundObjectsCallback)
         {
-            //Task<ICollection<OBJECT>> localTask;
-            //Task<ICollection<OBJECT>> serverTask;
-             
-            //Create a new cell and hand it the callback
-            DateTime? lastQueryUtc = cell.LastQuery;
-
 #if DEBUG
             cell.DebugMessage = $"S:{sectionNumber} L:{level.Level} {iCell}";
 #endif
@@ -266,36 +256,121 @@ namespace WebAnnotationModel
             
             //Add the callback right away in case the query task completes before we can add it afterword
             cell.AddCallback(foundObjectsCallback);
-            var task = DoServerRequestAndCallbackAsync(cell, level, iCell, sectionNumber, aToken);
-            cell.SetQuery(task, aToken);
-            
-#if DEBUG
-            //string TraceString = string.Format("CreateRegionRequest: {0} ({1},{2}) Level:{3} MinRadius:{4}", SectionNumber, iCell.X, iCell.Y, level.Level, level.MinRadius);
-            //Trace.WriteLine(TraceString, "WebAnnotation");
-#endif
+            CancellationTokenSource cts = new CancellationTokenSource();
+            RegionQueryKey key = new RegionQueryKey(sectionNumber, level.Level, iCell.X, iCell.Y);
+            cell.PrepareQuery(cts);
+            liveQueries[key] = cell;
+            Task task = DoServerRequestAndCallbackAsync(cell, level, sectionNumber, key, cts.Token);
+            cell.SetQuery(task, cts);
             return task;
-        } 
+        }
 
-        private async Task DoServerRequestAndCallbackAsync(RegionRequestData<OBJECT> cell, IRegionPyramidLevel<RegionRequestData<OBJECT>> level, GridIndex iCell, int sectionNumber, CancellationToken aToken)
+        /// <summary>
+        /// Abort streams for this section whose cell no longer intersects the padded visible rectangle.
+        /// </summary>
+        void CancelQueriesOutsidePaddedView(int sectionNumber, Geometry.Rectangle paddedVisible)
         {
-            var client = ServerClient.GetOrCreate();
-
-            var serverResult = await client.GetAsync(sectionNumber, cell.Bounds.ToWKT(), level.MinRadius, cell.LastQuery, aToken);
-            
-            if (aToken.IsCancellationRequested)
+            foreach (KeyValuePair<RegionQueryKey, RegionRequestData<OBJECT>> kv in liveQueries)
             {
-                cell.ClearLastQuery();
-                return;
+                if (kv.Key.Section != sectionNumber)
+                    continue;
+                if (kv.Value.Bounds.Intersects(paddedVisible))
+                    continue;
+                kv.Value.CancelQuery();
+            }
+        }
+
+        readonly struct RegionQueryKey : IEquatable<RegionQueryKey>
+        {
+            public readonly int Section;
+            public readonly int Level;
+            public readonly int X;
+            public readonly int Y;
+
+            public RegionQueryKey(int section, int level, int x, int y)
+            {
+                Section = section;
+                Level = level;
+                X = x;
+                Y = y;
             }
 
-            await ServerObjProcessor.ProcessServerResults(serverResult.QueryTime, serverResult.NewOrUpdated);
+            public bool Equals(RegionQueryKey other) =>
+                Section == other.Section && Level == other.Level && X == other.X && Y == other.Y;
 
-            //The locals should now include the new objects
-            var localObjectKeys = SpatialSearch.Intersects(cell.Bounds.ToRTreeRect(sectionNumber));
-            objectStore.TryGetObjectsByIDs(localObjectKeys, out var found, out _);
-            List<OBJECT> localsObjects = found.ToList(); 
+            public override bool Equals(object obj) => obj is RegionQueryKey other && Equals(other);
 
-            await cell.OnLoadCompleted(localsObjects, serverResult.QueryTime);
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hash = 17;
+                    hash = hash * 31 + Section;
+                    hash = hash * 31 + Level;
+                    hash = hash * 31 + X;
+                    hash = hash * 31 + Y;
+                    return hash;
+                }
+            }
+        }
+
+        private async Task DoServerRequestAndCallbackAsync(RegionRequestData<OBJECT> cell, IRegionPyramidLevel<RegionRequestData<OBJECT>> level, int sectionNumber, RegionQueryKey key, CancellationToken aToken)
+        {
+            try
+            {
+                var client = ServerClient.GetOrCreate();
+
+                ServerUpdate<KEY, SERVER_OBJECT[]> serverResult;
+                try
+                {
+                    serverResult = await client.GetAsync(sectionNumber, cell.Bounds.ToWKT(), level.MinRadius, cell.LastQuery, aToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    await AbortQueryAsync(cell).ConfigureAwait(false);
+                    return;
+                }
+
+                if (aToken.IsCancellationRequested)
+                {
+                    await AbortQueryAsync(cell).ConfigureAwait(false);
+                    return;
+                }
+
+                await ServerObjProcessor.ProcessServerResults(serverResult.QueryTime, serverResult.NewOrUpdated);
+
+                var localObjectKeys = SpatialSearch.Intersects(cell.Bounds.ToRTreeRect(sectionNumber));
+                objectStore.TryGetObjectsByIDs(localObjectKeys, out var found, out _);
+                List<OBJECT> localsObjects = found.ToList();
+
+                try
+                {
+                    await cell.OnLoadCompleted(localsObjects, serverResult.QueryTime);
+                }
+                catch (OperationCanceledException)
+                {
+                    await AbortQueryAsync(cell).ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                liveQueries.TryRemove(key, out _);
+            }
+        }
+
+        static async Task AbortQueryAsync(RegionRequestData<OBJECT> cell)
+        {
+            await cell.Lock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                if (cell.CurrentQuery != null)
+                    cell.ClearLastQuery();
+                cell.SetQueryCompletedOrAborted();
+            }
+            finally
+            {
+                cell.Lock.Release();
+            }
         }
     }
 }

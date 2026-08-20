@@ -18,8 +18,9 @@
         </ItemsPanelTemplate>
         <conv:StructureTypeIDsToStructureTypeObjsConverter x:Key="StructureIDsToStructureObjsConverter"/>
         <conv:IntToBrushConverter x:Key="IntToBrushConverter"/>
+        <conv:SortStructureTypesByCodeConverter x:Key="SortStructureTypesByCodeConverter"/>
         <HierarchicalDataTemplate x:Key="StructureTypeTemplate"
-                              ItemsSource="{Binding Children}">
+                              ItemsSource="{Binding Children, Converter={StaticResource SortStructureTypesByCodeConverter}}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" SharedSizeGroup="TypeCode"/>

@@ -1,5 +1,8 @@
 ﻿namespace gRPCAnnotationService.Protos
 {
+    /// <summary>
+    /// Permitted-link proto ↔ EF. Key is SourceTypeId+TargetTypeId; there is no surrogate ID.
+    /// </summary>
     public static class PermitterStructureLinkEFExtensions
     {
         public static Viking.DataModel.Annotation.PermittedStructureLink ToPermittedStructureLink(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.PermittedStructureLink src)

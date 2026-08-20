@@ -35,6 +35,10 @@ namespace WebAnnotationModel.gRPC
         /// </summary>
         private readonly ConcurrentDictionary<long, DateTime> LastQueryForSection = new ConcurrentDictionary<long, DateTime>();
 
+        readonly object _liveRegionLock = new object();
+        readonly Dictionary<int, List<LiveRegionQuery>> _liveRegionQueries = new Dictionary<int, List<LiveRegionQuery>>();
+        readonly Dictionary<int, CompletedRegionQuery> _lastCompletedRegion = new Dictionary<int, CompletedRegionQuery>();
+
         private readonly IStructureStore _structureStore;
         private readonly ILocationLinkStore _locationLinkStore;
 
@@ -183,8 +187,36 @@ namespace WebAnnotationModel.gRPC
         } 
 
         /// <summary>
+        /// One gRPC region stream. Cancelled only when its queried rectangle leaves the padded visible view.
+        /// Draw-loop wait tokens must not be passed into this stream.
+        /// </summary>
+        sealed class LiveRegionQuery
+        {
+            public Geometry.Rectangle Bounds;
+            public double PixelSize;
+            public CancellationTokenSource Cts;
+            public Task<List<LocationObj>> Task;
+        }
+
+        readonly struct CompletedRegionQuery
+        {
+            public CompletedRegionQuery(Geometry.Rectangle bounds, double pixelSize, DateTime completedUtc)
+            {
+                Bounds = bounds;
+                PixelSize = pixelSize;
+                CompletedUtc = completedUtc;
+            }
+
+            public Geometry.Rectangle Bounds { get; }
+            public double PixelSize { get; }
+            public DateTime CompletedUtc { get; }
+        }
+
+        /// <summary>
         /// Queries the server for locations on the given section whose mosaic-space bounding box intersects
         /// VolumeBounds, merges them into the local store, and invokes foundObjectCallback with the results.
+        /// In-flight streams that still intersect the padded visible region are reused; they are not cancelled
+        /// when the draw loop replaces its wait token.
         /// </summary>
         public async Task<List<LocationObj>> GetObjectsInRegionAsync(Geometry.Rectangle VolumeBounds,
             double ScreenPixelSizeInVolume,
@@ -201,65 +233,200 @@ namespace WebAnnotationModel.gRPC
                 return cached;
             }
 
-            var client = _spatialClientFactory.GetOrCreate();
-            string regionWKT = ToWktPolygon(VolumeBounds);
-            var progressiveResults = new List<LocationObj>();
-
-            // Incremental refresh: pass prior section watermark so DeletedLocations / updates apply.
-            DateTime? modifiedAfter = null;
-            if (LastQueryForSection.TryGetValue(SectionNumber, out var lastQuery) && lastQuery > DateTime.MinValue)
-                modifiedAfter = lastQuery;
-
-            // Prefer progressive merge when the concrete gRPC client is available.
-            if (client is LocationsClient locationsClient)
+            Geometry.Rectangle padded = RegionQueryBounds.PadVisible(VolumeBounds);
+            Task<List<LocationObj>> queryTask = null;
+            List<LocationObj> cachedHit = null;
+            lock (_liveRegionLock)
             {
-                var response = await locationsClient.GetAsync(
-                    SectionNumber, regionWKT, ScreenPixelSizeInVolume, modifiedAfter, token,
-                    onChunk: async update =>
+                if (!_liveRegionQueries.TryGetValue(SectionNumber, out List<LiveRegionQuery> live))
+                {
+                    live = new List<LiveRegionQuery>();
+                    _liveRegionQueries[SectionNumber] = live;
+                }
+
+                for (int i = live.Count - 1; i >= 0; i--)
+                {
+                    LiveRegionQuery q = live[i];
+                    if (q.Task.IsCompleted)
                     {
-                        if (token.IsCancellationRequested)
-                            return;
-                        await EnsureParentStructuresAsync(update.NewOrUpdated, token);
-                        var chunkChanges = await ServerQueryResultsHandler
-                            .ProcessServerUpdate(update.NewOrUpdated, update.DeletedIDs);
-                        await CallOnCollectionChanged(chunkChanges);
-                        await OnServerObjectsLoaded(update.NewOrUpdated, update.QueryTime);
-                        var chunkObjs = chunkChanges.ObjectsInStore
-                            .Where(l => VolumeBounds.Covers(l.Position)).ToList();
-                        progressiveResults.AddRange(chunkObjs);
-                        foundObjectCallback?.Invoke(chunkObjs);
-                    });
+                        live.RemoveAt(i);
+                        continue;
+                    }
 
-                if (token.IsCancellationRequested)
-                    return new List<LocationObj>();
+                    if (!q.Bounds.Intersects(padded))
+                    {
+                        q.Cts.Cancel();
+                        live.RemoveAt(i);
+                    }
+                }
 
-                await OnServerObjectsLoaded(response.NewOrUpdated, response.QueryTime);
-                await SyncLocationLinksForSectionAsync(SectionNumber, token);
-                TouchSectionQueryTime(SectionNumber);
-                return progressiveResults.Count > 0
-                    ? progressiveResults.Distinct().ToList()
-                    : response.NewOrUpdated
-                        .Select(l => ServerObjConverter.Convert(l))
-                        .Where(l => VolumeBounds.Covers(l.Position))
-                        .ToList();
+                LiveRegionQuery covering = null;
+                foreach (LiveRegionQuery q in live)
+                {
+                    if (!RegionQueryBounds.SameLod(q.PixelSize, ScreenPixelSizeInVolume))
+                        continue;
+                    if (q.Bounds.Contains(VolumeBounds))
+                    {
+                        covering = q;
+                        break;
+                    }
+                }
+
+                if (covering != null)
+                {
+                    queryTask = covering.Task;
+                }
+                else if (TryGetFreshCompletedCovering(SectionNumber, VolumeBounds, ScreenPixelSizeInVolume, out cachedHit))
+                {
+                }
+                else
+                {
+                    CancellationTokenSource cts = new CancellationTokenSource();
+                    LiveRegionQuery started = new LiveRegionQuery
+                    {
+                        Bounds = padded,
+                        PixelSize = ScreenPixelSizeInVolume,
+                        Cts = cts
+                    };
+                    started.Task = RunRegionQueryAsync(VolumeBounds, padded, ScreenPixelSizeInVolume, SectionNumber,
+                        foundObjectCallback, cts);
+                    live.Add(started);
+                    queryTask = started.Task;
+                }
             }
 
-            var unary = await client.GetAsync(SectionNumber, regionWKT, ScreenPixelSizeInVolume, modifiedAfter, token);
+            if (cachedHit != null)
+            {
+                foundObjectCallback?.Invoke(cachedHit);
+                return cachedHit;
+            }
 
-            if (token.IsCancellationRequested)
-                return new List<LocationObj>();
+            try
+            {
+                return await queryTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                var cached = GetLocalObjectsForSection(SectionNumber).Values
+                    .Where(l => VolumeBounds.Covers(l.Position)).ToList();
+                foundObjectCallback?.Invoke(cached);
+                return cached;
+            }
+        }
 
-            await EnsureParentStructuresAsync(unary.NewOrUpdated, token);
-            var changes = await ServerQueryResultsHandler.ProcessServerUpdate(unary.NewOrUpdated, unary.DeletedIDs);
-            await CallOnCollectionChanged(changes);
-            await OnServerObjectsLoaded(unary.NewOrUpdated, unary.QueryTime);
-            await SyncLocationLinksForSectionAsync(SectionNumber, token);
-            TouchSectionQueryTime(SectionNumber);
+        bool TryGetFreshCompletedCovering(int sectionNumber, Geometry.Rectangle visible, double pixel,
+            out List<LocationObj> cached)
+        {
+            cached = null;
+            if (!_lastCompletedRegion.TryGetValue(sectionNumber, out CompletedRegionQuery last))
+                return false;
+            if (!RegionQueryBounds.SameLod(last.PixelSize, pixel))
+                return false;
+            if (!last.Bounds.Contains(visible))
+                return false;
+            if ((DateTime.UtcNow - last.CompletedUtc).TotalSeconds > RegionQueryBounds.RefreshIntervalSeconds)
+                return false;
+            cached = GetLocalObjectsForSection(sectionNumber).Values
+                .Where(l => visible.Covers(l.Position)).ToList();
+            return true;
+        }
 
-            List<LocationObj> results = changes.ObjectsInStore
-                .Where(l => VolumeBounds.Covers(l.Position)).ToList();
-            foundObjectCallback?.Invoke(results);
-            return results;
+        async Task<List<LocationObj>> RunRegionQueryAsync(Geometry.Rectangle visibleBounds,
+            Geometry.Rectangle paddedBounds,
+            double screenPixelSizeInVolume,
+            int sectionNumber,
+            Action<ICollection<LocationObj>> foundObjectCallback,
+            CancellationTokenSource cts)
+        {
+            CancellationToken streamToken = cts.Token;
+            try
+            {
+                var client = _spatialClientFactory.GetOrCreate();
+                string regionWKT = ToWktPolygon(paddedBounds);
+                var progressiveResults = new List<LocationObj>();
+
+                DateTime? modifiedAfter = null;
+                if (LastQueryForSection.TryGetValue(sectionNumber, out var lastQuery) && lastQuery > DateTime.MinValue)
+                    modifiedAfter = lastQuery;
+
+                if (client is LocationsClient locationsClient)
+                {
+                    var response = await locationsClient.GetAsync(
+                        sectionNumber, regionWKT, screenPixelSizeInVolume, modifiedAfter, streamToken,
+                        onChunk: async update =>
+                        {
+                            if (streamToken.IsCancellationRequested)
+                                return;
+                            await EnsureParentStructuresAsync(update.NewOrUpdated, streamToken);
+                            var chunkChanges = await ServerQueryResultsHandler
+                                .ProcessServerUpdate(update.NewOrUpdated, update.DeletedIDs);
+                            await CallOnCollectionChanged(chunkChanges);
+                            await OnServerObjectsLoaded(update.NewOrUpdated, update.QueryTime);
+                            var chunkObjs = chunkChanges.ObjectsInStore
+                                .Where(l => paddedBounds.Covers(l.Position)).ToList();
+                            progressiveResults.AddRange(chunkObjs);
+                            foundObjectCallback?.Invoke(chunkObjs);
+                        });
+
+                    if (streamToken.IsCancellationRequested)
+                        return progressiveResults;
+
+                    await OnServerObjectsLoaded(response.NewOrUpdated, response.QueryTime);
+                    await SyncLocationLinksForSectionAsync(sectionNumber, streamToken);
+                    TouchSectionQueryTime(sectionNumber);
+                    RecordCompletedRegion(sectionNumber, paddedBounds, screenPixelSizeInVolume);
+                    return progressiveResults.Count > 0
+                        ? progressiveResults.Distinct().ToList()
+                        : response.NewOrUpdated
+                            .Select(l => ServerObjConverter.Convert(l))
+                            .Where(l => paddedBounds.Covers(l.Position))
+                            .ToList();
+                }
+
+                var unary = await client.GetAsync(sectionNumber, regionWKT, screenPixelSizeInVolume, modifiedAfter, streamToken);
+
+                if (streamToken.IsCancellationRequested)
+                    return new List<LocationObj>();
+
+                await EnsureParentStructuresAsync(unary.NewOrUpdated, streamToken);
+                var changes = await ServerQueryResultsHandler.ProcessServerUpdate(unary.NewOrUpdated, unary.DeletedIDs);
+                await CallOnCollectionChanged(changes);
+                await OnServerObjectsLoaded(unary.NewOrUpdated, unary.QueryTime);
+                await SyncLocationLinksForSectionAsync(sectionNumber, streamToken);
+                TouchSectionQueryTime(sectionNumber);
+                RecordCompletedRegion(sectionNumber, paddedBounds, screenPixelSizeInVolume);
+
+                List<LocationObj> results = changes.ObjectsInStore
+                    .Where(l => paddedBounds.Covers(l.Position)).ToList();
+                foundObjectCallback?.Invoke(results);
+                return results;
+            }
+            catch (OperationCanceledException)
+            {
+                var cached = GetLocalObjectsForSection(sectionNumber).Values
+                    .Where(l => visibleBounds.Covers(l.Position)).ToList();
+                foundObjectCallback?.Invoke(cached);
+                return cached;
+            }
+            finally
+            {
+                try
+                {
+                    cts.Dispose();
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            }
+        }
+
+        void RecordCompletedRegion(int sectionNumber, Geometry.Rectangle paddedBounds, double pixelSize)
+        {
+            lock (_liveRegionLock)
+            {
+                _lastCompletedRegion[sectionNumber] =
+                    new CompletedRegionQuery(paddedBounds, pixelSize, DateTime.UtcNow);
+            }
         }
 
         private static string ToWktPolygon(Geometry.Rectangle bounds)

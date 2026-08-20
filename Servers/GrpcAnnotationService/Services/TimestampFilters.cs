@@ -3,6 +3,9 @@ using Google.Protobuf.WellKnownTypes;
 
 namespace gRPCAnnotationService
 {
+    /// <summary>
+    /// Incremental-query watermarks. Use this instead of Timestamp.ToDateTime() on ModifiedAfter fields.
+    /// </summary>
     internal static class TimestampFilters
     {
         /// <summary>

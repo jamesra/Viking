@@ -2,6 +2,7 @@ using Geometry;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -73,6 +74,14 @@ namespace Viking.VolumeModel
         private int _MinDownsample = int.MaxValue;
 
         protected ConcurrentDictionary<TileKey, Task<CreateTileTaskResult>> TileTasks = new();
+
+        /// <summary>
+        /// Raised on a worker thread after a tile mesh is cached. Jotunn hooks this to
+        /// RequestRender so the present loop cannot idle while warped TEM tiles are still building.
+        /// </summary>
+        public static Action? TileMeshCreated;
+
+        public override bool HasPendingTileConstruction => !TileTasks.IsEmpty;
 
         public int MaxDownsample
         {
@@ -381,7 +390,6 @@ namespace Viking.VolumeModel
 
             int ExpectedTileCount = (iMaxX - iMinX) * (iMaxY - iMinY);
             List<TileViewModel> TilesToDraw = new(ExpectedTileCount);
-            //List<Task<TileViewModel>> tileTasks = new List<Task<TileViewModel>>(ExpectedTileCount);
 
             for (int iX = iMinX; iX <= iMaxX; iX++)
             {
@@ -389,37 +397,25 @@ namespace Viking.VolumeModel
                 {
                     TileKey tilekey = new(iX, iY, roundedDownsample);
                     if (TileTasks.ContainsKey(tilekey))
-                        continue; //We are already getting this tile, so continue
+                        continue;
 
                     var UniqueID = TileUniqueKey.Create(Section.Number, Name, Name, roundedDownsample, this.TileTextureFileName(iX, iY));
                     string TextureFileName = TileFullPath(iX, iY, roundedDownsample);
 
-                    if (Global.TileCache.TryGetValue(UniqueID, out TileViewModel tileViewModel) && tileViewModel != null)
+                    if (Global.TileCache.TryGetValue(UniqueID, out TileViewModel tileViewModel))
                     {
-                        TilesToDraw.Add(tileViewModel);
+                        if (tileViewModel != null)
+                            TilesToDraw.Add(tileViewModel);
                     }
                     else
                     {
-
-                        //Func<string, int, int, int, string, string,Tile> a = CreateTile;
-                        int ixc = iX;
-                        int iyc = iY;
-                        int rd = roundedDownsample;
                         var tileTask = Task.Run<CreateTileTaskResult>(() => CreateTile(UniqueID, tilekey, TextureFileName, Name));
                         tileTask.ContinueWith(previousTask => OnTileCreated(previousTask.Result));
                         TileTasks.TryAdd(tilekey, tileTask);
-
-                        //tileTasks.Add(T);
-                        //TilesToDraw.Add(CreateTile(UniqueID, ixc, iyc, rd, TextureFileName, Name));
                     }
                 }
             }
 
-            /*
-            Task[] tileTaskArray = tileTasks.Cast<Task>().ToArray();
-            Task.WaitAll(tileTaskArray);
-            TilesToDraw.AddRange(tileTasks.Select(t => t.Result));
-            */
             return TilesToDraw;
         }
 
@@ -458,6 +454,7 @@ namespace Viking.VolumeModel
         {
             CreateTileTaskResult result = tileview;
             TileTasks.TryRemove(result.Key, out var value);
+            TileMeshCreated?.Invoke();
         }
     }
 }

@@ -7,6 +7,7 @@ using Viking;
 using Viking.Common;
 using Viking.UI.WPF;
 using Viking.VolumeModel;
+using WebAnnotationModel;
 using VolumeGlobal = Viking.VolumeViewModel.Global;
 using VolumeVM = Viking.VolumeViewModel.VolumeViewModel;
 
@@ -28,7 +29,6 @@ namespace Jotunn
             LoginWindow login = new LoginWindow
             {
                 InitialVolumeUrl = ShellParameterService.FirstVolumeUrlFromArgs(e.Args)
-                    ?? ShellParameterService.DefaultVolumeUrl
             };
 
             bool? loginResult = login.ShowDialog();
@@ -41,34 +41,81 @@ namespace Jotunn
             UserCredentials = login.Credentials;
             SegmentationServiceUrl = login.SegmentationServiceUrl;
 
-            SplashScreen splash = new SplashScreen();
+            CancellationTokenSource loadCts = new CancellationTokenSource();
+            SplashScreen splash = new SplashScreen { LoadCancellation = loadCts };
             splash.Show();
 
             try
             {
-                ShellParameterService shellParameters = ShellParameterService.FromVolumeUrl(login.VolumeURL);
-                Progress<ProgressInfo> progress = new Progress<ProgressInfo>(info => splash.Report(info));
+                Progress<ProgressInfo> progressReporter = new Progress<ProgressInfo>(info => splash.Report(info));
+                IProgress<ProgressInfo> progress = progressReporter;
+                ShellParameterService shellParameters = await ShellParameterService.FromVolumeUrlAsync(
+                    login.VolumeURL,
+                    login.Credentials,
+                    loadCts.Token,
+                    progress).ConfigureAwait(true);
+                if (loadCts.IsCancellationRequested)
+                {
+                    Shutdown();
+                    return;
+                }
 
                 Volume volume = new Volume(shellParameters.HostPath, VolumeGlobal.CachePath, shellParameters.Xml, progress);
                 if (login.Credentials != null)
                     volume.UserCredentials = login.Credentials;
 
-                await volume.Initialize(CancellationToken.None, progress).ConfigureAwait(true);
+                await volume.Initialize(loadCts.Token, progress).ConfigureAwait(true);
+                if (loadCts.IsCancellationRequested)
+                {
+                    Shutdown();
+                    return;
+                }
 
+                TileLoadEnvironment.UiDispatcher = Dispatcher;
                 TileLoadEnvironment.BindVolume(volume);
+                TileLoadEnvironment.StartTexturePipeline();
                 VolumeGlobal.Volume = volume;
-                VolumeVM volumeViewModel = new VolumeVM(volume);
 
+                VolumeVM volumeViewModel = new VolumeVM(volume);
                 MainWindow mainWindow = new MainWindow();
                 mainWindow.AttachVolume(volumeViewModel);
                 MainWindow = mainWindow;
                 ShutdownMode = ShutdownMode.OnMainWindowClose;
                 splash.Close();
                 mainWindow.Show();
+
+                bool annotationsReady = await WebAnnotation.AnnotationBootstrap.TryInitializeAsync(
+                    volume,
+                    UserCredentials,
+                    SegmentationServiceUrl,
+                    loadCts.Token).ConfigureAwait(true);
+                if (loadCts.IsCancellationRequested)
+                {
+                    Shutdown();
+                    return;
+                }
+
+                if (!annotationsReady || !Store.IsInitialized)
+                {
+                    MessageBox.Show(
+                        "Annotations could not be loaded. The volume will open without annotation tools.",
+                        "Jotunn",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+                else
+                {
+                    mainWindow.TryAttachAnnotations();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                Shutdown();
             }
             catch (Exception ex)
             {
-                splash.Close();
+                if (splash.IsVisible)
+                    splash.Close();
                 Trace.WriteLine(ex);
                 MessageBox.Show(ex.Message, "Jotunn", MessageBoxButton.OK, MessageBoxImage.Error);
                 Shutdown();

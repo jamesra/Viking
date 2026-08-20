@@ -10,6 +10,15 @@
              Name="Sections">
     <Grid>
         <VolumeView:SectionSceneHost x:Name="SceneHost"/>
+        <!-- HwndHost child HWND often never delivers WPF mouse; this overlay owns pan/zoom. -->
+        <Border Background="Transparent"
+                MouseLeftButtonDown="OnViewMouseLeftButtonDown"
+                MouseRightButtonDown="OnViewMouseRightButtonDown"
+                MouseDown="OnViewMouseDown"
+                MouseMove="OnViewMouseMove"
+                MouseLeftButtonUp="OnViewMouseLeftButtonUp"
+                MouseRightButtonUp="OnViewMouseRightButtonUp"
+                MouseWheel="OnViewMouseWheel"/>
         <ItemsControl x:Name="SectionsGrid"
                  Background="Transparent"
                  ScrollViewer.VerticalScrollBarVisibility="Disabled"
