@@ -108,7 +108,6 @@
     <ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\NGVV\VikingCore.csproj" />
     <ProjectReference Include="..\..\Viking.UI.WPF\Viking.UI.WPF.csproj" />
-    <ProjectReference Include="..\..\WCFTokenInjector\WCFTokenInjector.csproj" />
   </ItemGroup>
   
   <!-- Use VikingXNAGraphics for net48 and Monographics for net9.0 -->

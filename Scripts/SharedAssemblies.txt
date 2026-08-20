@@ -41,7 +41,7 @@ Viking.UI.WPF.dll
 VikingXNAGraphics.dll
 VikingXNAWinForms.dll
 VolumeModel.dll
-WCFTokenInjector.dll
+Viking.Tokens.dll
 AnnotationInterfaces.dll
 AnnotationServiceTypes.dll
 Annotation.ViewModels.dll

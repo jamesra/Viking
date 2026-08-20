@@ -260,8 +260,8 @@ namespace Viking.AU
                     identityServerUri,
                     requireReviewRights: true);
 
-                TokenInjector.BearerToken = bearerToken;
-                TokenInjector.BearerTokenAuthority = identityServerUri.ToString();
+                TokenStore.BearerToken = bearerToken;
+                TokenStore.BearerTokenAuthority = identityServerUri.ToString();
             }
             catch (Exception ex)
             {
@@ -796,7 +796,7 @@ namespace Viking.AU
 
         private sealed class VikingAuAnnotationAccessTokenProvider : IAnnotationAccessTokenProvider
         {
-            public string GetAccessToken() => TokenInjector.BearerToken?.AccessToken;
+            public string GetAccessToken() => TokenStore.BearerToken?.AccessToken;
         }
     }
 }

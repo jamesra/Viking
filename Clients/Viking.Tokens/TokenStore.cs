@@ -3,7 +3,7 @@ using Duende.IdentityModel.Client;
 namespace Viking.Tokens
 {
     /// <summary>
-    /// Process-wide bearer token used by HTTP/gRPC clients. WCF injection reads the same store.
+    /// Process-wide bearer token used by HTTP/gRPC clients.
     /// </summary>
     public static class TokenStore
     {

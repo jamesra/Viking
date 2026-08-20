@@ -371,13 +371,10 @@ namespace Viking
 
             if (wpfLoginWindow.BearerToken != null)
             {
-                Viking.Tokens.TokenInjector.BearerToken = wpfLoginWindow.BearerToken;
-                // Set authority so TokenInjector adds Bearer token to WCF calls (required for AnnotationService with anonymous/logged-in users).
+                Viking.Tokens.TokenStore.BearerToken = wpfLoginWindow.BearerToken;
                 var identityServerUrl = settings.IdentityServerURL ?? wpfLoginWindow.IdentityServerUrl;
                 if (!string.IsNullOrEmpty(identityServerUrl))
-                {
-                    Viking.Tokens.TokenInjector.BearerTokenAuthority = identityServerUrl;
-                }
+                    Viking.Tokens.TokenStore.BearerTokenAuthority = identityServerUrl;
             }
 
             bool settingsChanged = false;

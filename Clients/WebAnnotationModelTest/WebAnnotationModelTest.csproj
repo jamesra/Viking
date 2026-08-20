@@ -38,7 +38,7 @@
 		<ProjectReference Include="..\..\RTree\RTree.csproj" />
 		<ProjectReference Include="..\..\SIMeasurement\SIMeasurement.csproj" />
 		<ProjectReference Include="..\Viking\WebAnnotation\WebAnnotation.csproj" />
-		<ProjectReference Include="..\WCFTokenInjector\WCFTokenInjector.csproj" />
+		<ProjectReference Include="..\Viking.Tokens\Viking.Tokens.csproj" />
 		<ProjectReference Include="..\WebAnnotationModel\WebAnnotationModel.csproj" />
 	</ItemGroup>
 	<ItemGroup>

@@ -80,8 +80,8 @@ namespace WebAnnotationModelTest
             var bearer_token_response = await TokenHelper.RetrieveBearerToken(Username, Password, list_permissions.ToArray());
             Assert.IsFalse(bearer_token_response.IsError, token.Error);
 
-            TokenInjector.BearerToken = bearer_token_response as TokenResponse;
-            TokenInjector.BearerTokenAuthority = IdentityEndpoint;
+            TokenStore.BearerToken = bearer_token_response as TokenResponse;
+            TokenStore.BearerTokenAuthority = IdentityEndpoint;
         }
 
         #region StructureTypes

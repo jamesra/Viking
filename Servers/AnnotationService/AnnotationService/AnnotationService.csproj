@@ -74,7 +74,6 @@
 		<ProjectReference Include="..\..\..\SqlGeometryUtils\SqlGeometryUtils.csproj" />
 		<ProjectReference Include="..\..\ConnectomeDataModel\ConnectomeDataModel.csproj" />
 		<ProjectReference Include="..\..\WebAppSettings\VikingWebAppSettings.csproj" />
-		<ProjectReference Include="..\..\..\Clients\WCFTokenInjector\WCFTokenInjector.csproj" />
 	</ItemGroup>
 	<!-- Content files -->
 	<ItemGroup>
