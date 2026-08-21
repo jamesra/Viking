@@ -189,6 +189,9 @@ namespace VikingXNAGraphics
 
         public static void SetColor(this MeshModel<VertexPositionColor> model, Color color)
         {
+            if (model?.Vertices is null)
+                return;
+
             for (int i = 0; i < model.Vertices.Length; i++)
             {
                 model.Vertices[i].Color = color;
@@ -197,6 +200,9 @@ namespace VikingXNAGraphics
 
         public static void SetColor(this MeshModel<VertexPositionNormalColor> model, Color color)
         {
+            if (model?.Vertices is null)
+                return;
+
             for (int i = 0; i < model.Vertices.Length; i++)
             {
                 model.Vertices[i].Color = color;

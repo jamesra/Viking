@@ -518,8 +518,11 @@ namespace MonogameTestbed
                 ReadyModelLock.EnterWriteLock();
                 if (node.MeshModel != null)
                 {
-                    node.MeshModel.Color = this.Color;
-                    ReadyModels.Add(node.Key, node.MeshModel);
+                    if (node.MeshModel.model?.Vertices is { Length: > 0 })
+                    {
+                        node.MeshModel.Color = this.Color;
+                        ReadyModels.Add(node.Key, node.MeshModel);
+                    }
                 }
 
                 if (node.IsLeaf == false)
@@ -688,7 +691,7 @@ namespace MonogameTestbed
         private MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor> GenerateBoundingBoxMesh(IAssemblyPlannerNode node)
         {
             IAssemblyPlannerBranch branch = node as IAssemblyPlannerBranch;
-            if (NodeBoundingBox.TryGetValue(node.Key, out Box bbox))
+            if (NodeBoundingBox.TryGetValue(node.Key, out Box bbox) && bbox != default)
             {
                 if (node.Depth > 0)
                 {
@@ -741,9 +744,13 @@ namespace MonogameTestbed
                 {
                     result = lbox.Value;
                 }
+                else if (rbox.HasValue)
+                {
+                    result = rbox.Value;
+                }
                 else
                 {
-                    result = rbox.HasValue ? rbox.Value : throw new ArgumentException($"Both branches have no bounding box");
+                    return null;
                 }
 
                 NodeBoundingBox[branch.Key] = result;
@@ -752,20 +759,15 @@ namespace MonogameTestbed
             else //Is a leaf
             {
                 var topology = sliceGraph.GetTopology(node.Key);
-                if (topology.Shapes is null)
+                if (!topology.IsValid || topology.Shapes is null || topology.Shapes.Length == 0)
                 {
-                    Debug.Assert(topology.Shapes != null, "Expected topology for node");
-                    NodeBoundingBox[node.Key] = default;
-                    return default;
-                }
-                else
-                {
-                    Rectangle boundingRect = topology.Shapes.BoundingBox().Translate(sliceGraph.BoundingBox.CenterPoint.XY());
-                    Box bbox = new(boundingRect, topology.ShapeZ.Min(), topology.ShapeZ.Max());
-                    NodeBoundingBox[node.Key] = bbox;
-                    return bbox;
+                    return null;
                 }
 
+                Rectangle boundingRect = topology.Shapes.BoundingBox().Translate(sliceGraph.BoundingBox.CenterPoint.XY());
+                Box bbox = new(boundingRect, topology.ShapeZ.Min(), topology.ShapeZ.Max());
+                NodeBoundingBox[node.Key] = bbox;
+                return bbox;
             }
         }
     }

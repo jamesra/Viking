@@ -250,7 +250,7 @@ namespace WebAnnotationModel.gRPC
             }
         }
 
-        async Task<ServerUpdate<long, AnnotationSet[]>> IServerSpatialAnnotationsClient<long, AnnotationSet>.GetAsync(long Z, string geometryWellKnownText, double screenPixelSizeInVolume, DateTime? modifiedAfter, CancellationToken token)
+        async Task<ServerUpdate<long, AnnotationSet[]>> IServerSpatialAnnotationsClient<long, AnnotationSet>.GetAsync(long Z, string geometryWellKnownText, double screenPixelSizeInVolume, DateTime? modifiedAfter, CancellationToken token, Func<ServerUpdate<long, AnnotationSet[]>, Task> onChunk)
         {
             var region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
             {
@@ -263,7 +263,7 @@ namespace WebAnnotationModel.gRPC
                 Region = region,
                 Z = Z
             };
-            if (modifiedAfter.HasValue)
+            if (modifiedAfter.HasValue && modifiedAfter.Value.Year >= 1753)
                 request.ModifiedAfterThisUtcTime = Timestamp.FromDateTime(DateTime.SpecifyKind(modifiedAfter.Value, DateTimeKind.Utc));
 
             try
@@ -280,12 +280,20 @@ namespace WebAnnotationModel.gRPC
                         var chunk = call.ResponseStream.Current;
                         if (chunk.QueryExecutedTime != null)
                             queryTime = chunk.QueryExecutedTime.ToDateTime();
+                        AnnotationSet partial = chunk.Partial ?? new AnnotationSet();
                         if (chunk.Partial != null)
                         {
                             merged.Locations.AddRange(chunk.Partial.Locations);
                             merged.Structures.AddRange(chunk.Partial.Structures);
                         }
-                        deletedIds.AddRange(chunk.DeletedIds);
+                        var chunkDeleted = chunk.DeletedIds.ToArray();
+                        deletedIds.AddRange(chunkDeleted);
+                        if (onChunk != null)
+                        {
+                            await onChunk(new ServerUpdate<long, AnnotationSet[]>(
+                                queryTime ?? DateTime.UtcNow, new AnnotationSet[] { partial }, chunkDeleted))
+                                .ConfigureAwait(false);
+                        }
                         if (chunk.IsLast)
                             sawLast = true;
                     }
@@ -309,8 +317,11 @@ namespace WebAnnotationModel.gRPC
             catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)
             {
                 var response = await Client.GetAnnotationsInMosaicRegionAsync(request, cancellationToken: token);
-                return new ServerUpdate<long, AnnotationSet[]>(response.QueryExecutedTime.ToDateTime(), new AnnotationSet[] { response.Result },
+                var update = new ServerUpdate<long, AnnotationSet[]>(response.QueryExecutedTime.ToDateTime(), new AnnotationSet[] { response.Result },
                     response.DeletedIds.ToArray());
+                if (onChunk != null)
+                    await onChunk(update).ConfigureAwait(false);
+                return update;
             }
         }
 

@@ -12,9 +12,12 @@ using Viking.DataModel.Annotation;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using EfLocation = Viking.DataModel.Annotation.Location;
 using EfLocationLink = Viking.DataModel.Annotation.LocationLink;
+using EfStructureLink = Viking.DataModel.Annotation.StructureLink;
 using ProtoLocation = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location;
 using ProtoLocationLink = Viking.AnnotationServiceTypes.gRPC.V1.Protos.LocationLink;
 using ProtoGeometry = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry;
+using ProtoStructure = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Structure;
+using ProtoStructureLink = Viking.AnnotationServiceTypes.gRPC.V1.Protos.StructureLink;
 
 namespace gRPCAnnotationService
 {
@@ -204,7 +207,8 @@ namespace gRPCAnnotationService
         }
 
         /// <summary>
-        /// Locations in the mosaic bbox plus their parent structures. DeletedIds are location IDs only.
+        /// Locations, parent structures, and links from SelectSectionAnnotationsInMosaicBounds.
+        /// DeletedIds are location IDs only.
         /// </summary>
         public override async Task<GetAnnotationsInMosaicRegionResponse> GetAnnotationsInMosaicRegion(GetAnnotationsInMosaicRegionRequest request, ServerCallContext context)
         {
@@ -213,26 +217,11 @@ namespace gRPCAnnotationService
                 var ct = context.CancellationToken;
                 var queryStart = DateTime.UtcNow;
                 var modifiedAfter = TimestampFilters.ModifiedAfterOrNull(request.ModifiedAfterThisUtcTime);
-
-                var locations = await MosaicRegionQuery(request.Z, request.Region, request.MinRadius, modifiedAfter)
-                    .ToListAsync(ct);
-
-                var parentIds = locations.Select(l => l.ParentId).Distinct().ToArray();
-
-                var set = new AnnotationSet();
-                set.Locations.AddRange(locations.Select(l => l.ToProtobufMessage()));
-                await AttachLocationLinksAsync(set.Locations, ct);
-                foreach (var chunk in parentIds.Chunk())
-                {
-                    var structures = await _context.Structures.AsNoTracking()
-                        .Where(s => chunk.Contains(s.Id)).ToListAsync(ct);
-                    set.Structures.AddRange(structures.Select(s => s.ToProtobufMessage()));
-                }
-
+                var loaded = await LoadMosaicAnnotationsAsync(request.Z, request.Region, request.MinRadius, modifiedAfter, ct);
                 var response = new GetAnnotationsInMosaicRegionResponse
                 {
-                    Result = set,
-                    QueryExecutedTime = Timestamp.FromDateTime(queryStart)
+                    Result = ToAnnotationSet(loaded),
+                    QueryExecutedTime = Timestamp.FromDateTime(DateTime.SpecifyKind(queryStart, DateTimeKind.Utc))
                 };
                 response.DeletedIds.AddRange(await DeletedIdsSince(request.Z, modifiedAfter, ct));
                 return response;
@@ -294,8 +283,8 @@ namespace gRPCAnnotationService
         }
 
         /// <summary>
-        /// Same payload as GetAnnotationsInMosaicRegion, chunked. QueryExecutedTime on first chunk;
-        /// DeletedIds and IsLast on the last.
+        /// Same payload as GetAnnotationsInMosaicRegion, chunked after the stored procedure returns.
+        /// QueryExecutedTime on first chunk; DeletedIds and IsLast on the last.
         /// </summary>
         public override async Task StreamAnnotationsInMosaicRegion(
             GetAnnotationsInMosaicRegionRequest request,
@@ -309,43 +298,48 @@ namespace gRPCAnnotationService
                 var modifiedAfter = TimestampFilters.ModifiedAfterOrNull(request.ModifiedAfterThisUtcTime);
                 var ct = context.CancellationToken;
 
-                var batch = new List<EfLocation>(RegionStreamBatchSize);
+                var loaded = await LoadMosaicAnnotationsAsync(request.Z, request.Region, request.MinRadius, modifiedAfter, ct);
+                var structures = loaded.Structures.Select(s => s.ToProtobufMessage()).ToList();
+                AttachStructureLinks(structures, loaded.StructureLinks);
+                var locations = loaded.Locations.Select(l => l.ToProtobufMessage()).ToList();
+
                 var isFirst = true;
-
-                await foreach (var location in MosaicRegionQuery(request.Z, request.Region, request.MinRadius, modifiedAfter)
-                                   .AsAsyncEnumerable()
-                                   .WithCancellation(ct))
+                var offset = 0;
+                while (offset < locations.Count)
                 {
-                    batch.Add(location);
-                    if (batch.Count < RegionStreamBatchSize)
-                        continue;
-
+                    var take = Math.Min(RegionStreamBatchSize, locations.Count - offset);
+                    var isLast = offset + take >= locations.Count;
                     var chunk = new AnnotationRegionChunk
                     {
-                        IsLast = false,
-                        Partial = await AnnotationSetForLocationBatch(batch, ct)
+                        IsLast = isLast,
+                        Partial = new AnnotationSet()
                     };
                     if (isFirst)
                     {
                         chunk.QueryExecutedTime = queryExecutedTime;
+                        chunk.Partial.Structures.AddRange(structures);
                         isFirst = false;
                     }
 
+                    chunk.Partial.Locations.AddRange(locations.Skip(offset).Take(take));
+                    if (isLast)
+                        chunk.DeletedIds.AddRange(await DeletedIdsSince(request.Z, modifiedAfter, ct));
                     await responseStream.WriteAsync(chunk);
-                    batch.Clear();
+                    offset += take;
                 }
 
-                var final = new AnnotationRegionChunk
-                {
-                    IsLast = true,
-                    Partial = batch.Count > 0
-                        ? await AnnotationSetForLocationBatch(batch, ct)
-                        : new AnnotationSet()
-                };
                 if (isFirst)
-                    final.QueryExecutedTime = queryExecutedTime;
-                final.DeletedIds.AddRange(await DeletedIdsSince(request.Z, modifiedAfter, ct));
-                await responseStream.WriteAsync(final);
+                {
+                    var empty = new AnnotationRegionChunk
+                    {
+                        IsLast = true,
+                        QueryExecutedTime = queryExecutedTime,
+                        Partial = new AnnotationSet()
+                    };
+                    empty.Partial.Structures.AddRange(structures);
+                    empty.DeletedIds.AddRange(await DeletedIdsSince(request.Z, modifiedAfter, ct));
+                    await responseStream.WriteAsync(empty);
+                }
             }
             catch (OperationCanceledException) { throw; }
             catch (RpcException) { throw; }
@@ -615,6 +609,48 @@ namespace gRPCAnnotationService
         #region Helpers
 
         private const int RegionStreamBatchSize = 128;
+
+        async Task<SectionAnnotationsInMosaicBoundsResult> LoadMosaicAnnotationsAsync(
+            long z, ProtoGeometry region, double minRadius, DateTime? queryDate, CancellationToken ct)
+        {
+            var bbox = region?.ToNetTopologyGeometry()
+                ?? throw new RpcException(new Status(StatusCode.InvalidArgument, "A region is required"));
+            return await _context.Procedures
+                .SelectSectionAnnotationsInMosaicBoundsFullAsync(z, bbox, minRadius, queryDate, ct);
+        }
+
+        static AnnotationSet ToAnnotationSet(SectionAnnotationsInMosaicBoundsResult loaded)
+        {
+            var set = new AnnotationSet();
+            var structures = loaded.Structures.Select(s => s.ToProtobufMessage()).ToList();
+            AttachStructureLinks(structures, loaded.StructureLinks);
+            set.Structures.AddRange(structures);
+            set.Locations.AddRange(loaded.Locations.Select(l => l.ToProtobufMessage()));
+            return set;
+        }
+
+        static void AttachStructureLinks(IList<ProtoStructure> structures, IReadOnlyList<EfStructureLink> links)
+        {
+            if (structures.Count == 0 || links.Count == 0)
+                return;
+
+            var byId = structures.ToDictionary(s => s.Id);
+            foreach (var link in links)
+            {
+                var proto = new ProtoStructureLink
+                {
+                    SourceId = link.SourceId,
+                    TargetId = link.TargetId,
+                    Bidirectional = link.Bidirectional,
+                    Tags = link.Tags ?? string.Empty,
+                    Username = link.Username ?? string.Empty
+                };
+                if (byId.TryGetValue(link.SourceId, out var source))
+                    source.Links.Add(proto);
+                if (link.TargetId != link.SourceId && byId.TryGetValue(link.TargetId, out var target))
+                    target.Links.Add(proto);
+            }
+        }
 
         private async Task<AnnotationSet> AnnotationSetForLocationBatch(IReadOnlyList<EfLocation> locations, CancellationToken ct)
         {

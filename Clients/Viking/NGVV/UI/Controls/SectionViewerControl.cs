@@ -3553,10 +3553,9 @@ namespace Viking.UI.Controls
             Viking.Properties.Settings.Default.LoadAdjacentSectionTextures = viewModel.LoadAdjacentSectionTextures;
             Viking.Properties.Settings.Default.Save();
             Viking.PendingTextureQueue.UpdateSortInterval(viewModel.VisibleTileSortIntervalMs);
-            int effectiveLimit = viewModel.MaxConcurrentTextureRequests > 0
-                ? viewModel.MaxConcurrentTextureRequests
-                : Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel.DefaultMaxConcurrentTextureRequests;
-            Viking.TextureReaderV2.SetMaxConcurrentRequestLimit(effectiveLimit);
+            Viking.TextureReaderV2.ApplyMaxConcurrentRequestPreference(
+                viewModel.MaxConcurrentTextureRequests,
+                Section?.VolumeViewModel?.DefaultTileWidth);
         }
 
         #endregion

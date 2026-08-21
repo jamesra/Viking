@@ -21,6 +21,7 @@ namespace WebAnnotationModel.ServerInterface
                                      string geometryWellKnownText,
                                      double ScreenPixelSizeInVolume,
                                      DateTime? modifiedAfter,
-                                     CancellationToken token);
+                                     CancellationToken token,
+                                     Func<ServerUpdate<KEY, SERVER_OBJECT[]>, Task> onChunk);
     }
 }

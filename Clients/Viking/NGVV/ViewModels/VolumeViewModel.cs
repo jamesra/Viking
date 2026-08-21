@@ -20,6 +20,8 @@ namespace Viking.ViewModels
 
         public bool IsLocal => _Volume.IsLocal;
 
+        public int? DefaultTileWidth => _Volume.DefaultTileWidth;
+
         public UnitsAndScale.IAxisUnits DefaultXYScale => _Volume.DefaultXYScale;
 
         public int DefaultSectionNumber

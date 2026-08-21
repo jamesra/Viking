@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Viking;
 using Viking.AnnotationServiceTypes;
 using Viking.Common;
 using Viking.ViewModels;
@@ -233,6 +234,10 @@ namespace WebAnnotation.ViewModel
             {
                 AddLocations(unknownObjs);
             }
+
+            AnnotationOverlay.GetAnnotationsForSection(PrimarySectionNumber)
+                ?.OnAdjacentLocationsLoaded(locationObjs);
+            TileLoadEnvironment.RequestRender?.Invoke();
         }
 
         public override void AddLocations(IEnumerable<LocationObj> locations)
@@ -758,7 +763,10 @@ namespace WebAnnotation.ViewModel
             try
             {
                 await Store.Locations.GetObjectsByIDs(ids, token).ConfigureAwait(false);
+                Store.Locations.TryGetObjectsByIDs(ids, out var hydrated, out _);
                 SectionLocationLinks.RetryPendingLinks();
+                AddOverlappedLocations(LocationsOnOurSectionLinkedFromSet(hydrated));
+                TileLoadEnvironment.RequestRender?.Invoke();
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -1417,7 +1425,10 @@ namespace WebAnnotation.ViewModel
 
         #endregion
 
-        /// <summary>Loads this section and the adjacent ±1 views for the same mosaic region.</summary>
+        /// <summary>
+        /// Loads this section and adjacent ±1 in parallel. First paint is driven by
+        /// foundObjectCallback RequestRender, not by waiting for all three.
+        /// </summary>
         public override async Task LoadAnnotationsInRegion(VikingXNA.Scene scene, CancellationToken token)
         {
             Task primary = base.LoadAnnotationsInRegion(scene, token);
@@ -1425,7 +1436,9 @@ namespace WebAnnotation.ViewModel
             Task below = SectionBelow != null ? SectionBelow.LoadAnnotationsInRegion(scene, token) : Task.CompletedTask;
             try
             {
-                await Task.WhenAll(primary, above, below).ConfigureAwait(false);
+                await primary.ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
+                await Task.WhenAll(above, below).ConfigureAwait(false);
                 Task hydrate;
                 lock (_linkHydrateLock)
                     hydrate = _linkHydrateTask;
@@ -1439,9 +1452,15 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// Load 
+        /// Adjacent-section locations arrived. Retry pending A→B links and bind inscribed
+        /// overlap glyphs on this section's circles.
         /// </summary>
-        /// <param name="locationObjs"></param>
+        internal void OnAdjacentLocationsLoaded(IEnumerable<LocationObj> adjacentLocations)
+        {
+            SectionLocationLinks.RetryPendingLinks();
+            AddOverlappedLocations(LocationsOnOurSectionLinkedFromSet(adjacentLocations));
+        }
+
         protected override void AddLocationsInLocalCache(IEnumerable<LocationObj> locationObjs)
         {
             LocationObj[] unknownObjs = [.. locationObjs.Where(l => !KnownLocations.Contains(l.ID))];
@@ -1449,6 +1468,8 @@ namespace WebAnnotation.ViewModel
             {
                 AddLocationBatch(unknownObjs);
             }
+
+            TileLoadEnvironment.RequestRender?.Invoke();
         }
 
         private void AddLocationsInRegionCallback(IEnumerable<LocationObj> locationObjs) => AddLocationBatch(locationObjs);

@@ -248,6 +248,7 @@ namespace MonogameTestbed
 
         static TextWriter SynchronizedLogWriter = null;
         static TextWriterTraceListener LogListener = null;
+        static ConsoleTraceListener ConsoleListener = null;
         static ILoggerFactory LoggerFactory = null;
         static ILogger Logger = null;
 
@@ -314,24 +315,7 @@ namespace MonogameTestbed
                     return;
                 }
 
-                if (Program.options.Log)
-                {
-                    LogPath = Program.options.OutputPath is null ? System.IO.Directory.GetCurrentDirectory() : System.IO.Path.Combine(Program.options.OutputPath, "Logs");
-                    CreateLogger();
-                }
-
-                if (Program.options.Verbose && LoggerFactory is null)
-                {
-                    LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
-                    {
-                        builder.AddConsole();
-                        builder.SetMinimumLevel(LogLevel.Debug);
-                    });
-                    Logger = LoggerFactory.CreateLogger("MonogameTestbed");
-
-                    Logger.LogInformation("Displaying trace messages");
-                    Logger.LogDebug("Displaying debug messages");
-                }
+                ConfigureDiagnostics();
 
 
                 if (args.Length == 0)
@@ -348,20 +332,7 @@ namespace MonogameTestbed
                 if (HaveConsole)
                     FreeConsole();
 
-                if (Program.options is not null)
-                {
-                    if (Program.options.Log)
-                    {
-                        StopLogger();
-                    }
-
-                    if (Program.options.Verbose)
-                    {
-                        LoggerFactory?.Dispose();
-                        LoggerFactory = null;
-                        Logger = null;
-                    }
-                }
+                StopDiagnostics();
             }
         }
 
@@ -378,30 +349,73 @@ namespace MonogameTestbed
             Geometry.Global.TryUseNativeMKL();
         }
 
-        private static void CreateLogger()
+        /// <summary>
+        /// Attaches console and/or file listeners independently so -v and -l can be combined.
+        /// Trace.WriteLine follows the same destinations as ILogger.
+        /// </summary>
+        private static void ConfigureDiagnostics()
         {
-            if (!Directory.Exists(LogPath))
-                Directory.CreateDirectory(LogPath);
+            if (Program.options is null)
+                return;
 
-            DebugLogFile = File.CreateText(LogFullPath);
-            DebugLogFile.AutoFlush = true;
+            bool logToFile = Program.options.Log;
+            bool logToConsole = Program.options.Verbose;
 
-            SynchronizedLogWriter = TextWriter.Synchronized(DebugLogFile);
-            LogListener = new TextWriterTraceListener(SynchronizedLogWriter, "MonogameTestbedLog");
-            Trace.Listeners.Add(LogListener);
+            if (!logToFile && !logToConsole)
+                return;
+
             Trace.AutoFlush = true;
+
+            if (logToFile)
+            {
+                LogPath = Program.options.OutputPath is null
+                    ? Directory.GetCurrentDirectory()
+                    : Path.Combine(Program.options.OutputPath, "Logs");
+
+                if (!Directory.Exists(LogPath))
+                    Directory.CreateDirectory(LogPath);
+
+                DebugLogFile = File.CreateText(LogFullPath);
+                DebugLogFile.AutoFlush = true;
+
+                SynchronizedLogWriter = TextWriter.Synchronized(DebugLogFile);
+                LogListener = new TextWriterTraceListener(SynchronizedLogWriter, "MonogameTestbedLog");
+                Trace.Listeners.Add(LogListener);
+            }
+
+            if (logToConsole)
+            {
+                ConsoleListener = new ConsoleTraceListener(false) { Name = "MonogameTestbedConsole" };
+                Trace.Listeners.Add(ConsoleListener);
+            }
 
             LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
             {
-                builder.AddDebug();
-                builder.AddConsole();
+                if (logToFile)
+                    builder.AddDebug();
+                if (logToConsole)
+                    builder.AddConsole();
                 builder.SetMinimumLevel(LogLevel.Debug);
             });
             Logger = LoggerFactory.CreateLogger("MonogameTestbed");
+
+            if (logToConsole)
+            {
+                Logger.LogInformation("Displaying trace messages");
+                Logger.LogDebug("Displaying debug messages");
+            }
         }
 
-        private static void StopLogger()
+        private static void StopDiagnostics()
         {
+            if (ConsoleListener != null)
+            {
+                Trace.Listeners.Remove(ConsoleListener);
+                ConsoleListener.Flush();
+                ConsoleListener.Dispose();
+                ConsoleListener = null;
+            }
+
             if (LogListener != null)
             {
                 Trace.Listeners.Remove(LogListener);

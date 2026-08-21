@@ -96,7 +96,8 @@ namespace MorphologyMesh
                 {
                     //Log the failure rather than silently emitting an empty topology.  An empty topology
                     //still has to be reported so dependent slices can proceed, but the cause must be visible.
-                    System.Diagnostics.Trace.WriteLine($"Exception building slice topology for {slice}, emitting empty topology:\n{e}");
+                    string sectionText = Graph.FormatSectionNumbers(slice);
+                    System.Diagnostics.Trace.WriteLine($"Slice {slice.Key} topology initialization failed for {sectionText}. Emitting empty topology.\n{e}");
                     this.OnTopologyComplete(slice, new SliceTopology());
                 }
             }

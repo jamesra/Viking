@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,7 +42,15 @@ namespace WebAnnotation
 #if !NETFRAMEWORK
             AnnotationOverlay.SectionViewLookup = GetOrCreate;
 #endif
+            if (Store.IsInitialized)
+            {
+                Store.Locations.CollectionChanged += OnStoreCollectionChanged;
+                Store.LocationLinks.CollectionChanged += OnStoreCollectionChanged;
+            }
         }
+
+        void OnStoreCollectionChanged(object sender, NotifyCollectionChangedEventArgs e) =>
+            TileLoadEnvironment.RequestRender?.Invoke();
 
         public VolumeTransformProvider Transforms => _transforms;
 

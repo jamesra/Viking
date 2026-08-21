@@ -1006,6 +1006,57 @@ break;
             }
         }
 
+        /// <summary>
+        /// Places a modeless WPF dialog on the viewer: owned by the viewer form (above Viking, not Topmost)
+        /// so other applications can cover it. topRight aligns the dialog's top-right to the viewer's
+        /// top-right; otherwise the bottom-right corners match.
+        /// </summary>
+        private void ShowAnchoredToViewer(System.Windows.Window window, bool topRight)
+        {
+            window.WindowStartupLocation = System.Windows.WindowStartupLocation.Manual;
+            window.Topmost = false;
+            SetFormOwner(window);
+
+            void PositionOnce(object sender, EventArgs e)
+            {
+                window.ContentRendered -= PositionOnce;
+                PositionWindowOnViewer(window, topRight);
+            }
+
+            if (window.IsLoaded)
+                PositionWindowOnViewer(window, topRight);
+            else
+                window.ContentRendered += PositionOnce;
+        }
+
+        private void PositionWindowOnViewer(System.Windows.Window window, bool topRight)
+        {
+            if (_Parent is null || !_Parent.IsHandleCreated)
+                return;
+
+            System.Drawing.Rectangle viewerScreen = _Parent.RectangleToScreen(_Parent.ClientRectangle);
+            double dpiX = 1.0;
+            double dpiY = 1.0;
+            var source = System.Windows.PresentationSource.FromVisual(window);
+            if (source?.CompositionTarget is not null)
+            {
+                dpiX = source.CompositionTarget.TransformToDevice.M11;
+                dpiY = source.CompositionTarget.TransformToDevice.M22;
+            }
+
+            double width = window.ActualWidth;
+            double height = window.ActualHeight;
+            if (width <= 0)
+                width = double.IsNaN(window.Width) ? window.MinWidth : window.Width;
+            if (height <= 0)
+                height = double.IsNaN(window.Height) ? window.MinHeight : window.Height;
+
+            window.Left = (viewerScreen.Right / dpiX) - width;
+            window.Top = topRight
+                ? viewerScreen.Top / dpiY
+                : (viewerScreen.Bottom / dpiY) - height;
+        }
+
         public void OpenGotoStructureForm()
         {
             if (GoToStructureForm == null)
@@ -1016,13 +1067,14 @@ break;
                     IsValidInput = async (ID, token) => await Store.Structures.GetObjectByID(ID, token) != null,
                     OnGo = id => _ = GoToStructure(id)
                 };
-                SetFormOwner(GoToStructureForm);
                 GoToStructureForm.Closed += GoToStructureForm_Closed;
                 System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(GoToStructureForm);
+                ShowAnchoredToViewer(GoToStructureForm, topRight: true);
                 GoToStructureForm.Show();
             }
             else
             {
+                PositionWindowOnViewer(GoToStructureForm, topRight: true);
                 GoToStructureForm.Activate();
             }
         }
@@ -1069,13 +1121,14 @@ break;
                     IsValidInput = async (ID, token) => await Store.Locations.GetObjectByID(ID, token) != null,
                     OnGo = id => _ = GoToLocation(id)
                 };
-                SetFormOwner(GoToLocationForm);
                 GoToLocationForm.Closed += GoToLocationForm_Closed;
                 System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(GoToLocationForm);
+                ShowAnchoredToViewer(GoToLocationForm, topRight: false);
                 GoToLocationForm.Show();
             }
             else
             {
+                PositionWindowOnViewer(GoToLocationForm, topRight: false);
                 GoToLocationForm.Activate();
             }
         }

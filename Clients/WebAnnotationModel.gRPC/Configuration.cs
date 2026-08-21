@@ -23,6 +23,7 @@ namespace Microsoft.Extensions.DependencyInjection
             service.AddTransient<IObjectConverter<LocationObj, ILocation>, LocationClientToServerConverter>();
             service.AddTransient<IObjectConverter<ILocation, Location>, LocationToLocationServerConverter>();
             service.AddTransient<IObjectUpdater<LocationObj, Location>, LocationServerToClientUpdater>();
+            service.AddTransient<IObjectUpdater<LocationObj, ILocation>, LocationServerToClientUpdater>();
             service.AddTransient<IBoundingBoxConverter<LocationObj>, LocationServerToMosaicShapeConverter>();
             return service;
         } 
@@ -30,6 +31,9 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IServiceCollection AddStandardQueryConverters(this IServiceCollection service)
         {
             service.AddTransient<IServerQuerySingleAddOrUpdateHandler<AnnotationSet>, ProcessorForServerAnnotationSets>();
+            service.AddTransient<IServerQueryMultipleAddsOrUpdatesHandler<AnnotationSet>, ProcessorForServerAnnotationSets>();
+            service.AddSingleton<IServerQueryDeleteHandler<long>, LocationIdDeleteHandler>();
+            service.AddSingleton<IRegionLoader<LocationObj>, LocationRegionLoader>();
             return service;
         } 
 

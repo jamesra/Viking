@@ -187,7 +187,13 @@ namespace WebAnnotation.View
         public LocationPolygonView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {
             _ControlPointRadius = Global.AnnotationSettings.PolygonPointRadius;
-            VolumePolygon = mapper.TryMapShapeSectionToVolume(obj.MosaicShape.ToSqlGeometry())?.ToPolygon();
+            var mappedShape = mapper.TryMapShapeSectionToVolume(obj.MosaicShape.ToSqlGeometry());
+            if (mappedShape is null)
+            {
+                throw new ArgumentException($"Could not map location {obj.ID} to volume");
+            }
+
+            VolumePolygon = mappedShape.ToPolygon();
             //_ControlPointRadius = GetRadiusFromPolygonArea(VolumePolygon, 0.01);
             SmoothedVolumePolygon = VolumePolygon;//VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
             bool hasParent = obj.Parent?.ParentID.HasValue ?? false;

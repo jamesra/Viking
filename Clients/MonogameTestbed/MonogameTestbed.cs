@@ -47,7 +47,7 @@ namespace MonogameTestbed
     /// <summary>
     /// This is the main type for your game.
     /// </summary>
-    public class MonoTestbed : Game, IRenderInfo
+    public partial class MonoTestbed : Game, IRenderInfo
     {
         readonly GraphicsDeviceManager graphics;
         public SpriteBatch spriteBatch;
@@ -179,11 +179,7 @@ namespace MonogameTestbed
             Window.AllowUserResizing = true;
             this.Window.Title = "Monogame testbed";
             this.Window.AllowUserResizing = true;
-#if DEBUG
-            this.Window.Position = new Point(0, 0);
-#else
-            //this.Window.Position = new Point(0, 0);
-#endif
+            PositionWindowFullyOnScreen();
 
             this.IsMouseVisible = true;
 

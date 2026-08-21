@@ -146,11 +146,9 @@ namespace Viking
             DateTime stopVolume = DateTime.UtcNow;
             var elapsedTime = stopVolume - startVolume;
             Trace.WriteLine("Volume Load Time: " + elapsedTime.ToString());
-            int pref = Viking.Properties.Settings.Default.MaxConcurrentTextureRequests;
-            if (pref > 0)
-                TextureReaderV2.SetMaxConcurrentRequestLimit(pref);
-            else
-                TextureReaderV2.SetMaxConcurrentRequestLimit(Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel.DefaultMaxConcurrentTextureRequests);
+            TextureReaderV2.ApplyMaxConcurrentRequestPreference(
+                Viking.Properties.Settings.Default.MaxConcurrentTextureRequests,
+                Volume.DefaultTileWidth);
 
             UI.State.volume = new Viking.ViewModels.VolumeViewModel(Volume);
             TileLoadEnvironment.BindVolume(Volume);

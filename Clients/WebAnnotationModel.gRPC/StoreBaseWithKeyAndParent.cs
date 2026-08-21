@@ -50,12 +50,12 @@ namespace WebAnnotationModel.gRPC
         /// gRPC GetAll uses IStoreEditor.GetOrAdd, which never called the old InternalAdd
         /// that populated RootObjects and Parent.Children. Wire that here when the batch is applied.
         /// </summary>
-        internal override Task CallOnCollectionChanged(ChangeInventory<OBJECT> inventory)
+        internal override async Task CallOnCollectionChanged(ChangeInventory<OBJECT> inventory)
         {
             if (inventory?.AddedObjects != null && inventory.AddedObjects.Count > 0)
                 WireParentsAndRoots(inventory.AddedObjects);
 
-            return base.CallOnCollectionChanged(inventory);
+            await base.CallOnCollectionChanged(inventory).ConfigureAwait(false);
         }
 
         /// <summary>

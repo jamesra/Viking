@@ -622,6 +622,31 @@ class TextureReaderV2 : IDisposable
     readonly SemaphoreSlim LoadTextureSemaphore = new(1, 1);
 
     /// <summary>
+    /// Concurrent HTTP limit for a tile pixel width: (4096 / tileWidth) × 2, at least 1.
+    /// Used when the user preference is 0 (Auto).
+    /// </summary>
+    public static int GetAutoMaxConcurrentRequests(int tileWidth)
+    {
+        int safeWidth = Math.Max(1, tileWidth);
+        return Math.Max(1, (4096 / safeWidth) * 2);
+    }
+
+    /// <summary>
+    /// Applies the user preference: a positive value is a hard limit; 0 uses tile-size Auto when tile width is known.
+    /// </summary>
+    public static void ApplyMaxConcurrentRequestPreference(int preference, int? tileWidth)
+    {
+        if (preference > 0)
+        {
+            SetMaxConcurrentRequestLimit(preference);
+            return;
+        }
+
+        if (tileWidth.HasValue)
+            SetMaxConcurrentRequestLimit(GetAutoMaxConcurrentRequests(tileWidth.Value));
+    }
+
+    /// <summary>
     /// Set the max concurrent texture load workers to a direct limit (1-256).
     /// Delegates to TextureRequestQueue.
     /// </summary>

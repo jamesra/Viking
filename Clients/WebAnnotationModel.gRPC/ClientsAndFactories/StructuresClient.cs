@@ -137,7 +137,7 @@ namespace WebAnnotationModel.gRPC
             return first_response.DeletedId;
         }
 
-        public async Task<ServerUpdate<long, IStructure[]>> GetAsync(long Z, string geometryWellKnownText, double screenPixelSizeInVolume,  DateTime? modifiedAfter, CancellationToken token)
+        public async Task<ServerUpdate<long, IStructure[]>> GetAsync(long Z, string geometryWellKnownText, double screenPixelSizeInVolume,  DateTime? modifiedAfter, CancellationToken token, Func<ServerUpdate<long, IStructure[]>, Task> onChunk)
         {
             var region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
             {
@@ -149,7 +149,10 @@ namespace WebAnnotationModel.gRPC
                 request.ModifiedAfterThisUtcTime = Timestamp.FromDateTime(DateTime.SpecifyKind(modifiedAfter.Value, DateTimeKind.Utc));
             var response = await Client.GetStructuresInMosaicRegionAsync(request, cancellationToken: token);
 
-            return new ServerUpdate<long, IStructure[]>(response.QueryExecutedTime.ToDateTime(), response.Results.Cast<IStructure>().ToArray(), response.DeletedIds.ToArray());
+            var update = new ServerUpdate<long, IStructure[]>(response.QueryExecutedTime.ToDateTime(), response.Results.Cast<IStructure>().ToArray(), response.DeletedIds.ToArray());
+            if (onChunk != null)
+                await onChunk(update).ConfigureAwait(false);
+            return update;
         }
          
         public async Task<ServerUpdate<long, IStructure[]>> GetAsync(long Z, DateTime? modifiedAfter, CancellationToken token)

@@ -46,7 +46,6 @@ namespace WebAnnotationModel
     public class RegionLoader<KEY, OBJECT, SERVER_OBJECT> : IRegionLoader<OBJECT>
         where KEY : struct, IEquatable<KEY>, IComparable<KEY>
         where OBJECT : class, IDataObjectWithKey<KEY>
-        where SERVER_OBJECT : IEquatable<SERVER_OBJECT>, IDataObjectWithKey<KEY>
     {
         readonly GridCellDimensions CellDimensions;
         private readonly double PowerScale;
@@ -113,14 +112,20 @@ namespace WebAnnotationModel
 
         private Task DoStoreChangedTask(NotifyCollectionChangedEventArgs e)
         {
-            foreach (OBJECT o in e.OldItems.Cast<OBJECT>())
+            if (e.OldItems != null)
             {
-                SpatialSearch.Delete(o.ID, out var _);
+                foreach (OBJECT o in e.OldItems.Cast<OBJECT>())
+                {
+                    SpatialSearch.Delete(o.ID, out var _);
+                }
             }
 
-            foreach (OBJECT o in e.NewItems.Cast<OBJECT>())
+            if (e.NewItems != null)
             {
-                SpatialSearch.TryAdd(RTreeConverter.BoundingRect(o), o.ID);
+                foreach (OBJECT o in e.NewItems.Cast<OBJECT>())
+                {
+                    SpatialSearch.TryAdd(RTreeConverter.BoundingRect(o), o.ID);
+                }
             }
 
             return Task.CompletedTask;
@@ -321,9 +326,20 @@ namespace WebAnnotationModel
                 var client = ServerClient.GetOrCreate();
 
                 ServerUpdate<KEY, SERVER_OBJECT[]> serverResult;
+                var processedChunks = false;
                 try
                 {
-                    serverResult = await client.GetAsync(sectionNumber, cell.Bounds.ToWKT(), level.MinRadius, cell.LastQuery, aToken);
+                    serverResult = await client.GetAsync(
+                        sectionNumber,
+                        ToWktPolygon(cell.Bounds),
+                        level.MinRadius,
+                        cell.LastQuery,
+                        aToken,
+                        async update =>
+                        {
+                            processedChunks = true;
+                            await ApplyServerUpdateAsync(update).ConfigureAwait(false);
+                        }).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -337,7 +353,8 @@ namespace WebAnnotationModel
                     return;
                 }
 
-                await ServerObjProcessor.ProcessServerResults(serverResult.QueryTime, serverResult.NewOrUpdated);
+                if (!processedChunks)
+                    await ApplyServerUpdateAsync(serverResult).ConfigureAwait(false);
 
                 var localObjectKeys = SpatialSearch.Intersects(cell.Bounds.ToRTreeRect(sectionNumber));
                 objectStore.TryGetObjectsByIDs(localObjectKeys, out var found, out _);
@@ -356,6 +373,23 @@ namespace WebAnnotationModel
             {
                 liveQueries.TryRemove(key, out _);
             }
+        }
+
+        async Task ApplyServerUpdateAsync(ServerUpdate<KEY, SERVER_OBJECT[]> update)
+        {
+            if (update.NewOrUpdated != null && update.NewOrUpdated.Length > 0)
+                await ServerObjProcessor.ProcessServerResults(update.QueryTime, update.NewOrUpdated).ConfigureAwait(false);
+
+            if (update.DeletedIDs != null && update.DeletedIDs.Length > 0)
+                await ServerDeletesProcessor.ProcessServerDelete(update.DeletedIDs).ConfigureAwait(false);
+        }
+
+        static string ToWktPolygon(Geometry.Rectangle bounds)
+        {
+            var ci = System.Globalization.CultureInfo.InvariantCulture;
+            return string.Format(ci,
+                "POLYGON(({0} {1}, {2} {1}, {2} {3}, {0} {3}, {0} {1}))",
+                bounds.Left, bounds.Bottom, bounds.Right, bounds.Top);
         }
 
         static async Task AbortQueryAsync(RegionRequestData<OBJECT> cell)

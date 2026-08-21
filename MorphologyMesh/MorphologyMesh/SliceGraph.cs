@@ -79,6 +79,32 @@ namespace MorphologyMesh
         /// </summary>
         public Box BoundingBox => Graph.BoundingBox;
 
+        /// <summary>
+        /// Volume section numbers (location UnscaledZ) of the annotations that form <paramref name="slice"/>.
+        /// Used when reporting topology or meshing failures so the console shows a section, not only a slice key.
+        /// </summary>
+        public IReadOnlyList<long> GetSectionNumbers(Slice slice)
+        {
+            ArgumentNullException.ThrowIfNull(slice);
+            return [.. slice.AllNodes
+                .Select(id => Graph[id].Location.UnscaledZ)
+                .Distinct()
+                .OrderBy(z => z)];
+        }
+
+        /// <summary>
+        /// Formats <see cref="GetSectionNumbers"/> for console and trace messages.
+        /// </summary>
+        public string FormatSectionNumbers(Slice slice)
+        {
+            IReadOnlyList<long> sections = GetSectionNumbers(slice);
+            if (sections.Count == 0)
+                return "unknown section";
+            if (sections.Count == 1)
+                return $"section {sections[0]}";
+            return $"sections {string.Join(", ", sections)}";
+        }
+
         private SliceGraph(MorphologyGraph graph)
         {
             this.Graph = graph;
@@ -590,10 +616,10 @@ namespace MorphologyMesh
             }
             else
             {
-                //The cache omits shapes it could not prepare, such as a polygon below MinAnnotationArea.  Cached
-                //shapes are centered on the graph bounding box, so rebuilding without that translation would place
-                //this contour a half-volume away from the neighbors it is meant to tile against.
-                shape = Graph[id].Geometry.ToPolygon().Translate(TranslationToCenter);
+                //The cache omits shapes it could not prepare (tiny polygons, simplify failures). Cached
+                //shapes are centered on the graph bounding box, so rebuild with the same translation.
+                //Use ToShape2D so a polyline cache miss does not abort the entire slice via ToPolygon.
+                shape = Graph[id].Geometry.ToShape2D().Translate(TranslationToCenter);
             }
 
             return new SliceShape(shape, isUpper, Graph[id].Z, id);

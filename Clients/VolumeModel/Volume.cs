@@ -933,7 +933,7 @@ namespace Viking.VolumeModel
             {
             }
 
-            if (result != null)
+            if (result?.Transform != null)
             {
                 try
                 {

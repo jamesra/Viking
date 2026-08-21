@@ -859,18 +859,23 @@ namespace WebAnnotationModel.gRPC.Tests
 
             using var call = client.StreamAnnotationsInMosaicRegion(request);
             var locations = new List<Location>();
+            var structures = new List<Structure>();
             var sawLast = false;
             while (await call.ResponseStream.MoveNext())
             {
                 var chunk = call.ResponseStream.Current;
                 if (chunk.Partial != null)
+                {
                     locations.AddRange(chunk.Partial.Locations);
+                    structures.AddRange(chunk.Partial.Structures);
+                }
                 if (chunk.IsLast)
                     sawLast = true;
             }
 
             Assert.That(sawLast, Is.True);
             Assert.That(locations, Has.Some.Matches<Location>(l => l.Id == 1));
+            Assert.That(structures, Has.Some.Matches<Structure>(s => s.Id == 1));
         }
 
         [Test]
@@ -2451,6 +2456,40 @@ namespace WebAnnotationModel.gRPC.Tests
             Assert.That(reply.Result, Is.Not.Null);
             Assert.That(reply.Result.Locations, Has.Some.Matches<Location>(l => l.Id == 1));
             Assert.That(reply.Result.Structures, Has.Some.Matches<Structure>(s => s.Id == 1));
+        }
+
+        [Test]
+        public async Task GetAnnotationsInMosaicRegion_IncrementalQueryDate_OmitsUnmodifiedStructures()
+        {
+            var accessToken = await RequestAccessTokenAsync();
+            using var channel = CreateAuthenticatedChannel(accessToken);
+            var client = new AnnotateLocations.AnnotateLocationsClient(channel);
+            var region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
+            {
+                Text = "POLYGON((0 0, 200 0, 200 300, 0 300, 0 0))"
+            };
+
+            var first = await client.GetAnnotationsInMosaicRegionAsync(new GetAnnotationsInMosaicRegionRequest
+            {
+                Z = 1,
+                MinRadius = 0,
+                Region = region
+            });
+            Assert.That(first.Result.Structures, Has.Some.Matches<Structure>(s => s.Id == 1));
+
+            var seed = first.Result.Structures.First(s => s.Id == 1);
+            var afterSeed = Timestamp.FromDateTime(
+                DateTime.SpecifyKind(seed.LastModified.ToDateTime().AddSeconds(1), DateTimeKind.Utc));
+
+            var second = await client.GetAnnotationsInMosaicRegionAsync(new GetAnnotationsInMosaicRegionRequest
+            {
+                Z = 1,
+                MinRadius = 0,
+                Region = region,
+                ModifiedAfterThisUtcTime = afterSeed
+            });
+
+            Assert.That(second.Result.Structures, Has.None.Matches<Structure>(s => s.Id == 1));
         }
 
         [Test]

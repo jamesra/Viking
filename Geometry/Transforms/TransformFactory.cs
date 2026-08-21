@@ -253,6 +253,13 @@ namespace Geometry.Transforms
             Rectangle ControlBounds = new(ControlLeft, ControlRight, ControlBottom, ControlTop);
             Rectangle MappedBounds = new(MappedLeft, MappedRight, MappedBottom, MappedTop);
 
+            // ITK stos files can emit "nan"; Convert.ToDouble throws FormatException on .NET Framework.
+            if (lines[6].IndexOf("nan", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                Trace.WriteLine($"Skipping stos transform containing NaN for {info}", "Geometry");
+                return null;
+            }
+
             //Check the parts to make sure they are actually numbers
             TransformParameters transform_parts = TransformParameters.Parse(lines[6]);
 

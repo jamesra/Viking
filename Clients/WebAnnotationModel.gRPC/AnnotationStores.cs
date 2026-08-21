@@ -24,7 +24,7 @@ namespace WebAnnotationModel.gRPC
         public IPermittedStructureLinkStore PermittedStructureLinks { get; }
 
         /// <summary>
-        /// Same instance as <see cref="Locations"/>, exposed as IRegionLoader for mosaic-bounds queries.
+        /// Same instance as the RegionLoader wrapping mosaic-cell AnnotationSet streams.
         /// </summary>
         public IRegionLoader<LocationObj> LocationsByRegion { get; }
 
@@ -34,6 +34,7 @@ namespace WebAnnotationModel.gRPC
             IStructureLinkStore structureLinks,
             ILocationLinkStore locationLinks,
             IPermittedStructureLinkStore permittedStructureLinks,
+            IRegionLoader<LocationObj> locationsByRegion,
             LocationLinkToLocationUpdater locationLinkToLocationUpdater)
         {
             Locations = locations;
@@ -42,7 +43,7 @@ namespace WebAnnotationModel.gRPC
             StructureLinks = structureLinks;
             LocationLinks = locationLinks;
             PermittedStructureLinks = permittedStructureLinks;
-            LocationsByRegion = locations as IRegionLoader<LocationObj>;
+            LocationsByRegion = locationsByRegion;
             // Constructed for its CollectionChanged subscription; keep the instance alive via DI.
             _ = locationLinkToLocationUpdater;
         }

@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using WebAnnotationModel.Objects;
 using WebAnnotationModel.ServerInterface;
+using Viking.AnnotationServiceTypes;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using Viking.AnnotationServiceTypes.Interfaces;
 using System.ComponentModel;
@@ -151,15 +152,24 @@ namespace WebAnnotationModel.gRPC.Converters
         ILocation IObjectConverter<LocationObj, ILocation>.Convert(LocationObj src) => Convert(src);
     }
 
-    public class LocationServerToClientUpdater : IObjectUpdater<LocationObj, Location>
+    public class LocationServerToClientUpdater : IObjectUpdater<LocationObj, Location>,
+        IObjectUpdater<LocationObj, ILocation>
     {
+        public Task<bool> Update(LocationObj obj, ILocation update)
+        {
+            if (update is Location loc)
+                return Update(obj, loc);
+
+            return UpdateFromInterface(obj, update);
+        }
+
         public async Task<bool> Update(LocationObj obj, Location update)
         {
             bool updated = false;
             void OnPropertyChanged(object s, PropertyChangedEventArgs e) => updated = true;
             try
             {
-                obj.PropertyChanged += OnPropertyChanged; //Record change events so we know if an update occurred.
+                obj.PropertyChanged += OnPropertyChanged;
 
                 obj.Section = update.Section;
                 obj.MosaicShape = LocationShapeConversion.ShapeFromCircleOrWkt(update, mosaic: true);
@@ -179,7 +189,35 @@ namespace WebAnnotationModel.gRPC.Converters
             }
 
             return updated;
-        } 
+        }
+
+        static async Task<bool> UpdateFromInterface(LocationObj obj, ILocation update)
+        {
+            bool updated = false;
+            void OnPropertyChanged(object s, PropertyChangedEventArgs e) => updated = true;
+            try
+            {
+                obj.PropertyChanged += OnPropertyChanged;
+
+                obj.Section = update.SectionNumber;
+                obj.MosaicShape = LocationShapeConversion.ShapeFromCircleOrWkt(update, mosaic: true);
+                obj.VolumeShape = LocationShapeConversion.ShapeFromCircleOrWkt(update, mosaic: false);
+                obj.TypeCode = update.TypeCode;
+                obj.Terminal = update.Terminal;
+                obj.OffEdge = update.OffEdge;
+                obj.Width = update.Width;
+                obj.Username = update.Username;
+                obj.LastModified = update.LastModified;
+                await obj.SetAttributes(ObjAttributeParser.ParseAttributes(update.Attributes ?? string.Empty));
+                await obj.SetLinksFromServerAsync(update.Links);
+            }
+            finally
+            {
+                obj.PropertyChanged -= OnPropertyChanged;
+            }
+
+            return updated;
+        }
     }
 
     /// <summary>

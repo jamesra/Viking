@@ -299,7 +299,8 @@ namespace MorphologyMesh
                         var topology = sliceGraph.GetTopology(capturedSlice);
                         if (topology.IsValid == false)
                         {
-                            Trace.WriteLine($"Slice {capturedSlice} produced no mesh: topology initialisation failed.");
+                            string sectionText = sliceGraph.FormatSectionNumbers(capturedSlice);
+                            Trace.WriteLine($"Slice {capturedSlice.Key} produced no mesh: topology initialisation failed ({sectionText}).");
                             return (capturedSlice, (BajajGeneratorMesh)null);
                         }
 

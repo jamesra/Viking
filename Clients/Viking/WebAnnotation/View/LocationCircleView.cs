@@ -366,6 +366,7 @@ namespace WebAnnotation.View
                 if (value is null || value.Count == 0)
                 {
                     OverlappedLinkView = null;
+                    return;
                 }
 
                 OverlappedLinkView = new OverlappedLinkCircleView(circleView.Circle, ID, (int)Z, value)

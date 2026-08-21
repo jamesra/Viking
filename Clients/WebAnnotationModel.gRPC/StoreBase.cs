@@ -68,22 +68,19 @@ namespace WebAnnotationModel.gRPC
         #region Events
 
         /// <summary>
-        /// Runs store UI events. When UseAsynchEvents is true this is Task.Run, so
-        /// subscribers must marshal to the dispatcher themselves if they touch WPF.
+        /// Runs store UI events. When UseAsynchEvents is true this is Task.Run; callers of
+        /// CallOnCollectionChanged await so ingest does not race the next chunk.
         /// </summary>
-        protected void InvokeEventAction(Action a, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
+        protected Task InvokeEventAction(Action a, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
         {
 #if DEBUG
             System.Diagnostics.Trace.WriteLine($"{GetType().FullName}.{memberName} Invoking Event Action");
 #endif
             if (State.UseAsynchEvents)
-            {
-                System.Threading.Tasks.Task.Run(a);
-            }
-            else
-            {
-                a.Invoke();
-            }
+                return Task.Run(a);
+
+            a.Invoke();
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -92,31 +89,21 @@ namespace WebAnnotationModel.gRPC
         /// before the event. IStoreEditor.EndBatch calls this method on StoreBase directly
         /// and skips that override — use this virtual on the concrete store for parented types.
         /// </summary>
-        internal virtual Task CallOnCollectionChanged(ChangeInventory<OBJECT> inventory)
+        internal virtual async Task CallOnCollectionChanged(ChangeInventory<OBJECT> inventory)
         {
-            //Action a = new Action(() =>
-            //    {
-            CallOnCollectionChangedForDelete(inventory.DeletedObjects);
-            CallOnCollectionChangedForReplace(inventory.OldObjectsReplaced, inventory.NewObjectReplacements);
-            CallOnCollectionChangedForAdd(inventory.AddedObjects);
-            return Task.CompletedTask;
-            //    });
-            //InvokeEventAction(a); 
-
+            await CallOnCollectionChangedForDelete(inventory.DeletedObjects).ConfigureAwait(false);
+            await CallOnCollectionChangedForReplace(inventory.OldObjectsReplaced, inventory.NewObjectReplacements).ConfigureAwait(false);
+            await CallOnCollectionChangedForAdd(inventory.AddedObjects).ConfigureAwait(false);
         }
 
-        protected void CallOnCollectionChangedForAdd(OBJECT addedObj)
+        protected Task CallOnCollectionChangedForAdd(OBJECT addedObj)
         {
-            //InternalUpdate will send its own notification for the updated objects
-           
-            Action a = new Action(() =>
+            return InvokeEventAction(() =>
             {
                 OBJECT[] listCopy = new OBJECT[1];
                 listCopy[0] = addedObj;
                 CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listCopy));
             });
-
-            InvokeEventAction(a); 
         }
 
         /// <summary>
@@ -125,74 +112,59 @@ namespace WebAnnotationModel.gRPC
         /// </summary>
       //  public event OnAllUpdatesCompletedEventHandler OnAllUpdatesCompleted; 
 
-        protected void CallOnCollectionChangedForAdd(ICollection<OBJECT> listAddedObj)
+        protected Task CallOnCollectionChangedForAdd(ICollection<OBJECT> listAddedObj)
         {
-            //InternalUpdate will send its own notification for the updated objects
-            if (listAddedObj != null && listAddedObj.Count > 0)
-            {
-                Action a = new Action(() =>
-                {
-                    OBJECT[] listCopy = new OBJECT[listAddedObj.Count];
-                    listAddedObj.CopyTo(listCopy, 0);
-                    //CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listAddedObj));
-                    CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listCopy));
-                });
+            if (listAddedObj == null || listAddedObj.Count == 0)
+                return Task.CompletedTask;
 
-                InvokeEventAction(a);
-            }
+            return InvokeEventAction(() =>
+            {
+                OBJECT[] listCopy = new OBJECT[listAddedObj.Count];
+                listAddedObj.CopyTo(listCopy, 0);
+                CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listCopy));
+            });
         }
 
-        protected void CallOnCollectionChangedForDelete(OBJECT deletedObj)
+        protected Task CallOnCollectionChangedForDelete(OBJECT deletedObj)
         {
-            //InternalUpdate will send its own notification for the updated objects
-         
-            Action a = new Action(() =>
+            return InvokeEventAction(() =>
             {
                 OBJECT[] listCopy = new OBJECT[1];
                 listCopy[0] = deletedObj;
-                //CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listAddedObj));
                 CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, listCopy));
             });
-
-            InvokeEventAction(a);
         }
 
-        protected void CallOnCollectionChangedForDelete(ICollection<OBJECT> listObj)
+        protected Task CallOnCollectionChangedForDelete(ICollection<OBJECT> listObj)
         {
-            //InternalUpdate will send its own notification for the updated objects
-            if (listObj != null && listObj.Count > 0)
-            {
-                Action a = new Action(() =>
-                {
-                    OBJECT[] listCopy = new OBJECT[listObj.Count];
-                    listObj.CopyTo(listCopy, 0);
-                    //CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listAddedObj));
-                    CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, listCopy));
-                });
+            if (listObj == null || listObj.Count == 0)
+                return Task.CompletedTask;
 
-                InvokeEventAction(a);
-            }
+            return InvokeEventAction(() =>
+            {
+                OBJECT[] listCopy = new OBJECT[listObj.Count];
+                listObj.CopyTo(listCopy, 0);
+                CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, listCopy));
+            });
         }
 
 
-        protected void CallOnCollectionChangedForReplace(ICollection<OBJECT> listOldObjects, ICollection<OBJECT> listNewObjects)
+        protected Task CallOnCollectionChangedForReplace(ICollection<OBJECT> listOldObjects, ICollection<OBJECT> listNewObjects)
         {
             Debug.Assert(listOldObjects.Count == listNewObjects.Count);
-            if (listNewObjects != null && listNewObjects.Count > 0)
-            {
-                Action a = new Action(() =>
-                {
-                    OBJECT[] listOldObjectsCopy = new OBJECT[listOldObjects.Count];
-                    OBJECT[] listNewObjectsCopy = new OBJECT[listNewObjects.Count];
-                    listOldObjects.CopyTo(listOldObjectsCopy, 0);
-                    listNewObjects.CopyTo(listNewObjectsCopy, 0);
-                    NotifyCollectionChangedEventArgs e = new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace,
-                                                                                              listNewObjectsCopy, listOldObjectsCopy);
-                    CallOnCollectionChanged(e);
-                });
+            if (listNewObjects == null || listNewObjects.Count == 0)
+                return Task.CompletedTask;
 
-                InvokeEventAction(a);
-            }
+            return InvokeEventAction(() =>
+            {
+                OBJECT[] listOldObjectsCopy = new OBJECT[listOldObjects.Count];
+                OBJECT[] listNewObjectsCopy = new OBJECT[listNewObjects.Count];
+                listOldObjects.CopyTo(listOldObjectsCopy, 0);
+                listNewObjects.CopyTo(listNewObjectsCopy, 0);
+                NotifyCollectionChangedEventArgs e = new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace,
+                                                                                          listNewObjectsCopy, listOldObjectsCopy);
+                CallOnCollectionChanged(e);
+            });
         }
 
 

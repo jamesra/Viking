@@ -268,7 +268,7 @@ namespace WebAnnotationModel.gRPC
             var client = StructureClientFactory.GetOrCreate();
             string regionWkt = ToWktPolygon(bounds);
             var update = await ((IServerSpatialAnnotationsClient<long, IStructure>)client)
-                .GetAsync(SectionNumber, regionWkt, MinRadius, LastQueryUtc, CancellationToken.None)
+                .GetAsync(SectionNumber, regionWkt, MinRadius, LastQueryUtc, CancellationToken.None, null)
                 .ConfigureAwait(false);
 
             var changes = await ServerQueryResultsHandler
