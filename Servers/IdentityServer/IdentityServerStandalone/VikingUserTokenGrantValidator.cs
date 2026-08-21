@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
@@ -28,6 +29,15 @@ namespace Viking.Identity.Server
 
         public async Task ValidateAsync(ExtensionGrantValidationContext context)
         {
+            if (!string.Equals(context.Request.ClientId, "api", StringComparison.Ordinal))
+            {
+                _logger.LogWarning("Rejected viking_user_token from client {ClientId}", context.Request.ClientId);
+                context.Result = new GrantValidationResult(
+                    Duende.IdentityServer.Models.TokenRequestErrors.UnauthorizedClient,
+                    "client is not permitted to use this grant");
+                return;
+            }
+
             var userId = context.Request.Raw["user_id"];
             if (string.IsNullOrEmpty(userId))
             {

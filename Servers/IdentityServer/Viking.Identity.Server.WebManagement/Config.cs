@@ -29,7 +29,7 @@ namespace Viking.Identity.Server.WebManagement
                 new ApiResource("Viking.Annotation", "Viking Annotation API")
                 {
                     UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name},
-                    ApiSecrets = { new Secret(options.Secret.Sha256())}
+                    ApiSecrets = { new Secret(options.GetClientSecret("api").Sha256())}
                 },
             };
         }
@@ -143,7 +143,7 @@ namespace Viking.Identity.Server.WebManagement
                     ClientName = "API Resource",
                     ClientSecrets =
                     {
-                        new Secret(options.Secret.Sha256())
+                        new Secret(options.GetClientSecret("api").Sha256())
                     },
                     AllowedGrantTypes = GrantTypes.ClientCredentials,
                     RedirectUris = { options.Authority + "signin-oidc" },
@@ -163,7 +163,7 @@ namespace Viking.Identity.Server.WebManagement
 
                     ClientSecrets =
                     {
-                        new Secret(options.Secret.Sha256())
+                        new Secret(options.GetClientSecret("mvc").Sha256())
                     },
 
                     RedirectUris = { options.Authority + "signin-oidc" },

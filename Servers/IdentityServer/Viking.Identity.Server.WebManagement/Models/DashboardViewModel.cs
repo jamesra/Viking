@@ -14,6 +14,7 @@ namespace Viking.Identity.Server.WebManagement.Models
         public List<OrganizationalUnit> UserOrganizations { get; set; } = new List<OrganizationalUnit>();
         public List<Volume> UserVolumes { get; set; } = new List<Volume>();
         public List<SegmentationService> UserSegmentationServices { get; set; } = new List<SegmentationService>();
+        public List<Group> UserGroups { get; set; } = new List<Group>();
         
         public string Username { get; set; }
         public bool IsAuthenticated { get; set; }

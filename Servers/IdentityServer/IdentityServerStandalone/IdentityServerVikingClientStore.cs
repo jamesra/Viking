@@ -20,18 +20,13 @@ namespace Viking.Identity
     {
         ApplicationDbContext _context;
         IResourceStore _resourceStore;
-
-        private readonly Secret _clientSecret;
-
+        private readonly VikingIdentityServerOptions _options;
         private readonly Uri _redirectUri;
 
         public IdentityServerVikingClientStore(ApplicationDbContext context, IResourceStore resourceStore, IOptions<VikingIdentityServerOptions> serverOptions)
         {
-            var options = serverOptions.Value;
-            var secret = options.Secret;
-
-            _redirectUri = new Uri(options.Authority);
-            _clientSecret = new Secret(secret.Sha256());
+            _options = serverOptions.Value;
+            _redirectUri = new Uri(_options.Authority);
             _context = context;
             _resourceStore = resourceStore;
         }
@@ -60,6 +55,8 @@ namespace Viking.Identity
             scopes.Add(IdentityServerConstants.StandardScopes.Profile);
             scopes.AddRange(IdentityServerCustomResourceStore.StandardScopes.Select(s => s.Name));
 
+            var clientSecret = new Secret(_options.GetClientSecret(clientId).Sha256());
+
             if (clientId == "mvc")  /* The MVC client is used for the Identity Management Site */
             {
                 return new Client
@@ -68,7 +65,7 @@ namespace Viking.Identity
                     ClientName = "MVC Client",
                     AllowedGrantTypes = new[] { GrantType.AuthorizationCode, GrantType.ResourceOwnerPassword, GrantType.ClientCredentials },
                     RequireConsent = false,
-                    ClientSecrets = { _clientSecret },
+                    ClientSecrets = { clientSecret },
                     RedirectUris = { new Uri(_redirectUri, "signin-oidc").ToString() },
                     FrontChannelLogoutUri = new Uri(_redirectUri,"signout-oidc").ToString(),
                     PostLogoutRedirectUris = { new Uri(_redirectUri,"signout-callback-oidc").ToString() },
@@ -83,7 +80,7 @@ namespace Viking.Identity
                     ClientId = clientId,
                     AllowedGrantTypes = new[] { GrantType.AuthorizationCode, GrantType.ResourceOwnerPassword, GrantType.ClientCredentials, VikingUserTokenGrantValidator.VikingUserTokenGrantType },
                     RequireConsent = false,
-                    ClientSecrets = { _clientSecret },
+                    ClientSecrets = { clientSecret },
                     RedirectUris = { new Uri(_redirectUri, "signin-oidc").ToString() },
                     PostLogoutRedirectUris = { new Uri(_redirectUri,"signout-callback-oidc").ToString() },
                     AllowedScopes = scopes,
@@ -97,7 +94,7 @@ namespace Viking.Identity
                 {
                     ClientId = clientId,
                     AllowedGrantTypes = new[] { GrantType.AuthorizationCode, GrantType.ResourceOwnerPassword, GrantType.ClientCredentials },
-                    ClientSecrets = { _clientSecret },
+                    ClientSecrets = { clientSecret },
                     RedirectUris = { new Uri(_redirectUri, "signin-oidc").ToString() },
                     FrontChannelLogoutUri = new Uri(_redirectUri,"signout-oidc").ToString(),
                     PostLogoutRedirectUris = { new Uri(_redirectUri,"signout-callback-oidc").ToString() },
@@ -110,7 +107,7 @@ namespace Viking.Identity
                 {
                     ClientId = clientId,
                     AllowedGrantTypes = new[] { GrantType.ResourceOwnerPassword, GrantType.ClientCredentials },
-                    ClientSecrets = { _clientSecret },
+                    ClientSecrets = { clientSecret },
                     AllowedScopes = readonlyScopes,
                     RedirectUris = { new Uri(_redirectUri, "signin-oidc").ToString() },
                     FrontChannelLogoutUri = new Uri(_redirectUri,"signout-oidc").ToString(),

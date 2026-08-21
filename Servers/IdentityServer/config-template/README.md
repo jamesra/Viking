@@ -30,7 +30,7 @@ Restart scripts set `IDENTITY_CONFIG_PATH` to this folder so compose finds ssl_c
 
 Holds the .env files used when running `docker-compose` (build/up):
 
-- **.env.All** – Shared defaults (SQL_* host/port/user/password, DB names, AUTHORITY, **IDENTITY_SERVER_SECRET**).
+- **.env.All** – Shared defaults (SQL_* host/port/user/password, DB names, AUTHORITY, **IDENTITY_SERVER_SECRET**, **IDENTITY_SERVER_API_SECRET**, **IDENTITY_SERVER_MVC_SECRET**, **IDENTITY_SERVER_RO_VIKING_SECRET**).
 - **.env.All.Docker** – Docker overrides (SSL_CERT_PATH, SSL_KEY_PATH, DUENDE_KEY_PATH; optional ACME_*).
 - **.env.All.Production** – Production overrides (used by restart_omni.cmd).
 - **.env.All.Development** – Development overrides (used by restart_omni_debug.cmd).
@@ -63,9 +63,9 @@ The Management website listens on **port 80 (HTTP) and 443 (HTTPS)** by default 
 
 The WebManagement app loads `secrets.json` last (optional). Use it to override sensitive values. See **mounted-config/secrets.json.example** for the structure. Main sections:
 
-- **VikingIdentityServerOptions** – `Secret`, `Authority`, `MetadataAddress`, `ApiScopes`.
+- **VikingIdentityServerOptions** – `Secret` (Viking desktop), `ApiSecret`, `MvcSecret`, `RoVikingSecret`, `Authority`, `MetadataAddress`, `ApiScopes`.
 
-The Management app also expects **IDENTITY_SERVER_SECRET** for configuration substitution (used in appsettings for `VikingIdentityServerOptions:Secret` and `OAuth2IntrospectionOptions:ClientSecret`). Set it in your build .env (e.g. `.env.All`) so docker-compose passes it into the container. It should match the secret in secrets.json if you use both.
+The Management app expects **IDENTITY_SERVER_MVC_SECRET** for `OAuth2IntrospectionOptions:ClientSecret` (mvc client) and **IDENTITY_SERVER_SECRET** for the Viking desktop client. WebApi uses **IDENTITY_SERVER_API_SECRET**. Set unique values in your build .env (e.g. `.env.All`) so docker-compose passes them into the container. Do not reuse the Viking desktop secret for api or mvc.
 - **SSL** – `CertificatePath`, `KeyPath`, `Password`.
 - **Email** – SMTP settings.
 - **WebApiOptions** – `BaseUrl` for the Identity WebAPI.

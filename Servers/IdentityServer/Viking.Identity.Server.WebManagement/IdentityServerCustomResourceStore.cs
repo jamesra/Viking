@@ -49,7 +49,7 @@ namespace Viking.Identity.Server.WebManagement
             ILogger<IdentityServerCustomResourceStore> logger)
         {
             var options = serverOptions.Value;
-            _Secret = new Secret(options.Secret.Sha256());
+            _Secret = new Secret(options.GetClientSecret("api").Sha256());
             _context = context;
             _logger = logger;
 

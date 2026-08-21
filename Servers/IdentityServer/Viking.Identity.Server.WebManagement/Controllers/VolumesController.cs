@@ -1,9 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
@@ -39,41 +37,10 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         {
             var allVolumes = await _context.Volume
                 .Include(v => v.Parent)
-                .Include(v => v.UsersWithPermissions)
-                .Include(v => v.GroupsWithPermissions)
                 .ToListAsync();
 
-            // Filter volumes to only show those the user has access to
-            var accessibleVolumes = new List<Volume>();
-            foreach (var volume in allVolumes)
-            {
-                // User can see volume if they're admin of parent org OR have any permissions on the volume
-                var isParentAdmin = await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, volume);
-                
-                // Check if user has direct permissions
-                var userId = HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                var hasDirectPermissions = !string.IsNullOrEmpty(userId) && 
-                    volume.UsersWithPermissions?.Any(p => p.UserId == userId) == true;
-                
-                // Check if user is in any groups with permissions
-                // Note: We'll skip recursive group check for now to avoid complexity - this is a basic filter
-                // A more complete implementation would check group memberships recursively
-                var hasGroupPermissions = false;
-                if (!string.IsNullOrEmpty(userId))
-                {
-                    // Use RecursiveMemberOfGroups to get all groups user belongs to (including nested)
-                    var userGroups = await _context.RecursiveMemberOfGroups(userId);
-                    var userGroupIds = userGroups.Select(g => g.Id).ToList();
-                    
-                    hasGroupPermissions = userGroupIds.Any(groupId => 
-                        volume.GroupsWithPermissions?.Any(p => p.GroupId == groupId) == true);
-                }
-
-                if (isParentAdmin || hasDirectPermissions || hasGroupPermissions)
-                {
-                    accessibleVolumes.Add(volume);
-                }
-            }
+            var accessibleVolumes = await _authorization.FilterAccessibleResourcesAsync(
+                _context, HttpContext.User, allVolumes, nameof(Volume));
 
             return View(accessibleVolumes);
         }
@@ -97,12 +64,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return NotFound();
             }
 
-            var isParentAdmin = await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, volume);
-            var userId = HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            var hasDirectPermissions = !string.IsNullOrEmpty(userId) &&
-                volume.UsersWithPermissions?.Any(p => p.UserId == userId) == true;
-
-            if (!isParentAdmin && !hasDirectPermissions && !User.IsInRole(Special.Roles.Admin))
+            if (false == await _authorization.CanViewResourceAsync(_context, HttpContext.User, volume))
             {
                 return Forbid();
             }
@@ -179,6 +141,10 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             {
                 return NotFound();
             }
+            if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, volume))
+            {
+                return Forbid();
+            }
             ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, volume.ParentID);
             return View(volume);
         }
@@ -195,6 +161,30 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return NotFound();
             }
 
+            var existing = await _context.Volume.FirstOrDefaultAsync(v => v.Id == id);
+            if (existing == null)
+            {
+                return NotFound();
+            }
+
+            if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, existing))
+            {
+                return Unauthorized();
+            }
+
+            if (volume.ParentID != existing.ParentID)
+            {
+                var reparentProbe = new Volume
+                {
+                    ParentID = volume.ParentID,
+                    ResourceTypeId = nameof(Volume)
+                };
+                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, reparentProbe))
+                {
+                    return Forbid();
+                }
+            }
+
             if (_context.IsResourceNameTaken(volume.Name, nameof(Volume), volume.Id))
             {
                 ModelState.AddModelError(nameof(volume.Name), $"A volume named {volume.Name} already exists");
@@ -202,14 +192,12 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
             if (ModelState.IsValid)
             {
-                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, volume))
-                {
-                    return Unauthorized();
-                }
-
                 try
                 {
-                    _context.Update(volume);
+                    existing.Name = volume.Name;
+                    existing.Description = volume.Description;
+                    existing.ParentID = volume.ParentID;
+                    existing.Endpoint = volume.Endpoint;
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
@@ -244,6 +232,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             if (volume == null)
             {
                 return NotFound();
+            }
+
+            if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, volume))
+            {
+                return Forbid();
             }
 
             return View(volume);

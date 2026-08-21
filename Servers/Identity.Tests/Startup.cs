@@ -21,6 +21,7 @@ namespace Identity.Tests
         {
             var config = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.test.json")
+                .AddUserSecrets<Startup>(optional: true)
                 .AddEnvironmentVariables()
                 .Build();
             

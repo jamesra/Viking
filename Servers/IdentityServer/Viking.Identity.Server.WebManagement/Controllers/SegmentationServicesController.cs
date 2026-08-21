@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -29,34 +28,10 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         {
             var allServices = await _context.SegmentationServices
                 .Include(s => s.Parent)
-                .Include(s => s.UsersWithPermissions)
-                .Include(s => s.GroupsWithPermissions)
                 .ToListAsync();
 
-            var accessibleServices = new List<SegmentationService>();
-            foreach (var service in allServices)
-            {
-                var isParentAdmin = await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, service);
-
-                var userId = HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                var hasDirectPermissions = !string.IsNullOrEmpty(userId) &&
-                    service.UsersWithPermissions?.Any(p => p.UserId == userId) == true;
-
-                var hasGroupPermissions = false;
-                if (!string.IsNullOrEmpty(userId))
-                {
-                    var userGroups = await _context.RecursiveMemberOfGroups(userId);
-                    var userGroupIds = userGroups.Select(g => g.Id).ToList();
-
-                    hasGroupPermissions = userGroupIds.Any(groupId =>
-                        service.GroupsWithPermissions?.Any(p => p.GroupId == groupId) == true);
-                }
-
-                if (isParentAdmin || hasDirectPermissions || hasGroupPermissions)
-                {
-                    accessibleServices.Add(service);
-                }
-            }
+            var accessibleServices = await _authorization.FilterAccessibleResourcesAsync(
+                _context, HttpContext.User, allServices, nameof(SegmentationService));
 
             return View(accessibleServices);
         }
@@ -80,12 +55,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return NotFound();
             }
 
-            var isParentAdmin = await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, segmentationService);
-            var userId = HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            var hasDirectPermissions = !string.IsNullOrEmpty(userId) &&
-                segmentationService.UsersWithPermissions?.Any(p => p.UserId == userId) == true;
-
-            if (!isParentAdmin && !hasDirectPermissions && !User.IsInRole(Special.Roles.Admin))
+            if (false == await _authorization.CanViewResourceAsync(_context, HttpContext.User, segmentationService))
             {
                 return Forbid();
             }
@@ -161,6 +131,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return NotFound();
             }
 
+            if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, segmentationService))
+            {
+                return Forbid();
+            }
+
             ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), segmentationService.ParentID);
             return View(segmentationService);
         }
@@ -175,6 +150,30 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return NotFound();
             }
 
+            var existing = await _context.SegmentationServices.FirstOrDefaultAsync(s => s.Id == id);
+            if (existing == null)
+            {
+                return NotFound();
+            }
+
+            if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, existing))
+            {
+                return Unauthorized();
+            }
+
+            if (segmentationService.ParentID != existing.ParentID)
+            {
+                var reparentProbe = new SegmentationService
+                {
+                    ParentID = segmentationService.ParentID,
+                    ResourceTypeId = nameof(SegmentationService)
+                };
+                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, reparentProbe))
+                {
+                    return Forbid();
+                }
+            }
+
             if (_context.IsResourceNameTaken(segmentationService.Name, nameof(SegmentationService), segmentationService.Id))
             {
                 ModelState.AddModelError(nameof(segmentationService.Name), $"A segmentation service named {segmentationService.Name} already exists");
@@ -182,14 +181,12 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
             if (ModelState.IsValid)
             {
-                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, segmentationService))
-                {
-                    return Unauthorized();
-                }
-
                 try
                 {
-                    _context.Update(segmentationService);
+                    existing.Name = segmentationService.Name;
+                    existing.Description = segmentationService.Description;
+                    existing.ParentID = segmentationService.ParentID;
+                    existing.Endpoint = segmentationService.Endpoint;
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
@@ -224,6 +221,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             if (segmentationService == null)
             {
                 return NotFound();
+            }
+
+            if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, segmentationService))
+            {
+                return Forbid();
             }
 
             return View(segmentationService);

@@ -24,6 +24,8 @@
 {
     <!-- Quick Stats Cards -->
     <div class="row mb-4">
+        @if (Model.IsAdmin)
+        {
         <div class="col-md-3 col-sm-6 mb-3">
             <a asp-controller="ApplicationUsers" asp-action="Index" class="text-decoration-none d-block stats-card-link">
                 <div class="card stats-card bg-primary">
@@ -41,6 +43,7 @@
                 </div>
             </a>
         </div>
+        }
         <div class="col-md-3 col-sm-6 mb-3">
             <a asp-controller="OrganizationalUnits" asp-action="Index" class="text-decoration-none d-block stats-card-link">
                 <div class="card stats-card" style="background: linear-gradient(135deg, var(--color-org) 0%, #0056b3 100%);">
@@ -135,11 +138,14 @@
                                 <i class="bi bi-diagram-3"></i> View Segmentation Services
                             </a>
                         </div>
+                        @if (Model.IsAdmin)
+                        {
                         <div class="col-md-3 col-sm-6 mb-2">
                             <a asp-controller="ApplicationUsers" asp-action="Index" class="btn btn-outline-purple btn-quick-action w-100">
                                 <i class="bi bi-people"></i> View Users
                             </a>
                         </div>
+                        }
                         <div class="col-md-3 col-sm-6 mb-2">
                             <a asp-controller="MyAccess" asp-action="Index" class="btn btn-outline-info btn-quick-action w-100">
                                 <i class="bi bi-shield-check"></i> My Access
@@ -305,7 +311,47 @@
         </div>
     }
 
-    @if (!Model.UserVolumes.Any() && !Model.UserSegmentationServices.Any() && !Model.UserOrganizations.Any())
+    <!-- Your Groups -->
+    @if (Model.UserGroups.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card card-modern">
+                    <div class="card-header text-white" style="background: linear-gradient(135deg, var(--color-group) 0%, #c8620a 100%);">
+                        <h5 class="mb-0">
+                            <i class="bi bi-person-badge"></i> Your Groups
+                            <span class="badge bg-light text-dark ms-2">@Model.TotalGroups</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            @foreach (var group in Model.UserGroups)
+                            {
+                                <a asp-controller="Groups" asp-action="Details" asp-route-id="@group.Id" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">
+                                            <i class="bi bi-person-badge"></i> @group.Name
+                                        </h6>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(group.Description))
+                                    {
+                                        <p class="mb-1 text-muted small">@group.Description</p>
+                                    }
+                                </a>
+                            }
+                        </div>
+                        <div class="mt-3">
+                            <a asp-controller="Groups" asp-action="Index" class="btn btn-outline-warning">
+                                <i class="bi bi-arrow-right"></i> View Groups
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (!Model.UserVolumes.Any() && !Model.UserSegmentationServices.Any() && !Model.UserOrganizations.Any() && !Model.UserGroups.Any())
     {
         <div class="row">
             <div class="col-12">

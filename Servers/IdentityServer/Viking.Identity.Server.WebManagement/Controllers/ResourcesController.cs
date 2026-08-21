@@ -52,6 +52,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
         // GET: Resources
         [HttpGet]
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> Index()
         {
             var applicationDbContext = _context.Resource.Include(r => r.Parent).Include(r => r.ResourceType);
@@ -237,6 +238,17 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return NotFound();
             }
 
+            var typedDelete = TryRedirectByResourceType(nameof(Delete), resource.ResourceTypeId, id);
+            if (typedDelete != null)
+            {
+                return typedDelete;
+            }
+
+            if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, resource))
+            {
+                return Forbid();
+            }
+
             return View(resource);
         }
 
@@ -246,6 +258,10 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
             var resource = await _context.Resource.FindAsync(id);
+            if (resource == null)
+            {
+                return NotFound();
+            }
 
             if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, resource))
             {
@@ -280,6 +296,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     return RedirectToAction(ActionName, "Volumes", RouteValues);
                 case nameof(Identity.Models.Group):
                     return RedirectToAction(ActionName, "Groups", RouteValues);
+                case nameof(Identity.Models.SegmentationService):
+                    return RedirectToAction(ActionName, "SegmentationServices", RouteValues);
                 case nameof(Identity.Models.Resource):
                     if (IsResourceAction != null)
                         return IsResourceAction(); 

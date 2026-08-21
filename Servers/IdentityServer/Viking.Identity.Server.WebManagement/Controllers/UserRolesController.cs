@@ -17,7 +17,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 {
 
     [Route("[controller]/[action]")]
-    [Authorize]
+    [Authorize(Roles = Special.Roles.Admin)]
     public class UserRolesController : Controller
     {
         private readonly ApplicationDbContext _context;

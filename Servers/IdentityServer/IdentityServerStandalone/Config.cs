@@ -39,7 +39,7 @@ namespace Viking.Identity
                 new ApiResource("Viking.Annotation.API", "Viking Annotation API")
                 {
                     UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name},
-                    ApiSecrets = { new Secret(options.Secret.Sha256())},
+                    ApiSecrets = { new Secret(options.GetClientSecret("api").Sha256())},
                     Scopes = options.ApiScopes.Select(s => s.Name).ToList()
                 },
             };
@@ -129,7 +129,7 @@ namespace Viking.Identity
 
                     ClientSecrets =
                     {
-                        new Secret(options.Secret.Sha256())
+                        new Secret(options.GetClientSecret("Viking").Sha256())
                     },
                     AllowedScopes = AnnotationScopes,
                 }, 
@@ -141,7 +141,7 @@ namespace Viking.Identity
                      
                     ClientSecrets =
                     {
-                        new Secret("ro.viking.secret".Sha256())
+                        new Secret(options.GetClientSecret("ro.viking").Sha256())
                     },
                     AllowedScopes = AnnotationScopes,                    
                     AccessTokenType = AccessTokenType.Reference
@@ -153,11 +153,9 @@ namespace Viking.Identity
                     ClientName = "API Resource",
                     ClientSecrets =
                     {
-                        new Secret(options.Secret.Sha256())
+                        new Secret(options.GetClientSecret("api").Sha256())
                     },
-                    AllowedGrantTypes = GrantTypes.ClientCredentials,
-                    AllowedScopes = allowedScopes,
-                    AccessTokenType = AccessTokenType.Reference
+                    AllowedGrantTypes = new[] { GrantType.ClientCredentials, Viking.Identity.Server.VikingUserTokenGrantValidator.VikingUserTokenGrantType },
                 },
                 // OpenID Connect hybrid flow and client credentials client (MVC)
                 new Client
@@ -171,7 +169,7 @@ namespace Viking.Identity
 
                     ClientSecrets =
                     {
-                        new Secret(options.Secret.Sha256())
+                        new Secret(options.GetClientSecret("mvc").Sha256())
                     },
 
                     RedirectUris = { $"{options.Authority}signin-oidc" },
@@ -191,7 +189,7 @@ namespace Viking.Identity
 
                     ClientSecrets =
                     {
-                        new Secret(options.Secret.Sha256())
+                        new Secret(options.GetClientSecret("web").Sha256())
                     },
 
                     RedirectUris = { $"{options.Authority}signin-oidc" },

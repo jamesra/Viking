@@ -39,9 +39,29 @@ namespace TestIdentityModel
             return new string(chars);
         }
 
+        /// <summary>
+        /// Builds a Database={0} SQL template. Prefer SQL_SERVER_* env vars (or user secrets mapped
+        /// to DataContext:ConnectionStrings:IdentityConnection) so passwords stay out of git.
+        /// SQL_SERVER_PASSWORD selects SQL auth; otherwise the json Integrated Security template is used.
+        /// </summary>
+        private static string BuildSqlConnectionTemplate(IConfiguration configuration)
+        {
+            var fromConfig = configuration.GetRequiredSection("DataContext").GetConnectionString("IdentityConnection");
+            var password = Environment.GetEnvironmentVariable("SQL_SERVER_PASSWORD");
+            if (string.IsNullOrEmpty(password))
+            {
+                return fromConfig;
+            }
+
+            var host = Environment.GetEnvironmentVariable("SQL_SERVER_HOST") ?? "localhost";
+            var port = Environment.GetEnvironmentVariable("SQL_SERVER_PORT") ?? "1433";
+            var user = Environment.GetEnvironmentVariable("SQL_SERVER_USER") ?? "sa";
+            return $"Server={host},{port};Database={{0}};Trusted_Connection=False;User ID={user};Password={password};MultipleActiveResultSets=true;TrustServerCertificate=True";
+        }
+
         public CreateDropDatabaseFixture(IConfiguration configuration, IPasswordHasher<ApplicationUser> passwordHasher, ILogger<CreateDropDatabaseFixture> log = null)
         {
-            var connStringTemplate = configuration.GetRequiredSection("DataContext").GetConnectionString("IdentityConnection");
+            var connStringTemplate = BuildSqlConnectionTemplate(configuration);
 
             DatabaseName = "IdentityTest" + RandomLetters(8);
             var connString = string.Format(connStringTemplate, DatabaseName);

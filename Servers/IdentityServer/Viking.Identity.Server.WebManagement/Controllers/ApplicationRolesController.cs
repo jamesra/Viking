@@ -9,7 +9,7 @@ using Viking.Identity.Models;
 namespace Viking.Identity.Server.WebManagement.Controllers
 {
     [Route("[controller]/[action]")]
-    [Authorize]
+    [Authorize(Roles = Special.Roles.Admin)]
     public class ApplicationRolesController : Controller
     {
         private readonly ApplicationDbContext _context;

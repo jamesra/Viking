@@ -117,7 +117,7 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
                 ["grant_type"] = "viking_user_token",
                 ["user_id"] = launchCode.UserId,
                 ["client_id"] = "api",
-                ["client_secret"] = _identityOptions.Secret ?? "",
+                ["client_secret"] = _identityOptions.GetClientSecret("api"),
                 ["scope"] = scopes
             };
 

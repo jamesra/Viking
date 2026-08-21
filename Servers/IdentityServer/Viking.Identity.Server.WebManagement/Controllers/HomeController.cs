@@ -1,25 +1,34 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
+using Viking.Identity.Server.Authorization;
 using Viking.Identity.Server.WebManagement.Models;
 
 namespace Viking.Identity.Server.WebManagement.Controllers
 {
     public class HomeController : Controller
     {
+        private const int DashboardPreviewCount = 10;
+
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IAuthorizationService _authorization;
 
-        public HomeController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public HomeController(
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager,
+            IAuthorizationService authorization)
         {
             _context = context;
             _userManager = userManager;
+            _authorization = authorization;
         }
 
         public async Task<IActionResult> Index()
@@ -33,61 +42,28 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
             if (model.IsAuthenticated)
             {
-                // Get total counts
-                model.TotalUsers = await _context.Users.CountAsync();
-                model.TotalOrganizations = await _context.OrgUnit.CountAsync();
-                model.TotalVolumes = await _context.Volume.CountAsync();
-                model.TotalSegmentationServices = await _context.SegmentationServices.CountAsync();
-                model.TotalGroups = await _context.Group.CountAsync();
-
-                // Get user's organizations and volumes - simplified for now
-                // This will be enhanced when we have the full permission system in place
-                if (!string.IsNullOrEmpty(model.Username))
+                var userId = _userManager.GetUserId(User);
+                if (!string.IsNullOrEmpty(userId))
                 {
-                    var user = await _userManager.FindByNameAsync(model.Username);
-                    if (user != null)
-                    {
-                        // Get volumes user has direct access to
-                        var userVolumeIds = await _context.GrantedUserPermissions
-                            .Where(gup => gup.UserId == user.Id)
-                            .Select(gup => gup.ResourceId)
-                            .Distinct()
-                            .ToListAsync();
+                    var volumes = await GetAccessibleVolumesAsync();
+                    var segmentationServices = await GetAccessibleSegmentationServicesAsync();
+                    var organizations = await GetAccessibleOrganizationsAsync(userId, volumes, segmentationServices);
+                    var groups = await GetCallerGroupsAsync(userId);
 
-                        if (userVolumeIds.Any())
-                        {
-                            model.UserVolumes = await _context.Volume
-                                .Where(v => userVolumeIds.Contains(v.Id))
-                                .Include(v => v.Parent)
-                                .Take(10)
-                                .ToListAsync();
-                        }
-
-                        var userSegmentationIds = await _context.GrantedUserPermissions
-                            .Where(gup => gup.UserId == user.Id)
-                            .Select(gup => gup.ResourceId)
-                            .Distinct()
-                            .ToListAsync();
-
-                        if (userSegmentationIds.Any())
-                        {
-                            model.UserSegmentationServices = await _context.SegmentationServices
-                                .Where(s => userSegmentationIds.Contains(s.Id))
-                                .Include(s => s.Parent)
-                                .Take(10)
-                                .ToListAsync();
-                        }
-                    }
+                    model.TotalVolumes = volumes.Count;
+                    model.TotalSegmentationServices = segmentationServices.Count;
+                    model.TotalOrganizations = organizations.Count;
+                    model.TotalGroups = groups.Count;
+                    model.UserVolumes = volumes.Take(DashboardPreviewCount).ToList();
+                    model.UserSegmentationServices = segmentationServices.Take(DashboardPreviewCount).ToList();
+                    model.UserOrganizations = organizations.Take(DashboardPreviewCount).ToList();
+                    model.UserGroups = groups.Take(DashboardPreviewCount).ToList();
                 }
-            }
-            else
-            {
-                // For non-authenticated users, show public stats only if admin, otherwise 0
-                model.TotalUsers = 0;
-                model.TotalOrganizations = 0;
-                model.TotalVolumes = 0;
-                model.TotalSegmentationServices = 0;
-                model.TotalGroups = 0;
+
+                if (model.IsAdmin)
+                {
+                    model.TotalUsers = await _context.Users.CountAsync();
+                }
             }
 
             ViewData["Title"] = "Dashboard";
@@ -111,6 +87,66 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+
+        /// <summary>
+        /// Volumes the caller may access via grants, group membership, site admin, or parent-org administration.
+        /// </summary>
+        private async Task<List<Volume>> GetAccessibleVolumesAsync()
+        {
+            var volumes = await _context.Volume.Include(v => v.Parent).ToListAsync();
+            var accessible = await _authorization.FilterAccessibleResourcesAsync(
+                _context, User, volumes, nameof(Volume));
+            return accessible.OrderBy(v => v.Name).ToList();
+        }
+
+        /// <summary>
+        /// Segmentation services the caller may access via grants, group membership, site admin, or parent-org administration.
+        /// </summary>
+        private async Task<List<SegmentationService>> GetAccessibleSegmentationServicesAsync()
+        {
+            var services = await _context.SegmentationServices.Include(s => s.Parent).ToListAsync();
+            var accessible = await _authorization.FilterAccessibleResourcesAsync(
+                _context, User, services, nameof(SegmentationService));
+            return accessible.OrderBy(s => s.Name).ToList();
+        }
+
+        /// <summary>
+        /// Organizations the caller administers, plus parents of volumes/services they can already access.
+        /// </summary>
+        private async Task<List<OrganizationalUnit>> GetAccessibleOrganizationsAsync(
+            string userId,
+            IReadOnlyCollection<Volume> accessibleVolumes,
+            IReadOnlyCollection<SegmentationService> accessibleServices)
+        {
+            var grantedIds = (await _context.UserResourcePermissionsByType(userId, new[] { nameof(OrganizationalUnit) })).Keys.ToHashSet();
+            foreach (var parentId in accessibleVolumes.Select(v => v.ParentID)
+                .Concat(accessibleServices.Select(s => s.ParentID))
+                .Where(id => id.HasValue)
+                .Select(id => id.Value))
+            {
+                grantedIds.Add(parentId);
+            }
+
+            var orgs = await _context.OrgUnit.Include(o => o.Parent).ToListAsync();
+            return orgs
+                .Where(o => grantedIds.Contains(o.Id))
+                .OrderBy(o => o.Name)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Groups the caller belongs to, excluding the virtual Anonymous group.
+        /// </summary>
+        private async Task<List<Group>> GetCallerGroupsAsync(string userId)
+        {
+            var groups = await _context.RecursiveMemberOfGroups(userId);
+            return groups
+                .Where(g => g.Id != Special.Groups.Anonymous.Id)
+                .GroupBy(g => g.Id)
+                .Select(g => g.First())
+                .OrderBy(g => g.Name)
+                .ToList();
         }
     }
 }

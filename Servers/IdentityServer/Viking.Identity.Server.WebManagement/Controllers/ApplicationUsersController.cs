@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -101,7 +102,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        //public async Task<IActionResult> Create([Bind("Id,UserName,NormalizedUserName,Email,NormalizedEmail,EmailConfirmed,PasswordHash,SecurityStamp,ConcurrencyStamp,PhoneNumber,PhoneNumberConfirmed,TwoFactorEnabled,LockoutEnd,LockoutEnabled,AccessFailedCount")] ApplicationUser applicationUser)
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> Create([Bind("Id,UserName,NormalizedUserName,Email,NormalizedEmail,EmailConfirmed,PhoneNumber,PhoneNumberConfirmed,TwoFactorEnabled,LockoutEnd,LockoutEnabled,AccessFailedCount")] ApplicationUser applicationUser)
         {
             if (ModelState.IsValid)
@@ -122,6 +123,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return NotFound();
             }
 
+            if (!IsUserAnAdminOrSelf(id))
+            {
+                return Forbid();
+            }
+
             var applicationUser = await _context.ApplicationUser.Include("GroupAssignments.Group").SingleOrDefaultAsync(m => m.Id == id);
             if (applicationUser == null)
             {
@@ -132,18 +138,23 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             return View(applicationUser);
         }
 
-        private bool IsUserAnAdminOrSelf(string UserId)
+        /// <summary>
+        /// True when the caller is an Administrator or the account identified by <paramref name="userId"/>.
+        /// Compares ASP.NET Identity user id from the cookie, not email or username.
+        /// </summary>
+        private bool IsUserAnAdminOrSelf(string userId)
         {
-            if (!this.User.IsInRole(Special.Roles.Admin))
+            if (string.IsNullOrEmpty(userId))
             {
-                var originalUsername = _context.ApplicationUser.Where(u => u.Id == UserId).Select(u => u.Email).FirstOrDefault();
-                if (!(this.User.Identity.Name == originalUsername))
-                {
-                    return false;
-                }
+                return false;
             }
 
-            return true;
+            if (User.IsInRole(Special.Roles.Admin))
+            {
+                return true;
+            }
+
+            return string.Equals(_userManager.GetUserId(User), userId, StringComparison.Ordinal);
         }
 
         // POST: ApplicationUsers/Edit/5
@@ -217,6 +228,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             return View(applicationUser);
         }
 
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> EditOrganizations(string id)
         {
             if (id == null)
@@ -400,6 +412,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         }
 
         // GET: ApplicationUsers/Delete/5
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> Delete(string id)
         {
             if (id == null)

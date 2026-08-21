@@ -168,7 +168,7 @@ public class Program
                 .AddOAuth2Introspection(options =>
                 {
                     options.Authority = vikingConfig?.Authority;
-                    options.ClientSecret = vikingConfig?.Secret;
+                    options.ClientSecret = vikingConfig?.GetClientSecret("api");
                     options.ClientId = "api";
                     options.ClientCredentialStyle = IdentityModel.Client.ClientCredentialStyle.AuthorizationHeader;
                     options.EnableCaching = true;

@@ -19,6 +19,17 @@ TestResults
 # Secrets files
 secrets.json
 
+# Local environment files and developer signing keys (contain secrets / private keys)
+.env
+.env.*
+!.env.Development
+!.env.Production
+!.env.All.Development
+!.env.All.Production
+tempkey.jwk
+**/tempkey.jwk
+**/DataProtectionKeys/*.xml
+
 # Build results
 build
 [Dd]ebug/

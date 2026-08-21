@@ -188,7 +188,8 @@ namespace Viking.Identity.Server.Standalone
             services.ConfigureIdentityServerDataContext(configuration);
 
             var persistedGrantConnectionString = configuration.GetConnectionString("PersistedGrantConnection");
-            Log.Information($"Grant Connection String: {persistedGrantConnectionString}");
+            Log.Information("PersistedGrant connection string configured: {HasConnectionString}",
+                !string.IsNullOrEmpty(persistedGrantConnectionString));
             var migrationsAssembly = typeof(Program).GetTypeInfo().Assembly.GetName().Name;
 
             var serverOptions = configuration.GetSection(nameof(VikingIdentityServerOptions)).Get<VikingIdentityServerOptions>();
@@ -216,7 +217,10 @@ namespace Viking.Identity.Server.Standalone
             services.Configure<VikingIdentityServerOptions>(
                 configuration.GetSection(nameof(VikingIdentityServerOptions)));
               
-            services.AddIdentity<ApplicationUser, ApplicationRole>()
+            services.AddIdentity<ApplicationUser, ApplicationRole>(config =>
+                {
+                    config.SignIn.RequireConfirmedEmail = true;
+                })
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
 
@@ -311,67 +315,107 @@ namespace Viking.Identity.Server.Standalone
             ConfigureSigningCredentials(builder, sslCert);
         }
 
+        /// <summary>
+        /// Developer signing credentials (tempkey.jwk) are allowed only for local Development-style
+        /// hosts. Docker and Production must have a usable SSL signing certificate.
+        /// </summary>
+        private static bool AllowDeveloperSigningCredential()
+        {
+            var hostingEnv = Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") ?? "Local";
+            if (string.Equals(hostingEnv, "Docker", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var aspnetCoreEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+            return string.Equals(aspnetCoreEnv, "Development", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(aspnetCoreEnv, "DevelopmentTest", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(aspnetCoreEnv, "Local", StringComparison.OrdinalIgnoreCase);
+        }
+
         private static void ConfigureSigningCredentials(IIdentityServerBuilder builder, X509Certificate2 sslCert)
         {
-            if (sslCert != null)
+            if (TryAddCertificateSigningCredential(builder, sslCert))
             {
-                // Validate that the certificate has a private key
-                if (!sslCert.HasPrivateKey)
-                {
-                    Log.Warning("Certificate does not have a private key. Cannot use for signing. Subject: {Subject}, Thumbprint: {Thumbprint}. Using developer signing credential instead.",
-                        sslCert.Subject, sslCert.Thumbprint);
-                    builder.AddDeveloperSigningCredential();
-                    return;
-                }
-
-                try
-                {
-                    // Additional validation - try to access the private key to ensure it's usable
-                    using (var rsa = sslCert.GetRSAPrivateKey())
-                    {
-                        if (rsa == null)
-                        {
-                            Log.Warning("Certificate private key is not accessible or not RSA. Subject: {Subject}, Thumbprint: {Thumbprint}. Using developer signing credential instead.",
-                                sslCert.Subject, sslCert.Thumbprint);
-                            builder.AddDeveloperSigningCredential();
-                            return;
-                        }
-                    }
-
-                    builder.AddSigningCredential(sslCert);
-                    Log.Information("Successfully configured IdentityServer with certificate signing credential. Subject: {Subject}, Thumbprint: {Thumbprint}, HasPrivateKey: {HasPrivateKey}",
-                        sslCert.Subject, sslCert.Thumbprint, sslCert.HasPrivateKey);
-                }
-                catch (CryptographicException ex)
-                {
-                    Log.Error(ex, "Failed to configure IdentityServer signing credentials with certificate due to cryptographic error. Using developer signing credential instead.");
-                    builder.AddDeveloperSigningCredential();
-                }
-                catch (ArgumentException ex)
-                {
-                    Log.Error(ex, "Failed to configure IdentityServer signing credentials with certificate due to invalid certificate format. Using developer signing credential instead.");
-                    builder.AddDeveloperSigningCredential();
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "Failed to configure IdentityServer signing credentials with certificate due to unexpected error. Using developer signing credential instead.");
-                    builder.AddDeveloperSigningCredential();
-                }
+                return;
             }
-            else
+
+            if (AllowDeveloperSigningCredential())
             {
-                Log.Warning("No valid certificate found. Using developer signing credential for IdentityServer.");
+                Log.Warning("No usable signing certificate. Using developer signing credential (Development only).");
                 builder.AddDeveloperSigningCredential();
+                return;
+            }
+
+            throw new InvalidOperationException(
+                "IdentityServer signing certificate is missing or unusable. Refusing to start with developer signing credentials outside local Development.");
+        }
+
+        /// <returns>True when the certificate was installed as the signing credential.</returns>
+        private static bool TryAddCertificateSigningCredential(IIdentityServerBuilder builder, X509Certificate2 sslCert)
+        {
+            if (sslCert == null)
+            {
+                Log.Warning("No valid certificate found for IdentityServer signing.");
+                return false;
+            }
+
+            if (!sslCert.HasPrivateKey)
+            {
+                Log.Warning("Certificate does not have a private key. Cannot use for signing. Subject: {Subject}, Thumbprint: {Thumbprint}.",
+                    sslCert.Subject, sslCert.Thumbprint);
+                return false;
+            }
+
+            try
+            {
+                using (var rsa = sslCert.GetRSAPrivateKey())
+                {
+                    if (rsa == null)
+                    {
+                        Log.Warning("Certificate private key is not accessible or not RSA. Subject: {Subject}, Thumbprint: {Thumbprint}.",
+                            sslCert.Subject, sslCert.Thumbprint);
+                        return false;
+                    }
+                }
+
+                builder.AddSigningCredential(sslCert);
+                Log.Information("Successfully configured IdentityServer with certificate signing credential. Subject: {Subject}, Thumbprint: {Thumbprint}, HasPrivateKey: {HasPrivateKey}",
+                    sslCert.Subject, sslCert.Thumbprint, sslCert.HasPrivateKey);
+                return true;
+            }
+            catch (CryptographicException ex)
+            {
+                Log.Error(ex, "Failed to configure IdentityServer signing credentials with certificate due to cryptographic error.");
+                return false;
+            }
+            catch (ArgumentException ex)
+            {
+                Log.Error(ex, "Failed to configure IdentityServer signing credentials with certificate due to invalid certificate format.");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to configure IdentityServer signing credentials with certificate due to unexpected error.");
+                return false;
             }
         }
 
+        /// <summary>
+        /// PersistKeysToFileSystem disables default at-rest encryption. Docker and Production must
+        /// wrap the key ring with the SSL cert. Existing unencrypted key XML remains readable;
+        /// new keys are written encrypted.
+        /// </summary>
         private static void ConfigureDataProtection(IServiceCollection services, X509Certificate2 sslCert)
         {
             // In Docker, use the shared volume path so the same key ring is used across restarts and
             // matches the keys that protect IdentityServer signing keys in the operational store.
             // Otherwise the app would use ./DataProtectionKeys (relative to CWD) and get a different
             // key ring, causing "Error unprotecting the IdentityServer signing key" (key not available).
-            var isDockerEnvironment = Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") == "Docker";
+            var isDockerEnvironment = string.Equals(
+                Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT"),
+                "Docker",
+                StringComparison.OrdinalIgnoreCase);
             var dataProtectionKeysPath = isDockerEnvironment
                 ? "/app/DataProtectionKeys"
                 : @"./DataProtectionKeys/";
@@ -379,37 +423,31 @@ namespace Viking.Identity.Server.Standalone
                 .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
                 .SetApplicationName("VikingIdentityServer");
 
-            if (!isDockerEnvironment)
+            if (sslCert != null)
             {
-                if (sslCert != null)
+                try
                 {
-                    try
-                    {
-                        dataProtectionBuilder.ProtectKeysWithCertificate(sslCert);
-                        Log.Information("Data Protection configured with certificate encryption");
-                    }
-                    catch (CryptographicException ex)
-                    {
-                        Log.Warning(ex, "Failed to configure Data Protection with certificate due to cryptographic error, using file system protection only");
-                    }
-                    catch (ArgumentException ex)
-                    {
-                        Log.Warning(ex, "Failed to configure Data Protection with certificate due to invalid certificate format, using file system protection only");
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Warning(ex, "Failed to configure Data Protection with certificate due to unexpected error, using file system protection only");
-                    }
+                    dataProtectionBuilder.ProtectKeysWithCertificate(sslCert);
+                    Log.Information(
+                        "Data Protection configured with certificate encryption. Subject: {Subject}, Thumbprint: {Thumbprint}",
+                        sslCert.Subject, sslCert.Thumbprint);
+                    return;
                 }
-                else
+                catch (Exception ex) when (AllowDeveloperSigningCredential())
                 {
-                    Log.Warning("No certificate found for Data Protection, using file system protection only");
+                    Log.Warning(ex, "Failed to configure Data Protection with certificate, using file system protection only");
+                    return;
                 }
             }
-            else
+
+            if (AllowDeveloperSigningCredential())
             {
-                Log.Information("Docker environment detected - Data Protection configured with file system protection only");
+                Log.Warning("No certificate found for Data Protection, using file system protection only");
+                return;
             }
+
+            throw new InvalidOperationException(
+                "Data Protection requires the SSL certificate to encrypt keys at rest outside local Development.");
         }
 
         private static void ConfigureEmailServices(IServiceCollection services, IConfiguration configuration)
@@ -428,7 +466,9 @@ namespace Viking.Identity.Server.Standalone
             // this will do the initial DB population and required migrations
             InitializeDatabase(app);
 
-            if (env.IsDevelopment() || Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") == "Docker")
+            var aspnetCoreEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? env.EnvironmentName;
+            if (env.IsDevelopment()
+                || string.Equals(aspnetCoreEnv, "Local", StringComparison.OrdinalIgnoreCase))
             {
                 Log.Information("Using Developer Exception Pages...");
                 app.UseDeveloperExceptionPage();

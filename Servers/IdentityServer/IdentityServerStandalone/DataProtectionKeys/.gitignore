@@ -1,0 +1,2 @@
+# Key-ring XML (plain or cert-wrapped). Never commit.
+*.xml
