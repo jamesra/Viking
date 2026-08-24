@@ -23,6 +23,28 @@
       "stopAtEntry": false
     },
     {
+      "name": "MonogameTestbed (BAJAJTEST screenshots)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-monogame-testbed",
+      "program": "${workspaceFolder}/Clients/MonogameTestbed/bin/x64/Debug/net9.0-windows/MonogameTestbed.dll",
+      "args": [
+        "--mode",
+        "BajajTest",
+        "--screenshots",
+        "--repro",
+        "5",
+        "-o",
+        "C:\\Temp\\BajajTestScreenshots",
+        "-q",
+        "-v",
+        "-l"
+      ],
+      "cwd": "${workspaceFolder}/Clients/MonogameTestbed/bin/x64/Debug/net9.0-windows",
+      "console": "integratedTerminal",
+      "stopAtEntry": false
+    },
+    {
       "name": "MonogameTestbed (RC1 MullerCells)",
       "type": "coreclr",
       "request": "launch",

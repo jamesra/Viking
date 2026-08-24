@@ -86,7 +86,7 @@ namespace MonogameTestbed
         /// <summary>
         /// Test to run at startup
         /// </summary>
-        private TestMode Mode = TestMode.BAJAJMULTITEST;
+        private TestMode Mode = TestMode.BAJAJTEST;
 
         private readonly object _initLock = new();
         private readonly HashSet<TestMode> _initStartedModes = [];
@@ -127,6 +127,9 @@ namespace MonogameTestbed
             VikingXNAGraphics.Global.Content = this.Content;
             graphics.PreparingDeviceSettings += graphics_PreparingDeviceSettings;
             Content.RootDirectory = "Content";
+
+            if (Program.options?.StartupTestMode is TestMode startup)
+                Mode = startup;
         }
 
         private static void LoadMonoGameNativeLibraries()
@@ -526,9 +529,10 @@ namespace MonogameTestbed
         /// <summary>
         /// Draws an on-screen HUD for the active test (if it implements <see cref="ITestLegend"/>) showing a
         /// static description, the live enabled sub-views, and a color legend. Rendered in pixel coordinates so
-        /// it is independent of the camera zoom.
+        /// it is independent of the camera zoom. Description and active-view text sit at the top of the
+        /// render target; the Legend block sits on the bottom edge.
         /// </summary>
-        private void DrawLegendHUD()
+        internal void DrawLegendHUD()
         {
             if (listTests[Mode] is not ITestLegend legend)
                 return;
@@ -536,9 +540,8 @@ namespace MonogameTestbed
             if (spriteBatch is null || fontArial is null || _whitePixel is null)
                 return;
 
-            // The Arial SpriteFont is rendered at a large point size, so scale it down for the HUD (matches
-            // the hudScale used by BajajMultiTest).
-            const float HudScale = 0.15f;
+            // Arial.spritefont is 56pt. 0.125 ≈ 7pt on screen (was 0.15 ≈ 8.4pt).
+            const float HudScale = 0.125f;
             const float Margin = 8f;
             const float LineSpacing = 2f;
             const float SwatchTextGap = 6f;
@@ -550,70 +553,87 @@ namespace MonogameTestbed
             float lineHeight = scaledLineHeight + LineSpacing;
             float swatchSize = scaledLineHeight * 0.9f;
 
+            List<string> Wrap(string text)
+            {
+                List<string> lines = [];
+                foreach (string rawLine in text.Replace("\r\n", "\n").Split('\n'))
+                {
+                    if (rawLine.Length == 0)
+                        continue;
+                    lines.AddRange(WrapText(rawLine, WrapWidth, HudScale));
+                }
+                return lines;
+            }
+
+            List<string> descriptionLines = string.IsNullOrWhiteSpace(legend.ModeDescription)
+                ? []
+                : Wrap(legend.ModeDescription);
+
+            List<string> activeViewLines = [];
+            if (!string.IsNullOrWhiteSpace(legend.ActiveViewDescription))
+            {
+                activeViewLines.Add("Active views:");
+                foreach (string rawLine in legend.ActiveViewDescription.Replace("\r\n", "\n").Split('\n'))
+                {
+                    if (rawLine.Length == 0)
+                        continue;
+                    foreach (string wrapped in WrapText(rawLine, WrapWidth, HudScale))
+                        activeViewLines.Add("  " + wrapped);
+                }
+            }
+
+            IReadOnlyList<LegendEntry> entries = legend.LegendEntries ?? [];
+            int legendLineCount = entries.Count > 0 ? 1 + entries.Count : 0;
+
+            static float SectionHeight(int lineCount, float scaled, float spacing) =>
+                lineCount <= 0 ? 0 : lineCount * scaled + (lineCount - 1) * spacing;
+
+            float x = Margin;
+
             void DrawText(string text, float px, float py) =>
                 spriteBatch.DrawString(fontArial, text, new Vector2(px, py), textColor, 0f, Vector2.Zero, HudScale, SpriteEffects.None, 0f);
 
-            float x = Margin;
-            float y = Margin;
+            void DrawTextSection(IReadOnlyList<string> lines, ref float y)
+            {
+                for (int i = 0; i < lines.Count; i++)
+                {
+                    DrawText(lines[i], x, y);
+                    y += i == lines.Count - 1 ? scaledLineHeight : lineHeight;
+                }
+            }
 
             spriteBatch.Begin();
             try
             {
-                // Static description of the test mode.
-                string description = legend.ModeDescription;
-                if (!string.IsNullOrWhiteSpace(description))
-                {
-                    foreach (string rawLine in description.Replace("\r\n", "\n").Split('\n'))
-                    {
-                        if (rawLine.Length == 0)
-                            continue;
+                float y = Margin;
+                if (descriptionLines.Count > 0)
+                    DrawTextSection(descriptionLines, ref y);
 
-                        foreach (string wrapped in WrapText(rawLine, WrapWidth, HudScale))
-                        {
-                            DrawText(wrapped, x, y);
-                            y += lineHeight;
-                        }
-                    }
-                    y += SectionGap;
+                if (activeViewLines.Count > 0)
+                {
+                    if (descriptionLines.Count > 0)
+                        y += SectionGap;
+                    DrawTextSection(activeViewLines, ref y);
                 }
 
-                // Live description of the currently enabled sub-views.
-                string activeViews = legend.ActiveViewDescription;
-                if (!string.IsNullOrWhiteSpace(activeViews))
+                if (legendLineCount > 0)
                 {
-                    DrawText("Active views:", x, y);
-                    y += lineHeight;
+                    float legendHeight = SectionHeight(legendLineCount, scaledLineHeight, LineSpacing);
+                    y = GraphicsDevice.Viewport.Height - legendHeight;
 
-                    foreach (string rawLine in activeViews.Replace("\r\n", "\n").Split('\n'))
-                    {
-                        if (rawLine.Length == 0)
-                            continue;
-
-                        foreach (string wrapped in WrapText(rawLine, WrapWidth, HudScale))
-                        {
-                            DrawText("  " + wrapped, x, y);
-                            y += lineHeight;
-                        }
-                    }
-                    y += SectionGap;
-                }
-
-                // Color legend.
-                IReadOnlyList<LegendEntry> entries = legend.LegendEntries;
-                if (entries is { Count: > 0 })
-                {
                     DrawText("Legend:", x, y);
                     y += lineHeight;
 
-                    foreach (LegendEntry entry in entries)
+                    for (int i = 0; i < entries.Count; i++)
                     {
+                        LegendEntry entry = entries[i];
                         float swatchY = y + ((scaledLineHeight - swatchSize) / 2.0f);
                         Microsoft.Xna.Framework.Rectangle swatchRect = new((int)(x + 2), (int)swatchY, (int)swatchSize, (int)swatchSize);
                         spriteBatch.Draw(_whitePixel, swatchRect, entry.Color);
 
                         string entryText = entry.Style.HasValue ? $"{entry.Text} ({entry.Style.Value} line)" : entry.Text;
                         DrawText(entryText, x + 2 + swatchSize + SwatchTextGap, y);
-                        y += lineHeight;
+                        y += i == entries.Count - 1 ? scaledLineHeight : lineHeight;
                     }
                 }
             }

@@ -1,6 +1,6 @@
 ---
 name: contours-to-mesh
-description: Guides contour-to-3D-mesh work using the Bajaj algorithm and Viking MorphologyMesh implementation. Use when editing MonogameTestbed mesh tests, MorphologyMesh generators, slice graphs, region closing, slice chords, medial-axis untiled regions, or debugging BajajMultiTest mesh failures.
+description: Guides contour-to-3D-mesh work using the Bajaj algorithm and Viking MorphologyMesh implementation. Use when editing MonogameTestbed mesh tests, MorphologyMesh generators, slice graphs, region closing, slice chords, medial-axis untiled regions, or debugging BajajTest / BajajMultiTest mesh failures.
 ---
 
 # Contours to 3D Mesh
@@ -82,7 +82,7 @@ Per-slice `GenerateFaces` order (see `BajajMeshGenerator.GenerateFaces`):
 
 ## Debugging workflow
 
-1. Reproduce in **MonogameTestbed** `BajajMultiTest` or `MeshTest`; check Trace for `Exception building mesh U: … D: …`.
+1. For a **single slice pair**, dump BAJAJTEST screenshots with the CLI (see [bajajtest-cli](../bajajtest-cli/SKILL.md)). For a whole cell, use `BajajMultiTest` or `MeshTest` and check Trace for `Exception building mesh U: … D: …`.
 2. Identify stage: correspondence warnings in slice-graph build vs pass-2 untiled triangulation vs slice-chord failure.
 3. For one failing region, breakpoint `TryClosingUntiledRegion` or `SecondPassRegionDetection`; dump perimeter + medial-axis points before `Triangulate`.
 4. Fix upstream (correspondence) before downstream (Delaunay) when both fail.
@@ -91,6 +91,7 @@ Per-slice `GenerateFaces` order (see `BajajMeshGenerator.GenerateFaces`):
 ## Testing targets
 
 - `GeometryTests` — Delaunay, polygon intersection, transforms
+- `Clients/MonogameTestbed/BajajTest.cs` — single-slice ReproSet visual debugger (`--mode BajajTest --screenshots`)
 - `Clients/MonogameTestbed/BajajMultiTest.cs` — whole-cell multi-slice runs
 - `Clients/MonogameTestbed/MeshTest.cs` — parameterized repro cases
 - `AnnotationVizLibTests/MorphologyGraphTest.cs` — graph loading

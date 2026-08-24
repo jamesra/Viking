@@ -123,6 +123,26 @@ namespace MonogameTestbed
             [Option('h', "help", Required = false, HelpText = "Show help", Separator = ' ', Default = false)]
             public bool ShowHelp { get; set; }
 
+            [Option("mode", Required = false, HelpText = "Startup test mode, e.g. BajajTest or BajajMultiTest")]
+            public string ModeParam { get; set; }
+
+            internal TestMode? StartupTestMode { get; private set; }
+
+            [Option("screenshots", Required = false, HelpText = "Dump BAJAJTEST view PNGs under the output folder", Default = false)]
+            public bool Screenshots { get; set; }
+
+            [Option("repro", Required = false, HelpText = "BAJAJTEST ReproSet index, range, comma list, or 'all'")]
+            public string ReproParam { get; set; }
+
+            public bool ReproAll { get; private set; }
+
+            public List<int> ReproIndices { get; private set; }
+
+            [Option("capture-request", Required = false, HelpText = "JSON file listing extra or replacement screenshot shots")]
+            public string CaptureRequestPath { get; set; }
+
+            public CaptureRequestFile CaptureRequest { get; private set; }
+
 
             private static readonly Regex IntegerRegex = MyRegex();
             private static readonly Regex IntegerRangeRegex = new(@"^(\d+)\-(\d+)$");
@@ -232,6 +252,69 @@ namespace MonogameTestbed
             {
                 this.LocationIDs = InputParameterListToIDs(LocationIDParams ?? []);
                 this.StructureIDs = InputParameterListToIDs(StructureIDParams ?? []);
+                ParseStartupMode();
+                ParseReproParam();
+                LoadCaptureRequest();
+            }
+
+            private void ParseStartupMode()
+            {
+                if (string.IsNullOrWhiteSpace(ModeParam))
+                    return;
+
+                if (Enum.TryParse(ModeParam, ignoreCase: true, out TestMode parsed))
+                {
+                    StartupTestMode = parsed;
+                    return;
+                }
+
+                throw new ArgumentException($"Unknown test mode '{ModeParam}'. Use a TestMode name such as BajajTest or BajajMultiTest.");
+            }
+
+            private void ParseReproParam()
+            {
+                if (string.IsNullOrWhiteSpace(ReproParam))
+                    return;
+
+                if (ReproParam.Equals("all", StringComparison.OrdinalIgnoreCase))
+                {
+                    ReproAll = true;
+                    return;
+                }
+
+                ReproIndices = [];
+                foreach (string chunk in ReproParam.Split([',', ';']).Select(s => s.Trim()).Where(s => s.Length > 0))
+                {
+                    if (int.TryParse(chunk, out int index))
+                    {
+                        ReproIndices.Add(index);
+                        continue;
+                    }
+
+                    Match range = IntegerRangeRegex.Match(chunk);
+                    if (!range.Success)
+                        throw new ArgumentException($"'{chunk}' is not a ReproSet index, range, or 'all'");
+
+                    int start = int.Parse(range.Groups[1].Value);
+                    int end = int.Parse(range.Groups[2].Value);
+                    if (start > end)
+                        (start, end) = (end, start);
+                    for (int i = start; i <= end; i++)
+                        ReproIndices.Add(i);
+                }
+            }
+
+            private void LoadCaptureRequest()
+            {
+                if (string.IsNullOrWhiteSpace(CaptureRequestPath))
+                    return;
+
+                if (!File.Exists(CaptureRequestPath))
+                    throw new FileNotFoundException($"Capture request file was not found: {CaptureRequestPath}");
+
+                string json = File.ReadAllText(CaptureRequestPath);
+                CaptureRequest = System.Text.Json.JsonSerializer.Deserialize<CaptureRequestFile>(json, CaptureRequestFile.JsonOptions)
+                    ?? throw new ArgumentException($"Failed to parse capture request JSON: {CaptureRequestPath}");
             }
 
             [GeneratedRegex(@"^(\d+)$")]

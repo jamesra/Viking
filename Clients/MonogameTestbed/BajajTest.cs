@@ -10,9 +10,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing.Drawing2D;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
@@ -114,6 +116,14 @@ namespace MonogameTestbed
         public bool ShowPolyPositionLabels => PolyViews?.LabelPosition ?? false;
 
         readonly System.Threading.Tasks.Task BajajMeshGenerationTask = null;
+
+        public bool ShowOtvChords { get; set; }
+
+        public bool IsMeshGenerationFinished => BajajMeshGenerationTask is null || BajajMeshGenerationTask.IsCompleted;
+
+        public bool IsMeshFaulted => BajajMeshGenerationTask?.IsFaulted == true;
+
+        public Exception MeshFault => BajajMeshGenerationTask?.Exception?.GetBaseException();
 
         public BajajOTVAssignmentView(AnnotationVizLib.MorphologyGraph graph)
         {
@@ -270,121 +280,92 @@ namespace MonogameTestbed
 
             string temp = FirstPassTriangulation.Vertices.Select(v => v.Position.XY()).Distinct().ToJSON();
             Trace.WriteLine(temp);
-            //BajajMeshGenerator.AddDelaunayEdges(FirstPassTriangulation, OnTriangulationProgress); /*Use this line to see triangulation construction */
             BajajMeshGenerator.AddDelaunayEdges(FirstPassTriangulation, OnProgress: null);
 
-            //MeshViews.Add(CreateMeshView(FirstPassTriangulation, "FirstPassDelaunay"));
-
-            lock (ViewsLock)
-            {
-                listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "FirstPassDelaunay"));
-            }
+            AddLineView(FirstPassTriangulation, "FirstPassDelaunay");
 
             var RegionPairingGraph = BajajMeshGenerator.GenerateRegionGraph(FirstPassTriangulation);
 
             FirstPassTriangulation.RemoveInvalidEdges();
 
-            lock (ViewsLock)
-            {
-                listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "Remove Invalid Edges"));
-                MeshViews.Add(CreateMeshView(FirstPassTriangulation, "Remove Invalid Edges"));
-            }
+            AddLineView(FirstPassTriangulation, "Remove Invalid Edges");
+            AddMeshView(FirstPassTriangulation, "Remove Invalid Edges");
 
             BajajMeshGenerator.CompleteCorrespondingVertexFaces(FirstPassTriangulation);
-            lock (ViewsLock)
-            {
-                listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "CompleteCorrespondingVertexFaces"));
-
-                MeshViews.Add(CreateMeshView(FirstPassTriangulation, "CompleteCorrespondingVertexFaces"));
-                RegionViews.Add(CreateRegionPolygonViews(FirstPassTriangulation));
-            }
-
-            //RegionViews = new PolygonSetView(RegionPairingGraph.Nodes.Select(n => n.Value.Polygon));
-            //RegionViews.LabelPolygonIndex = true;
+            AddLineView(FirstPassTriangulation, "CompleteCorrespondingVertexFaces");
+            AddMeshView(FirstPassTriangulation, "CompleteCorrespondingVertexFaces");
+            AddRegionView(CreateRegionPolygonViews(FirstPassTriangulation));
 
             SliceChordRTree rTree = FirstPassTriangulation.CreateChordTree(ShapeZ);
             List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree, OnTriangulateRegionProgress);
 
-            lock (ViewsLock)
-            {
-                MeshViews.Add(CreateMeshView(FirstPassTriangulation, "MergeAndCloseRegionsPass"));
-                listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "MergeAndCloseRegionsPass"));
-            }
+            AddMeshView(FirstPassTriangulation, "MergeAndCloseRegionsPass");
+            AddLineView(FirstPassTriangulation, "MergeAndCloseRegionsPass");
 
             var IncompleteVerticies = BajajMeshGenerator.IdentifyIncompleteVerticies(FirstPassTriangulation);
 
+            PointSetView incompleteView = CreateCompletedVertexView(IncompleteVerticies, Color.DarkRed);
+            incompleteView.LabelIndex = false;
+            incompleteView.LabelPosition = false;
+            PointSetView meshVerts = PointSetView.CreateFor(FirstPassTriangulation);
             lock (ViewsLock)
             {
-                IncompletedVertexView = CreateCompletedVertexView(IncompleteVerticies, Color.DarkRed);
-                IncompletedVertexView.LabelIndex = false;
-                IncompletedVertexView.LabelPosition = false;
-
-                this.MeshVertsView = PointSetView.CreateFor(FirstPassTriangulation);
-
+                IncompletedVertexView = incompleteView;
+                this.MeshVertsView = meshVerts;
                 CreateChordViews(FirstPassTriangulation, listOTVTables);
             }
 
-            //CloseRegions(FirstPassTriangulation);
             List<MorphMeshVertex> FirstPassIncompleteVerticies = BajajMeshGenerator.FirstPassSliceChordGeneration(FirstPassTriangulation, ShapeZ);
 
-            lock (ViewsLock)
-            {
-                MeshViews.Add(CreateMeshView(FirstPassTriangulation, "FirstPassSliceChordGeneration"));
-                listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "FirstPassSliceChordGeneration"));
-            }
-
-            // IMesh SecondPassMesh = FirstPassTriangulation.Triangulate();
-            //IdentifyIncompleteVerticies(FirstPassTriangulation);
+            AddMeshView(FirstPassTriangulation, "FirstPassSliceChordGeneration");
+            AddLineView(FirstPassTriangulation, "FirstPassSliceChordGeneration");
 
             BajajMeshGenerator.FirstPassFaceGeneration(FirstPassTriangulation, FirstPassIncompleteVerticies);
 
             FirstPassIncompleteVerticies = BajajMeshGenerator.IdentifyIncompleteVerticies(FirstPassTriangulation);
 
-            lock (ViewsLock)
-            {
-                MeshViews.Add(CreateMeshView(FirstPassTriangulation, "FirstPassFaceGeneration"));
-            }
+            AddMeshView(FirstPassTriangulation, "FirstPassFaceGeneration");
 
             MorphMeshRegionGraph SecondPassRegions = MorphRenderMesh.SecondPassRegionDetection(FirstPassTriangulation, FirstPassIncompleteVerticies, OnSecondPassRegionProgress);
-            lock (ViewsLock)
-            {
-                RegionViews.Add(CreateRegionPolygonViews(FirstPassTriangulation, SecondPassRegions.Nodes.Keys));
-            }
+            AddRegionView(CreateRegionPolygonViews(FirstPassTriangulation, SecondPassRegions.Nodes.Keys));
 
             SecondPassRegions.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree, OnTriangulateRegionProgress);
 
-            lock (ViewsLock)
-            {
-                MeshViews.Add(CreateMeshView(FirstPassTriangulation, "Second MergeAndCloseRegionsPass"));
-                listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "Second MergeAndCloseRegionsPass"));
-            }
+            AddMeshView(FirstPassTriangulation, "Second MergeAndCloseRegionsPass");
+            AddLineView(FirstPassTriangulation, "Second MergeAndCloseRegionsPass");
 
             FirstPassTriangulation.CapMeshEnd(true, OnTriangulateRegionProgress);
-            lock (ViewsLock)
-            {
-                MeshViews.Add(CreateMeshView(FirstPassTriangulation, "Cap upper polygons"));
-                listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "Cap upper polygons"));
-            }
-
+            AddMeshView(FirstPassTriangulation, "Cap upper polygons");
+            AddLineView(FirstPassTriangulation, "Cap upper polygons");
 
             FirstPassTriangulation.CapMeshEnd(false, OnTriangulateRegionProgress);
-            lock (ViewsLock)
-            {
-                MeshViews.Add(CreateMeshView(FirstPassTriangulation, "Cap lower polygons"));
-                listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "Cap lower polygons"));
-            }
+            AddMeshView(FirstPassTriangulation, "Cap lower polygons");
+            AddLineView(FirstPassTriangulation, "Cap lower polygons");
 
             FirstPassTriangulation.EnsureFacesHaveExternalNormals();
             FirstPassTriangulation.RecalculateNormals();
 
+            AddLineView(FirstPassTriangulation, "Second MergeAndCloseRegionsPass");
+        }
+
+        private void AddLineView(BajajGeneratorMesh mesh, string name)
+        {
+            LineSetView view = PolyBranchAssignmentView.UpdateMeshLines(mesh, name);
             lock (ViewsLock)
-            {
-                listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "Second MergeAndCloseRegionsPass"));
-            }
+                listLineViews.Add(view);
+        }
 
-            //MeshViews.Add(CreateMeshView(FirstPassTriangulation, "Second MergeAndCloseRegionsPass"));
+        private void AddMeshView(BajajGeneratorMesh mesh, string name)
+        {
+            MeshView<VertexPositionColor> view = CreateMeshView(mesh, name);
+            lock (ViewsLock)
+                MeshViews.Add(view);
+        }
 
-
+        private void AddRegionView(RegionView view)
+        {
+            lock (ViewsLock)
+                RegionViews.Add(view);
         }
 
         private void CheckViewIndexBoundaries()
@@ -869,9 +850,9 @@ namespace MonogameTestbed
                 ViewLabels.AppendLine("Y: Region Polygon Views");
             }
 
-            if (OTVTableView != null)
+            if (OTVTableView != null && ShowOtvChords && OTVTableView.Count > 0)
             {
-                //LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, OTVTableView.ToArray());
+                LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, [.. OTVTableView]);
                 DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1);
                 ViewLabels.AppendLine("OTV Table");
             }
@@ -925,6 +906,83 @@ namespace MonogameTestbed
             // The enabled sub-views are surfaced to the legend HUD (see MonoTestbed.DrawLegendHUD) instead of
             // being rendered inline here.
             LastViewLabels = ViewLabels.ToString();
+        }
+
+        internal List<BajajCaptureShot> EnumerateDefaultShots()
+        {
+            lock (ViewsLock)
+                return EnumerateDefaultShotsUnlocked();
+        }
+
+        internal List<BajajCaptureShot> EnumerateDefaultShotsUnlocked()
+        {
+            List<BajajCaptureShot> shots =
+            [
+                BajajCaptureShot.Overview2D(),
+                BajajCaptureShot.OtvChords()
+            ];
+
+            for (int i = 0; i < MeshViews.Count; i++)
+            {
+                string name = string.IsNullOrWhiteSpace(MeshViews[i].Name) ? $"mesh-{i}" : MeshViews[i].Name;
+                shots.Add(BajajCaptureShot.Mesh(i, name, view3d: false));
+                shots.Add(BajajCaptureShot.Mesh(i, name, view3d: true));
+            }
+
+            for (int i = 0; i < listLineViews.Count; i++)
+            {
+                string name = string.IsNullOrWhiteSpace(listLineViews[i].Name) ? $"lines-{i}" : listLineViews[i].Name;
+                shots.Add(BajajCaptureShot.Lines(i, name));
+            }
+
+            for (int i = 0; i < RegionViews.Count; i++)
+                shots.Add(BajajCaptureShot.Region(i));
+
+            return shots;
+        }
+
+        internal List<BajajCaptureShot> EnumerateInteractiveShotsUnlocked()
+        {
+            List<BajajCaptureShot> shots = [BajajCaptureShot.Overview2D()];
+
+            if (OTVTableView is { Count: > 0 })
+                shots.Add(BajajCaptureShot.OtvChords());
+
+            for (int i = 0; i < listLineViews.Count; i++)
+            {
+                string name = string.IsNullOrWhiteSpace(listLineViews[i].Name) ? $"lines-{i}" : listLineViews[i].Name;
+                shots.Add(BajajCaptureShot.Lines(i, name));
+            }
+
+            for (int i = 0; i < MeshViews.Count; i++)
+            {
+                string name = string.IsNullOrWhiteSpace(MeshViews[i].Name) ? $"mesh-{i}" : MeshViews[i].Name;
+                shots.Add(BajajCaptureShot.Mesh(i, name, view3d: false));
+            }
+
+            for (int i = 0; i < RegionViews.Count; i++)
+                shots.Add(BajajCaptureShot.Region(i));
+
+            return shots;
+        }
+
+        internal void ApplyShot(BajajCaptureShot shot)
+        {
+            ArgumentNullException.ThrowIfNull(shot);
+
+            lock (ViewsLock)
+                ApplyShotUnlocked(shot);
+        }
+
+        internal void ApplyShotUnlocked(BajajCaptureShot shot)
+        {
+            iShownMesh = shot.MeshIndex;
+            iShownLineView = shot.LineIndex;
+            iShownRegion = shot.RegionIndex;
+            ShowOtvChords = shot.ShowOtvChords;
+            // Overview/OTV clear mesh labels so contour PolyViews draw. Other shots restore MESH
+            // labels, which hides that overlay so line/mesh/region geometry is visible.
+            VertexLabelType = shot.ClearVertexLabels ? IndexLabelType.NONE : IndexLabelType.MESH;
         }
     }
 
@@ -1293,6 +1351,11 @@ namespace MonogameTestbed
         Scene scene;
         Scene3D scene3D;
         readonly GamePadStateTracker Gamepad = new();
+        readonly KeyboardStateTracker _keyboard = new();
+        MouseState _lastMouse;
+        bool _mouseSeen;
+        int? _displayShotIndex;
+        int _pendingShotDelta;
         readonly Polygon A;
         readonly Polygon B;
         readonly PointSetViewCollection Points_A = new(Color.Blue, Color.BlueViolet, Color.PowderBlue);
@@ -1307,6 +1370,24 @@ namespace MonogameTestbed
         public bool Initialized => _initialized;
 
         readonly AnnotationVizLib.MorphologyGraph Graph;
+
+        enum ScreenshotPhase
+        {
+            Inactive,
+            WaitMesh,
+            Capture,
+            NextRepro,
+            Done
+        }
+
+        MonoTestbed _host;
+        ScreenshotPhase _screenshotPhase = ScreenshotPhase.Inactive;
+        List<int> _reproQueue;
+        int _reproQueueIndex;
+        string _screenshotRoot;
+        CaptureManifest _manifest;
+        CaptureManifestCase _currentManifestCase;
+        string _currentCaseFolder;
 
 
         public Task Init(MonoTestbed window)
@@ -1323,75 +1404,46 @@ namespace MonogameTestbed
 
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
 
+            _host = window;
+            _reproQueue = ResolveReproQueue();
+            _reproQueueIndex = 0;
 
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(GlialDebug1, true, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { 180 }, true, DataSource.EndpointMap[ENDPOINT.RC1]);
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { 40429 }, true, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            //graph = graph.Subgraphs.Values.First();
-
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(BasicBranchInteriorHole, true, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(BasicBranchTroubleIDS, true, DataSource.EndpointMap[ENDPOINT.RPC1]);
-
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(BasicInteriorHoleOverAdjacentExteriorRing, true, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(HorseshoeInteriorHoleOverAdjacentExteriorRing, true, DataSource.EndpointMap[ENDPOINT.RPC1]);
-
-            ///////////Old direct loading code///////////////////////////
-            /*
-            /////////////
-            ///This is the major test of mesh generation that covers as many cases as I could think of
-            //this.Graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(NightmareTroubleIDS, true, DataSource.EndpointMap[ENDPOINT.TEST]);
-            Graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(DelaunayTest20, true, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            //////////////
-
-            //BajajMeshGenerator.ConvertToMeshGraph(graph);
-
-            AnnotationVizLib.MorphologyNode[] nodes = Graph.Nodes.Values.ToArray();
-            //wrapView = new MonogameTestbed.BajajOTVAssignmentView(nodes.Select(n => n.Geometry.ToPolygon()).ToArray(), nodes.Select(n=> n.Z).ToArray());
-            wrapView = new MonogameTestbed.BajajOTVAssignmentView(Graph);
-
-            */
-            ////////////////////////////////////////////////////////////////
-            ///
-            CurrentTestCase = ReproSet[CurrentReproCase];
-
-            CurrentTestCase.Initialize(tolerance: 1.0);
-            var Graph = CurrentTestCase.Morphology;
-            Slice slice = CurrentTestCase.GetSlice();
-
-            wrapView = new MonogameTestbed.BajajOTVAssignmentView(CurrentTestCase.Graph, slice);
-
-            if (window.Scene.RestoreCamera(TestMode.BAJAJTEST) == false)
+            if (Program.options?.Screenshots == true)
             {
-                Geometry.Rectangle bRect = wrapView.Shapes.BoundingBox();
-                window.Scene.Camera.LookAt = bRect.Center.ToXNAVector2();
-                window.Scene.Camera.Downsample = bRect.Width / window.GraphicsDevice.Viewport.Width;
+                _screenshotRoot = ScreenshotCapture.BajajOutputRoot();
+                Directory.CreateDirectory(_screenshotRoot);
+                _manifest = new CaptureManifest();
+                _screenshotPhase = ScreenshotPhase.WaitMesh;
             }
 
-            Box bbox = new(wrapView.Shapes.BoundingBox(), Graph.Nodes.Values.Min(n => n.Z), Graph.Nodes.Values.Max(n => n.Z));
-            scene3D.Camera.Position = (bbox.CenterPoint.XY().ToVector3(0) + new Geometry.Vector3(0, 0, 10f * (float)bbox.Depth)).ToXNAVector3();
-            scene3D.Camera.LookAt = new Microsoft.Xna.Framework.Vector3((float)bbox.CenterPoint.X, (float)bbox.CenterPoint.Y, 0); // bbox.CenterPoint.ToXNAVector3();
+            try
+            {
+                LoadReproAtQueueIndex(window, restoreCamera: Program.options?.Screenshots != true);
+            }
+            catch (Exception ex)
+            {
+                if (_screenshotPhase == ScreenshotPhase.Inactive)
+                    throw;
 
-            /*
-            A = SqlGeometry.STPolyFromText(PolyA.ToSqlChars(), 0).ToPolygon();
-            B = SqlGeometry.STPolyFromText(PolyB.ToSqlChars(), 0).ToPolygon();
-
-            Geometry.Vector2 Centroid = A.Centroid;
-            A = A.Translate(-Centroid);
-            B = B.Translate(-Centroid);
-
-            Points_A.Points = new MonogameTestbed.PointSet(A.ExteriorRing);
-            Points_B.Points = new MonogameTestbed.PointSet(B.ExteriorRing);
-
-            wrapView = new TriangulationShapeWrapView(A, B);
-            */
+                RecordCaseError(ex.ToString());
+                _screenshotPhase = ScreenshotPhase.NextRepro;
+            }
 
             return Task.CompletedTask;
         }
 
         public void Update()
         {
+            UpdateScreenshotCapture();
+            if (_screenshotPhase is ScreenshotPhase.Capture or ScreenshotPhase.Done or ScreenshotPhase.NextRepro)
+                return;
+            if (wrapView is null)
+                return;
+
             GamePadState state = GamePad.GetState(PlayerIndex.One);
             Gamepad.Update(state);
+            _keyboard.Update(Microsoft.Xna.Framework.Input.Keyboard.GetState());
+            UpdateDisplayShotInput();
 
             if (!Draw3D)
                 CameraManipulator.Update(scene.Camera);
@@ -1451,6 +1503,8 @@ namespace MonogameTestbed
                 Slice slice = CurrentTestCase.GetSlice();
 
                 wrapView = new MonogameTestbed.BajajOTVAssignmentView(CurrentTestCase.Graph, slice);
+                _displayShotIndex = null;
+                _pendingShotDelta = 0;
             }
 
             if (Gamepad.RightShoulder_Clicked)
@@ -1521,16 +1575,328 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window)
         {
-            if (!Draw3D)
+            if (_screenshotPhase == ScreenshotPhase.Capture)
             {
-                wrapView?.Draw(window, scene);
+                try
+                {
+                    CaptureCurrentCase(window);
+                }
+                catch (Exception ex)
+                {
+                    RecordCaseError(ex.ToString());
+                }
+
+                _screenshotPhase = ScreenshotPhase.NextRepro;
+                return;
             }
-            else
-            {
-                wrapView?.Draw3D(window, scene3D);
-            }
+
+            DrawCurrentView(window);
         }
 
         public void UnloadContent(MonoTestbed window) => this.scene.SaveCamera(TestMode.BAJAJTEST);
+
+        private List<int> ResolveReproQueue()
+        {
+            CaptureRequestFile request = Program.options?.CaptureRequest;
+            IEnumerable<int> raw;
+            if (request?.Repro is { Length: > 0 })
+                raw = request.Repro;
+            else if (Program.options?.ReproAll == true)
+                raw = Enumerable.Range(0, ReproSet.Length);
+            else if (Program.options?.ReproIndices is { Count: > 0 } indices)
+                raw = indices;
+            else
+                raw = [CurrentReproCase];
+
+            List<int> queue = [];
+            foreach (int i in raw.Distinct())
+            {
+                if (i < 0 || i >= ReproSet.Length)
+                {
+                    string msg = $"Skipping out-of-range ReproSet index {i} (valid 0..{ReproSet.Length - 1})";
+                    Console.WriteLine(msg);
+                    Trace.WriteLine(msg);
+                    continue;
+                }
+
+                queue.Add(i);
+            }
+
+            if (queue.Count == 0)
+                queue.Add(Math.Clamp(CurrentReproCase, 0, ReproSet.Length - 1));
+
+            return queue;
+        }
+
+        private void LoadReproAtQueueIndex(MonoTestbed window, bool restoreCamera)
+        {
+            int index = _reproQueue[_reproQueueIndex];
+            CurrentTestCase = ReproSet[index];
+            _currentCaseFolder = $"case-{index:D2}-{ScreenshotCapture.SanitizeFilePart(CurrentTestCase.Description)}";
+            _currentManifestCase = new CaptureManifestCase
+            {
+                Index = index,
+                Description = CurrentTestCase.Description,
+                LocationIds = CurrentTestCase.SliceLocations,
+                Endpoint = CurrentTestCase.Endpoint?.ToString(),
+                Folder = _currentCaseFolder
+            };
+
+            CurrentTestCase.Initialize(tolerance: 1.0);
+            Slice slice = CurrentTestCase.GetSlice();
+            wrapView = new BajajOTVAssignmentView(CurrentTestCase.Graph, slice);
+            FitCameras(window, restoreCamera);
+            _displayShotIndex = null;
+            _pendingShotDelta = 0;
+        }
+
+        private void FitCameras(MonoTestbed window, bool restoreSaved)
+        {
+            if (wrapView?.Shapes is null || wrapView.Shapes.Length == 0)
+                return;
+
+            Geometry.Rectangle bRect = wrapView.Shapes.BoundingBox();
+            if (!restoreSaved || window.Scene.RestoreCamera(TestMode.BAJAJTEST) == false)
+            {
+                scene.Camera.LookAt = bRect.Center.ToXNAVector2();
+                scene.Camera.Downsample = bRect.Width / Math.Max(1, window.GraphicsDevice.Viewport.Width);
+            }
+
+            AnnotationVizLib.MorphologyGraph morphology = CurrentTestCase.Morphology;
+            if (morphology?.Nodes is not { Count: > 0 })
+                return;
+
+            Box bbox = new(bRect, morphology.Nodes.Values.Min(n => n.Z), morphology.Nodes.Values.Max(n => n.Z));
+            double depth = Math.Max(bbox.Depth, 1);
+            scene3D.Camera.Position = (bbox.CenterPoint.XY().ToVector3(0) + new Geometry.Vector3(0, 0, 10f * (float)depth)).ToXNAVector3();
+            scene3D.Camera.LookAt = new Microsoft.Xna.Framework.Vector3((float)bbox.CenterPoint.X, (float)bbox.CenterPoint.Y, 0);
+        }
+
+        private void ApplyShotCamera(BajajCaptureShot shot)
+        {
+            if (shot.LookAtX.HasValue && shot.LookAtY.HasValue)
+                scene.Camera.LookAt = new Microsoft.Xna.Framework.Vector2(shot.LookAtX.Value, shot.LookAtY.Value);
+            if (shot.Downsample.HasValue)
+                scene.Camera.Downsample = shot.Downsample.Value;
+        }
+
+        /// <summary>
+        /// Steps the interactive view through <see cref="BajajOTVAssignmentView.EnumerateDefaultShots"/>,
+        /// the same list screenshot capture uses. Ignored while a screenshot dump is running.
+        /// Mouse X2 / PageDown go forward; X1 / PageUp go back. Wrap around. The first press
+        /// starts at overview (forward) or the last shot (back) rather than guessing the stacked A/B/Y overlays.
+        /// </summary>
+        private void UpdateDisplayShotInput()
+        {
+            MouseState mouse = Mouse.GetState();
+            bool x2Clicked = false;
+            bool x1Clicked = false;
+            if (_mouseSeen)
+            {
+                x2Clicked = mouse.XButton2 == ButtonState.Pressed && _lastMouse.XButton2 != ButtonState.Pressed;
+                x1Clicked = mouse.XButton1 == ButtonState.Pressed && _lastMouse.XButton1 != ButtonState.Pressed;
+            }
+
+            _lastMouse = mouse;
+            _mouseSeen = true;
+
+            if (_screenshotPhase != ScreenshotPhase.Inactive)
+                return;
+
+            if (x2Clicked || _keyboard.Pressed(Keys.PageDown))
+                _pendingShotDelta++;
+            else if (x1Clicked || _keyboard.Pressed(Keys.PageUp))
+                _pendingShotDelta--;
+
+            TryApplyPendingShotStep();
+        }
+
+        /// <summary>
+        /// Applies queued forward/back steps without blocking the game thread on mesh-generation locks.
+        /// Interactive order is overview, then line/chord passes (OTV only if chords exist), then 2D mesh, then regions.
+        /// A click during view construction is kept in <see cref="_pendingShotDelta"/> until the lock is free.
+        /// </summary>
+        private void TryApplyPendingShotStep()
+        {
+            if (_pendingShotDelta == 0 || wrapView is null)
+                return;
+
+            if (!Monitor.TryEnter(wrapView.ViewsLock))
+                return;
+
+            try
+            {
+                List<BajajCaptureShot> shots = wrapView.EnumerateInteractiveShotsUnlocked();
+                if (shots.Count == 0)
+                    return;
+
+                int next;
+                if (_displayShotIndex is int current && current >= 0 && current < shots.Count)
+                    next = Mod(_displayShotIndex.Value + _pendingShotDelta, shots.Count);
+                else
+                    next = _pendingShotDelta > 0 ? 0 : shots.Count - 1;
+
+                BajajCaptureShot shot = shots[next];
+                wrapView.ApplyShotUnlocked(shot);
+                Draw3D = shot.Draw3D;
+                _displayShotIndex = next;
+                _pendingShotDelta = 0;
+            }
+            finally
+            {
+                Monitor.Exit(wrapView.ViewsLock);
+            }
+        }
+
+        private static int Mod(int value, int modulus)
+        {
+            int remainder = value % modulus;
+            return remainder < 0 ? remainder + modulus : remainder;
+        }
+
+        private void UpdateScreenshotCapture()
+        {
+            switch (_screenshotPhase)
+            {
+                case ScreenshotPhase.WaitMesh:
+                    if (wrapView is null)
+                    {
+                        _screenshotPhase = ScreenshotPhase.NextRepro;
+                        return;
+                    }
+
+                    if (!wrapView.IsMeshGenerationFinished)
+                        return;
+
+                    // Capture whatever views exist even when generation faulted (overview / partial stages).
+                    _screenshotPhase = ScreenshotPhase.Capture;
+                    break;
+
+                case ScreenshotPhase.NextRepro:
+                    AdvanceToNextRepro();
+                    break;
+
+                case ScreenshotPhase.Done:
+                    break;
+            }
+        }
+
+        private void AdvanceToNextRepro()
+        {
+            while (true)
+            {
+                _reproQueueIndex++;
+                if (_reproQueueIndex >= _reproQueue.Count)
+                {
+                    ScreenshotCapture.WriteManifest(_screenshotRoot, _manifest);
+                    _screenshotPhase = ScreenshotPhase.Done;
+                    if (Program.options?.Quiet == true)
+                        _host?.Exit();
+                    return;
+                }
+
+                try
+                {
+                    LoadReproAtQueueIndex(_host, restoreCamera: false);
+                    _screenshotPhase = ScreenshotPhase.WaitMesh;
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    RecordCaseError(ex.ToString());
+                }
+            }
+        }
+
+        private void CaptureCurrentCase(MonoTestbed window)
+        {
+            if (wrapView is null)
+                throw new InvalidOperationException("Cannot capture screenshots before the Bajaj view is created.");
+            FitCameras(window, restoreSaved: false);
+            List<BajajCaptureShot> defaults = wrapView.EnumerateDefaultShots();
+            List<BajajCaptureShot> shots = ScreenshotCapture.ResolveRequestedShots(defaults, Program.options?.CaptureRequest?.Shots);
+
+            string caseDir = System.IO.Path.Combine(_screenshotRoot, _currentCaseFolder);
+            Directory.CreateDirectory(caseDir);
+
+            for (int i = 0; i < shots.Count; i++)
+            {
+                BajajCaptureShot shot = shots[i];
+                wrapView.ApplyShot(shot);
+                Draw3D = shot.Draw3D;
+                ApplyShotCamera(shot);
+
+                string fileName = $"{i:D2}-{shot.FileSlug}.png";
+                string fullPath = System.IO.Path.Combine(caseDir, fileName);
+                ScreenshotCapture.SavePng(window.GraphicsDevice, fullPath, () =>
+                {
+                    DrawCurrentView(window);
+                    window.DrawLegendHUD();
+                });
+
+                _currentManifestCase.Shots.Add(new CaptureManifestShot
+                {
+                    Stage = shot.Stage,
+                    View = shot.View,
+                    RelativePath = System.IO.Path.Combine(_currentCaseFolder, fileName).Replace('\\', '/'),
+                    LookAtX = scene.Camera.LookAt.X,
+                    LookAtY = scene.Camera.LookAt.Y,
+                    Downsample = scene.Camera.Downsample
+                });
+            }
+
+            if (wrapView.IsMeshFaulted)
+            {
+                string message = wrapView.MeshFault?.ToString() ?? "Mesh generation faulted.";
+                _currentManifestCase.Error = message;
+                File.WriteAllText(System.IO.Path.Combine(caseDir, "error.txt"), message);
+            }
+
+            _manifest.Cases.Add(_currentManifestCase);
+            ScreenshotCapture.WriteManifest(_screenshotRoot, _manifest);
+            DrawCurrentView(window);
+        }
+
+        private void DrawCurrentView(MonoTestbed window)
+        {
+            if (!Draw3D)
+                wrapView?.Draw(window, scene);
+            else
+                wrapView?.Draw3D(window, scene3D);
+        }
+
+        private void RecordCaseError(string message)
+        {
+            Console.WriteLine(message);
+            Trace.WriteLine(message);
+
+            int index = _reproQueue is { Count: > 0 } && _reproQueueIndex < _reproQueue.Count
+                ? _reproQueue[_reproQueueIndex]
+                : CurrentReproCase;
+
+            _currentManifestCase ??= new CaptureManifestCase
+            {
+                Index = index,
+                Description = CurrentTestCase?.Description,
+                LocationIds = CurrentTestCase?.SliceLocations,
+                Endpoint = CurrentTestCase?.Endpoint?.ToString(),
+                Folder = _currentCaseFolder ?? $"case-{index:D2}-error"
+            };
+            _currentManifestCase.Error = message;
+
+            if (_manifest is not null && !_manifest.Cases.Contains(_currentManifestCase))
+                _manifest.Cases.Add(_currentManifestCase);
+
+            if (!string.IsNullOrEmpty(_screenshotRoot))
+            {
+                string folder = _currentManifestCase.Folder ?? _currentCaseFolder ?? $"case-{index:D2}-error";
+                string dir = System.IO.Path.Combine(_screenshotRoot, folder);
+                Directory.CreateDirectory(dir);
+                File.WriteAllText(System.IO.Path.Combine(dir, "error.txt"), message);
+                ScreenshotCapture.WriteManifest(_screenshotRoot, _manifest);
+            }
+
+            _currentManifestCase = null;
+        }
     }
 }
