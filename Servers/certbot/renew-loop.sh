@@ -11,8 +11,50 @@ CERTBOT_STAGING="${CERTBOT_STAGING:-false}"
 CERTBOT_AUTH_METHOD="${CERTBOT_AUTH_METHOD:-dns-cloudflare}"
 CF_DNS_API_CREDENTIALS_FILE="${CF_DNS_API_CREDENTIALS_FILE:-/run/secrets/cloudflare.ini}"
 CF_DNS_PROPAGATION_SECONDS="${CF_DNS_PROPAGATION_SECONDS:-60}"
-CERTBOT_CERT_NAME="${CERTBOT_CERT_NAME:-${LETSENCRYPT_PRIMARY_DOMAIN}}"
+CERTBOT_CERT_NAME="${CERTBOT_CERT_NAME:-}"
 STAGED_CF_CREDENTIALS="/tmp/cloudflare.ini"
+
+# Prefer a real certbot lineage (non-empty renewal/*.conf). Seeding or copying
+# files into live/${domain}/ blocks `certbot certonly --cert-name ${domain}`
+# with "live directory exists", which previously created domain-0001 instead.
+resolve_managed_cert_name() {
+  local domain="$1"
+  local conf
+  local best=""
+
+  if [ -n "${CERTBOT_CERT_NAME}" ]; then
+    echo "${CERTBOT_CERT_NAME}"
+    return
+  fi
+
+  shopt -s nullglob
+  for conf in /etc/letsencrypt/renewal/"${domain}".conf /etc/letsencrypt/renewal/"${domain}"-*.conf; do
+    if [ -s "${conf}" ]; then
+      best="$(basename "${conf}" .conf)"
+    fi
+  done
+  shopt -u nullglob
+
+  if [ -n "${best}" ]; then
+    echo "${best}"
+    return
+  fi
+
+  echo "${domain}"
+}
+
+remove_empty_renewal_confs() {
+  local domain="$1"
+  local conf
+  shopt -s nullglob
+  for conf in /etc/letsencrypt/renewal/"${domain}".conf /etc/letsencrypt/renewal/"${domain}"-*.conf; do
+    if [ -f "${conf}" ] && [ ! -s "${conf}" ]; then
+      echo "[certbot] Removing empty/broken renewal config: ${conf}"
+      rm -f "${conf}"
+    fi
+  done
+  shopt -u nullglob
+}
 
 if [ -n "${LETSENCRYPT_PRIMARY_DOMAIN}" ]; then
   seed_cert="/seed-certs/fullchain.pem"
@@ -34,11 +76,7 @@ if [ -z "${LETSENCRYPT_EMAIL}" ] || [ -z "${LETSENCRYPT_PRIMARY_DOMAIN}" ]; then
   exec /opt/identity-certbot/renew-loop.sh
 fi
 
-broken_renewal="/etc/letsencrypt/renewal/${LETSENCRYPT_PRIMARY_DOMAIN}.conf"
-if [ -f "${broken_renewal}" ] && [ ! -s "${broken_renewal}" ]; then
-  echo "[certbot] Removing empty/broken renewal config: ${broken_renewal}"
-  rm -f "${broken_renewal}"
-fi
+remove_empty_renewal_confs "${LETSENCRYPT_PRIMARY_DOMAIN}"
 
 DOMAIN_ARGS=(-d "${LETSENCRYPT_PRIMARY_DOMAIN}")
 if [ -n "${LETSENCRYPT_ADDITIONAL_DOMAINS}" ]; then
@@ -62,7 +100,9 @@ if [ "${CERTBOT_STAGING}" = "true" ]; then
   COMMON_ARGS+=(--staging)
 fi
 
-CERT_NAME_ARGS=(--cert-name "${CERTBOT_CERT_NAME}")
+MANAGED_CERT_NAME="$(resolve_managed_cert_name "${LETSENCRYPT_PRIMARY_DOMAIN}")"
+CERT_NAME_ARGS=(--cert-name "${MANAGED_CERT_NAME}")
+echo "[certbot] Using managed lineage ${MANAGED_CERT_NAME}."
 
 case "${CERTBOT_AUTH_METHOD}" in
   dns-cloudflare)
@@ -93,8 +133,14 @@ case "${CERTBOT_AUTH_METHOD}" in
 esac
 
 cert_path="/etc/letsencrypt/live/${LETSENCRYPT_PRIMARY_DOMAIN}/fullchain.pem"
+managed_live_path="/etc/letsencrypt/live/${MANAGED_CERT_NAME}/fullchain.pem"
 
-if [ ! -f "${cert_path}" ]; then
+if [ -f "${managed_live_path}" ] || [ -f "${cert_path}" ]; then
+  echo "[certbot] Promoting the newest live lineage onto the canonical Identity Server path."
+  bash /opt/identity-certbot/reload-identity.sh || true
+fi
+
+if [ ! -f "${cert_path}" ] && [ ! -f "${managed_live_path}" ]; then
   echo "[certbot] No certificate found for ${LETSENCRYPT_PRIMARY_DOMAIN}; requesting initial certificate..."
   if ! certbot certonly "${AUTH_ARGS[@]}" "${COMMON_ARGS[@]}" "${CERT_NAME_ARGS[@]}" "${DOMAIN_ARGS[@]}"; then
     echo "[certbot] Initial certificate request failed; retrying in 10 minutes."
@@ -102,9 +148,11 @@ if [ ! -f "${cert_path}" ]; then
     exec /opt/identity-certbot/renew-loop.sh
   fi
   bash /opt/identity-certbot/reload-identity.sh
-elif ! openssl x509 -in "${cert_path}" -checkend 0 >/dev/null 2>&1; then
-  echo "[certbot] Existing certificate for ${LETSENCRYPT_PRIMARY_DOMAIN} is expired; forcing renewal now."
-  if ! certbot certonly "${AUTH_ARGS[@]}" "${COMMON_ARGS[@]}" "${CERT_NAME_ARGS[@]}" "${DOMAIN_ARGS[@]}" --force-renewal; then
+elif [ -f "${cert_path}" ] && ! openssl x509 -in "${cert_path}" -checkend 0 >/dev/null 2>&1; then
+  echo "[certbot] Canonical certificate is still expired; forcing renewal of lineage ${MANAGED_CERT_NAME}."
+  if ! certbot renew --cert-name "${MANAGED_CERT_NAME}" --force-renewal \
+      "${AUTH_ARGS[@]}" "${COMMON_ARGS[@]}" \
+      --deploy-hook "bash /opt/identity-certbot/reload-identity.sh"; then
     echo "[certbot] Forced renewal failed; retrying in 10 minutes."
     sleep 600
     exec /opt/identity-certbot/renew-loop.sh
@@ -118,6 +166,7 @@ echo "[certbot] Starting renewal loop every ${CERTBOT_RENEW_INTERVAL_HOURS} hour
 
 # Always perform a renewal check on container startup.
 if ! certbot renew \
+  --cert-name "${MANAGED_CERT_NAME}" \
   "${AUTH_ARGS[@]}" \
   "${COMMON_ARGS[@]}" \
   --deploy-hook "bash /opt/identity-certbot/reload-identity.sh"; then
@@ -127,6 +176,7 @@ fi
 
 while true; do
   if ! certbot renew \
+    --cert-name "${MANAGED_CERT_NAME}" \
     "${AUTH_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --deploy-hook "bash /opt/identity-certbot/reload-identity.sh"; then
