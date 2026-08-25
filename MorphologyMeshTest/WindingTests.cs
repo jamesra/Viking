@@ -63,6 +63,127 @@ namespace MorphologyMeshTest
             Assert.IsTrue(sharedEdgeCount > 0, "Expected interior edges shared by two faces.");
         }
 
+        /// <summary>
+        /// Two triangles sharing an edge, one reversed. Reorient walks only the 2-manifold corridor and
+        /// makes the pair opposite-wound; vertex normals then point into the same hemisphere.
+        /// </summary>
+        [TestMethod]
+        public void Reorient_TwoTrianglesOneReversed_SharedEdgeOppositeAndNormalsAgree()
+        {
+            Mesh3D<MorphMeshVertex> mesh = NewMesh();
+            AddVert(mesh, 0, 0, 0, 0);
+            AddVert(mesh, 1, 0, 0, 1);
+            AddVert(mesh, 1, 1, 0, 2);
+            AddVert(mesh, 0, 1, 0, 3);
+            mesh.AddFace(0, 1, 2);
+            mesh.AddFace(0, 3, 2);
+
+            Assert.AreEqual(1, MeshWindingDiagnostics.Analyze(mesh).InconsistentManifoldEdges,
+                "Setup: the shared edge should start inconsistent.");
+
+            MeshWindingReorientation.Reorient(mesh, CompositeStyleOptions());
+            AssertAllTwoFaceEdgesOpposite(mesh);
+
+            mesh.RecalculateNormals();
+            Assert.IsTrue(Vector3.Dot(mesh[0].Normal, mesh[2].Normal) > 0.5,
+                "Shared-vertex normals must agree after consistent winding.");
+            Assert.IsTrue(Vector3.Dot(mesh[1].Normal, mesh[3].Normal) > 0.5,
+                "Unshared vertices of the two faces must still sit in the same hemisphere.");
+        }
+
+        /// <summary>
+        /// Face.Equals ignores winding, so RecalculateNormals must not reuse a cached normal after ReverseFace.
+        /// </summary>
+        [TestMethod]
+        public void RecalculateNormals_AfterReverse_UsesNewWindingNotCache()
+        {
+            Mesh3D<MorphMeshVertex> mesh = NewMesh();
+            AddVert(mesh, 0, 0, 0, 0);
+            AddVert(mesh, 1, 0, 0, 1);
+            AddVert(mesh, 0, 1, 0, 2);
+            mesh.AddFace(0, 1, 2);
+
+            mesh.RecalculateNormals();
+            Vector3 before = mesh[0].Normal;
+            Assert.IsTrue(before.Z > 0.5, "CCW triangle in XY should have a +Z normal.");
+
+            IFace original = mesh.Faces.First();
+            mesh.RemoveFace(original);
+            mesh.AddFace(0, 2, 1);
+
+            mesh.RecalculateNormals();
+            Vector3 after = mesh[0].Normal;
+            Assert.IsTrue(Vector3.Dot(before, after) < -0.5,
+                "Vertex normals must follow the reversed winding; a winding-blind cache would keep the old +Z.");
+        }
+
+        /// <summary>
+        /// Three faces on one edge cannot be oriented; they must not join 2-manifold patches.
+        /// After Reorient every Faces.Count==2 edge is consistent; the 3-face edge may remain.
+        /// </summary>
+        [TestMethod]
+        public void Reorient_NonManifoldBarrier_TwoFaceEdgesConsistent()
+        {
+            Mesh3D<MorphMeshVertex> mesh = NewMesh();
+            AddVert(mesh, 0, 0, 0, 0);
+            AddVert(mesh, 1, 0, 0, 1);
+            AddVert(mesh, 1, 1, 0, 2);
+            AddVert(mesh, 0, 1, 0, 3);
+            AddVert(mesh, 0.5, -1, 0, 4);
+            AddVert(mesh, 0.5, 0.5, 1, 5);
+            AddVert(mesh, 2, -1, 0, 6);
+            AddVert(mesh, 2.5, -2, 0, 7);
+
+            mesh.AddFace(0, 1, 2);
+            mesh.AddFace(0, 3, 2);
+            mesh.AddFace(0, 1, 4);
+            mesh.AddFace(0, 1, 5);
+            mesh.AddFace(1, 4, 6);
+            mesh.AddFace(4, 6, 7);
+
+            var before = MeshWindingDiagnostics.Analyze(mesh);
+            Assert.AreEqual(1, before.NonManifoldEdges, "Edge 0-1 should carry three faces.");
+            Assert.IsTrue(before.InconsistentManifoldEdges > 0, "Setup includes reversed 2-face strips.");
+
+            MeshWindingReorientation.Reorient(mesh, CompositeStyleOptions());
+
+            var after = MeshWindingDiagnostics.Analyze(mesh);
+            Assert.AreEqual(1, after.NonManifoldEdges, "Reorient must not try to dissolve the 3-face junction.");
+            AssertAllTwoFaceEdgesOpposite(mesh);
+            Assert.AreEqual(0, MeshWindingDiagnostics.CountInconsistentAwayFromNonManifold(mesh));
+        }
+
+        private static Mesh3D<MorphMeshVertex> NewMesh() => new();
+
+        private static MeshWindingReorientation.Options CompositeStyleOptions() => new()
+        {
+            RespectAnchorFaces = false,
+            AlwaysOrientOutward = false,
+            RunRepairPass = false
+        };
+
+        private static void AddVert(Mesh3D<MorphMeshVertex> mesh, double x, double y, double z, int i) =>
+            mesh.AddVertex(new MorphMeshVertex(new PolygonIndex(0, i, 16), new Vector3(x, y, z)));
+
+        private static void AssertAllTwoFaceEdgesOpposite(Mesh3D<MorphMeshVertex> mesh)
+        {
+            int shared = 0;
+            foreach (KeyValuePair<IEdgeKey, IEdge> kvp in mesh.Edges)
+            {
+                IFace[] faces = [.. kvp.Value.Faces];
+                if (faces.Length != 2)
+                    continue;
+
+                shared++;
+                bool firstForward = TraversesForward(faces[0].iVerts, kvp.Key.A, kvp.Key.B);
+                bool secondForward = TraversesForward(faces[1].iVerts, kvp.Key.A, kvp.Key.B);
+                Assert.AreNotEqual(firstForward, secondForward,
+                    $"Faces sharing edge ({kvp.Key.A},{kvp.Key.B}) traverse it in the same direction.");
+            }
+
+            Assert.IsTrue(shared > 0, "Expected at least one 2-face edge.");
+        }
+
         private static bool TraversesForward(System.Collections.Immutable.ImmutableArray<int> iVerts, int a, int b)
         {
             for (int i = 0; i < iVerts.Length; i++)

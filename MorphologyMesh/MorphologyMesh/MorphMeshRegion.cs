@@ -221,22 +221,12 @@ namespace MorphologyMesh
                 else
                 {
                     Vector2[] Endpoints = ContourEndpoints(Contour, PolyIndexToMeshIndex);
-
-                    LineSegment B = new(lastContourEndpoints[1], Endpoints[0]);
-                    LineSegment A = new(lastContourEndpoints[0], Endpoints[1]);
-
-                    //If the line crosses then we need to reverse the contour before adding it to the output
-                    if (A.Intersects(B))
-                    {
-                        lastContour = new PolygonIndex[Contour.Length];
-                        Array.Copy(Contour, lastContour, Contour.Length);
-                        lastContour.Reverse();
-                    }
-                    else
-                    {
-                        lastContour = Contour;
-                    }
-
+                    lastContour = OrderContourToAvoidCrossing(
+                        Contour,
+                        lastContourEndpoints[0],
+                        lastContourEndpoints[1],
+                        Endpoints[0],
+                        Endpoints[1]);
                     AssembledContour.AddRange(lastContour);
                 }
 
@@ -244,6 +234,30 @@ namespace MorphologyMesh
             }
 
             return [.. AssembledContour];
+        }
+
+        /// <summary>
+        /// Reverses <paramref name="incomingContour"/> when the joiners from the previous fragment would cross,
+        /// which would hourglass the assembled region perimeter. Called by ConnectContours while stitching
+        /// open contour fragments. Enumerable.Reverse is a no-op here because it does not mutate the array.
+        /// </summary>
+        /// <returns>The incoming contour, or a reversed copy when the joiners intersect.</returns>
+        internal static PolygonIndex[] OrderContourToAvoidCrossing(
+            PolygonIndex[] incomingContour,
+            Vector2 previousStart,
+            Vector2 previousEnd,
+            Vector2 incomingStart,
+            Vector2 incomingEnd)
+        {
+            LineSegment joinPreviousStartToIncomingEnd = new(previousStart, incomingEnd);
+            LineSegment joinPreviousEndToIncomingStart = new(previousEnd, incomingStart);
+            if (!joinPreviousStartToIncomingEnd.Intersects(joinPreviousEndToIncomingStart))
+                return incomingContour;
+
+            PolygonIndex[] reversed = new PolygonIndex[incomingContour.Length];
+            Array.Copy(incomingContour, reversed, incomingContour.Length);
+            Array.Reverse(reversed);
+            return reversed;
         }
 
         Vector2[] ContourEndpoints(IReadOnlyList<PolygonIndex> contour, Dictionary<PolygonIndex, int> PolyIndexToMeshIndex)

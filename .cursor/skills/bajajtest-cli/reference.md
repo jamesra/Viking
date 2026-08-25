@@ -58,8 +58,41 @@ PNG slug is `{index:D2}-{sanitizedStage}-2d.png` or `-3d.png`. Because the overv
 | Left shoulder | Toggle 2D / 3D |
 | Start | Rebuild mesh for the current case |
 | Right shoulder / stick | Vertex label mode / position labels |
-| Left stick | Cull mode |
+| Left stick / K | Cull mode (BajajMultiTest starts with culling off so reversed walls stay visible) |
+| Right stick | 2D pan `LookAt` |
+| Triggers | 2D zoom (`Downsample`) |
+| Right stick click | Reset 2D camera |
 | Back | Reset 3D camera |
+
+## Interactive mouse and keyboard (camera)
+
+2D (`Cursor2DCameraManipulator`, used when not in 3D):
+
+| Control | Action |
+|---------|--------|
+| Right-drag | Pan `LookAt` |
+| Wheel | Zoom (`Downsample`; scroll up zooms in) |
+| Middle-click / Home | Reset LookAt and Downsample |
+| WASD | Pan (Shift = faster) |
+| Q / E | Zoom out / in |
+
+3D (`Camera3DManipulator`, BajajTest and BajajMultiTest when `Draw3D`):
+
+| Control | Action |
+|---------|--------|
+| Left-drag | Translate in view XY |
+| Right-drag | Yaw / pitch |
+| Wheel | Dolly in / out |
+| Middle-click | Reset rotation and position |
+| WASD | Translate in view XZ |
+| E / C | Translate in view Y |
+| PageUp / PageDown | Move along world Z |
+| Shift | Faster steps |
+| Ctrl+WASD | Pitch / yaw |
+
+View (2D and 3D): **K** toggles backface culling the same way as left-stick click (`None` shows backfaces).
+
+BajajTest shot cycling: mouse X2 / X1 always; PageUp / PageDown only in 2D so they can move world Z in 3D.
 
 Keyboard F-keys / numpad still switch `TestMode` (numpad 4 = BAJAJTEST).
 

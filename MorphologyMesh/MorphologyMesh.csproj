@@ -4,6 +4,9 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="MorphologyMeshTest" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\AnnotationVizLib\AnnotationVizLib.csproj" />
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\SqlGeometryUtils\SqlGeometryUtils.csproj" />

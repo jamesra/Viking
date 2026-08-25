@@ -91,6 +91,10 @@ namespace MonogameTestbed
         }
     }
 
+    /// <summary>
+    /// Gamepad, mouse, and keyboard orbit/dolly for a <see cref="Camera3D"/>. BajajTest and BajajMultiTest
+    /// call this when drawing 3D; other mesh tests still use gamepad-only <see cref="StandardCameraManipulator"/>.
+    /// </summary>
     internal class Camera3DManipulator
     {
         readonly KeyboardStateTracker keyboard = new();
@@ -101,7 +105,11 @@ namespace MonogameTestbed
         const double OneDegree = (Math.PI * 2.0 / 360);
         public double PitchRawStepSize = OneDegree;
 
-        public void Update(Camera3D Camera)
+        /// <summary>
+        /// Polls all three input devices and applies gamepad, WASD/E/C/PageUp keyboard, and mouse mappings.
+        /// Viewport size scales right-drag so a full-width drag is about one turn (same as Jotunn Camera3DBehavior).
+        /// </summary>
+        public void Update(Camera3D Camera, int viewportWidth, int viewportHeight)
         {
             keyboard.Update(Keyboard.GetState());
             mouse.Update(Mouse.GetState());
@@ -111,7 +119,7 @@ namespace MonogameTestbed
 
             UpdateCameraFromGamepad(Camera);
             UpdateCameraFromKeyboard(Camera);
-            UpdateCameraFromMouse(Camera);
+            UpdateCameraFromMouse(Camera, viewportWidth, viewportHeight);
         }
 
         public void UpdateCameraFromGamepad(Camera3D camera) => StandardCameraManipulator.Update(camera, UnitStepSize);
@@ -173,13 +181,55 @@ namespace MonogameTestbed
                 translation += new Vector3(0, -UnitStepSize * stepScalar, 0) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.C) : 1);
             }
 
+            if (PressedOrDown(Keys.PageUp))
+                Camera.Position += new Vector3(0, 0, UnitStepSize * stepScalar * (CapsLockDown ? ScalarForElapsedDownTime(Keys.PageUp) : 1));
+            if (PressedOrDown(Keys.PageDown))
+                Camera.Position += new Vector3(0, 0, -UnitStepSize * stepScalar * (CapsLockDown ? ScalarForElapsedDownTime(Keys.PageDown) : 1));
 
             Vector3 translated = Camera.View.TranslateRelativeToViewMatrix(translation.X, translation.Y, translation.Z);
             Camera.Position += translated;
         }
 
-        public static void UpdateCameraFromMouse(Camera3D camera)
+        /// <summary>
+        /// Maps mouse onto the same 3D camera roles as the gamepad: left-drag translates in view XY
+        /// (left stick), right-drag yaws/pitches (right stick), wheel dollies (triggers), middle-click
+        /// resets (right-stick click). Right-drag uses viewport size so a full-width drag is about one turn.
+        /// Called from <see cref="Update"/>.
+        /// </summary>
+        public void UpdateCameraFromMouse(Camera3D camera, int viewportWidth, int viewportHeight)
         {
+            const float dragPixelsToStick = 200f;
+            const float wheelTicks = 120f;
+            float width = Math.Max(viewportWidth, 1);
+            float height = Math.Max(viewportHeight, 1);
+
+            if (mouse.Down[MouseButton.Left] || mouse.Clicked[MouseButton.Left])
+            {
+                Vector3 translated = camera.View.TranslateRelativeToViewMatrix(
+                    mouse.PositionDelta.X / dragPixelsToStick * UnitStepSize,
+                    -mouse.PositionDelta.Y / dragPixelsToStick * UnitStepSize,
+                    0);
+                camera.Position += translated;
+            }
+
+            if (mouse.Down[MouseButton.Right] || mouse.Clicked[MouseButton.Right])
+            {
+                camera.Yaw += mouse.PositionDelta.X / width * (Math.PI * 2);
+                camera.Pitch += mouse.PositionDelta.Y / height * (Math.PI * 2);
+            }
+
+            int wheel = mouse.ScrollWheelValueDelta;
+            if (wheel != 0)
+            {
+                Vector3 dolly = camera.View.TranslateRelativeToViewMatrix(0, 0, UnitStepSize * (wheel / wheelTicks));
+                camera.Position += dolly;
+            }
+
+            if (mouse.Clicked[MouseButton.Middle])
+            {
+                camera.Rotation = Vector3.Zero;
+                camera.Position = new Vector3(0, -UnitStepSize, 0);
+            }
         }
 
         public float ScalarForElapsedDownTime(Keys key)

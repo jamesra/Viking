@@ -31,7 +31,7 @@ namespace MonogameTestbed
         //public PointSetViewView[] PolyPointsView = null;
         public PointSetView IncompletedVertexView = null;
 
-        public CullMode CullMode = CullMode.CullCounterClockwiseFace;
+        public CullMode CullMode = CullMode.None;
 
         public ConcurrentQueue<BajajGeneratorMesh> CompletedMeshes = new();
 
@@ -805,7 +805,7 @@ class BajajMultiAssignmentTest : IGraphicsTest
             CameraManipulator.Update(scene.Camera);
         else
         {
-            Camera3DManipulator.Update(this.scene3D.Camera);
+            Camera3DManipulator.Update(this.scene3D.Camera, scene3D.Viewport.Width, scene3D.Viewport.Height);
             //StandardCameraManipulator.Update(this.scene3D.Camera);
         }
 
@@ -882,7 +882,7 @@ class BajajMultiAssignmentTest : IGraphicsTest
                 wrapView.ShowAssemblyBoundingBoxes = !wrapView.ShowAssemblyBoundingBoxes;
             }
 
-            if (Gamepad.LeftStick_Clicked)
+            if (Gamepad.LeftStick_Clicked || keyboard.Pressed(Keys.K))
             {
                 wrapView.CullMode = wrapView.CullMode == CullMode.None ? CullMode.CullCounterClockwiseFace : CullMode.None;
             }
@@ -978,7 +978,7 @@ class BajajMultiAssignmentTest : IGraphicsTest
             hud.AppendLine($"Struct {wrapView.Graph?.StructureID} assembled={assembled} verts={verts} incompleteBoxes={incomplete}");
         }
 
-        hud.AppendLine("RightStick: bbox overlay  LeftStick: cull on/off (off shows backfaces)");
+        hud.AppendLine("RightStick: bbox overlay  LeftStick / K: cull on/off (default off shows the full tube)");
 
         window.GraphicsDevice.BlendState = BlendState.AlphaBlend;
         window.spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);

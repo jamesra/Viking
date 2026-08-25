@@ -25,7 +25,7 @@ cwd: that same folder.
 | Flag | Purpose |
 |------|---------|
 | `--mode BajajTest` | Start in BAJAJTEST (enum parse is case-insensitive) |
-| `--screenshots` | After mesh gen, dump PNGs + `manifest.json` |
+| `--screenshots` | Fullscreen at native monitor resolution, then dump PNGs + `manifest.json` |
 | `--repro N` | `ReproSet` index; also `0-3`, `1,5,7`, or `all` |
 | `--capture-request path.json` | Replace the default shot list and/or override `--repro` |
 | `-o dir` | Output root; screenshots go to `{dir}/BajajTest/` |

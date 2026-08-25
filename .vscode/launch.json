@@ -9,6 +9,8 @@
       "preLaunchTask": "build-monogame-testbed",
       "program": "${workspaceFolder}/Clients/MonogameTestbed/bin/x64/Debug/net9.0-windows/MonogameTestbed.dll",
       "args": [
+        "--mode",
+        "BajajMultiTest",
         "-s",
         "1",
         "-e",
@@ -51,6 +53,8 @@
       "preLaunchTask": "build-monogame-testbed",
       "program": "${workspaceFolder}/Clients/MonogameTestbed/bin/x64/Debug/net9.0-windows/MonogameTestbed.dll",
       "args": [
+        "--mode",
+        "BajajMultiTest",
         "-s",
         "1724",
         "-e",

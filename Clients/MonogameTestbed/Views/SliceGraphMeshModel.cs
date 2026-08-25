@@ -213,6 +213,8 @@ namespace MonogameTestbed
         /// <summary>
         /// Reorient the merged composite so adjacent faces agree across slice boundaries, then refresh GPU normals.
         /// Per-slice meshes are oriented locally; merging can leave thousands of inconsistent shared edges.
+        /// Greedy manifold repair is skipped when any edge still has three or more faces: on those composites
+        /// the repair oscillates and punches culling holes in the tube.
         /// </summary>
         public void EnsureCompositeWinding()
         {
@@ -227,7 +229,15 @@ namespace MonogameTestbed
 
             var outwardCtx = MorphMeshOutwardOrientation.ShapeContext.FromAccumulated(_shapesAtZ, _isUpperByMorphShape);
             int outwardFlips = MorphMeshOutwardOrientation.OrientComponentsOutward(composite, outwardCtx);
-            int repairAfterOutward = MeshWindingReorientation.RepairManifoldConsistency(composite);
+
+            //Greedy repair walks every inconsistent pair and flips one face.  On a composite with
+            //non-manifold junctions that pass does not converge: RC1 structure 1724 spent 98k reversals
+            //and finished with *more* inconsistent edges than Reorient left.  Those reversed walls are
+            //what backface culling turns into gaps in the tube.  Repair while the surface is manifold.
+            int repairAfterOutward = 0;
+            var afterOutward = MeshWindingDiagnostics.Analyze(composite);
+            if (afterOutward.NonManifoldEdges == 0)
+                repairAfterOutward = MeshWindingReorientation.RepairManifoldConsistency(composite);
 
             composite.RecalculateNormals();
 
@@ -254,8 +264,10 @@ namespace MonogameTestbed
             }
 
             CompositeManifoldReport = MeshManifoldValidator.Validate(composite);
+            int awayFromNonManifold = MeshWindingDiagnostics.CountInconsistentAwayFromNonManifold(composite);
             System.Diagnostics.Trace.WriteLine(
                 $"Composite winding: {result.BeforeInconsistent} -> {result.AfterInconsistent} inconsistent edges, " +
+                $"awayFromNonManifold={awayFromNonManifold} (after Reorient {result.AfterInconsistentAwayFromNonManifold}), " +
                 $"{result.TotalReversals} reversals, {outwardFlips} components flipped outward, {repairAfterOutward} repaired.  " +
                 $"Composite {CompositeManifoldReport}");
         }

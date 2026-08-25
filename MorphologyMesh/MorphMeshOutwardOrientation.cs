@@ -131,8 +131,10 @@ namespace MorphologyMesh
         }
 
         /// <summary>
-        /// After manifold-consistent winding, flip connected components that mostly point inward relative to contours.
-        /// Uses majority vote per component instead of a single cap face (critical for large merged composites).
+        /// After manifold-consistent winding, flip 2-manifold patches that mostly point inward relative to contours.
+        /// Uses majority vote per patch instead of a single cap face (critical for large merged composites).
+        /// Patches are the same 2-manifold components <see cref="MeshWindingReorientation"/> orients; walking
+        /// through 3-face junctions would mix independently orientable sides and invert the wrong walls.
         /// </summary>
         public static int OrientComponentsOutward(Mesh3D<MorphMeshVertex> mesh, ShapeContext ctx)
         {
@@ -144,7 +146,7 @@ namespace MorphologyMesh
                 if (visited.Contains(start))
                     continue;
 
-                List<IFace> component = CollectComponent(mesh, start, visited);
+                List<IFace> component = CollectTwoManifoldPatch(mesh, start, visited);
                 int needFlip = 0;
                 int sampled = 0;
                 foreach (IFace f in component)
@@ -171,7 +173,7 @@ namespace MorphologyMesh
             return componentsFlipped;
         }
 
-        private static List<IFace> CollectComponent(Mesh3D<MorphMeshVertex> mesh, IFace start, HashSet<IFace> visited)
+        private static List<IFace> CollectTwoManifoldPatch(Mesh3D<MorphMeshVertex> mesh, IFace start, HashSet<IFace> visited)
         {
             List<IFace> component = [];
             Queue<IFace> queue = new();
@@ -182,15 +184,12 @@ namespace MorphologyMesh
             {
                 IFace f = queue.Dequeue();
                 component.Add(f);
-                foreach (IEdgeKey ek in f.Edges)
+                foreach ((IFace nf, _) in MeshWindingReorientation.TwoManifoldNeighbors(mesh, f))
                 {
-                    foreach (IFace nf in mesh.Edges[ek].Faces)
-                    {
-                        if (visited.Contains(nf))
-                            continue;
-                        visited.Add(nf);
-                        queue.Enqueue(nf);
-                    }
+                    if (visited.Contains(nf))
+                        continue;
+                    visited.Add(nf);
+                    queue.Enqueue(nf);
                 }
             }
 
@@ -199,8 +198,11 @@ namespace MorphologyMesh
 
         private static IFace ReverseFace(Mesh3D<MorphMeshVertex> mesh, IFace f)
         {
+            if (mesh is MorphRenderMesh morph)
+                return morph.ReverseFace(f);
+
             mesh.RemoveFace(f);
-            IFace newFace = Face.Create(f.iVerts.Reverse());
+            IFace newFace = mesh.CreateFace?.Invoke(f.iVerts.Reverse()) ?? Face.Create(f.iVerts.Reverse());
             mesh.AddFace(newFace);
             return newFace;
         }

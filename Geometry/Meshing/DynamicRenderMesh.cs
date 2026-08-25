@@ -275,27 +275,16 @@ namespace Geometry.Meshing
         readonly Dictionary<IFace, Vector3> face_normals_cache = [];
 
         /// <summary>
-        /// Recalculate normals based on the faces touching each vertex
+        /// Recalculate normals based on the faces touching each vertex.
+        /// The cache is keyed by <see cref="IFace"/> equality, which ignores winding, so it is cleared first:
+        /// otherwise a reversed face keeps the pre-flip normal and lighting stays checkerboard.
         /// </summary>
         public void RecalculateNormals()
         {
-            //Calculate normals for all faces
-
-            if (face_normals_cache.Count == 0)
+            face_normals_cache.Clear();
+            foreach (IFace f in this.Faces)
             {
-                foreach (IFace f in this.Faces)
-                {
-                    Vector3 normal = Normal(f);
-                    face_normals_cache.Add(f, normal);
-                }
-            }
-            else
-            {
-                foreach (IFace f in this.Faces.Where(face => face_normals_cache.ContainsKey(face) == false))
-                {
-                    Vector3 normal = Normal(f);
-                    face_normals_cache.Add(f, normal);
-                }
+                face_normals_cache.Add(f, Normal(f));
             }
 
             /*
@@ -331,10 +320,12 @@ namespace Geometry.Meshing
         }
 
         /// <summary>
-        /// Recalculate normals based on the faces touching each vertex
+        /// Recalculate normals for vertices. Clears the face-normal cache first because
+        /// <see cref="Face.Equals(IFace)"/> ignores winding.
         /// </summary>
         public void RecalculateNormals(IEnumerable<int> verticies)
         {
+            face_normals_cache.Clear();
             //Calculate normals for all faces
             //Dictionary<IFace, Vector3> normals = new Dictionary<Meshing.IFace, Geometry.Vector3>(this.Faces.Count);
             /*

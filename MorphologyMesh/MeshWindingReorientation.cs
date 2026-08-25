@@ -8,7 +8,10 @@ namespace MorphologyMesh
 {
     /// <summary>
     /// Edge-propagation face reorientation for <see cref="Mesh3D{MorphMeshVertex}"/> meshes.
-    /// Used on the assembled composite where per-slice winding fixes disagree at shared slice boundaries.
+    /// Walks only 2-manifold edges (exactly two faces). Three-face junctions cannot be oriented and
+    /// must not join patches; that is what left inconsistent 2-face edges and checkerboard lighting
+    /// on the composite. Called from per-slice <see cref="BajajGeneratorMesh.EnsureFacesHaveExternalNormals"/>
+    /// and from composite <c>SliceGraphMeshModel.EnsureCompositeWinding</c>.
     /// </summary>
     public static class MeshWindingReorientation
     {
@@ -17,7 +20,7 @@ namespace MorphologyMesh
             /// <summary>When true, medial-axis cap faces are never reversed during propagation.</summary>
             public bool RespectAnchorFaces { get; init; }
 
-            /// <summary>When true, flip each component via signed volume after propagation (even if an anchor seed was used).</summary>
+            /// <summary>When true, flip each closed component via signed volume after propagation (even if an anchor seed was used).</summary>
             public bool AlwaysOrientOutward { get; init; }
 
             /// <summary>When false, skip the greedy repair pass (run outward orientation first, then repair separately).</summary>
@@ -46,11 +49,14 @@ namespace MorphologyMesh
                 if (visited.Contains(start))
                     continue;
 
-                List<IFace> componentFaces = CollectConnectedComponent(mesh, start, visited, options, out IFace anchorSeed);
-                IFace seed = anchorSeed ?? componentFaces[0];
-                List<IFace> component = PropagateWindingFromSeed(mesh, seed, options, ref totalReversals);
+                List<IFace> componentFaces = CollectTwoManifoldPatch(mesh, start, visited, options, out List<IFace> anchors);
+                List<IFace> seeds = options.RespectAnchorFaces && anchors.Count > 0
+                    ? anchors
+                    : [componentFaces[0]];
+                List<IFace> component = PropagateWindingFromSeeds(mesh, seeds, options, ref totalReversals);
 
                 //Signed volume is only meaningful for closed shells; open morphology components have boundary edges.
+                IFace anchorSeed = anchors.Count > 0 ? anchors[0] : null;
                 if ((options.AlwaysOrientOutward || anchorSeed is null) && ComponentHasBoundaryEdge(mesh, component) == false)
                 {
                     if (OrientComponentOutward(mesh, component))
@@ -74,6 +80,27 @@ namespace MorphologyMesh
             };
         }
 
+        /// <summary>
+        /// Faces sharing an edge that has exactly two faces, i.e. a corridor that can be wound opposite.
+        /// Edges with any other face count are patch boundaries. Used by Reorient and
+        /// <see cref="MorphMeshOutwardOrientation"/>.
+        /// </summary>
+        public static IEnumerable<(IFace Neighbor, IEdgeKey SharedEdge)> TwoManifoldNeighbors(Mesh3D<MorphMeshVertex> mesh, IFace f)
+        {
+            foreach (IEdgeKey ek in f.Edges)
+            {
+                IEdge edge = mesh.Edges[ek];
+                if (edge.Faces.Count != 2)
+                    continue;
+
+                foreach (IFace nf in edge.Faces)
+                {
+                    if (f.Equals(nf) == false)
+                        yield return (nf, ek);
+                }
+            }
+        }
+
         /// <summary>Re-run BFS propagation only (no volume flip, no repair).</summary>
         public static int PropagateConsistencyOnly(Mesh3D<MorphMeshVertex> mesh)
         {
@@ -86,8 +113,9 @@ namespace MorphologyMesh
                 if (visited.Contains(start))
                     continue;
 
-                CollectConnectedComponent(mesh, start, visited, options, out IFace anchorSeed);
-                PropagateWindingFromSeed(mesh, anchorSeed ?? start, options, ref totalReversals);
+                List<IFace> componentFaces = CollectTwoManifoldPatch(mesh, start, visited, options, out List<IFace> anchors);
+                List<IFace> seeds = anchors.Count > 0 ? anchors : [componentFaces[0]];
+                PropagateWindingFromSeeds(mesh, seeds, options, ref totalReversals);
             }
 
             return totalReversals;
@@ -162,10 +190,13 @@ namespace MorphologyMesh
             return mesh[f.iVerts].Any(v => v.MedialAxisIndex.HasValue);
         }
 
-        private static List<IFace> CollectConnectedComponent(
-            Mesh3D<MorphMeshVertex> mesh, IFace start, HashSet<IFace> visited, Options options, out IFace anchorSeed)
+        /// <summary>
+        /// Flood faces connected to <paramref name="start"/> across 2-manifold edges only.
+        /// </summary>
+        private static List<IFace> CollectTwoManifoldPatch(
+            Mesh3D<MorphMeshVertex> mesh, IFace start, HashSet<IFace> visited, Options options, out List<IFace> anchors)
         {
-            anchorSeed = null;
+            anchors = [];
             List<IFace> component = [];
             Queue<IFace> queue = new();
             queue.Enqueue(start);
@@ -175,32 +206,34 @@ namespace MorphologyMesh
             {
                 IFace f = queue.Dequeue();
                 component.Add(f);
-                if (anchorSeed is null && IsAnchorFace(mesh, f, options))
-                    anchorSeed = f;
+                if (IsAnchorFace(mesh, f, options))
+                    anchors.Add(f);
 
-                foreach (IEdgeKey ek in f.Edges)
+                foreach ((IFace nf, _) in TwoManifoldNeighbors(mesh, f))
                 {
-                    foreach (IFace nf in mesh.Edges[ek].Faces)
-                    {
-                        if (visited.Contains(nf))
-                            continue;
+                    if (visited.Contains(nf))
+                        continue;
 
-                        visited.Add(nf);
-                        queue.Enqueue(nf);
-                    }
+                    visited.Add(nf);
+                    queue.Enqueue(nf);
                 }
             }
 
             return component;
         }
 
-        private static List<IFace> PropagateWindingFromSeed(
-            Mesh3D<MorphMeshVertex> mesh, IFace seed, Options options, ref int totalReversals)
+        /// <summary>
+        /// Breadth-first from every seed at once across 2-manifold edges, reversing any neighbor that
+        /// traverses the shared edge in the same direction. Anchor seeds are never reversed.
+        /// </summary>
+        private static List<IFace> PropagateWindingFromSeeds(
+            Mesh3D<MorphMeshVertex> mesh, List<IFace> seeds, Options options, ref int totalReversals)
         {
             List<IFace> component = [];
-            HashSet<IFace> placed = [seed];
+            HashSet<IFace> placed = [.. seeds];
             Queue<IFace> queue = new();
-            queue.Enqueue(seed);
+            foreach (IFace seed in seeds)
+                queue.Enqueue(seed);
 
             while (queue.Count > 0)
             {
@@ -209,7 +242,11 @@ namespace MorphologyMesh
 
                 foreach (IEdgeKey ek in current.Edges)
                 {
-                    IFace[] neighbors = [.. mesh.Edges[ek].Faces];
+                    IEdge edge = mesh.Edges[ek];
+                    if (edge.Faces.Count != 2)
+                        continue;
+
+                    IFace[] neighbors = [.. edge.Faces];
                     foreach (IFace nf in neighbors)
                     {
                         if (current.Equals(nf) || placed.Contains(nf))
@@ -236,8 +273,11 @@ namespace MorphologyMesh
 
         private static IFace ReverseFace(Mesh3D<MorphMeshVertex> mesh, IFace f)
         {
+            if (mesh is MorphRenderMesh morph)
+                return morph.ReverseFace(f);
+
             mesh.RemoveFace(f);
-            IFace newFace = Face.Create(f.iVerts.Reverse());
+            IFace newFace = mesh.CreateFace?.Invoke(f.iVerts.Reverse()) ?? Face.Create(f.iVerts.Reverse());
             mesh.AddFace(newFace);
             return newFace;
         }

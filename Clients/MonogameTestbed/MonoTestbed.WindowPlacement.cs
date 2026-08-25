@@ -10,6 +10,8 @@ namespace MonogameTestbed
         private const int SmCyframe = 33;
         private const int SmCycaption = 4;
         private const int SmCxpaddedborder = 92;
+        private const int SmCxscreen = 0;
+        private const int SmCyscreen = 1;
         private const uint MonitorDefaultToNearest = 2;
         private const uint SpiGetWorkArea = 0x0030;
 
@@ -40,6 +42,80 @@ namespace MonogameTestbed
                 frameY = Math.Clamp(frameY, work.Top, maxFrameY);
 
             Window.Position = new Point(frameX + borderLeft, frameY + borderTop);
+        }
+
+        /// <summary>
+        /// Sets borderless-fullscreen intent and a native-resolution back buffer before the device is created.
+        /// Exclusive hardware switching would lock the adapter to 1600×1200 and keep screenshots downsampled.
+        /// </summary>
+        private void ConfigureExportFullscreen()
+        {
+            GetExportDisplaySize(out int width, out int height);
+            graphics.HardwareModeSwitch = false;
+            graphics.IsFullScreen = true;
+            graphics.PreferredBackBufferWidth = width;
+            graphics.PreferredBackBufferHeight = height;
+        }
+
+        /// <summary>
+        /// Enters borderless fullscreen at the current monitor's pixel size and refreshes <see cref="Scene"/>'s viewport.
+        /// Called from Initialize (and again before PNG capture) so dump resolution matches the display.
+        /// </summary>
+        internal void EnsureExportFullscreen()
+        {
+            GetExportDisplaySize(out int width, out int height);
+            graphics.HardwareModeSwitch = false;
+            graphics.PreferredBackBufferWidth = width;
+            graphics.PreferredBackBufferHeight = height;
+            graphics.IsFullScreen = true;
+            if (GraphicsDevice is not null)
+            {
+                graphics.ApplyChanges();
+                SyncSceneViewport();
+            }
+        }
+
+        /// <summary>
+        /// Copies the live graphics viewport onto the testbed scene so projection matches the fullscreen back buffer.
+        /// </summary>
+        internal void SyncSceneViewport()
+        {
+            if (Scene is not null && GraphicsDevice is not null)
+                Scene.Viewport = GraphicsDevice.Viewport;
+        }
+
+        private void GetExportDisplaySize(out int width, out int height)
+        {
+            if (TryGetMonitorBounds(out NativeRect monitor))
+            {
+                width = Math.Max(1, monitor.Right - monitor.Left);
+                height = Math.Max(1, monitor.Bottom - monitor.Top);
+                return;
+            }
+
+            width = Math.Max(1, GetSystemMetrics(SmCxscreen));
+            height = Math.Max(1, GetSystemMetrics(SmCyscreen));
+        }
+
+        private bool TryGetMonitorBounds(out NativeRect monitor)
+        {
+            IntPtr hwnd = Window.Handle;
+            if (hwnd != IntPtr.Zero)
+            {
+                IntPtr hMonitor = MonitorFromWindow(hwnd, MonitorDefaultToNearest);
+                if (hMonitor != IntPtr.Zero)
+                {
+                    NativeMonitorInfo info = new() { cbSize = Marshal.SizeOf<NativeMonitorInfo>() };
+                    if (GetMonitorInfoW(hMonitor, ref info))
+                    {
+                        monitor = info.rcMonitor;
+                        return true;
+                    }
+                }
+            }
+
+            monitor = default;
+            return false;
         }
 
         private bool TryGetWorkArea(out NativeRect work)

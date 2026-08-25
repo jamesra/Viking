@@ -14,4 +14,7 @@
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\MorphologyMesh\MorphologyMesh.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Testdata\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

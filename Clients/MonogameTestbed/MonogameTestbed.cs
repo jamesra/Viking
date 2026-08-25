@@ -124,6 +124,9 @@ namespace MonogameTestbed
                 GraphicsProfile = GraphicsProfile.HiDef
             };
 
+            if (Program.options?.Screenshots == true)
+                ConfigureExportFullscreen();
+
             VikingXNAGraphics.Global.Content = this.Content;
             graphics.PreparingDeviceSettings += graphics_PreparingDeviceSettings;
             Content.RootDirectory = "Content";
@@ -158,8 +161,11 @@ namespace MonogameTestbed
 
         private void graphics_PreparingDeviceSettings(object sender, PreparingDeviceSettingsEventArgs e)
         {
-            graphics.PreferredBackBufferWidth = desired_screen_width;
-            graphics.PreferredBackBufferHeight = desired_screen_height;
+            if (Program.options?.Screenshots != true)
+            {
+                graphics.PreferredBackBufferWidth = desired_screen_width;
+                graphics.PreferredBackBufferHeight = desired_screen_height;
+            }
             graphics.PreferMultiSampling = true;
             graphics.GraphicsProfile = GraphicsProfile.HiDef;
             graphics.SynchronizeWithVerticalRetrace = true;
@@ -180,14 +186,27 @@ namespace MonogameTestbed
             base.Initialize();
 
             Window.AllowUserResizing = true;
-            this.Window.Title = "Monogame testbed";
+            this.Window.Title = WindowTitleForMode(Mode);
             this.Window.AllowUserResizing = true;
-            PositionWindowFullyOnScreen();
+            if (Program.options?.Screenshots == true)
+                EnsureExportFullscreen();
+            else
+                PositionWindowFullyOnScreen();
 
             this.IsMouseVisible = true;
 
             // Initialize GPU synchronization after the window and graphics device are set up
             GpuSynchronizationManager.Initialize();
+        }
+
+        /// <summary>
+        /// Window caption is the testbed name plus the active <see cref="TestMode"/> (BAJAJTEST, BAJAJMULTITEST, …),
+        /// not the IGraphicsTest class name. Called from Initialize and each Update so keyboard mode switches stay in sync.
+        /// </summary>
+        static string WindowTitleForMode(TestMode mode, string status = null)
+        {
+            string title = $"Monogame testbed - {mode}";
+            return string.IsNullOrEmpty(status) ? title : title + status;
         }
 
         /// <summary>
@@ -456,9 +475,10 @@ namespace MonogameTestbed
             }
 
             IGraphicsTest current = listTests[Mode];
-            Window.Title = current.Initialized
-                ? current.Title
-                : IsInitFailed(Mode) ? current.Title + " (init failed)" : current.Title + " (loading...)";
+            string status = current.Initialized
+                ? null
+                : IsInitFailed(Mode) ? " (init failed)" : " (loading...)";
+            Window.Title = WindowTitleForMode(Mode, status);
 
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape))
             {

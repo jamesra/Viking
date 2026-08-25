@@ -288,9 +288,10 @@ namespace MorphologyMesh
         {
             get
             {
-                foreach (var edge in this.Faces)
+                foreach (IFace face in this.Faces)
                 {
-                    yield return (MorphMeshFace)edge;
+                    if (face is MorphMeshFace morphFace)
+                        yield return morphFace;
                 }
             }
         }

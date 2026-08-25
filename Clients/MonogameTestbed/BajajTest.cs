@@ -32,9 +32,12 @@ namespace MonogameTestbed
         public List<LineSetView> PolygonViews;
         public List<LabelView> LabelViews;
 
+        public bool HasGeometry =>
+            PolygonViews is { Count: > 0 } && PolygonViews.Exists(v => v.LineViews is { Count: > 0 });
+
         public void Draw(MonoTestbed window, Scene scene)
         {
-            LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, [.. PolygonViews.SelectMany(rpv => rpv.LineViews)]);
+            LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. PolygonViews.SelectMany(rpv => rpv.LineViews)]);
             DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1);
             LabelView.Draw(window.spriteBatch, window.fontArial, scene, LabelViews);
             DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1);
@@ -357,9 +360,16 @@ namespace MonogameTestbed
 
         private void AddMeshView(BajajGeneratorMesh mesh, string name)
         {
-            MeshView<VertexPositionColor> view = CreateMeshView(mesh, name);
-            lock (ViewsLock)
-                MeshViews.Add(view);
+            try
+            {
+                MeshView<VertexPositionColor> view = CreateMeshView(mesh, name);
+                lock (ViewsLock)
+                    MeshViews.Add(view);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"AddMeshView({name}) failed: {ex}");
+            }
         }
 
         private void AddRegionView(RegionView view)
@@ -412,9 +422,6 @@ namespace MonogameTestbed
 
         public static MeshView<VertexPositionColor> CreateMeshView(BajajGeneratorMesh mesh, string name)
         {
-            mesh.EnsureFacesHaveExternalNormals();
-            mesh.RecalculateNormals();
-
             MeshModel<VertexPositionColor> meshViewModel = CreateFaceView(mesh);
 
             //Adjust the meshViewModel Z coordinates so we can see the mesh in 2D
@@ -843,7 +850,7 @@ namespace MonogameTestbed
             if (RegionPolygonViews != null && ShowRegionPolygons)
             {
 
-                LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, [.. RegionPolygonViews.SelectMany(rpv => rpv.LineViews)]);
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. RegionPolygonViews.SelectMany(rpv => rpv.LineViews)]);
                 DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1);
                 LabelView.Draw(window.spriteBatch, window.fontArial, scene, RegionLabelViews);
                 DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1);
@@ -852,7 +859,7 @@ namespace MonogameTestbed
 
             if (OTVTableView != null && ShowOtvChords && OTVTableView.Count > 0)
             {
-                LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, [.. OTVTableView]);
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. OTVTableView]);
                 DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1);
                 ViewLabels.AppendLine("OTV Table");
             }
@@ -916,11 +923,10 @@ namespace MonogameTestbed
 
         internal List<BajajCaptureShot> EnumerateDefaultShotsUnlocked()
         {
-            List<BajajCaptureShot> shots =
-            [
-                BajajCaptureShot.Overview2D(),
-                BajajCaptureShot.OtvChords()
-            ];
+            List<BajajCaptureShot> shots = [BajajCaptureShot.Overview2D()];
+
+            if (OTVTableView is { Count: > 0 })
+                shots.Add(BajajCaptureShot.OtvChords());
 
             for (int i = 0; i < MeshViews.Count; i++)
             {
@@ -936,7 +942,10 @@ namespace MonogameTestbed
             }
 
             for (int i = 0; i < RegionViews.Count; i++)
-                shots.Add(BajajCaptureShot.Region(i));
+            {
+                if (RegionViews[i].HasGeometry)
+                    shots.Add(BajajCaptureShot.Region(i));
+            }
 
             return shots;
         }
@@ -964,6 +973,70 @@ namespace MonogameTestbed
                 shots.Add(BajajCaptureShot.Region(i));
 
             return shots;
+        }
+
+        /// <summary>
+        /// Axis-aligned bounds of the line, region, or OTV overlay a shot will draw.
+        /// Used to frame screenshot cameras on chord and region views instead of the full slice pair.
+        /// </summary>
+        internal bool TryGetShotBounds(BajajCaptureShot shot, out Rectangle bounds)
+        {
+            lock (ViewsLock)
+                return TryGetShotBoundsUnlocked(shot, out bounds);
+        }
+
+        internal bool TryGetShotBoundsUnlocked(BajajCaptureShot shot, out Rectangle bounds)
+        {
+            if (shot.ShowOtvChords)
+                return TryLineBounds(OTVTableView, out bounds);
+
+            if (shot.LineIndex is int lineIndex && lineIndex >= 0 && lineIndex < listLineViews.Count)
+                return TryLineBounds(listLineViews[lineIndex].LineViews, out bounds);
+
+            if (shot.RegionIndex is int regionIndex && regionIndex >= 0 && regionIndex < RegionViews.Count)
+                return TryLineBounds(RegionViews[regionIndex].PolygonViews.SelectMany(v => v.LineViews), out bounds);
+
+            bounds = default;
+            return false;
+        }
+
+        private static bool TryLineBounds(IEnumerable<LineView> lines, out Rectangle bounds)
+        {
+            bounds = default;
+            if (lines is null)
+                return false;
+
+            bool any = false;
+            double minX = double.PositiveInfinity;
+            double minY = double.PositiveInfinity;
+            double maxX = double.NegativeInfinity;
+            double maxY = double.NegativeInfinity;
+            foreach (LineView line in lines)
+            {
+                any = true;
+                minX = Math.Min(minX, Math.Min(line.Source.X, line.Destination.X));
+                minY = Math.Min(minY, Math.Min(line.Source.Y, line.Destination.Y));
+                maxX = Math.Max(maxX, Math.Max(line.Source.X, line.Destination.X));
+                maxY = Math.Max(maxY, Math.Max(line.Source.Y, line.Destination.Y));
+            }
+
+            if (!any)
+                return false;
+
+            if (minX == maxX)
+            {
+                minX -= 1;
+                maxX += 1;
+            }
+
+            if (minY == maxY)
+            {
+                minY -= 1;
+                maxY += 1;
+            }
+
+            bounds = new Rectangle(minX, maxX, minY, maxY);
+            return true;
         }
 
         internal void ApplyShot(BajajCaptureShot shot)
@@ -1361,6 +1434,7 @@ namespace MonogameTestbed
         readonly PointSetViewCollection Points_A = new(Color.Blue, Color.BlueViolet, Color.PowderBlue);
         readonly PointSetViewCollection Points_B = new(Color.Red, Color.Pink, Color.Plum);
         readonly Cursor2DCameraManipulator CameraManipulator = new();
+        readonly Camera3DManipulator Camera3DManipulator = new();
 
         BajajOTVAssignmentView wrapView = null;
 
@@ -1374,6 +1448,7 @@ namespace MonogameTestbed
         enum ScreenshotPhase
         {
             Inactive,
+            WaitFullscreen,
             WaitMesh,
             Capture,
             NextRepro,
@@ -1413,7 +1488,7 @@ namespace MonogameTestbed
                 _screenshotRoot = ScreenshotCapture.BajajOutputRoot();
                 Directory.CreateDirectory(_screenshotRoot);
                 _manifest = new CaptureManifest();
-                _screenshotPhase = ScreenshotPhase.WaitMesh;
+                _screenshotPhase = ScreenshotPhase.WaitFullscreen;
             }
 
             try
@@ -1448,7 +1523,7 @@ namespace MonogameTestbed
             if (!Draw3D)
                 CameraManipulator.Update(scene.Camera);
             else
-                StandardCameraManipulator.Update(this.scene3D.Camera);
+                Camera3DManipulator.Update(this.scene3D.Camera, scene3D.Viewport.Width, scene3D.Viewport.Height);
 
             if (Gamepad.A_Clicked)
             {
@@ -1534,7 +1609,7 @@ namespace MonogameTestbed
                 wrapView.VertexLabelType ^= IndexLabelType.POSITION;
             }
 
-            if (Gamepad.LeftStick_Clicked)
+            if (Gamepad.LeftStick_Clicked || _keyboard.Pressed(Keys.K))
             {
                 wrapView.CullMode = wrapView.CullMode == CullMode.None ? CullMode.CullCounterClockwiseFace : CullMode.None;
             }
@@ -1681,10 +1756,38 @@ namespace MonogameTestbed
         }
 
         /// <summary>
+        /// Honor an explicit capture-request camera, otherwise zoom 2D chord/region shots to their overlay bounds.
+        /// Overview and mesh shots fall back to the slice-pair framing from <see cref="FitCameras"/>.
+        /// </summary>
+        private void FrameShotCamera(MonoTestbed window, BajajCaptureShot shot)
+        {
+            if (shot.LookAtX.HasValue || shot.Downsample.HasValue)
+            {
+                ApplyShotCamera(shot);
+                return;
+            }
+
+            if (!Draw3D && wrapView is not null && wrapView.TryGetShotBounds(shot, out Rectangle bounds))
+            {
+                double padX = Math.Max(bounds.Width * 0.1, 1);
+                double padY = Math.Max(bounds.Height * 0.1, 1);
+                Rectangle padded = new(bounds.Left - padX, bounds.Right + padX, bounds.Bottom - padY, bounds.Top + padY);
+                scene.Camera.LookAt = padded.Center.ToXNAVector2();
+                double span = Math.Max(padded.Width, padded.Height);
+                int pixels = Math.Max(window.GraphicsDevice.Viewport.Width, 1);
+                scene.Camera.Downsample = span / pixels;
+                return;
+            }
+
+            FitCameras(window, restoreSaved: false);
+        }
+
+        /// <summary>
         /// Steps the interactive view through <see cref="BajajOTVAssignmentView.EnumerateDefaultShots"/>,
         /// the same list screenshot capture uses. Ignored while a screenshot dump is running.
         /// Mouse X2 / PageDown go forward; X1 / PageUp go back. Wrap around. The first press
         /// starts at overview (forward) or the last shot (back) rather than guessing the stacked A/B/Y overlays.
+        /// PageUp/PageDown are omitted in 3D so they can pan world Z on the camera.
         /// </summary>
         private void UpdateDisplayShotInput()
         {
@@ -1703,9 +1806,9 @@ namespace MonogameTestbed
             if (_screenshotPhase != ScreenshotPhase.Inactive)
                 return;
 
-            if (x2Clicked || _keyboard.Pressed(Keys.PageDown))
+            if (x2Clicked || (!Draw3D && _keyboard.Pressed(Keys.PageDown)))
                 _pendingShotDelta++;
-            else if (x1Clicked || _keyboard.Pressed(Keys.PageUp))
+            else if (x1Clicked || (!Draw3D && _keyboard.Pressed(Keys.PageUp)))
                 _pendingShotDelta--;
 
             TryApplyPendingShotStep();
@@ -1758,6 +1861,12 @@ namespace MonogameTestbed
         {
             switch (_screenshotPhase)
             {
+                case ScreenshotPhase.WaitFullscreen:
+                    if (_host is not null)
+                        SyncCaptureViewports(_host);
+                    _screenshotPhase = ScreenshotPhase.WaitMesh;
+                    break;
+
                 case ScreenshotPhase.WaitMesh:
                     if (wrapView is null)
                     {
@@ -1812,6 +1921,7 @@ namespace MonogameTestbed
         {
             if (wrapView is null)
                 throw new InvalidOperationException("Cannot capture screenshots before the Bajaj view is created.");
+            SyncCaptureViewports(window);
             FitCameras(window, restoreSaved: false);
             List<BajajCaptureShot> defaults = wrapView.EnumerateDefaultShots();
             List<BajajCaptureShot> shots = ScreenshotCapture.ResolveRequestedShots(defaults, Program.options?.CaptureRequest?.Shots);
@@ -1824,7 +1934,7 @@ namespace MonogameTestbed
                 BajajCaptureShot shot = shots[i];
                 wrapView.ApplyShot(shot);
                 Draw3D = shot.Draw3D;
-                ApplyShotCamera(shot);
+                FrameShotCamera(window, shot);
 
                 string fileName = $"{i:D2}-{shot.FileSlug}.png";
                 string fullPath = System.IO.Path.Combine(caseDir, fileName);
@@ -1897,6 +2007,21 @@ namespace MonogameTestbed
             }
 
             _currentManifestCase = null;
+        }
+
+        /// <summary>
+        /// Fullscreen at native monitor resolution and copy the live viewport onto both Bajaj scenes
+        /// so PNG dumps are not stuck at the 1600×1200 windowed back buffer.
+        /// </summary>
+        private void SyncCaptureViewports(MonoTestbed window)
+        {
+            window.EnsureExportFullscreen();
+            window.SyncSceneViewport();
+            Viewport viewport = window.GraphicsDevice.Viewport;
+            if (scene is not null)
+                scene.Viewport = viewport;
+            if (scene3D is not null)
+                scene3D.Viewport = viewport;
         }
     }
 }

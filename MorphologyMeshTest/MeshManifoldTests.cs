@@ -1,8 +1,12 @@
 using Geometry;
+using Geometry.JSON;
+using Geometry.Meshing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MorphologyMesh;
 using System;
 using System.Linq;
+using System.Text;
+using System.Text.Json;
 
 namespace MorphologyMeshTest
 {
@@ -160,6 +164,57 @@ namespace MorphologyMeshTest
             Assert.AreEqual(0, report.InconsistentManifoldEdges, $"Faces disagree across a shared edge.  {report}");
             Assert.AreEqual(0, report.UnexpectedBoundaryEdges, $"The surface has holes away from the contour seam.  {report}");
             Assert.IsTrue(report.ContourBoundaryEdges > 0, $"A slice mesh should leave its contour seam open.  {report}");
+        }
+
+        /// <summary>
+        /// The RC1 1724 adjacent pair is a near-cylinder.  Live BAJAJMULTITEST logs show almost every such
+        /// slice picking up exactly one non-manifold edge and one unexpected hole, which is what leaves
+        /// gaps in the assembled tube.  Fail this test with a dump of those edges so the extra face is
+        /// identifiable.
+        /// </summary>
+        [TestMethod]
+        public void CachedRc1Structure1724Pair_IsAValidSliceSurface()
+        {
+            string path = System.IO.Path.Combine(AppContext.BaseDirectory, "Testdata", "rc1-structure-1724-adjacent-pair.json");
+            Assert.IsTrue(System.IO.File.Exists(path), $"Cached slice pair is missing: {path}");
+
+            using JsonDocument doc = JsonDocument.Parse(System.IO.File.ReadAllText(path));
+            JsonElement root = doc.RootElement;
+            Polygon lower = GeometryJSONExtensions.PolygonFromJSON(root.GetProperty("lower").GetRawText());
+            Polygon upper = GeometryJSONExtensions.PolygonFromJSON(root.GetProperty("upper").GetRawText());
+            double lowerZ = root.GetProperty("lowerZ").GetDouble();
+            double upperZ = root.GetProperty("upperZ").GetDouble();
+
+            BajajGeneratorMesh mesh = new([lower, upper], [lowerZ, upperZ], [false, true]);
+            BajajMeshGenerator.GenerateFaces(mesh);
+
+            MeshManifoldReport report = MeshManifoldValidator.Validate(mesh);
+            Assert.AreEqual(0, report.NonManifoldEdges, $"Non-manifold edges:\n{DescribeDefectiveEdges(mesh)}\n{report}");
+            Assert.AreEqual(0, report.UnexpectedBoundaryEdges, $"Unexpected holes:\n{DescribeDefectiveEdges(mesh)}\n{report}");
+            Assert.AreEqual(0, report.InconsistentManifoldEdges, $"Inconsistent winding.  {report}");
+        }
+
+        static string DescribeDefectiveEdges(BajajGeneratorMesh mesh)
+        {
+            StringBuilder sb = new();
+            foreach (var kvp in mesh.Edges)
+            {
+                int n = kvp.Value.Faces.Count;
+                bool isContour = kvp.Value is MorphMeshEdge me && me.Type == EdgeType.CONTOUR;
+                if (n <= 2 && (n != 1 || isContour) && n != 0)
+                    continue;
+                if (n == 2)
+                    continue;
+
+                string type = kvp.Value is MorphMeshEdge morph ? morph.Type.ToString() : "unknown";
+                MorphMeshVertex a = mesh[kvp.Key.A];
+                MorphMeshVertex b = mesh[kvp.Key.B];
+                sb.AppendLine($"edge {kvp.Key.A}-{kvp.Key.B} faces:{n} type:{type} A={a.Position} shape={a.ShapeIndex} B={b.Position} shape={b.ShapeIndex}");
+                foreach (IFace f in kvp.Value.Faces)
+                    sb.AppendLine($"  face [{string.Join(",", f.iVerts)}] Z=[{string.Join(",", f.iVerts.Select(i => mesh[i].Position.Z.ToString("F1")))}]");
+            }
+
+            return sb.Length == 0 ? "(none)" : sb.ToString();
         }
     }
 }
