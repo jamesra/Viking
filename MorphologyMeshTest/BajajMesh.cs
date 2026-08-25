@@ -130,5 +130,67 @@ namespace MorphologyMeshTest
         }
 
         private static bool EdgesHaveMoreThanTwoFaces(BajajGeneratorMesh mesh) => mesh.Edges.Values.Any(e => e.Faces.Count > 2);
+
+        /// <summary>
+        /// Production slice 620: verts 88/89/90 formed a ~0.4-span colinear triplet. Exact XY keys left them
+        /// as three Delaunay sites, so edge 53-89 intersected 88-90.
+        /// </summary>
+        [TestMethod]
+        public void ClusterNearDuplicateXySites_MergesColinearSubPixelTriplet()
+        {
+            Vector2 p88 = new(1231.91, -309.64);
+            Vector2 p89 = new(1231.98, -309.46);
+            Vector2 p90 = new(1232.06, -309.27);
+            Vector2 p53 = new(1259.46, -189.95);
+
+            Dictionary<Vector2, List<int>> exact = new()
+            {
+                [p88] = [88],
+                [p89] = [89],
+                [p90] = [90],
+                [p53] = [53],
+            };
+
+            Dictionary<Vector2, List<int>> clustered = BajajMeshGenerator.ClusterNearDuplicateXySites(
+                exact, BajajMeshGenerator.DelaunayXyClusterDistance);
+
+            Assert.AreEqual(2, clustered.Count, "Triplet should collapse to one site; distant vertex stays separate.");
+            Assert.IsTrue(clustered.Values.Any(list => list.Contains(88) && list.Contains(89) && list.Contains(90)));
+            Assert.IsTrue(clustered.Values.Any(list => list.Count == 1 && list[0] == 53));
+        }
+
+        /// <summary>
+        /// A contour with the slice-620 triplet plus a distant vertex must triangulate without
+        /// <see cref="Geometry.Meshing.EdgesIntersectTriangulationException"/>.
+        /// </summary>
+        [TestMethod]
+        public void AddDelaunayEdges_NearDuplicateColinearTriplet_DoesNotThrow()
+        {
+            Polygon contour = new(
+            [
+                new Vector2(1231.91, -309.64),
+                new Vector2(1231.98, -309.46),
+                new Vector2(1232.06, -309.27),
+                new Vector2(1259.46, -189.95),
+                new Vector2(1280, -400),
+                new Vector2(1200, -400),
+                new Vector2(1231.91, -309.64),
+            ]);
+
+            Polygon upper = new(
+            [
+                new Vector2(1220, -380),
+                new Vector2(1260, -380),
+                new Vector2(1260, -220),
+                new Vector2(1220, -220),
+                new Vector2(1220, -380),
+            ]);
+
+            BajajGeneratorMesh mesh = new([contour, upper], [0, 10], [false, true]);
+            Dictionary<Vector2, List<int>> sites = BajajMeshGenerator.CreatePointToIndexMap(mesh);
+            Assert.IsTrue(sites.Values.Any(list => list.Count >= 3), "Near-duplicate contour verts should share one Delaunay site.");
+
+            BajajMeshGenerator.AddDelaunayEdges(mesh);
+        }
     }
 }

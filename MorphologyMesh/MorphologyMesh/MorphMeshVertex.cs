@@ -150,6 +150,24 @@ namespace MorphologyMesh
             IShapeIndex prev = ShapeIndex.Previous;
             IShapeIndex next = ShapeIndex.Next;
 
+            if (prev is null || next is null)
+            {
+                IShapeIndex neighbor = prev ?? next;
+                if (neighbor is null)
+                    return true;
+
+                if (mesh.Contains(neighbor) == false)
+                    return false;
+
+                MorphMeshVertex neighborVertex = mesh[neighbor];
+                IEnumerable<IEdgeKey> contourEdges = this.Edges.Where(e => mesh[e].Contains(neighborVertex.Index));
+                if (contourEdges.Any() == false)
+                    return false;
+
+                FacesAreComplete = mesh[contourEdges.First()].Faces.Count >= 1;
+                return FacesAreComplete;
+            }
+
             MorphMeshVertex prevVertex = mesh[prev];
             MorphMeshVertex nextVertex = mesh[next];
 

@@ -43,15 +43,20 @@ namespace MorphologyMesh
     ///Then we ask B,E for nodes below B,I -> D,J.  Then we ask for nodes above: D,J -> A.  Continuing 
     ///until no new nodes are added.  These nodes are then combined and sent to the Bajaj generator
     ///
-    /// A SliceGraph translates all polygons to the center of the bounding box of the MorphologyGraph it is passed.  To 
-    /// position the SliceGraph in volume space you should translate it to the center of the bounding box of the Morhphology
-    /// graph.
+    /// A SliceGraph translates all polygons by <see cref="XYOrigin"/> (typically the parent cell's
+    /// location AABB center so synapses mesh in the same XY frame as the cell). Restore with that
+    /// origin when drawing or exporting. Z stays in volume.
     /// </summary>
     public class SliceGraph : Graph<ulong, Slice, Edge<ulong>>
     {
         readonly MorphologyGraph Graph;
 
         public double SectionThickness => this.Graph.SectionThickness;
+
+        /// <summary>
+        /// Volume XY subtracted from every cached shape. Parent cell and its children should share this origin.
+        /// </summary>
+        public Vector2 XYOrigin { get; }
 
         /// <summary>
         /// Polygons with an area below this we do not bother to render in the slice graph
@@ -64,20 +69,18 @@ namespace MorphologyMesh
         /// </summary>
         internal Dictionary<ulong, IShape2D> MorphNodeToShape = null;
 
-        private Vector2? _translationToCenter;
-
         /// <summary>
         /// The translation InitializeShapes applied to every cached shape, so any shape rebuilt outside that cache
         /// can be placed in the same centered space.
         /// </summary>
-        private Vector2 TranslationToCenter => _translationToCenter ??= -Graph.BoundingBox.CenterPoint.XY();
+        private Vector2 TranslationToCenter => -XYOrigin;
 
         private Dictionary<ulong, SliceTopology> SliceToTopology = null;
 
         /// <summary>
-        /// The center of the bounding box of all slices in the graph
+        /// Placement origin for this structure's mesh (own locations, not child subgraphs).
         /// </summary>
-        public Box BoundingBox => Graph.BoundingBox;
+        public Box BoundingBox => Graph.NodesBoundingBox;
 
         /// <summary>
         /// Volume section numbers (location UnscaledZ) of the annotations that form <paramref name="slice"/>.
@@ -105,15 +108,20 @@ namespace MorphologyMesh
             return $"sections {string.Join(", ", sections)}";
         }
 
-        private SliceGraph(MorphologyGraph graph)
+        private SliceGraph(MorphologyGraph graph, Vector2 xyOrigin)
         {
             this.Graph = graph;
+            XYOrigin = xyOrigin;
         }
 
-        public static async Task<SliceGraph> Create(MorphologyGraph graph, double tolerance = 0)
+        /// <summary>
+        /// Build a slice graph. <paramref name="xyOrigin"/> is the volume XY subtracted from shapes
+        /// (defaults to this graph's own location AABB). Pass a parent cell origin so child synapses share that frame.
+        /// </summary>
+        public static async Task<SliceGraph> Create(MorphologyGraph graph, double tolerance = 0, Vector2? xyOrigin = null)
         {
             //An empty morphology graph has no bounding box; downstream code (InitializeShapes ->
-            //graph.BoundingBox.CenterPoint) would otherwise dereference a default Box and throw an opaque
+            //graph.NodesBoundingBox.CenterPoint) would otherwise dereference a default Box and throw an opaque
             //NullReferenceException.  Fail fast with an actionable message instead.
             if (graph.Nodes.Count == 0 && graph.Subgraphs.IsEmpty)
                 throw new ArgumentException(
@@ -122,7 +130,8 @@ namespace MorphologyMesh
                     "(e.g. location IDs were queried as structure IDs, or the IDs/endpoint are wrong).",
                     nameof(graph));
 
-            SliceGraph output = new(graph);
+            Vector2 origin = xyOrigin ?? graph.NodesBoundingBox.CenterPoint.XY();
+            SliceGraph output = new(graph, origin);
 
             SortedSet<MorphologyEdge> Edges = [.. graph.Edges.Values];
 
@@ -238,7 +247,7 @@ namespace MorphologyMesh
                 }
             }
 
-            output.MorphNodeToShape = await InitializeShapes(graph, tolerance);
+            output.MorphNodeToShape = await InitializeShapes(graph, -origin, tolerance);
             output.InitializeSliceTopology(tolerance);
 
             /*output.SliceToTopology = new Dictionary<ulong, SliceTopology>(output.Nodes.Count);
@@ -406,7 +415,7 @@ namespace MorphologyMesh
         {
             try
             {
-                this.MorphNodeToShape ??= await SliceGraph.InitializeShapes(this.Graph, tolerance);
+                this.MorphNodeToShape ??= await SliceGraph.InitializeShapes(this.Graph, TranslationToCenter, tolerance);
 
                 ConcurrentTopologyInitializer concurrentInitializer = new(this);
 
@@ -438,11 +447,15 @@ namespace MorphologyMesh
         /// <param name="graph"></param>
         /// <param name="tolerance"></param>
         /// <returns></returns>
-        public static async Task<Dictionary<ulong, IShape2D>> InitializeShapes(MorphologyGraph graph, double tolerance = 0)
+        public static Task<Dictionary<ulong, IShape2D>> InitializeShapes(MorphologyGraph graph, double tolerance = 0) =>
+            InitializeShapes(graph, -graph.NodesBoundingBox.CenterPoint.XY(), tolerance);
+
+        /// <summary>
+        /// Cache simplified shapes translated by <paramref name="translationToCenter"/> (usually −cell XY origin).
+        /// </summary>
+        public static async Task<Dictionary<ulong, IShape2D>> InitializeShapes(MorphologyGraph graph, Vector2 translationToCenter, double tolerance = 0)
         {
             Dictionary<ulong, IShape2D> result = new(graph.Nodes.Count);
-
-            Vector2 translationToCenter = -graph.BoundingBox.CenterPoint.XY();
 
             List<Task<IShape2D>> tasks = new(graph.Nodes.Count);
             foreach (var node in graph.Nodes.Values)
@@ -552,7 +565,7 @@ namespace MorphologyMesh
 
             //If we are taking this path there is a danger corresponding verticies won't exist across multiple slices
             var result = GetSliceTopology(sliceKey, MorphNodeToShape);
-            Debug.Assert(result.Shapes != null, "Current version only handles polygons, developer needs to figure out why they are missing here.");
+            Debug.Assert(result.Shapes != null, "Slice topology initialisation returned no shapes.");
             SliceToTopology[sliceKey] = result;
 
             return SliceToTopology[sliceKey];
@@ -578,6 +591,16 @@ namespace MorphologyMesh
             //Correspondence is computed over every shape in the slice, including shapes we cannot tile, because a
             //polyline still contributes corresponding verticies to the polygons it touches.
             List<IShape2D> ShapeList = [.. sliceShapes.Select(s => s.Shape)];
+            bool[] sliceIsUpper = [.. sliceShapes.Select(s => s.IsUpper)];
+            IShape2D[] workingShapes = [.. ShapeList];
+            Vector2 virtualOverlapOffset = SliceTopology.TryTranslateNonOverlappingPair(workingShapes, sliceIsUpper);
+            if (virtualOverlapOffset != Vector2.Zero)
+            {
+                for (int i = 0; i < sliceShapes.Count; i++)
+                    sliceShapes[i] = sliceShapes[i] with { Shape = workingShapes[i] };
+                ShapeList = [.. workingShapes];
+            }
+
             var correspondingPoints = ShapeList.AddCorrespondingVertices();
 
             Polygon[] Polygons = [.. ShapeList.OfType<Polygon>()];
@@ -586,19 +609,21 @@ namespace MorphologyMesh
             Polyline[] Polylines = [.. ShapeList.OfType<Polyline>()];
             SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(Polylines, correspondingPoints);
 
-            //The Bajaj generator only tiles polygons.  Filter the shapes and their per-shape data as a unit so the
-            //surviving entries remain indexed in lockstep.
-            SliceShape[] tileable = [.. sliceShapes.Where(s => s.Shape is Polygon)];
+            //Polygons always tile. Polylines tile only when this slice has no polygon (gap-junction / raft
+            //ribbon). A polyline on a polygon slice stays correspondence-only after the intersection verts above.
+            bool sliceHasPolygon = Polygons.Length > 0;
+            SliceShape[] tileable = [.. sliceShapes.Where(s => IsTileableForBajaj(s.Shape, sliceHasPolygon))];
 
             if (tileable.Length != sliceShapes.Count)
-                Trace.WriteLine($"Slice {group.Key}: {sliceShapes.Count - tileable.Length} of {sliceShapes.Count} shapes are not polygons and were excluded from the mesh.");
+                Trace.WriteLine($"Slice {group.Key}: {sliceShapes.Count - tileable.Length} of {sliceShapes.Count} shapes were excluded from tiling (correspondence-only polylines or unsupported types).");
 
             return new SliceTopology(group.Key,
                 tileable.Select(s => s.Shape),
                 tileable.Select(s => s.IsUpper),
                 tileable.Select(s => s.Z),
                 tileable.Select(s => s.MorphNodeIndex),
-                this.SectionThickness);
+                this.SectionThickness,
+                virtualOverlapOffset);
         }
 
         private SliceShape CreateSliceShape(ulong id, bool isUpper, IReadOnlyDictionary<ulong, IShape2D> polyLookup)
@@ -623,6 +648,19 @@ namespace MorphologyMesh
             }
 
             return new SliceShape(shape, isUpper, Graph[id].Z, id);
+        }
+
+        /// <summary>
+        /// Polygons always enter GenerateFaces. Polylines tile only when the slice has no polygon
+        /// (gap-junction / raft ribbon). A polyline that merely crosses a cell is correspondence-only.
+        /// </summary>
+        internal static bool IsTileableForBajaj(IShape2D shape, bool sliceHasPolygon)
+        {
+            if (shape is Polygon)
+                return true;
+            if (shape is Polyline)
+                return sliceHasPolygon == false;
+            return false;
         }
     }
 

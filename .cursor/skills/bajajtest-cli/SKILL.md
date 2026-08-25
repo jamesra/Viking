@@ -9,7 +9,7 @@ description: Dump and review MonogameTestbed BAJAJTEST screenshots via CLI to de
 
 For algorithm/paper context see [contours-to-mesh](../contours-to-mesh/SKILL.md). For legend colors, gamepad, and stage names see [reference.md](reference.md).
 
-**Not this skill:** whole-cell export is `BAJAJMULTITEST` (`-s` structure IDs, `-e` endpoint, `-o` DAE folder).
+**Not this skill:** whole-cell export is `BAJAJMULTITEST` (`-s` structure IDs, `-e` endpoint, `-o` DAE folder). Child structures are included by default; pass `--xc` / `--exclude-children` to mesh only the IDs on `-s`.
 
 ## Constraints
 

@@ -12,6 +12,11 @@ namespace MorphologyMesh
     public static class RegionGraphExtensions
     {
         /// <summary>
+        /// XY scale of a polyline end-cap relative to the section polyline, about the vertex-average centroid.
+        /// </summary>
+        private const double PolylineCapScale = 0.5;
+
+        /// <summary>
         /// Find nodes with only one edge, attempt to create chords between the nodes.  If we are successful remove the edge. 
         /// Then find nodes with zero edges, attempt to close those regions. Remove the nodes if successful
         /// </summary>
@@ -596,13 +601,77 @@ namespace MorphologyMesh
                         mesh.AddFace(newFace);
                     }
                 }
+                else if (mesh.Shapes[iPoly] is Polyline line)
+                {
+                    CapPolylineEnd(mesh, line, iPoly, CloseUpper, halfThickness);
+                }
                 else
                 {
-                    //Only polygons can be capped.  A shape reaching here leaves an open end in the surface, so make
+                    //Only polygons and polylines can be capped.  A shape reaching here leaves an open end in the surface, so make
                     //that visible instead of silently producing a mesh with a hole where the cap should be.
                     Trace.WriteLine($"Cannot cap {mesh.Shapes[iPoly].GetType().Name} at shape index {iPoly} of mesh {mesh}.  This end of the mesh is left open.");
                 }
             }
+        }
+
+        /// <summary>
+        /// Loft an open-end polyline to a copy scaled 50% about the vertex-average centroid and offset
+        /// ± half a section in Z. Called from <see cref="CapMeshEnd"/> so synapses and other polyline
+        /// structures occupy their terminal section instead of collapsing onto the contour plane.
+        /// A same-XY vertical strip has no area looking down Z; the inset copy gives curved polylines a visible band.
+        /// </summary>
+        private static void CapPolylineEnd(BajajGeneratorMesh mesh, Polyline line, int iPoly, bool closeUpper, double halfThickness)
+        {
+            double contourZ = mesh.ShapeZ[iPoly];
+            double peakOffset = closeUpper ? halfThickness : -halfThickness;
+
+            List<PolylineIndex> contour = [];
+            foreach (PolylineIndex idx in new PolylineVertexEnum(line, iPoly))
+                contour.Add(idx);
+            if (contour.Count < 2)
+                return;
+
+            Vector2 centroid = Vector2.Zero;
+            for (int i = 0; i < contour.Count; i++)
+                centroid += mesh[contour[i]].Position.XY();
+            centroid *= 1.0 / contour.Count;
+
+            int[] extruded = new int[contour.Count];
+            for (int i = 0; i < contour.Count; i++)
+            {
+                Vector2 xy = mesh[contour[i]].Position.XY();
+                Vector2 scaled = centroid + ((xy - centroid) * PolylineCapScale);
+                MorphMeshVertex capVert = new(default(MedialAxisIndex), scaled.ToVector3(contourZ + peakOffset));
+                extruded[i] = mesh.AddVertex(capVert);
+            }
+
+            for (int i = 0; i + 1 < contour.Count; i++)
+            {
+                int a = mesh[contour[i]].Index;
+                int b = mesh[contour[i + 1]].Index;
+                int aPrime = extruded[i];
+                int bPrime = extruded[i + 1];
+
+                if (mesh.Contains(a, aPrime) == false)
+                    mesh.AddEdge(new MorphMeshEdge(EdgeType.CONTOUR_TO_MEDIALAXIS, a, aPrime));
+                if (mesh.Contains(b, bPrime) == false)
+                    mesh.AddEdge(new MorphMeshEdge(EdgeType.CONTOUR_TO_MEDIALAXIS, b, bPrime));
+                if (mesh.Contains(aPrime, bPrime) == false)
+                    mesh.AddEdge(new MorphMeshEdge(EdgeType.MEDIALAXIS, aPrime, bPrime));
+
+                AddCappedTriangle(mesh, [a, b, bPrime], closeUpper);
+                AddCappedTriangle(mesh, [a, bPrime, aPrime], closeUpper);
+            }
+        }
+
+        private static void AddCappedTriangle(BajajGeneratorMesh mesh, int[] verts, bool closeUpper)
+        {
+            Vector3 normal = mesh.Normal(verts);
+            MorphMeshFace face = closeUpper
+                ? normal.Z < 0 ? new MorphMeshFace(verts) : new MorphMeshFace(verts.Reverse())
+                : normal.Z > 0 ? new MorphMeshFace(verts) : new MorphMeshFace(verts.Reverse());
+            face.NormalIsKnownCorrect = true;
+            mesh.AddFace(face);
         }
 
         /// <summary>

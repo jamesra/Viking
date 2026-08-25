@@ -71,6 +71,11 @@ namespace MorphologyMesh
 
         public virtual bool[] IsUpperShape { get; }
 
+        /// <summary>
+        /// True when any topology shape is a polygon. Polyline-only slices skip region/medial-axis closing.
+        /// </summary>
+        public bool HasPolygonShapes => Shapes is not null && Shapes.Any(s => s is Polygon);
+
         private readonly Dictionary<IShapeIndex, long> ShapeIndexToVertex = [];
 
         [NonSerialized]
@@ -154,10 +159,13 @@ namespace MorphologyMesh
                 }
             }
 
-            //Add contours
+            //Add contours. Polygon rings wrap via Next; polyline endpoints return null and stay open.
             foreach (var i1 in shapeVerts)
             {
-                var next = i1.Next; //Next returns the next index in the ring, not in the list, so it will close the contour correctly
+                IShapeIndex next = i1.Next;
+                if (next is null)
+                    continue;
+
                 MorphMeshEdge edge = new(EdgeType.CONTOUR, mesh[i1].Index, mesh[next].Index);
                 mesh.AddEdge(edge);
             }

@@ -34,6 +34,12 @@ namespace AnnotationVizLib
         private RTree<ulong> RTree => _RTree ??= CreateRTree(this);
 
         /// <summary>
+        /// Graph this subgraph was added under. Null for a factory root. Not serialized (parent/child cycle).
+        /// </summary>
+        [field: NonSerialized()]
+        public MorphologyGraph Parent { get; private set; }
+
+        /// <summary>
         /// Map the motif label to the arbitrary id used by TLP.  Do not add directly to this collection.  Use Add/Remove Subgraph instead.
         /// </summary>
         public readonly ConcurrentDictionary<ulong, MorphologyGraph> Subgraphs = new();
@@ -55,10 +61,15 @@ namespace AnnotationVizLib
         }
 
         //Call this when the graph has changed any spatial qualities that should reset cached measurements
-        protected void ResetCachedMeasurements() => _BoundingBox = default;
+        protected void ResetCachedMeasurements()
+        {
+            _BoundingBox = default;
+            _NodesBoundingBox = default;
+        }
 
         public void AddSubgraph(MorphologyGraph subgraph)
         {
+            subgraph.Parent = this;
             Subgraphs.TryAdd(subgraph.StructureID, subgraph);
             ulong nearest_id = NearestNode(subgraph, out double minDistance);
             if (nearest_id != ulong.MaxValue)
@@ -72,6 +83,8 @@ namespace AnnotationVizLib
         public void RemoveSubgraph(ulong StructureID)
         {
             Subgraphs.TryRemove(StructureID, out MorphologyGraph value);
+            if (value != null)
+                value.Parent = null;
             if (NearestNodeToSubgraph.TryRemove(StructureID, out ulong nearest_node_id))
             {
                 Nodes[nearest_node_id].RemoveSubgraph(StructureID);
@@ -141,6 +154,29 @@ namespace AnnotationVizLib
         }
 
         private Box _BoundingBox = default;
+        private Box _NodesBoundingBox = default;
+
+        /// <summary>
+        /// AABB of this structure's own locations, excluding child subgraphs.
+        /// SliceGraph recenters and BajajMultiTest restores volume XY from this origin so a cell mesh is not shifted by synapse bboxes.
+        /// </summary>
+        public Geometry.Box NodesBoundingBox
+        {
+            get
+            {
+                const int ParallelThreshold = 64;
+                if (_NodesBoundingBox == default && this.Nodes.Count > 0)
+                {
+                    IEnumerable<Box> boxes = this.Nodes.Count > ParallelThreshold
+                        ? this.Nodes.Values.Select(n => n.BoundingBox).AsParallel()
+                        : this.Nodes.Values.Select(n => n.BoundingBox);
+                    _NodesBoundingBox = boxes.Aggregate((a, b) => Box.Union(a, b));
+                }
+
+                return _NodesBoundingBox;
+            }
+        }
+
         public Geometry.Box BoundingBox
         {
             get
@@ -148,14 +184,7 @@ namespace AnnotationVizLib
                 const int ParallelThreshold = 64;
                 if (_BoundingBox == default)
                 {
-                    if (this.Nodes.Count > 0)
-                    {
-                        //Don't bother using parrallelism for small graphs
-                        IEnumerable<Box> boxes = this.Nodes.Count > ParallelThreshold
-                            ? this.Nodes.Values.Select(n => n.BoundingBox).AsParallel()
-                            : this.Nodes.Values.Select(n => n.BoundingBox);
-                        _BoundingBox = boxes.Aggregate((a, b) => Box.Union(a, b));
-                    }
+                    _BoundingBox = NodesBoundingBox;
 
                     if (!Subgraphs.IsEmpty)
                     {

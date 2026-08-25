@@ -2,12 +2,12 @@
   "profiles": {
     "MonogameTestbed (RC2 Vasculature)": {
       "commandName": "Project",
-      "commandLineArgs": "-s 1 -e http://websvc.codepharm.net/RC2/OData -o C:\\Temp\\Cell_DAEs\\VikingMeshFiles\\RC2\\Vasculature",
+      "commandLineArgs": "--mode BajajMultiTest -s 1 -e http://websvc.codepharm.net/RC2/OData -o C:\\Temp\\Cell_DAEs\\VikingMeshFiles\\RC2\\Vasculature --invert-z",
       "workingDirectory": "$(TargetDir)"
     },
     "MonogameTestbed (RC1 MullerCells)": {
       "commandName": "Project",
-      "commandLineArgs": "-s 1724 -e http://websvc.codepharm.net/RC1/OData -o E:\\Documents\\Cell_DAEs\\VikingMeshFiles\\RC1\\MullerCells -v",
+      "commandLineArgs": "--mode BajajMultiTest -s 1724 -e http://websvc.codepharm.net/RC1/OData -o E:\\Documents\\Cell_DAEs\\VikingMeshFiles\\RC1\\MullerCells -v --invert-z",
       "workingDirectory": "$(TargetDir)"
     }
   }

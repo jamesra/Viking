@@ -10,7 +10,7 @@ using System.Linq;
 namespace AnnotationVizLib.OData
 {
 
-    public class ODataLocationAdapter(Location l, UnitsAndScale.IScale scale) : ILocationReadOnly
+    public class ODataLocationAdapter(Location l, UnitsAndScale.IScale scale) : ILocationReadOnly, IGeometry
     {
         private readonly Location loc = l ?? throw new ArgumentNullException(nameof(l));
         public readonly UnitsAndScale.IScale scale = scale ?? throw new ArgumentNullException(nameof(scale));
@@ -28,15 +28,17 @@ namespace AnnotationVizLib.OData
         {
             get
             {
-                if (_VolumeShape is null)
-                {
-                    _VolumeShape = loc.VolumeShape.Geometry.WellKnownBinary != null
-                        ? Microsoft.SqlServer.Types.SqlGeometry.STGeomFromWKB(new System.Data.SqlTypes.SqlBytes(loc.VolumeShape.Geometry.WellKnownBinary), loc.VolumeShape.Geometry.CoordinateSystemId.Value)
-                        : Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(loc.VolumeShape.Geometry.WellKnownText), loc.VolumeShape.Geometry.CoordinateSystemId.Value);
+                if (_VolumeShape != null)
+                    return _VolumeShape;
 
-                    _VolumeShape = _VolumeShape.Scale(scale);
-                }
+                if (loc.VolumeShape?.Geometry is null)
+                    return null;
 
+                _VolumeShape = loc.VolumeShape.Geometry.WellKnownBinary != null
+                    ? Microsoft.SqlServer.Types.SqlGeometry.STGeomFromWKB(new System.Data.SqlTypes.SqlBytes(loc.VolumeShape.Geometry.WellKnownBinary), loc.VolumeShape.Geometry.CoordinateSystemId.Value)
+                    : Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(loc.VolumeShape.Geometry.WellKnownText), loc.VolumeShape.Geometry.CoordinateSystemId.Value);
+
+                _VolumeShape = _VolumeShape.Scale(scale);
                 return _VolumeShape;
             }
 
@@ -70,7 +72,11 @@ namespace AnnotationVizLib.OData
             {
                 if (_BoundingBox == default)
                 {
-                    Rectangle bound_rect = Geometry.BoundingBox();
+                    SqlGeometry volume = Geometry;
+                    if (volume is null)
+                        return default;
+
+                    Rectangle bound_rect = volume.BoundingBox();
                     _BoundingBox = new Box(bound_rect, Z - scale.Z.Value, Z + scale.Z.Value);
                 }
 

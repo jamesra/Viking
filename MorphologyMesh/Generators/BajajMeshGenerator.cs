@@ -249,6 +249,16 @@ namespace MorphologyMesh
 
     public static class BajajMeshGenerator
     {
+        /// <summary>
+        /// XY distance at which distinct mesh vertices become one Delaunay site.
+        /// <see cref="Vector2.Equals(Vector2, Vector2)"/> / <see cref="Global.Epsilon"/> (0.001) is too tight:
+        /// correspondence and midpoint insertion can leave a colinear triplet ~0.2 apart (span ~0.4), and
+        /// divide-and-conquer Delaunay then adds a long edge through the middle vertex that intersects the
+        /// tiny outer segment (<c>EdgesIntersectTriangulationException</c>, slice 620). Real contour spacing
+        /// is much larger (pixels after volume scale). <c>Epsilon * 100</c> (medial-axis dedup) is still
+        /// below a 0.2 step, so this is <c>Epsilon * 500</c>.
+        /// </summary>
+        internal const double DelaunayXyClusterDistance = Global.Epsilon * 500.0;
 
         /// <summary>
         /// Raised once for every slice in the graph.  <paramref name="mesh"/> is null when the slice produced no
@@ -446,38 +456,45 @@ namespace MorphologyMesh
             //Trace.WriteLine(string.Format("Creating mesh {0}", mesh.ToString()));
 
             AddDelaunayEdges(mesh);
-            var RegionPairingGraph = GenerateRegionGraph(mesh);
 
-            //Remove the edges we know are bad
-            mesh.RemoveInvalidEdges();
-
-            //Ensure corresponding verticies have a face (Legacy, unused in test case last I checked)
-            CompleteCorrespondingVertexFaces(mesh);
-
-            SliceChordRTree rTree = mesh.CreateChordTree(mesh.ShapeZ);
-            List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(mesh, rTree);
-
-            var IncompleteVerticies = IdentifyIncompleteVerticies(mesh);
-
-            List<MorphMeshVertex> FirstPassIncompleteVerticies = FirstPassSliceChordGeneration(mesh, mesh.ShapeZ);
-
-            BajajMeshGenerator.FirstPassFaceGeneration(mesh);
-
-            try
+            bool hasPolygons = mesh.HasPolygonShapes;
+            if (hasPolygons)
             {
-                //2nd pass region detection to locate missing faces
-                MorphMeshRegionGraph SecondPassRegions = MorphRenderMesh.SecondPassRegionDetection(mesh, FirstPassIncompleteVerticies);
-                SecondPassRegions.MergeAndCloseRegionsPass(mesh, rTree);
-            }
-            catch (Exception e)
-            {
-                //The second pass failed.  We continue so the partial mesh is still produced, but flag the
-                //mesh so callers do not treat it as a fully successful reconstruction.
-                mesh.GenerationHadErrors = true;
-                Trace.WriteLine(string.Format("Exception building mesh {0}\n{1}", mesh.ToString(), e));
-            }
+                var RegionPairingGraph = GenerateRegionGraph(mesh);
 
-            BajajMeshGenerator.FirstPassFaceGeneration(mesh);
+                mesh.RemoveInvalidEdges();
+
+                CompleteCorrespondingVertexFaces(mesh);
+
+                SliceChordRTree rTree = mesh.CreateChordTree(mesh.ShapeZ);
+                List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(mesh, rTree);
+
+                var IncompleteVerticies = IdentifyIncompleteVerticies(mesh);
+
+                List<MorphMeshVertex> FirstPassIncompleteVerticies = FirstPassSliceChordGeneration(mesh, mesh.ShapeZ);
+
+                BajajMeshGenerator.FirstPassFaceGeneration(mesh);
+
+                try
+                {
+                    MorphMeshRegionGraph SecondPassRegions = MorphRenderMesh.SecondPassRegionDetection(mesh, FirstPassIncompleteVerticies);
+                    SecondPassRegions.MergeAndCloseRegionsPass(mesh, rTree);
+                }
+                catch (Exception e)
+                {
+                    mesh.GenerationHadErrors = true;
+                    Trace.WriteLine(string.Format("Exception building mesh {0}\n{1}", mesh.ToString(), e));
+                }
+
+                BajajMeshGenerator.FirstPassFaceGeneration(mesh);
+            }
+            else
+            {
+                mesh.RemoveInvalidEdges();
+                CompleteCorrespondingVertexFaces(mesh);
+                FirstPassSliceChordGeneration(mesh, mesh.ShapeZ);
+                BajajMeshGenerator.FirstPassFaceGeneration(mesh);
+            }
 
             if (mesh.Slice != null)
             {
@@ -490,9 +507,10 @@ namespace MorphologyMesh
 
             }
 
+            mesh.RestoreVirtualOverlapTranslation();
+
             mesh.EnsureFacesHaveExternalNormals();
 
-            //Recompute per-vertex normals now that face winding is consistent so lighting matches the corrected surface.
             mesh.RecalculateNormals();
 
             mesh.ManifoldReport = MeshManifoldValidator.Validate(mesh);
@@ -503,21 +521,85 @@ namespace MorphologyMesh
             }
         }
 
-        private static Dictionary<Vector2, List<int>> CreatePointToIndexMap(BajajGeneratorMesh mesh)
+        /// <summary>
+        /// Groups mesh vertices that share an XY Delaunay site. Corresponding vertices (identical XY, different Z)
+        /// collapse via <see cref="Vector2"/> equality; remaining near-duplicates within
+        /// <see cref="DelaunayXyClusterDistance"/> are clustered so the triangulator does not see a degenerate
+        /// colinear micro-edge.
+        /// </summary>
+        internal static Dictionary<Vector2, List<int>> CreatePointToIndexMap(BajajGeneratorMesh mesh)
         {
-            Dictionary<Vector2, List<int>> result = new(mesh.Vertices.Count);
+            Dictionary<Vector2, List<int>> exact = new(mesh.Vertices.Count);
             foreach (MorphMeshVertex v in mesh.Vertices)
             {
                 Vector2 p = v.Position.XY();
-                if (result.ContainsKey(p))
-                {
-                    result[p].Add(v.Index);
-                }
+                if (exact.TryGetValue(p, out List<int> list))
+                    list.Add(v.Index);
                 else
+                    exact.Add(p, [v.Index]);
+            }
+
+            return ClusterNearDuplicateXySites(exact, DelaunayXyClusterDistance);
+        }
+
+        /// <summary>
+        /// Union-find merge of XY keys closer than <paramref name="mergeDistance"/>. Each cluster keeps the
+        /// first site's coordinates and concatenates mesh-index lists (same representation as corresponding verts).
+        /// </summary>
+        internal static Dictionary<Vector2, List<int>> ClusterNearDuplicateXySites(
+            Dictionary<Vector2, List<int>> exactSites, double mergeDistance)
+        {
+            if (exactSites.Count < 2 || mergeDistance <= 0)
+                return exactSites;
+
+            Vector2[] sites = [.. exactSites.Keys];
+            int n = sites.Length;
+            double mergeDistSq = mergeDistance * mergeDistance;
+            int[] parent = new int[n];
+            for (int i = 0; i < n; i++)
+                parent[i] = i;
+
+            int Find(int i)
+            {
+                while (parent[i] != i)
                 {
-                    result.Add(p, [v.Index]);
+                    parent[i] = parent[parent[i]];
+                    i = parent[i];
+                }
+
+                return i;
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = i + 1; j < n; j++)
+                {
+                    if (Vector2.DistanceSquared(in sites[i], in sites[j]) > mergeDistSq)
+                        continue;
+
+                    int a = Find(i);
+                    int b = Find(j);
+                    if (a != b)
+                        parent[b] = a;
                 }
             }
+
+            Dictionary<int, List<int>> merged = [];
+            for (int i = 0; i < n; i++)
+            {
+                int root = Find(i);
+                if (!merged.TryGetValue(root, out List<int> list))
+                {
+                    list = [];
+                    merged[root] = list;
+                }
+
+                list.AddRange(exactSites[sites[i]]);
+            }
+
+            Dictionary<Vector2, List<int>> result = new(merged.Count);
+            foreach (KeyValuePair<int, List<int>> kvp in merged)
+                result.Add(sites[kvp.Key], kvp.Value);
 
             return result;
         }
@@ -561,6 +643,9 @@ namespace MorphologyMesh
             {
                 int A = MeshToTriMesh[edge.A];
                 int B = MeshToTriMesh[edge.B];
+                if (A == B)
+                    continue;
+
                 triMesh.AddConstrainedEdge(new Geometry.Meshing.ConstrainedEdge(A, B), OnProgress);
             }
 
@@ -875,93 +960,12 @@ return;
                         //int iVLower = mesh.IsUpperShape[vA.PolyIndex.Value.ShapeIndex] ? iVB : iVA;
                         //int iVUpper = iVLower == iVB ? iVA : iVB;
 
-                        if (v.ShapeIndex is not PolygonIndex vPolyIndex)
-                        {
-                            Trace.WriteLine("Cannot close faces between polygons and polylines yet.");
+                        if (v.ShapeIndex is null || mesh[iVB].ShapeIndex is null)
                             break;
-                        }
 
-                        if (mesh[iVB].ShapeIndex is not PolygonIndex vCorrespondingIndex)
-                        {
-                            Trace.WriteLine("Cannot close faces between polygons and polylines yet.");
-                            break;
-                        }
+                        int nFacesFound = TryAddCorrespondingNeighborFaces(mesh, v.ShapeIndex, mesh[iVB].ShapeIndex, iVA, iVB);
 
-                        if (mesh.Shapes[vCorrespondingIndex.ShapeIndex] is not Polygon oppositePolygon)
-                            throw new ArgumentException("PolygonIndex does not point to a polygon");
-
-                        //Check all of the edge cases 
-                        EdgeType NNType = mesh.GetContourEdgeTypeWithOrientation(vPolyIndex.Next, vCorrespondingIndex.Next);
-                        EdgeType NPType = mesh.GetContourEdgeTypeWithOrientation(vPolyIndex.Next, vCorrespondingIndex.Previous);
-                        EdgeType PPType = mesh.GetContourEdgeTypeWithOrientation(vPolyIndex.Previous, vCorrespondingIndex.Previous);
-                        EdgeType PNType = mesh.GetContourEdgeTypeWithOrientation(vPolyIndex.Previous, vCorrespondingIndex.Next);
-
-                        bool NNValid = NNType.IsValid() || NNType == EdgeType.FLIPPED_DIRECTION;
-                        bool NPValid = NPType.IsValid() || NPType == EdgeType.FLIPPED_DIRECTION;
-                        bool PPValid = PPType.IsValid() || PPType == EdgeType.FLIPPED_DIRECTION;
-                        bool PNValid = PNType.IsValid() || PNType == EdgeType.FLIPPED_DIRECTION;
-
-                        int nFacesFound = 0;
-
-                        if (NNValid)
-                        {
-                            int[] TriFace = [mesh[vPolyIndex.Next].Index, iVA, iVB];
-
-                            MorphMeshFace face = new(TriFace);
-                            mesh.AddFace(face);
-                            TriFace = [mesh[vCorrespondingIndex.Next].Index, mesh[vPolyIndex.Next].Index, iVB];
-                            face = new MorphMeshFace(TriFace);
-
-                            if (FaceContainsVerticies(mesh, face, out MorphMeshVertex[] contained_verts) == false)
-                            {
-                                mesh.AddFace(face);
-                                nFacesFound++;
-                            }
-                        }
-
-                        if (NPValid)
-                        {
-                            int[] TriFace = [mesh[vPolyIndex.Next].Index, iVA, iVB];
-                            MorphMeshFace face = new(TriFace);
-                            mesh.AddFace(face);
-                            TriFace = [mesh[vCorrespondingIndex.Previous].Index, mesh[vPolyIndex.Next].Index, iVB];
-                            face = new MorphMeshFace(TriFace);
-                            if (FaceContainsVerticies(mesh, face, out MorphMeshVertex[] contained_verts) == false)
-                            {
-                                mesh.AddFace(face);
-                                nFacesFound++;
-                            }
-                        }
-
-                        if (PPValid)
-                        {
-                            int[] TriFace = [mesh[vPolyIndex.Previous].Index, iVA, iVB];
-                            MorphMeshFace face = new(TriFace);
-                            mesh.AddFace(face);
-                            TriFace = [mesh[vCorrespondingIndex.Previous].Index, mesh[vPolyIndex.Previous].Index, iVB];
-                            face = new MorphMeshFace(TriFace);
-                            if (FaceContainsVerticies(mesh, face, out MorphMeshVertex[] contained_verts) == false)
-                            {
-                                mesh.AddFace(face);
-                                nFacesFound++;
-                            }
-                        }
-
-                        if (PNValid)
-                        {
-                            int[] TriFace = [mesh[vPolyIndex.Previous].Index, iVA, iVB];
-                            MorphMeshFace face = new(TriFace);
-                            mesh.AddFace(face);
-                            TriFace = [mesh[vCorrespondingIndex.Next].Index, mesh[vPolyIndex.Previous].Index, iVB];
-                            face = new MorphMeshFace(TriFace);
-                            if (FaceContainsVerticies(mesh, face, out MorphMeshVertex[] contained_verts) == false)
-                            {
-                                mesh.AddFace(face);
-                                nFacesFound++;
-                            }
-                        }
-
-                        //Once in a while there are not two valid edges to complete the face.  
+                        //Once in a while there are not two valid edges to complete the face.
                         //TODO: This case would be better handled by triangulating verticies contained in the face.  It would solve some of the known failures in mesh generation.
                         if (nFacesFound == 1)
                         {
@@ -1037,6 +1041,46 @@ return;
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Close corresponding-vertex faces by walking Next/Previous on each contour. Null neighbors
+        /// (polyline endpoints) are skipped so open chains can still form a ribbon.
+        /// </summary>
+        private static int TryAddCorrespondingNeighborFaces(MorphRenderMesh mesh, IShapeIndex origin, IShapeIndex corresponding, int iVA, int iVB)
+        {
+            int nFacesFound = 0;
+            nFacesFound += TryAddCorrespondingNeighborPair(mesh, origin.Next, corresponding.Next, iVA, iVB);
+            nFacesFound += TryAddCorrespondingNeighborPair(mesh, origin.Next, corresponding.Previous, iVA, iVB);
+            nFacesFound += TryAddCorrespondingNeighborPair(mesh, origin.Previous, corresponding.Previous, iVA, iVB);
+            nFacesFound += TryAddCorrespondingNeighborPair(mesh, origin.Previous, corresponding.Next, iVA, iVB);
+            return nFacesFound;
+        }
+
+        private static int TryAddCorrespondingNeighborPair(MorphRenderMesh mesh, IShapeIndex originNeighbor, IShapeIndex correspondingNeighbor, int iVA, int iVB)
+        {
+            if (originNeighbor is null || correspondingNeighbor is null)
+                return 0;
+            if (mesh.Contains(originNeighbor) == false || mesh.Contains(correspondingNeighbor) == false)
+                return 0;
+
+            EdgeType type = mesh.GetContourEdgeTypeWithOrientation(originNeighbor, correspondingNeighbor);
+            if (type.IsValid() == false && type != EdgeType.FLIPPED_DIRECTION)
+                return 0;
+
+            int[] triFace = [mesh[originNeighbor].Index, iVA, iVB];
+            MorphMeshFace face = new(triFace);
+            mesh.AddFace(face);
+
+            triFace = [mesh[correspondingNeighbor].Index, mesh[originNeighbor].Index, iVB];
+            face = new MorphMeshFace(triFace);
+            if (FaceContainsVerticies(mesh, face, out MorphMeshVertex[] contained_verts) == false)
+            {
+                mesh.AddFace(face);
+                return 1;
+            }
+
+            return 0;
         }
 
         /// <summary>
@@ -1699,7 +1743,8 @@ return;
             bool T4 = true;
             bool T4Opp = true;
 
-            if ((TestsToRun & SliceChordTestType.LineOrientation) > 0)
+            if ((TestsToRun & SliceChordTestType.LineOrientation) > 0
+                && vertex is PolygonIndex && candidate is PolygonIndex)
             {
                 AngleOrientation = EdgeTypeExtensions.OrientationsAreMatched(vertex, candidate, Shapes);
                 if (!AngleOrientation)

@@ -31,8 +31,38 @@ namespace Geometry
             }
         }
 
-        /// <summary>Spatial index of current segments; created on first <see cref="Add"/>.</summary>
+        /// <summary>
+        /// Spatial index of segments. Bulk constructors and <see cref="Translate"/> copy points without
+        /// going through <see cref="Add"/>, so this stays null until rebuilt from the point list.
+        /// </summary>
         private BoundingBoxIndex<LineSegment> rTree = null;
+
+        /// <summary>
+        /// Slice centering translates polylines via the Vector2 constructor, which never called Add.
+        /// Correspondence then queried a null index. Rebuild from <see cref="LineSegments"/> on first use.
+        /// </summary>
+        private BoundingBoxIndex<LineSegment> SpatialIndex
+        {
+            get
+            {
+                EnsureSpatialIndex();
+                return rTree;
+            }
+        }
+
+        private void EnsureSpatialIndex()
+        {
+            if (rTree != null)
+                return;
+
+            rTree = new BoundingBoxIndex<LineSegment>();
+            _ = LineSegments;
+            if (_LineSegments is null)
+                return;
+
+            foreach (LineSegment seg in _LineSegments)
+                rTree.Add(seg.BoundingBox, seg);
+        }
 
         public int PointCount => _Points.Count;
 
@@ -111,8 +141,7 @@ namespace Geometry
             if (_Points.Count == 1)
                 return true;
 
-            //var Existing = this.LineSegments;
-            List<LineSegment> intersectionCandidates = rTree.Intersects(line.BoundingBox);
+            List<LineSegment> intersectionCandidates = SpatialIndex.Intersects(line.BoundingBox);
             if (line.SelfIntersects([.. this.LineSegments.Where(l => intersectionCandidates.Contains(l))], LineSetOrdering.Polyline))
             {
                 return false;
@@ -123,13 +152,13 @@ namespace Geometry
 
         public void Add(IPoint2D next)
         {
-            rTree ??= new BoundingBoxIndex<LineSegment>();
-
             if (_Points.Count == 0)
             {
                 _Points.Add(next);
                 return;
             }
+
+            EnsureSpatialIndex();
 
             //Figure out why we can't add and throw an exception
             if (_Points.Contains(next) && AllowsSelfIntersection == false)
@@ -169,7 +198,7 @@ namespace Geometry
 
         public void Insert(int index, IPoint2D value)
         {
-            rTree ??= new BoundingBoxIndex<LineSegment>();
+            EnsureSpatialIndex();
 
             if (index < 0 || index > _Points.Count)
                 throw new IndexOutOfRangeException($"{nameof(Polyline)}.{nameof(Insert)}: {index} out of bounds");
@@ -264,24 +293,29 @@ namespace Geometry
             }
 
 
+            // SelfIntersects(addition, lines) treats addition as appended after the last segment.
+            // Insert splits a mid-polyline edge; sharing a vertex with the previous/next segment is expected.
             if (AllowsSelfIntersection == false || AllowsSelfIntersection && KnownSelfIntersection.HasValue == false)
             {
                 foreach (var new_seg in new_segments)
                 {
-                    List<LineSegment> intersectionCandidates = [.. rTree.Intersects(new_seg.BoundingBox).Where(l => removed_segments.Contains(l) == false)];
-
-                    if (new_seg.SelfIntersects([.. this.LineSegments.Where(l => intersectionCandidates.Contains(l))], LineSetOrdering.Polyline, out LineSegment? intersected))
+                    foreach (LineSegment existing in segments)
                     {
-                        if (AllowsSelfIntersection == false)
+                        if (SharesExactlyOneEndpoint(new_seg, existing))
+                            continue;
+
+                        if (new_seg.Intersects(existing, EndpointsOnRingDoNotIntersect: false))
                         {
-                            throw new ArgumentException("Added point created self-intersecting line in Polyline");
-                        }
-                        else
-                        {
-                            this.KnownSelfIntersection = intersected;
+                            if (AllowsSelfIntersection == false)
+                                throw new ArgumentException("Added point created self-intersecting line in Polyline");
+
+                            KnownSelfIntersection = existing;
                             break;
                         }
                     }
+
+                    if (KnownSelfIntersection.HasValue)
+                        break;
                 }
             }
 
@@ -310,17 +344,15 @@ namespace Geometry
             }
         }
 
+        /// <summary>
+        /// Inserts a vertex on this polyline at every crossing or T-junction with <paramref name="other"/>.
+        /// Endpoint hits count so the second polyline of a pair still sees a shared vertex after the first was split there.
+        /// </summary>
         public List<Vector2> AddPointsAtIntersections(Polyline other)
         {
-            var candidates = other.rTree.Intersects(this.BoundingBox);
-
             List<Vector2> found_or_added_intersections = [];
 
-            List<Vector2> newPolyline = new(_Points.Count);
-
-            var otherLineSegments = other.LineSegments.ToArray();
-
-            foreach (var other_ls in candidates)
+            foreach (var other_ls in other.LineSegments)
             {
                 found_or_added_intersections.AddRange(this.AddPointsAtIntersections(other_ls));
             }
@@ -328,6 +360,10 @@ namespace Geometry
             return found_or_added_intersections;
         }
 
+        /// <summary>
+        /// Inserts a vertex on this polyline at every crossing or T-junction with <paramref name="other"/>.
+        /// Existing vertices are left unchanged and still returned.
+        /// </summary>
         public List<Vector2> AddPointsAtIntersections(LineSegment other)
         {
             Rectangle? overlap = this.BoundingBox.Intersection(other.BoundingBox);
@@ -339,16 +375,19 @@ namespace Geometry
 
             for (int i = LineSegmentsCopy.Length - 1; i >= 0; i--) //Go in reverse order so we do not change the index we are inserting into
             {
-                LineSegment ls = LineSegments[i];
+                LineSegment ls = LineSegmentsCopy[i];
 
-                var intersects = ls.Intersects(other, true, out var intersection);
+                // Count endpoint hits so the second polyline still sees a crossing after the first was split at that point.
+                var intersects = ls.Intersects(other, false, out var intersection);
                 if (intersects)
                 {
                     if (intersection is IPoint2D point)
                     {
                         Vector2 p = point.ToVector2();
                         found_or_added_intersections.Insert(0, p);
-                        System.Diagnostics.Debug.Assert(false == _Points.Contains(point));
+                        if (_Points.Contains(point) || _Points.Contains(p) || ls.A.Equals(p) || ls.B.Equals(p))
+                            continue;
+
                         this.Insert(i + 1, point);
                     }
                 }
@@ -514,7 +553,7 @@ namespace Geometry
         {
             Vector2 local_offset = new(offset.X, offset.Y);
             var translatedPoints = this._Points.Select(p => new Vector2(p.X + local_offset.X, p.Y + local_offset.Y));
-            return new Polyline(translatedPoints);
+            return new Polyline(translatedPoints, this.AllowsSelfIntersection);
         }
 
         /// <summary>
@@ -534,6 +573,16 @@ namespace Geometry
         }
 
         public override string ToString() => string.Format("PolyLine: {0}", string.Join(" ", _Points));
+
+        /// <summary>
+        /// True when the segments meet at exactly one vertex. Used by <see cref="Insert"/> so splitting an edge is not treated as a self-crossing.
+        /// </summary>
+        static bool SharesExactlyOneEndpoint(in LineSegment a, in LineSegment b)
+        {
+            bool sharesA = a.A.Equals(b.A) || a.A.Equals(b.B);
+            bool sharesB = a.B.Equals(b.A) || a.B.Equals(b.B);
+            return sharesA != sharesB;
+        }
 
         public Polyline Clone() => new Polyline(this.Points.ToArray(), this.AllowsSelfIntersection);
 

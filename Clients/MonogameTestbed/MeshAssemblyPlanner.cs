@@ -764,7 +764,7 @@ namespace MonogameTestbed
                     return null;
                 }
 
-                Rectangle boundingRect = topology.Shapes.BoundingBox().Translate(sliceGraph.BoundingBox.CenterPoint.XY());
+                Rectangle boundingRect = topology.Shapes.BoundingBox().Translate(sliceGraph.XYOrigin);
                 Box bbox = new(boundingRect, topology.ShapeZ.Min(), topology.ShapeZ.Max());
                 NodeBoundingBox[node.Key] = bbox;
                 return bbox;

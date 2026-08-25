@@ -47,7 +47,7 @@ namespace MonogameTestbed
         /// <summary>
         /// The position of this mesh in volume space. 
         /// </summary>
-        public Geometry.Vector2 Position => Graph.BoundingBox.CenterPoint.XY();
+        public Geometry.Vector2 Position => Graph.NodesBoundingBox.CenterPoint.XY();
 
         readonly PolygonSetView PolyViews;
         readonly List<LineView> OTVTableView = null;
@@ -123,6 +123,32 @@ namespace MonogameTestbed
         public readonly MorphologyGraph Graph;
 
         /// <summary>
+        /// Volume XY SliceGraph subtracts from this structure. Shared with the parent cell so synapses mesh in the cell's frame.
+        /// </summary>
+        internal readonly Geometry.Vector2 SliceOrigin;
+
+        Vector3? _placementOffset;
+
+        /// <summary>
+        /// World translation that puts this mesh back in volume XY. Uses the mesh AABB when available so a
+        /// synapse centered on the cell origin is not shifted by its own bbox.
+        /// </summary>
+        internal Vector3 SliceGraphToVolumeOffset =>
+            _placementOffset ?? new Vector3((float)SliceOrigin.X, (float)SliceOrigin.Y, 0f);
+
+        /// <summary>
+        /// Color from the structure type recorded on the morphology graph. Shared by the mesh and the BajajMultiTest legend.
+        /// </summary>
+        internal static Color ColorForGraph(MorphologyGraph graph)
+        {
+            uint argb = graph?.structure?.Type?.Color ?? 0xFF808080u;
+            Color color = argb.ToXNAColor();
+            if (color.A == 0)
+                color.A = 255;
+            return color;
+        }
+
+        /// <summary>
         /// Used to lock the mesh views for individual slices
         /// </summary>
         private readonly SemaphoreSlim drawlock = new(1);
@@ -134,10 +160,11 @@ namespace MonogameTestbed
         internal bool IsGeneratingMesh => Volatile.Read(ref _generateRunning) != 0;
         //SliceGraph sliceGraph;
 
-        public BajajMultiOTVAssignmentView(MorphologyGraph graph)
+        public BajajMultiOTVAssignmentView(MorphologyGraph graph, Geometry.Vector2? sliceOrigin = null)
         {
             ///Takes a set of polygons and Z values and generates a meshView
             Graph = graph;
+            SliceOrigin = sliceOrigin ?? graph.NodesBoundingBox.CenterPoint.XY();
 
             /*
             Trace.WriteLine("Begin Slice graph construction");
@@ -174,6 +201,7 @@ namespace MonogameTestbed
         /// </summary>
         internal void ResetMesh()
         {
+            _placementOffset = null;
             SliceMeshView = new MeshView<VertexPositionColor>
             {
                 Name = "Slice Mesh"
@@ -218,7 +246,7 @@ namespace MonogameTestbed
                     ResetMesh();
 
                 Trace.WriteLine("Begin Slice graph construction");
-                SliceGraph sliceGraph = await SliceGraph.Create(Graph, 2.0);
+                SliceGraph sliceGraph = await SliceGraph.Create(Graph, 2.0, SliceOrigin);
                 Trace.WriteLine("End Slice graph construction");
 
                 if (!IsCurrent())
@@ -238,7 +266,7 @@ namespace MonogameTestbed
                 meshIncompleteView = new MeshAssemblyPlannerIncompleteView(meshAssemblyPlan, sliceGraph);
                 meshCompletedView = new MeshAssemblyPlannerCompletedView(meshAssemblyPlan)
                 {
-                    Color = ColorExtensions.Random()
+                    Color = ColorForGraph(Graph)
                 };
 
                 await BajajMeshGenerator.ConvertToMesh(sliceGraph, (slice, mesh, success) =>
@@ -276,11 +304,16 @@ namespace MonogameTestbed
                     && meshAssemblyPlan.Root?.MeshModel?.composite is { } composite
                     && composite.Faces.Count > 0)
                 {
-                    _assembledDisplayModel = BuildDisplayModelFromComposite(composite, meshCompletedView.Color);
+                    _assembledDisplayModel = BuildDisplayModelFromComposite(composite, ColorForGraph(Graph));
                 }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Mesh generation failed for structure {Graph.StructureID}: {ex}");
             }
             finally
             {
+                RefreshPlacementOffset();
                 Interlocked.Exchange(ref _generateRunning, 0);
             }
         }
@@ -451,6 +484,7 @@ namespace MonogameTestbed
 
         public void Draw3D(MonoTestbed window, Scene3D scene)
         {
+            ApplySliceGraphPlacement();
             scene.Viewport = window.GraphicsDevice.Viewport;
 
 
@@ -463,6 +497,7 @@ namespace MonogameTestbed
             };
 
             window.GraphicsDevice.DepthStencilState = dstate;
+            CullMode cull = BajajMultiAssignmentTest.CullModeForView(CullMode);
             //window.GraphicsDevice.BlendState = BlendState.Opaque;
 
             //Expand our model if we can
@@ -473,7 +508,7 @@ namespace MonogameTestbed
                 {
                     if (ViewIndex.InRange(iShownMesh, MeshViews.Count))
                     {
-                        MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, scene, CullMode);
+                        MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, scene, cull);
                     }
                 }
                 else
@@ -490,7 +525,7 @@ namespace MonogameTestbed
                                 var incompleteModels = meshIncompleteView.MeshModels;
                                 if (incompleteModels.Length > 0)
                                     MeshView<VertexPositionColor>.Draw(window.GraphicsDevice, scene, window.basicEffect,
-                                        CullMode, FillMode.WireFrame, incompleteModels);
+                                        cull, FillMode.WireFrame, incompleteModels);
                             }
 
                             bool drewSolidMesh = false;
@@ -501,7 +536,7 @@ namespace MonogameTestbed
                                 {
                                     rootMeshModel.ModelLock.EnterReadLock();
                                     MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
-                                        window.basicEffect, CullMode, FillMode.Solid, [rootMeshModel.model]);
+                                        window.basicEffect, cull, FillMode.Solid, [rootMeshModel.model]);
                                     drewSolidMesh = true;
                                 }
                                 finally
@@ -513,11 +548,11 @@ namespace MonogameTestbed
                             if (!drewSolidMesh && _assembledDisplayModel != null)
                             {
                                 MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
-                                    window.basicEffect, CullMode, FillMode.Solid, [_assembledDisplayModel]);
+                                    window.basicEffect, cull, FillMode.Solid, [_assembledDisplayModel]);
                             }
                             else if (!drewSolidMesh && meshCompletedView != null)
                                 MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
-                                    window.basicEffect, CullMode, FillMode.Solid, meshCompletedView.MeshModels);
+                                    window.basicEffect, cull, FillMode.Solid, meshCompletedView.MeshModels);
                         }
                         finally
                         {
@@ -535,9 +570,63 @@ namespace MonogameTestbed
         }
 
         /// <summary>
-        /// Axis-aligned bounds of mesh geometry actually drawn in 3D (centered slice-graph space).
+        /// Put this mesh at volume XY. SliceGraph subtracted <see cref="SliceOrigin"/> (the parent cell's location center).
         /// </summary>
-        public bool TryGetRenderedMeshBounds(out Vector3 min, out Vector3 max)
+        private void ApplySliceGraphPlacement()
+        {
+            Matrix m = Matrix.CreateTranslation(SliceGraphToVolumeOffset);
+            var root = meshAssemblyPlan?.Root?.MeshModel?.model;
+            if (root != null)
+                root.ModelMatrix = m;
+            if (_assembledDisplayModel != null)
+                _assembledDisplayModel.ModelMatrix = m;
+            if (meshCompletedView?.MeshModels != null)
+            {
+                foreach (var model in meshCompletedView.MeshModels)
+                {
+                    if (model != null)
+                        model.ModelMatrix = m;
+                }
+            }
+
+            if (meshIncompleteView?.MeshModels != null)
+            {
+                foreach (var model in meshIncompleteView.MeshModels)
+                {
+                    if (model != null)
+                        model.ModelMatrix = m;
+                }
+            }
+        }
+
+        /// <summary>
+        /// After assembly, translate so this structure's annotation AABB center lands at volume XY
+        /// even if the mesh was built in the parent cell's frame.
+        /// </summary>
+        void RefreshPlacementOffset()
+        {
+            Geometry.Vector2 target = Graph.Nodes.Count > 0
+                ? Graph.NodesBoundingBox.CenterPoint.XY()
+                : SliceOrigin;
+            if (TryGetLocalMeshXYCenter(out Geometry.Vector2 local))
+                _placementOffset = new Vector3((float)(target.X - local.X), (float)(target.Y - local.Y), 0f);
+            else
+                _placementOffset = new Vector3((float)SliceOrigin.X, (float)SliceOrigin.Y, 0f);
+        }
+
+        bool TryGetLocalMeshXYCenter(out Geometry.Vector2 center)
+        {
+            if (!TryGetLocalMeshBounds(out Vector3 min, out Vector3 max))
+            {
+                center = default;
+                return false;
+            }
+
+            center = new Geometry.Vector2((min.X + max.X) * 0.5, (min.Y + max.Y) * 0.5);
+            return true;
+        }
+
+        bool TryGetLocalMeshBounds(out Vector3 min, out Vector3 max)
         {
             Vector3 boundsMin = new(float.MaxValue);
             Vector3 boundsMax = new(float.MinValue);
@@ -585,19 +674,87 @@ namespace MonogameTestbed
             max = boundsMax;
             return any;
         }
+
+        /// <summary>
+        /// Axis-aligned bounds of mesh geometry actually drawn in 3D (volume XY, slice-graph Z).
+        /// </summary>
+        public bool TryGetRenderedMeshBounds(out Vector3 min, out Vector3 max)
+        {
+            if (!TryGetLocalMeshBounds(out min, out max))
+                return false;
+
+            Vector3 offset = SliceGraphToVolumeOffset;
+            min += offset;
+            max += offset;
+            return true;
+        }
     }
 
 /// <summary>
 /// Generates a single mesh for a cell or a subset of a cell based on a Z range.  Used to debug the generation of whole cells and the merging of multiple slice meshes.
 /// </summary>
-class BajajMultiAssignmentTest : IGraphicsTest
+class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
 {
     public string Title => this.GetType().Name;
 
+    public string ModeDescription => string.Empty;
+
+    public string ActiveViewDescription => string.Empty;
+
+    public IReadOnlyList<LegendEntry> LegendEntries
+    {
+        get
+        {
+            Dictionary<ulong, LegendEntry> byType = [];
+            foreach (var wrapView in wrapViews)
+            {
+                var type = wrapView.Graph?.structure?.Type;
+                if (type is null || byType.ContainsKey(type.ID))
+                    continue;
+
+                string name = type.Name;
+                if (string.IsNullOrWhiteSpace(name))
+                    name = type.Code;
+                if (string.IsNullOrWhiteSpace(name))
+                    name = $"Type {type.ID}";
+
+                byType[type.ID] = new LegendEntry(name, BajajMultiOTVAssignmentView.ColorForGraph(wrapView.Graph));
+            }
+
+            return [.. byType.Values.OrderBy(e => e.Text, StringComparer.OrdinalIgnoreCase)];
+        }
+    }
+
     Scene scene;
     Scene3D scene3D;
+    MonoTestbed _window;
     readonly GamePadStateTracker Gamepad = new();
     readonly KeyboardStateTracker keyboard = new();
+
+    /// <summary>
+    /// World transform that reflects volume Z through the XY plane when <see cref="Program.CommandLineOptions.InvertZ"/> is set.
+    /// Camera3D uses +Z as up; this keeps exported DAE in volume coordinates.
+    /// </summary>
+    internal static Matrix ViewZAxisWorld =>
+        Program.options?.InvertZ == true
+            ? Matrix.CreateScale(1f, 1f, -1f)
+            : Matrix.Identity;
+
+    /// <summary>
+    /// Swap clockwise/counterclockwise culling when the view Z reflection reverses winding.
+    /// </summary>
+    internal static CullMode CullModeForView(CullMode mode)
+    {
+        if (Program.options?.InvertZ != true)
+            return mode;
+
+        return mode switch
+        {
+            CullMode.CullClockwiseFace => CullMode.CullCounterClockwiseFace,
+            CullMode.CullCounterClockwiseFace => CullMode.CullClockwiseFace,
+            _ => mode
+        };
+    }
 
     AnnotationVizLib.MorphologyGraph graph;
 
@@ -619,12 +776,14 @@ class BajajMultiAssignmentTest : IGraphicsTest
 
     public async Task Init(MonoTestbed window)
     {
+        _window = window;
         this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
 
         this.scene3D = new Scene3D(window.GraphicsDevice.Viewport, new Camera3D())
         {
             MaxDrawDistance = 1000000,
-            MinDrawDistance = 1
+            MinDrawDistance = 1,
+            World = ViewZAxisWorld
         };
 
         Gamepad.Update(GamePad.GetState(PlayerIndex.One));
@@ -650,7 +809,7 @@ class BajajMultiAssignmentTest : IGraphicsTest
             Console.WriteLine(" From command line parameters");
 
             Uri endpoint = Program.options.EndpointUri;
-            graph = await Task.Run(() => AnnotationVizLib.OData.ODataMorphologyFactory.FromOData([.. Program.options.StructureIDs.Select(id => (long)id)], false, endpoint));
+            graph = await Task.Run(() => AnnotationVizLib.OData.ODataMorphologyFactory.FromOData([.. Program.options.StructureIDs.Select(id => (long)id)], Program.options.IncludeChildren, endpoint));
         }
         else
         {
@@ -669,7 +828,7 @@ class BajajMultiAssignmentTest : IGraphicsTest
             //Becca's paper, 2nd render
             //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] {933, 23122, 31687, 23095, 23017, 23856, 39762 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
 
-            graph = await Task.Run(() => AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { 476 }, false, DataSource.EndpointMap[Endpoint.TEST]));
+            graph = await Task.Run(() => AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { 476 }, Program.options.IncludeChildren, DataSource.EndpointMap[Endpoint.TEST]));
 
             //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 30804, 2713 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
             //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 933 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
@@ -727,16 +886,7 @@ class BajajMultiAssignmentTest : IGraphicsTest
         }
 
         List<Task> meshGenTasks = [];
-        //AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
-        foreach (var subgraph in graph.Subgraphs.Values)
-        {
-            BajajMultiOTVAssignmentView wrapView = new(subgraph);// (nodes.Select(n => n.Geometry.ToPolygon()).ToArray(), nodes.Select(n=> n.Z).ToArray());
-
-            wrapViews.Add(wrapView);
-
-            var task = wrapView.GenerateMesh();
-            meshGenTasks.Add(task);
-        }
+        QueueMeshViews(graph, meshGenTasks);
 
         await Task.WhenAll(meshGenTasks);
 
@@ -759,7 +909,7 @@ class BajajMultiAssignmentTest : IGraphicsTest
                 try
                 {
                     if (wrapView.meshAssemblyPlan != null && wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
-                        SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, wrapView.Graph.BoundingBox.CenterPoint, wrapView.Graph.StructureID, Program.options.OutputPath);
+                        SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, PlacementTranslation(wrapView), wrapView.Graph, Program.options.OutputPath);
                 }
                 catch (Exception e)
                 {
@@ -793,6 +943,28 @@ class BajajMultiAssignmentTest : IGraphicsTest
         */
     }
 
+    /// <summary>
+    /// Starts Bajaj generation for every nested subgraph. Children share the parent cell's XY origin so their
+    /// meshes sit on the cell instead of being recentered on each synapse bbox.
+    /// </summary>
+    private void QueueMeshViews(MorphologyGraph parent, List<Task> meshGenTasks, Geometry.Vector2? familyOrigin = null)
+    {
+        foreach (var subgraph in parent.Subgraphs.Values)
+        {
+            Geometry.Vector2? origin = familyOrigin;
+            if (origin is null && subgraph.Nodes.Count > 0)
+                origin = subgraph.NodesBoundingBox.CenterPoint.XY();
+
+            if (subgraph.Nodes.Count > 0)
+            {
+                BajajMultiOTVAssignmentView wrapView = new(subgraph, origin);
+                wrapViews.Add(wrapView);
+                meshGenTasks.Add(wrapView.GenerateMesh());
+            }
+
+            QueueMeshViews(subgraph, meshGenTasks, origin);
+        }
+    }
 
     public void Update()
     {
@@ -896,8 +1068,17 @@ class BajajMultiAssignmentTest : IGraphicsTest
             if (Gamepad.Back_Clicked || keyboard.Pressed(Keys.PrintScreen))
             {
                 if (wrapView.meshAssemblyPlan != null && wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
-                    SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, wrapView.Graph.BoundingBox.CenterPoint, wrapView.Graph.StructureID);
+                    SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, PlacementTranslation(wrapView), wrapView.Graph);
             }
+        }
+
+        if (keyboard.Pressed(Keys.I) && Program.options != null)
+        {
+            Program.options.InvertZ = !Program.options.InvertZ;
+            if (scene3D != null)
+                scene3D.World = ViewZAxisWorld;
+            if (_window != null)
+                FrameCameraOnRenderedMesh(_window);
         }
 
         if (Gamepad.Back_Clicked || (keyboard.Pressed(Keys.S) && (keyboard.Pressed(Keys.LeftControl) || keyboard.Pressed(Keys.RightControl))))
@@ -926,6 +1107,7 @@ class BajajMultiAssignmentTest : IGraphicsTest
     public void Draw(MonoTestbed window)
     {
         scene3D.Viewport = window.GraphicsDevice.Viewport;
+        scene3D.World = ViewZAxisWorld;
         window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, 1.0f, 0);
 
 
@@ -963,22 +1145,12 @@ class BajajMultiAssignmentTest : IGraphicsTest
         hud.AppendLine($"Cam ({cam.Position.X:F0}, {cam.Position.Y:F0}, {cam.Position.Z:F0})");
         hud.AppendLine($"LookAt ({cam.LookAt.X:F0}, {cam.LookAt.Y:F0}, {cam.LookAt.Z:F0})");
         hud.AppendLine($"Yaw {cam.Yaw * 180 / Math.PI:F1} deg  Pitch {cam.Pitch * 180 / Math.PI:F1} deg  Dist {camDistance:F0}");
+        hud.AppendLine(Program.options?.InvertZ == true ? "Z inverted (I to toggle)" : "Z volume (I / --invert-z)");
         if (graph?.BoundingBox != null)
         {
             var bbox = graph.BoundingBox;
             hud.AppendLine($"Mesh XY +/-{bbox.Width / 2:F0}  Z {bbox.MinVals[2]:F0}-{bbox.MaxVals[2]:F0}");
         }
-
-        foreach (var wrapView in wrapViews)
-        {
-            hud.AppendLine($"Composite={wrapView.ShowCompositeMesh} BBoxOverlay={wrapView.ShowAssemblyBoundingBoxes} Cull={wrapView.CullMode}");
-            bool assembled = wrapView.meshAssemblyPlan?.MeshAssembledEvent.IsSet ?? false;
-            int verts = wrapView.meshAssemblyPlan?.Root?.MeshModel?.model?.Vertices?.Length ?? 0;
-            int incomplete = wrapView.meshIncompleteView?.MeshModels?.Length ?? 0;
-            hud.AppendLine($"Struct {wrapView.Graph?.StructureID} assembled={assembled} verts={verts} incompleteBoxes={incomplete}");
-        }
-
-        hud.AppendLine("RightStick: bbox overlay  LeftStick / K: cull on/off (default off shows the full tube)");
 
         window.GraphicsDevice.BlendState = BlendState.AlphaBlend;
         window.spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
@@ -1017,6 +1189,11 @@ class BajajMultiAssignmentTest : IGraphicsTest
 
         if (!any)
             return;
+
+        Vector3 worldMin = Vector3.Transform(min, ViewZAxisWorld);
+        Vector3 worldMax = Vector3.Transform(max, ViewZAxisWorld);
+        min = Vector3.Min(worldMin, worldMax);
+        max = Vector3.Max(worldMin, worldMax);
 
         Vector3 center = (min + max) * 0.5f;
         Vector3 extent = max - min;
@@ -1089,6 +1266,8 @@ class BajajMultiAssignmentTest : IGraphicsTest
             ColladaView.Add(rootModel);
         }
 
+        Dictionary<ulong, StructureModel> modelsById = [];
+
         foreach (var view in wrapViews)
         {
             if (view.meshAssemblyPlan is null || view.Graph is null)
@@ -1098,14 +1277,27 @@ class BajajMultiAssignmentTest : IGraphicsTest
             if (view.meshAssemblyPlan.Root.MeshModel != null)
             {
                 var mesh = view.meshAssemblyPlan.Root.MeshModel.composite;
+                Vector3 offset = view.SliceGraphToVolumeOffset;
                 StructureModel rootModel = new(structure_id, mesh,
-                new MaterialLighting(MaterialLighting.CreateKey(COLORSOURCE.STRUCTURE, graph.Subgraphs[structure_id].structure), System.Drawing.Color.CornflowerBlue))
+                new MaterialLighting(MaterialKey(view.Graph), System.Drawing.Color.CornflowerBlue))
                 {
-                    Translation = view.Graph.BoundingBox.CenterPoint * 0.001
+                    Translation = new Geometry.Vector3(offset.X, offset.Y, view.Graph.NodesBoundingBox.CenterPoint.Z) * 0.001
                 };
 
-                ColladaView.Add(rootModel);
+                modelsById[structure_id] = rootModel;
             }
+        }
+
+        foreach (var view in wrapViews)
+        {
+            if (!modelsById.TryGetValue(view.Graph.StructureID, out StructureModel model))
+                continue;
+
+            MorphologyGraph parentGraph = view.Graph.Parent;
+            if (parentGraph != null && parentGraph.StructureID != 0 && modelsById.TryGetValue(parentGraph.StructureID, out StructureModel parentModel))
+                parentModel.AddChild(model);
+            else
+                ColladaView.Add(model);
         }
 
         DirectoryInfo fInfo = new(outputDir);
@@ -1116,9 +1308,25 @@ class BajajMultiAssignmentTest : IGraphicsTest
         DynamicRenderMeshColladaSerializer.SerializeToFile(ColladaView, outputFile);
     }
 
-    public void SaveMesh(IReadOnlyMesh3D<IVertex3D> mesh, Geometry.Vector3 Position, ulong structure_id, string outputDir = null)
+    static Geometry.Vector3 PlacementTranslation(BajajMultiOTVAssignmentView view)
+    {
+        Vector3 offset = view.SliceGraphToVolumeOffset;
+        return new Geometry.Vector3(offset.X, offset.Y, view.Graph.NodesBoundingBox.CenterPoint.Z);
+    }
+
+    /// <summary>
+    /// Collada material key for a structure mesh. Nested children are not in the dummy root's
+    /// <see cref="MorphologyGraph.Subgraphs"/> map, so this uses the graph already attached to the view.
+    /// </summary>
+    static string MaterialKey(MorphologyGraph structureGraph) =>
+        structureGraph.structure != null
+            ? MaterialLighting.CreateKey(COLORSOURCE.STRUCTURE, structureGraph.structure)
+            : MaterialLighting.CreateKey(COLORSOURCE.STRUCTURE, structureGraph.StructureID);
+
+    public void SaveMesh(IReadOnlyMesh3D<IVertex3D> mesh, Geometry.Vector3 Position, MorphologyGraph structureGraph, string outputDir = null)
     {
         outputDir = outputDir ?? DefaultOutputPath;
+        ulong structure_id = structureGraph.StructureID;
 
         BasicColladaView ColladaView = new(graph.scale.X, null)
         {
@@ -1126,7 +1334,7 @@ class BajajMultiAssignmentTest : IGraphicsTest
         };
 
         StructureModel rootModel = new(structure_id, mesh,
-            new MaterialLighting(MaterialLighting.CreateKey(COLORSOURCE.STRUCTURE, graph.Subgraphs[structure_id].structure), System.Drawing.Color.CornflowerBlue))
+            new MaterialLighting(MaterialKey(structureGraph), System.Drawing.Color.CornflowerBlue))
         {
             Translation = Position * 0.001
         };

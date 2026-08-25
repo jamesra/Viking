@@ -218,6 +218,11 @@ namespace MonogameTestbed
         /// </summary>
         public void EnsureCompositeWinding()
         {
+            // A slice that produced no mesh still completes the assembly leaf so parents can merge.
+            // The display model Vertices array is never allocated in that case.
+            if (composite.Faces.Count == 0)
+                return;
+
             var options = new MeshWindingReorientation.Options
             {
                 RespectAnchorFaces = false,
@@ -248,15 +253,19 @@ namespace MonogameTestbed
                 //Triangle index order must match reoriented composite faces or backface culling ignores the fix.
                 model.Edges = [.. composite.Faces.SelectMany(f => f.iVerts)];
 
-                for (int i = 0; i < composite.Vertices.Count && i < model.Vertices.Length; i++)
+                if (model.Vertices is { Length: > 0 })
                 {
-                    var v = model.Vertices[i];
-                    v.Normal = composite[i].Normal.ToXNAVector3();
-                    model.Vertices[i] = v;
-                }
+                    int n = Math.Min(composite.Vertices.Count, model.Vertices.Length);
+                    for (int i = 0; i < n; i++)
+                    {
+                        var v = model.Vertices[i];
+                        v.Normal = composite[i].Normal.ToXNAVector3();
+                        model.Vertices[i] = v;
+                    }
 
-                //In-place vertex edits do not mark buffers dirty; reassign to force GPU refresh.
-                model.Vertices = [.. model.Vertices];
+                    //In-place vertex edits do not mark buffers dirty; reassign to force GPU refresh.
+                    model.Vertices = [.. model.Vertices];
+                }
             }
             finally
             {

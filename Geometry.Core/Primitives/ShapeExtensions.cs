@@ -920,6 +920,7 @@ namespace Geometry
                 {
                     var newAIntersections = lineA.AddPointsAtIntersections(lineB);
                     added_intersections.AddRange(newAIntersections);
+                    added_intersections.AddRange(lineB.AddPointsAtIntersections(lineA));
                 }
                 else if (A is Polygon polyAB && B is Polyline lineAB)
                 {

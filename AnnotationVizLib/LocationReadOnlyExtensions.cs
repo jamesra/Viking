@@ -14,8 +14,15 @@ namespace AnnotationVizLib
     /// </summary>
     public static class LocationReadOnlyExtensions
     {
+        /// <summary>
+        /// Volume-space shape. Prefers <see cref="IGeometry.Geometry"/> on OData/WCF adapters (VolumeShape WKB + scale). Never MosaicShape.
+        /// </summary>
         public static SqlGeometry Geometry(this ILocationReadOnly loc)
         {
+            // OData/WCF adapters expose scaled VolumeShape (WKB preferred). Do not use MosaicShape here.
+            if (loc is IGeometry volume && volume.Geometry != null)
+                return volume.Geometry;
+
             if (string.IsNullOrEmpty(loc.VolumeGeometryWKT))
                 return null;
 

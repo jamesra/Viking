@@ -113,7 +113,7 @@ namespace MorphologyMesh
     {
         public static bool IsValid(this EdgeType edge)
         {
-            const EdgeType ValidMask = EdgeType.CONTOUR | EdgeType.SURFACE | EdgeType.ARTIFICIAL | EdgeType.CORRESPONDING | EdgeType.MEDIALAXIS | EdgeType.CONTOUR_TO_MEDIALAXIS;
+            const EdgeType ValidMask = EdgeType.CONTOUR | EdgeType.SURFACE | EdgeType.ARTIFICIAL | EdgeType.CORRESPONDING | EdgeType.MEDIALAXIS | EdgeType.CONTOUR_TO_MEDIALAXIS | EdgeType.COUNTOUR_TO_POLYLINE;
             return (edge & ValidMask) > 0;
         }
 
@@ -234,6 +234,8 @@ namespace MorphologyMesh
                 return GetEdgeType(iPolyA, iPolyB, shapes, midpoint);
             if (A is PolylineIndex iLineA && B is PolylineIndex iLineB)
                 return GetEdgeType(iLineA, iLineB, shapes, midpoint);
+            if ((A is PolygonIndex && B is PolylineIndex) || (A is PolylineIndex && B is PolygonIndex))
+                return EdgeType.COUNTOUR_TO_POLYLINE;
 
             throw new ArgumentException("Unhandled case in GetEdgeType");
         }
@@ -414,18 +416,19 @@ namespace MorphologyMesh
 
             if (ALine.ShapeIndex != BLine.ShapeIndex)
             {
-                //return EdgeType.FLYING; //Line covers empty space, could be on surface
                 LineSegment segment = new(ALine.Point(A), BLine.Point(B));
-                bool LineIntersectsAnyOtherPoly = Shapes.Where((p, iP) => iP != ALine.ShapeIndex && iP != BLine.ShapeIndex).Any(p => p.GetRelation(segment) != ShapeRelation.None);
-                if (!LineIntersectsAnyOtherPoly)
+                bool lineIntersectsAnyOtherShape = Shapes.Where((p, iP) => iP != ALine.ShapeIndex && iP != BLine.ShapeIndex)
+                    .Any(p => p.GetRelation(segment) != ShapeRelation.None);
+                if (lineIntersectsAnyOtherShape)
                     return EdgeType.INVALID;
-                else
-                {
-                    return EdgeType.SURFACE;
-                }
+
+                return EdgeType.SURFACE;
             }
             else if (ALine.ShapeIndex == BLine.ShapeIndex)
             {
+                if (ALine.AreAdjacent(BLine))
+                    return EdgeType.CONTOUR;
+
                 return EdgeType.INVALID;
             }
 
@@ -486,44 +489,33 @@ namespace MorphologyMesh
         }
 
         /// <summary>
-        /// Determines the edge type for two verticies that are both on a contour
+        /// Determines the edge type for two contour verticies, including open polylines.
         /// </summary>
-        /// <param name="APoly"></param>
-        /// <param name="BPoly"></param>
-        /// <param name="midpoint"></param>
-        /// <param name="Polygons"></param>
-        /// <returns></returns>
-        public static EdgeType GetContourEdgeTypeWithOrientation(this MorphRenderMesh mesh, PolygonIndex A, PolygonIndex B, Vector2? midpoint = new Vector2?())
+        public static EdgeType GetContourEdgeTypeWithOrientation(this MorphRenderMesh mesh, IShapeIndex A, IShapeIndex B, Vector2? midpoint = new Vector2?())
         {
-            if (!midpoint.HasValue)
-            {
-                midpoint = ((mesh[A].Position + mesh[B].Position) / 2.0).XY();
-            }
+            if (A is null || B is null)
+                return EdgeType.INVALID;
 
-            EdgeType type = GetContourEdgeTypeWithOrientation(A, B, mesh.Shapes, midpoint.Value);
-            return type;
+            if (mesh.Contains(A) == false || mesh.Contains(B) == false)
+                return EdgeType.INVALID;
+
+            if (!midpoint.HasValue)
+                midpoint = ((mesh[A].Position + mesh[B].Position) / 2.0).XY();
+
+            return GetContourEdgeTypeWithOrientation(A, B, mesh.Shapes, midpoint.Value);
         }
 
         /// <summary>
-        /// Determines the edge type for two verticies that are both on a contour
+        /// Determines the edge type for two contour indicies. Polygon pairs still check orientation;
+        /// polylines are two-sided so a valid type is never flipped.
         /// </summary>
-        /// <param name="APoly"></param>
-        /// <param name="BPoly"></param>
-        /// <param name="midpoint"></param>
-        /// <param name="Polygons"></param>
-        /// <returns></returns>
-        public static EdgeType GetContourEdgeTypeWithOrientation(PolygonIndex APoly, PolygonIndex BPoly, IReadOnlyList<IShape2D> Shapes, Vector2 midpoint)
+        public static EdgeType GetContourEdgeTypeWithOrientation(IShapeIndex A, IShapeIndex B, IReadOnlyList<IShape2D> Shapes, Vector2 midpoint)
         {
-            EdgeType type = GetEdgeType(APoly, BPoly, Shapes, midpoint);
-            if ((type.IsValid() &&
-               type != EdgeType.CONTOUR))
+            EdgeType type = GetEdgeType(A, B, Shapes, midpoint);
+            if (A is PolygonIndex && B is PolygonIndex && type.IsValid() && type != EdgeType.CONTOUR)
             {
-                bool OrientationsMatch = OrientationsAreMatched(APoly, BPoly, Shapes);
-
-                if (!OrientationsMatch)
-                {
+                if (OrientationsAreMatched(A, B, Shapes) == false)
                     type = EdgeType.FLIPPED_DIRECTION;
-                }
             }
 
             return type;
@@ -541,12 +533,15 @@ namespace MorphologyMesh
         {
             if (A.Type == VertexOrigin.CONTOUR && B.Type == VertexOrigin.CONTOUR)
             {
+                if (A.ShapeIndex is null || B.ShapeIndex is null)
+                    return EdgeType.UNKNOWN;
+
                 if (!midpoint.HasValue)
                 {
                     midpoint = ((A.Position + B.Position) / 2.0).XY();
                 }
 
-                return GetContourEdgeTypeWithOrientation((PolygonIndex)A.ShapeIndex, (PolygonIndex)B.ShapeIndex, Shapes, midpoint.Value);
+                return GetContourEdgeTypeWithOrientation(A.ShapeIndex, B.ShapeIndex, Shapes, midpoint.Value);
             }
             else if ((A.Type == VertexOrigin.CONTOUR && B.Type == VertexOrigin.MEDIALAXIS) ||
                     (B.Type == VertexOrigin.CONTOUR && A.Type == VertexOrigin.MEDIALAXIS))

@@ -1411,13 +1411,14 @@ namespace MonogameTestbed
             new(108602,  108528, DataSource.EndpointMap[Endpoint.RPC1], "We should always be able to find an edge to add to our perimeter until we exhaust the list of unassigned perimeter edges",1.0),
             new(113919,  113910, DataSource.EndpointMap[Endpoint.RPC1], "Duplicate point found in exterior ring", 1.0),
             new(269802 , 269803, DataSource.EndpointMap[Endpoint.RPC1], "Index out of range", 3.0),
-            new(85470 , 85449, DataSource.EndpointMap[Endpoint.RPC1], "Scale check", 2.0)
+            new(85470 , 85449, DataSource.EndpointMap[Endpoint.RPC1], "Scale check", 2.0),
+            new(169273, 5653, DataSource.EndpointMap[Endpoint.RC1], "Slice 51: nonManifold:1 holes:1 (U:169273 Z62 / D:5653 Z61, structure 180)")
         ];
 
         /// <summary>
         /// Index of the reprocase we want to display on load
         /// </summary>
-        readonly int CurrentReproCase = 5;
+        readonly int CurrentReproCase = 41;
 
         BajajRepro CurrentTestCase = null;
 

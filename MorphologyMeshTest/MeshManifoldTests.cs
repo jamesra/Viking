@@ -216,5 +216,39 @@ namespace MorphologyMeshTest
 
             return sb.Length == 0 ? "(none)" : sb.ToString();
         }
+
+        /// <summary>
+        /// Two contours joined by a single LocationLink but not overlapping in XY used to produce no slice
+        /// chords (FLYING). Virtual overlap must let tiling run, then restore the lower contour to its original XY.
+        /// </summary>
+        [TestMethod]
+        public void GenerateFaces_SingleLinkNonOverlappingSquares_ConnectsAndRestoresLowerXY()
+        {
+            Polygon lower = Square(10).Translate(new Vector2(-50, 0));
+            Polygon upper = Square(8).Translate(new Vector2(50, 0));
+            Assert.IsFalse(lower.Intersects(upper), "Test setup requires a disjoint pair.");
+
+            BajajGeneratorMesh mesh = new([lower, upper], [0, 10], [false, true]);
+            Assert.AreNotEqual(Vector2.Zero, mesh.Topology.VirtualOverlapOffset);
+
+            BajajMeshGenerator.GenerateFaces(mesh);
+
+            Assert.IsTrue(mesh.Faces.Count > 0, "1:1 disjoint pair must still generate a connecting mesh.");
+
+            MorphMeshVertex[] lowerVerts = [.. mesh.MorphVerticies.Where(v =>
+                v.ShapeIndex != null && mesh.Topology.IsUpper[v.ShapeIndex.ShapeIndex] == false)];
+            Assert.IsTrue(lowerVerts.Length > 0);
+            double avgX = lowerVerts.Average(v => v.Position.X);
+            Assert.IsTrue(avgX < 0, $"Lower contour should return to original XY (avg X {avgX}), not stay stacked on the upper.");
+        }
+
+        [TestMethod]
+        public void TryTranslateNonOverlappingPair_OverlappingSquares_DoesNotMove()
+        {
+            IShape2D[] shapes = [Square(10), Square(8)];
+            bool[] isUpper = [false, true];
+            Vector2 offset = SliceTopology.TryTranslateNonOverlappingPair(shapes, isUpper);
+            Assert.AreEqual(Vector2.Zero, offset);
+        }
     }
 }

@@ -76,17 +76,18 @@ namespace MorphologyMesh
         public readonly double SliceCenterZ;
 
         /// <summary>
-        /// The translation vector to position this slice in world space.
+        /// XY translation applied to every lower shape so a 1:1 linked pair that does not overlap
+        /// can still generate Bajaj slice chords. Inverse is applied to those vertices after faces exist.
         /// </summary>
-        //public readonly Vector2 Offset;
+        public readonly Vector2 VirtualOverlapOffset;
 
-        public SliceTopology(ulong key, IEnumerable<IShape2D> shapes, IEnumerable<bool> isUpper, IEnumerable<double> shapeZ, IEnumerable<ulong> shapeIndexToMorphNodeIndex, double sliceThickness = double.NaN)
-            : this(shapes, isUpper, shapeZ, shapeIndexToMorphNodeIndex, sliceThickness)
+        public SliceTopology(ulong key, IEnumerable<IShape2D> shapes, IEnumerable<bool> isUpper, IEnumerable<double> shapeZ, IEnumerable<ulong> shapeIndexToMorphNodeIndex, double sliceThickness = double.NaN, Vector2 virtualOverlapOffset = default)
+            : this(shapes, isUpper, shapeZ, shapeIndexToMorphNodeIndex, sliceThickness, virtualOverlapOffset)
         {
             SliceKey = key;
         }
 
-        public SliceTopology(IEnumerable<IShape2D> shapes, IEnumerable<bool> isUpper, IEnumerable<double> shapeZ, IEnumerable<ulong> shapeIndexToMorphNodeIndex = null, double sliceThickness = double.NaN)
+        public SliceTopology(IEnumerable<IShape2D> shapes, IEnumerable<bool> isUpper, IEnumerable<double> shapeZ, IEnumerable<ulong> shapeIndexToMorphNodeIndex = null, double sliceThickness = double.NaN, Vector2 virtualOverlapOffset = default)
         {
             SliceKey = 0;
 
@@ -112,6 +113,10 @@ namespace MorphologyMesh
 
             if (ShapeIndexToMorphNodeIndex is not null && ShapeIndexToMorphNodeIndex.Length != Shapes.Length)
                 throw new ArgumentException($"ShapeIndexToMorphNodeIndex has {ShapeIndexToMorphNodeIndex.Length} entries for {Shapes.Length} shapes.  These must be indexed in lockstep.", nameof(shapeIndexToMorphNodeIndex));
+
+            if (virtualOverlapOffset == Vector2.Zero)
+                virtualOverlapOffset = TryTranslateNonOverlappingPair(Shapes, IsUpper);
+            VirtualOverlapOffset = virtualOverlapOffset;
 
             //Assign polys to sets for convenience later
             CalculateUpperAndLowerPolygons(IsUpper, Shapes, out UpperShapes, out UpperShapeIndicies, out LowerShapes, out LowerShapeIndicies);
@@ -447,7 +452,9 @@ namespace MorphologyMesh
         }
 
         /// <summary>
-        /// Due to details of the implementation of our bajaj algorithm we need to add a point between adjacent corresponding points on a polygon
+        /// Bajaj tiling needs a vertex between two corresponding points that already share a contour edge.
+        /// Inserts the chord midpoint before Next. Inserting at Current would split the previous edge;
+        /// a chord stays on the existing segment so a simple polyline cannot self-intersect.
         /// </summary>
         internal static void AddPointsBetweenAdjacentCorrespondingVerticies(Polyline[] Polylines, List<Vector2> correspondingPoints)
         {
@@ -458,7 +465,7 @@ namespace MorphologyMesh
                     continue;
 
                 SortedList<int, Vector2> PointsToInsert = [];
-                correspondingIndicies.Sort(); //Sort the indicies so we can simplify our search.
+                correspondingIndicies.Sort();
 
                 PolylineIndex Current = correspondingIndicies[0];
                 for (long i = 0; i < correspondingIndicies.Count - 1; i++)
@@ -467,24 +474,21 @@ namespace MorphologyMesh
 
                     if (Current.Next == Next)
                     {
-                        //This means two corresponding points are adjacent and we need to insert a midpoint into the polygon between them.
-                        Vector2[] midPoint = CatmullRom.FitCurveSegment(line.Points,
-                            Current.VertexIndex,
-                            [0.5]
-                        );
+                        Vector2 mid = (Current.Point(line) + Next.Point(line)) * 0.5;
+                        if (mid == Current.Point(line) || mid == Next.Point(line))
+                        {
+                            Current = Next;
+                            continue;
+                        }
 
-                        //Adding the point will change index of all PointIndex values so we wait until the end
-                        PointsToInsert.Add(Current.VertexIndex, midPoint[0]);
+                        PointsToInsert.Add(Next.VertexIndex, mid);
                     }
 
                     Current = Next;
                 }
 
-                //Reverse the order of our list of points to add so we do not break polygon indicies.  Then insert our points
                 foreach (var addition in PointsToInsert.Reverse())
                 {
-                    //Trace.WriteLine(string.Format("Add vertex after {0}", addition));
-                    //Insert the vertex, adjust the size of the ring in case we've already inserted into it.
                     line.Insert(addition.Key, addition.Value);
                 }
             }
@@ -525,5 +529,54 @@ namespace MorphologyMesh
             return;
         }
 
+        /// <summary>
+        /// A slice that is one upper and one lower annotation linked by a single LocationLink has unambiguous
+        /// correspondence even when the contours do not overlap. Bajaj classifies every chord across that gap as
+        /// FLYING and leaves a break. Translate the lower contour onto the upper centroid so tiling can run.
+        /// Callers restore vertex XY after faces exist.
+        /// </summary>
+        /// <returns>The offset applied to each lower shape, or <see cref="Vector2.Zero"/> when no translation ran.</returns>
+        internal static Vector2 TryTranslateNonOverlappingPair(IShape2D[] shapes, bool[] isUpper)
+        {
+            if (shapes is null || isUpper is null || shapes.Length != isUpper.Length)
+                return Vector2.Zero;
+
+            int iUpper = -1;
+            int iLower = -1;
+            for (int i = 0; i < isUpper.Length; i++)
+            {
+                if (isUpper[i])
+                {
+                    if (iUpper >= 0)
+                        return Vector2.Zero;
+                    iUpper = i;
+                }
+                else
+                {
+                    if (iLower >= 0)
+                        return Vector2.Zero;
+                    iLower = i;
+                }
+            }
+
+            if (iUpper < 0 || iLower < 0)
+                return Vector2.Zero;
+
+            IShape2D upper = shapes[iUpper];
+            IShape2D lower = shapes[iLower];
+            if (upper.Intersects(lower))
+                return Vector2.Zero;
+
+            Vector2 offset = ShapeCenter(upper) - ShapeCenter(lower);
+            if (offset == Vector2.Zero)
+                return Vector2.Zero;
+
+            shapes[iLower] = lower.Translate(offset);
+            System.Diagnostics.Trace.WriteLine($"1:1 non-overlapping pair: translated lower shape by {offset} so Bajaj can tile, then restore after faces.");
+            return offset;
+        }
+
+        internal static Vector2 ShapeCenter(IShape2D shape) =>
+            shape is ICentroid centroid ? centroid.Centroid.ToVector2() : shape.BoundingBox.Center;
     }
 }

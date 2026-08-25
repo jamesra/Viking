@@ -91,6 +91,28 @@ namespace MonogameTestbed
             public IEnumerable<ulong> BoundaryIDs { get; set; }
 
             /// <summary>
+            /// When set, child structures of each -s ID are not loaded. Synapses, gap junctions, and rafts are included by default.
+            /// </summary>
+            [Option("exclude-children", Default = false, HelpText = "Do not load child structures of the IDs given with -s (alias: -xc / --xc). Children are included by default.")]
+            public bool ExcludeChildren { get; set; }
+
+            [Option("xc", Default = false, Hidden = true)]
+            public bool ExcludeChildrenAlias { get; set; }
+
+            /// <summary>
+            /// True unless <see cref="ExcludeChildren"/> (or --xc) was passed. Passed to OData as include_children.
+            /// </summary>
+            public bool IncludeChildren => !ExcludeChildren;
+
+            /// <summary>
+            /// Reflect volume Z through the XY plane in the 3D view. Camera3D uses +Z as up, so unflipped
+            /// section numbers appear inverted relative to a typical stack. Exported meshes keep volume Z.
+            /// Toggle at runtime in BajajMultiTest with I.
+            /// </summary>
+            [Option("invert-z", Default = false, HelpText = "Negate Z in the 3D view (Camera3D is Z-up). Does not change exported meshes.")]
+            public bool InvertZ { get; set; }
+
+            /// <summary>
             /// The output file or path name
             /// </summary>
             [Option('o', "output", Required = false, HelpText = "Output folder name", Separator = ' ', Default = null)]
@@ -252,6 +274,7 @@ namespace MonogameTestbed
             {
                 this.LocationIDs = InputParameterListToIDs(LocationIDParams ?? []);
                 this.StructureIDs = InputParameterListToIDs(StructureIDParams ?? []);
+                ExcludeChildren |= ExcludeChildrenAlias;
                 ParseStartupMode();
                 ParseReproParam();
                 LoadCaptureRequest();
@@ -321,6 +344,24 @@ namespace MonogameTestbed
             private static partial Regex MyRegex();
         }
 
+        /// <summary>
+        /// CommandLineParser only binds long names with a double dash. Map the single-dash forms the CLI help advertises.
+        /// </summary>
+        private static string[] NormalizeChildStructureFlags(string[] args)
+        {
+            string[] mapped = new string[args.Length];
+            for (int i = 0; i < args.Length; i++)
+            {
+                mapped[i] = args[i] switch
+                {
+                    "-xc" => "--xc",
+                    "-exclude-children" => "--exclude-children",
+                    _ => args[i]
+                };
+            }
+            return mapped;
+        }
+
         public static CommandLineOptions options;
 
         static string LogPath;
@@ -351,7 +392,7 @@ namespace MonogameTestbed
                 Console.WriteLine($"App Domain Base Directory: {AppDomain.CurrentDomain.BaseDirectory}");
 #endif
 
-                var result = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
+                var result = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(NormalizeChildStructureFlags(args));
                 result
                     .WithParsed<CommandLineOptions>(o =>
                     {

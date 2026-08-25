@@ -271,8 +271,11 @@ namespace MorphologyMesh
             };
             MeshWindingReorientation.Reorient(this, options);
 
-            var ctx = MorphMeshOutwardOrientation.ShapeContext.FromSliceTopology(Topology);
-            MorphMeshOutwardOrientation.OrientComponentsOutward(this, ctx);
+            if (HasPolygonShapes)
+            {
+                var ctx = MorphMeshOutwardOrientation.ShapeContext.FromSliceTopology(Topology);
+                MorphMeshOutwardOrientation.OrientComponentsOutward(this, ctx);
+            }
 
             var after = MeshWindingDiagnostics.Analyze(this);
             if (after.NonManifoldEdges == 0)
@@ -365,6 +368,45 @@ namespace MorphologyMesh
 
             return positions.AreClockwise() == false;
             */
+        }
+
+        /// <summary>
+        /// After tiling in the overlapped XY frame, move lower-contour (and lower-Z cap) vertices back so the
+        /// mesh spans the annotators' original positions instead of stacking the pair.
+        /// </summary>
+        internal void RestoreVirtualOverlapTranslation()
+        {
+            Vector2 offset = Topology.VirtualOverlapOffset;
+            if (offset == Vector2.Zero)
+                return;
+
+            Vector2 back = -offset;
+            double lowerZ = LowerShapeIndicies.Count == 0 ? double.NaN : LowerShapeIndicies.Select(i => ShapeZ[i]).Average();
+            double upperZ = UpperShapeIndicies.Count == 0 ? double.NaN : UpperShapeIndicies.Select(i => ShapeZ[i]).Average();
+            double midZ = (lowerZ + upperZ) / 2.0;
+
+            foreach (MorphMeshVertex v in MorphVerticies)
+            {
+                bool move;
+                if (v.ShapeIndex != null)
+                    move = Topology.IsUpper[v.ShapeIndex.ShapeIndex] == false;
+                else
+                    move = !double.IsNaN(midZ) && v.Position.Z <= midZ;
+
+                if (move)
+                    v.Position = new Vector3(v.Position.X + back.X, v.Position.Y + back.Y, v.Position.Z);
+            }
+
+            foreach (int i in LowerShapeIndicies)
+            {
+                IShape2D restored = Shapes[i].Translate(back);
+                Shapes[i] = restored;
+                Topology.Shapes[i] = restored;
+            }
+
+            IShape2D[] lowerShapes = Topology.LowerShapes;
+            for (int j = 0; j < lowerShapes.Length; j++)
+                lowerShapes[j] = lowerShapes[j].Translate(back);
         }
     }
 }
