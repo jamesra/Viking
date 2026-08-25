@@ -69,47 +69,27 @@ namespace MorphologyMesh
 
         /// <summary>
         /// Returns true when the face winding should be reversed so the normal points outward from the contours.
+        /// Sidewalls that span two slices must not use the cap-containment test: the face centroid sits
+        /// between section Z values, containment misses, and majority vote inverts an already-outward tube.
+        /// Called by <see cref="OrientComponentsOutward"/> on per-slice meshes and the assembled composite.
         /// </summary>
         public static bool FaceNeedsFlipForOutward(Mesh3D<MorphMeshVertex> mesh, IFace f, ShapeContext ctx)
         {
+            return TryFaceNeedsFlipForOutward(mesh, f, ctx, out bool needsFlip) && needsFlip;
+        }
+
+        private static bool TryFaceNeedsFlipForOutward(
+            Mesh3D<MorphMeshVertex> mesh, IFace f, ShapeContext ctx, out bool needsFlip)
+        {
+            needsFlip = false;
             MorphMeshVertex[] verts = [.. mesh[f.iVerts]];
             Vector3 n = mesh.Normal(f);
-            double faceZ = verts.Average(v => v.Position.Z);
 
-            if (Math.Abs(n.Z) < Global.Epsilon)
-            {
-                if (f.IsTriangle() == false)
-                    return false;
-
-                MorphMeshVertex noncorresponding = verts.First(v =>
-                    v.Corresponding.HasValue == false || f.iVerts.Contains(v.Corresponding.Value) == false);
-
-                if (noncorresponding.ShapeIndex is null)
-                    return false;
-
-                if (ctx.IsUpperByShapeIndex.TryGetValue(noncorresponding.ShapeIndex.ShapeIndex, out bool nonCorrespondingIsUpper) == false)
-                    return false;
-
-                int iNonCorresponding = Array.IndexOf(verts, noncorresponding);
-                InfiniteSequentialIndexSet faceIndexer = new(0, f.iVerts.Length, 0);
-
-                MorphMeshVertex nextVert = verts[faceIndexer[iNonCorresponding + 1]];
-                MorphMeshVertex prevVert = verts[faceIndexer[iNonCorresponding - 1]];
-
-                bool output;
-                if (nextVert.ShapeIndex == noncorresponding.ShapeIndex.Next)
-                    output = nonCorrespondingIsUpper == false;
-                else if (nextVert.ShapeIndex == noncorresponding.ShapeIndex.Previous)
-                    output = nonCorrespondingIsUpper;
-                else
-                    output = prevVert.ShapeIndex == noncorresponding.ShapeIndex.Previous
-                        ? nonCorrespondingIsUpper == false
-                        : nonCorrespondingIsUpper;
-
-                return noncorresponding.ShapeIndex.IsInner ? !output : output;
-            }
+            if (f.IsTriangle() && IsSidewall(verts, n))
+                return TrySidewallNeedsFlip(verts, ctx, out needsFlip);
 
             Vector2 faceCenter = mesh.GetCentroid(f);
+            double faceZ = verts.Average(v => v.Position.Z);
             double zTol = Math.Max(Global.Epsilon * 1000, 0.5);
 
             if (n.Z < 0)
@@ -117,18 +97,140 @@ namespace MorphologyMesh
                 IEnumerable<IShape2D> lowersAtZ = ctx.ShapesAtZ
                     .Where(s => s.IsUpper == false && Math.Abs(s.Z - faceZ) <= zTol)
                     .Select(s => s.Shape);
-                if (lowersAtZ.Any(p => p.GetRelation((IPoint2D)faceCenter) == ShapeRelation.Contained))
-                    return false;
+                needsFlip = lowersAtZ.Any(p => p.GetRelation((IPoint2D)faceCenter) == ShapeRelation.Contained) == false;
                 return true;
             }
 
             IEnumerable<IShape2D> uppersAtZ = ctx.ShapesAtZ
                 .Where(s => s.IsUpper && Math.Abs(s.Z - faceZ) <= zTol)
                 .Select(s => s.Shape);
-            if (uppersAtZ.Any(p => p.GetRelation((IPoint2D)faceCenter) == ShapeRelation.Contained))
-                return false;
+            needsFlip = uppersAtZ.Any(p => p.GetRelation((IPoint2D)faceCenter) == ShapeRelation.Contained) == false;
             return true;
         }
+
+        /// <summary>
+        /// A tiling triangle lives on two sections, or is closer to vertical than to a cap.
+        /// Composite faces always span Z; testing them as caps with zTol≈1 always votes "flip".
+        /// </summary>
+        private static bool IsSidewall(MorphMeshVertex[] verts, Vector3 n)
+        {
+            double zMin = verts.Min(v => v.Position.Z);
+            double zMax = verts.Max(v => v.Position.Z);
+            if (zMax - zMin > Global.Epsilon)
+                return true;
+
+            return Math.Abs(n.Z) < 0.5;
+        }
+
+        /// <summary>
+        /// Contour-edge winding test that does not need <see cref="MorphMeshVertex.Corresponding"/> (not
+        /// copied onto the composite) or a per-morph-node IsUpper map (each location is upper in one
+        /// slice pair and lower in the next). Uses <see cref="IShapeIndex.Equals"/> because boxed
+        /// PolygonIndex == is reference equality and never matched Next/Previous.
+        /// </summary>
+        private static bool TrySidewallNeedsFlip(MorphMeshVertex[] verts, ShapeContext ctx, out bool needsFlip)
+        {
+            needsFlip = false;
+            if (TryGetContourEdge(verts, out MorphMeshVertex onContour, out MorphMeshVertex opposite) == false)
+                return false;
+            if (onContour.ShapeIndex is null)
+                return false;
+
+            bool contourIsUpper = ContourIsUpperOnFace(onContour, opposite, ctx);
+            int iOnContour = Array.IndexOf(verts, onContour);
+            InfiniteSequentialIndexSet faceIndexer = new(0, verts.Length, 0);
+            MorphMeshVertex nextVert = verts[faceIndexer[iOnContour + 1]];
+            MorphMeshVertex prevVert = verts[faceIndexer[iOnContour - 1]];
+
+            bool output;
+            if (SameShapeIndex(nextVert.ShapeIndex, onContour.ShapeIndex.Next))
+                output = contourIsUpper;
+            else if (SameShapeIndex(nextVert.ShapeIndex, onContour.ShapeIndex.Previous))
+                output = contourIsUpper == false;
+            else
+                output = SameShapeIndex(prevVert.ShapeIndex, onContour.ShapeIndex.Previous)
+                    ? contourIsUpper
+                    : contourIsUpper == false;
+
+            needsFlip = onContour.ShapeIndex.IsInner ? !output : output;
+            return true;
+        }
+
+        /// <summary>
+        /// Geometric upper = higher Z on this face. Equal-Z pairing (rare branch grouping) falls back
+        /// to the topology map.
+        /// </summary>
+        private static bool ContourIsUpperOnFace(MorphMeshVertex onContour, MorphMeshVertex opposite, ShapeContext ctx)
+        {
+            double dz = onContour.Position.Z - opposite.Position.Z;
+            if (Math.Abs(dz) > Global.Epsilon)
+                return dz > 0;
+
+            if (onContour.ShapeIndex is not null
+                && ctx.IsUpperByShapeIndex.TryGetValue(onContour.ShapeIndex.ShapeIndex, out bool mapped))
+                return mapped;
+
+            return false;
+        }
+
+        private static bool TryGetContourEdge(
+            MorphMeshVertex[] verts, out MorphMeshVertex onContour, out MorphMeshVertex opposite)
+        {
+            onContour = null;
+            opposite = null;
+
+            for (int i = 0; i < verts.Length; i++)
+            {
+                MorphMeshVertex a = verts[i];
+                if (a.ShapeIndex is null)
+                    continue;
+
+                for (int j = 0; j < verts.Length; j++)
+                {
+                    if (i == j)
+                        continue;
+
+                    MorphMeshVertex b = verts[j];
+                    if (b.ShapeIndex is null)
+                        continue;
+
+                    if (SameShapeIndex(b.ShapeIndex, a.ShapeIndex.Next) == false
+                        && SameShapeIndex(b.ShapeIndex, a.ShapeIndex.Previous) == false)
+                        continue;
+
+                    MorphMeshVertex third = verts.FirstOrDefault(v =>
+                        ReferenceEquals(v, a) == false && ReferenceEquals(v, b) == false);
+                    if (third is null)
+                        return false;
+
+                    onContour = a;
+                    opposite = third;
+                    return true;
+                }
+            }
+
+            MorphMeshVertex[] ordered = [.. verts.OrderBy(v => v.Position.Z)];
+            if (Math.Abs(ordered[0].Position.Z - ordered[1].Position.Z) <= Global.Epsilon
+                && ordered[2].Position.Z - ordered[1].Position.Z > Global.Epsilon)
+            {
+                onContour = ordered[0].ShapeIndex is not null ? ordered[0] : ordered[1];
+                opposite = ordered[2];
+                return onContour.ShapeIndex is not null;
+            }
+
+            if (Math.Abs(ordered[1].Position.Z - ordered[2].Position.Z) <= Global.Epsilon
+                && ordered[1].Position.Z - ordered[0].Position.Z > Global.Epsilon)
+            {
+                onContour = ordered[1].ShapeIndex is not null ? ordered[1] : ordered[2];
+                opposite = ordered[0];
+                return onContour.ShapeIndex is not null;
+            }
+
+            return false;
+        }
+
+        private static bool SameShapeIndex(IShapeIndex a, IShapeIndex b) =>
+            a is not null && b is not null && a.Equals(b);
 
         /// <summary>
         /// After manifold-consistent winding, flip 2-manifold patches that mostly point inward relative to contours.
@@ -153,9 +255,11 @@ namespace MorphologyMesh
                 {
                     if (f.IsTriangle() == false)
                         continue;
+                    if (TryFaceNeedsFlipForOutward(mesh, f, ctx, out bool flip) == false)
+                        continue;
 
                     sampled++;
-                    if (FaceNeedsFlipForOutward(mesh, f, ctx))
+                    if (flip)
                         needFlip++;
                 }
 

@@ -2,6 +2,7 @@ using Geometry;
 using Geometry.Meshing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MorphologyMesh;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -61,6 +62,59 @@ namespace MorphologyMeshTest
             }
 
             Assert.IsTrue(sharedEdgeCount > 0, "Expected interior edges shared by two faces.");
+        }
+
+        /// <summary>
+        /// Tapered sidewalls span Z, so the cap-containment test never finds a contour (centroid Z is
+        /// between slices). A second outward pass must not invert an already-correct tube; that is the
+        /// BajajMultiTest composite bug where the trunk went dark while branches stayed lit.
+        /// </summary>
+        [TestMethod]
+        public void OrientComponentsOutward_TaperedPrism_SecondPassDoesNotInvertSidewalls()
+        {
+            Polygon lower = Square(10);
+            Polygon upper = Square(8);
+            BajajGeneratorMesh mesh = new([lower, upper], [0, 10], [false, true]);
+            BajajMeshGenerator.GenerateFaces(mesh);
+            mesh.RecalculateNormals();
+
+            AssertSidewallsPointAwayFromAxis(mesh);
+
+            var ctx = MorphMeshOutwardOrientation.ShapeContext.FromSliceTopology(mesh.Topology);
+            int flips = MorphMeshOutwardOrientation.OrientComponentsOutward(mesh, ctx);
+            mesh.RecalculateNormals();
+
+            Assert.AreEqual(0, flips, "A second outward pass must not flip an already-outward frustum.");
+            AssertSidewallsPointAwayFromAxis(mesh);
+        }
+
+        /// <summary>
+        /// Outward south wall (CCW lower edge + upper vertex). Composite vertices have no Corresponding
+        /// and an empty IsUpper map; the face still must not be marked for flip.
+        /// </summary>
+        [TestMethod]
+        public void FaceNeedsFlip_TaperedSouthWall_FalseWhenAlreadyOutwardWithoutCorresponding()
+        {
+            Mesh3D<MorphMeshVertex> mesh = NewMesh();
+            const int ring = 4;
+            mesh.AddVertex(new MorphMeshVertex(new PolygonIndex(0, 0, ring), new Vector3(-10, -10, 0)));
+            mesh.AddVertex(new MorphMeshVertex(new PolygonIndex(0, 1, ring), new Vector3(10, -10, 0)));
+            mesh.AddVertex(new MorphMeshVertex(new PolygonIndex(1, 1, ring), new Vector3(8, -8, 10)));
+            mesh.AddFace(0, 1, 2);
+            IFace face = mesh.Faces.First();
+
+            Vector3 n = mesh.Normal(face);
+            Assert.IsTrue(n.Y < -0.3, "Setup: south wall must point toward -Y (outside the square).");
+
+            var ctx = MorphMeshOutwardOrientation.ShapeContext.FromAccumulated(
+                [
+                    new MorphMeshOutwardOrientation.ShapeAtZ { Shape = Square(10), IsUpper = false, Z = 0 },
+                    new MorphMeshOutwardOrientation.ShapeAtZ { Shape = Square(8), IsUpper = true, Z = 10 },
+                ],
+                new Dictionary<int, bool>());
+
+            Assert.IsFalse(MorphMeshOutwardOrientation.FaceNeedsFlipForOutward(mesh, face, ctx),
+                "Spanning sidewalls must use contour-edge winding, not cap containment between slice Z values.");
         }
 
         /// <summary>
@@ -161,6 +215,25 @@ namespace MorphologyMeshTest
             AlwaysOrientOutward = false,
             RunRepairPass = false
         };
+
+        private static void AssertSidewallsPointAwayFromAxis(Mesh3D<MorphMeshVertex> mesh)
+        {
+            int sampled = 0;
+            foreach (MorphMeshVertex v in mesh.Vertices)
+            {
+                Vector2 xy = v.Position.XY();
+                if (xy.Magnitude < 1)
+                    continue;
+                if (Math.Abs(v.Normal.Z) > 0.5)
+                    continue;
+
+                sampled++;
+                Assert.IsTrue(Vector2.Dot(xy, v.Normal.XY()) > 0,
+                    $"Sidewall vertex {v.Position} normal {v.Normal} must point away from the tube axis.");
+            }
+
+            Assert.IsTrue(sampled > 0, "Expected sidewall vertices with mostly-horizontal normals.");
+        }
 
         private static void AddVert(Mesh3D<MorphMeshVertex> mesh, double x, double y, double z, int i) =>
             mesh.AddVertex(new MorphMeshVertex(new PolygonIndex(0, i, 16), new Vector3(x, y, z)));
