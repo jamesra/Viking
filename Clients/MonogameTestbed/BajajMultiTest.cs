@@ -841,6 +841,12 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
 
         Console.WriteLine("End OData fetch");
 
+        if (Program.options.SmoothProcesses)
+        {
+            Console.WriteLine("Smoothing unbranched process centroids");
+            AnnotationVizLib.MorphologyGraph.SmoothProcesses(graph);
+        }
+
         //graph = graph.Subgraphs.Values.First();
 
 

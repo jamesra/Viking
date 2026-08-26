@@ -113,6 +113,18 @@ namespace MonogameTestbed
             public bool InvertZ { get; set; }
 
             /// <summary>
+            /// When set, skip Catmull-Rom centroid smoothing on unbranched processes. Smoothing is on by default so
+            /// long processes do not inherit section-registration jitter; pass this to A/B the same cell.
+            /// </summary>
+            [Option("no-smooth-processes", Default = false, HelpText = "Disable process centroid jitter smoothing before SliceGraph.Create (on by default).")]
+            public bool NoSmoothProcesses { get; set; }
+
+            /// <summary>
+            /// True unless <see cref="NoSmoothProcesses"/> was passed. Applied once after OData load in BajajMultiTest.
+            /// </summary>
+            public bool SmoothProcesses => !NoSmoothProcesses;
+
+            /// <summary>
             /// The output file or path name
             /// </summary>
             [Option('o', "output", Required = false, HelpText = "Output folder name", Separator = ' ', Default = null)]

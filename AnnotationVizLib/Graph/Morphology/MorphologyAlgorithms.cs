@@ -3,7 +3,6 @@ using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace AnnotationVizLib
 {
@@ -393,38 +392,145 @@ namespace AnnotationVizLib
         }
 
         /// <summary>
-        /// Apply a smoothing function to nodes with two edges.  Leaves branch points and terminals in place.
+        /// Cap on XY translation in volume units (nm after scale) so a real bend is not pulled onto the fit.
         /// </summary>
-        /// <param name="graph"></param>
+        public const double MaxProcessCentroidOffset = 80.0;
+
+        /// <summary>
+        /// Further cap: do not move more than this fraction of the contour's XY bounding-box width.
+        /// </summary>
+        public const double MaxProcessCentroidOffsetFractionOfWidth = 0.35;
+
+        /// <summary>
+        /// Fit a Z-parameterized open Catmull-Rom through each unbranched process (including pinned
+        /// branch/terminal endpoints) and rigidly translate only 1-up-and-1-down process contours.
+        /// Child subgraphs whose nearest parent node moved are co-translated so synapses stay on the wall.
+        /// Call once on the factory root before <c>SliceGraph.Create</c>; it recurses into subgraphs.
+        /// Mutates <see cref="MorphologyNode.Geometry"/> in place. Do not run after correspondence:
+        /// corresponding verts require identical XY.
+        /// </summary>
         public static void SmoothProcesses(MorphologyGraph graph)
         {
-            //Iterate over each process
             List<ulong[]> listProcesses = graph.Processes();
 
             foreach (ulong[] process in listProcesses)
-            {
-                MorphologyNode[] process_nodes = [.. process.Select(p => graph.Nodes[p])];
+                SmoothProcessChain(graph, process);
 
-                Vector2[] center_of_mass = [.. process_nodes.Select(n => n.Center.XY())];
-
-                Vector2[] smoothed_points = Geometry.Smoothing.Gaussian(center_of_mass);
-
-                Vector2[] translation_vectors = [.. center_of_mass.Select((c, i) => smoothed_points[i] - c)];
-
-                Parallel.For(0, process_nodes.Length, (i) => process_nodes[i].Geometry = process_nodes[i].Geometry.Translate(translation_vectors[i]));
-
-                /*
-                for (int i = 0; i < process_nodes.Length; i++)
-                {
-                    process_nodes[i].Geometry = process_nodes[i].Geometry.Translate(translation_vectors[i]);
-                }
-                */
-            }
+            graph._RTree = null;
+            graph.ResetCachedMeasurements();
 
             foreach (MorphologyGraph subgraph in graph.Subgraphs.Values)
-            {
                 SmoothProcesses(subgraph);
+        }
+
+        /// <summary>
+        /// Evaluates the Catmull-Rom at each process node's Z (skipping that node's own jittered centroid as a
+        /// control point so the spline actually damps section noise) and applies a clamped rigid XY Translate.
+        /// </summary>
+        private static void SmoothProcessChain(MorphologyGraph graph, ulong[] process)
+        {
+            if (process.Length < 3)
+                return;
+
+            MorphologyNode[] nodes = [.. process.Select(id => graph.Nodes[id])];
+            Vector2[] centroids = [.. nodes.Select(n => n.Center.XY())];
+            double[] z = [.. nodes.Select(n => n.Z)];
+
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                MorphologyNode node = nodes[i];
+                if (i == 0 || i == nodes.Length - 1 || !node.IsUnbranchedProcess())
+                    continue;
+
+                Vector2 smoothed = EvaluateProcessCentroid(centroids, z, i);
+                Vector2 offset = ClampProcessOffset(node, smoothed - centroids[i]);
+                if (offset.Magnitude <= Tolerance.Epsilon)
+                    continue;
+
+                TranslateNodeAndAttachedSubgraphs(graph, node, offset);
             }
+        }
+
+        /// <summary>
+        /// Catmull-Rom through the chain with this node's centroid omitted so jitter is not interpolated.
+        /// Parameter t is this node's Z between the previous and next samples, so a missing section does not stretch the fit.
+        /// </summary>
+        private static Vector2 EvaluateProcessCentroid(Vector2[] centroids, double[] z, int i)
+        {
+            double dz = z[i + 1] - z[i - 1];
+            if (Math.Abs(dz) < Tolerance.Epsilon)
+                return centroids[i];
+
+            if (Vector2.DistanceSquared(centroids[i - 1], centroids[i + 1]) <= Tolerance.EpsilonSquared)
+                return centroids[i];
+
+            double t = (z[i] - z[i - 1]) / dz;
+            if (t < 0)
+                t = 0;
+            else if (t > 1)
+                t = 1;
+
+            List<Vector2> control = [];
+            if (i - 2 >= 0)
+                control.Add(centroids[i - 2]);
+            control.Add(centroids[i - 1]);
+            control.Add(centroids[i + 1]);
+            if (i + 2 < centroids.Length)
+                control.Add(centroids[i + 2]);
+
+            int iStart = control.Count >= 3 && i - 2 >= 0 ? 1 : 0;
+            if (iStart + 1 >= control.Count)
+                return centroids[i];
+
+            Vector2[] fitted = CatmullRom.FitCurveSegment(control, iStart, [t]);
+            if (fitted is null || fitted.Length == 0 || double.IsNaN(fitted[0].X) || double.IsNaN(fitted[0].Y))
+                return centroids[i - 1] + ((centroids[i + 1] - centroids[i - 1]) * t);
+
+            return fitted[0];
+        }
+
+        private static Vector2 ClampProcessOffset(MorphologyNode node, Vector2 offset)
+        {
+            double length = offset.Magnitude;
+            if (length <= Tolerance.Epsilon)
+                return Vector2.Zero;
+
+            Rectangle bbox = node.Geometry.BoundingBox();
+            double maxOffset = Math.Min(MaxProcessCentroidOffset, MaxProcessCentroidOffsetFractionOfWidth * bbox.Width);
+            if (maxOffset <= Tolerance.Epsilon || length <= maxOffset)
+                return offset;
+
+            return offset * (maxOffset / length);
+        }
+
+        /// <summary>
+        /// Rigidly translate a process node and every child subgraph whose nearest parent location is that node.
+        /// Pinned anchors never call this, so their synapses stay put.
+        /// </summary>
+        private static void TranslateNodeAndAttachedSubgraphs(MorphologyGraph graph, MorphologyNode node, Vector2 offset)
+        {
+            node.Geometry = node.Geometry.Translate(offset);
+
+            foreach (KeyValuePair<ulong, ulong> pair in graph.NearestNodeToSubgraph)
+            {
+                if (pair.Value != node.Key)
+                    continue;
+                if (!graph.Subgraphs.TryGetValue(pair.Key, out MorphologyGraph child))
+                    continue;
+                TranslateSubgraphGeometry(child, offset);
+            }
+        }
+
+        private static void TranslateSubgraphGeometry(MorphologyGraph subgraph, Vector2 offset)
+        {
+            foreach (MorphologyNode n in subgraph.Nodes.Values)
+                n.Geometry = n.Geometry.Translate(offset);
+
+            subgraph._RTree = null;
+            subgraph.ResetCachedMeasurements();
+
+            foreach (MorphologyGraph nested in subgraph.Subgraphs.Values)
+                TranslateSubgraphGeometry(nested, offset);
         }
     }
 }

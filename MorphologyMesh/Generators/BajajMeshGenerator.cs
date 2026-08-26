@@ -267,6 +267,22 @@ namespace MorphologyMesh
         /// </summary>
         public delegate void OnMeshGeneratedEventHandler(Slice slice, BajajGeneratorMesh mesh, bool Success);
 
+        /// <summary>
+        /// Smooth unbranched process centroids (unless <paramref name="smoothProcesses"/> is false), then slice and mesh.
+        /// Callers that already smoothed the graph should pass false. Correspondence requires identical XY after this pass.
+        /// </summary>
+        public static async Task<List<BajajGeneratorMesh>> ConvertToMesh(MorphologyGraph graph, OnMeshGeneratedEventHandler OnMeshGenerated = null, bool smoothProcesses = true)
+        {
+            if (smoothProcesses)
+                MorphologyGraph.SmoothProcesses(graph);
+
+            Trace.WriteLine("Begin Slice graph construction");
+            SliceGraph sliceGraph = await SliceGraph.Create(graph, 2.0);
+            Trace.WriteLine("End Slice graph construction");
+
+            return await ConvertToMesh(sliceGraph, OnMeshGenerated);
+        }
+
         /*
         /// <summary>
         /// Convert a morphology graph to an unprocessed mesh graph

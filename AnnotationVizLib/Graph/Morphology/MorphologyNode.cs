@@ -100,6 +100,33 @@ else
         }
 
         /// <summary>
+        /// Unbranched Z-traveling shaft: exactly one LocationLink to the section above and one to the section below.
+        /// <see cref="MorphologyGraph.SmoothProcesses"/> translates only these nodes. Degree-2 nodes whose both
+        /// links share a Z are branches, not processes.
+        /// </summary>
+        public bool IsUnbranchedProcess(MorphologyGraph graph = null)
+        {
+            graph ??= this.Graph;
+            return GetEdgesAbove(graph).Length == 1
+                && GetEdgesBelow(graph).Length == 1
+                && !IsSameSectionBranch(graph);
+        }
+
+        /// <summary>
+        /// Exactly one LocationLink. Curve endpoint; SmoothProcesses never translates these.
+        /// </summary>
+        public bool IsProcessTerminal() => Edges.Count == 1;
+
+        /// <summary>
+        /// Two or more LocationLinks to the same adjacent Z (Y-junction / Bajaj branch). Pinned; never translated.
+        /// </summary>
+        public bool IsSameSectionBranch(MorphologyGraph graph = null)
+        {
+            graph ??= this.Graph;
+            return GetConnectedNodesGroupedByZ(graph).Any(g => g.Count() > 1);
+        }
+
+        /// <summary>
         /// Return edges conneted to nodes above this node in Z
         /// </summary>
         public IEnumerable<IGrouping<double, MorphologyNode>> GetConnectedNodesGroupedByZ(MorphologyGraph graph = null)

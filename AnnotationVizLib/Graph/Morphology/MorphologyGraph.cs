@@ -248,101 +248,78 @@ namespace AnnotationVizLib
         /// <returns></returns>
         public ulong[] GetProcessIDs() => [.. this.Nodes.Values.Where(n => n.Edges.Count == 2).Select(n => n.Key)];
 
+        /// <summary>
+        /// Unbranched 1-up-and-1-down shafts, each including the pinned branch/terminal endpoints used as Catmull-Rom anchors.
+        /// Isolated blobs are omitted. A degree-2 node with both links at the same Z is a branch endpoint, not a process.
+        /// Called by <see cref="SmoothProcesses"/>; ToStickFigure still uses <see cref="GetProcessIDs"/> (edge count).
+        /// </summary>
         public List<ulong[]> Processes()
         {
-            SortedSet<ulong> allProcessIDs = [.. this.GetProcessIDs()];
-
-            if (allProcessIDs.Count == 0)
-            {
+            SortedSet<ulong> remaining = [.. Nodes.Values.Where(n => n.IsUnbranchedProcess()).Select(n => n.Key)];
+            if (remaining.Count == 0)
                 return [];
-            }
-
-            SortedSet<ulong> DoNotTraverse = [];
-
-            //Do not traverse branches or terminals
-            DoNotTraverse.UnionWith(this.Nodes.Values.Where(n => n.Edges.Count != 2).Select(n => n.ID));
-
-            //Find a starting point
-            MorphologyNode seed = this.Nodes[allProcessIDs.First()];
 
             List<ulong[]> listOutput = [];
-            while (true)
+            while (remaining.Count > 0)
             {
-                ulong[] process = TraverseEntireProcess(seed);
+                ulong[] process = TraverseUnbranchedProcess(Nodes[remaining.First()]);
                 listOutput.Add(process);
-
-                allProcessIDs.ExceptWith(process);
-
-                if (allProcessIDs.Count == 0)
-                    break;
-
-                seed = this.Nodes[allProcessIDs.First()];
+                remaining.ExceptWith(process.Where(id => Nodes[id].IsUnbranchedProcess()));
             }
 
             return listOutput;
         }
 
-        private static ulong[] TraverseEntireProcess(MorphologyNode seed)
+        /// <summary>
+        /// Walks from <paramref name="seed"/> down to the lowest process node, then up, appending the
+        /// non-process neighbor at each end so the fit is anchored at branches and terminals.
+        /// </summary>
+        private ulong[] TraverseUnbranchedProcess(MorphologyNode seed)
         {
-            Debug.Assert(seed.Edges.Count == 2);
-
             MorphologyGraph graph = seed.Graph;
+            MorphologyNode lowest = seed;
+            HashSet<ulong> visited = [seed.Key];
 
-            List<ulong> listOutput =
-            [
-                seed.ID
-            ];
-
-            ulong[] linkedIDs = [.. seed.Edges.Keys];
-            MorphologyNode rightOfSeed = graph.Nodes[linkedIDs[0]];
-            if (rightOfSeed.Edges.Count == 2)
+            while (true)
             {
-                listOutput.Add(rightOfSeed.ID);
-                TraverseProcessRecursively(ref listOutput, rightOfSeed, 1, false);
+                ulong[] below = lowest.GetEdgesBelow();
+                if (below.Length != 1)
+                    break;
+
+                MorphologyNode neighbor = graph.Nodes[below[0]];
+                if (!neighbor.IsUnbranchedProcess() || !visited.Add(neighbor.Key))
+                    break;
+
+                lowest = neighbor;
             }
 
-            MorphologyNode leftOfSeed = graph.Nodes[linkedIDs[1]];
-            if (leftOfSeed.Edges.Count == 2)
+            List<ulong> chain = [];
+            ulong[] lowestBelow = lowest.GetEdgesBelow();
+            if (lowestBelow.Length == 1)
+                chain.Add(lowestBelow[0]);
+
+            MorphologyNode cursor = lowest;
+            while (true)
             {
-                listOutput.Insert(0, leftOfSeed.ID);
-                TraverseProcessRecursively(ref listOutput, leftOfSeed, 0, true);
-            }
+                chain.Add(cursor.Key);
+                ulong[] above = cursor.GetEdgesAbove();
+                if (above.Length != 1)
+                    break;
 
-            return [.. listOutput];
-        }
+                MorphologyNode next = graph.Nodes[above[0]];
+                if (chain.Contains(next.Key))
+                    break;
 
-        private static void TraverseProcessRecursively(ref List<ulong> output, MorphologyNode seed, int iSeedIndex, bool InsertBefore)
-        {
-            int iLastAdded = InsertBefore ? iSeedIndex + 1 : iSeedIndex - 1;
-            ulong LastAddedID = output[iLastAdded];
-            Debug.Assert(output[iSeedIndex] == seed.ID);
-
-            //This function does not tolerate cycles
-            MorphologyGraph graph = seed.Graph;
-            foreach (ulong linkedID in seed.Edges.Keys)
-            {
-                //Don't add the seed node again
-                if (linkedID == LastAddedID)
-                    continue;
-
-                //Debug.Assert(output.Contains(linkedID) == false);
-
-                //I shouldn't have to do this, but cycles can occur and this check is needed to prevent them.
-                if (output.Contains(linkedID))
-                    continue;
-
-                MorphologyNode candidate = graph.Nodes[linkedID];
-
-                int InsertionIndex = InsertBefore ? iSeedIndex : iSeedIndex + 1;
-                int iNewSeedIndex = InsertBefore ? iSeedIndex : iSeedIndex + 1;
-
-                output.Insert(InsertionIndex, candidate.ID);
-
-                if (candidate.Edges.Count == 2)
+                if (!next.IsUnbranchedProcess())
                 {
-                    TraverseProcessRecursively(ref output, candidate, iNewSeedIndex, InsertBefore);
+                    chain.Add(next.Key);
+                    break;
                 }
+
+                cursor = next;
             }
+
+            return [.. chain.Distinct().OrderBy(id => graph.Nodes[id].Z).ThenBy(id => id)];
         }
     }
 }
