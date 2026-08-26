@@ -105,6 +105,24 @@ namespace Viking.VolumeViewModel
 
         public string DefaultVolumeTransform { get { return _Volume.DefaultVolumeTransform; } }
 
+        public List<string> VolumeTransformNames { get { return _Volume.VolumeTransformNames; } }
+
+        public static readonly DependencyProperty ActiveVolumeTransformProperty = DependencyProperty.Register(
+            nameof(ActiveVolumeTransform),
+            typeof(string),
+            typeof(VolumeViewModel),
+            new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+
+        public string ActiveVolumeTransform
+        {
+            get
+            {
+                string value = (string)GetValue(ActiveVolumeTransformProperty);
+                return string.IsNullOrEmpty(value) ? DefaultVolumeTransform : value;
+            }
+            set { SetValue(ActiveVolumeTransformProperty, value); }
+        }
+
         public ChannelInfo[] DefaultChannels { get { return _Volume.DefaultChannels; } set { _Volume.DefaultChannels = value; } }
 
         public string[] ChannelNames { get { return Volume.ChannelNames; } }
@@ -124,6 +142,8 @@ namespace Viking.VolumeViewModel
                 SectionViewModel sectionViewModel = new SectionViewModel(volume, s, _MappingManager);
                 SectionViewModels.Add(s.Number, sectionViewModel);
             }
+
+            ActiveVolumeTransform = volume.DefaultVolumeTransform;
         }
 
         public string Host { get { return _Volume.Host; } }

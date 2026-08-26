@@ -5,6 +5,7 @@ using System.Threading;
 using System.Windows;
 using Viking;
 using Viking.Common;
+using Viking.Tokens;
 using Viking.UI.WPF;
 using Viking.VolumeModel;
 using WebAnnotationModel;
@@ -40,6 +41,12 @@ namespace Jotunn
 
             UserCredentials = login.Credentials;
             SegmentationServiceUrl = login.SegmentationServiceUrl;
+            if (login.BearerToken != null)
+            {
+                TokenStore.BearerToken = login.BearerToken;
+                if (!string.IsNullOrEmpty(login.IdentityServerUrl))
+                    TokenStore.BearerTokenAuthority = login.IdentityServerUrl;
+            }
 
             CancellationTokenSource loadCts = new CancellationTokenSource();
             SplashScreen splash = new SplashScreen { LoadCancellation = loadCts };

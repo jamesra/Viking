@@ -15,7 +15,9 @@ using Viking.Input;
 using Viking.Rendering;
 using Viking.VolumeModel;
 using WebAnnotation;
+using WebAnnotation.Tools;
 using JotunnSectionVM = Viking.VolumeViewModel.SectionViewModel;
+using VolumeVM = Viking.VolumeViewModel.VolumeViewModel;
 
 namespace Viking.VolumeView
 {
@@ -236,6 +238,10 @@ namespace Viking.VolumeView
             AddAdjacentSectionNumbers(keep);
             PruneTextureLoadTokens(keep);
 
+            VolumeVM volumeVm = Grid?.DataContext as VolumeVM ?? DataContext as VolumeVM;
+            if (volumeVm != null)
+                _renderer.VolumeTransformName = volumeVm.ActiveVolumeTransform ?? string.Empty;
+
             bool panning = _panning;
             int activeSectionNumber = ResolveActiveSectionNumber(draws);
             for (int i = 0; i < draws.Count; i++)
@@ -249,6 +255,11 @@ namespace Viking.VolumeView
                 bool active = draws.Count == 1 || section.Number == activeSectionNumber;
                 if (active)
                     SectionNumber = section.Number;
+
+                JotunnSectionVM sectionVm = volumeVm != null && volumeVm.SectionViewModels.ContainsKey(section.Number)
+                    ? volumeVm.SectionViewModels[section.Number]
+                    : null;
+                _renderer.SectionTransformName = sectionVm?.SelectedSectionTransform ?? section.DefaultPyramidTransform ?? string.Empty;
 
                 CancellationToken token = GetOrCreateSectionTextureLoadToken(section.Number);
                 _renderer.EnsureMappingInitialized(section, token);
@@ -401,7 +412,7 @@ namespace Viking.VolumeView
                     if (!TryToDeviceViewport(cells[i].Bounds, deviceViewport, out Viewport cellViewport))
                         continue;
 
-                    draws.Add((sectionVm.section, sectionVm.DefaultChannel ?? string.Empty, cellViewport));
+                    draws.Add((sectionVm.section, sectionVm.SelectedChannel ?? sectionVm.DefaultChannel ?? string.Empty, cellViewport));
                 }
             }
 
@@ -409,7 +420,12 @@ namespace Viking.VolumeView
             {
                 Section section = FallbackSection();
                 if (section != null)
-                    draws.Add((section, section.DefaultChannel ?? string.Empty, deviceViewport));
+                {
+                    string channel = section.DefaultChannel ?? string.Empty;
+                    if (Grid?.DataContext is VolumeVM vm && vm.SectionViewModels.ContainsKey(section.Number))
+                        channel = vm.SectionViewModels[section.Number].SelectedChannel ?? channel;
+                    draws.Add((section, channel, deviceViewport));
+                }
             }
 
             return draws;
@@ -578,7 +594,7 @@ namespace Viking.VolumeView
         /// <summary>
         /// Annotation click/drag handler. Null until the volume view wires it after store init.
         /// </summary>
-        public ViewportAnnotationController AnnotationController { get; set; }
+        public AnnotationToolHost AnnotationTools { get; set; }
 
         /// <summary>
         /// Viking mouse: left click selects/moves/creates annotations; hold right and drag to pan;
@@ -622,7 +638,7 @@ namespace Viking.VolumeView
                 return;
 
             _annotating = true;
-            AnnotationController?.OnMouseDown(screen, button, clickCount);
+            AnnotationTools?.OnMouseDown(screen, button, clickCount);
         }
 
         public void HandleViewMouseMove(Point p, MouseButtonState leftButton, MouseButtonState rightButton)
@@ -630,7 +646,7 @@ namespace Viking.VolumeView
             if (_annotating && leftButton == MouseButtonState.Pressed)
             {
                 ApplyActiveCellViewport();
-                AnnotationController?.OnMouseMove(ActiveCellScreen(p));
+                AnnotationTools?.OnMouseMove(ActiveCellScreen(p));
                 return;
             }
 
@@ -657,7 +673,7 @@ namespace Viking.VolumeView
             if (button == MouseButton.Left && _annotating)
             {
                 ApplyActiveCellViewport();
-                AnnotationController?.OnMouseUp();
+                AnnotationTools?.OnMouseUp();
                 _annotating = false;
             }
 
@@ -708,10 +724,37 @@ namespace Viking.VolumeView
         Size HostWorldArea(double downsample) =>
             new(Math.Max(ActualWidth, 1) * downsample, Math.Max(ActualHeight, 1) * downsample);
 
+        public bool HandleViewKeyDown(Key key)
+        {
+            return AnnotationTools != null && AnnotationTools.OnKeyDown(key);
+        }
+
         /// <summary>
-        /// Viking: XButton2 (forward) steps to a higher section, XButton1 (back) to a lower one.
-        /// Same commands as PageUp/PageDown.
+        /// Draws the current frame to a PNG. Used by the Export Screenshot command.
         /// </summary>
+        public bool TryCaptureScreenshot(string path)
+        {
+            if (Device == null || string.IsNullOrWhiteSpace(path))
+                return false;
+
+            int w = Math.Max(1, Device.PresentationParameters.BackBufferWidth);
+            int h = Math.Max(1, Device.PresentationParameters.BackBufferHeight);
+            using RenderTarget2D rt = new(Device, w, h, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8);
+            RenderTargetBinding[] previous = Device.GetRenderTargets();
+            try
+            {
+                Device.SetRenderTarget(rt);
+                Device.Clear(Microsoft.Xna.Framework.Color.Black);
+                OnDrawing(this, new DrawingEventArgs(Device, Scene));
+            }
+            finally
+            {
+                Device.SetRenderTargets(previous);
+            }
+            using System.IO.FileStream stream = System.IO.File.Create(path);
+            rt.SaveAsPng(stream, w, h);
+            return true;
+        }
         void StepSection(int delta)
         {
             Window window = Window.GetWindow(this);

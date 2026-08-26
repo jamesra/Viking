@@ -61,14 +61,46 @@ namespace Viking.VolumeViewModel
         public string SelectedChannel { 
             get 
             {
+                string bound = (string)GetValue(SelectedChannelProperty);
+                if (!string.IsNullOrEmpty(bound))
+                    return bound;
                 if (_SelectedChannel == null)
                     _SelectedChannel = DefaultChannel; 
                 return _SelectedChannel; 
             }
             set
             {
-                if(ChannelNames.Contains(value))
+                if(value != null && ChannelNames.Contains(value))
+                {
                     _SelectedChannel = value;
+                    SetValue(SelectedChannelProperty, value);
+                }
+            }
+        }
+
+        public static readonly DependencyProperty SelectedChannelProperty = DependencyProperty.Register(
+            nameof(SelectedChannel),
+            typeof(string),
+            typeof(SectionViewModelBase),
+            new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+
+        public static readonly DependencyProperty SelectedSectionTransformProperty = DependencyProperty.Register(
+            nameof(SelectedSectionTransform),
+            typeof(string),
+            typeof(SectionViewModelBase),
+            new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+
+        public string SelectedSectionTransform
+        {
+            get
+            {
+                string bound = (string)GetValue(SelectedSectionTransformProperty);
+                return string.IsNullOrEmpty(bound) ? DefaultPyramidTransform : bound;
+            }
+            set
+            {
+                if (value != null && (PyramidTransformNames == null || PyramidTransformNames.Contains(value)))
+                    SetValue(SelectedSectionTransformProperty, value);
             }
         }
 
@@ -135,6 +167,10 @@ namespace Viking.VolumeViewModel
             this._VolumeModel = Volume;
             this.section = section;
             this._MappingManager = _MappingManager;
+            if (!string.IsNullOrEmpty(DefaultChannel))
+                SelectedChannel = DefaultChannel;
+            if (!string.IsNullOrEmpty(DefaultPyramidTransform))
+                SelectedSectionTransform = DefaultPyramidTransform;
         }
 
         public void PrepareTransform(string transform)

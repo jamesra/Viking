@@ -18,5 +18,9 @@
         <StatusBarItem>
             <TextBlock x:Name="ZoomText" Text="Zoom: —"/>
         </StatusBarItem>
+        <Separator/>
+        <StatusBarItem>
+            <TextBlock x:Name="MessageText" Text=""/>
+        </StatusBarItem>
     </StatusBar>
 </UserControl>

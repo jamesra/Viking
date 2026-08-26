@@ -77,6 +77,7 @@ namespace Viking.VolumeView
         void OnViewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             ((UIElement)sender).CaptureMouse();
+            ((UIElement)sender).Focus();
             SceneHost.HandleViewMouseDown(e.GetPosition(SceneHost), MouseButton.Left, e.ClickCount);
             UpdateMouseStatus(e.GetPosition(SceneHost));
             e.Handled = true;
@@ -117,6 +118,12 @@ namespace Viking.VolumeView
             SceneHost.HandleViewMouseWheel(e.Delta, e.GetPosition(SceneHost));
             UpdateMouseStatus(e.GetPosition(SceneHost));
             e.Handled = true;
+        }
+
+        void OnViewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (SceneHost.HandleViewKeyDown(e.Key))
+                e.Handled = true;
         }
 
         void UpdateMouseStatus(Point hostPoint)

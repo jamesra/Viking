@@ -24,6 +24,8 @@
   <ItemGroup>
     <Compile Remove="VikingVolumeViewModule.cs" />
     <Compile Remove="Test.cs" />
+    <Compile Remove="PyramidViewer.xaml.cs" />
+    <Page Remove="PyramidViewer.xaml" />
     <Compile Remove="Properties\Settings.Designer.cs" />
     <Compile Remove="Properties\Resources.Designer.cs" />
   </ItemGroup>

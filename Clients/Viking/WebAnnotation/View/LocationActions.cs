@@ -110,7 +110,7 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// WinForms-only. Jotunn uses ViewportAnnotationController instead of these Command types.
+        /// WinForms-only. Jotunn uses AnnotationToolHost instead of these Command types.
         /// </summary>
         /// <param name="action">The action</param>
         /// <param name="Parent">The control hosting the command we are creating</param>

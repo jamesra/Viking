@@ -17,7 +17,7 @@
                                HorizontalAlignment="Center"
                                Background="Black"
                                Foreground="White"/>
-            <local:PyramidViewer Grid.Row="1" TileMapping="{Binding Path=DefaultMapping}"/>
+            <Border Grid.Row="1" Background="Black"/>
         </Grid>
     </DataTemplate>
 </ResourceDictionary>

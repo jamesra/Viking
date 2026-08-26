@@ -21,5 +21,10 @@ namespace Viking.VolumeView
             PositionText.Text = $"X: {worldX:F0}  Y: {worldY:F0}";
             ZoomText.Text = $"Zoom: {downsample:F2}";
         }
+
+        public void SetMessage(string message)
+        {
+            MessageText.Text = message ?? string.Empty;
+        }
     }
 }

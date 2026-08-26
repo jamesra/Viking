@@ -54,6 +54,8 @@ namespace WebAnnotation
 
         public VolumeTransformProvider Transforms => _transforms;
 
+        public bool Visible { get; set; } = true;
+
         internal SectionAnnotationsView GetOrCreate(int sectionNumber)
         {
             lock (_loadLock)
@@ -142,6 +144,8 @@ namespace WebAnnotation
         public object HitTest(int sectionNumber, Geometry.Vector2 worldPosition, out double distance)
         {
             distance = double.MaxValue;
+            if (!Visible)
+                return null;
             SectionAnnotationsView locView = GetOrCreate(sectionNumber);
             if (locView is null)
                 return null;
@@ -165,6 +169,8 @@ namespace WebAnnotation
 
         public void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, int sectionNumber, Texture backgroundLuma, Texture backgroundColors, ref int nextStencilValue, bool requestLoad = true)
         {
+            if (!Visible)
+                return;
             SectionAnnotationsView current = GetOrCreate(sectionNumber);
             if (current is null || scene is null)
                 return;

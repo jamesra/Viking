@@ -2,6 +2,7 @@
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Viking;
 using VolumeVM = Viking.VolumeViewModel.VolumeViewModel;
 using SectionVM = Viking.VolumeViewModel.SectionViewModel;
 
@@ -45,6 +46,11 @@ namespace Viking.VolumeView
                 return;
 
             volume.CenterIndex = volume.SectionViewModels.IndexOfKey(section.Number);
+        }
+
+        void OnViewSettingChanged(object sender, SelectionChangedEventArgs e)
+        {
+            TileLoadEnvironment.RequestRender?.Invoke();
         }
 
         static T FindAncestor<T>(DependencyObject source) where T : DependencyObject

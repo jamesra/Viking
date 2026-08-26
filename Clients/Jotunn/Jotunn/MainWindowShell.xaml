@@ -16,39 +16,94 @@
         <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.RemoveGridRowCommand}" Executed="OnRemoveGridRow"/>
         <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.AddGridColumnCommand}" Executed="OnAddGridColumn"/>
         <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.RemoveGridColumnCommand}" Executed="OnRemoveGridColumn"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.GoToLocation}" Executed="OnGoToLocation"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.FindStructure}" Executed="OnFindStructure"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.ContinueLast}" Executed="OnContinueLast"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.DeleteAnnotation}" Executed="OnDeleteAnnotation"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.HideAnnotations}" Executed="OnHideAnnotations"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.CommitTool}" Executed="OnCommitTool"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.CancelTool}" Executed="OnCancelTool"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.PlaceCircle}" Executed="OnPlaceCircle"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.PlacePolyline}" Executed="OnPlacePolyline"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.PlacePolygon}" Executed="OnPlacePolygon"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.MeasureDistance}" Executed="OnMeasureDistance"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.AnnotationPreferences}" Executed="OnAnnotationPreferences"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.ViewerPreferences}" Executed="OnViewerPreferences"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.SetupChannels}" Executed="OnSetupChannels"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.ManageStructureTypes}" Executed="OnManageStructureTypes"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.Bookmarks}" Executed="OnBookmarks"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.AddBookmark}" Executed="OnAddBookmark"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.ExportScreenshot}" Executed="OnExportScreenshot"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.ExportVisibleAnnotations}" Executed="OnExportVisibleAnnotations"/>
+        <CommandBinding Command="{x:Static jotunnuicommon:GlobalCommands.Segmentation}" Executed="OnSegmentation"/>
     </Window.CommandBindings>
 
-    <Grid>
-        <Grid.InputBindings>
-            <KeyBinding Command="{x:Static jotunnuicommon:GlobalCommands.IncrementSectionNumber}" Key="PageUp"/>
-            <KeyBinding Command="{x:Static jotunnuicommon:GlobalCommands.DecrementSectionNumber}" Key="PageDown"/>
-            <KeyBinding Key="Left" Command="{x:Static jotunnuicommon:GlobalCommands.RemoveGridColumnCommand}"/>
-            <KeyBinding Key="Right" Command="{x:Static jotunnuicommon:GlobalCommands.AddGridColumnCommand}"/>
-            <KeyBinding Key="Up" Command="{x:Static jotunnuicommon:GlobalCommands.AddGridRowCommand}"/>
-            <KeyBinding Key="Down" Command="{x:Static jotunnuicommon:GlobalCommands.RemoveGridRowCommand}"/>
-        </Grid.InputBindings>
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="Export _screenshot…" Command="{x:Static jotunnuicommon:GlobalCommands.ExportScreenshot}"/>
+                <MenuItem Header="Export _visible annotations…" Command="{x:Static jotunnuicommon:GlobalCommands.ExportVisibleAnnotations}"/>
+                <Separator/>
+                <MenuItem Header="E_xit" Click="OnExit"/>
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="Setup _channels…" Command="{x:Static jotunnuicommon:GlobalCommands.SetupChannels}"/>
+                <MenuItem Header="_Viewer preferences…" Command="{x:Static jotunnuicommon:GlobalCommands.ViewerPreferences}"/>
+                <MenuItem Header="_Hide annotations" Command="{x:Static jotunnuicommon:GlobalCommands.HideAnnotations}" InputGestureText="Space"/>
+            </MenuItem>
+            <MenuItem Header="_Annotations">
+                <MenuItem Header="Place _circle" Command="{x:Static jotunnuicommon:GlobalCommands.PlaceCircle}"/>
+                <MenuItem Header="Place _polyline" Command="{x:Static jotunnuicommon:GlobalCommands.PlacePolyline}"/>
+                <MenuItem Header="Place p_olygon" Command="{x:Static jotunnuicommon:GlobalCommands.PlacePolygon}"/>
+                <Separator/>
+                <MenuItem Header="_Go to location…" Command="{x:Static jotunnuicommon:GlobalCommands.GoToLocation}" InputGestureText="F12"/>
+                <MenuItem Header="_Find structure…" Command="{x:Static jotunnuicommon:GlobalCommands.FindStructure}" InputGestureText="F11"/>
+                <MenuItem Header="_Continue last" Command="{x:Static jotunnuicommon:GlobalCommands.ContinueLast}" InputGestureText="F3"/>
+                <MenuItem Header="_Delete" Command="{x:Static jotunnuicommon:GlobalCommands.DeleteAnnotation}" InputGestureText="Ctrl+D"/>
+                <Separator/>
+                <MenuItem Header="Annotation _preferences…" Command="{x:Static jotunnuicommon:GlobalCommands.AnnotationPreferences}"/>
+                <MenuItem Header="Manage structure _types…" Command="{x:Static jotunnuicommon:GlobalCommands.ManageStructureTypes}"/>
+            </MenuItem>
+            <MenuItem Header="_Tools">
+                <MenuItem Header="_Measure distance" Command="{x:Static jotunnuicommon:GlobalCommands.MeasureDistance}"/>
+                <MenuItem Header="_Bookmarks…" Command="{x:Static jotunnuicommon:GlobalCommands.Bookmarks}"/>
+                <MenuItem Header="Add bookmark" Command="{x:Static jotunnuicommon:GlobalCommands.AddBookmark}" InputGestureText="Ctrl+B"/>
+                <MenuItem Header="_Segmentation…" Command="{x:Static jotunnuicommon:GlobalCommands.Segmentation}"/>
+            </MenuItem>
+        </Menu>
 
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="256"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        <Grid>
+            <Grid.InputBindings>
+                <KeyBinding Command="{x:Static jotunnuicommon:GlobalCommands.IncrementSectionNumber}" Key="PageUp"/>
+                <KeyBinding Command="{x:Static jotunnuicommon:GlobalCommands.DecrementSectionNumber}" Key="PageDown"/>
+                <KeyBinding Key="Left" Command="{x:Static jotunnuicommon:GlobalCommands.RemoveGridColumnCommand}"/>
+                <KeyBinding Key="Right" Command="{x:Static jotunnuicommon:GlobalCommands.AddGridColumnCommand}"/>
+                <KeyBinding Key="Up" Command="{x:Static jotunnuicommon:GlobalCommands.AddGridRowCommand}"/>
+                <KeyBinding Key="Down" Command="{x:Static jotunnuicommon:GlobalCommands.RemoveGridRowCommand}"/>
+            </Grid.InputBindings>
 
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="256"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <TabControl x:Name="NavigationHost"
-                    Grid.Column="0"
-                    Grid.Row="0"/>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <ContentControl x:Name="ViewHost"
-                        Background="Transparent"
-                        Grid.Column="1"
+            <TabControl x:Name="NavigationHost"
+                        Grid.Column="0"
                         Grid.Row="0"/>
 
-        <ContentControl x:Name="StatusHost"
-                        Grid.Column="1"
-                        Grid.Row="1"/>
-    </Grid>
+            <ContentControl x:Name="ViewHost"
+                            Background="Transparent"
+                            Grid.Column="1"
+                            Grid.Row="0"/>
+
+            <ContentControl x:Name="StatusHost"
+                            Grid.Column="1"
+                            Grid.Row="1"/>
+        </Grid>
+    </DockPanel>
 </Window>

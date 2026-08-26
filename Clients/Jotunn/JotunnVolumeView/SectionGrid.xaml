@@ -12,6 +12,8 @@
         <VolumeView:SectionSceneHost x:Name="SceneHost"/>
         <!-- HwndHost child HWND often never delivers WPF mouse; this overlay owns pan/zoom. -->
         <Border Background="Transparent"
+                Focusable="True"
+                KeyDown="OnViewKeyDown"
                 MouseLeftButtonDown="OnViewMouseLeftButtonDown"
                 MouseRightButtonDown="OnViewMouseRightButtonDown"
                 MouseDown="OnViewMouseDown"

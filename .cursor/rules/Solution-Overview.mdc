@@ -6,10 +6,10 @@ alwaysApply: true
 **Project:** Image viewing, annotation, and analysis suite — Viking client plus servers that serve images and annotations from SQL. Client projects live under `Clients/`, server projects under `Servers/`.
 
 **Clients**
-- **Viking** (`Clients/Viking/`) — .NET 4.8, Monogame 3.7.x; main client.
+- **Viking** (`Clients/Viking/`) — .NET 4.8, Monogame 3.7.x; current production WinForms client. Keep working until Jotunn covers daily tracing.
 - **VikingAU** (`Clients/VikingAU/`) — Same stack as Viking; auto-adjusts annotation positions in the DB.
 - **MonogameTestbed** (`Clients/MonogameTestbed/`) — .NET 9.0, latest Monogame; keep in sync with Viking where they share code.
-- **Jotunn** — Abandoned WPF port of Viking; low priority — get it running only if quick; don't invest much time.
+- **Jotunn** (`Clients/Jotunn/`) — Active .NET 10 WPF client and intended Viking successor. Shares `Viking.Scene` / `WebAnnotation` / MonoGame `SectionSceneRenderer` with Viking; do not add a second annotation renderer.
 
 **Servers**
 - **AnnotationService** — WCF; planned replacement by gRPC. Working gRPC implementation lives in the Viking repo (sibling to VikingLegacy solution folder).
