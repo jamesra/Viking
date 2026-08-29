@@ -40,10 +40,12 @@ const DEFAULT_VOLUME = 'RC1';
 const MAX_QUERY_BYTES = 1800;
 
 /*
- * The service's route table. Each format maps to the two-segment path the controller actually
- * exposes: a controller-level [Route("[controller]/[action]")] plus an action-level template,
- * which concatenate. A one-segment URL such as /Morphology/tlp silently returns the help page
- * with HTTP 200, so these must be exact.
+ * The service's route table: {Report}/{format}. The service also still answers the older
+ * {Report}/Get{FORMAT}/{format} form that named the format twice, so links published before
+ * August 2026 keep working, but there is no reason to generate them.
+ *
+ * An unmatched URL returns the instructions page with HTTP 200 rather than a 404, so a typo
+ * here surfaces as a successful download of an HTML file. These must be exact.
  */
 const REPORTS = {
   morphology: {
@@ -51,8 +53,8 @@ const REPORTS = {
     acceptsIds: true,
     options: ['stick'],
     formats: [
-      { id: 'tlp',  path: 'Morphology/GetTLP/tlp',   label: 'TLP',  note: 'Tulip' },
-      { id: 'json', path: 'Morphology/GetJSON/json', label: 'JSON', note: 'generic' }
+      { id: 'tlp',  path: 'Morphology/tlp',  label: 'TLP',  note: 'Tulip' },
+      { id: 'json', path: 'Morphology/json', label: 'JSON', note: 'generic' }
     ]
   },
   network: {
@@ -60,10 +62,10 @@ const REPORTS = {
     acceptsIds: true,
     options: ['hops'],
     formats: [
-      { id: 'dot',  path: 'Network/GetDot/dot',   label: 'DOT',     note: 'Graphviz' },
-      { id: 'tlp',  path: 'Network/GetTLP/tlp',   label: 'TLP',     note: 'Tulip' },
-      { id: 'gml',  path: 'Network/GetGML/gml',   label: 'GraphML', note: 'XML' },
-      { id: 'json', path: 'Network/GetJSON/json', label: 'JSON',    note: 'generic' }
+      { id: 'dot',  path: 'Network/dot',  label: 'DOT',     note: 'Graphviz' },
+      { id: 'tlp',  path: 'Network/tlp',  label: 'TLP',     note: 'Tulip' },
+      { id: 'gml',  path: 'Network/gml',  label: 'GraphML', note: 'XML' },
+      { id: 'json', path: 'Network/json', label: 'JSON',    note: 'generic' }
     ]
   },
   motif: {
@@ -71,9 +73,9 @@ const REPORTS = {
     acceptsIds: false,
     options: [],
     formats: [
-      { id: 'dot',  path: 'Motif/GetDot/dot',   label: 'DOT',  note: 'Graphviz' },
-      { id: 'tlp',  path: 'Motif/GetTLP/tlp',   label: 'TLP',  note: 'Tulip' },
-      { id: 'json', path: 'Motif/GetJSON/json', label: 'JSON', note: 'generic' }
+      { id: 'dot',  path: 'Motif/dot',  label: 'DOT',  note: 'Graphviz' },
+      { id: 'tlp',  path: 'Motif/tlp',  label: 'TLP',  note: 'Tulip' },
+      { id: 'json', path: 'Motif/json', label: 'JSON', note: 'generic' }
     ]
   }
 };

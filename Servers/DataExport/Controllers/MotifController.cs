@@ -11,8 +11,14 @@ namespace DataExport.Controllers;
 /// </remarks>
 /// <param name="env">The web host environment.</param>
 /// <param name="configuration">The configuration service.</param>
+/*
+ * The route prefix deliberately omits [action]. With it, the controller prefix already
+ * resolved to "Motif/GetTLP" and the action template "tlp" appended to it, so the
+ * only reachable URL was Motif/GetTLP/tlp with the format named twice. Actions now
+ * carry explicit templates: the short form, and the longer form kept for compatibility.
+ */
 [ApiController]
-[Route("[controller]/[action]")]
+[Route("[controller]")]
 public class MotifController(IWebHostEnvironment env, IConfiguration configuration) : Controller
 {
     private readonly IWebHostEnvironment _env = env ?? throw new ArgumentNullException(nameof(env));
@@ -54,8 +60,9 @@ public class MotifController(IWebHostEnvironment env, IConfiguration configurati
     /// Exports motif graph data in DOT format.
     /// </summary>
     /// <returns>The generated DOT file for download.</returns>
-    [HttpGet("GetDot")]
     [HttpGet("dot")]
+    [HttpGet("GetDot")]
+    [HttpGet("GetDot/dot")]
     public async Task<IActionResult> GetDot()
     {
         string userDotDirectory = GetAndCreateOutputDirectory();
@@ -74,8 +81,9 @@ public class MotifController(IWebHostEnvironment env, IConfiguration configurati
     /// Exports motif graph data in TLP (Tulip) format.
     /// </summary>
     /// <returns>The generated TLP file for download.</returns>
-    [HttpGet("GetTLP")]
     [HttpGet("tlp")]
+    [HttpGet("GetTLP")]
+    [HttpGet("GetTLP/tlp")]
     public async Task<IActionResult> GetTLP()
     {
         string userDotDirectory = GetAndCreateOutputDirectory();
@@ -94,8 +102,9 @@ public class MotifController(IWebHostEnvironment env, IConfiguration configurati
     /// Exports motif graph data in JSON format.
     /// </summary>
     /// <returns>The generated JSON file for download.</returns>
-    [HttpGet("GetJSON")]
     [HttpGet("json")]
+    [HttpGet("GetJSON")]
+    [HttpGet("GetJSON/json")]
     public async Task<IActionResult> GetJSON()
     {
         string userDotDirectory = GetAndCreateOutputDirectory();

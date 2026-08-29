@@ -11,8 +11,14 @@ namespace DataExport.Controllers;
 /// </remarks>
 /// <param name="env">The web host environment.</param>
 /// <param name="configuration">The configuration service.</param>
+/*
+ * The route prefix deliberately omits [action]. With it, the controller prefix already
+ * resolved to "Network/GetTLP" and the action template "tlp" appended to it, so the
+ * only reachable URL was Network/GetTLP/tlp with the format named twice. Actions now
+ * carry explicit templates: the short form, and the longer form kept for compatibility.
+ */
 [ApiController]
-[Route("[controller]/[action]")]
+[Route("[controller]")]
 public class NetworkController(IWebHostEnvironment env, IConfiguration configuration) : Controller
 {
     private readonly IWebHostEnvironment _env = env ?? throw new ArgumentNullException(nameof(env));
@@ -61,7 +67,7 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
     /// </summary>
     /// <param name="req">The form file (not used, but required for routing).</param>
     /// <returns>Redirect to the generated DOT file.</returns>
-    [HttpPost]
+    [HttpPost("PostDot")]
     public async Task<IActionResult> PostDot([FromForm] IFormFile? req)
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
@@ -79,7 +85,7 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
     /// </summary>
     /// <param name="req">The form file (not used, but required for routing).</param>
     /// <returns>Redirect to the generated TLP file.</returns>
-    [HttpPost]
+    [HttpPost("PostTLP")]
     public async Task<IActionResult> PostTLP([FromForm] IFormFile? req)
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
@@ -97,7 +103,7 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
     /// </summary>
     /// <param name="req">The form file (not used, but required for routing).</param>
     /// <returns>Redirect to the generated GraphML file.</returns>
-    [HttpPost]
+    [HttpPost("PostGML")]
     public async Task<IActionResult> PostGML([FromForm] IFormFile? req)
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
@@ -115,7 +121,7 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
     /// </summary>
     /// <param name="req">The form file (not used, but required for routing).</param>
     /// <returns>Redirect to the generated JSON file.</returns>
-    [HttpPost]
+    [HttpPost("PostJSON")]
     public async Task<IActionResult> PostJSON([FromForm] IFormFile? req)
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
@@ -132,8 +138,9 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
     /// Exports network data in DOT format via GET request.
     /// </summary>
     /// <returns>The generated DOT file for download.</returns>
-    [HttpGet("GetDot")]
     [HttpGet("dot")]
+    [HttpGet("GetDot")]
+    [HttpGet("GetDot/dot")]
     public async Task<IActionResult> GetDot()
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
@@ -150,8 +157,9 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
     /// Exports network data in TLP (Tulip) format via GET request.
     /// </summary>
     /// <returns>The generated TLP file for download.</returns>
-    [HttpGet("GetTLP")]
     [HttpGet("tlp")]
+    [HttpGet("GetTLP")]
+    [HttpGet("GetTLP/tlp")]
     public async Task<IActionResult> GetTLP()
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
@@ -169,8 +177,9 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
     /// Exports network data in GraphML format via GET request.
     /// </summary>
     /// <returns>The generated GraphML file for download.</returns>
-    [HttpGet("GetGML")]
     [HttpGet("gml")]
+    [HttpGet("GetGML")]
+    [HttpGet("GetGML/gml")]
     public async Task<IActionResult> GetGML()
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
@@ -187,8 +196,9 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
     /// Exports network data in JSON format via GET request.
     /// </summary>
     /// <returns>The generated JSON file for download.</returns>
-    [HttpGet("GetJSON")]
     [HttpGet("json")]
+    [HttpGet("GetJSON")]
+    [HttpGet("GetJSON/json")]
     public async Task<IActionResult> GetJSON()
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());

@@ -33,7 +33,6 @@
     <Content Include="SqlServerTypes\**\*.*" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Utils\*.*" />
     <Content Include="Controllers\*.*" />
-    <Content Include="Output\*.*" />
     <Content Include="GlobalSuppressions.cs" />
     <Content Include="DataExport.Publish.xml" />
   </ItemGroup>

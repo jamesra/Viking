@@ -23,32 +23,66 @@ Tulip Analysis Plugin
 Export from the web page
 ========================
 
-  This user friendlier `website`_ exports files for Marc lab hosted databases.  
+  The `export portal`_ builds these URLs for you.  Choose a volume, an export type and a
+  format, paste or drag-drop a list of structure IDs, and it assembles the request and
+  downloads the result.  It covers every export described below and is the recommended
+  starting point.
 
 Export directly from a URL
 ==========================
 
-  Exports are available under a volume URL's /export/ subpath.  An Export URL has the following components
+  Exports live under a volume's ``/Export/`` subpath.  An export URL has three parts after
+  the volume: the report, the format, and a query string.
 
-.. http:get:: /export/( report_type )/( format )/
-    
-   
+.. http:get:: /( volume )/Export/( report )/( format )
+
+   A mistyped URL does not return 404.  The service answers **HTTP 200 with this
+   documentation page**, so a bad URL looks like a successful request that produced
+   unexpected content.  Check the response body if an export seems to return the wrong
+   thing.
+
+   Paths are not case sensitive, so ``dot`` and ``DOT`` are equivalent.
+
+   Not every report offers every format:
+
+   ===========  ===  ====  ===  ===
+   Report       TLP  JSON  DOT  GML
+   ===========  ===  ====  ===  ===
+   Morphology   yes  yes   no   no
+   Network      yes  yes   yes  yes
+   Motif        yes  yes   yes  no
+   ===========  ===  ====  ===  ===
+
+.. note::
+
+   Until August 2026 the format had to be named twice, as
+   ``/( volume )/Export/( report )/Get( FORMAT )/( format )``.  That form still works, so
+   existing links and scripts need no changes, but the shorter URL above is preferred for
+   new work.
+
+.. warning::
+
+   Multiple IDs are separated by **semicolons**, not commas.  A comma-separated list is
+   not rejected; it silently yields a near-empty file.  Because a semicolon terminates a
+   query string in some shells, quote the URL when using tools such as ``curl``.
+
+
 Neuron connectivity network
 ===========================
 
   Neuronal connectivity graphs map nodes to individual neurons (parent structures).  Edges are the collection of all connections between neurons grouped by type.  
 
-.. http:get:: /export/network/( Format )
+.. http:get:: /( volume )/Export/Network/( format )
 
    Requests the connectivity graph for the neurons specified in the query string.
       
    **Format:**
-      * **TLP** - Tulip file format
-      * **DOT** - Graphviz DOT file format
-      * **GraphML** - GraphML file format
-      * **JSON** - Java script object notation
+      * **TLP** - Tulip file format, ``tlp``
+      * **DOT** - Graphviz DOT file format, ``dot``
+      * **GML** - GraphML file format, ``gml``
+      * **JSON** - Java script object notation, ``json``
         
-   :query id: ID numbers of cells to include in connectivity graph.  Commas separate multiple IDs.
+   :query ids: ID numbers of cells to include in connectivity graph.  Semicolons separate multiple IDs.  Omit to export the whole volume.
    :query hops: Degrees of seperation to include additional neurons in graph
    
    :resheader Content-Type: text/plain
@@ -57,15 +91,18 @@ Neuron connectivity network
       
       Get all cells within one degree of seperation of cells 476 and 514.
       
-      .. sourcecode:: http
+      .. code-block:: text
       
-         http://websvc1.connectomes.utah.edu/RC1/export/network/tlp?id=476,514&hops=1
+         https://websvc.codepharm.net/RC1/Export/Network/tlp?ids=476;514&hops=1
          
       Get all cells in the network:
       
-      .. sourcecode:: http
+      .. code-block:: text
       
-         http://websvc1.connectomes.utah.edu/RC1/export/network/tlp
+         https://websvc.codepharm.net/RC1/Export/Network/tlp
+         
+      Raising ``hops`` grows the result quickly.  For RC1 cell 180 the DOT export is
+      roughly 0.9 MB at one hop and 39 MB at three.
          
    **Neuron Node Properties:**
    
@@ -95,25 +132,31 @@ Motif connectivity
 
   Motif connectivity graphs group all neurons (Structures) by label and map each label to a node.  Edges are the collection of all connections between those labels grouped by type.
 
-.. http:get:: /export/motif/( Format )
+.. http:get:: /( volume )/Export/Motif/( format )
 
    Connectivity between classes of neurons based on label.  Includes all neurons.  Nodes represent the set of all structures that share a label.  Edges indicate at least one connection between cells with those labels.
    
+   The report always covers the entire volume, so it takes no query parameters.
+   
    **Format:**
-      * **TLP** - Tulip file format
-      * **DOT** - Graphviz DOT file format
-      * **GraphML** - GraphML file format
-      * **JSON** - Java script object notation
+      * **TLP** - Tulip file format, ``tlp``
+      * **DOT** - Graphviz DOT file format, ``dot``
+      * **JSON** - Java script object notation, ``json``
      
    :resheader Content-Type: text/plain
    
    **Example request**
    
-      Get a dot file of the morphology for use in Graphviz
+      Get a dot file of the motif connectivity for use in Graphviz
       
-      .. sourcecode:: http   
+      .. code-block:: text   
          
-         http://websvc1.connectomes.utah.edu/RC1/export/motifs/dot
+         https://websvc.codepharm.net/RC1/Export/Motif/dot
+         
+      Because the report covers the whole volume its cost scales with volume size.
+      Smaller volumes return in seconds, RC2 takes roughly two minutes, and RC1 can
+      take longer still.  Allow a generous timeout rather than assuming the request
+      has failed.
          
    **Motif Node Properties:**
    
@@ -151,17 +194,17 @@ Morphology
   
    Morphology graphs map each annotation to a node.  Edges represent links between annotations.  The position information is preserved to create a 3D model of the structures.
 
-.. http:get:: /export/morphology/( Format )
+.. http:get:: /( volume )/Export/Morphology/( format )
 
    Returns a 3D graph using annotations to determine node position.
    
    Nodes with a glowing effect are involved in a structure link.
    
    **Format:**
-      * **TLP** - Tulip file format
-      * **JSON** - Java script object notation
+      * **TLP** - Tulip file format, ``tlp``
+      * **JSON** - Java script object notation, ``json``
      
-   :query id: ID numbers of cells to include in connectivity graph.  Commas separate multiple IDs.
+   :query ids: ID numbers of cells to include in the graph.  Semicolons separate multiple IDs.
    :query stick: When set to a number greater than 0 the morphology graph is simplified.  Only nodes representing process terminations or branching points are represented.
    
    :resheader Content-Type: text/plain
@@ -170,9 +213,21 @@ Morphology
    
       Get the morphology of cells 180 and 476.
       
-      .. sourcecode:: http
+      .. code-block:: text
       
-         http://websvc1.connectomes.utah.edu/RC1/export/morphology/tlp?id=180,476
+         https://websvc.codepharm.net/RC1/Export/Morphology/tlp?ids=180;476
+         
+      Simplify the same cells to their branch and termination points.
+      
+      .. code-block:: text
+      
+         https://websvc.codepharm.net/RC1/Export/Morphology/tlp?ids=180;476&stick=1
+         
+.. note::
+
+   Morphology **JSON** currently returns an empty envelope of the form
+   ``{"Morphology":[{}]}`` on every volume, one empty object per requested structure.
+   Use the TLP format until this is fixed.
          
 .. figure:: Morphology_Export1.png
       
@@ -194,5 +249,5 @@ Navigation between Viking and Tulip
          
 .. _Tulip: http://tulip.labri.fr/
 .. _Graphviz: http://www.graphviz.org/
-.. _website: http://websvc1.connectomes.utah.edu/Export
+.. _export portal: https://websvc.codepharm.net/Export/
 .. _TulipPaths: https://github.com/visdesignlab/TulipPaths

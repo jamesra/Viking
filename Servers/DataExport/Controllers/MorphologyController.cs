@@ -12,8 +12,14 @@ namespace DataExport.Controllers;
 /// </remarks>
 /// <param name="env">The web host environment.</param>
 /// <param name="configuration">The configuration service.</param>
+/*
+ * The route prefix deliberately omits [action]. With it, the controller prefix already
+ * resolved to "Morphology/GetTLP" and the action template "tlp" appended to it, so the
+ * only reachable URL was Morphology/GetTLP/tlp with the format named twice. Actions now
+ * carry explicit templates: the short form, and the longer form kept for compatibility.
+ */
 [ApiController]
-[Route("[controller]/[action]")]
+[Route("[controller]")]
 public class MorphologyController(IWebHostEnvironment env, IConfiguration configuration) : Controller
 {
     private readonly IWebHostEnvironment _env = env ?? throw new ArgumentNullException(nameof(env));
@@ -94,7 +100,7 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
     /// Exports morphology data in TLP (Tulip) format via POST request.
     /// </summary>
     /// <returns>Redirect to the generated TLP file.</returns>
-    [HttpPost]
+    [HttpPost("PostTLP")]
     public async Task<IActionResult> PostTLP()
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
@@ -122,7 +128,7 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
     /// Exports morphology data in JSON format via POST request.
     /// </summary>
     /// <returns>Redirect to the generated JSON file.</returns>
-    [HttpPost]
+    [HttpPost("PostJSON")]
     public async Task<IActionResult> PostJSON()
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
@@ -170,8 +176,9 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
     /// Exports morphology data in TLP (Tulip) format via GET request.
     /// </summary>
     /// <returns>The generated TLP file for download.</returns>
-    [HttpGet("GetTLP")]
     [HttpGet("tlp")]
+    [HttpGet("GetTLP")]
+    [HttpGet("GetTLP/tlp")]
     public async Task<IActionResult> GetTLP()
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
@@ -199,8 +206,9 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
     /// Exports morphology data in JSON format via GET request.
     /// </summary>
     /// <returns>The generated JSON file for download.</returns>
-    [HttpGet("GetJSON")]
     [HttpGet("json")]
+    [HttpGet("GetJSON")]
+    [HttpGet("GetJSON/json")]
     public async Task<IActionResult> GetJSON()
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
