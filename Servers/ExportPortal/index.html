@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viking Data Export</title>
+<link rel="stylesheet" href="css/portal.css">
+</head>
+<body>
+
+<header class="banner">
+  <img src="img/banner.jpg" alt="Viking Connectomics">
+  <div class="banner-overlay">
+    <h1>Data Export</h1>
+    <p>Build and download morphology, network, and motif exports from any Viking volume.</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Step 1 ─────────────────────────────────────────────── -->
+  <section class="step" id="step-volume">
+    <h2><span class="num">1</span> Choose a volume</h2>
+
+    <div class="volume-row">
+      <select id="volume" aria-label="Volume">
+        <option value="">Loading volumes…</option>
+      </select>
+      <button type="button" id="recheck" class="ghost" title="Re-test which volumes are responding">Re-check</button>
+    </div>
+
+    <p class="volume-status" id="volume-status"></p>
+    <p class="volume-desc" id="volume-desc"></p>
+  </section>
+
+  <!-- ── Step 2 ─────────────────────────────────────────────── -->
+  <section class="step" id="step-report">
+    <h2><span class="num">2</span> Choose an export</h2>
+
+    <div class="cards" role="radiogroup" aria-label="Export type">
+
+      <label class="card" data-report="morphology">
+        <input type="radio" name="report" value="morphology" checked>
+        <img src="img/morphology.jpg" alt="">
+        <div class="card-body">
+          <h3>Morphology</h3>
+          <p>The shape of individual structures: every annotation, its position, and its links.
+             Use this to reconstruct cells in Tulip or your own tooling.</p>
+        </div>
+      </label>
+
+      <label class="card" data-report="network">
+        <input type="radio" name="report" value="network">
+        <img src="img/network.jpg" alt="">
+        <div class="card-body">
+          <h3>Network</h3>
+          <p>Connectivity between structures, traced outward a chosen number of hops.
+             The usual starting point for circuit analysis.</p>
+        </div>
+      </label>
+
+      <label class="card" data-report="motif">
+        <input type="radio" name="report" value="motif">
+        <img src="img/motif.jpg" alt="">
+        <div class="card-body">
+          <h3>Motif</h3>
+          <p>Connection patterns summarized by structure type across the whole volume.
+             Takes no inputs.</p>
+        </div>
+      </label>
+
+    </div>
+  </section>
+
+  <!-- ── Step 3 ─────────────────────────────────────────────── -->
+  <section class="step" id="step-format">
+    <h2><span class="num">3</span> Choose a format</h2>
+    <div class="formats" id="formats" role="radiogroup" aria-label="Output format"></div>
+    <p class="hint" id="format-hint"></p>
+  </section>
+
+  <!-- ── Step 4 ─────────────────────────────────────────────── -->
+  <section class="step" id="step-options">
+    <h2><span class="num">4</span> Set the inputs</h2>
+
+    <div class="note" id="motif-note" hidden>
+      A motif export summarizes the entire volume. It takes no structure list and no options.
+    </div>
+
+    <div id="options-body">
+
+      <div class="field" id="field-ids">
+        <label for="ids">Structure IDs</label>
+        <p class="hint">
+          Leave this empty to export the entire volume. Paste a list, or drop a
+          <code>.txt</code> or <code>.csv</code> file onto the box below. Commas, semicolons,
+          spaces, tabs, and line breaks all work as separators.
+        </p>
+
+        <div class="dropzone" id="dropzone">
+          <textarea id="ids" rows="6" spellcheck="false"
+                    placeholder="180, 476, 514&#10;or one ID per line&#10;or drop a file here"></textarea>
+          <div class="dropzone-overlay"><span>Drop your ID file</span></div>
+        </div>
+
+        <div class="idbar">
+          <span id="id-count" class="pill">no IDs, whole volume</span>
+          <span id="id-files" class="pill subtle" hidden></span>
+          <button type="button" class="ghost sm" id="clear-ids">Clear</button>
+        </div>
+      </div>
+
+      <div class="field inline" id="field-hops">
+        <label for="hops">Hops</label>
+        <input type="number" id="hops" min="0" max="10" step="1" value="1">
+        <p class="hint">How many synaptic steps outward from the listed structures to follow.</p>
+      </div>
+
+      <div class="field inline" id="field-stick">
+        <label class="check">
+          <input type="checkbox" id="stick">
+          <span>Reduce to a stick figure</span>
+        </label>
+        <p class="hint">Collapses each structure to its skeleton, producing a much smaller file.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── Step 5 ─────────────────────────────────────────────── -->
+  <section class="step" id="step-go">
+    <h2><span class="num">5</span> Download</h2>
+
+    <div class="urlbox">
+      <label for="url-preview">Request</label>
+      <input type="text" id="url-preview" readonly spellcheck="false">
+      <button type="button" class="ghost sm" id="copy-url">Copy</button>
+    </div>
+
+    <div class="lengthbar" id="lengthbar" hidden>
+      <div class="lengthbar-track"><div class="lengthbar-fill" id="length-fill"></div></div>
+      <p class="hint" id="length-text"></p>
+    </div>
+
+    <div class="actions">
+      <button type="button" id="download" class="primary">Download export</button>
+      <span class="status" id="status"></span>
+    </div>
+
+    <div id="results" class="results" hidden></div>
+  </section>
+
+</main>
+
+<footer>
+  <p>
+    Prefer to build URLs yourself? The
+    <a href="https://connectomes.github.io/viking/export/index.html">export documentation</a>
+    describes the underlying service, and each volume also exposes a
+    <a href="#" id="odata-link" target="_blank" rel="noopener">live OData endpoint</a>
+    for direct queries.
+  </p>
+  <p class="fine">
+    Structure IDs travel in the URL, so very long lists are split into several downloads
+    automatically. DAE export is not currently offered by the service.
+  </p>
+</footer>
+
+<script src="js/portal.js"></script>
+</body>
+</html>
