@@ -47,12 +47,22 @@ namespace Client
 
             var buildEnvFile = $".env.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}";
             Env.TraversePath().Load(buildEnvFile);
-            Secret = Environment.GetEnvironmentVariable("IDENTITY_SERVER_SECRET"); // TODO: Remove fallback in production
+            Secret = Environment.GetEnvironmentVariable("IDENTITY_SERVER_SECRET");
+            var userName = Environment.GetEnvironmentVariable("IDENTITY_USERNAME");
+            var password = Environment.GetEnvironmentVariable("IDENTITY_PASSWORD");
 
             if(Secret is null)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"No secret found. Please set IDENTITY_SERVER_SECRET in {envFile} or {buildEnvFile}.");
+                Console.ForegroundColor = ConsoleColor.White;
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"No user credentials found. Please set IDENTITY_USERNAME and IDENTITY_PASSWORD in {envFile} or {buildEnvFile}.");
                 Console.ForegroundColor = ConsoleColor.White;
                 return;
             }
@@ -76,22 +86,18 @@ namespace Client
                 HttpClient client = new HttpClient();
 
                 Console.WriteLine($"Client: {Client}");
-                Console.WriteLine($"Client Secret: {Secret}");
+                Console.WriteLine($"User: {userName}");
 
                 var requested_scopes = new List<string> { "openid", "Viking.Annotation", $"{VolumeName}.Read", $"{VolumeName}.Annotate" };
                 var tokenResponse = await client.RequestPasswordTokenAsync(new PasswordTokenRequest
                 {
                     Address = disco.TokenEndpoint,
-                    UserName = "jamesan",
-                    Password = "JulyNinth2005!",
+                    UserName = userName,
+                    Password = password,
                     ClientId = Client,
                     ClientSecret = Secret,
-                    Scope = string.Join(" ", requested_scopes), //Add desired permissions to scope
+                    Scope = string.Join(" ", requested_scopes),
                 });
-
-                //var tokenResponse = await tokenClient.RequestClientCredentialsAsync("api1");
-                //var tokenResponse = await tokenClient.RequestResourceOwnerPasswordAsync("jander42@hotmail.com", "Wat>com3", "Viking.Annotation openid");
-                //var tokenResponse = await tokenClient.RequestResourceOwnerPasswordAsync("jamesan", "Wat>com3", "openid Viking.Annotation RC1.Read");
 
                 if (tokenResponse.IsError)
                 {
@@ -193,10 +199,6 @@ namespace Client
                 string appUserId = JsonSerializer.Deserialize<string>(appUserIdResponse);
 
                 Console.WriteLine($"Server reports userId = {appUserId}");
-
-                //client.SetToken("token", tokenResponse.AccessToken);
-
-                //client.SetBasicAuthentication("jamesan", "Wat>com3");
 
                 {
                     string address = $"{identityServerEndpoint}permissions/{appUserId}/resource/{VolumeName}";

@@ -18,11 +18,21 @@ TestResults
 
 # Secrets files
 secrets.json
+.env
+.env.*
+
+# Committed Serilog dumps (contain host paths / usernames)
+IdentityServerManagement*.json
+
 
 # Build results
 build
 [Dd]ebug/
 [Rr]elease/
+
+# Keep committed env templates (the `build` rule above would otherwise ignore this folder)
+!config-template/build/
+!config-template/build/**
 x64/
 *_i.c
 *_p.c

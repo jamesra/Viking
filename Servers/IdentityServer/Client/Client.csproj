@@ -14,9 +14,8 @@
 	  <PackageReference Include="DotNetEnv" Version="3.1.1" />
   </ItemGroup>
 
-	<!-- Debug configuration -->
 	<ItemGroup>
-		<Content Include="../.env" Condition="Exists('../.env')">
+		<Content Include=".env" Condition="Exists('.env')">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 	</ItemGroup>

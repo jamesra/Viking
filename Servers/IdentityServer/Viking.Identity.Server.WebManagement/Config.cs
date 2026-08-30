@@ -8,8 +8,6 @@ namespace Viking.Identity.Server.WebManagement
 {
     public class Config
     {
-        //internal const string Secret = "CorrectHorseBatteryStaple"; 
-
         public const string AuthenticationSchemes = "Bearer, Introspection, Identity.Application";
          
         // scopes define the resources in your system
@@ -110,32 +108,7 @@ namespace Viking.Identity.Server.WebManagement
 
             // client credentials client
             return new List<Client>
-            { 
-                /*
-                new Client
-                {
-                    ClientId = "Viking",
-                    AllowedGrantTypes = GrantTypes.ClientCredentials,
-
-                    ClientSecrets =
-                    {
-                        new Secret(options.Secret.Sha256()) //"My co-workers remove eyeballs from cute mammals for a living"
-                    },
-                    AllowedScopes = AnnotationScopes,
-                }, 
-                // resource owner password grant client
-                new Client
-                {
-                    ClientId = "ro.viking",
-                    AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
-                     
-                    ClientSecrets =
-                    {
-                        new Secret(options.Secret.Sha256())
-                    },
-                    AllowedScopes = AnnotationScopes
-                }, 
-                */
+            {  
                 // API Client for token introspection
                 new Client
                 {
@@ -155,8 +128,7 @@ namespace Viking.Identity.Server.WebManagement
                 new Client
                 {
                     ClientId = "mvc",
-                    ClientName = "Management Website Client",
-                    //AllowedGrantTypes = GrantTypes.HybridAndClientCredentials,
+                    ClientName = "Management Website Client", 
                     AllowedGrantTypes = GrantTypes.Code,
 
                     RequireConsent = false,

@@ -7,12 +7,12 @@ This folder is a **template** for secrets, certificates, and .env files. Copy th
 | Folder | Contents | Copy to |
 |--------|----------|---------|
 | **mounted-config/** | ssl_cert, ssl_key, Duende_License.key, secrets.json, secrets.json.example | **D:\Docker\mounted-configs\IdentityServer** |
-| **build/** | .env.All, .env.All.Docker, .env.All.Production, .env.All.Development | **D:\Docker\Builds\IdentityServer** |
+| **build/** | env.All.example, env.All.Docker.example, env.All.Production.example, env.All.Development.example | **D:\Docker\Builds\IdentityServer** (rename to `.env.All`, `.env.All.Docker`, etc.) |
 
 ## Workflow
 
 1. Copy **config-template/mounted-config/** to **D:\Docker\mounted-configs\IdentityServer**. Replace template files with real certs, keys, and secrets.
-2. Copy **config-template/build/** to **D:\Docker\Builds\IdentityServer**. Fill in the .env files (database, AUTHORITY, SSL paths, etc.).
+2. Copy **config-template/build/env.All.example** (and the other `env.All.*.example` files) to **D:\Docker\Builds\IdentityServer**, rename them to `.env.All`, `.env.All.Docker`, `.env.All.Production`, and `.env.All.Development`, and fill in real values.
 3. Do not commit the filled-in copies. Restart scripts and docker-compose read from those paths.
 
 ## Mounted config (D:\Docker\mounted-configs\IdentityServer)
@@ -30,7 +30,7 @@ Restart scripts set `IDENTITY_CONFIG_PATH` to this folder so compose finds ssl_c
 
 Holds the .env files used when running `docker-compose` (build/up):
 
-- **.env.All** – Shared defaults (SQL_* host/port/user/password, DB names, AUTHORITY, **IDENTITY_SERVER_SECRET**).
+- **.env.All** – Shared defaults (SQL_* host/port/user/password, DB names, AUTHORITY, **IDENTITY_SERVER_SECRET**, **SBFSEM_TOOLS_CLIENT_SECRET**).
 - **.env.All.Docker** – Docker overrides (SSL_CERT_PATH, SSL_KEY_PATH, DUENDE_KEY_PATH; optional ACME_*).
 - **.env.All.Production** – Production overrides (used by restart_omni.cmd).
 - **.env.All.Development** – Development overrides (used by restart_omni_debug.cmd).
