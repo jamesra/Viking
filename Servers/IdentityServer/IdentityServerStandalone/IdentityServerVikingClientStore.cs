@@ -18,12 +18,19 @@ namespace Viking.Identity
 
     public class IdentityServerVikingClientStore : IClientStore
     {
+        /// <summary>Client id issued to the third-party sbfsem-tools web application.</summary>
+        public const string SbfsemToolsClientId = "sbfsem-tools";
+
         ApplicationDbContext _context;
         IResourceStore _resourceStore;
 
         private readonly Secret _clientSecret;
 
         private readonly Uri _redirectUri;
+
+        private readonly string _sbfsemToolsSecret;
+        private readonly string[] _sbfsemToolsRedirectUris;
+        private readonly string[] _sbfsemToolsPostLogoutRedirectUris;
 
         public IdentityServerVikingClientStore(ApplicationDbContext context, IResourceStore resourceStore, IOptions<VikingIdentityServerOptions> serverOptions)
         {
@@ -32,13 +39,22 @@ namespace Viking.Identity
 
             _redirectUri = new Uri(options.Authority);
             _clientSecret = new Secret(secret.Sha256());
+            _sbfsemToolsSecret = options.SbfsemToolsClientSecret;
+            _sbfsemToolsRedirectUris = options.SbfsemToolsRedirectUris ?? Array.Empty<string>();
+            _sbfsemToolsPostLogoutRedirectUris = options.SbfsemToolsPostLogoutRedirectUris ?? Array.Empty<string>();
             _context = context;
             _resourceStore = resourceStore;
         }
 
         public async Task<Client> FindClientByIdAsync(string clientId)
         {
-            if (clientId != "ro.viking" && clientId != "mvc" && clientId != "Viking" && clientId != "api")
+            if (clientId != "ro.viking" && clientId != "mvc" && clientId != "Viking" && clientId != "api" &&
+                clientId != SbfsemToolsClientId)
+                return null;
+
+            // Without a configured secret the third-party client would fall back to the first-party
+            // shared secret, so refuse to serve it instead.
+            if (clientId == SbfsemToolsClientId && string.IsNullOrWhiteSpace(_sbfsemToolsSecret))
                 return null;
 
             // Rebuild AllowedScopes from the live resource store on every lookup so newly
@@ -87,6 +103,28 @@ namespace Viking.Identity
                     RedirectUris = { new Uri(_redirectUri, "signin-oidc").ToString() },
                     PostLogoutRedirectUris = { new Uri(_redirectUri,"signout-callback-oidc").ToString() },
                     AllowedScopes = scopes,
+                    AllowOfflineAccess = true,
+                    AccessTokenType = AccessTokenType.Reference
+                };
+            }
+            else if (clientId == SbfsemToolsClientId) /* Third party web tool, confidential backend */
+            {
+                return new Client
+                {
+                    ClientId = clientId,
+                    ClientName = "sbfsem-tools",
+                    AllowedGrantTypes = new[] { GrantType.AuthorizationCode },
+                    RequirePkce = true,
+                    RequireConsent = false,
+                    ClientSecrets = { new Secret(_sbfsemToolsSecret.Sha256()) },
+                    RedirectUris = _sbfsemToolsRedirectUris,
+                    PostLogoutRedirectUris = _sbfsemToolsPostLogoutRedirectUris,
+                    // Volume scopes are not needed: the Permissions API authorizes on the user, not the scope.
+                    AllowedScopes = new List<string>
+                    {
+                        IdentityServerConstants.StandardScopes.OpenId,
+                        IdentityServerConstants.StandardScopes.Profile
+                    }.Concat(IdentityServerCustomResourceStore.StandardScopes.Select(s => s.Name)).ToList(),
                     AllowOfflineAccess = true,
                     AccessTokenType = AccessTokenType.Reference
                 };

@@ -139,9 +139,28 @@ The system defines several OAuth2/OIDC clients for different use cases:
     - Read-only client for annotation data
     - May support anonymous users
 
+**sbfsem-tools** - Third-party web application (sbfsem-tools.com)
+    - Client ID: ``sbfsem-tools``
+    - Allowed Grant Types: Authorization Code with PKCE (required)
+    - Used for: External web tool whose Python backend logs users in and reads volume permissions
+    - Requires Consent: No
+    - Allows Offline Access: Yes (refresh tokens)
+    - Scopes: ``openid``, ``profile``, ``Viking.Annotation`` (no volume scopes; the Permissions API
+      authorizes on the user, not the scope)
+    - Access Token Type: Reference (validated by the WebApi through introspection)
+    - Redirect URIs: ``VikingIdentityServerOptions:SbfsemToolsRedirectUris``
+      (default ``https://sbfsem-tools.com/auth/callback``)
+    - Post Logout URIs: ``VikingIdentityServerOptions:SbfsemToolsPostLogoutRedirectUris``
+      (default ``https://sbfsem-tools.com/``)
+    - Secret: its **own** value from ``SBFSEM_TOOLS_CLIENT_SECRET``, never the shared first-party
+      secret. When the variable is empty the client is not served at all.
+    - Integration guide for the third party: ``Documentation/source/server/Identity/sbfsem-tools.rst``
+
 **Client Secret**
-    All clients share a configured secret (``CorrectHorseBatteryStaple`` in the example configuration).
-    **Important:** Change this secret in production and store it securely.
+    The first-party clients share a secret loaded from ``IDENTITY_SERVER_SECRET`` (or the matching
+    app setting). Third-party clients such as ``sbfsem-tools`` get a separate secret so that an
+    external site never receives the first-party value.
+    **Important:** Do not commit these values. Store them in environment variables, user-secrets, or Docker secrets.
 
 Scopes
 ------
