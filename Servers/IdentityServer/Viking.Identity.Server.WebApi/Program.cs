@@ -36,6 +36,17 @@ using Viking.SSL;
 
 public class Program
 {
+    /// <summary>
+    /// Name of the CORS policy granting browser access to the anonymous volume tree.
+    /// </summary>
+    private const string PortalCorsPolicy = "VikingWebPortals";
+
+    /// <summary>
+    /// Origin used when Cors:AllowedOrigins is absent from configuration. This is the host that
+    /// serves the export portal.
+    /// </summary>
+    private const string DefaultPortalOrigin = "https://websvc.codepharm.net";
+
     public static void Main(string[] args)
     {
         // Configure Serilog
@@ -215,6 +226,21 @@ public class Program
 
             builder.Services.AddControllers();
 
+            // The export portal is served from websvc and reads the anonymous volume tree from
+            // this API. Because the API answers on port 6001, that is a cross-origin request even
+            // though both are codepharm hosts, so it needs an explicit origin grant. Scoped to
+            // GET only; nothing here permits a browser to mutate identity state.
+            string[] corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+                                   ?? [DefaultPortalOrigin];
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy(PortalCorsPolicy, policy =>
+                    policy.WithOrigins(corsOrigins)
+                          .WithMethods("GET")
+                          .AllowAnyHeader());
+            });
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline
@@ -229,6 +255,8 @@ public class Program
             app.UseHttpsRedirection();
 
             app.UseRouting();
+
+            app.UseCors(PortalCorsPolicy);
 
             app.UseAuthentication();
             app.UseAuthorization();
