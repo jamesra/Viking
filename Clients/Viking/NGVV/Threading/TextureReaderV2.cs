@@ -5,6 +5,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -309,24 +310,26 @@ class TextureReaderV2 : IDisposable
                         .GetAsync(textureUri, HttpCompletionOption.ResponseContentRead, token).ConfigureAwait(false);
                     if (false == response.IsSuccessStatusCode)
                     {
-                        if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
-                            response.StatusCode == System.Net.HttpStatusCode.RequestTimeout)
+                        if (response.StatusCode == HttpStatusCode.ServiceUnavailable ||
+                            response.StatusCode == HttpStatusCode.RequestTimeout ||
+                            response.StatusCode == HttpStatusCode.TooManyRequests)
                         {
                             nRetries--;
-                            Debug.WriteLine($"Failed to load {textureUri} : Delaying for retry");
-                            await Task.Delay(Geometry.Global.GetRandomRequestDelay(), token);
+                            TimeSpan delay = response.StatusCode == HttpStatusCode.TooManyRequests
+                                ? DelayForTooManyRequests(response)
+                                : TimeSpan.FromMilliseconds(Geometry.Global.GetRandomRequestDelay());
+                            Debug.WriteLine($"Failed to load {textureUri} : {response.StatusCode}, delaying {delay.TotalMilliseconds:F0}ms for retry");
+                            response.Dispose();
+                            await Task.Delay(delay, token).ConfigureAwait(false);
                             continue;
                         }
-                        else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                        {
+
+                        if (response.StatusCode == HttpStatusCode.NotFound)
                             this.TextureNotFound = true;
-                            break;
-                        }
+                        break;
                     }
-                    else
-                    {
-                        return await TryLoadingFromHttpClientResponse(response, CacheFilename, token).ConfigureAwait(false);
-                    }
+
+                    return await TryLoadingFromHttpClientResponse(response, CacheFilename, token).ConfigureAwait(false);
                 }
 
                 if (response != null)
@@ -360,6 +363,30 @@ class TextureReaderV2 : IDisposable
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Wait before retrying HTTP 429. Uses Retry-After (delta-seconds or HTTP-date) when present;
+    /// otherwise the same 800–1200 ms jitter as 503/408. Capped so one header cannot stall the
+    /// texture worker pool.
+    /// </summary>
+    static TimeSpan DelayForTooManyRequests(HttpResponseMessage response)
+    {
+        const int maxRetryAfterMs = 60_000;
+        RetryConditionHeaderValue retryAfter = response.Headers.RetryAfter;
+        TimeSpan delay;
+        if (retryAfter?.Delta is TimeSpan delta)
+            delay = delta;
+        else if (retryAfter?.Date is DateTimeOffset date)
+            delay = date - DateTimeOffset.UtcNow;
+        else
+            delay = TimeSpan.FromMilliseconds(Geometry.Global.GetRandomRequestDelay());
+
+        if (delay < TimeSpan.Zero)
+            return TimeSpan.Zero;
+        if (delay.TotalMilliseconds > maxRetryAfterMs)
+            return TimeSpan.FromMilliseconds(maxRetryAfterMs);
+        return delay;
     }
 
     private async Task<Texture2D> TryLoadingFromHttpClientResponse(HttpResponseMessage response, string CacheFilename, CancellationToken token)
