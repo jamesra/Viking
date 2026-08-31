@@ -86,7 +86,14 @@ const state = {
   volumes: [],
   report: 'morphology',
   format: 'tlp',
-  ids: []
+
+  ids: [],          // everything to export: numeric entries plus resolved labels
+  numericIds: [],   // from plain IDs and ranges, available without a round trip
+  invalid: [],      // entries that could not be read, surfaced rather than dropped
+  labelTerms: [],   // label entries awaiting or holding a lookup result
+  labelResults: [],
+  resolving: false,
+  hasInput: false   // whether the box holds anything at all, which decides the empty-set guard
 };
 
 const $ = (id) => document.getElementById(id);
@@ -148,26 +155,161 @@ const SAME_ORIGIN = (() => {
   }
 })();
 
-/* ── ID parsing ─────────────────────────────────────────── */
+/* ── Input parsing ──────────────────────────────────────── */
+
+/*
+ * A range wider than this is refused rather than expanded. It is far above any plausible real
+ * request and stops a slip such as 1-99999999 from building a multi-megabyte list.
+ */
+const MAX_RANGE_SPAN = 10000;
+
+/*
+ * Entries are separated by newline, comma, or semicolon, and never by whitespace alone.
+ *
+ * That restriction exists because labels contain spaces. On RC1, 313 of 8,044 labelled parent
+ * structures have a space in the label, including "GC ON", "yAC ON+OFF" and "GAC yAC ON+OFF", so
+ * splitting on whitespace would tear those into meaningless fragments. Commas, semicolons and
+ * newlines appear in no label at all.
+ *
+ * Whitespace still separates within an entry that contains no letters, which keeps a pasted
+ * "180 476 514" working without endangering any label.
+ */
+const ENTRY_SEPARATORS = /[\n\r,;]+/;
+
+/** Escapes a value for an OData string literal, where a quote is doubled. */
+const odataQuote = (s) => s.replace(/'/g, "''");
 
 /**
- * Extracts structure IDs from free text.
+ * Splits raw text into entries and classifies each one.
  *
- * Deliberately permissive: commas, semicolons, tabs, spaces, and line breaks all separate, so a
- * pasted spreadsheet column, a CSV fragment, and a dragged text file all behave the same. Only
- * non-negative integers survive, and the result is deduplicated and sorted.
+ * Returns numeric IDs, the label terms that need resolving against OData, and the entries that
+ * could not be understood. Unparseable entries are reported rather than dropped: an empty ID set
+ * means "export the whole volume", so silently discarding input is the one failure this page
+ * must not have.
  */
-function parseIds(text) {
-  if (!text) return [];
-  const seen = new Set();
-  const matches = text.match(/\d+/g);
-  if (matches) {
-    for (const m of matches) {
-      const n = Number(m);
-      if (Number.isSafeInteger(n) && n >= 0) seen.add(n);
+function parseEntries(text) {
+  const ids = new Set();
+  const labels = [];
+  const invalid = [];
+
+  if (!text) return { ids: [], labels, invalid };
+
+  for (const rawEntry of text.split(ENTRY_SEPARATORS)) {
+    const entry = rawEntry.trim();
+    if (!entry) continue;
+
+    // Anything with a letter is a label, and is never split further.
+    if (/[a-z]/i.test(entry)) {
+      if (!labels.includes(entry)) labels.push(entry);
+      continue;
+    }
+
+    // Tighten "180 - 476" to "180-476" first, so the whitespace split below cannot break a
+    // spaced range into three meaningless tokens.
+    for (const token of entry.replace(/\s*-\s*/g, '-').split(/\s+/)) {
+      if (!token) continue;
+
+      if (/^\d+$/.test(token)) {
+        const n = Number(token);
+        if (Number.isSafeInteger(n)) ids.add(n);
+        else invalid.push({ text: token, reason: 'number is too large' });
+        continue;
+      }
+
+      const range = token.match(/^(\d+)-(\d+)$/);
+      if (range) {
+        let lo = Number(range[1]);
+        let hi = Number(range[2]);
+        if (!Number.isSafeInteger(lo) || !Number.isSafeInteger(hi)) {
+          invalid.push({ text: token, reason: 'number is too large' });
+          continue;
+        }
+        if (lo > hi) [lo, hi] = [hi, lo];
+        const span = hi - lo + 1;
+        if (span > MAX_RANGE_SPAN) {
+          invalid.push({ text: token, reason: `range covers ${span.toLocaleString()} IDs, over the ${MAX_RANGE_SPAN.toLocaleString()} limit` });
+          continue;
+        }
+        for (let i = lo; i <= hi; i++) ids.add(i);
+        continue;
+      }
+
+      invalid.push({ text: token, reason: 'not an ID or a range' });
     }
   }
-  return [...seen].sort((a, b) => a - b);
+
+  return { ids: [...ids].sort((a, b) => a - b), labels, invalid };
+}
+
+/* ── Label resolution ───────────────────────────────────── */
+
+/*
+ * Labels are turned into IDs here rather than by the export service, which accepts numeric IDs
+ * only. OData has no regular-expression support -- matchesPattern is rejected with HTTP 400 --
+ * so matching is a case-insensitive substring test, which contains() does support.
+ *
+ * Only parent structures are considered. Those are the neurons that Morphology and Network
+ * export; their children are the individual annotations.
+ */
+const labelCache = new Map();
+
+async function fetchLabelMatches(volume, term) {
+  const filter = `contains(tolower(Label),'${odataQuote(term.toLowerCase())}') and ParentID eq null`;
+  let url = `${SERVICE_ROOT}/${volume}/OData/Structures`
+    + `?$filter=${encodeURIComponent(filter)}&$select=ID,Label&$orderby=ID`;
+
+  const ids = [];
+  const samples = [];
+
+  // OData pages large result sets, so follow the continuation until it stops.
+  while (url) {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`OData returned HTTP ${response.status}`);
+    const page = await response.json();
+
+    for (const row of page.value || []) {
+      ids.push(row.ID);
+      if (samples.length < 4 && row.Label) {
+        const trimmed = row.Label.trim();
+        if (trimmed && !samples.includes(trimmed)) samples.push(trimmed);
+      }
+    }
+    url = page['@odata.nextLink'] || null;
+  }
+
+  return { ids, samples };
+}
+
+/**
+ * Resolves label terms to IDs, reusing earlier answers for the same volume and term.
+ *
+ * Each term is reported separately so the page can say which ones matched and which did not,
+ * instead of merging everything into one opaque count.
+ */
+async function resolveLabels(volume, terms) {
+  return Promise.all(terms.map(async (term) => {
+    const key = `${volume}\u0000${term.toLowerCase()}`;
+    if (labelCache.has(key)) return labelCache.get(key);
+
+    let result;
+    try {
+      const { ids, samples } = await fetchLabelMatches(volume, term);
+      result = { term, ids, samples, error: null };
+    } catch (error) {
+      result = {
+        term,
+        ids: [],
+        samples: [],
+        error: SAME_ORIGIN
+          ? error.message
+          : 'label lookup needs the OData service on this page\u2019s origin'
+      };
+    }
+
+    // A failure is not cached, so a transient outage does not stick for the session.
+    if (!result.error) labelCache.set(key, result);
+    return result;
+  }));
 }
 
 /* ── URL building ───────────────────────────────────────── */
@@ -378,6 +520,12 @@ function onVolumeChange() {
 
   $('volume-desc').textContent = description;
   $('odata-link').href = `${SERVICE_ROOT}/${volume}/OData/`;
+
+  // Labels resolve to IDs that only mean anything within one volume, so the previous answers
+  // cannot carry over. Re-running the parse re-queries whatever labels are in the box.
+  state.labelResults = [];
+  onIdsChanged();
+
   refresh();
 }
 
@@ -425,12 +573,61 @@ function renderOptions() {
 function renderIdCount() {
   const pill = $('id-count');
   const n = state.ids.length;
-  if (!n) {
-    pill.textContent = 'no IDs, whole volume';
+
+  if (state.resolving) {
+    pill.textContent = 'looking up labels…';
+    pill.classList.add('count');
+  } else if (!n) {
+    // Only an genuinely empty box means the whole volume. Text that resolved to nothing is a
+    // mistake, and saying "whole volume" there would be the wrong reassurance entirely.
+    pill.textContent = state.hasInput ? 'nothing matched' : 'no IDs, whole volume';
     pill.classList.remove('count');
   } else {
     pill.textContent = `${n.toLocaleString()} structure${n === 1 ? '' : 's'}`;
     pill.classList.add('count');
+  }
+
+  renderIdReport();
+}
+
+/** Lists what each label matched and which entries could not be read. */
+function renderIdReport() {
+  const box = $('id-report');
+  const rows = [];
+
+  for (const term of state.labelTerms) {
+    const result = state.labelResults.find((r) => r.term === term);
+
+    if (!result) {
+      rows.push({ cls: 'wait', label: term, detail: 'looking up…' });
+    } else if (result.error) {
+      rows.push({ cls: 'err', label: term, detail: result.error });
+    } else if (!result.ids.length) {
+      rows.push({ cls: 'err', label: term, detail: 'no structures with a matching label' });
+    } else {
+      const matched = `${result.ids.length.toLocaleString()} structure${result.ids.length === 1 ? '' : 's'}`;
+      const shown = result.samples.slice(0, 3).join(', ');
+      const more = result.samples.length > 3 ? ', …' : '';
+      rows.push({ cls: 'ok', label: term, detail: shown ? `${matched} — ${shown}${more}` : matched });
+    }
+  }
+
+  for (const bad of state.invalid) {
+    rows.push({ cls: 'err', label: bad.text, detail: bad.reason });
+  }
+
+  box.innerHTML = '';
+  box.hidden = rows.length === 0;
+
+  for (const row of rows) {
+    const el = document.createElement('div');
+    el.className = 'idrow';
+    el.innerHTML = `<span class="badge ${row.cls}"></span><code></code><span class="detail"></span>`;
+    el.querySelector('.badge').textContent =
+      row.cls === 'ok' ? 'matched' : (row.cls === 'wait' ? 'checking' : 'no match');
+    el.querySelector('code').textContent = row.label;
+    el.querySelector('.detail').textContent = row.detail;
+    box.appendChild(el);
   }
 }
 
@@ -447,11 +644,28 @@ function renderRequest() {
   const batches = batchIds(ids);
 
   $('url-preview').value = buildUrl(volume, state.report, state.format, batches[0]);
-  $('download').disabled = false;
 
   const bar = $('lengthbar');
   const fill = $('length-fill');
   const text = $('length-text');
+
+  /*
+   * The guard that matters most on this page. Omitting the id parameter means "export the whole
+   * volume", so input that resolves to nothing would quietly export everything -- the opposite of
+   * what was asked for, and expensive on a volume the size of RC1.
+   */
+  const resolvedToNothing = report.acceptsIds && state.hasInput && !ids.length;
+  $('download').disabled = resolvedToNothing || state.resolving;
+
+  if (resolvedToNothing) {
+    bar.hidden = false;
+    fill.style.width = '0%';
+    fill.className = 'lengthbar-fill warn';
+    text.textContent = state.resolving
+      ? 'Looking up labels…'
+      : 'Nothing in the box matched a structure. Clear it to export the whole volume, or correct the entries above.';
+    return;
+  }
 
   if (!ids.length) {
     bar.hidden = true;
@@ -672,10 +886,61 @@ function wireDropzone() {
   });
 }
 
+/** Recomputes the export set from the numeric entries and whatever labels have resolved. */
+function mergeIds() {
+  const all = new Set(state.numericIds);
+  for (const result of state.labelResults) {
+    for (const id of result.ids) all.add(id);
+  }
+  state.ids = [...all].sort((a, b) => a - b);
+}
+
+/*
+ * Label lookups hit the network, so they are debounced and their results are applied only if the
+ * box has not changed again in the meantime. Without that guard a slow reply for an earlier
+ * keystroke could overwrite the answer for the current text.
+ */
+let labelTimer = null;
+let labelRequestId = 0;
+
 function onIdsChanged() {
-  state.ids = parseIds($('ids').value);
+  const text = $('ids').value;
+  const parsed = parseEntries(text);
+
+  state.hasInput = text.trim().length > 0;
+  state.numericIds = parsed.ids;
+  state.invalid = parsed.invalid;
+  state.labelTerms = parsed.labels;
+
+  // Drop results for terms that are no longer present, so removing a label removes its IDs.
+  state.labelResults = state.labelResults.filter((r) => parsed.labels.includes(r.term));
+
+  clearTimeout(labelTimer);
+
+  const pending = parsed.labels.filter((t) => !state.labelResults.some((r) => r.term === t));
+  state.resolving = pending.length > 0;
+
+  mergeIds();
   renderIdCount();
   renderRequest();
+
+  if (!pending.length) return;
+
+  const requestId = ++labelRequestId;
+  labelTimer = setTimeout(async () => {
+    const volume = $('volume').value;
+    const results = await resolveLabels(volume, pending);
+    if (requestId !== labelRequestId) return;  // superseded by newer input
+
+    state.labelResults = state.labelResults
+      .filter((r) => state.labelTerms.includes(r.term))
+      .concat(results.filter((r) => state.labelTerms.includes(r.term)));
+    state.resolving = false;
+
+    mergeIds();
+    renderIdCount();
+    renderRequest();
+  }, 350);
 }
 
 /* ── Startup ────────────────────────────────────────────── */

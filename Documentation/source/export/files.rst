@@ -24,9 +24,38 @@ Export from the web page
 ========================
 
   The `export portal`_ builds these URLs for you.  Choose a volume, an export type and a
-  format, paste or drag-drop a list of structure IDs, and it assembles the request and
+  format, paste or drag-drop a list of structures, and it assembles the request and
   downloads the result.  It covers every export described below and is the recommended
   starting point.
+
+  The portal accepts three kinds of entry, which may be mixed freely in one list:
+
+  ==========  =====================  ================================================
+  Entry       Example                Meaning
+  ==========  =====================  ================================================
+  ID          ``180``                A single structure.
+  Range       ``1-10``               Every ID from 1 to 10, inclusive of both ends.
+  Label       ``CBb3n``              Every structure whose label contains that text,
+                                     ignoring case.
+  ==========  =====================  ================================================
+
+  **Separate entries with a comma, a semicolon, or a new line.**  Whitespace separates
+  numbers only.  That distinction exists because labels contain spaces: on RC1, 313 of the
+  8,044 labelled structures have one, including ``GC ON`` and ``yAC ON+OFF``.  Splitting
+  those on whitespace would search for fragments instead of the label.  A range must have
+  digits on both sides, which is what keeps a hyphenated label such as ``CBa2-3`` from
+  being read as a range.
+
+  Labels are resolved by the portal, which looks up matching structures in the volume's
+  OData service and puts the resulting IDs into the URL.  It reports what each label
+  matched, and it will not start a download when nothing in the box matched anything,
+  because an export with no IDs means the whole volume.
+
+.. note::
+
+   Ranges and labels are conveniences of the portal, not of the export service.  By the
+   time a request reaches the service it carries plain numeric IDs.  A URL written by hand
+   must therefore use IDs only, as described below.
 
 Export directly from a URL
 ==========================
@@ -65,6 +94,12 @@ Export directly from a URL
    Multiple IDs are separated by **semicolons**, not commas.  A comma-separated list is
    not rejected; it silently yields a near-empty file.  Because a semicolon terminates a
    query string in some shells, quote the URL when using tools such as ``curl``.
+
+   The service accepts **numeric IDs only**.  Ranges and labels are portal features and
+   mean nothing here: ``?ids=1-10`` and ``?ids=CBb3n`` are both discarded, and because an
+   empty ID set means "export the whole volume", either one quietly returns the entire
+   volume rather than an error.  The service splits on semicolons and newlines, so a
+   multi-line value works, but a comma does not.
 
 
 Neuron connectivity network

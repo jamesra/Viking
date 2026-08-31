@@ -252,6 +252,40 @@ select:focus, input:focus, textarea:focus { border-color: var(--accent); }
 .pill.subtle { color: var(--muted); }
 .pill.count  { border-color: var(--accent-dim); color: var(--accent); }
 
+/* ── Input syntax help + per-entry results ──────────────── */
+
+.hint.syntax { margin: 6px 0 0; padding-left: 18px; }
+.hint.syntax li { margin: 2px 0; }
+.hint.syntax b { color: var(--text); font-weight: 600; }
+
+.idreport { margin-top: 10px; border-top: 1px solid var(--line); }
+
+.idrow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--line);
+}
+
+.idrow:last-child { border-bottom: 0; }
+.idrow code { font-size: 12.5px; color: var(--text); }
+.idrow .detail { color: var(--muted); flex: 1; min-width: 0; }
+
+.idrow .badge {
+  flex: none;
+  min-width: 62px;
+  text-align: center;
+  font-size: 11.5px;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.idrow .badge.ok   { background: rgba(76,191,122,.16); color: var(--good); }
+.idrow .badge.err  { background: rgba(224,96,76,.16);  color: var(--bad); }
+.idrow .badge.wait { background: var(--panel-2);       color: var(--muted); }
+
 /* ── URL preview + length ───────────────────────────────── */
 
 .urlbox { display: flex; align-items: center; gap: 9px; }
