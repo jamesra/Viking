@@ -183,7 +183,22 @@ namespace VikingXNAGraphics
         public static MeshModel<VertexPositionColor> ToMeshModelEdgesOnly(this Box bbox, Color color)
         {
             var model = VikingXNAGraphics.MeshExtensions.CreateUnitBoundingBox(color);
-            model.ModelMatrix = Matrix.CreateScale((float)bbox.Width / 2, (float)bbox.Height / 2, (float)bbox.Depth / 2) * Matrix.CreateTranslation(bbox.CenterPoint.ToXNAVector3());
+
+            float halfWidth = (float)bbox.Width / 2;
+            float halfHeight = (float)bbox.Height / 2;
+            float halfDepth = (float)bbox.Depth / 2;
+
+            //A slice whose shapes all sit on one Z has zero depth, which would scale the unit box flat and leave
+            //a degenerate transform. Give collapsed axes a thin extent so the box still reads as a box.
+            float minExtent = Math.Max(Math.Max(halfWidth, halfHeight), halfDepth) * 0.005f;
+            if (minExtent > 0)
+            {
+                halfWidth = Math.Max(halfWidth, minExtent);
+                halfHeight = Math.Max(halfHeight, minExtent);
+                halfDepth = Math.Max(halfDepth, minExtent);
+            }
+
+            model.ModelMatrix = Matrix.CreateScale(halfWidth, halfHeight, halfDepth) * Matrix.CreateTranslation(bbox.CenterPoint.ToXNAVector3());
             return model;
         }
 
@@ -196,6 +211,8 @@ namespace VikingXNAGraphics
             {
                 model.Vertices[i].Color = color;
             }
+
+            model.InvalidateBuffers();
         }
 
         public static void SetColor(this MeshModel<VertexPositionNormalColor> model, Color color)
@@ -207,6 +224,8 @@ namespace VikingXNAGraphics
             {
                 model.Vertices[i].Color = color;
             }
+
+            model.InvalidateBuffers();
         }
 
         /// <summary>

@@ -485,7 +485,7 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window)
         {
-            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
+            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, 1.0f, 0);
 
             DepthStencilState dstate = new()
             {

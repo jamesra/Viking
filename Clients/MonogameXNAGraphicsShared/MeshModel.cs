@@ -63,14 +63,28 @@ namespace VikingXNAGraphics
         /// </summary>
         public PrimitiveType Primitive { get; set; } = PrimitiveType.TriangleList;
 
-        public int PrimitiveCount => Primitive switch
+        /// <summary>
+        /// Primitives to draw. Reports what the index buffer actually holds when one has been uploaded, because
+        /// <see cref="Edges"/> can be replaced by a meshing thread between EnsureBuffers and the draw call.
+        /// </summary>
+        public int PrimitiveCount
         {
-            PrimitiveType.TriangleList => this.Edges.Length / 3,
-            PrimitiveType.LineList => this.Edges.Length / 2,
-            PrimitiveType.LineStrip => this.Edges.Length - 1,
-            PrimitiveType.TriangleStrip => this.Edges.Length - 2,
-            _ => throw new NotImplementedException("Unexpected primitive type"),
-        };
+            get
+            {
+                int indexCount = _indexBuffer != null && !_indexBuffer.IsDisposed
+                    ? _indexBuffer.IndexCount
+                    : this.Edges?.Length ?? 0;
+
+                return Primitive switch
+                {
+                    PrimitiveType.TriangleList => indexCount / 3,
+                    PrimitiveType.LineList => indexCount / 2,
+                    PrimitiveType.LineStrip => indexCount - 1,
+                    PrimitiveType.TriangleStrip => indexCount - 2,
+                    _ => throw new NotImplementedException("Unexpected primitive type"),
+                };
+            }
+        }
 
         static MeshModel()
         {
@@ -89,9 +103,11 @@ namespace VikingXNAGraphics
         public bool HasColor => _HasColor;
 
         /// <summary>
-        /// Marks the cached vertex/index buffers as invalid (e.g. after in-place vertex changes). Subclasses may call this.
+        /// Marks the cached vertex/index buffers as invalid. Callers that mutate the contents of
+        /// <see cref="Vertices"/> or <see cref="Edges"/> in place must call this, because only the property
+        /// setters detect assignment and an already-uploaded buffer is otherwise never refreshed.
         /// </summary>
-        protected void InvalidateBuffers()
+        public void InvalidateBuffers()
         {
             _bufferDirty = true;
         }
@@ -102,29 +118,54 @@ namespace VikingXNAGraphics
         /// <returns>True if buffers are valid and can be used for DrawIndexedPrimitives; false if geometry is empty or invalid.</returns>
         public bool EnsureBuffers(GraphicsDevice device)
         {
-            if (device == null || _verticies == null || _verticies.Length == 0 || _edges == null || _edges.Length == 0)
+            if (device == null)
                 return false;
 
-            if (!_bufferDirty && _vertexBuffer != null && !_vertexBuffer.IsDisposed && _indexBuffer != null && !_indexBuffer.IsDisposed &&
-                _vertexBuffer.VertexCount == _verticies.Length && _indexBuffer.IndexCount == _edges.Length)
+            //Clear the flag before reading the arrays. A writer that swaps them after this point sets it again
+            //and the next frame rebuilds; clearing at the end would swallow that and leave a stale buffer.
+            bool wasDirty = _bufferDirty;
+            _bufferDirty = false;
+
+            //These models are filled from meshing threads while the draw thread renders them, and the setters
+            //replace the whole array rather than mutating in place. Snapshot both references so the lengths used
+            //to size a buffer cannot change before the buffer is filled.
+            VERTEXTYPE[] verticies = _verticies;
+            int[] edges = _edges;
+
+            if (verticies == null || verticies.Length == 0 || edges == null || edges.Length == 0)
+                return false;
+
+            if (!wasDirty && _vertexBuffer != null && !_vertexBuffer.IsDisposed && _indexBuffer != null && !_indexBuffer.IsDisposed &&
+                _vertexBuffer.VertexCount == verticies.Length && _indexBuffer.IndexCount == edges.Length)
                 return true;
+
+            //Verticies and edges are published independently, so a partially applied update can leave indices
+            //pointing past the end of the vertex array. Wait for the matching vertices rather than drawing it.
+            //Validating below the not-dirty early-out keeps a fully assembled model off this O(edges) scan every
+            //frame: the existing buffers can only have been uploaded by a previous pass through this check, and
+            //any array swap since then set _bufferDirty, which forces this path and revalidates. Re-setting
+            //_bufferDirty here (rather than relying on the clear at the top) is what makes the next frame retry.
+            for (int i = 0; i < edges.Length; i++)
+            {
+                if ((uint)edges[i] >= (uint)verticies.Length)
+                {
+                    _bufferDirty = true;
+                    return false;
+                }
+            }
 
             _vertexBuffer?.Dispose();
             _vertexBuffer = null;
             _indexBuffer?.Dispose();
             _indexBuffer = null;
 
-            VERTEXTYPE v = _verticies[0];
-            int declStride = v.VertexDeclaration?.VertexStride ?? -1;
-            int vertexCount = _verticies.Length;
             int marshalSize = Marshal.SizeOf<VERTEXTYPE>();
-            _vertexBuffer = new VertexBuffer(device, typeof(VERTEXTYPE), _verticies.Length, BufferUsage.None);
-            _vertexBuffer.SetData(0, _verticies, 0, _verticies.Length, marshalSize);
+            _vertexBuffer = new VertexBuffer(device, typeof(VERTEXTYPE), verticies.Length, BufferUsage.None);
+            _vertexBuffer.SetData(0, verticies, 0, verticies.Length, marshalSize);
 
-            _indexBuffer = new IndexBuffer(device, IndexElementSize.ThirtyTwoBits, _edges.Length, BufferUsage.None);
-            _indexBuffer.SetData(_edges, 0, _edges.Length);
+            _indexBuffer = new IndexBuffer(device, IndexElementSize.ThirtyTwoBits, edges.Length, BufferUsage.None);
+            _indexBuffer.SetData(edges, 0, edges.Length);
 
-            _bufferDirty = false;
             return true;
         }
 
@@ -135,37 +176,40 @@ namespace VikingXNAGraphics
         /// <returns></returns>
         public int AppendVerticies(ICollection<VERTEXTYPE> input)
         {
-            if (Vertices is null)
-            {
-                Vertices = [.. input];
-                return 0;
-            }
+            VERTEXTYPE[] existing = _verticies;
+            int iInsert = existing?.Length ?? 0;
 
-            int iInsert = Vertices.Length;
-
-            /////////////////////////
-            //Extend our vertex array
-            //VERTEXTYPE[] newVerts = new VERTEXTYPE[input.Count + Vertices.Length];
-            //Array.Copy(Vertices, newVerts, Vertices.Length);
-            Vertices = Vertices.AddRange([.. input]);
-            /////////////////////////
-
-            //Array.Copy(input.ToArray(), 0, Vertices, iInsert, input.Count);
+            Vertices = Appended(existing, input);
 
             return iInsert;
         }
 
         public void AppendEdges(ICollection<int> newEdges)
         {
-            if (Edges is null)
-            {
-                Edges = [.. newEdges];
-            }
-            else
-            {
-                //Edges = Edges.Concat(newEdges).ToArray();
-                Edges = Edges.AddRange([.. newEdges]);
-            }
+            Edges = Appended(_edges, newEdges);
+        }
+
+        /// <summary>
+        /// Concatenation into a freshly allocated array, sized once and filled by copying both sides directly.
+        /// </summary>
+        /// <remarks>
+        /// The result is only ever handed to the property setters, so the array the draw thread is currently
+        /// reading is never touched: readers see either the old array or the fully built new one.
+        /// </remarks>
+        private static T[] Appended<T>(T[] existing, ICollection<T> addition)
+        {
+            int existingCount = existing?.Length ?? 0;
+            int additionCount = addition.Count;
+
+            T[] result = new T[existingCount + additionCount];
+
+            if (existingCount > 0)
+                Array.Copy(existing, result, existingCount);
+
+            if (additionCount > 0)
+                addition.CopyTo(result, existingCount);
+
+            return result;
         }
 
         public Geometry.Vector3 Position

@@ -196,7 +196,7 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window)
         {
-            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
+            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, 1.0f, 0);
 
             //Draw where we know the geometries are and where the views say the geometries are.  These should match or one
             //of the translation routines has a bug

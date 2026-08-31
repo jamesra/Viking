@@ -97,6 +97,12 @@ namespace MonogameTestbed
         /// <summary>1x1 white texture for drawing solid color swatches in the legend HUD.</summary>
         private Texture2D _whitePixel = null;
 
+        /// <summary>
+        /// 1x1 white texture tests can stretch into solid rectangles (crosshairs, bars) via SpriteBatch.
+        /// Null until LoadContent runs.
+        /// </summary>
+        internal Texture2D WhitePixel => _whitePixel;
+
         public static uint NumCurveInterpolations = 10;
 
         GraphicsDevice IPrimitiveRenderInfo.device => this.GraphicsDevice;
@@ -163,8 +169,8 @@ namespace MonogameTestbed
         {
             if (Program.options?.Screenshots != true)
             {
-                graphics.PreferredBackBufferWidth = desired_screen_width;
-                graphics.PreferredBackBufferHeight = desired_screen_height;
+                graphics.PreferredBackBufferWidth = ScaleForDisplayDpi(desired_screen_width);
+                graphics.PreferredBackBufferHeight = ScaleForDisplayDpi(desired_screen_height);
             }
             graphics.PreferMultiSampling = true;
             graphics.GraphicsProfile = GraphicsProfile.HiDef;
@@ -480,6 +486,19 @@ namespace MonogameTestbed
                 : IsInitFailed(Mode) ? " (init failed)" : " (loading...)";
             Window.Title = WindowTitleForMode(Mode, status);
 
+            //A batch run has no interactive user to notice the "(init failed)" title, and nothing retries a failed
+            //Init, so continuing to pump the loop means the process never exits.  A whole-cell run whose OData fetch
+            //failed would sit here indefinitely instead of reporting the failure to its caller.
+            if (Program.options.Quiet && IsInitFailed(Mode))
+            {
+                Console.WriteLine($"Exiting: initialization of {Mode} failed and -q was requested.");
+                Console.Out.Flush();
+
+                //Game.Exit() is not reliable here: the OData fetch leaves foreground work outstanding, so the
+                //process can outlive the window and hang a caller waiting on it.
+                Environment.Exit(1);
+            }
+
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape))
             {
                 //Close the game, but Monogame won't allow it?
@@ -515,6 +534,10 @@ namespace MonogameTestbed
             {
                 CullMode = CullMode.None
             };
+
+            //The window is resizable, so the shared scene has to follow the back buffer or its projection and any
+            //screen-space label placement drift from what is actually being drawn.
+            SyncSceneViewport();
 
             UpdateEffectMatricies(this.Scene);
 
@@ -560,12 +583,23 @@ namespace MonogameTestbed
             if (spriteBatch is null || fontArial is null || _whitePixel is null)
                 return;
 
-            // Arial.spritefont is 56pt. 0.125 ≈ 7pt on screen (was 0.15 ≈ 8.4pt).
-            const float HudScale = 0.125f;
-            const float Margin = 8f;
-            const float LineSpacing = 2f;
-            const float SwatchTextGap = 6f;
-            const float SectionGap = 8f;
+            // Arial.spritefont is 56pt. 0.125 ≈ 7pt on a 1200px-tall window.
+            const float BaseHudScale = 0.125f;
+            const float ReferenceHeight = 1200f;
+
+            //Screenshots are captured borderless-fullscreen at the monitor's native resolution, so a fixed pixel
+            //scale keeps the same absolute text height and shrinks to an unreadable fraction of a large frame.
+            //Scaling with height holds the text at a constant proportion of the image instead.
+            //A capture is read back as an image file, usually rescaled to around a thousand pixels wide, so it gets
+            //a smaller reference height to survive that reduction.
+            const float CaptureReferenceHeight = 576f;
+            float reference = Program.options?.Screenshots == true ? CaptureReferenceHeight : ReferenceHeight;
+            float hudSizeFactor = Math.Max(1f, GraphicsDevice.Viewport.Height / reference);
+            float HudScale = BaseHudScale * hudSizeFactor;
+            float Margin = 8f * hudSizeFactor;
+            float LineSpacing = 2f * hudSizeFactor;
+            float SwatchTextGap = 6f * hudSizeFactor;
+            float SectionGap = 8f * hudSizeFactor;
             float WrapWidth = Math.Max(200f, (GraphicsDevice.Viewport.Width / 2.0f));
 
             Color textColor = Color.White;

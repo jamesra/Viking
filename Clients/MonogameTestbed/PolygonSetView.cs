@@ -102,6 +102,28 @@ namespace MonogameTestbed
             }
         }
 
+        /// <summary>
+        /// Applies vertex, ring, and label sizes in world units.  All three are world measurements, so their
+        /// apparent size depends entirely on the camera zoom: the constructor defaults fall well below one pixel
+        /// once the camera is fitted to a whole slice, and the vertices, rings, and labels all disappear.
+        /// </summary>
+        public void SetDrawScale(double pointRadius, double lineWidth, double labelFontSize)
+        {
+            PointRadius = pointRadius;
+
+            foreach (LineView line in PolyRingViews ?? [])
+                line.LineWidth = (float)lineWidth;
+
+            foreach (LabelView label in PolyIndexLabels)
+                label.FontSize = labelFontSize;
+
+            //The per-polygon point sets rebuild their labels from PointRadius, so size those after the assignment
+            //above rather than letting the marker radius decide how large the index text is.
+            foreach (PointSetView psv in PolyPointsView ?? [])
+                foreach (LabelView label in psv.LabelViews ?? [])
+                    label.FontSize = labelFontSize;
+        }
+
         private static List<LabelView> CreatePolyIndexLabels(List<Polygon> Polygons, double pointradius)
         {
             List<LabelView> listPointLabels = [];
@@ -228,7 +250,7 @@ namespace MonogameTestbed
                 }
             }
 
-            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, float.MaxValue, 0);
+            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, 1.0f, 0);
 
             if (((this.PointLabelType & (IndexLabelType.POLYGON)) > 0) && this.PolyIndexLabels != null)
             {

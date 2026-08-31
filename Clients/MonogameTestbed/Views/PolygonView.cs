@@ -59,6 +59,8 @@ namespace MonogameTestbed
             {
                 ExteriorRingView = null;
                 InteriorEdgeView = null;
+                MedialAxisView = null;
+                return;
             }
 
             ExteriorRingView = new LineSetView
@@ -67,8 +69,6 @@ namespace MonogameTestbed
             };
 
             TriangleNet.Meshing.IMesh mesh = _Polygon.Triangulate();
-
-            int[] indicies = mesh.IndiciesForPointsXY(Polygon.ExteriorRing);
 
             InteriorEdgeView = new LineSetView();
             List<LineSegment> lines = mesh.ToLines();
@@ -153,8 +153,6 @@ namespace MonogameTestbed
             }
 
             TriangleNet.Meshing.IMesh mesh = _Polygon.Triangulate();
-
-            int[] indicies = mesh.IndiciesForPointsXY(Polygon.ExteriorRing);
 
             InteriorEdgeView = new LineSetView();
             List<LineSegment> lines = mesh.ToLines();

@@ -49,7 +49,7 @@ namespace MonogameTestbed
                 scene.Camera.Downsample = (double)Properties.Settings.Default.Properties[downsamplekey].DefaultValue;
                 return true;
             }
-            catch
+            catch (System.Exception)
             {
                 return false;
             }

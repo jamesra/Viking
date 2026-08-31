@@ -18,6 +18,9 @@
 		<PublishAot>False</PublishAot>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
+	<ItemGroup>
+		<InternalsVisibleTo Include="MonogameTestbedTests" />
+	</ItemGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
 		<DefineConstants>DEBUG;TRACE;WINDOWS</DefineConstants>
 		<Optimize>False</Optimize>

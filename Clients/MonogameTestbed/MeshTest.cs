@@ -255,7 +255,7 @@ public void Update()
 public void Draw(MonoTestbed window)
 {
     this.Scene.Viewport = window.GraphicsDevice.Viewport;
-    window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
+    window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, 1.0f, 0);
 
     DepthStencilState dstate = new DepthStencilState
     {

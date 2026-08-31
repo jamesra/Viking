@@ -35,6 +35,7 @@ namespace MonogameTestbed
         readonly List<MorphMeshOutwardOrientation.ShapeAtZ> _shapesAtZ = [];
         readonly Dictionary<int, bool> _isUpperByMorphShape = [];
 
+
         public ReaderWriterLockSlim ModelLock = new();
 
         /// <summary>
@@ -75,7 +76,10 @@ namespace MonogameTestbed
         /// <param name="mesh"></param>
         public void AddSlice(BajajGeneratorMesh mesh)
         {
+            using var _phase = MeshPhaseTimings.Measure(MeshPhase.MergeAddSlice, mesh.Vertices.Count);
+
             AccumulateSliceTopology(mesh.Topology);
+
 
             //Maps mesh vertex index to the global vertex index
             int[] mesh_to_global = new int[mesh.Vertices.Count];
@@ -122,7 +126,8 @@ namespace MonogameTestbed
             int[] NewModelEdges = AddFacesToComposite(mesh.Faces, mesh_to_global);
 
             //Update the normals for any vertex that was affected
-            composite.RecalculateNormals(mesh_to_global);
+            using (MeshPhaseTimings.Measure(MeshPhase.MergeNormals, composite.Vertices.Count))
+                composite.RecalculateNormals(mesh_to_global);
 
             UpdateModel(modelVerts, NewModelEdges, mesh_to_global);
 
@@ -189,6 +194,7 @@ namespace MonogameTestbed
             {
                 int morphShape = (int)topology.ShapeIndexToMorphNodeIndex[i];
                 _isUpperByMorphShape[morphShape] = topology.IsUpper[i];
+
                 _shapesAtZ.Add(new MorphMeshOutwardOrientation.ShapeAtZ
                 {
                     Shape = topology.Shapes[i],
@@ -208,6 +214,7 @@ namespace MonogameTestbed
 
             foreach (var kvp in other._isUpperByMorphShape)
                 _isUpperByMorphShape[kvp.Key] = kvp.Value;
+
         }
 
         /// <summary>
@@ -222,6 +229,8 @@ namespace MonogameTestbed
             // The display model Vertices array is never allocated in that case.
             if (composite.Faces.Count == 0)
                 return;
+
+            using var _phase = MeshPhaseTimings.Measure(MeshPhase.RootFinalize, composite.Vertices.Count);
 
             var options = new MeshWindingReorientation.Options
             {
@@ -243,6 +252,7 @@ namespace MonogameTestbed
             var afterOutward = MeshWindingDiagnostics.Analyze(composite);
             if (afterOutward.NonManifoldEdges == 0)
                 repairAfterOutward = MeshWindingReorientation.RepairManifoldConsistency(composite);
+
 
             composite.RecalculateNormals();
 
@@ -266,6 +276,7 @@ namespace MonogameTestbed
                     //In-place vertex edits do not mark buffers dirty; reassign to force GPU refresh.
                     model.Vertices = [.. model.Vertices];
                 }
+
             }
             finally
             {
@@ -280,6 +291,7 @@ namespace MonogameTestbed
                 $"{result.TotalReversals} reversals, {outwardFlips} components flipped outward, {repairAfterOutward} repaired.  " +
                 $"Composite {CompositeManifoldReport}");
         }
+
 
         /// <summary>
         /// Update our mesh model with new verticies and edges from a merge or additional slice operation.  Thread safe.
@@ -322,6 +334,8 @@ namespace MonogameTestbed
         {
             // When we merge another SliceGraphMeshModel we know the PolyIndex values for the other model match our own.  We need to create new verticies, edges, and faces into our models
             Mesh3D<MorphMeshVertex> mesh = other.composite;
+
+            using var _phase = MeshPhaseTimings.Measure(MeshPhase.MergeCombine, mesh.Vertices.Count);
 
             //Carry over the other model's accumulated contour context.  The binary-tree assembly merges child
             //models into a single survivor; without this the root's EnsureCompositeWinding would only see the
@@ -378,7 +392,8 @@ namespace MonogameTestbed
             int[] NewModelEdges = AddFacesToComposite(mesh.Faces, mesh_to_global);
 
             //Update the normals for any vertex that was affected
-            composite.RecalculateNormals(mesh_to_global);
+            using (MeshPhaseTimings.Measure(MeshPhase.MergeNormals, composite.Vertices.Count))
+                composite.RecalculateNormals(mesh_to_global);
 
             UpdateModel(modelVerts, NewModelEdges, mesh_to_global);
         }

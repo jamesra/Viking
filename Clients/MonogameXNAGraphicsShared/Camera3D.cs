@@ -73,14 +73,20 @@ namespace VikingXNA
         }
 
         /// <summary>
-        /// Calculate the lookat vector based on the rotation parameters
+        /// Recover the rotation parameters that <see cref="CalculateLineOfSightUnitVector"/> would turn back into
+        /// <paramref name="v"/>.  These two must stay exact inverses: the view matrix is built from the rotation,
+        /// so any mismatch here silently aims the camera somewhere other than the requested LookAt.
         /// </summary>
-        /// <returns></returns>
-        private static void CalculateRotationFromLineOfSightUnitVector(Vector3 v, out double yaw, out double pitch)
+        private static void CalculateRotationFromLineOfSightUnitVector(Vector3 v, double fallbackYaw, out double yaw, out double pitch)
         {
             v.Normalize();
-            yaw = Math.Asin(-v.Y);
-            pitch = Math.Atan2(v.X, v.Z);
+
+            pitch = Math.Acos(MathHelper.Clamp(v.Z, -1f, 1f));
+
+            //Looking straight along Z leaves yaw unconstrained, and atan2(0,0) would collapse it to zero
+            //rather than leaving the caller's heading alone.
+            double sinPitch = Math.Sin(pitch);
+            yaw = Math.Abs(sinPitch) < 1e-6 ? fallbackYaw : Math.Atan2(v.Y, v.X);
         }
 
         public float Pan
@@ -121,11 +127,10 @@ namespace VikingXNA
                 _LookAt = value;
                 var lineOfSightVector = _LookAt - _Position;
 
-                CalculateRotationFromLineOfSightUnitVector(lineOfSightVector, out double yaw, out double pitch);
-                this.Rotation = new Vector3((float)yaw, (float)pitch, (float)this.Rotation.Z);
+                CalculateRotationFromLineOfSightUnitVector(lineOfSightVector, _Rotation.X, out double yaw, out double pitch);
 
-                //UpdateViewMatrix();
-                //CallOnPropertyChanged();
+                //Assigning Rotation rebuilds the view matrix and raises the change notification.
+                this.Rotation = new Vector3((float)yaw, (float)pitch, this.Rotation.Z);
             }
         }
 

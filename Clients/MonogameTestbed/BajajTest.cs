@@ -95,6 +95,49 @@ namespace MonogameTestbed
 
         public object ViewsLock = new();
 
+        //Every annotation size below is a world measurement, and the camera is fitted to the slice, so a large
+        //slice makes the constructor defaults sub-pixel.  These are the sizes we want on screen instead, in
+        //pixels, so a slice reads the same whether it spans 200nm or 20um and whatever the capture resolution is.
+        private const double VertexRadiusPixels = 4.0;
+        private const double LineWidthPixels = 2.0;
+        private const double RegionEdgePixels = 3.5;
+        private const double LabelHeightPixels = 15.0;
+
+        /// <summary>
+        /// Viewport height the pixel sizes above were chosen against.  Screenshots are captured fullscreen at the
+        /// monitor's native resolution, so a fixed pixel size would occupy a steadily smaller share of a larger
+        /// frame.  LabelView also hides any text below 1/200th of the viewport height, so text in particular has
+        /// to grow with the frame to stay drawn at all.
+        /// </summary>
+        private const double ReferenceViewportHeight = 1200.0;
+
+        /// <summary>
+        /// Reference height used while capturing screenshots.  A capture is reviewed as an image file, and the
+        /// readers of those files (including image-capable tools) routinely rescale a 2560x1440 frame down to
+        /// around a thousand pixels wide, which takes 15px text below the point of being readable.  Sizing
+        /// against a frame this small makes annotations survive that reduction.
+        /// </summary>
+        private const double CaptureReferenceViewportHeight = 576.0;
+
+        /// <summary>
+        /// Smallest index label we are willing to draw before giving up on it entirely.
+        /// </summary>
+        private const double MinLabelHeightPixels = 6.0;
+
+        /// <summary>
+        /// Share of an edge's length its label may span.  Text running the full length reaches the vertices at both
+        /// ends, where it collides with the labels of every other edge meeting there, so it is held short of them.
+        /// </summary>
+        private const double EdgeLabelLengthFraction = 0.6;
+
+        private double _scaledForWorldPerPixel;
+        private int _scaledForViewportHeight;
+
+        /// <summary>
+        /// Labels shrunk below this world size are skipped instead of drawn as unreadable smudges.
+        /// </summary>
+        private double _minLabelWorldSize;
+
         /// <summary>
         /// The list of currently-enabled sub-views, rebuilt every Draw. Exposed so the legend HUD can describe
         /// the active view state.
@@ -279,6 +322,8 @@ namespace MonogameTestbed
                 this.MeshVertsView = PointSetView.CreateFor(FirstPassTriangulation);
             }
 
+            InvalidateAnnotationScale();
+
             //UpdatePolyViews();
 
             string temp = FirstPassTriangulation.Vertices.Select(v => v.Position.XY()).Distinct().ToJSON();
@@ -318,6 +363,8 @@ namespace MonogameTestbed
                 CreateChordViews(FirstPassTriangulation, listOTVTables);
             }
 
+            InvalidateAnnotationScale();
+
             List<MorphMeshVertex> FirstPassIncompleteVerticies = BajajMeshGenerator.FirstPassSliceChordGeneration(FirstPassTriangulation, ShapeZ);
 
             AddMeshView(FirstPassTriangulation, "FirstPassSliceChordGeneration");
@@ -349,6 +396,11 @@ namespace MonogameTestbed
             FirstPassTriangulation.RecalculateNormals();
 
             AddLineView(FirstPassTriangulation, "Second MergeAndCloseRegionsPass");
+
+            //Seed the interactive selection now that every view exists.  Without this nothing is selected, so Draw
+            //skips every branch and the window stays empty until the user steps to a shot.  The screenshot path
+            //assigns shot indices directly afterwards, so it is unaffected.
+            CheckViewIndexBoundaries();
         }
 
         private void AddLineView(BajajGeneratorMesh mesh, string name)
@@ -356,6 +408,8 @@ namespace MonogameTestbed
             LineSetView view = PolyBranchAssignmentView.UpdateMeshLines(mesh, name);
             lock (ViewsLock)
                 listLineViews.Add(view);
+
+            InvalidateAnnotationScale();
         }
 
         private void AddMeshView(BajajGeneratorMesh mesh, string name)
@@ -376,6 +430,208 @@ namespace MonogameTestbed
         {
             lock (ViewsLock)
                 RegionViews.Add(view);
+
+            InvalidateAnnotationScale();
+        }
+
+        /// <summary>
+        /// Forces the next draw to re-apply annotation sizes.  Views are published by the meshing task while the
+        /// camera sits still, so without this a view created after a scale pass keeps its sub-pixel default.
+        /// </summary>
+        private void InvalidateAnnotationScale() => _scaledForWorldPerPixel = 0;
+
+        /// <summary>
+        /// Resizes every annotation view so it covers a constant number of screen pixels.  Recomputed only when
+        /// the zoom actually changes, because resizing a point set rebuilds its circles and labels.
+        /// </summary>
+        private void ScaleAnnotationsToScene(Scene scene)
+        {
+            //Downsample is world units per pixel by construction: Scene builds its orthographic volume as
+            //Viewport dimensions * Downsample.  Reading it avoids the lazily rebuilt VisibleWorldBounds that
+            //ScreenPixelSizeInVolume goes through, which takes a semaphore.
+            double worldPerPixel = scene?.Camera?.Downsample ?? 0;
+            if (worldPerPixel <= 0 || double.IsNaN(worldPerPixel) || double.IsInfinity(worldPerPixel))
+                return;
+
+            int viewportHeight = Math.Max(1, scene.Viewport.Height);
+            if (Math.Abs(worldPerPixel - _scaledForWorldPerPixel) <= worldPerPixel * 1e-6 &&
+                viewportHeight == _scaledForViewportHeight)
+                return;
+
+            _scaledForWorldPerPixel = worldPerPixel;
+            _scaledForViewportHeight = viewportHeight;
+
+            //World units per pixel of the size we want, grown so a larger capture keeps the same proportions.
+            double reference = Program.options?.Screenshots == true ? CaptureReferenceViewportHeight : ReferenceViewportHeight;
+            double unit = worldPerPixel * Math.Max(1.0, viewportHeight / reference);
+
+            double vertexRadius = VertexRadiusPixels * unit;
+            double lineWidth = LineWidthPixels * unit;
+            double regionEdge = RegionEdgePixels * unit;
+            double labelSize = LabelHeightPixels * unit;
+
+            //Labels shrunk to fit their own geometry can end up too small to read.  Drawing them anyway produces a
+            //grey mush, so a label below this size is dropped; the marker or edge underneath still shows.  The
+            //floor also has to clear LabelView's own rule of hiding text below 1/200th of the viewport height.
+            _minLabelWorldSize = Math.Max(MinLabelHeightPixels, viewportHeight / 180.0) * worldPerPixel;
+
+            lock (ViewsLock)
+            {
+                PolyViews?.SetDrawScale(vertexRadius, lineWidth, labelSize);
+                ScaleVertexLabels(MeshVertsView, vertexRadius, labelSize);
+
+                //Only a handful of incomplete vertices are ever marked, so they keep the readable size.
+                ScalePoints(IncompletedVertexView, vertexRadius, labelSize);
+
+                foreach (LineSetView view in listLineViews)
+                    ScaleLines(view, lineWidth, labelSize);
+
+                foreach (RegionView region in RegionViews)
+                {
+                    foreach (LineSetView view in region.PolygonViews ?? [])
+                        ScaleLines(view, regionEdge, labelSize);
+
+                    ScaleLabels(region.LabelViews, labelSize);
+                }
+
+                foreach (LineSetView view in RegionPolygonViews ?? [])
+                    ScaleLines(view, regionEdge, labelSize);
+
+                ScaleLabels(RegionLabelViews, labelSize);
+
+                foreach (LineView line in OTVTableView ?? [])
+                    line.LineWidth = (float)lineWidth;
+            }
+        }
+
+        /// <summary>
+        /// Largest font, in world units, that keeps <paramref name="text"/> inside <paramref name="room"/> world
+        /// units of space.  Glyphs average about 0.55 em wide, so a label needs that much room per character.
+        /// </summary>
+        /// <summary>
+        /// True when a label survived shrinking at a size still worth reading.
+        /// </summary>
+        private bool IsLegible(LabelView label) => label != null && label.FontSize >= _minLabelWorldSize;
+
+        private static double LabelSizeToFit(string text, double room, double maxSize)
+        {
+            int chars = Math.Max(1, text?.Length ?? 1);
+            return Math.Min(maxSize, room / (0.55 * chars));
+        }
+
+        private static void ScalePoints(PointSetView view, double radius, double labelSize)
+        {
+            if (view is null)
+                return;
+
+            //Assigning the radius rebuilds the labels and sizes them from it, so the text size is applied after.
+            view.PointRadius = radius;
+            ScaleLabels(view.LabelViews, labelSize);
+        }
+
+        /// <summary>
+        /// Sizes the mesh vertex labels individually.  Vertices crowd together along the contour rings rather than
+        /// spreading evenly, so each label is fitted to the gap between its own point and the next one instead of
+        /// every label sharing one size derived from the average.
+        /// </summary>
+        private static void ScaleVertexLabels(PointSetView view, double radius, double maxLabelSize)
+        {
+            if (view is null)
+                return;
+
+            view.PointRadius = radius;
+
+            LabelView[] labels = view.LabelViews;
+            if (labels is null || labels.Length == 0)
+                return;
+
+            //Mesh vertex order is not spatial, so the room a label has is its distance to the nearest other vertex
+            //rather than to the next one in the list.
+            QuadTree<int> tree = new();
+            HashSet<Geometry.Vector2> placed = [];
+            for (int i = 0; i < labels.Length; i++)
+            {
+                if (labels[i] is null)
+                    continue;
+
+                //Coincident vertices are common where shapes correspond; the tree only needs one of each.
+                if (placed.Add(labels[i].Position))
+                    tree.Add(labels[i].Position, i);
+            }
+
+            foreach (LabelView label in labels)
+            {
+                if (label is null)
+                    continue;
+
+                double gap = 0;
+                foreach (var candidate in tree.FindNearestPoints(label.Position, 2))
+                {
+                    if (candidate.Distance > 0)
+                    {
+                        gap = candidate.Distance;
+                        break;
+                    }
+                }
+
+                //A lone vertex, or one sharing its position with others, gets the full size.  PointSetView already
+                //offsets coincident labels onto separate lines so they do not pile up.
+                label.FontSize = gap <= 0 ? maxLabelSize : LabelSizeToFit(label.Text, gap, maxLabelSize);
+            }
+        }
+
+        /// <summary>
+        /// Sizes each edge label to the edge it annotates.  A label is drawn rotated along its segment, so the
+        /// segment's own length is the room it has, and short edges shrink their text instead of the whole view
+        /// dropping to one size that either overlaps everywhere or is illegible everywhere.
+        /// </summary>
+        private static void ScaleLines(LineSetView view, double width, double maxLabelSize)
+        {
+            if (view is null)
+                return;
+
+            view.LineRadius = width;
+            foreach (LineView line in view.LineViews ?? [])
+                line.LineWidth = (float)width;
+
+            List<LabelView> labels = view.LineLabels;
+            List<LineView> lines = view.LineViews;
+            if (labels is null)
+                return;
+
+            //UpdateMeshLines appends a label for every line it adds, so the two lists run in step.
+            bool perEdge = lines != null && lines.Count == labels.Count;
+            List<Geometry.Vector2> offsets = view.LineLabelOffsetDirections;
+            bool haveOffsets = offsets != null && offsets.Count == labels.Count;
+
+            for (int i = 0; i < labels.Count; i++)
+            {
+                LabelView label = labels[i];
+                if (label is null)
+                    continue;
+
+                if (!perEdge)
+                {
+                    label.FontSize = maxLabelSize;
+                    continue;
+                }
+
+                LineView line = lines[i];
+                Geometry.Vector2 a = new(line.Source.X, line.Source.Y);
+                Geometry.Vector2 b = new(line.Destination.X, line.Destination.Y);
+                label.FontSize = LabelSizeToFit(label.Text, Geometry.Vector2.Distance(a, b) * EdgeLabelLengthFraction, maxLabelSize);
+
+                //Re-seat the label each time the size changes, since how far it has to clear the edge depends on
+                //how tall the text ended up.
+                if (haveOffsets)
+                    label.Position = ((a + b) / 2.0) + (offsets[i] * label.FontSize * 0.7);
+            }
+        }
+
+        private static void ScaleLabels(IEnumerable<LabelView> labels, double fontSize)
+        {
+            foreach (LabelView label in labels ?? [])
+                label.FontSize = fontSize;
         }
 
         private void CheckViewIndexBoundaries()
@@ -726,8 +982,14 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window, Scene scene)
         {
-            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
+            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, 1.0f, 0);
+
+            //The camera fit depends on the slice and the viewport, so sizes have to follow it rather than be set
+            //once at construction.
+            ScaleAnnotationsToScene(scene);
+
             StringBuilder ViewLabels = new();
+
 
             if (RegionViews != null && ViewIndex.InRange(iShownRegion, RegionViews.Count))
             {
@@ -761,7 +1023,10 @@ namespace MonogameTestbed
                 scene.World = Matrix.CreateScale(new Vector3(1, 1, 1f / (float)ZRange)) * Matrix.CreateTranslation(new Vector3(0, 0, -(float)minZ));
                 */
 
+
                 MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, scene, CullMode.None);
+
+
                 ViewLabels.AppendLine("A: " + MeshViews[iShownMesh.Value].Name);
                 DeviceStateManager.RestoreDeviceState(window.GraphicsDevice);
 
@@ -799,9 +1064,9 @@ namespace MonogameTestbed
 
                 DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, 0);
 
-                window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, float.MaxValue, 0);
+                window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, 1.0f, 0);
                 LineView.Draw(window.GraphicsDevice, scene, window.lineManager, [.. lineView.LineViews]);
-                window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, float.MaxValue, 0);
+                window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, 1.0f, 0);
 
                 DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 10);
 
@@ -809,18 +1074,22 @@ namespace MonogameTestbed
                 DeviceStateManager.RestoreDeviceState(window.GraphicsDevice);
 
                 //CurveLabel.Draw(window.GraphicsDevice, window.Scene, window.spriteBatch, window.fontArial, window.curveManager, lineView.LineLables.ToArray());
-                foreach (var labelsByFont in lineView.LineLabels.GroupBy(l => l.font))
+                //Edge colors still carry the edge type, so the view stays useful where the text had to be dropped.
+                LabelView[] legible = [.. lineView.LineLabels.Where(IsLegible)];
+                foreach (var labelsByFont in legible.GroupBy(l => l.font))
                 {
                     LabelView.Draw(window.spriteBatch, labelsByFont.Key, scene, [.. labelsByFont]);
                 }
-                ViewLabels.AppendLine("B: " + lineView.Name);
+
+                ViewLabels.AppendLine("B: " + lineView.Name +
+                    (legible.Length < lineView.LineLabels.Count ? $" ({lineView.LineLabels.Count - legible.Length} labels too small, zoom in)" : ""));
             }
             /*
             if (lineViews != null && ShowPolygons && !ShowRegionPolygons)
             {
                 DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, 0);
                 LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, lineViews.LineViews.ToArray());
-                window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, float.MaxValue, 0);
+                window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, 1.0f, 0);
                 DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 10);
                 CurveLabel.Draw(window.GraphicsDevice, window.Scene, window.spriteBatch, window.fontArial, window.curveManager, lineViews.LineLables.ToArray());
                 ViewLabels.AppendLine("Chords");
@@ -843,8 +1112,17 @@ namespace MonogameTestbed
 
             if (MeshVertsView != null && (this.VertexLabelType & IndexLabelType.MESH) > 0 && ViewIndex.InRange(iShownLineView, listLineViews.Count))
             {
-                MeshVertsView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha);
-                ViewLabels.AppendLine("Mesh verticies");
+                //Markers always draw; only the index text that shrank past readable is held back, so a crowded ring
+                //still shows where its vertices are.
+                CircleView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, MeshVertsView.PointViews);
+
+                LabelView[] all = MeshVertsView.LabelViews ?? [];
+                LabelView[] legibleVerts = [.. all.Where(IsLegible)];
+                if (legibleVerts.Length > 0)
+                    LabelView.Draw(window.spriteBatch, window.fontArial, scene, legibleVerts);
+
+                ViewLabels.AppendLine("Mesh verticies" +
+                    (legibleVerts.Length < all.Length ? $" ({all.Length - legibleVerts.Length} labels too small, zoom in)" : ""));
             }
 
             if (RegionPolygonViews != null && ShowRegionPolygons)
@@ -874,13 +1152,15 @@ namespace MonogameTestbed
             // The enabled sub-views are surfaced to the legend HUD (see MonoTestbed.DrawLegendHUD) instead of
             // being rendered inline here.
             LastViewLabels = ViewLabels.ToString();
+
         }
+
 
         public void Draw3D(MonoTestbed window, Scene3D scene)
         {
             StringBuilder ViewLabels = new();
 
-            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
+            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, 1.0f, 0);
 
             DepthStencilState dstate = new()
             {
@@ -914,6 +1194,7 @@ namespace MonogameTestbed
             // being rendered inline here.
             LastViewLabels = ViewLabels.ToString();
         }
+
 
         internal List<BajajCaptureShot> EnumerateDefaultShots()
         {
@@ -1189,7 +1470,7 @@ namespace MonogameTestbed
                     if (CurrentTestCase.SliceLocations is { Length: > 0 })
                         sb.AppendLine("Slice locations: " + string.Join(", ", CurrentTestCase.SliceLocations));
                 }
-                sb.Append(Draw3D ? "View: 3D mesh" : "View: 2D");
+                sb.Append(Draw3D ? "View: 3D mesh  (V: 2D)" : "View: 2D  (V: 3D, PgUp/PgDn: stage)");
                 return sb.ToString();
             }
         }
@@ -1415,6 +1696,42 @@ namespace MonogameTestbed
             new(169273, 5653, DataSource.EndpointMap[Endpoint.RC1], "Slice 51: nonManifold:1 holes:1 (U:169273 Z62 / D:5653 Z61, structure 180)")
         ];
 
+        private BajajRepro[] _cases;
+
+        /// <summary>
+        /// <see cref="ReproSet"/> followed by any ad-hoc cases named on the command line or in the capture request,
+        /// so an arbitrary slice can be inspected in the viewer without first being committed to the repro set.
+        /// </summary>
+        private BajajRepro[] Cases => _cases ??= [.. ReproSet, .. AdHocCases()];
+
+        private static IEnumerable<BajajRepro> AdHocCases()
+        {
+            foreach (var request in Program.options?.CaptureRequest?.ReproLocations ?? [])
+            {
+                if (request.Locations is not { Length: > 1 })
+                    continue;
+
+                Uri endpoint = ResolveEndpoint(request.Endpoint) ?? Program.options?.EndpointUri;
+                yield return new BajajRepro(request.Locations, endpoint,
+                                            request.Description ?? $"ad-hoc {string.Join("/", request.Locations)}",
+                                            request.Tolerance ?? 1.0);
+            }
+
+            if (Program.options?.ReproLocations is { Count: > 1 } locations)
+                yield return new BajajRepro([.. locations], Program.options.EndpointUri, $"ad-hoc {string.Join("/", locations)}", Program.options.ReproTolerance);
+        }
+
+        private static Uri ResolveEndpoint(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return null;
+
+            if (DataSource.EndpointMap.TryGetValue(name.ToEnum<Endpoint>(), out Uri uri))
+                return uri;
+
+            return new Uri(name);
+        }
+
         /// <summary>
         /// Index of the reprocase we want to display on load
         /// </summary>
@@ -1615,10 +1932,11 @@ namespace MonogameTestbed
                 wrapView.CullMode = wrapView.CullMode == CullMode.None ? CullMode.CullCounterClockwiseFace : CullMode.None;
             }
 
-            if (Gamepad.LeftShoulder_Clicked)
+            //Keyboard alternative to the shoulder button, which is the only way to reach the 3D view without a
+            //gamepad attached.
+            if (Gamepad.LeftShoulder_Clicked || _keyboard.Pressed(Keys.V))
             {
                 this.Draw3D = !this.Draw3D;
-
             }
 
             if (Gamepad.Back_Clicked)
@@ -1678,18 +1996,20 @@ namespace MonogameTestbed
             if (request?.Repro is { Length: > 0 })
                 raw = request.Repro;
             else if (Program.options?.ReproAll == true)
-                raw = Enumerable.Range(0, ReproSet.Length);
+                raw = Enumerable.Range(0, Cases.Length);
             else if (Program.options?.ReproIndices is { Count: > 0 } indices)
                 raw = indices;
+            else if (Cases.Length > ReproSet.Length)
+                raw = Enumerable.Range(ReproSet.Length, Cases.Length - ReproSet.Length);
             else
                 raw = [CurrentReproCase];
 
             List<int> queue = [];
             foreach (int i in raw.Distinct())
             {
-                if (i < 0 || i >= ReproSet.Length)
+                if (i < 0 || i >= Cases.Length)
                 {
-                    string msg = $"Skipping out-of-range ReproSet index {i} (valid 0..{ReproSet.Length - 1})";
+                    string msg = $"Skipping out-of-range ReproSet index {i} (valid 0..{Cases.Length - 1})";
                     Console.WriteLine(msg);
                     Trace.WriteLine(msg);
                     continue;
@@ -1699,7 +2019,7 @@ namespace MonogameTestbed
             }
 
             if (queue.Count == 0)
-                queue.Add(Math.Clamp(CurrentReproCase, 0, ReproSet.Length - 1));
+                queue.Add(Math.Clamp(CurrentReproCase, 0, Cases.Length - 1));
 
             return queue;
         }
@@ -1707,7 +2027,7 @@ namespace MonogameTestbed
         private void LoadReproAtQueueIndex(MonoTestbed window, bool restoreCamera)
         {
             int index = _reproQueue[_reproQueueIndex];
-            CurrentTestCase = ReproSet[index];
+            CurrentTestCase = Cases[index];
             _currentCaseFolder = $"case-{index:D2}-{ScreenshotCapture.SanitizeFilePart(CurrentTestCase.Description)}";
             _currentManifestCase = new CaptureManifestCase
             {
@@ -1729,14 +2049,18 @@ namespace MonogameTestbed
         private void FitCameras(MonoTestbed window, bool restoreSaved)
         {
             if (wrapView?.Shapes is null || wrapView.Shapes.Length == 0)
+            {
                 return;
+            }
 
             Geometry.Rectangle bRect = wrapView.Shapes.BoundingBox();
-            if (!restoreSaved || window.Scene.RestoreCamera(TestMode.BAJAJTEST) == false)
+            bool restored = restoreSaved && window.Scene.RestoreCamera(TestMode.BAJAJTEST);
+            if (restored == false)
             {
                 scene.Camera.LookAt = bRect.Center.ToXNAVector2();
-                scene.Camera.Downsample = bRect.Width / Math.Max(1, window.GraphicsDevice.Viewport.Width);
+                scene.Camera.Downsample = FitDownsample(window, bRect);
             }
+
 
             AnnotationVizLib.MorphologyGraph morphology = CurrentTestCase.Morphology;
             if (morphology?.Nodes is not { Count: > 0 })
@@ -1746,6 +2070,21 @@ namespace MonogameTestbed
             double depth = Math.Max(bbox.Depth, 1);
             scene3D.Camera.Position = (bbox.CenterPoint.XY().ToVector3(0) + new Geometry.Vector3(0, 0, 10f * (float)depth)).ToXNAVector3();
             scene3D.Camera.LookAt = new Microsoft.Xna.Framework.Vector3((float)bbox.CenterPoint.X, (float)bbox.CenterPoint.Y, 0);
+        }
+
+
+        /// <summary>
+        /// Zoom that fits the whole rectangle on screen.  Scaling to width alone crops the top and bottom of any
+        /// shape taller than the viewport aspect allows, and because contours are hollow outlines the result is a
+        /// frame that looks empty with only the left and right arcs clipping the edges.
+        /// </summary>
+        private static double FitDownsample(MonoTestbed window, Geometry.Rectangle rect, double pad = 1.1)
+        {
+            int width = Math.Max(1, window.GraphicsDevice.Viewport.Width);
+            int height = Math.Max(1, window.GraphicsDevice.Viewport.Height);
+            double byWidth = rect.Width * pad / width;
+            double byHeight = rect.Height * pad / height;
+            return Math.Max(Math.Max(byWidth, byHeight), 0.01);
         }
 
         private void ApplyShotCamera(BajajCaptureShot shot)
@@ -1774,9 +2113,7 @@ namespace MonogameTestbed
                 double padY = Math.Max(bounds.Height * 0.1, 1);
                 Rectangle padded = new(bounds.Left - padX, bounds.Right + padX, bounds.Bottom - padY, bounds.Top + padY);
                 scene.Camera.LookAt = padded.Center.ToXNAVector2();
-                double span = Math.Max(padded.Width, padded.Height);
-                int pixels = Math.Max(window.GraphicsDevice.Viewport.Width, 1);
-                scene.Camera.Downsample = span / pixels;
+                scene.Camera.Downsample = FitDownsample(window, padded, pad: 1.0);
                 return;
             }
 
@@ -1970,6 +2307,12 @@ namespace MonogameTestbed
 
         private void DrawCurrentView(MonoTestbed window)
         {
+            //A scene built at load time keeps whatever viewport the device had then.  The window is resizable and
+            //the back buffer is sized from the display, so a stale viewport both stretches the projection and lands
+            //screen-space labels at the wrong pixels.
+            MonoTestbed.SyncViewport(scene, window.GraphicsDevice);
+            MonoTestbed.SyncViewport(scene3D, window.GraphicsDevice);
+
             if (!Draw3D)
                 wrapView?.Draw(window, scene);
             else

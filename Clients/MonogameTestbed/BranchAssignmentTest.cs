@@ -258,6 +258,7 @@ namespace MonogameTestbed
             List<LineView> lineViews = new(edgeKeys.Length);
             //List<CurveLabel> lineLabels = new List<CurveLabel>(edgeKeys.Length);
             List<LabelView> lineLabels = new(edgeKeys.Length);
+            List<Geometry.Vector2> labelOffsets = new(edgeKeys.Length);
 
             const double lineWidth = 1.0;
 
@@ -275,14 +276,65 @@ namespace MonogameTestbed
                 /*CurveLabel lineLabel = CurveLabel.CreateLineLabel(edge.Type.ToString(), segment, Color.White, lineWidth: lineWidth);*/
                 LabelView lineLabel = new(edge.Type.ToString() + " " + edgeKey.ToString(), segment, Color.White, lineWidth: lineWidth, scaleFontWithScene: true);
                 lineLabels.Add(lineLabel);
+                labelOffsets.Add(InwardOffsetDirection(mesh, edge, segment));
             }
 
 
             TrianglesView.color = Color.Red;
             TrianglesView.LineViews = lineViews;
             TrianglesView.LineLabels = lineLabels;
+            TrianglesView.LineLabelOffsetDirections = labelOffsets;
             TrianglesView.Name = Name;
             return TrianglesView;
+        }
+
+        /// <summary>
+        /// Unit vector perpendicular to <paramref name="segment"/> aimed into a face that uses the edge.  An edge
+        /// label centered on the edge straddles the line it names, which reads as belonging to neither side; the
+        /// caller offsets it along this direction so it sits on the surface the edge borders instead.
+        /// </summary>
+        /// <returns>Zero when the edge has no face yet, or the face is degenerate.</returns>
+        private static Geometry.Vector2 InwardOffsetDirection(MorphRenderMesh mesh, MorphMeshEdge edge, LineSegment segment)
+        {
+            //Once the ends are capped a contour edge has a face on both sides: the band between the two slices, and
+            //the flat cap closing its own slice.  The cap sits on the far side, so choosing it throws the label off
+            //the surface entirely - which is why contour labels landed outside the cell.  Faces that span both
+            //slices are the surface the label belongs on, so those win.
+            MorphMeshFace face = edge.Faces.FirstOrDefault(f => FaceSpansSlices(mesh, f)) ?? edge.Faces.FirstOrDefault();
+            if (face is null)
+                return Geometry.Vector2.Zero;
+
+            Geometry.Vector2 centroid = Geometry.Vector2.Zero;
+            foreach (int iVert in face.iVerts)
+                centroid += mesh[iVert].Position.XY();
+            centroid /= face.iVerts.Length;
+
+            //Only the component across the edge moves the label off the line; the component along it would slide
+            //the text away from the edge's midpoint.
+            Geometry.Vector2 toCentroid = centroid - segment.PointAlongLine(0.5);
+            Geometry.Vector2 along = Geometry.Vector2.Normalize(segment.Direction);
+            Geometry.Vector2 across = toCentroid - (along * Geometry.Vector2.Dot(toCentroid, along));
+
+            return across.Magnitude <= double.Epsilon ? Geometry.Vector2.Zero : Geometry.Vector2.Normalize(across);
+        }
+
+        /// <summary>
+        /// True when a face bridges the two slices being tiled rather than lying flat inside one of them, which
+        /// separates the tiled surface from the caps that close each slice.
+        /// </summary>
+        private static bool FaceSpansSlices(MorphRenderMesh mesh, MorphMeshFace face)
+        {
+            if (face is null || face.iVerts.Length == 0)
+                return false;
+
+            double z = mesh[face.iVerts[0]].Position.Z;
+            foreach (int iVert in face.iVerts)
+            {
+                if (mesh[iVert].Position.Z != z)
+                    return true;
+            }
+
+            return false;
         }
 
 

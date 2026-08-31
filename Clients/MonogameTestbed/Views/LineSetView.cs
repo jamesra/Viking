@@ -14,6 +14,12 @@ namespace MonogameTestbed
     {
         public List<LineView> LineViews = [];
         public List<LabelView> LineLabels = [];
+
+        /// <summary>
+        /// Unit vector per entry in <see cref="LineLabels"/> pointing from the edge into the face beside it, so a
+        /// label can be nudged off the line it names and onto the surface.  Zero where no direction is known.
+        /// </summary>
+        public List<Geometry.Vector2> LineLabelOffsetDirections = [];
         public double LineRadius = 1;
         public Color color;
         public LineStyle Style = LineStyle.Standard;

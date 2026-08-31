@@ -1,4 +1,4 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30503.244
@@ -69,6 +69,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationInterfaces", "..\AnnotationInterfaces\AnnotationInterfaces.csproj", "{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationVizLibODataClient", "..\AnnotationVizLibODataClient\AnnotationVizLibODataClient.csproj", "{FF2C1828-20CA-47C0-9B69-85694CCCECD3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonogameTestbedTests", "MonogameTestbedTests\MonogameTestbedTests.csproj", "{514D613B-471A-4E03-B38A-09299F63A3E7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -658,6 +660,24 @@ Global
 		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.ReleaseWithSymbols|x64.Build.0 = Release|Any CPU
 		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.ReleaseWithSymbols|x86.ActiveCfg = Release|Any CPU
 		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.Debug|Any CPU.Build.0 = Debug|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.Debug|x64.ActiveCfg = Debug|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.Debug|x64.Build.0 = Debug|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.Debug|x86.ActiveCfg = Debug|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.Debug|x86.Build.0 = Debug|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.Release|Any CPU.ActiveCfg = Release|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.Release|Any CPU.Build.0 = Release|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.Release|x64.ActiveCfg = Release|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.Release|x64.Build.0 = Release|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.Release|x86.ActiveCfg = Release|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.Release|x86.Build.0 = Release|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.ReleaseWithSymbols|Any CPU.ActiveCfg = Debug|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.ReleaseWithSymbols|Any CPU.Build.0 = Debug|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.ReleaseWithSymbols|x64.ActiveCfg = Debug|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.ReleaseWithSymbols|x64.Build.0 = Debug|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.ReleaseWithSymbols|x86.ActiveCfg = Debug|x64
+		{514D613B-471A-4E03-B38A-09299F63A3E7}.ReleaseWithSymbols|x86.Build.0 = Debug|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

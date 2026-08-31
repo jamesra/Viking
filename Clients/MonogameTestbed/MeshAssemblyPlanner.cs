@@ -169,16 +169,30 @@ namespace MonogameTestbed
             if (leaf == Root)//This covers the case of a single node mesh plan.
             {
                 FinalizeRootComposite();
-                this.MeshAssembledEvent.Set();
             }
         }
 
+        private int _rootFinalized;
+
         /// <summary>
-        /// Run composite-level winding fix once the full structure mesh is assembled at the root.
+        /// Run composite-level winding fix once the full structure mesh is assembled at the root, and only once.
+        ///
+        /// Root.MeshComplete latches, so every thread whose CheckForMerge walk subsequently reaches the root sees
+        /// it set.  Without this guard the slices that finish last all re-run the winding pass over the same
+        /// composite; the second pass tries to reverse faces the first has already removed and re-added, tripping
+        /// the face/edge consistency assert in Edge.RemoveFace.
+        ///
+        /// MeshAssembledEvent is signalled here rather than at the call sites so it cannot be set by a thread that
+        /// skipped the guard while the winding pass is still running - consumers treat the event as "the composite
+        /// is final" and export from it directly.
         /// </summary>
         private void FinalizeRootComposite()
         {
+            if (Interlocked.Exchange(ref _rootFinalized, 1) != 0)
+                return;
+
             Root?.MeshModel?.EnsureCompositeWinding();
+            MeshAssembledEvent.Set();
         }
 
         public void CheckForMerge(AssemblyPlannerBranch node)
@@ -251,7 +265,6 @@ namespace MonogameTestbed
                     if (Root.MeshComplete)
                     {
                         FinalizeRootComposite();
-                        MeshAssembledEvent.Set();
                     }
                 }
 
@@ -561,6 +574,19 @@ namespace MonogameTestbed
         private readonly ReaderWriterLockSlim ReadyModelLock = new();
         private readonly SortedSet<ulong> NodesThatFailedMeshing = [];
 
+        /// <summary>
+        /// The scale-and-centre transform each box was built with.  A box is a unit cube that carries all of its
+        /// size and position in its ModelMatrix, so placement has to be composed onto this rather than assigned
+        /// over it.
+        /// </summary>
+        private readonly Dictionary<ulong, Matrix> BoxLocalTransform = [];
+
+        /// <summary>
+        /// Slices that SliceGraph could not report a valid topology for. They get no box at all, so a run that
+        /// silently visualizes fewer slices than it has is visible in the log rather than just looking sparse.
+        /// </summary>
+        private int _leavesWithoutBoundingBox;
+
         private MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor>[] _MeshModels = null;
         public MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor>[] MeshModels
         {
@@ -568,16 +594,31 @@ namespace MonogameTestbed
             {
                 try
                 {
-                    ReadyModelLock.EnterReadLock();
+                    ReadyModelLock.EnterUpgradeableReadLock();
 
-                    //_MeshModels = BoundingBoxModels.Values.ToArray();
-                    _MeshModels ??= [.. GetVisibleBoundingBoxModels()];
+                    if (_MeshModels != null)
+                        return _MeshModels;
+
+                    MeshModel<VertexPositionColor>[] models = [.. GetVisibleBoundingBoxModels()];
+
+                    //Publishing the cache takes the write lock. The getter runs on the draw thread while meshing
+                    //threads invalidate it from OnNodeCompleted, so filling it under a read lock let two callers
+                    //build and publish concurrently.
+                    try
+                    {
+                        ReadyModelLock.EnterWriteLock();
+                        _MeshModels = models;
+                    }
+                    finally
+                    {
+                        ReadyModelLock.ExitWriteLock();
+                    }
 
                     return _MeshModels;
                 }
                 finally
                 {
-                    ReadyModelLock.ExitReadLock();
+                    ReadyModelLock.ExitUpgradeableReadLock();
                 }
             }
         }
@@ -603,22 +644,16 @@ namespace MonogameTestbed
         }
 
         /// <summary>
-        /// Determine which bounding box models to show based on whether children are completed. 
+        /// A node is boxed until its own mesh exists, so a run opens with every slice boxed and each box
+        /// disappears as its slice is absorbed into a merge.
         /// </summary>
-        private static bool CanShowBoundingBoxModel(IAssemblyPlannerNode node)
-        {
-            if (node.Parent is null)
-                return !node.MeshComplete; //Only show the root bounding box if the mesh isn't done
-
-            //if (node.MeshComplete)
-            //    return false;
-
-            var parent = node.Parent;
-            bool showLeft = !parent.Left.MeshComplete;
-            bool showRight = !parent.Right.MeshComplete;
-
-            return showLeft ^ showRight;
-        }
+        /// <remarks>
+        /// This deliberately consults only <paramref name="node"/>. The previous rule returned the XOR of the
+        /// two sibling completion flags, which never read the node it was asked about and therefore gave both
+        /// siblings the same answer. Worse, before any slice finished both flags were true, so the XOR was false
+        /// for every non-root node and only the whole-cell root box survived the filter.
+        /// </remarks>
+        internal static bool CanShowBoundingBoxModel(IAssemblyPlannerNode node) => !node.MeshComplete;
 
 
         public MeshAssemblyPlannerIncompleteView(MeshAssemblyPlanner plan, SliceGraph sliceGraph) : base(plan)
@@ -633,6 +668,9 @@ namespace MonogameTestbed
             {
                 ReadyModelLock.ExitWriteLock();
             }
+
+            if (_leavesWithoutBoundingBox > 0)
+                Trace.WriteLine($"MeshAssemblyPlannerIncompleteView: {_leavesWithoutBoundingBox} slices reported invalid topology and have no bounding box. {BoundingBoxModels.Count} boxes generated.");
         }
 
         public override void OnNodeCompleted(IAssemblyPlannerNode node, bool success)
@@ -644,14 +682,16 @@ namespace MonogameTestbed
                 if (success)
                 {
                     BoundingBoxModels.Remove(node.Key);
-                    this._MeshModels = null;
                 }
                 else if (BoundingBoxModels.TryGetValue(node.Key, out MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor> model))
                 {
                     NodesThatFailedMeshing.Add(node.Key);
-                    Color color = success ? Color.LightGreen.SetAlpha(0.33f) : Color.Red.SetAlpha(0.5f);
-                    model.SetColor(color);
+                    model.SetColor(Color.Red.SetAlpha(0.5f));
                 }
+
+                //Both paths change which boxes are visible: success drops one from the collection, and failure
+                //adds a key that GetVisibleBoundingBoxModels treats as always-visible.
+                this._MeshModels = null;
             }
             finally
             {
@@ -680,7 +720,31 @@ namespace MonogameTestbed
             //Generate our bounding box mesh
             var model = GenerateBoundingBoxMesh(node);
             if (model != null)
+            {
                 BoundingBoxModels[node.Key] = model;
+                BoxLocalTransform[node.Key] = model.ModelMatrix;
+            }
+        }
+
+        /// <summary>
+        /// Position the boxes in the world without discarding the transform that gives them their size.
+        /// </summary>
+        public void ApplyPlacement(Matrix placement)
+        {
+            try
+            {
+                ReadyModelLock.EnterReadLock();
+
+                foreach (var item in BoundingBoxModels)
+                {
+                    if (BoxLocalTransform.TryGetValue(item.Key, out Matrix local))
+                        item.Value.ModelMatrix = local * placement;
+                }
+            }
+            finally
+            {
+                ReadyModelLock.ExitReadLock();
+            }
         }
 
         /// <summary>
@@ -761,10 +825,14 @@ namespace MonogameTestbed
                 var topology = sliceGraph.GetTopology(node.Key);
                 if (!topology.IsValid || topology.Shapes is null || topology.Shapes.Length == 0)
                 {
+                    _leavesWithoutBoundingBox++;
                     return null;
                 }
 
-                Rectangle boundingRect = topology.Shapes.BoundingBox().Translate(sliceGraph.XYOrigin);
+                //Left in the slice graph's centered frame, the same space the mesh verticies use.  These models
+                //are given the view's placement ModelMatrix alongside the mesh models, so translating to volume
+                //XY here would apply that offset a second time and draw every box away from its own geometry.
+                Rectangle boundingRect = topology.Shapes.BoundingBox();
                 Box bbox = new(boundingRect, topology.ShapeZ.Min(), topology.ShapeZ.Max());
                 NodeBoundingBox[node.Key] = bbox;
                 return bbox;

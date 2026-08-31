@@ -29,6 +29,29 @@ namespace MonogameTestbed
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static partial bool FreeConsole();
 
+        private static readonly IntPtr DpiAwarenessContextPerMonitorAwareV2 = new(-4);
+
+        [LibraryImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool SetProcessDpiAwarenessContext(IntPtr value);
+
+        /// <summary>
+        /// Opts the process into true pixel coordinates.  Without this Windows virtualizes every size and position
+        /// we ask about, so a 3840x2160 monitor at 150% scaling reports itself as 2560x1440 and fullscreen captures
+        /// come out at that reduced size.  Must run before any window exists for the choice to take effect.
+        /// </summary>
+        private static void EnablePerMonitorDpiAwareness()
+        {
+            try
+            {
+                SetProcessDpiAwarenessContext(DpiAwarenessContextPerMonitorAwareV2);
+            }
+            catch (EntryPointNotFoundException)
+            {
+                //Present since Windows 10 1703; older builds simply stay scaled.
+            }
+        }
+
 
         static System.IO.StreamWriter DebugLogFile = null;
 
@@ -152,6 +175,13 @@ namespace MonogameTestbed
             public bool Log { get; set; }
 
             /// <summary>
+            /// Off by default so the timing hooks cost nothing in a normal run.
+            /// </summary>
+            [Option("timings", Required = false,
+                HelpText = "Accumulate and print mesh generation phase timings when the run finishes", Default = false)]
+            public bool Timings { get; set; }
+
+            /// <summary>
             /// Display help
             /// </summary>
             [Option('h', "help", Required = false, HelpText = "Show help", Separator = ' ', Default = false)]
@@ -172,8 +202,22 @@ namespace MonogameTestbed
 
             public List<int> ReproIndices { get; private set; }
 
+            [Option("repro-locations", Required = false, HelpText = "BAJAJTEST: mesh the slice spanning these LocationIDs instead of a ReproSet index")]
+            public string ReproLocationsParam { get; set; }
+
+            public List<ulong> ReproLocations { get; private set; }
+
+            [Option("repro-tolerance", Required = false, HelpText = "Polygon simplification tolerance for --repro-locations", Default = 1.0)]
+            public double ReproTolerance { get; set; }
+
             [Option("capture-request", Required = false, HelpText = "JSON file listing extra or replacement screenshot shots")]
             public string CaptureRequestPath { get; set; }
+
+            [Option("display", Required = false, HelpText = "Monitor to capture on: an index from --list-displays, or 'primary'. Defaults to a secondary monitor when capturing so the primary display is left alone.")]
+            public string DisplayParam { get; set; }
+
+            [Option("list-displays", Required = false, HelpText = "Print the attached monitors with their indices and exit", Default = false)]
+            public bool ListDisplays { get; set; }
 
             public CaptureRequestFile CaptureRequest { get; private set; }
 
@@ -289,7 +333,9 @@ namespace MonogameTestbed
                 ExcludeChildren |= ExcludeChildrenAlias;
                 ParseStartupMode();
                 ParseReproParam();
+                ParseReproLocations();
                 LoadCaptureRequest();
+                MorphologyMesh.MeshPhaseTimings.Enabled = Timings;
             }
 
             private void ParseStartupMode()
@@ -337,6 +383,24 @@ namespace MonogameTestbed
                     for (int i = start; i <= end; i++)
                         ReproIndices.Add(i);
                 }
+            }
+
+            private void ParseReproLocations()
+            {
+                if (string.IsNullOrWhiteSpace(ReproLocationsParam))
+                    return;
+
+                ReproLocations = [];
+                foreach (string chunk in ReproLocationsParam.Split([',', ';', ' ', '/'], StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (ulong.TryParse(chunk.Trim(), out ulong id) == false)
+                        throw new ArgumentException($"'{chunk}' in --repro-locations is not a LocationID");
+
+                    ReproLocations.Add(id);
+                }
+
+                if (ReproLocations.Count < 2)
+                    throw new ArgumentException("--repro-locations needs at least two LocationIDs to form a slice");
             }
 
             private void LoadCaptureRequest()
@@ -395,6 +459,8 @@ namespace MonogameTestbed
         static void Main(string[] args)
         {
 
+            EnablePerMonitorDpiAwareness();
+
             bool HaveConsole = false;
             try
             {
@@ -448,6 +514,12 @@ namespace MonogameTestbed
                     }
 
                     //If help was requested, then quit afterword.
+                    return;
+                }
+
+                if (Program.options.ListDisplays)
+                {
+                    MonoTestbed.PrintDisplays();
                     return;
                 }
 

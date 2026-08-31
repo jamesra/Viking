@@ -26,7 +26,29 @@ namespace MonogameTestbed
 
         public int[] Repro { get; set; }
 
+        /// <summary>
+        /// Slices named by LocationID rather than by repro index, so a slice found by a diagnostic can be opened in
+        /// the viewer without editing the committed repro set.  These are appended after the repro set and selected
+        /// automatically when no <see cref="Repro"/> index is given.
+        /// </summary>
+        public List<ReproLocationRequest> ReproLocations { get; set; }
+
         public List<CaptureShotRequest> Shots { get; set; }
+    }
+
+    /// <summary>
+    /// One ad-hoc slice to mesh, identified by the LocationIDs it spans.
+    /// </summary>
+    public sealed class ReproLocationRequest
+    {
+        public ulong[] Locations { get; set; }
+
+        /// <summary>Endpoint name such as RC1 or RPC1, or a full OData URL.  Defaults to the -e endpoint.</summary>
+        public string Endpoint { get; set; }
+
+        public string Description { get; set; }
+
+        public double? Tolerance { get; set; }
     }
 
     /// <summary>

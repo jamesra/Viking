@@ -1,5 +1,7 @@
 using Microsoft.Xna.Framework;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace MonogameTestbed
@@ -14,6 +16,29 @@ namespace MonogameTestbed
         private const int SmCyscreen = 1;
         private const uint MonitorDefaultToNearest = 2;
         private const uint SpiGetWorkArea = 0x0030;
+        private const uint MonitorinfofPrimary = 1;
+
+        /// <summary>
+        /// Converts a window size chosen in logical pixels to physical ones.  The process is per-monitor DPI aware
+        /// so that captures come out at the display's true resolution, which also means Windows no longer stretches
+        /// a fixed pixel size on a scaled display; without this the interactive window would shrink to 1/1.5 of its
+        /// former size at 150% scaling.
+        /// </summary>
+        internal static int ScaleForDisplayDpi(int logicalPixels)
+        {
+            try
+            {
+                uint dpi = GetDpiForSystem();
+                if (dpi > 0)
+                    return (int)Math.Round(logicalPixels * (dpi / 96.0));
+            }
+            catch (EntryPointNotFoundException)
+            {
+                //Present since Windows 10 1607; older builds keep the unscaled size.
+            }
+
+            return logicalPixels;
+        }
 
         /// <summary>
         /// Places the window at the top-left of the monitor work area, accounting for the title bar.
@@ -28,8 +53,8 @@ namespace MonogameTestbed
             {
                 borderLeft = GetSystemMetrics(SmCxframe) + GetSystemMetrics(SmCxpaddedborder);
                 borderTop = GetSystemMetrics(SmCycaption) + GetSystemMetrics(SmCyframe) + GetSystemMetrics(SmCxpaddedborder);
-                frameWidth = desired_screen_width + (borderLeft * 2);
-                frameHeight = desired_screen_height + borderTop + borderLeft;
+                frameWidth = ScaleForDisplayDpi(desired_screen_width) + (borderLeft * 2);
+                frameHeight = ScaleForDisplayDpi(desired_screen_height) + borderTop + borderLeft;
             }
 
             int frameX = work.Left;
@@ -58,13 +83,16 @@ namespace MonogameTestbed
         }
 
         /// <summary>
-        /// Enters borderless fullscreen at the current monitor's pixel size and refreshes <see cref="Scene"/>'s viewport.
-        /// Called from Initialize (and again before PNG capture) so dump resolution matches the display.
+        /// Enters borderless fullscreen at the capture monitor's pixel size and refreshes <see cref="Scene"/>'s
+        /// viewport.  Called from Initialize (and again before PNG capture) so dump resolution matches the display.
         /// </summary>
         internal void EnsureExportFullscreen()
         {
             GetExportDisplaySize(out int width, out int height);
             graphics.HardwareModeSwitch = false;
+
+            MoveToCaptureDisplay();
+
             graphics.PreferredBackBufferWidth = width;
             graphics.PreferredBackBufferHeight = height;
             graphics.IsFullScreen = true;
@@ -76,16 +104,66 @@ namespace MonogameTestbed
         }
 
         /// <summary>
+        /// Moves the window onto the monitor chosen for capture.  Borderless fullscreen follows whichever monitor
+        /// the window sits on, so the window has to be placed there while it still has a position, which means
+        /// leaving fullscreen first if it is already in it.
+        /// </summary>
+        private void MoveToCaptureDisplay()
+        {
+            if (!TryGetCaptureMonitor(out NativeRect monitor))
+                return;
+
+            if (Window.Position.X >= monitor.Left && Window.Position.X < monitor.Right &&
+                Window.Position.Y >= monitor.Top && Window.Position.Y < monitor.Bottom)
+                return;
+
+            if (graphics.IsFullScreen && GraphicsDevice is not null)
+            {
+                graphics.IsFullScreen = false;
+                graphics.ApplyChanges();
+            }
+
+            Window.Position = new Point(monitor.Left, monitor.Top);
+            Trace.WriteLine($"Capturing on the display at ({monitor.Left},{monitor.Top}); pass --display to change it.");
+        }
+
+        /// <summary>
         /// Copies the live graphics viewport onto the testbed scene so projection matches the fullscreen back buffer.
         /// </summary>
-        internal void SyncSceneViewport()
+        internal void SyncSceneViewport() => SyncViewport(Scene, GraphicsDevice);
+
+        /// <summary>
+        /// Points a scene at the device's current viewport.  Assigning it recomputes the projection, so the
+        /// assignment is skipped when nothing changed.
+        /// </summary>
+        internal static void SyncViewport(VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.GraphicsDevice device)
         {
-            if (Scene is not null && GraphicsDevice is not null)
-                Scene.Viewport = GraphicsDevice.Viewport;
+            if (scene is null || device is null)
+                return;
+
+            if (!scene.Viewport.Equals(device.Viewport))
+                scene.Viewport = device.Viewport;
+        }
+
+        /// <inheritdoc cref="SyncViewport(VikingXNA.Scene, Microsoft.Xna.Framework.Graphics.GraphicsDevice)"/>
+        internal static void SyncViewport(VikingXNA.Scene3D scene, Microsoft.Xna.Framework.Graphics.GraphicsDevice device)
+        {
+            if (scene is null || device is null)
+                return;
+
+            if (!scene.Viewport.Equals(device.Viewport))
+                scene.Viewport = device.Viewport;
         }
 
         private void GetExportDisplaySize(out int width, out int height)
         {
+            if (TryGetCaptureMonitor(out NativeRect capture))
+            {
+                width = Math.Max(1, capture.Right - capture.Left);
+                height = Math.Max(1, capture.Bottom - capture.Top);
+                return;
+            }
+
             if (TryGetMonitorBounds(out NativeRect monitor))
             {
                 width = Math.Max(1, monitor.Right - monitor.Left);
@@ -95,6 +173,84 @@ namespace MonogameTestbed
 
             width = Math.Max(1, GetSystemMetrics(SmCxscreen));
             height = Math.Max(1, GetSystemMetrics(SmCyscreen));
+        }
+
+        /// <summary>
+        /// Monitor the capture should use.  Taking over the primary display steals whatever the operator is looking
+        /// at, so a capture run defaults to a secondary monitor when one is attached.  <c>--display</c> overrides
+        /// the choice by index, or with "primary" to keep the old behaviour.
+        /// </summary>
+        /// <returns>False when the current monitor should be used, which the callers already handle.</returns>
+        private static bool TryGetCaptureMonitor(out NativeRect monitor)
+        {
+            monitor = default;
+
+            //Only capture runs relocate themselves; an interactive session stays where the operator put it.
+            if (Program.options?.Screenshots != true)
+                return false;
+
+            List<DisplayInfo> displays = EnumerateDisplays();
+            if (displays.Count == 0)
+                return false;
+
+            string requested = Program.options?.DisplayParam;
+            if (!string.IsNullOrWhiteSpace(requested))
+            {
+                if (requested.Trim().Equals("primary", StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                if (int.TryParse(requested.Trim(), out int index) && index >= 0 && index < displays.Count)
+                {
+                    monitor = displays[index].Bounds;
+                    return true;
+                }
+
+                Trace.WriteLine($"--display '{requested}' is not a monitor index or 'primary'; using the default capture monitor.");
+            }
+
+            foreach (DisplayInfo display in displays)
+            {
+                if (!display.IsPrimary)
+                {
+                    monitor = display.Bounds;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Writes the attached monitors and their indices to the console, for use with <c>--display</c>.
+        /// </summary>
+        internal static void PrintDisplays()
+        {
+            List<DisplayInfo> displays = EnumerateDisplays();
+            Console.WriteLine($"{displays.Count} display(s):");
+            for (int i = 0; i < displays.Count; i++)
+            {
+                DisplayInfo d = displays[i];
+                Console.WriteLine($"  {i}: {d.Bounds.Right - d.Bounds.Left}x{d.Bounds.Bottom - d.Bounds.Top} " +
+                                  $"at ({d.Bounds.Left},{d.Bounds.Top}){(d.IsPrimary ? " [primary]" : "")}");
+            }
+        }
+
+        private readonly record struct DisplayInfo(NativeRect Bounds, bool IsPrimary);
+
+        private static List<DisplayInfo> EnumerateDisplays()
+        {
+            List<DisplayInfo> displays = [];
+
+            EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr hMonitor, IntPtr _, ref NativeRect _, IntPtr _) =>
+            {
+                NativeMonitorInfo info = new() { cbSize = Marshal.SizeOf<NativeMonitorInfo>() };
+                if (GetMonitorInfoW(hMonitor, ref info))
+                    displays.Add(new DisplayInfo(info.rcMonitor, (info.dwFlags & MonitorinfofPrimary) != 0));
+
+                return true;
+            }, IntPtr.Zero);
+
+            return displays;
         }
 
         private bool TryGetMonitorBounds(out NativeRect monitor)
@@ -200,12 +356,21 @@ namespace MonogameTestbed
         [LibraryImport("user32.dll")]
         private static partial IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
 
+        private delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdc, ref NativeRect lprcClip, IntPtr dwData);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr lprcClip, MonitorEnumProc lpfnEnum, IntPtr dwData);
+
         [LibraryImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool GetMonitorInfoW(IntPtr hMonitor, ref NativeMonitorInfo lpmi);
 
         [LibraryImport("user32.dll")]
         private static partial int GetSystemMetrics(int nIndex);
+
+        [LibraryImport("user32.dll")]
+        private static partial uint GetDpiForSystem();
 
         [LibraryImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
