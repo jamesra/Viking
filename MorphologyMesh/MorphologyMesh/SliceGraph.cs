@@ -1,4 +1,4 @@
-using AnnotationVizLib;
+﻿using AnnotationVizLib;
 using Geometry;
 using GraphLib;
 using SqlGeometryUtils;
@@ -77,6 +77,22 @@ namespace MorphologyMesh
 
         private Dictionary<ulong, SliceTopology> SliceToTopology = null;
 
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<ulong, string> _failedTopologySlices = new();
+
+        /// <summary>
+        /// Slices whose topology could not be built, mapped to the sections they cover.
+        ///
+        /// These slices fall back to an empty topology so dependent slices can still run, which means they
+        /// contribute no geometry at all.  A run that loses slices this way otherwise completes successfully and
+        /// looks identical to a clean one, so callers are expected to report this rather than only trace it.
+        /// </summary>
+        public IReadOnlyDictionary<ulong, string> FailedTopologySlices => _failedTopologySlices;
+
+        public int FailedTopologyCount => _failedTopologySlices.Count;
+
+        internal void RecordTopologyFailure(ulong sliceKey, string sectionText) =>
+            _failedTopologySlices[sliceKey] = sectionText;
+
         /// <summary>
         /// Placement origin for this structure's mesh (own locations, not child subgraphs).
         /// </summary>
@@ -129,6 +145,8 @@ namespace MorphologyMesh
                     "This usually means the OData query returned no annotations for the requested IDs " +
                     "(e.g. location IDs were queried as structure IDs, or the IDs/endpoint are wrong).",
                     nameof(graph));
+
+            using var _phase = MeshPhaseTimings.Measure(MeshPhase.SliceGraphCreate, graph.Nodes.Count);
 
             Vector2 origin = xyOrigin ?? graph.NodesBoundingBox.CenterPoint.XY();
             SliceGraph output = new(graph, origin);
@@ -248,7 +266,7 @@ namespace MorphologyMesh
             }
 
             output.MorphNodeToShape = await InitializeShapes(graph, -origin, tolerance);
-            output.InitializeSliceTopology(tolerance);
+            await output.InitializeSliceTopology(tolerance);
 
             /*output.SliceToTopology = new Dictionary<ulong, SliceTopology>(output.Nodes.Count);
             foreach(Slice s in output.Nodes.Values)
@@ -331,27 +349,31 @@ namespace MorphologyMesh
             FollowedEdges.UnionWith(NewNodesAbove.SelectMany(n => graph[n].GetEdgesBelow(graph).Select(other => new MorphologyEdge(graph, other, n))));
             FollowedEdges.UnionWith(NewNodesBelow.SelectMany(n => graph[n].GetEdgesAbove(graph).Select(other => new MorphologyEdge(graph, other, n))));
 
-            NewNodesBelow = [.. NewNodesAbove.SelectMany(n => graph[n].GetEdgesBelow(graph))];
-            NewNodesAbove = [.. NewNodesBelow.SelectMany(n => graph[n].GetEdgesAbove(graph))];
+            //Both frontiers have to be derived from the sets we arrived with.  Assigning to NewNodesBelow first and
+            //then reading it back to build NewNodesAbove walks down and straight back up, so the upward expansion of
+            //the nodes below is never explored.  The edges to those nodes are recorded above regardless, which left
+            //the slice holding a link to a contour it does not contain and no way to tile across it.
+            SortedSet<ulong> NextNodesBelow = [.. NewNodesAbove.SelectMany(n => graph[n].GetEdgesBelow(graph))];
+            SortedSet<ulong> NextNodesAbove = [.. NewNodesBelow.SelectMany(n => graph[n].GetEdgesAbove(graph))];
 
-            var CycleWithAbove = NodesAbove.Intersect(NewNodesBelow).ToArray();
+            var CycleWithAbove = NodesAbove.Intersect(NextNodesBelow).ToArray();
             if (CheckForCycle(CycleWithAbove))
                 throw new CycleInGraphException(CycleWithAbove);
 
-            var CycleWithBelow = NodesBelow.Intersect(NewNodesAbove).ToArray();
+            var CycleWithBelow = NodesBelow.Intersect(NextNodesAbove).ToArray();
             if (CheckForCycle(CycleWithBelow))
                 throw new CycleInGraphException(CycleWithBelow);
 
-            NewNodesAbove.ExceptWith(NodesAbove);
-            NewNodesBelow.ExceptWith(NodesBelow);
+            NextNodesAbove.ExceptWith(NodesAbove);
+            NextNodesBelow.ExceptWith(NodesBelow);
 
-            if (NewNodesAbove.Count == 0 && NewNodesBelow.Count == 0)
+            if (NextNodesAbove.Count == 0 && NextNodesBelow.Count == 0)
             {
                 return;
             }
             else
             {
-                BuildMeshingCrossSection(graph, ref NodesAbove, ref NodesBelow, NewNodesAbove, NewNodesBelow, ref FollowedEdges);
+                BuildMeshingCrossSection(graph, ref NodesAbove, ref NodesBelow, NextNodesAbove, NextNodesBelow, ref FollowedEdges);
                 return;
             }
         }
@@ -411,7 +433,7 @@ namespace MorphologyMesh
         /// Populates the lookup table mapping morph nodes to shapes.  Allows user option to simplify shapes.  Ensures all shapes have matching corresponding verticies if they participate in two or more slices
         /// </summary>
         /// <param name="tolerance"></param>
-        private async void InitializeSliceTopology(double tolerance = 0)
+        private async Task InitializeSliceTopology(double tolerance = 0)
         {
             try
             {
@@ -419,7 +441,10 @@ namespace MorphologyMesh
 
                 ConcurrentTopologyInitializer concurrentInitializer = new(this);
 
-                this.SliceToTopology = concurrentInitializer.InitializeSliceTopology();
+                this.SliceToTopology = await concurrentInitializer.InitializeSliceTopologyAsync(tolerance);
+
+                RefreshMovedShapesFromCachedShapes();
+
 
                 /*
                 //Create corresponding verticies for all shapes
@@ -437,7 +462,59 @@ namespace MorphologyMesh
             catch (Exception ex)
             {
                 Trace.WriteLine($"InitializeSliceTopology failed: {ex}", "SliceGraph");
-                // Log and swallow: caller cannot await async void; leaving MorphNodeToShape/SliceToTopology unchanged is the safe default.
+                // Log and swallow: a partially built graph is still usable by the callers, and leaving
+                // MorphNodeToShape/SliceToTopology unchanged is the safe default.
+            }
+        }
+
+        /// <summary>
+        /// A slice keeps a reference to the cached contour, so verticies a later slice inserts are picked up
+        /// automatically - except on a shape virtual overlap moved, which is a copy taken before those insertions and
+        /// can therefore be missing verticies its neighbour has.  The composite welds slices on (morph node, vertex
+        /// index), and an index only means the same point in both slices if they list the same verticies, so a stale
+        /// copy leaves that seam open.
+        ///
+        /// Every topology exists by the time this runs, so the cached contours are final and each moved copy can be
+        /// brought up to date.  Mutating in place is deliberate: the topology's upper and lower arrays hold the same
+        /// references, and the mesh is not built until later.
+        /// </summary>
+        private void RefreshMovedShapesFromCachedShapes()
+        {
+            if (SliceToTopology is null || MorphNodeToShape is null)
+                return;
+
+            foreach (SliceTopology topology in SliceToTopology.Values)
+            {
+                if (topology.Shapes is null
+                    || topology.HasVirtualOverlapTranslation == false
+                    || topology.ShapeIndexToMorphNodeIndex is null)
+                    continue;
+
+                for (int i = 0; i < topology.Shapes.Length; i++)
+                {
+                    Vector2 offset = topology.GetVirtualOverlapOffset(i);
+                    if (offset == Vector2.Zero)
+                        continue;
+
+                    if (MorphNodeToShape.TryGetValue(topology.ShapeIndexToMorphNodeIndex[i], out IShape2D cached) == false)
+                        continue;
+
+                    //Polylines are left alone so the fork partition's cached vertex ranges stay valid.
+                    if (topology.Shapes[i] is not Polygon moved || cached is not Polygon source)
+                        continue;
+
+                    //Interior rings would have to be reconciled the same way, and a contour with holes is not the
+                    //case this addresses, so leave those alone rather than half-updating them.
+                    if (moved.InteriorRings.Count > 0 || source.InteriorRings.Count > 0)
+                        continue;
+
+                    //Rebuilt from the cached ring rather than patched vertex by vertex.  Inserting the missing points
+                    //into the copy would give it the same points but not necessarily at the same indices, since an
+                    //insertion can land at index zero and rotate the ring, and the weld key is the index.  Assigning
+                    //the whole ring makes the order identical by construction.  Mutating this shape rather than
+                    //replacing it matters: the topology's upper and lower arrays hold the same reference.
+                    moved.ExteriorRing = [.. source.ExteriorRing.Select(p => p + offset)];
+                }
             }
         }
 
@@ -451,7 +528,7 @@ namespace MorphologyMesh
             InitializeShapes(graph, -graph.NodesBoundingBox.CenterPoint.XY(), tolerance);
 
         /// <summary>
-        /// Cache simplified shapes translated by <paramref name="translationToCenter"/> (usually −cell XY origin).
+        /// Cache simplified shapes translated by <paramref name="translationToCenter"/> (usually âˆ’cell XY origin).
         /// </summary>
         public static async Task<Dictionary<ulong, IShape2D>> InitializeShapes(MorphologyGraph graph, Vector2 translationToCenter, double tolerance = 0)
         {
@@ -584,6 +661,8 @@ namespace MorphologyMesh
 
         internal SliceTopology GetSliceTopology(Slice group, IReadOnlyDictionary<ulong, IShape2D> polyLookup = null)
         {
+            using var _phase = MeshPhaseTimings.Measure(MeshPhase.SliceTopology);
+
             List<SliceShape> sliceShapes = [];
             sliceShapes.AddRange(group.NodesAbove.Select(id => CreateSliceShape(id, true, polyLookup)));
             sliceShapes.AddRange(group.NodesBelow.Select(id => CreateSliceShape(id, false, polyLookup)));
@@ -593,8 +672,12 @@ namespace MorphologyMesh
             List<IShape2D> ShapeList = [.. sliceShapes.Select(s => s.Shape)];
             bool[] sliceIsUpper = [.. sliceShapes.Select(s => s.IsUpper)];
             IShape2D[] workingShapes = [.. ShapeList];
-            Vector2 virtualOverlapOffset = SliceTopology.TryTranslateNonOverlappingPair(workingShapes, sliceIsUpper);
-            if (virtualOverlapOffset != Vector2.Zero)
+
+            //Virtual overlap is measured over every shape in the slice, before tileability filtering, so a fork is
+            //recognised from the annotator's links rather than from whatever survived the filter.
+            bool[,] sliceLinks = BuildShapeLinkMatrix(group, sliceShapes, reportUnlinked: false);
+            Vector2[] virtualOverlapOffsets = SliceTopology.TryTranslateNonOverlappingShapes(workingShapes, sliceIsUpper, sliceLinks);
+            if (virtualOverlapOffsets is not null)
             {
                 for (int i = 0; i < sliceShapes.Count; i++)
                     sliceShapes[i] = sliceShapes[i] with { Shape = workingShapes[i] };
@@ -609,10 +692,18 @@ namespace MorphologyMesh
             Polyline[] Polylines = [.. ShapeList.OfType<Polyline>()];
             SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(Polylines, correspondingPoints);
 
+            ShareCorrespondenceWithCachedShapes(sliceShapes, virtualOverlapOffsets, polyLookup);
+
             //Polygons always tile. Polylines tile only when this slice has no polygon (gap-junction / raft
             //ribbon). A polyline on a polygon slice stays correspondence-only after the intersection verts above.
             bool sliceHasPolygon = Polygons.Length > 0;
-            SliceShape[] tileable = [.. sliceShapes.Where(s => IsTileableForBajaj(s.Shape, sliceHasPolygon))];
+            int[] tileableSourceIndex = [.. Enumerable.Range(0, sliceShapes.Count).Where(i => IsTileableForBajaj(sliceShapes[i].Shape, sliceHasPolygon))];
+            SliceShape[] tileable = [.. tileableSourceIndex.Select(i => sliceShapes[i])];
+
+            //Offsets are indexed by shape, so they have to be filtered alongside the shapes they belong to.
+            Vector2[] tileableOffsets = virtualOverlapOffsets is null
+                ? null
+                : [.. tileableSourceIndex.Select(i => virtualOverlapOffsets[i])];
 
             if (tileable.Length != sliceShapes.Count)
                 Trace.WriteLine($"Slice {group.Key}: {sliceShapes.Count - tileable.Length} of {sliceShapes.Count} shapes were excluded from tiling (correspondence-only polylines or unsupported types).");
@@ -623,7 +714,98 @@ namespace MorphologyMesh
                 tileable.Select(s => s.Z),
                 tileable.Select(s => s.MorphNodeIndex),
                 this.SectionThickness,
-                virtualOverlapOffset);
+                tileableOffsets,
+                BuildShapeLinkMatrix(group, tileable),
+                buildForkPartition: true);
+        }
+
+        /// <summary>
+        /// Correspondence has to run after virtual overlap, because the verticies it inserts are the intersections
+        /// between shapes and these shapes do not intersect until they are moved.  Moving a shape produces a private
+        /// translated copy though, so those verticies land somewhere the other slice sharing that contour will never
+        /// see them.  Copy them onto the cached contour, in its own untranslated coordinates, so they become visible
+        /// to every slice that uses it.
+        ///
+        /// Polylines are excluded: <see cref="PolylineForkPartition"/> caches vertex indices and arc lengths for them
+        /// when the topology is built, and inserting points would silently invalidate those ranges.
+        /// </summary>
+        private static void ShareCorrespondenceWithCachedShapes(IReadOnlyList<SliceShape> sliceShapes,
+                                                               Vector2[] virtualOverlapOffsets,
+                                                               IReadOnlyDictionary<ulong, IShape2D> polyLookup)
+        {
+            if (virtualOverlapOffsets is null || polyLookup is null)
+                return;
+
+            for (int i = 0; i < sliceShapes.Count; i++)
+            {
+                //A shape that did not move was never copied: it still is the cached shape, so it needs nothing.
+                Vector2 offset = virtualOverlapOffsets[i];
+                if (offset == Vector2.Zero)
+                    continue;
+
+                if (polyLookup.TryGetValue(sliceShapes[i].MorphNodeIndex, out IShape2D cached) == false)
+                    continue;
+
+                if (sliceShapes[i].Shape is not Polygon moved || cached is not Polygon target)
+                    continue;
+
+                foreach (Vector2 vertex in moved.ExteriorRing)
+                    target.AddVertex(vertex - offset);
+            }
+        }
+
+        /// <summary>
+        /// Record which pairs of tileable shapes the annotator actually joined with a LocationLink.
+        ///
+        /// The matrix is indexed by position in <paramref name="tileable"/>, so callers must pass exactly the shape
+        /// list the indices will be interpreted against: the filtered set for the returned SliceTopology, or the
+        /// full slice for a pass that runs before filtering.
+        /// </summary>
+        private static bool[,] BuildShapeLinkMatrix(Slice group, IReadOnlyList<SliceShape> tileable, bool reportUnlinked = true)
+        {
+            //A node can legitimately appear on both sides of a slice, so map to the first shape index we saw for it.
+            Dictionary<ulong, int> nodeToShape = new(tileable.Count);
+            for (int i = 0; i < tileable.Count; i++)
+                nodeToShape.TryAdd(tileable[i].MorphNodeIndex, i);
+
+            bool[,] linked = new bool[tileable.Count, tileable.Count];
+
+            //A shape is always considered linked to itself so contour and same-shape edges are never gated.
+            for (int i = 0; i < tileable.Count; i++)
+                linked[i, i] = true;
+
+            foreach (MorphologyEdge edge in group.InternalEdges)
+            {
+                if (nodeToShape.TryGetValue(edge.SourceNodeKey, out int a) == false)
+                    continue;
+
+                if (nodeToShape.TryGetValue(edge.TargetNodeKey, out int b) == false)
+                    continue;
+
+                linked[a, b] = true;
+                linked[b, a] = true;
+            }
+
+            //Only cross-band pairs are gated, so only those are worth reporting.  A slice with unlinked cross-band
+            //pairs is a fork or a doubled-back chain, which is where mesh defects concentrate; naming them makes the
+            //difference between "this slice changed because of the gate" and "this slice changed for another reason".
+            List<string> unlinked = [];
+            for (int i = 0; i < tileable.Count; i++)
+            {
+                for (int j = i + 1; j < tileable.Count; j++)
+                {
+                    if (tileable[i].IsUpper == tileable[j].IsUpper)
+                        continue;
+
+                    if (linked[i, j] == false)
+                        unlinked.Add($"{tileable[i].MorphNodeIndex}/{tileable[j].MorphNodeIndex}");
+                }
+            }
+
+            if (reportUnlinked && unlinked.Count > 0)
+                Trace.WriteLine($"Slice {group.Key}: {unlinked.Count} unlinked cross-band shape pair(s) will not be tiled: {string.Join(", ", unlinked)}");
+
+            return linked;
         }
 
         private SliceShape CreateSliceShape(ulong id, bool isUpper, IReadOnlyDictionary<ulong, IShape2D> polyLookup)

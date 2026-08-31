@@ -229,7 +229,7 @@ namespace MorphologyMeshTest
             Assert.IsFalse(lower.Intersects(upper), "Test setup requires a disjoint pair.");
 
             BajajGeneratorMesh mesh = new([lower, upper], [0, 10], [false, true]);
-            Assert.AreNotEqual(Vector2.Zero, mesh.Topology.VirtualOverlapOffset);
+            Assert.IsTrue(mesh.Topology.HasVirtualOverlapTranslation);
 
             BajajMeshGenerator.GenerateFaces(mesh);
 
@@ -243,12 +243,11 @@ namespace MorphologyMeshTest
         }
 
         [TestMethod]
-        public void TryTranslateNonOverlappingPair_OverlappingSquares_DoesNotMove()
+        public void TryTranslateNonOverlappingShapes_OverlappingSquares_DoesNotMove()
         {
             IShape2D[] shapes = [Square(10), Square(8)];
             bool[] isUpper = [false, true];
-            Vector2 offset = SliceTopology.TryTranslateNonOverlappingPair(shapes, isUpper);
-            Assert.AreEqual(Vector2.Zero, offset);
+            Assert.IsNull(SliceTopology.TryTranslateNonOverlappingShapes(shapes, isUpper));
         }
     }
 }

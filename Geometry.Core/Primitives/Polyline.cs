@@ -56,7 +56,7 @@ namespace Geometry
                 return;
 
             rTree = new BoundingBoxIndex<LineSegment>();
-            _ = LineSegments;
+            _ = SegmentStorage;
             if (_LineSegments is null)
                 return;
 
@@ -68,7 +68,7 @@ namespace Geometry
 
         public int NumUniqueVertices => _Points.Count;
 
-        public int LineCount => LineSegments.Count;
+        public int LineCount => SegmentStorage.Count;
 
         public Polyline(bool AllowSelfIntersection = false)
         {
@@ -142,7 +142,7 @@ namespace Geometry
                 return true;
 
             List<LineSegment> intersectionCandidates = SpatialIndex.Intersects(line.BoundingBox);
-            if (line.SelfIntersects([.. this.LineSegments.Where(l => intersectionCandidates.Contains(l))], LineSetOrdering.Polyline))
+            if (line.SelfIntersects([.. this.SegmentStorage.Where(l => intersectionCandidates.Contains(l))], LineSetOrdering.Polyline))
             {
                 return false;
             }
@@ -155,6 +155,7 @@ namespace Geometry
             if (_Points.Count == 0)
             {
                 _Points.Add(next);
+                InvalidateBoundingBox();
                 return;
             }
 
@@ -172,6 +173,7 @@ namespace Geometry
             if (_Points.Count == 1)
             {
                 _Points.Add(next);
+                InvalidateBoundingBox();
                 rTree.Add(line.BoundingBox, line);
                 this._LineSegments = [];
                 _LineSegments.Add(line);
@@ -181,7 +183,7 @@ namespace Geometry
             {
                 List<LineSegment> intersectionCandidates = rTree.Intersects(line.BoundingBox);
 
-                if (line.SelfIntersects([.. this.LineSegments.Where(l => intersectionCandidates.Contains(l))], LineSetOrdering.Polyline, out LineSegment? intersected))
+                if (line.SelfIntersects([.. this.SegmentStorage.Where(l => intersectionCandidates.Contains(l))], LineSetOrdering.Polyline, out LineSegment? intersected))
                 {
                     this.KnownSelfIntersection = AllowsSelfIntersection == false
                         ? throw new ArgumentException("Added point created self-intersecting line in Polyline")
@@ -191,6 +193,7 @@ namespace Geometry
 
             var Existing = this._LineSegments;
             _Points.Add(next);
+            InvalidateBoundingBox();
             Existing.Add(line);
             rTree.Add(line.BoundingBox, line);
             this._LineSegments = Existing;
@@ -219,6 +222,7 @@ namespace Geometry
                     throw new ArgumentException("Inserting point already in Polyline identical to an adjacent point");
 
                 _Points.Insert(index, value);
+                InvalidateBoundingBox();
                 LineSegment line = new(_Points[0], _Points[1]);
                 rTree.Add(line.BoundingBox, line);
                 return;
@@ -262,7 +266,7 @@ namespace Geometry
             }
 
             //Copy the existing line segments so we can test new segments against the existing ones minus the replaced segment
-            List<LineSegment> segments = [.. this.LineSegments];
+            List<LineSegment> segments = [.. this.SegmentStorage];
             List<LineSegment> new_segments = [];
             List<LineSegment> removed_segments = [];
 
@@ -304,14 +308,21 @@ namespace Geometry
                         if (SharesExactlyOneEndpoint(new_seg, existing))
                             continue;
 
-                        if (new_seg.Intersects(existing, EndpointsOnRingDoNotIntersect: false))
-                        {
-                            if (AllowsSelfIntersection == false)
-                                throw new ArgumentException("Added point created self-intersecting line in Polyline");
+                        if (new_seg.Intersects(existing, EndpointsOnRingDoNotIntersect: false) == false)
+                            continue;
 
-                            KnownSelfIntersection = existing;
-                            break;
-                        }
+                        //Splitting an edge cannot introduce a crossing: the two new segments together cover the
+                        //edge that was removed, so anything they meet was already met by that edge.  Closed curve
+                        //annotations arrive here as polylines whose closing segment crosses the rest of the
+                        //contour, and blaming the caller's vertex for that crossing cost the whole slice its mesh.
+                        if (removed_segments.Any(removed => removed.Intersects(existing, EndpointsOnRingDoNotIntersect: false)))
+                            continue;
+
+                        if (AllowsSelfIntersection == false)
+                            throw new ArgumentException("Added point created self-intersecting line in Polyline");
+
+                        KnownSelfIntersection = existing;
+                        break;
                     }
 
                     if (KnownSelfIntersection.HasValue)
@@ -321,6 +332,7 @@ namespace Geometry
 
             //Looks like we passed self-intersection tests.  Update the segments, rtree, and return
             _Points.Insert(index, value);
+            InvalidateBoundingBox();
 
             if (insert_index.IsFirstIndex)
             {
@@ -352,6 +364,7 @@ namespace Geometry
         {
             List<Vector2> found_or_added_intersections = [];
 
+            //Copy: the per-segment overload inserts vertices, which would invalidate an enumerator over other's live cache if other is this.
             foreach (var other_ls in other.LineSegments)
             {
                 found_or_added_intersections.AddRange(this.AddPointsAtIntersections(other_ls));
@@ -371,7 +384,8 @@ namespace Geometry
                 return [];
 
             List<Vector2> found_or_added_intersections = [];
-            var LineSegmentsCopy = this.LineSegments.ToArray();
+            //Snapshot: Insert below rebuilds the segment cache while we iterate.
+            var LineSegmentsCopy = this.SegmentStorage.ToArray();
 
             for (int i = LineSegmentsCopy.Length - 1; i >= 0; i--) //Go in reverse order so we do not change the index we are inserting into
             {
@@ -419,18 +433,53 @@ namespace Geometry
 
         public double Area => throw new ArgumentException("No area for Polyline");
 
-        public double Length => LineSegments.Sum(l => l.Length);
+        public double Length => SegmentStorage.Sum(l => l.Length);
+
+        private Rectangle? _BoundingBox;
+
+        /// <summary>
+        /// Point count the cached box was computed from. <see cref="_Points"/> is append-only
+        /// (<see cref="Add"/> and <see cref="Insert"/> are the only mutators, and neither replaces an
+        /// existing vertex), so an unchanged count means the cache is still correct. Any future edit that
+        /// moves or removes a vertex without changing the count must call <see cref="InvalidateBoundingBox"/>,
+        /// otherwise correspondence silently misses intersections against a stale box.
+        /// </summary>
+        private int _BoundingBoxPointCount = -1;
+
+        private void InvalidateBoundingBox()
+        {
+            _BoundingBox = null;
+            _BoundingBoxPointCount = -1;
+        }
 
         public Rectangle BoundingBox
         {
             get
             {
-                var MinX = _Points.Min(p => p.X);
-                var MaxX = _Points.Max(p => p.X);
-                var MinY = _Points.Min(p => p.Y);
-                var MaxY = _Points.Max(p => p.Y);
+                if (_BoundingBox.HasValue && _BoundingBoxPointCount == _Points.Count)
+                    return _BoundingBox.Value;
 
-                return new Rectangle(MinX, MaxX, MinY, MaxY);
+                //Preserves the exception the previous LINQ implementation threw for an empty polyline.
+                if (_Points.Count == 0)
+                    throw new InvalidOperationException("Sequence contains no elements");
+
+                double MinX = double.MaxValue;
+                double MaxX = double.MinValue;
+                double MinY = double.MaxValue;
+                double MaxY = double.MinValue;
+
+                for (int i = 0; i < _Points.Count; i++)
+                {
+                    IPoint2D p = _Points[i];
+                    if (p.X < MinX) MinX = p.X;
+                    if (p.X > MaxX) MaxX = p.X;
+                    if (p.Y < MinY) MinY = p.Y;
+                    if (p.Y > MaxY) MaxY = p.Y;
+                }
+
+                _BoundingBox = new Rectangle(MinX, MaxX, MinY, MaxY);
+                _BoundingBoxPointCount = _Points.Count;
+                return _BoundingBox.Value;
             }
         }
 
@@ -443,14 +492,18 @@ namespace Geometry
         private List<LineSegment> _LineSegments;
 
         /// <summary>Rebuilds from points when the cache is null or stale. Returns a copy.</summary>
-        public List<LineSegment> LineSegments
+        public List<LineSegment> LineSegments => [.. SegmentStorage];
+
+        /// <summary>
+        /// The live segment cache, rebuilt if dirty. Read-only use only; callers that edit the returned
+        /// list, or that add points while iterating, must copy it or use <see cref="LineSegments"/>.
+        /// </summary>
+        internal List<LineSegment> SegmentStorage
         {
             get
             {
                 if (_LineSegments != null && _LineSegments.Count == _Points.Count - 1)
-                {
-                    return [.. _LineSegments];
-                }
+                    return _LineSegments;
 
                 _LineSegments = new List<LineSegment>(this._Points.Count);
 
@@ -459,12 +512,12 @@ namespace Geometry
                     _LineSegments.Add(new LineSegment(_Points[i], _Points[i + 1]));
                 }
 
-                return [.. _LineSegments];
+                return _LineSegments;
             }
         }
 
-        /// <summary>Uses the public getter so a null/stale <see cref="_LineSegments"/> cache is rebuilt.</summary>
-        IReadOnlyList<ILineSegment2D> IPolyLine2D.LineSegments => [.. LineSegments.Cast<ILineSegment2D>()];
+        /// <summary>Uses the cache accessor so a null/stale <see cref="_LineSegments"/> cache is rebuilt.</summary>
+        IReadOnlyList<ILineSegment2D> IPolyLine2D.LineSegments => [.. SegmentStorage.Cast<ILineSegment2D>()];
 
 
         public IReadOnlyList<IPoint2D> Points => this._Points;
@@ -506,8 +559,9 @@ namespace Geometry
 
         ShapeRelation RelationFromSegments(IShape2D other)
         {
-            List<ShapeRelation> parts = new(LineSegments.Count);
-            foreach (LineSegment seg in LineSegments)
+            var segments = SegmentStorage;
+            List<ShapeRelation> parts = new(segments.Count);
+            foreach (LineSegment seg in segments)
                 parts.Add(seg.GetRelation(other));
             return ShapeRelationHelpers.CombineParts(parts);
         }
@@ -518,7 +572,7 @@ namespace Geometry
                 return ShapeRelation.None;
 
             Vector2 v = new(p.X, p.Y);
-            if (!LineSegments.Any(line => line.Covers(v)))
+            if (!SegmentStorage.Any(line => line.Covers(v)))
                 return ShapeRelation.None;
 
             bool atStart = Vector2.DistanceSquared(v, _Points[0]) <= Tolerance.EpsilonSquared;
@@ -535,7 +589,7 @@ namespace Geometry
         {
             ShapeRelation output = ShapeRelation.None;
             const ShapeRelation exitCondition = ShapeRelation.Intersecting | ShapeRelation.Touching;
-            foreach (LineSegment seg in LineSegments)
+            foreach (LineSegment seg in SegmentStorage)
             {
                 output |= seg.GetRelation(line);
                 if (output.HasFlag(exitCondition))

@@ -111,7 +111,19 @@ namespace MorphologyMesh
         /// <summary>
         /// Allow the chord if the chord will not intersect an existing face
         /// </summary>
-        Face = 64
+        Face = 64,
+        /// <summary>
+        /// Allow the chord only if the annotator joined the two shapes with a LocationLink.
+        /// Unlike the geometric tests this is never relaxed on a later pass: an unlinked pair is a fact about
+        /// the annotation, not a heuristic that a looser pass might legitimately overrule.
+        /// </summary>
+        ShapeLink = 128,
+        /// <summary>
+        /// Allow the chord only if the vertex falls inside the range its forking polyline allocated to that partner.
+        /// Separate from <see cref="ShapeLink"/> so the allocation can be relaxed while tuning without also
+        /// re-enabling chords across pairs the annotator never linked.
+        /// </summary>
+        ForkPartition = 256
     }
 
     [Flags]
@@ -471,6 +483,8 @@ namespace MorphologyMesh
         {
             //Trace.WriteLine(string.Format("Creating mesh {0}", mesh.ToString()));
 
+            using var _phase = MeshPhaseTimings.Measure(MeshPhase.FaceGeneration, mesh.Vertices.Count);
+
             AddDelaunayEdges(mesh);
 
             bool hasPolygons = mesh.HasPolygonShapes;
@@ -512,6 +526,8 @@ namespace MorphologyMesh
                 BajajMeshGenerator.FirstPassFaceGeneration(mesh);
             }
 
+            int singleTrianglePolylinePairs = EnforceTwoFaceMinimumForPolylinePairs(mesh);
+
             if (mesh.Slice != null)
             {
 
@@ -529,12 +545,94 @@ namespace MorphologyMesh
 
             mesh.RecalculateNormals();
 
-            mesh.ManifoldReport = MeshManifoldValidator.Validate(mesh);
+            mesh.ManifoldReport = MeshManifoldValidator.Validate(mesh, mesh.IsForkGapBoundaryEdge, singleTrianglePolylinePairs);
+
             if (mesh.ManifoldReport.IsValidSliceSurface == false)
             {
                 mesh.GenerationHadErrors = true;
                 Trace.WriteLine($"Mesh {mesh} is not a valid slice surface: {mesh.ManifoldReport}");
             }
+        }
+
+        /// <summary>
+        /// Two polylines on different sections should share a full quad or nothing at all.  A lone triangle is a
+        /// sliver: it puts a single face where the surface needs two, and it leaves the odd vertex out with a
+        /// boundary edge that reads as a hole.  Remove those triangles so the result is a clean gap.
+        ///
+        /// Scoped to polyline pairs on purpose.  <c>TryClosingUntiledRegion</c> legitimately closes a three-vertex
+        /// region with one triangle, and that path only runs on the polygon branch, so a backstop that also swept
+        /// polygon pairs would delete correct region-closing output and reopen the hole it had just filled.
+        ///
+        /// This removes rather than trying to complete the quad.  FirstPassFaceGeneration has already run by this
+        /// point and its whole job is to add the second face wherever the existing chords admit one, so a pair still
+        /// holding one face is a pair whose complementary triangle was rejected.  Adding it here anyway would mean
+        /// re-adding a face the chord tests already refused, which trades a gap for crossing edges.
+        /// </summary>
+        /// <returns>How many cross-band polyline pairs were left with exactly one face.</returns>
+        private static int EnforceTwoFaceMinimumForPolylinePairs(BajajGeneratorMesh mesh)
+        {
+            //Group faces by the cross-band polyline pair they join.  A face touching three shapes, or any polygon,
+            //is not this pass's business.
+            Dictionary<(int Lower, int Upper), List<IFace>> facesByPair = [];
+
+            foreach (IFace face in mesh.Faces)
+            {
+                if (TryGetCrossBandPolylinePair(mesh, face, out (int Lower, int Upper) pair) == false)
+                    continue;
+
+                if (facesByPair.TryGetValue(pair, out List<IFace> faces) == false)
+                    facesByPair[pair] = faces = [];
+
+                faces.Add(face);
+            }
+
+            int slivers = 0;
+            foreach (KeyValuePair<(int Lower, int Upper), List<IFace>> kvp in facesByPair)
+            {
+                if (kvp.Value.Count != 1)
+                    continue;
+
+                slivers++;
+                mesh.RemoveFace(kvp.Value[0]);
+                Trace.WriteLine($"Mesh {mesh}: removed the single triangle joining polyline shapes {kvp.Key.Lower} and {kvp.Key.Upper}; a cross-section polyline pair needs two faces or none.");
+            }
+
+            return slivers;
+        }
+
+        /// <summary>
+        /// True when every vertex of the face belongs to one of exactly two polyline shapes that sit on opposite
+        /// bands, and both bands are represented.
+        /// </summary>
+        private static bool TryGetCrossBandPolylinePair(BajajGeneratorMesh mesh, IFace face, out (int Lower, int Upper) pair)
+        {
+            pair = default;
+
+            int lower = -1;
+            int upper = -1;
+
+            foreach (int iVert in face.iVerts)
+            {
+                IShapeIndex index = mesh[iVert].ShapeIndex;
+                if (index is null)
+                    return false;
+
+                int iShape = index.ShapeIndex;
+                if (mesh.Shapes[iShape] is not Polyline)
+                    return false;
+
+                ref int side = ref mesh.IsUpperShape[iShape] ? ref upper : ref lower;
+                if (side >= 0 && side != iShape)
+                    return false;
+
+                side = iShape;
+            }
+
+            if (lower < 0 || upper < 0)
+                return false;
+
+            pair = (lower, upper);
+            return true;
         }
 
         /// <summary>
@@ -674,7 +772,12 @@ namespace MorphologyMesh
                 if (A_List.Count == 1 && B_List.Count == 1 && C_List.Count == 1)
                 {
                     MorphMeshFace mesh_face = new(A_List[0], B_List[0], C_List[0]);
-                    mesh.AddFace(mesh_face);
+
+                    //The triangulator only sees XY, so it happily spans shapes the annotator never linked.  These
+                    //faces are committed before any edge classification runs, so this is the only place to stop
+                    //them; a rejected triangle leaves the region open for the normal chord and region passes.
+                    if (FaceRespectsShapeLinks(mesh, mesh_face))
+                        mesh.AddFace(mesh_face);
                 }
                 else
                 {
@@ -714,9 +817,49 @@ namespace MorphologyMesh
             //For corresponding verticies, we'll create edges where
             //int[] triMeshCorrespondingVerts = TriMeshToMesh.Where(item => item.Value.Count > 1).Select(item => item.Key).ToArray();
 
-
             mesh.ClassifyMeshEdges();
             //BajajGeneratorMesh.AddTriangulationEdgesToMesh(triMesh, mesh);
+        }
+
+        /// <summary>
+        /// True when the face respects the annotation topology: every pair of shapes it touches is joined by a
+        /// LocationLink, and no pair crosses a fork gap.  A mesh with neither link data nor a fork partition allows
+        /// everything, which keeps hand-built topologies working.
+        /// </summary>
+        private static bool FaceRespectsShapeLinks(BajajGeneratorMesh mesh, MorphMeshFace face)
+        {
+            Func<int, int, bool> isLinked = mesh.ShapeLinkPredicate;
+            PolylineForkPartition forkPartition = mesh.ForkPartition;
+            if (isLinked is null && forkPartition is null)
+                return true;
+
+            ImmutableArray<int> iVerts = face.iVerts;
+            for (int a = 0; a < iVerts.Length; a++)
+            {
+                IShapeIndex indexA = mesh[iVerts[a]].ShapeIndex;
+                if (indexA is null)
+                    continue;
+
+                for (int b = a + 1; b < iVerts.Length; b++)
+                {
+                    IShapeIndex indexB = mesh[iVerts[b]].ShapeIndex;
+                    if (indexB is null)
+                        continue;
+
+                    if (indexA.ShapeIndex == indexB.ShapeIndex)
+                        continue;
+
+                    if (isLinked is not null && isLinked(indexA.ShapeIndex, indexB.ShapeIndex) == false)
+                        return false;
+
+                    if (forkPartition is not null
+                        && (forkPartition.AllowsChord(indexA.ShapeIndex, indexA.VertexIndex, indexB.ShapeIndex) == false
+                         || forkPartition.AllowsChord(indexB.ShapeIndex, indexB.VertexIndex, indexA.ShapeIndex) == false))
+                        return false;
+                }
+            }
+
+            return true;
         }
 
         /*
@@ -1221,10 +1364,23 @@ return;
         /// <returns></returns>
         private static bool TryAddSliceChord(BajajGeneratorMesh mesh, SliceChord sc, SliceChordRTree ChordRTree, SliceChordTestType Tests)
         {
-            if (BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Shapes, mesh.GetSameLevelShapes(sc), mesh.GetAdjacentLevelShapes(sc), sc.Target, ChordRTree, Tests, out SliceChordTestType failures))
+            if (BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Shapes, mesh.GetSameLevelShapes(sc), mesh.GetAdjacentLevelShapes(sc), sc.Target, ChordRTree, Tests, out SliceChordTestType failures,
+                                                    mesh.ShapeLinkPredicate, mesh.ForkPartition))
             {
 
-                MorphMeshEdge edge = new(EdgeTypeExtensions.GetEdgeType(sc.Line, mesh.Shapes[sc.Origin.ShapeIndex], mesh.Shapes[sc.Target.ShapeIndex]), mesh[sc.Origin].Index, mesh[sc.Target].Index);
+                //The shape-only GetEdgeType overload cannot type a chord touching a polyline: given two shapes and a
+                //midpoint it has no vertex indices, so it can neither rebuild the chord nor test whether the chord
+                //crosses a third shape, and a midpoint test is meaningless against a shape with no interior.  It used
+                //to answer FLYING, a type outside IsValid()'s mask, disagreeing with the SURFACE that IsSliceChordValid
+                //had just accepted the chord on.  Route polyline chords through the same index-aware overload as the
+                //gate so the label cannot contradict the decision.  Polygon pairs keep the midpoint overload: the
+                //index-aware overload also reports INTERNAL / UNTILED / INVAGINATION / HOLE / FLAT, which drive region
+                //classification, so switching them is a behaviour change well beyond naming an accepted chord.
+                EdgeType chordType = sc.Origin is PolylineIndex || sc.Target is PolylineIndex
+                    ? EdgeTypeExtensions.GetEdgeType(sc.Origin, sc.Target, mesh.Shapes, sc.Line.PointAlongLine(0.5))
+                    : EdgeTypeExtensions.GetEdgeType(sc.Line, mesh.Shapes[sc.Origin.ShapeIndex], mesh.Shapes[sc.Target.ShapeIndex]);
+
+                MorphMeshEdge edge = new(chordType, mesh[sc.Origin].Index, mesh[sc.Target].Index);
                 if (mesh.Contains(edge))
                     return false;
 
@@ -1252,13 +1408,19 @@ return;
             mesh.CloseFaces();
             List<MorphMeshVertex> IncompleteVerticies = [.. mesh.MorphVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh))];
 
+            //Each pass relaxes a geometric heuristic that the previous pass may have been too strict about.
+            //ShapeLink is present in every pass because it is not a heuristic: a pair the annotator never joined
+            //stays unjoined no matter how badly the slice needs a chord.  ForkPartition rides along with it so a
+            //fork's allocation is not quietly undone by the loosest pass.
+            const SliceChordTestType AlwaysApplied = SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4
+                                                   | SliceChordTestType.ShapeLink | SliceChordTestType.ForkPartition;
+
             SliceChordTestType[] PassCriteria =
             [
-                SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4 | SliceChordTestType.LineOrientation,
-                SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4,
-                SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4 | SliceChordTestType.LineOrientation,
-                SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4,
-                //SliceChordTestType.Correspondance | SliceChordTestType.Theorem2 | SliceChordTestType.LineOrientation
+                AlwaysApplied | SliceChordTestType.Theorem2 | SliceChordTestType.LineOrientation,
+                AlwaysApplied | SliceChordTestType.Theorem2,
+                AlwaysApplied | SliceChordTestType.LineOrientation,
+                AlwaysApplied,
             ];
 
             //Precalulate the quad treeWithUniqueValues data structures
@@ -1453,8 +1615,9 @@ return;
         {
             List<SliceChord> CandidateChords = [];
 
-            //Create a sorted list of proposed chord lengths
-            foreach (IShapeIndex i1 in OTVTable.Keys)
+            //Ordered because OTVTable is a ConcurrentDictionary: its enumeration order varies between runs, and this
+            //loop both builds the candidate list and adds CORRESPONDING edges as it goes.
+            foreach (IShapeIndex i1 in OTVTable.Keys.OrderBy(k => k))
             {
                 if (OTVTable.TryGetValue(i1, out IShapeIndex i2))
                 {
@@ -1489,8 +1652,9 @@ return;
         {
             List<SliceChord> CandidateChords = [];
 
-            //Create a sorted list of proposed chord lengths
-            foreach (MorphMeshVertex i1 in OTVTable.Keys)
+            //Ordered by mesh vertex index because OTVTable is a ConcurrentDictionary: its enumeration order varies
+            //between runs, and this loop both builds the candidate list and adds CORRESPONDING edges as it goes.
+            foreach (MorphMeshVertex i1 in OTVTable.Keys.OrderBy(v => v.Index))
             {
                 if (OTVTable.TryGetValue(i1, out MorphMeshVertex i2))
                 {
@@ -1527,10 +1691,24 @@ return;
         {
             List<SliceChord> CandidateChords = CreateChordCandidateList(mesh, OTVTable);
 
+            //Ties are broken on the endpoint indices to keep the order total.  Chords arrive here in the
+            //enumeration order of a ConcurrentDictionary, which varies between runs, and OrderBy is a stable sort,
+            //so equal-priority chords used to inherit that arbitrary order.  Acceptance is order-dependent -
+            //TryAddSliceChord refuses a chord that crosses one already placed - so the tie order decided which of
+            //two competing chords won, and the same cell meshed to a different vertex and triangle count on
+            //every run.
             CandidateChords = priority switch
             {
-                SliceChordPriority.Distance => [.. CandidateChords.OrderBy(sc => sc.Line.Length)],
-                SliceChordPriority.Orientation => [.. CandidateChords.OrderBy(sc => EdgeTypeExtensions.Orientation(sc.Origin, sc.Target, mesh.Shapes))],
+                SliceChordPriority.Distance =>
+                    [.. CandidateChords
+                        .OrderBy(sc => sc.Line.Length)
+                        .ThenBy(sc => sc.Origin)
+                        .ThenBy(sc => sc.Target)],
+                SliceChordPriority.Orientation =>
+                    [.. CandidateChords
+                        .OrderBy(sc => EdgeTypeExtensions.Orientation(sc.Origin, sc.Target, mesh.Shapes))
+                        .ThenBy(sc => sc.Origin)
+                        .ThenBy(sc => sc.Target)],
                 _ => throw new ArgumentException("Unexpected slice chord priority"),
             };
 
@@ -1709,11 +1887,41 @@ return;
         /// <param name="chordTree"></param>
         /// <param name="TestsToRun"></param>
         /// <param name="results">Flags are set for any failing tests, though other tests may also fail but were not run due to short circuiting.</param>
+        /// <param name="isLinked">Answers whether two shape indices are joined by a LocationLink.  Null skips the
+        /// ShapeLink test, which is what callers without slice topology (debug views, hand-built shape arrays) want.</param>
+        /// <param name="forkPartition">Vertex ranges allocated to each partner of a forking polyline.  Null skips
+        /// the ForkPartition test.</param>
         /// <returns></returns>
         public static bool IsSliceChordValid(IShapeIndex vertex, IShape2D[] Shapes, in IReadOnlyList<IShape2D> SameLevelShapes, in IReadOnlyList<IShape2D> AdjacentLevelShapes,
-                                                       IShapeIndex candidate, SliceChordRTree chordTree, SliceChordTestType TestsToRun, out SliceChordTestType results)
+                                                       IShapeIndex candidate, SliceChordRTree chordTree, SliceChordTestType TestsToRun, out SliceChordTestType results,
+                                                       Func<int, int, bool> isLinked = null, PolylineForkPartition forkPartition = null)
         {
             results = SliceChordTestType.None;
+
+            //Checked before the geometry because it is a dictionary lookup and it rejects the pairs whose geometry
+            //is most expensive to evaluate: distant shapes that only ended up in the same slice via a doubled-back
+            //Z chain.  Applies to corresponding verticies too, since two unlinked annotations that merely coincide
+            //in XY must not be stitched together either.
+            if ((TestsToRun & SliceChordTestType.ShapeLink) > 0 && isLinked is not null)
+            {
+                if (isLinked(vertex.ShapeIndex, candidate.ShapeIndex) == false)
+                {
+                    results |= SliceChordTestType.ShapeLink;
+                    return false;
+                }
+            }
+
+            //Both directions matter: either end of the chord may belong to a forking polyline, and each fork
+            //allocates its own verticies independently of what its partner allocated.
+            if ((TestsToRun & SliceChordTestType.ForkPartition) > 0 && forkPartition is not null)
+            {
+                if (forkPartition.AllowsChord(vertex.ShapeIndex, vertex.VertexIndex, candidate.ShapeIndex) == false
+                 || forkPartition.AllowsChord(candidate.ShapeIndex, candidate.VertexIndex, vertex.ShapeIndex) == false)
+                {
+                    results |= SliceChordTestType.ForkPartition;
+                    return false;
+                }
+            }
 
             Vector2 p1 = vertex.Point(Shapes);
             Vector2 p2 = candidate.Point(Shapes);
@@ -1812,7 +2020,8 @@ return;
             if (candidate.FacesAreComplete)
                 return false;
 
-            return IsSliceChordValid(vertex.ShapeIndex, mesh.Shapes, SameLevelShapes, AdjacentLevelShapes, candidate.ShapeIndex, chordTree, TestsToRun, out failures);
+            return IsSliceChordValid(vertex.ShapeIndex, mesh.Shapes, SameLevelShapes, AdjacentLevelShapes, candidate.ShapeIndex, chordTree, TestsToRun, out failures,
+                                     BajajGeneratorMesh.LinkPredicateFor(mesh), BajajGeneratorMesh.ForkPartitionFor(mesh));
 
             /*
             Vector2 p1 = vertex.Position.XY();
@@ -1918,14 +2127,14 @@ return;
         /// <param name="chordTree">Lookup data structure for existing slice chords</param>
         /// <returns></returns>
         private static IShapeIndex FindOptimalTilingForVertexByDistance(IShapeIndex vertex, IShape2D[] Polygons, IReadOnlyList<IShape2D> SameLevelPolys, IReadOnlyList<IShape2D> AdjacentLevelShapes,
-                                                              QuadTreeWithUniqueValues<IShapeIndex> oppositeVertexTreeWithUniqueValues, SliceChordRTree chordTree, SliceChordTestType TestsToRun)
+                                                              QuadTreeWithUniqueValues<IShapeIndex> oppositeVertexTreeWithUniqueValues, SliceChordRTree chordTree, SliceChordTestType TestsToRun,
+                                                              Func<int, int, bool> isLinked = null, PolylineForkPartition forkPartition = null)
         {
             Vector2 p = vertex.Point(Polygons);
             if (oppositeVertexTreeWithUniqueValues.TryFindNearest(p, out var NearestPoint, out double distance) == false)
                 return default;
 
-
-            if (IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelShapes, NearestPoint, chordTree, TestsToRun, out SliceChordTestType failures))
+            if (IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelShapes, NearestPoint, chordTree, TestsToRun, out SliceChordTestType failures, isLinked, forkPartition))
             {
                 return NearestPoint;
             }
@@ -1956,7 +2165,7 @@ return;
                 {
                     IShapeIndex testPoint = NearestList[iNextTest].Value;
 
-                    if (IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelShapes, testPoint, chordTree, TestsToRun, out failures))
+                    if (IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelShapes, testPoint, chordTree, TestsToRun, out failures, isLinked, forkPartition))
                         return testPoint;
                 }
 
@@ -2148,17 +2357,17 @@ return;
         /// <param name="polygons"></param>
         /// <param name="PolyZ"></param>
         /// <param name="OTVTable"></param>
-        public static void CreateOptimalTilingVertexTable(IEnumerable<IShapeIndex> VerticiesToMap, IShape2D[] shapes, bool[] IsUpperShape, SliceChordTestType TestsToRun, out OTVTable OTVTable, ref SliceChordRTree chordTree)
+        public static void CreateOptimalTilingVertexTable(IEnumerable<IShapeIndex> VerticiesToMap, IShape2D[] shapes, bool[] IsUpperShape, SliceChordTestType TestsToRun, out OTVTable OTVTable, ref SliceChordRTree chordTree,
+                                                          Func<int, int, bool> isLinked = null, PolylineForkPartition forkPartition = null)
         {
             SliceTopologyQuadTrees<IShapeIndex> LevelTree = CreateQuadTreesForShapes(shapes, IsUpperShape);
 
             ////////////////////////////////////////////////////
-            CreateOptimalTilingVertexTable(VerticiesToMap, shapes, IsUpperShape, LevelTree, TestsToRun, out OTVTable, ref chordTree);
+            CreateOptimalTilingVertexTable(VerticiesToMap, shapes, IsUpperShape, LevelTree, TestsToRun, out OTVTable, ref chordTree, isLinked, forkPartition);
         }
 
-
         public static void CreateOptimalTilingVertexTable(IEnumerable<IShapeIndex> VerticiesToMap, IShape2D[] polygons, bool[] IsUpperShape, SliceTopologyQuadTrees<IShapeIndex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
-                                                          out OTVTable Table, ref SliceChordRTree chordTree)
+                                                          out OTVTable Table, ref SliceChordRTree chordTree, Func<int, int, bool> isLinked = null, PolylineForkPartition forkPartition = null)
         {
             Table = new OTVTable();
 
@@ -2179,7 +2388,7 @@ return;
                 foreach (IShapeIndex i in shapeGroup)
                 {
                     Vector2 p1 = i.Point(shape);
-                    IShapeIndex NearestOnOtherLevel = FindOptimalTilingForVertexByDistance(i, polygons, sameLevelShapes, adjacentLevelShapes, oppositeTreeWithUniqueValues, chordTree, TestsToRun);
+                    IShapeIndex NearestOnOtherLevel = FindOptimalTilingForVertexByDistance(i, polygons, sameLevelShapes, adjacentLevelShapes, oppositeTreeWithUniqueValues, chordTree, TestsToRun, isLinked, forkPartition);
                     if (NearestOnOtherLevel is not null)
                     {
                         Table.TryAdd(i, NearestOnOtherLevel);

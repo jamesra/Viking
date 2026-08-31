@@ -1465,14 +1465,12 @@ namespace Geometry
             //LineSegment test_line = test_ray.ToLine(Math.Max(BoundingBox.Width, BoundingBox.Height) * 2);
 
 
-            List<LineSegment> segmentsToTest = _ExteriorSegments.Length > 32 ? [.. _ExteriorSegments] : [.. _ExteriorSegments];
-
             //Make a horizontal line
             Line test_line = new(p, Vector2.UnitX);
 
             //Test all of the line segments for both interior and exterior polygons
-            //return IsPointInsidePolygonByWindingTest(segmentsToTest, test_line); 
-            ShapeRelation result = IsPointInsidePolygonByWindingTest(segmentsToTest, test_line);
+            //The winding test requires every exterior segment, so no RTree narrowing is possible here.
+            ShapeRelation result = IsPointInsidePolygonByWindingTest(_ExteriorSegments, test_line);
             if (result == ShapeRelation.Contained)
             {
                 foreach (Polygon inner in this.InteriorPolygons)
@@ -1905,7 +1903,7 @@ namespace Geometry
         /// Computational Geometry 20(3):131–144 (2001). Adjacent edges that only touch the
         /// test line are merged so a vertex on the ray is not counted twice.
         /// </remarks>
-        private static ShapeRelation IsPointInsidePolygonByWindingTest(List<LineSegment> polygonSegments, Line test_line)
+        private static ShapeRelation IsPointInsidePolygonByWindingTest(IReadOnlyList<LineSegment> polygonSegments, Line test_line)
         {
             Vector2 test_point = test_line.Origin;
 #if DEBUG
@@ -1950,7 +1948,8 @@ namespace Geometry
             if (IsLeft.Count == 0)
                 return ShapeRelation.None;
 
-            polygonSegments = [.. IsLeft.Select(left => left.S)];
+            //From here we mutate in parallel with IsLeft, so work on a private list instead of the caller's segments.
+            List<LineSegment> workingSegments = [.. IsLeft.Select(left => left.S)];
 
             //Find all segments that touch the line.  Remove the endpoints that touch the line and create a virtual segment that runs between the endpoints that did not touch the line.  This prevents double-counting windings.
             //InfiniteSequentialIndexSet SegEnumerator = new InfiniteSequentialIndexSet(0, IsLeft.Count, 0);
@@ -1977,8 +1976,8 @@ namespace Geometry
 
                     if (nextSegIsLeft == seg.A_is_left) //We touch the line and retreat.  We can remove both entries 
                     {
-                        polygonSegments.RemoveAt(Math.Max(i, iNext));
-                        polygonSegments.RemoveAt(Math.Min(i, iNext));
+                        workingSegments.RemoveAt(Math.Max(i, iNext));
+                        workingSegments.RemoveAt(Math.Min(i, iNext));
 
                         IsLeft.RemoveAt(Math.Max(i, iNext));
                         IsLeft.RemoveAt(Math.Min(i, iNext));
@@ -1988,9 +1987,9 @@ namespace Geometry
                     else  //We touch the line and then cross over it.  We can remove both entries and add a new one
                     {
                         LineSegment virtualPolySegment = new(seg.S.A, nextSegEndpoint);
-                        polygonSegments.RemoveAt(i);
-                        polygonSegments.Insert(i, virtualPolySegment);
-                        polygonSegments.RemoveAt(iNext);
+                        workingSegments.RemoveAt(i);
+                        workingSegments.Insert(i, virtualPolySegment);
+                        workingSegments.RemoveAt(iNext);
 
                         SegmentIsLeftData newEntry = new(a_is_left: seg.A_is_left,
                             b_is_left: nextSegIsLeft,
@@ -2005,7 +2004,7 @@ namespace Geometry
                 }
             }
 
-            var cross_or_parallel_segments = polygonSegments; //polygonSegments.Where((s, i) => (IsLeft[i].A != IsLeft[i].B) || (IsLeft[i].A == 0 || IsLeft[i].B == 0)).ToArray(); //Find all segments that span the testline or are parallel
+            var cross_or_parallel_segments = workingSegments; //polygonSegments.Where((s, i) => (IsLeft[i].A != IsLeft[i].B) || (IsLeft[i].A == 0 || IsLeft[i].B == 0)).ToArray(); //Find all segments that span the testline or are parallel
 
             //If we share endpoints then we are always inside the polygon.  Handles case where we ask if a polygon vertex is inside the polygon
             //if (cross_or_parallel_segments.Any(ps => ps.IsEndpoint(test_line.A)))

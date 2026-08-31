@@ -199,12 +199,15 @@ namespace MorphologyMesh
                                                       | SliceChordTestType.ChordIntersection
                                                       | SliceChordTestType.Theorem2
                                                       | SliceChordTestType.Theorem4
-                                                      | SliceChordTestType.LineOrientation;
+                                                      | SliceChordTestType.LineOrientation
+                                                      | SliceChordTestType.ShapeLink
+                                                      | SliceChordTestType.ForkPartition;
 
             BajajMeshGenerator.CreateOptimalTilingVertexTable(vertsWithoutFaces.Select(v => mesh[v].ShapeIndex),
                                                               mesh.Shapes, mesh.IsUpperShape,
                                                               RegionChordTests,
-                                                              out OTVTable OTVTable, ref rTree);
+                                                              out OTVTable OTVTable, ref rTree,
+                                                              mesh.ShapeLinkPredicate, mesh.ForkPartition);
 
             //If we can't map every vertex in the region it needs to be mapped to another region before being capped off
             if (OTVTable.Count < vertsWithoutFaces.Count)

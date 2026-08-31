@@ -17,7 +17,14 @@ namespace MorphologyMesh
         readonly SortedSet<ulong> CompletedSlices = [];
 
         readonly System.Threading.ReaderWriterLockSlim rwLock = new();
-        readonly System.Threading.ManualResetEventSlim AllDoneEvent = new();
+
+        /// <summary>
+        /// Completed by <see cref="OnTopologyComplete"/> while the write lock is held.  RunContinuationsAsynchronously
+        /// keeps the awaiting continuation - which is the remainder of SliceGraph.Create and everything it schedules -
+        /// from running inline on the last topology task's thread while that thread still owns the lock.
+        /// </summary>
+        readonly TaskCompletionSource<Dictionary<ulong, SliceTopology>> AllDone =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         readonly Dictionary<ulong, SliceTopology> SliceToTopology;
 
@@ -46,7 +53,7 @@ namespace MorphologyMesh
 
                 if (UnprocessedSlices.Count == 0 && SlicesWithActiveTasks.Count == 0)
                 {
-                    AllDoneEvent.Set();
+                    AllDone.TrySetResult(SliceToTopology);
                 }
             }
             finally
@@ -98,6 +105,7 @@ namespace MorphologyMesh
                     //still has to be reported so dependent slices can proceed, but the cause must be visible.
                     string sectionText = Graph.FormatSectionNumbers(slice);
                     System.Diagnostics.Trace.WriteLine($"Slice {slice.Key} topology initialization failed for {sectionText}. Emitting empty topology.\n{e}");
+                    Graph.RecordTopologyFailure(slice.Key, sectionText);
                     this.OnTopologyComplete(slice, new SliceTopology());
                 }
             }
@@ -109,11 +117,8 @@ namespace MorphologyMesh
         /// Populates the lookup table mapping morph nodes to shapes.  Allows user option to simplify shapes.  Ensures all shapes have matching corresponding verticies if they participate in two or more slices
         /// </summary>
         /// <param name="tolerance"></param>
-        public Dictionary<ulong, SliceTopology> InitializeSliceTopology(double tolerance = 0)
+        public Task<Dictionary<ulong, SliceTopology>> InitializeSliceTopologyAsync(double tolerance = 0)
         {
-            var MorphNodeToShape = Graph.MorphNodeToShape;
-
-            List<Slice> SlicesToStart = new(UnprocessedSlices.Count);
             bool TasksStarted = false;
             try
             {
@@ -133,10 +138,10 @@ namespace MorphologyMesh
             }
 
             //We need to ensure there are tasks to wait on. This was an edge case for structures with one annotation.
-            if (TasksStarted)
-                AllDoneEvent.Wait();
+            if (TasksStarted == false)
+                AllDone.TrySetResult(this.SliceToTopology);
 
-            return this.SliceToTopology;
+            return AllDone.Task;
         }
     }
 }

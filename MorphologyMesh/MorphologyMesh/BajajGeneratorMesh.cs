@@ -71,6 +71,78 @@ namespace MorphologyMesh
         /// </summary>
         internal SliceChordsTestResultsCache SliceChordCandidateCache = new();
 
+        private Func<int, int, bool> _shapeLinkPredicate;
+
+        /// <summary>
+        /// Delegate form of <see cref="SliceTopology.MayTile"/> for the slice chord tests, or null when this mesh
+        /// was built without link data so the ShapeLink test is skipped instead of rejecting everything.
+        /// Cached because it is queried once per chord candidate.
+        /// </summary>
+        internal Func<int, int, bool> ShapeLinkPredicate
+        {
+            get
+            {
+                if (Topology.HasLinkData == false)
+                    return null;
+
+                return _shapeLinkPredicate ??= Topology.MayTile;
+            }
+        }
+
+        /// <summary>
+        /// Vertex ranges allocated to each partner where a polyline forks across this slice, or null when nothing forks.
+        /// </summary>
+        internal PolylineForkPartition ForkPartition => Topology.ForkPartition;
+
+        /// <summary>
+        /// Convenience for callers holding only a <see cref="MorphRenderMesh"/>.
+        /// </summary>
+        internal static Func<int, int, bool> LinkPredicateFor(MorphRenderMesh mesh) =>
+            (mesh as BajajGeneratorMesh)?.ShapeLinkPredicate;
+
+        /// <inheritdoc cref="LinkPredicateFor"/>
+        internal static PolylineForkPartition ForkPartitionFor(MorphRenderMesh mesh) =>
+            (mesh as BajajGeneratorMesh)?.ForkPartition;
+
+        /// <summary>
+        /// True when a single-face edge borders a deliberate fork gap rather than a hole.
+        ///
+        /// The test is deliberately narrow: both endpoints must be verticies of a polyline, and at least one must be
+        /// a vertex the partitioner designated as a fork boundary.  A real tear one segment away from the fork is
+        /// still reported as a hole, which is the point; a broad exemption would hide exactly the defects the
+        /// manifold report exists to surface.
+        /// </summary>
+        public bool IsForkGapBoundaryEdge(IEdgeKey edge)
+        {
+            if (ForkPartition is null)
+                return false;
+
+            IShapeIndex indexA = this[edge.A].ShapeIndex;
+            IShapeIndex indexB = this[edge.B].ShapeIndex;
+            if (indexA is null || indexB is null)
+                return false;
+
+            if (Shapes[indexA.ShapeIndex] is not Polyline || Shapes[indexB.ShapeIndex] is not Polyline)
+                return false;
+
+            return ForkPartition.IsForkBoundaryVertex(indexA.ShapeIndex, indexA.VertexIndex)
+                || ForkPartition.IsForkBoundaryVertex(indexB.ShapeIndex, indexB.VertexIndex);
+        }
+
+        /// <inheritdoc/>
+        /// <remarks>
+        /// Called from the base constructor via PopulateMesh.  C# runs a derived class's field initializers before
+        /// the base constructor, so <see cref="Topology"/> is already assigned by the time this is reached; the
+        /// assert guards that ordering, because silently seeing a default topology here would disable the link gate
+        /// on every mesh without any other symptom.
+        /// </remarks>
+        protected override bool CorrespondenceAllowed(int iShapeA, int iShapeB)
+        {
+            Debug.Assert(Topology.IsValid, "Topology must be assigned before PopulateMesh queries correspondence.");
+
+            return Topology.MayTile(iShapeA, iShapeB);
+        }
+
         /// <summary>
         /// Set to true if a non-fatal error occurred during face generation (e.g. a region or pass could
         /// not be completed).  The mesh may still be partially generated, but callers should treat it as
@@ -371,42 +443,118 @@ namespace MorphologyMesh
         }
 
         /// <summary>
-        /// After tiling in the overlapped XY frame, move lower-contour (and lower-Z cap) vertices back so the
-        /// mesh spans the annotators' original positions instead of stacking the pair.
+        /// After tiling in the overlapped XY frame, move the verticies of every translated shape back so the mesh
+        /// spans the annotators' original positions instead of the frame Bajaj needed.
         /// </summary>
         internal void RestoreVirtualOverlapTranslation()
         {
-            Vector2 offset = Topology.VirtualOverlapOffset;
-            if (offset == Vector2.Zero)
+            Vector2[] offsets = Topology.VirtualOverlapOffsets;
+            if (offsets is null)
                 return;
 
-            Vector2 back = -offset;
-            double lowerZ = LowerShapeIndicies.Count == 0 ? double.NaN : LowerShapeIndicies.Select(i => ShapeZ[i]).Average();
-            double upperZ = UpperShapeIndicies.Count == 0 ? double.NaN : UpperShapeIndicies.Select(i => ShapeZ[i]).Average();
-            double midZ = (lowerZ + upperZ) / 2.0;
+            Vector2[] vertexOffsets = AttributeVirtualOverlapOffsetsToVerticies(offsets);
 
             foreach (MorphMeshVertex v in MorphVerticies)
             {
-                bool move;
-                if (v.ShapeIndex != null)
-                    move = Topology.IsUpper[v.ShapeIndex.ShapeIndex] == false;
-                else
-                    move = !double.IsNaN(midZ) && v.Position.Z <= midZ;
+                Vector2 back = -vertexOffsets[v.Index];
+                if (back == Vector2.Zero)
+                    continue;
 
-                if (move)
-                    v.Position = new Vector3(v.Position.X + back.X, v.Position.Y + back.Y, v.Position.Z);
+                v.Position = new Vector3(v.Position.X + back.X, v.Position.Y + back.Y, v.Position.Z);
             }
 
-            foreach (int i in LowerShapeIndicies)
+            for (int i = 0; i < offsets.Length; i++)
             {
-                IShape2D restored = Shapes[i].Translate(back);
+                if (offsets[i] == Vector2.Zero)
+                    continue;
+
+                IShape2D restored = Shapes[i].Translate(-offsets[i]);
                 Shapes[i] = restored;
                 Topology.Shapes[i] = restored;
             }
 
-            IShape2D[] lowerShapes = Topology.LowerShapes;
-            for (int j = 0; j < lowerShapes.Length; j++)
-                lowerShapes[j] = lowerShapes[j].Translate(back);
+            RestoreBandShapes(Topology.UpperShapes, UpperShapeIndicies, offsets);
+            RestoreBandShapes(Topology.LowerShapes, LowerShapeIndicies, offsets);
+        }
+
+        /// <summary>
+        /// UpperShapes and LowerShapes hold their own references to the shapes, so they have to be restored
+        /// alongside the shape array they were copied from.
+        /// </summary>
+        private static void RestoreBandShapes(IShape2D[] bandShapes, ImmutableSortedSet<int> bandIndicies, Vector2[] offsets)
+        {
+            int[] shapeIndex = [.. bandIndicies];
+            for (int j = 0; j < bandShapes.Length && j < shapeIndex.Length; j++)
+            {
+                Vector2 offset = offsets[shapeIndex[j]];
+                if (offset != Vector2.Zero)
+                    bandShapes[j] = bandShapes[j].Translate(-offset);
+            }
+        }
+
+        /// <summary>
+        /// Maps each vertex to the offset that must be undone.  Contour verticies carry the shape they came from,
+        /// but cap and medial-axis verticies have no ShapeIndex, so they inherit the offset of the shape verticies
+        /// they share a face with.  Inheritance is repeated until it stops spreading, because a medial-axis vertex
+        /// deep inside a cap can be several faces away from any contour vertex.  Anything still unattributed stays
+        /// where it is: leaving an interior vertex in the tiling frame is a lesser defect than pulling it toward a
+        /// shape it does not belong to.
+        /// </summary>
+        private Vector2[] AttributeVirtualOverlapOffsetsToVerticies(Vector2[] offsets)
+        {
+            Vector2[] vertexOffsets = new Vector2[Vertices.Count];
+            bool[] attributed = new bool[Vertices.Count];
+
+            foreach (MorphMeshVertex v in MorphVerticies)
+            {
+                if (v.ShapeIndex is null)
+                    continue;
+
+                vertexOffsets[v.Index] = offsets[v.ShapeIndex.ShapeIndex];
+                attributed[v.Index] = true;
+            }
+
+            bool spread = true;
+            while (spread)
+            {
+                spread = false;
+
+                //Collected for the whole sweep before anything is assigned, and resolved by lowest source vertex
+                //index, so a vertex reachable from two shapes does not depend on face enumeration order.
+                int[] source = new int[Vertices.Count];
+                Array.Fill(source, -1);
+
+                foreach (IFace f in Faces)
+                {
+                    int iSource = -1;
+                    foreach (int iVert in f.iVerts)
+                    {
+                        if (attributed[iVert] && (iSource < 0 || iVert < iSource))
+                            iSource = iVert;
+                    }
+
+                    if (iSource < 0)
+                        continue;
+
+                    foreach (int iVert in f.iVerts)
+                    {
+                        if (attributed[iVert] == false && (source[iVert] < 0 || iSource < source[iVert]))
+                            source[iVert] = iSource;
+                    }
+                }
+
+                for (int iVert = 0; iVert < source.Length; iVert++)
+                {
+                    if (source[iVert] < 0)
+                        continue;
+
+                    vertexOffsets[iVert] = vertexOffsets[source[iVert]];
+                    attributed[iVert] = true;
+                    spread = true;
+                }
+            }
+
+            return vertexOffsets;
         }
     }
 }

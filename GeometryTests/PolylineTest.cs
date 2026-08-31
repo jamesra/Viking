@@ -198,5 +198,59 @@ namespace GeometryTests
 
             Assert.ThrowsException<ArgumentException>(() => line.Insert(1, new Vector2(5, 11)));
         }
+
+        /// <summary>
+        /// A CLOSEDCURVE annotation reaches Geometry as a polyline whose last point repeats its first, and the
+        /// closing segment can cross the rest of the contour.  The bulk constructors do not validate, so such a
+        /// polyline exists long before anybody inserts into it.  Splitting one of its segments must not be blamed
+        /// for the crossing: RC1 cell 476 sections 271/272 lost its whole slice mesh to that misattribution.
+        ///
+        /// Coordinates are the contour that failed, so the arrangement is the real one rather than a guess at it.
+        /// </summary>
+        [TestMethod]
+        public void Insert_OnPolylineThatAlreadySelfIntersects_DoesNotBlameTheInsertedPoint()
+        {
+            Polyline closedCurve = new(
+            [
+                new Vector2(-18260.986, -1152.505),
+                new Vector2(-18190.273, -1160.419),
+                new Vector2(-18133.112, -1177.182),
+                new Vector2(-18062.325, -1211.564),
+                new Vector2(-18028.617, -1226.130),
+                new Vector2(-17964.889, -1241.967),
+                new Vector2(-17878.412, -1246.284),
+                new Vector2(-18260.986, -1152.505),
+            ]);
+
+            //Fixture check: the closing segment really does cross the contour, so the test exercises the bug.
+            LineSegment closing = new(closedCurve.Points[6].ToVector2(), closedCurve.Points[7].ToVector2());
+            LineSegment crossed = new(closedCurve.Points[2].ToVector2(), closedCurve.Points[3].ToVector2());
+            Assert.IsTrue(closing.Intersects(crossed, EndpointsOnRingDoNotIntersect: false),
+                "The contour must already self-intersect, or this test is not reproducing the reported failure.");
+
+            //The point the correspondence pass inserted when the partner contour crossed the closing segment.
+            closedCurve.Insert(7, new Vector2(-17945.400, -1229.864));
+
+            Assert.AreEqual(9, closedCurve.PointCount);
+            Assert.AreEqual(new Vector2(-17945.400, -1229.864), closedCurve.Points[7].ToVector2());
+        }
+
+        /// <summary>
+        /// Prepending is a genuine extension rather than a split, so it has nothing to inherit an existing
+        /// crossing from and must still be validated in full.
+        /// </summary>
+        [TestMethod]
+        public void Insert_AtFrontCreatingCrossing_StillThrows()
+        {
+            Polyline line = new(
+            [
+                new Vector2(0, 0),
+                new Vector2(10, 0),
+                new Vector2(10, 10),
+                new Vector2(0, 10),
+            ]);
+
+            Assert.ThrowsException<ArgumentException>(() => line.Insert(0, new Vector2(5, 11)));
+        }
     }
 }

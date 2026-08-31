@@ -76,6 +76,87 @@ namespace MorphologyMeshTest
         }
 
         /// <summary>
+        /// The stacked-polyline ribbon must still mesh once link gating is on.  A topology carrying a link matrix
+        /// takes the gated path through chord validation, correspondence, and Delaunay face creation, so this is the
+        /// check that gating a genuinely linked pair changes nothing.
+        /// </summary>
+        [TestMethod]
+        public void GenerateFaces_StackedPolylines_UnaffectedByLinkGating()
+        {
+            Polyline lower = HorizontalLine(0, 0, 30, 3);
+            Polyline upper = HorizontalLine(5, 0, 30, 3);
+
+            BajajGeneratorMesh ungated = new([lower, upper], [0.0, 10.0], [false, true]);
+            BajajMeshGenerator.GenerateFaces(ungated);
+
+            bool[,] linked = new bool[2, 2];
+            linked[0, 0] = linked[1, 1] = linked[0, 1] = linked[1, 0] = true;
+
+            SliceTopology gatedTopology = new(
+                [HorizontalLine(0, 0, 30, 3), HorizontalLine(5, 0, 30, 3)],
+                [false, true],
+                [0.0, 10.0],
+                shapeIndexToMorphNodeIndex: null,
+                sliceThickness: 10.0,
+                virtualOverlapOffsets: default,
+                shapesAreLinked: linked);
+
+            BajajGeneratorMesh gated = new(gatedTopology);
+            BajajMeshGenerator.GenerateFaces(gated);
+
+            Assert.IsTrue(gatedTopology.MayTile(0, 1), "The pair is linked, so tiling must be allowed.");
+            Assert.AreEqual(ungated.Faces.Count, gated.Faces.Count,
+                $"Gating a linked pair changed the ribbon: ungated {ungated.ManifoldReport} vs gated {gated.ManifoldReport}.");
+            Assert.AreEqual(ungated.ManifoldReport.ToString(), gated.ManifoldReport.ToString(),
+                "Gating a linked pair changed the manifold report.");
+            AssertAllTwoFaceEdgesOpposite(gated);
+        }
+
+        /// <summary>
+        /// Records what an open polyline ribbon actually reports, because the two ends of an open ribbon carry
+        /// single-face chords that count as unexpected boundary edges.  That predates fork support, so fork tests
+        /// must not expect a fork to reach zero unexpected boundary edges either.
+        /// </summary>
+        [TestMethod]
+        public void GenerateFaces_OpenRibbonEndsAreReportedAsBoundary()
+        {
+            Polyline lower = HorizontalLine(0, 0, 30, 3);
+            Polyline upper = HorizontalLine(5, 0, 30, 3);
+            BajajGeneratorMesh mesh = new([lower, upper], [0.0, 10.0], [false, true]);
+
+            BajajMeshGenerator.GenerateFaces(mesh);
+
+            MeshManifoldReport report = mesh.ManifoldReport;
+
+            Assert.AreEqual(0, report.NonManifoldEdges, $"A simple ribbon should not be non-manifold.  {report}");
+            Assert.AreEqual(0, report.PolylineForkBoundaryEdges, $"There is no fork here.  {report}");
+            Assert.AreEqual(2, report.UnexpectedBoundaryEdges,
+                $"An open ribbon has exactly two unclosed ends.  {report}");
+        }
+
+        /// <summary>
+        /// Typing a chord that touches a polyline from shapes alone is not answerable: there are no vertex indices to
+        /// rebuild the chord with, and a midpoint containment test means nothing against a shape with no interior.
+        /// The overload used to answer FLYING, which is outside IsValid()'s mask, so it must now refuse instead of
+        /// handing later passes a type that contradicts the chord's own validity gate.
+        /// </summary>
+        [TestMethod]
+        public void GetEdgeType_FromShapesAlone_RejectsPolylines()
+        {
+            Polyline line = HorizontalLine(0, 0, 30, 3);
+            Polygon square = Square(10);
+            LineSegment chord = new(new Vector2(0, 0), new Vector2(0, 5));
+
+            Assert.ThrowsException<ArgumentException>(() => chord.GetEdgeType(line, HorizontalLine(5, 0, 30, 3)));
+            Assert.ThrowsException<ArgumentException>(() => chord.GetEdgeType(square, line));
+            Assert.ThrowsException<ArgumentException>(() => chord.GetEdgeType(line, square));
+
+            //Polygon pairs still answer, so the guard has not swallowed the case this overload does handle.  The
+            //midpoint sits inside both squares, which is exactly what INTERNAL means.
+            Assert.AreEqual(EdgeType.INTERNAL, chord.GetEdgeType(square, Square(10)));
+        }
+
+        /// <summary>
         /// A polygon plus a crossing polyline must still populate without treating the line as a closed ring.
         /// </summary>
         [TestMethod]
@@ -225,6 +306,40 @@ namespace MorphologyMeshTest
             Assert.AreEqual(new Vector2(10, 0), line.Points[1].ToVector2());
             Assert.AreEqual(new Vector2(10, 0.5), line.Points[2].ToVector2());
             Assert.AreEqual(new Vector2(10, 1), line.Points[3].ToVector2());
+        }
+
+        /// <summary>
+        /// RC1 cell 476 sections 271/272.  Both shapes are CLOSEDCURVE annotations, which arrive as polylines whose
+        /// last point repeats the first, and whose closing segment crosses the rest of the contour.  Correspondence
+        /// inserts a vertex where the two contours meet, and the insert used to be blamed for the crossing that the
+        /// closing segment had brought with it, so the slice threw and was emitted as an empty topology.
+        /// </summary>
+        [TestMethod]
+        public void AddCorrespondingVertices_OnCrossingClosedCurves_DoesNotThrow()
+        {
+            Polyline upper = new(new Vector2[]
+            {
+                new(-18275.311, -1121.444), new(-18272.513, -1121.935), new(-18163.378, -1141.097),
+                new(-18058.648, -1167.778), new(-18046.362, -1170.908), new(-17945.400, -1229.864),
+                new(-17920.913, -1244.162), new(-17864.087, -1277.345), new(-17956.269, -1242.397),
+                new(-17974.437, -1235.510), new(-18069.699, -1199.394), new(-18119.620, -1180.469),
+                new(-18264.803, -1125.428), new(-18275.311, -1121.444),
+            });
+
+            Polyline lower = new(new Vector2[]
+            {
+                new(-18260.986, -1152.505), new(-18190.273, -1160.419), new(-18133.112, -1177.182),
+                new(-18062.325, -1211.564), new(-18028.617, -1226.130), new(-17964.889, -1241.967),
+                new(-17878.412, -1246.284), new(-18260.986, -1152.505),
+            });
+
+            List<IShape2D> shapes = [upper, lower];
+
+            List<Vector2> corresponding = shapes.AddCorrespondingVertices();
+
+            Assert.IsTrue(corresponding.Count > 0, "The contours cross, so correspondence must find shared verticies.");
+            Assert.IsTrue(upper.PointCount > 14, "The upper contour should have gained verticies where the lower one crosses it.");
+            Assert.IsTrue(lower.PointCount > 8, "The lower contour should have gained verticies where the upper one crosses it.");
         }
 
         private static bool TraversesForward(System.Collections.Immutable.ImmutableArray<int> iVerts, int a, int b)

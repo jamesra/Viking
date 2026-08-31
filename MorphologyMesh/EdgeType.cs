@@ -117,6 +117,14 @@ namespace MorphologyMesh
             return (edge & ValidMask) > 0;
         }
 
+        /// <summary>
+        /// True when the type affirmatively rules the edge off the final surface.  UNKNOWN is excluded on purpose:
+        /// IsValid() answers "is this edge known to belong on the surface", so it returns false both for an edge that
+        /// was ruled out and for one that was never classified.  Deleting on !IsValid() therefore discards tiling that
+        /// no pass ever rejected.  Since UNKNOWN is zero, this reads as "some bit is set, and none of them are valid".
+        /// </summary>
+        public static bool IsAffirmativelyInvalid(this EdgeType edge) => edge != EdgeType.UNKNOWN && !edge.IsValid();
+
         public static bool CouldBeSliceChord(this EdgeType edge) => edge.IsValid() || edge == EdgeType.FLYING;
 
         public static EdgeType GetEdgeType(this Vector2 midpoint, IShape2D A, IShape2D B)
@@ -124,14 +132,15 @@ namespace MorphologyMesh
             if (A is Polygon apoly && B is Polygon bpoly)
                 return GetEdgeType(midpoint, apoly, bpoly);
 
-            if (A is Polyline aline && B is Polyline bline)
-                return EdgeType.FLYING; //Line covers empty space, could be on surface 
-
-            if (A is Polygon && B is Polyline)
-                return EdgeType.FLYING; //Line covers empty space, could be on surface
-
-            if (A is Polyline && B is Polygon)
-                return EdgeType.FLYING; //Line covers empty space, could be on surface
+            //A polyline has no interior, so a midpoint containment test cannot say anything about a chord touching
+            //one.  This overload receives no vertex indices, so it also cannot rebuild the chord to test crossings.
+            //It used to answer FLYING here, which is outside IsValid()'s mask and made every committed polyline
+            //slice chord a deletion candidate for RemoveInvalidEdges.  Callers must use the IShapeIndex overload,
+            //which has the indices needed to return SURFACE / INVALID / COUNTOUR_TO_POLYLINE correctly.
+            if (A is Polyline || B is Polyline)
+                throw new ArgumentException(
+                    $"Cannot type a chord touching a polyline from shapes alone ({A.GetType().Name} to {B.GetType().Name}). " +
+                    $"Use GetEdgeType(IShapeIndex, IShapeIndex, IReadOnlyList<IShape2D>, Vector2) instead.");
 
             throw new ArgumentException("Unhandled case in GetEdgeType");
         }

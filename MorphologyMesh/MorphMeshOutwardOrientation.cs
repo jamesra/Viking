@@ -65,6 +65,103 @@ namespace MorphologyMesh
 
                 return map;
             }
+
+            private ZShapeIndex _upperByZ;
+            private ZShapeIndex _lowerByZ;
+
+            /// <summary>
+            /// True when any shape on the requested side, within <paramref name="zTol"/> of
+            /// <paramref name="faceZ"/>, contains <paramref name="point"/>.
+            ///
+            /// Equivalent to filtering <see cref="ShapesAtZ"/> linearly, but the caller runs this once per face
+            /// and an assembled composite accumulates every contour of every slice: structure 180 pairs ~10^5
+            /// faces with ~10^3 shapes, so the linear filter was the dominant cost of the orientation pass.
+            /// zTol does not vary per face, so the shapes can be bucketed by Z once and queried by range.
+            /// </summary>
+            internal bool AnyShapeContains(bool isUpper, double faceZ, double zTol, IPoint2D point)
+            {
+                ZShapeIndex index = isUpper
+                    ? _upperByZ ??= new ZShapeIndex(ShapesAtZ, wantUpper: true)
+                    : _lowerByZ ??= new ZShapeIndex(ShapesAtZ, wantUpper: false);
+
+                return index.AnyContains(faceZ, zTol, point);
+            }
+        }
+
+        /// <summary>
+        /// Shapes of one side grouped into ascending buckets of exact Z, so a Z-range query visits only the
+        /// buckets it needs.  Bucket keys are the shapes' own Z values, so a range scan selects exactly the
+        /// shapes a linear |s.Z - faceZ| &lt;= zTol filter would.
+        /// </summary>
+        private sealed class ZShapeIndex
+        {
+            /// <summary>Identity comparer, needed because <see cref="IShape2D"/> implementations refuse to hash.</summary>
+            private sealed class ReferenceComparer : IEqualityComparer<IShape2D>
+            {
+                public static readonly ReferenceComparer Instance = new();
+
+                public bool Equals(IShape2D x, IShape2D y) => ReferenceEquals(x, y);
+
+                public int GetHashCode(IShape2D obj) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);
+            }
+
+            private readonly double[] _z;
+            private readonly IShape2D[][] _shapes;
+
+            public ZShapeIndex(IReadOnlyList<ShapeAtZ> shapesAtZ, bool wantUpper)
+            {
+                var buckets = shapesAtZ
+                    .Where(s => s.IsUpper == wantUpper && s.Shape != null)
+                    .GroupBy(s => s.Z)
+                    .OrderBy(g => g.Key)
+                    .ToArray();
+
+                _z = new double[buckets.Length];
+                _shapes = new IShape2D[buckets.Length][];
+                for (int i = 0; i < buckets.Length; i++)
+                {
+                    _z[i] = buckets[i].Key;
+
+                    //Adjacent slices contribute the same contour instance more than once, and dropping the repeats
+                    //only changes how much work a query does, never its result, since the caller asks whether *any*
+                    //shape contains the point.  Deduplication must be by reference: Polygon.GetHashCode() throws
+                    //rather than hash geometry that compares with an epsilon.
+                    _shapes[i] = [.. buckets[i].Select(s => s.Shape).Distinct(ReferenceComparer.Instance)];
+                }
+            }
+
+            public bool AnyContains(double faceZ, double zTol, IPoint2D point)
+            {
+                double minZ = faceZ - zTol;
+                double maxZ = faceZ + zTol;
+
+                for (int i = FirstBucketAtOrAfter(minZ); i < _z.Length && _z[i] <= maxZ; i++)
+                {
+                    foreach (IShape2D shape in _shapes[i])
+                    {
+                        if (shape.GetRelation(point) == ShapeRelation.Contained)
+                            return true;
+                    }
+                }
+
+                return false;
+            }
+
+            private int FirstBucketAtOrAfter(double minZ)
+            {
+                int lo = 0;
+                int hi = _z.Length;
+                while (lo < hi)
+                {
+                    int mid = lo + ((hi - lo) / 2);
+                    if (_z[mid] < minZ)
+                        lo = mid + 1;
+                    else
+                        hi = mid;
+                }
+
+                return lo;
+            }
         }
 
         /// <summary>
@@ -92,19 +189,10 @@ namespace MorphologyMesh
             double faceZ = verts.Average(v => v.Position.Z);
             double zTol = Math.Max(Global.Epsilon * 1000, 0.5);
 
-            if (n.Z < 0)
-            {
-                IEnumerable<IShape2D> lowersAtZ = ctx.ShapesAtZ
-                    .Where(s => s.IsUpper == false && Math.Abs(s.Z - faceZ) <= zTol)
-                    .Select(s => s.Shape);
-                needsFlip = lowersAtZ.Any(p => p.GetRelation((IPoint2D)faceCenter) == ShapeRelation.Contained) == false;
-                return true;
-            }
-
-            IEnumerable<IShape2D> uppersAtZ = ctx.ShapesAtZ
-                .Where(s => s.IsUpper && Math.Abs(s.Z - faceZ) <= zTol)
-                .Select(s => s.Shape);
-            needsFlip = uppersAtZ.Any(p => p.GetRelation((IPoint2D)faceCenter) == ShapeRelation.Contained) == false;
+            //A cap face is outward when it sits over a contour on its own side; if nothing contains it, the
+            //normal points into the shape and the winding has to be reversed.
+            bool testUpperSide = n.Z >= 0;
+            needsFlip = ctx.AnyShapeContains(testUpperSide, faceZ, zTol, (IPoint2D)faceCenter) == false;
             return true;
         }
 

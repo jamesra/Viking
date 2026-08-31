@@ -1,3 +1,4 @@
+﻿using Microsoft.OData.Client;
 using ODataClient.ConnectomeDataModel;
 using System;
 using System.Collections.Generic;
@@ -43,7 +44,160 @@ namespace AnnotationVizLib.OData
         }
 
         /// <summary>
-        /// Loads multiple structures by their IDs in parallel
+        /// The OData client query is synchronous, so every request in flight occupies a thread pool thread for
+        /// its whole duration.  Fanning out one task per ID lets a structure with hundreds of children queue more
+        /// requests than the pool has threads; they then sit unstarted until the transport timeout cancels them,
+        /// which surfaces as TaskCanceledException even though the server is answering in well under a second.
+        /// </summary>
+        private const int MaxConcurrentRequests = 8;
+
+        /// <summary>
+        /// Run <paramref name="query"/> over every item with at most <see cref="MaxConcurrentRequests"/> in flight.
+        /// </summary>
+        private static async Task<TResult[]> RunThrottledAsync<TSource, TResult>(
+            IEnumerable<TSource> source,
+            Func<TSource, TResult> query,
+            CancellationToken cancellationToken)
+        {
+            using SemaphoreSlim throttle = new(MaxConcurrentRequests);
+
+            var tasks = source.Select(async item =>
+            {
+                await throttle.WaitAsync(cancellationToken);
+                try
+                {
+                    return await Task.Run(() => query(item), cancellationToken);
+                }
+                finally
+                {
+                    throttle.Release();
+                }
+            }).ToArray();
+
+            return await Task.WhenAll(tasks);
+        }
+
+        /// <summary>
+        /// Runs a query and returns every entity, following the nextLink until the service stops issuing one.
+        ///
+        /// Enumerating a <see cref="DataServiceQuery{T}"/> directly yields only the first page and drops the
+        /// nextLink silently, so any result larger than the service page size is truncated without an error.
+        /// </summary>
+        /// <param name="onEntry">
+        /// Invoked for each entity while it is still the materializer's current entry, which is the only point at
+        /// which <see cref="QueryOperationResponse.GetContinuation{T}(IEnumerable{T})"/> can report the nextLink of
+        /// one of its expanded collections. Calling that after enumeration finishes throws "the collection is not
+        /// part of the current entry", so nested links must be captured here and followed afterwards.
+        /// </param>
+        private static List<T> ExecuteAllPages<T>(
+            Container container,
+            DataServiceQuery<T> query,
+            CancellationToken cancellationToken,
+            Action<QueryOperationResponse<T>, T> onEntry = null)
+        {
+            List<T> all = [];
+            QueryOperationResponse<T> response = (QueryOperationResponse<T>)query.Execute();
+
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                foreach (T entry in response)
+                {
+                    onEntry?.Invoke(response, entry);
+                    all.Add(entry);
+                }
+
+                DataServiceQueryContinuation<T> continuation = response.GetContinuation();
+                if (continuation is null)
+                    break;
+
+                response = container.Execute(continuation);
+            }
+
+            return all;
+        }
+
+        /// <summary>
+        /// Appends the remaining pages of an $expand'ed collection onto the collection the materializer built.
+        ///
+        /// The service caps each expanded collection at its page size (2048 on RC1) and reports the remainder as a
+        /// nested nextLink, e.g. "Locations@odata.nextLink". The typed client materializes the first page and never
+        /// requests the rest, so the truncation is invisible: structure 476 arrived with 2048 of its 3161 locations,
+        /// leaving holes in its mesh that made correctly placed child synapses look like they floated in space.
+        /// </summary>
+        private static void DrainExpandedCollection<T>(
+            Container container,
+            ICollection<T> collection,
+            DataServiceQueryContinuation<T> continuation,
+            CancellationToken cancellationToken)
+        {
+            while (continuation != null)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                QueryOperationResponse<T> page = container.Execute(continuation);
+                foreach (T item in page)
+                    collection.Add(item);
+
+                continuation = page.GetContinuation();
+            }
+        }
+
+        /// <summary>
+        /// Reads the nextLink of an expanded collection, treating a collection the response never materialized
+        /// (an $expand the query did not ask for) as complete rather than as an error.
+        /// </summary>
+        private static DataServiceQueryContinuation<T> NestedContinuation<T>(
+            QueryOperationResponse response,
+            ICollection<T> collection)
+        {
+            if (collection is null)
+                return null;
+
+            try
+            {
+                return response.GetContinuation(collection);
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Runs a structure query to exhaustion, including the expanded Locations and Children of every structure.
+        /// </summary>
+        private static List<Structure> ExecuteStructureQuery(
+            Container container,
+            DataServiceQuery<Structure> query,
+            CancellationToken cancellationToken)
+        {
+            List<(ICollection<Location> Collection, DataServiceQueryContinuation<Location> Continuation)> pendingLocations = [];
+            List<(ICollection<Structure> Collection, DataServiceQueryContinuation<Structure> Continuation)> pendingChildren = [];
+
+            List<Structure> structures = ExecuteAllPages(container, query, cancellationToken, (response, s) =>
+            {
+                DataServiceQueryContinuation<Location> locations = NestedContinuation(response, s.Locations);
+                if (locations != null)
+                    pendingLocations.Add((s.Locations, locations));
+
+                DataServiceQueryContinuation<Structure> children = NestedContinuation(response, s.Children);
+                if (children != null)
+                    pendingChildren.Add((s.Children, children));
+            });
+
+            foreach (var (collection, continuation) in pendingLocations)
+                DrainExpandedCollection(container, collection, continuation, cancellationToken);
+
+            foreach (var (collection, continuation) in pendingChildren)
+                DrainExpandedCollection(container, collection, continuation, cancellationToken);
+
+            return structures;
+        }
+
+        /// <summary>
+        /// Loads multiple structures by their IDs
         /// </summary>
         private static async Task<List<Structure>> LoadStructuresByIDsAsync(
             Container container,
@@ -52,16 +206,15 @@ namespace AnnotationVizLib.OData
         {
             try
             {
-                var tasks = structureIDs.Select(id => Task.Run(() =>
-                    container.Structures
-                        .Expand(s => s.Locations)
-                        .Expand(s => s.Type)
-                        .Expand(s => s.Children)
-                        .Where(s => s.ID == id)
-                        .ToList(), cancellationToken)
-                ).ToArray();
+                List<Structure>[] results = await RunThrottledAsync(structureIDs, id =>
+                    ExecuteStructureQuery(container,
+                        (DataServiceQuery<Structure>)container.Structures
+                            .Expand(s => s.Locations)
+                            .Expand(s => s.Type)
+                            .Expand(s => s.Children)
+                            .Where(s => s.ID == id),
+                        cancellationToken), cancellationToken);
 
-                List<Structure>[] results = await Task.WhenAll(tasks);
                 List<Structure> allStructures = [];
                 foreach (var list in results)
                 {
@@ -87,16 +240,15 @@ namespace AnnotationVizLib.OData
         {
             try
             {
-                var tasks = typeIDs.Select(typeId => Task.Run(() =>
-                    container.Structures
-                        .Expand(s => s.Locations)
-                        .Expand(s => s.Type)
-                        .Expand(s => s.Children)
-                        .Where(s => s.TypeID == typeId)
-                        .ToList(), cancellationToken)
-                ).ToArray();
+                List<Structure>[] results = await RunThrottledAsync(typeIDs, typeId =>
+                    ExecuteStructureQuery(container,
+                        (DataServiceQuery<Structure>)container.Structures
+                            .Expand(s => s.Locations)
+                            .Expand(s => s.Type)
+                            .Expand(s => s.Children)
+                            .Where(s => s.TypeID == typeId),
+                        cancellationToken), cancellationToken);
 
-                List<Structure>[] results = await Task.WhenAll(tasks);
                 List<Structure> allStructures = [];
                 foreach (var list in results)
                 {
@@ -122,13 +274,11 @@ namespace AnnotationVizLib.OData
         {
             try
             {
-                var tasks = locationIDs.Distinct().Select(id => Task.Run(() =>
-                    container.Locations
-                        .Where(l => l.ID == id)
-                        .ToList(), cancellationToken)
-                ).ToArray();
+                List<Location>[] results = await RunThrottledAsync(locationIDs.Distinct(), id =>
+                    ExecuteAllPages(container,
+                        (DataServiceQuery<Location>)container.Locations.Where(l => l.ID == id),
+                        cancellationToken), cancellationToken);
 
-                List<Location>[] results = await Task.WhenAll(tasks);
                 List<Location> allLocations = [];
                 foreach (var list in results)
                 {
@@ -154,21 +304,21 @@ namespace AnnotationVizLib.OData
         {
             try
             {
-                var tasks = structures
-                    .Where(s => s.LocationLinks is null || !s.LocationLinks.Any())
-                    .Select(s => Task.Run(() =>
+                await RunThrottledAsync(
+                    structures.Where(s => s.LocationLinks is null || !s.LocationLinks.Any()),
+                    s =>
                     {
-                        List<LocationLink> links = [.. container.StructureLocationLinks(s.ID)];
+                        List<LocationLink> links = ExecuteAllPages(container, container.StructureLocationLinks(s.ID), cancellationToken);
 
-                        s.LocationLinks = new Microsoft.OData.Client.DataServiceCollection<LocationLink>(null, Microsoft.OData.Client.TrackingMode.None);
+                        s.LocationLinks = new DataServiceCollection<LocationLink>(null, TrackingMode.None);
                         foreach (var link in links)
                         {
                             s.LocationLinks.Add(link);
                         }
-                    }, cancellationToken))
-                    .ToArray();
 
-                await Task.WhenAll(tasks);
+                        return true;
+                    },
+                    cancellationToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

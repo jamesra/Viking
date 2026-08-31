@@ -1,4 +1,5 @@
 using Geometry.Meshing;
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -33,6 +34,22 @@ namespace MorphologyMesh
         /// <summary>Single-face edges that are not contour seams.  Always a hole in the surface.</summary>
         public int UnexpectedBoundaryEdges { get; init; }
 
+        /// <summary>
+        /// Single-face edges bordering a deliberate polyline fork gap.  Expected, not a hole.
+        ///
+        /// Where a polyline forks to two partners, one contour segment between the partners' vertex ranges is left
+        /// untiled on purpose so the fork reads as a fork.  The edges around that gap carry one face each and would
+        /// otherwise be indistinguishable from a tear in the surface.
+        /// </summary>
+        public int PolylineForkBoundaryEdges { get; init; }
+
+        /// <summary>
+        /// Cross-band polyline pairs joined by exactly one triangle.  Two polylines on different sections should
+        /// share a full quad or nothing; a lone triangle is a sliver.  The one legitimate exception, an annotation
+        /// consisting of a single point, is not implemented and so cannot occur.
+        /// </summary>
+        public int SingleTrianglePolylinePairs { get; init; }
+
         /// <summary>True when no edge has more than two faces.</summary>
         public bool IsEdgeManifold => NonManifoldEdges == 0;
 
@@ -53,7 +70,8 @@ namespace MorphologyMesh
 
         public override string ToString() =>
             $"faces:{FaceCount} manifold:{ManifoldEdges} nonManifold:{NonManifoldEdges} inconsistent:{InconsistentManifoldEdges} " +
-            $"contourSeam:{ContourBoundaryEdges} holes:{UnexpectedBoundaryEdges} isolated:{IsolatedEdges}";
+            $"contourSeam:{ContourBoundaryEdges} holes:{UnexpectedBoundaryEdges} isolated:{IsolatedEdges} " +
+            $"forkGap:{PolylineForkBoundaryEdges} singleTriPolyline:{SingleTrianglePolylinePairs}";
     }
 
     /// <summary>
@@ -62,7 +80,12 @@ namespace MorphologyMesh
     /// </summary>
     public static class MeshManifoldValidator
     {
-        public static MeshManifoldReport Validate<T>(IReadOnlyMesh<T> mesh) where T : IVertex
+        /// <param name="isForkGapBoundary">Identifies single-face edges that border a deliberate polyline fork gap,
+        /// so they are counted separately instead of as holes.  Null reports every non-contour boundary edge as a
+        /// hole, which is the behavior for meshes with no fork information.</param>
+        /// <param name="singleTrianglePolylinePairs">Count of cross-band polyline pairs sharing exactly one face,
+        /// which the caller measures because it needs shape identity rather than just edges.</param>
+        public static MeshManifoldReport Validate<T>(IReadOnlyMesh<T> mesh, Func<IEdgeKey, bool> isForkGapBoundary = null, int singleTrianglePolylinePairs = 0) where T : IVertex
         {
             int manifold = 0;
             int nonManifold = 0;
@@ -70,6 +93,7 @@ namespace MorphologyMesh
             int isolated = 0;
             int contourBoundary = 0;
             int unexpectedBoundary = 0;
+            int forkBoundary = 0;
 
             foreach (var kvp in mesh.Edges)
             {
@@ -85,6 +109,8 @@ namespace MorphologyMesh
                 {
                     if (kvp.Value is MorphMeshEdge morphEdge && morphEdge.Type == EdgeType.CONTOUR)
                         contourBoundary++;
+                    else if (isForkGapBoundary is not null && isForkGapBoundary(kvp.Key))
+                        forkBoundary++;
                     else
                         unexpectedBoundary++;
                     continue;
@@ -111,7 +137,9 @@ namespace MorphologyMesh
                 InconsistentManifoldEdges = inconsistent,
                 IsolatedEdges = isolated,
                 ContourBoundaryEdges = contourBoundary,
-                UnexpectedBoundaryEdges = unexpectedBoundary
+                UnexpectedBoundaryEdges = unexpectedBoundary,
+                PolylineForkBoundaryEdges = forkBoundary,
+                SingleTrianglePolylinePairs = singleTrianglePolylinePairs
             };
         }
 

@@ -13,6 +13,7 @@
     <ProjectReference Include="..\GeometryTests\GeometryTests.csproj" />
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\MorphologyMesh\MorphologyMesh.csproj" />
+    <ProjectReference Include="..\AnnotationVizLibODataClient\AnnotationVizLibODataClient.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Testdata\**\*" CopyToOutputDirectory="PreserveNewest" />

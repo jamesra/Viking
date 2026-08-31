@@ -320,48 +320,44 @@ namespace Geometry.Meshing
         }
 
         /// <summary>
-        /// Recalculate normals for vertices. Clears the face-normal cache first because
-        /// <see cref="Face.Equals(IFace)"/> ignores winding.
+        /// Recalculate normals for <paramref name="verticies"/> only.  A vertex normal can only change when a
+        /// face touching it was added or rewound, so callers merging a sub-mesh in pass the indicies the
+        /// incoming geometry mapped to and the cost stays proportional to the merged side rather than to the
+        /// whole composite.
+        ///
+        /// <see cref="Face.Equals(IFace)"/> ignores winding, so a reversed face would otherwise keep its
+        /// pre-flip cached normal.  The parameterless overload clears the entire cache for that reason; here
+        /// only the faces incident to the listed vertices are evicted, which covers every face that could have
+        /// changed while leaving the rest of the composite's cache intact.
         /// </summary>
         public void RecalculateNormals(IEnumerable<int> verticies)
         {
-            face_normals_cache.Clear();
-            //Calculate normals for all faces
-            //Dictionary<IFace, Vector3> normals = new Dictionary<Meshing.IFace, Geometry.Vector3>(this.Faces.Count);
-            /*
-            foreach (IFace f in this.Faces)
-            {
-                Vector3 normal = Normal(f);
-                normals.Add(f, normal);
-            }
-            */
-            /*
-             * Profiling showed this implementation to be much slower
-            for(int i = 0; i < Faces.Count; i++)
-            {
-                Face f = this.Faces.ElementAt(i);
-                Vector3 normal = Normal(f);
-                normals.Add(f, normal);
-            }
-            */
+            HashSet<int> affected = verticies as HashSet<int> ?? [.. verticies];
 
-            for (int i = 0; i < _Verticies.Count; i++)
+            //Accumulate in the same order as the parameterless overload so both produce identical sums.
+            SortedSet<IFace> vertFaces = [];
+            HashSet<IFace> evicted = [];
+
+            foreach (int i in affected)
             {
-                //SortedSet<IFace> vertFaces = new SortedSet<Meshing.IFace>();
                 IVertex3D v = this[i];
 
-                IFace[] vertFaces = [.. this[v.Edges].SelectMany(e => e.Faces).Distinct()];
+                vertFaces.Clear();
+                foreach (IEdgeKey ek in v.Edges)
+                {
+                    vertFaces.UnionWith(Edges[ek].Faces);
+                }
 
                 Vector3 avgNormal = Vector3.Zero;
-                for (int iFace = 0; iFace < vertFaces.Length; iFace++)
+                foreach (IFace f in vertFaces)
                 {
-                    IFace f = vertFaces[iFace];
+                    if (evicted.Add(f))
+                        face_normals_cache.Remove(f);
 
-                    bool face_has_normal = face_normals_cache.TryGetValue(f, out Vector3 normal);
-                    if (face_has_normal == false)
+                    if (face_normals_cache.TryGetValue(f, out Vector3 normal) == false)
                     {
                         normal = Normal(f);
-                        face_normals_cache.Add(f, normal); //Populate the cache
+                        face_normals_cache.Add(f, normal);
                     }
 
                     avgNormal += normal;

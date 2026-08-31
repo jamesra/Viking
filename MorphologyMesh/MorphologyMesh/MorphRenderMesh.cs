@@ -76,6 +76,17 @@ namespace MorphologyMesh
         /// </summary>
         public bool HasPolygonShapes => Shapes is not null && Shapes.Any(s => s is Polygon);
 
+        /// <summary>
+        /// True when two shapes may be joined by a CORRESPONDING edge where their verticies share an XY position.
+        ///
+        /// Two annotations can coincide in XY without the annotator ever linking them, which happens whenever a
+        /// process doubles back through the same column.  Stitching those together produces a surface that jumps
+        /// between unrelated parts of the structure, so <see cref="BajajGeneratorMesh"/> overrides this to consult
+        /// the slice's LocationLinks.  The base implementation allows everything, preserving the behavior of meshes
+        /// built directly from shape arrays.
+        /// </summary>
+        protected virtual bool CorrespondenceAllowed(int iShapeA, int iShapeB) => true;
+
         private readonly Dictionary<IShapeIndex, long> ShapeIndexToVertex = [];
 
         [NonSerialized]
@@ -139,17 +150,27 @@ namespace MorphologyMesh
                     //This vertex corresponds to where the polygon overlaps another polygon on another level.
                     //Populate the correspoinding field, and ensure the positions are 100% identical 
                     var corresponding = mesh[corresponding_vertex];
+
+                    //Positions are snapped either way so the triangulator sees one site instead of a degenerate
+                    //micro-edge, but an unlinked pair gets no CORRESPONDING edge and no Corresponding index, which
+                    //keeps CompleteCorrespondingVertexFaces from building a surface across the two.
+                    bool allowed = mesh.CorrespondenceAllowed(corresponding.ShapeIndex.ShapeIndex, i1.ShapeIndex);
+
                     v = new MorphMeshVertex(i1, corresponding.Position.XY().ToVector3(v.Position.Z))
                     {
-                        Corresponding = corresponding_vertex
+                        Corresponding = allowed ? corresponding_vertex : null
                     }; //Ensure the position is identical
 
                     //Add new vert to mesh with matching position and create corresponding edge
                     iV = mesh.AddVertex(v);
-                    corresponding.Corresponding = iV;
 
-                    MorphMeshEdge corresponding_edge = new(EdgeType.CORRESPONDING, iV, corresponding_vertex);
-                    mesh.AddEdge(corresponding_edge);
+                    if (allowed)
+                    {
+                        corresponding.Corresponding = iV;
+
+                        MorphMeshEdge corresponding_edge = new(EdgeType.CORRESPONDING, iV, corresponding_vertex);
+                        mesh.AddEdge(corresponding_edge);
+                    }
                 }
                 else
                 {
@@ -1090,20 +1111,40 @@ namespace MorphologyMesh
             return region;
         }
 
+        /// <summary>
+        /// Remove every edge whose type affirmatively rules it off the final surface.  Unclassified (UNKNOWN) edges
+        /// are deliberately left alone and reported instead: edges minted implicitly by AddFace carry UNKNOWN, and
+        /// ClassifyMeshEdges only runs once inside AddDelaunayEdges, so deleting them would drop tiling that later
+        /// passes added and nothing ever rejected.
+        /// </summary>
         public static void RemoveInvalidEdges(MorphRenderMesh mesh)
         {
-            foreach (var e in mesh.Edges.Values.Where(e => ((MorphMeshEdge)e).Type.IsValid() == false).ToArray())
+            foreach (var e in mesh.Edges.Values.Where(e => ((MorphMeshEdge)e).Type.IsAffirmativelyInvalid()).ToArray())
             {
                 mesh.RemoveEdge(e);
             }
+
+            ReportUnclassifiedEdges(mesh);
         }
 
-        public void RemoveInvalidEdges()
+        public void RemoveInvalidEdges() => RemoveInvalidEdges(this);
+
+        /// <summary>
+        /// An edge still typed UNKNOWN after a removal pass means classification never reached it, which is not fatal
+        /// and is expected whenever the pass runs after faces have been added.  The count is surfaced so a mesh full
+        /// of unclassified edges is visible in the BajajTest and BajajMultiTest logs instead of passing unnoticed.
+        /// </summary>
+        private static void ReportUnclassifiedEdges(MorphRenderMesh mesh)
         {
-            foreach (var e in this.Edges.Values.Where(e => ((MorphMeshEdge)e).Type.IsValid() == false).ToArray())
-            {
-                this.RemoveEdge(e);
-            }
+            int unclassified = mesh.MorphEdges.Count(e => e.Type == EdgeType.UNKNOWN);
+            if (unclassified == 0)
+                return;
+
+            //Deliberately traced rather than asserted.  A whole-cell run of structure 180 reports zero unclassified
+            //edges, but only because RemoveInvalidEdges is called before the face-generating passes; calling it after
+            //them leaves unclassified edges as a matter of course (a 3-segment ribbon leaves 3, stacked squares 4).
+            //An assert would therefore fire on exactly the ordering this method was changed to tolerate.
+            Trace.WriteLine($"RemoveInvalidEdges: {unclassified} of {mesh.Edges.Count} edges are still unclassified (UNKNOWN) and were left in place. {mesh}");
         }
     }
 }
