@@ -185,7 +185,8 @@ namespace Geometry.Meshing
         public void SplitIntoHalves(IReadOnlyList<IVertex2D> mesh, out MeshCut LowerSubset, out MeshCut UpperSubset, CutDirection cutDirection = CutDirection.NONE)
         {
             //Split the verticies into smaller groups and then merge the resulting triangulations
-            if (cutDirection == CutDirection.NONE)
+            bool chosenAxis = cutDirection == CutDirection.NONE;
+            if (chosenAxis)
             {
                 cutDirection = BoundingBox.Width > BoundingBox.Height ? CutDirection.VERTICAL : CutDirection.HORIZONTAL;
             }
@@ -241,9 +242,6 @@ namespace Geometry.Meshing
 
             //Divide verticies into two groups along the axis
             long nLowerHalf = NewSortedAlongCutAxisVertSet.LongLength / 2;
-            long oppAxisTieBreakVert = NewSortedOppositeCutAxisVertSet[nLowerHalf - 1];
-            HashSet<long> lowerOppAxisIndexHalf = new HashSet<long>(
-                NewSortedOppositeCutAxisVertSet.Take((int)nLowerHalf));
 
             List<long> LowerHalfAlongAxis = new((int)nLowerHalf);
             List<long> UpperHalfAlongAxis = new((int)(NewSortedAlongCutAxisVertSet.LongLength - nLowerHalf));
@@ -266,7 +264,7 @@ namespace Geometry.Meshing
             {
                 long iVert = NewSortedAlongCutAxisVertSet[i];
                 Vector2 vertPos = vertPosArray[i];//mesh[(int)iVert].Position;
-                bool AssignToLower = AssignVertexToLowerHalf(cutDirection, vertPos, DivisionPoint, iVert, oppAxisTieBreakVert, lowerOppAxisIndexHalf, ref nudgedDivisionPoint);
+                bool AssignToLower = AssignVertexToLowerHalf(cutDirection, vertPos, DivisionPoint, ref nudgedDivisionPoint);
 
                 if (AssignToLower)
                 {
@@ -296,6 +294,16 @@ namespace Geometry.Meshing
                     LowerHalfOppAxis.Add(iVert);
                 else
                     UpperHalfOppAxis.Add(iVert);
+            }
+
+            //Every vertex on one side means this axis cannot separate the set, which happens when the whole set
+            //shares the division coordinate.  The other axis usually can, so try it before resorting to a split
+            //by index, which does not separate the halves geometrically.
+            if ((LowerHalfAlongAxis.Count == 0 || UpperHalfAlongAxis.Count == 0) && chosenAxis)
+            {
+                SplitIntoHalves(mesh, out LowerSubset, out UpperSubset,
+                    cutDirection == CutDirection.HORIZONTAL ? CutDirection.VERTICAL : CutDirection.HORIZONTAL);
+                return;
             }
 
             if (LowerHalfAlongAxis.Count == 0 || UpperHalfAlongAxis.Count == 0)
@@ -392,17 +400,19 @@ namespace Geometry.Meshing
             CutDirection cutDirection,
             Vector2 vertPos,
             Vector2 divisionPoint,
-            long iVert,
-            long oppAxisTieBreakVert,
-            HashSet<long> lowerOppAxisIndexHalf,
             ref Vector2 nudgedDivisionPoint)
         {
+            //Verticies sharing the division coordinate all belong to the same half.  Splitting them by index
+            //instead leaves the halves interleaved along the division line rather than separated by it, and the
+            //merge step then builds an edge inside one half that runs exactly through a vertex of the other -
+            //an edge no triangulation can contain.  Contour and medial axis coordinates are rounded onto shared
+            //values, so such runs are routine here rather than exotic.
             if (cutDirection == CutDirection.HORIZONTAL)
             {
                 if (Math.Abs(vertPos.Y - divisionPoint.Y) < Global.Epsilon)
                 {
                     nudgedDivisionPoint = new Vector2(nudgedDivisionPoint.X, Math.Max(vertPos.Y, divisionPoint.Y));
-                    return iVert == oppAxisTieBreakVert || lowerOppAxisIndexHalf.Contains(iVert);
+                    return true;
                 }
 
                 return vertPos.Y < divisionPoint.Y;
@@ -411,7 +421,7 @@ namespace Geometry.Meshing
             if (Math.Abs(vertPos.X - divisionPoint.X) < Global.Epsilon)
             {
                 nudgedDivisionPoint = new Vector2(Math.Max(vertPos.X, divisionPoint.X), nudgedDivisionPoint.Y);
-                return iVert == oppAxisTieBreakVert || lowerOppAxisIndexHalf.Contains(iVert);
+                return true;
             }
 
             return vertPos.X < divisionPoint.X;

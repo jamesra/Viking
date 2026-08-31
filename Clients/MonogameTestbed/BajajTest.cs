@@ -548,15 +548,20 @@ namespace MonogameTestbed
             //Mesh vertex order is not spatial, so the room a label has is its distance to the nearest other vertex
             //rather than to the next one in the list.
             QuadTree<int> tree = new();
-            HashSet<Geometry.Vector2> placed = [];
+            bool empty = true;
             for (int i = 0; i < labels.Length; i++)
             {
                 if (labels[i] is null)
                     continue;
 
-                //Coincident vertices are common where shapes correspond; the tree only needs one of each.
-                if (placed.Add(labels[i].Position))
-                    tree.Add(labels[i].Position, i);
+                //Coincident verticies are common where shapes correspond, and the tree rejects a second point at the
+                //same place.  Its idea of "same place" is a tolerance rather than exact equality, so the tree has to
+                //be the one asked; comparing positions ourselves let near-coincident labels through and threw.
+                if (!empty && NearestDistance(tree, labels[i].Position) <= Geometry.Global.Epsilon)
+                    continue;
+
+                tree.Add(labels[i].Position, i);
+                empty = false;
             }
 
             foreach (LabelView label in labels)
@@ -567,7 +572,7 @@ namespace MonogameTestbed
                 double gap = 0;
                 foreach (var candidate in tree.FindNearestPoints(label.Position, 2))
                 {
-                    if (candidate.Distance > 0)
+                    if (candidate.Distance > Geometry.Global.Epsilon)
                     {
                         gap = candidate.Distance;
                         break;
@@ -578,6 +583,17 @@ namespace MonogameTestbed
                 //offsets coincident labels onto separate lines so they do not pile up.
                 label.FontSize = gap <= 0 ? maxLabelSize : LabelSizeToFit(label.Text, gap, maxLabelSize);
             }
+        }
+
+        /// <summary>
+        /// Distance from <paramref name="position"/> to the closest point already in <paramref name="tree"/>.
+        /// </summary>
+        private static double NearestDistance(QuadTree<int> tree, Geometry.Vector2 position)
+        {
+            foreach (var candidate in tree.FindNearestPoints(position, 1))
+                return candidate.Distance;
+
+            return double.MaxValue;
         }
 
         /// <summary>

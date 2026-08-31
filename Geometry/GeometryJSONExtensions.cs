@@ -32,11 +32,22 @@ namespace Geometry.JSON
             return obj;
         }
 
+        public static JObject ToJObject(this Polyline line)
+        {
+            dynamic obj = new JObject();
+            obj.Points = line.Points.ToJArray();
+            return obj;
+        }
+
         public static JObject ToJObject(this IShape2D input)
         {
             if (input is Polygon poly)
             {
                 return poly.ToJObject();
+            }
+            else if (input is Polyline polyline)
+            {
+                return polyline.ToJObject();
             }
             else if (input is LineSegment line)
             {
