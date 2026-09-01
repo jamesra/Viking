@@ -106,6 +106,20 @@ namespace MonogameTestbed
         /// </summary>
         public bool ShowAssemblyBoundingBoxes = true;
 
+        /// <summary>
+        /// When false, hides problem-colored slice boxes (red/orange/yellow) while in-progress gray boxes remain.
+        /// Toggle with R. Requires <see cref="ShowAssemblyBoundingBoxes"/>.
+        /// </summary>
+        public bool ShowFailedBoundingBoxes
+        {
+            get => meshIncompleteView?.ShowFailedBoundingBoxes ?? true;
+            set
+            {
+                if (meshIncompleteView != null)
+                    meshIncompleteView.ShowFailedBoundingBoxes = value;
+            }
+        }
+
         public IndexLabelType VertexLabelType
         {
             get => PolyViews is null ? IndexLabelType.NONE : PolyViews.PointLabelType;
@@ -1452,6 +1466,11 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
                 wrapView.ShowAssemblyBoundingBoxes = !wrapView.ShowAssemblyBoundingBoxes;
             }
 
+            if (keyboard.Pressed(Keys.R))
+            {
+                wrapView.ShowFailedBoundingBoxes = !wrapView.ShowFailedBoundingBoxes;
+            }
+
             if (Gamepad.LeftStick_Clicked || keyboard.Pressed(Keys.K))
             {
                 wrapView.CullMode = wrapView.CullMode == CullMode.None ? CullMode.CullCounterClockwiseFace : CullMode.None;
@@ -1573,6 +1592,13 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
             hud.AppendLine($"Pick {_lastPickMilliseconds:F1} ms");
         }
 
+        if (WrapViews.Any(w => w.ShowAssemblyBoundingBoxes))
+        {
+            hud.AppendLine("Boxes: B=all  R=problem");
+            hud.AppendLine("  gray=in progress  blue=section ready");
+            hud.AppendLine("  yellow=minor  orange=holes/winding  red=non-manifold");
+        }
+
         int dropped = DroppedSliceCount();
         if (dropped > 0)
             hud.AppendLine($"WARNING: {dropped} slice(s) dropped - no topology");
@@ -1673,39 +1699,59 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
         if (!TryGetSceneBounds(out Vector3 min, out Vector3 max))
             return;
 
+        MonoTestbed.SyncViewport(scene3D, window.GraphicsDevice);
+
         Vector3 worldMin = Vector3.Transform(min, ViewZAxisWorld);
         Vector3 worldMax = Vector3.Transform(max, ViewZAxisWorld);
         min = Vector3.Min(worldMin, worldMax);
         max = Vector3.Max(worldMin, worldMax);
 
         Vector3 center = (min + max) * 0.5f;
-        Vector3 extent = max - min;
+        Vector3 halfExtent = (max - min) * 0.5f;
+        if (halfExtent.LengthSquared() < float.Epsilon)
+            halfExtent = Vector3.One;
 
-        //Fit the bounding sphere rather than one extent: the camera looks down a diagonal, so any axis can end up
-        //spanning the screen and a sphere is the only bound that holds for every orientation.
-        float radius = extent.Length() * 0.5f;
-        if (radius < float.Epsilon)
-            radius = 1f;
+        //Same viewing direction as before; the camera sits on this ray at the fitted distance.
+        Vector3 direction = Vector3.Normalize(new Vector3(-1f, -0.35f, 0.2f));
+
+        //Match the basis CreateLookAt will use once Position and LookAt are set below.  zaxis points from the
+        //target toward the camera; x/y span the screen horizontally and vertically.
+        Vector3 zaxis = direction;
+        Vector3 cameraUp = Vector3.UnitZ;
+        Vector3 xaxis = Vector3.Cross(cameraUp, zaxis);
+        if (xaxis.LengthSquared() < 1e-6f)
+        {
+            cameraUp = Vector3.UnitY;
+            xaxis = Vector3.Cross(cameraUp, zaxis);
+        }
+        xaxis = Vector3.Normalize(xaxis);
+        Vector3 yaxis = Vector3.Normalize(Vector3.Cross(zaxis, xaxis));
+
+        //Project the box half-extents onto the view axes.  The old bounding-sphere fit divided by sin(fov/2),
+        //which backs the camera off by about 2x for compact shapes at the default 60 deg vertical field of view.
+        float extentHorizontal = Math.Abs(halfExtent.X * xaxis.X) + Math.Abs(halfExtent.Y * xaxis.Y) + Math.Abs(halfExtent.Z * xaxis.Z);
+        float extentVertical = Math.Abs(halfExtent.X * yaxis.X) + Math.Abs(halfExtent.Y * yaxis.Y) + Math.Abs(halfExtent.Z * yaxis.Z);
 
         //FieldOfView is vertical. A window wider than it is tall constrains vertically, but a narrow one
-        //constrains horizontally, so fit against whichever half angle is smaller.
+        //constrains horizontally, so fit each screen axis separately and take the larger distance.
         float halfFovVertical = scene3D.FieldOfView * 0.5f;
         float aspect = scene3D.Viewport.Height > 0
             ? scene3D.Viewport.Width / (float)scene3D.Viewport.Height
             : 1f;
         float halfFovHorizontal = (float)Math.Atan(Math.Tan(halfFovVertical) * aspect);
-        float limitingHalfFov = Math.Min(halfFovVertical, halfFovHorizontal);
 
         const float FrameMargin = 1.05f;
-        float distance = Math.Max(radius / (float)Math.Sin(limitingHalfFov) * FrameMargin, 1f);
+        float distanceVertical = extentVertical / (float)Math.Tan(halfFovVertical);
+        float distanceHorizontal = extentHorizontal / (float)Math.Tan(halfFovHorizontal);
+        float distance = Math.Max(Math.Max(distanceVertical, distanceHorizontal), 1f) * FrameMargin;
+
+        float enclosingRadius = Math.Max(extentHorizontal, extentVertical);
 
         //Leave the near plane where the scene was configured.  Pulling it out to bracket the geometry buys depth
         //precision but clips away everything in front of the fitted distance, so flying in toward a surface makes
         //it vanish long before the camera reaches it.
-        scene3D.MaxDrawDistance = Math.Max(scene3D.MaxDrawDistance, (distance + radius) * 2f);
+        scene3D.MaxDrawDistance = Math.Max(scene3D.MaxDrawDistance, (distance + enclosingRadius) * 2f);
 
-        //Same viewing direction as before, normalized so the offset length is the fitted distance.
-        Vector3 direction = Vector3.Normalize(new Vector3(-1f, -0.35f, 0.2f));
         scene3D.Camera.Position = center + (direction * distance);
         scene3D.Camera.LookAt = center;
     }

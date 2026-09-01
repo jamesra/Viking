@@ -36,7 +36,7 @@ namespace MonogameTestbed
         /// </summary>
         public System.Threading.ManualResetEventSlim MeshAssembledEvent = new();
 
-        public delegate void OnNodeMeshCompletedDelegate(IAssemblyPlannerNode node, bool success);
+        public delegate void OnNodeMeshCompletedDelegate(IAssemblyPlannerNode node, bool success, MeshManifoldReport? report);
 
         /// <summary>
         /// Called when a node in the assembly plan either completes mesh generation or knows an error occurred and it will not be generating a mesh
@@ -148,7 +148,7 @@ namespace MonogameTestbed
                 Trace.WriteLine($"Slice {slice.Key} merged without a complete mesh{(mesh is null ? " (no mesh was generated)" : $": {mesh.ManifoldReport}")}.");
 
             leaf.OnMeshCompletion(mesh);
-            OnNodeCompleted?.Invoke(leaf, Success);
+            OnNodeCompleted?.Invoke(leaf, Success, mesh?.ManifoldReport);
 
             /*
             try
@@ -256,7 +256,7 @@ namespace MonogameTestbed
 
                 if (MergePerformed && OnNodeCompleted != null)
                 {
-                    OnNodeCompleted(parent, true);
+                    OnNodeCompleted(parent, true, null);
                 }
                 //}
 
@@ -470,7 +470,7 @@ namespace MonogameTestbed
     {
         protected readonly MeshAssemblyPlanner Plan;
 
-        public abstract void OnNodeCompleted(IAssemblyPlannerNode node, bool success);
+        public abstract void OnNodeCompleted(IAssemblyPlannerNode node, bool success, MeshManifoldReport? report);
 
         public MeshAssemblyPlannerViewBase(MeshAssemblyPlanner plan)
         {
@@ -524,7 +524,7 @@ namespace MonogameTestbed
             set => Color = Color.SetAlpha(value);
         }
 
-        public override void OnNodeCompleted(IAssemblyPlannerNode node, bool success)
+        public override void OnNodeCompleted(IAssemblyPlannerNode node, bool success, MeshManifoldReport? report)
         {
             try
             {
@@ -573,6 +573,34 @@ namespace MonogameTestbed
 
         private readonly ReaderWriterLockSlim ReadyModelLock = new();
         private readonly SortedSet<ulong> NodesThatFailedMeshing = [];
+        private readonly Dictionary<ulong, MeshManifoldReport> NodeFailureReports = [];
+
+        /// <summary>
+        /// When false, problem-colored slice boxes (red/orange/yellow) are hidden while in-progress gray boxes remain.
+        /// Toggle with R in BajajMultiTest.
+        /// </summary>
+        public bool ShowFailedBoundingBoxes
+        {
+            get => _showFailedBoundingBoxes;
+            set
+            {
+                if (_showFailedBoundingBoxes == value)
+                    return;
+
+                _showFailedBoundingBoxes = value;
+                try
+                {
+                    ReadyModelLock.EnterWriteLock();
+                    _MeshModels = null;
+                }
+                finally
+                {
+                    ReadyModelLock.ExitWriteLock();
+                }
+            }
+        }
+
+        private bool _showFailedBoundingBoxes = true;
 
         /// <summary>
         /// The scale-and-centre transform each box was built with.  A box is a unit cube that carries all of its
@@ -633,7 +661,10 @@ namespace MonogameTestbed
             foreach (var item in BoundingBoxModels)
             {
                 if (NodesThatFailedMeshing.Contains(item.Key))
-                    listModels.Add(item.Value);
+                {
+                    if (ShowFailedBoundingBoxes)
+                        listModels.Add(item.Value);
+                }
                 else if (CanShowBoundingBoxModel(this.Plan[item.Key]))
                 {
                     listModels.Add(item.Value);
@@ -644,16 +675,39 @@ namespace MonogameTestbed
         }
 
         /// <summary>
-        /// A node is boxed until its own mesh exists, so a run opens with every slice boxed and each box
-        /// disappears as its slice is absorbed into a merge.
+        /// True when any descendant leaf has not finished meshing.
         /// </summary>
-        /// <remarks>
-        /// This deliberately consults only <paramref name="node"/>. The previous rule returned the XOR of the
-        /// two sibling completion flags, which never read the node it was asked about and therefore gave both
-        /// siblings the same answer. Worse, before any slice finished both flags were true, so the XOR was false
-        /// for every non-root node and only the whole-cell root box survived the filter.
-        /// </remarks>
-        internal static bool CanShowBoundingBoxModel(IAssemblyPlannerNode node) => !node.MeshComplete;
+        private static bool HasIncompleteDescendantLeaf(IAssemblyPlannerNode node)
+        {
+            if (node.IsLeaf)
+                return !node.MeshComplete;
+
+            if (node is IAssemblyPlannerBranch branch)
+            {
+                return (branch.Left != null && HasIncompleteDescendantLeaf(branch.Left))
+                    || (branch.Right != null && HasIncompleteDescendantLeaf(branch.Right));
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// A node is boxed until its own mesh exists. Branch boxes stay hidden while any inner slice box is still visible.
+        /// </summary>
+        internal static bool CanShowBoundingBoxModel(IAssemblyPlannerNode node) =>
+            !node.MeshComplete && (node.IsLeaf || !HasIncompleteDescendantLeaf(node));
+
+        internal static Color ColorForFailure(MeshManifoldReport? report)
+        {
+            if (report is null || report.Value.NonManifoldEdges > 0)
+                return Color.Red.SetAlpha(0.5f);
+
+            MeshManifoldReport r = report.Value;
+            if (r.UnexpectedBoundaryEdges > 0 || r.InconsistentManifoldEdges > 0)
+                return Color.Orange.SetAlpha(0.5f);
+
+            return Color.Yellow.SetAlpha(0.5f);
+        }
 
 
         public MeshAssemblyPlannerIncompleteView(MeshAssemblyPlanner plan, SliceGraph sliceGraph) : base(plan)
@@ -673,7 +727,7 @@ namespace MonogameTestbed
                 Trace.WriteLine($"MeshAssemblyPlannerIncompleteView: {_leavesWithoutBoundingBox} slices reported invalid topology and have no bounding box. {BoundingBoxModels.Count} boxes generated.");
         }
 
-        public override void OnNodeCompleted(IAssemblyPlannerNode node, bool success)
+        public override void OnNodeCompleted(IAssemblyPlannerNode node, bool success, MeshManifoldReport? report)
         {
             try
             {
@@ -682,15 +736,17 @@ namespace MonogameTestbed
                 if (success)
                 {
                     BoundingBoxModels.Remove(node.Key);
+                    NodesThatFailedMeshing.Remove(node.Key);
+                    NodeFailureReports.Remove(node.Key);
                 }
                 else if (BoundingBoxModels.TryGetValue(node.Key, out MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor> model))
                 {
                     NodesThatFailedMeshing.Add(node.Key);
-                    model.SetColor(Color.Red.SetAlpha(0.5f));
+                    if (report.HasValue)
+                        NodeFailureReports[node.Key] = report.Value;
+                    model.SetColor(ColorForFailure(report));
                 }
 
-                //Both paths change which boxes are visible: success drops one from the collection, and failure
-                //adds a key that GetVisibleBoundingBoxModels treats as always-visible.
                 this._MeshModels = null;
             }
             finally
