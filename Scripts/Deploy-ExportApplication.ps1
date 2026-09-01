@@ -20,9 +20,13 @@
     website root or defaults to "C:\inetpub\wwwroot".
 
 .PARAMETER UrlBase
-    The base URL for constructing VolumeURL and ODataURL. Defaults to "https://vpn.codepharm.net/".
+    The base URL for constructing VolumeURL and ODataURL. Defaults to "https://websvc.codepharm.net/".
     VolumeURL will be: {UrlBase}{VolumeName}
     ODataURL will be: {VolumeURL}/OData
+
+    The Export application calls ODataURL server-to-server, so this must be a host the IIS
+    machine can actually reach. It previously defaulted to vpn.codepharm.net, which resolves
+    but refuses TLS, causing every export request to fail with an unhandled 500.
 
 .PARAMETER SourceFolder
     The folder containing the source web.config and appsettings.json files. 
@@ -39,7 +43,7 @@
     Deploys Export application to C:\Services\Sites\RC1\Export with custom root folder.
 
 .EXAMPLE
-    .\Deploy-ExportApplication.ps1 -RelativePath "RC1" -UrlBase "https://vpn.codepharm.net/"
+    .\Deploy-ExportApplication.ps1 -RelativePath "RC1" -UrlBase "https://websvc.codepharm.net/"
     
     Deploys Export application with custom URL base.
 
@@ -57,7 +61,7 @@ param(
     [string]$RootFolder = $null,
     
     [Parameter(Mandatory=$false)]
-    [string]$UrlBase = "https://vpn.codepharm.net/",
+    [string]$UrlBase = "https://websvc.codepharm.net/",
     
     [Parameter(Mandatory=$false)]
     [string]$SourceFolder = "C:\Services\Release\Export"
@@ -288,6 +292,24 @@ $DllPath = Join-Path $SourceFolder "DataExport.dll"
 $WebConfigContent = $WebConfigContent -replace 'arguments="[^"]*"', "arguments=`"$DllPath`""
 Set-Content -Path $DestWebConfig -Value $WebConfigContent -Force
 Write-Host "web.config updated with DLL path: $DllPath"
+
+# Copy the content root payload. The binaries stay in SourceFolder and are launched through
+# web.config, but ContentRootPath is this per-volume folder, so anything resolved relative to
+# the content root has to live here. Omitting these leaves Resources empty, which makes every
+# Morphology export throw while Network and Motif appear to work.
+$ContentPayload = @("Content", "Resources")
+foreach ($PayloadFolder in $ContentPayload) {
+    $SourcePayload = Join-Path $SourceFolder $PayloadFolder
+    if (Test-Path $SourcePayload) {
+        Write-Host "Copying $PayloadFolder..."
+        Copy-Item -Path $SourcePayload -Destination $ExportFolder -Recurse -Force
+    } else {
+        Write-Warning "$PayloadFolder not found in source folder: $SourcePayload"
+        if ($PayloadFolder -eq "Resources") {
+            Write-Warning "Morphology exports will fail without Resources\ColorMapping."
+        }
+    }
+}
 
 # Copy and update appsettings.json
 Write-Host "Copying appsettings.json..."

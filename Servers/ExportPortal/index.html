@@ -106,6 +106,10 @@
           Separate entries with a comma, a semicolon, or a new line. Spaces separate numbers only,
           so a label that contains one, such as <code>GC ON</code>, stays intact.
         </p>
+        <p class="hint">
+          Lists of any length are fine. Long ones are sent in the request body rather than the
+          URL, so they arrive as a single request and download as a single file.
+        </p>
 
         <div class="dropzone" id="dropzone">
           <textarea id="ids" rows="6" spellcheck="false"
@@ -173,8 +177,8 @@
     for direct queries.
   </p>
   <p class="fine">
-    Structure IDs travel in the URL, so very long lists are split into several downloads
-    automatically. DAE export is not currently offered by the service.
+    Structure lists are sent in the request body, so a list of any length arrives as one
+    request and downloads as one file. DAE export is not currently offered by the service.
   </p>
 </footer>
 

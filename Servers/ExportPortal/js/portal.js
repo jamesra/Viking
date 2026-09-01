@@ -9,9 +9,9 @@
  *   1. There is no volume in its routes. Each volume is a separate IIS application bound to one
  *      volume by configuration, so the volume becomes a path segment: /{Volume}/Export/...
  *
- *   2. Inputs travel in the query string. The POST actions declare a file parameter but read
- *      their IDs from the query anyway, so a long structure list has to be split across several
- *      requests to stay under the IIS query-string limit. See MAX_QUERY_BYTES below.
+ *   2. A GET carries its inputs in the query string, which IIS caps near 2 KB. The service also
+ *      accepts the same list as a POST body, so downloads are sent that way and a long structure
+ *      list arrives as one request. The query form is still shown as a copyable URL.
  */
 
 'use strict';
@@ -35,9 +35,13 @@ const DEFAULT_VOLUME = 'RC1';
 
 /*
  * IIS caps the query string near 2048 bytes by default. Staying meaningfully below that leaves
- * headroom for the path and the other parameters.
+ * headroom for the path and the other parameters. This no longer limits a download, which uses a
+ * POST body; it only decides whether the previewed GET URL is short enough to be pasted elsewhere.
  */
 const MAX_QUERY_BYTES = 1800;
+
+/* Matches RequestBodyIds.MaxIdCount in the export service, which rejects anything larger. */
+const MAX_ID_COUNT = 50000;
 
 /*
  * The service's route table: {Report}/{format}. The service also still answers the older
@@ -142,10 +146,11 @@ const SERVICE_ROOT = deriveServiceRoot();
 /**
  * Whether the export services share this page's origin.
  *
- * This decides how a download is performed. Same-origin uses fetch, which allows the response to
- * be inspected, batches to be sequenced, and failures to be reported precisely. Cross-origin
- * cannot use fetch, because the export service sends no CORS headers, so the browser is navigated
- * to the URL instead and the service's Content-Disposition header produces the download.
+ * This decides how a download is performed. Same-origin uses fetch, which can POST the ID list in
+ * the request body, inspect the response, and report failures precisely. Cross-origin cannot use
+ * fetch, because the export service sends no CORS headers, so the browser is navigated to a GET
+ * URL instead and the service's Content-Disposition header produces the download. That fallback
+ * is subject to the URL length limit that POST exists to avoid.
  */
 const SAME_ORIGIN = (() => {
   try {
@@ -343,29 +348,13 @@ function buildUrl(volume, reportKey, formatId, ids) {
 }
 
 /**
- * Splits IDs into batches whose encoded query stays within the server's limit.
- * Returns a single empty batch when there are no IDs, meaning "the whole volume".
+ * Number of characters the encoded ID list would occupy in a URL.
+ *
+ * Only used to decide whether the previewed GET URL is short enough to be pasted elsewhere.
+ * Downloads are not bound by it, because they send the list in a POST body instead.
  */
-function batchIds(ids) {
-  if (!ids.length) return [[]];
-
-  const batches = [];
-  let current = [];
-
-  for (const id of ids) {
-    const candidate = current.concat(id);
-    // Semicolons encode to three characters each, so measure the encoded form rather than guess.
-    const encodedLength = encodeURIComponent(candidate.join(';')).length;
-    if (encodedLength > MAX_QUERY_BYTES && current.length) {
-      batches.push(current);
-      current = [id];
-    } else {
-      current = candidate;
-    }
-  }
-
-  if (current.length) batches.push(current);
-  return batches;
+function encodedQueryLength(ids) {
+  return encodeURIComponent(ids.join(';')).length;
 }
 
 /* ── Volume discovery ───────────────────────────────────── */
@@ -641,9 +630,8 @@ function renderRequest() {
 
   const report = REPORTS[state.report];
   const ids = report.acceptsIds ? state.ids : [];
-  const batches = batchIds(ids);
 
-  $('url-preview').value = buildUrl(volume, state.report, state.format, batches[0]);
+  $('url-preview').value = buildUrl(volume, state.report, state.format, ids);
 
   const bar = $('lengthbar');
   const fill = $('length-fill');
@@ -655,7 +643,8 @@ function renderRequest() {
    * what was asked for, and expensive on a volume the size of RC1.
    */
   const resolvedToNothing = report.acceptsIds && state.hasInput && !ids.length;
-  $('download').disabled = resolvedToNothing || state.resolving;
+  const tooMany = ids.length > MAX_ID_COUNT;
+  $('download').disabled = resolvedToNothing || tooMany || state.resolving;
 
   if (resolvedToNothing) {
     bar.hidden = false;
@@ -673,20 +662,27 @@ function renderRequest() {
   }
 
   bar.hidden = false;
-  const used = encodeURIComponent(batches[0].join(';')).length;
-  const pct = Math.min(100, (used / MAX_QUERY_BYTES) * 100);
+  const pct = Math.min(100, (ids.length / MAX_ID_COUNT) * 100);
   fill.style.width = pct + '%';
-  fill.className = 'lengthbar-fill' + (pct > 90 ? ' warn' : '');
+  fill.className = 'lengthbar-fill' + (tooMany || pct > 90 ? ' warn' : '');
 
-  if (batches.length > 1) {
-    const caveat = state.report === 'network'
-      ? ' Each part is exported independently, so hop traversal is computed within a part rather than across the whole list.'
-      : '';
+  const count = `${ids.length.toLocaleString()} structure${ids.length === 1 ? '' : 's'}`;
+
+  if (tooMany) {
     text.textContent =
-      `This list is too long for one request, so it will download as ${batches.length} separate ` +
-      `files of up to ${batches[0].length} structures each.${caveat}`;
+      `${count} is more than the service accepts in one request. Reduce the list to ` +
+      `${MAX_ID_COUNT.toLocaleString()} or fewer.`;
+  } else if (!SAME_ORIGIN && encodedQueryLength(ids) > MAX_QUERY_BYTES) {
+    // The cross-origin fallback navigates to the GET URL, so here the URL limit does still bite.
+    text.textContent =
+      `${count}. This list is too long for a URL, and this copy of the page can only download by ` +
+      'URL, so the request will likely be rejected. Use the portal served alongside the volumes.';
+  } else if (encodedQueryLength(ids) > MAX_QUERY_BYTES) {
+    text.textContent =
+      `${count}. Sent in the request body, so it downloads as a single file. The URL above is too ` +
+      'long to paste elsewhere.';
   } else {
-    text.textContent = `Request uses ${used} of about ${MAX_QUERY_BYTES} available characters.`;
+    text.textContent = `${count}. The URL above can be copied and used directly.`;
   }
 }
 
@@ -746,8 +742,8 @@ function formatBytes(n) {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
-async function downloadOne(url, fallbackName) {
-  const response = await fetch(url);
+async function downloadOne(url, fallbackName, init) {
+  const response = await fetch(url, init);
 
   // An unmatched route returns the help page with HTTP 200, so a success status alone does not
   // mean an export was produced. Treat HTML on an export URL as a failure.
@@ -795,7 +791,6 @@ async function onDownload() {
   const status = $('status');
   const report = REPORTS[state.report];
   const ids = report.acceptsIds ? state.ids : [];
-  const batches = batchIds(ids);
 
   $('results').hidden = true;
   $('results').innerHTML = '';
@@ -804,47 +799,41 @@ async function onDownload() {
   status.className = 'status';
 
   if (!SAME_ORIGIN) {
-    // Browsers throttle rapid successive navigations, so space the batches out a little.
-    for (let i = 0; i < batches.length; i++) {
-      saveByNavigation(buildUrl(volume, state.report, state.format, batches[i]));
-      if (i < batches.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 900));
-      }
-    }
+    // A cross-origin POST would need CORS headers the export service does not send, so this copy
+    // of the page falls back to a GET navigation and inherits the URL length limit.
+    saveByNavigation(buildUrl(volume, state.report, state.format, ids));
     button.disabled = false;
     status.className = 'status';
-    status.textContent = batches.length > 1
-      ? `Started ${batches.length} downloads. Your browser may ask permission to save multiple files.`
-      : 'Download started. Check your browser downloads for the result.';
+    status.textContent = 'Download started. Check your browser downloads for the result.';
     return;
   }
 
-  let failures = 0;
+  /*
+   * The ID list goes in the body rather than the query string. That keeps the whole list in one
+   * request regardless of length, which matters most for Network: hop traversal is computed over
+   * whatever arrives in a single request, so a split list would explore a smaller graph.
+   */
+  const usePost = ids.length > 0;
+  const url = buildUrl(volume, state.report, state.format, usePost ? [] : ids);
+  const init = usePost
+    ? { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: ids.join(';') }
+    : undefined;
 
-  for (let i = 0; i < batches.length; i++) {
-    const label = batches.length > 1 ? ` (part ${i + 1} of ${batches.length})` : '';
-    status.innerHTML = `<span class="spinner"></span>Generating export${label}… this can take a while for large requests.`;
+  status.innerHTML = '<span class="spinner"></span>Generating export… this can take a while for large requests.';
 
-    const url = buildUrl(volume, state.report, state.format, batches[i]);
-    try {
-      const saved = await downloadOne(url, `${volume}-${state.report}.${state.format}`);
-      addResult(saved.name, saved.size, true);
-    } catch (error) {
-      failures++;
-      addResult('', 0, false, `Part ${i + 1}: ${error.message}`);
-    }
+  try {
+    const saved = await downloadOne(url, `${volume}-${state.report}.${state.format}`, init);
+    addResult(saved.name, saved.size, true);
+    status.className = 'status ok';
+    status.textContent = 'Download complete.';
+  } catch (error) {
+    addResult('', 0, false, error.message);
+    status.className = 'status err';
+    status.textContent = 'The export request failed. '
+      + 'If this volume is newly deployed its export service may not be configured yet.';
   }
 
   button.disabled = false;
-
-  if (!failures) {
-    status.className = 'status ok';
-    status.textContent = batches.length > 1 ? `All ${batches.length} parts downloaded.` : 'Download complete.';
-  } else {
-    status.className = 'status err';
-    status.textContent = `${failures} of ${batches.length} request${batches.length === 1 ? '' : 's'} failed. `
-      + 'If this volume is newly deployed its export service may not be configured yet.';
-  }
 }
 
 /* ── Drag and drop ──────────────────────────────────────── */

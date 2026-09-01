@@ -33,6 +33,10 @@ Export neural network connectivity graphs:
 - `GET /Network/GetGML?id=180;476&hops=2` - Export as GraphML format
 - `GET /Network/GetJSON?id=180;476&hops=2` - Export as JSON format
 
+The short form of each route works too: `GET /Network/dot`, `/Network/tlp`, `/Network/gml`,
+`/Network/json`. Each also answers `POST` at the same address, taking the ID list from the
+request body. See [Posting long ID lists](#posting-long-id-lists).
+
 **Parameters:**
 - `id` or `ids` - Semicolon-separated list of structure IDs
 - `hops` - Number of network hops to traverse (default: 1)
@@ -42,8 +46,8 @@ Export morphological structure data:
 
 - `GET /Morphology/GetTLP?id=180` - Export as Tulip (TLP) format with spatial data
 - `GET /Morphology/GetJSON?id=180` - Export as JSON format
-- `POST /Morphology/PostTLP` - Export with query parameters in POST body
-- `POST /Morphology/PostJSON` - Export with query parameters in POST body
+- `POST /Morphology/tlp` - Export as TLP, taking the ID list from the request body
+- `POST /Morphology/json` - Export as JSON, taking the ID list from the request body
 
 **Parameters:**
 - `id` or `ids` - Semicolon-separated list of structure IDs
@@ -55,6 +59,41 @@ Export motif pattern graphs:
 - `GET /Motif/GetDot` - Export motif graph as DOT format
 - `GET /Motif/GetTLP` - Export motif graph as Tulip format
 - `GET /Motif/GetJSON` - Export motif graph as JSON format
+
+A motif export always covers the whole volume, so it takes no IDs and offers no POST route.
+
+### Posting long ID lists
+
+IIS caps a query string near 2048 bytes, roughly 300 IDs. Every Network and Morphology export
+also answers `POST` at the same URL, reading the ID list from the request body instead, so a
+long list is one request producing one file. This matters most for Network, where `hops`
+traversal covers only the IDs that arrive in a single request.
+
+Two body formats are accepted. A raw `text/plain` body:
+
+```bash
+curl -X POST -H "Content-Type: text/plain" --data-binary @ids.txt \
+  -OJ "http://localhost:62418/Morphology/tlp"
+```
+
+Or a `multipart/form-data` upload of a single `.txt` file:
+
+```bash
+curl -X POST -F "file=@ids.txt" -OJ "http://localhost:62418/Network/gml?hops=2"
+```
+
+The body holds IDs only, separated by semicolons or newlines. Other parameters such as `hops`
+and `stick` stay in the query string, and query IDs are merged with body IDs. The response is
+the file itself, the same as for GET.
+
+Because these endpoints are anonymous the body is bounded: at most 200 KB, at most 50,000 IDs,
+valid UTF-8, and exactly one uploaded file ending in `.txt`. Violations return ProblemDetails
+with 400, 413, or 415. A body that yields no ID is also rejected, since an empty ID set means
+"export the whole volume" and would silently do the opposite of what was asked. To export a
+whole volume, send no body.
+
+The legacy action names `PostTLP`, `PostJSON`, `PostDot` and `PostGML` still route, and now
+read the body as well.
 
 ## Configuration
 

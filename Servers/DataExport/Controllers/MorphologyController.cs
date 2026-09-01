@@ -88,22 +88,20 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
         return outputDir;
     }
 
-    private IActionResult RedirectToFile(string outputFilename)
-    {
-        string url = $"/Output/{outputFilename}";
-        Response.StatusCode = StatusCodes.Status201Created;
-        Response.Headers.Location = url;
-        return Redirect(url);
-    }
-
     /// <summary>
     /// Exports morphology data in TLP (Tulip) format via POST request.
     /// </summary>
-    /// <returns>Redirect to the generated TLP file.</returns>
+    /// <remarks>
+    /// POST accepts the structure ID list in the request body, which avoids the URL length limit that
+    /// constrains the equivalent GET.
+    /// </remarks>
+    /// <returns>The generated TLP file for download.</returns>
+    [HttpPost("tlp")]
     [HttpPost("PostTLP")]
+    [RequestSizeLimit(RequestBodyIds.MaxBodyBytes)]
     public async Task<IActionResult> PostTLP()
     {
-        ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
+        ICollection<long> requestIDs = await RequestVariables.GetIDsFromRequestAsync(Request, GetODataUrl(), HttpContext.RequestAborted);
         string outputFile = GetOutputFilename(requestIDs, "tlp");
         string userOutputDirectory = GetAndCreateOutputDirectory();
         string userOutputFileFullPath = Path.Combine(userOutputDirectory, outputFile);
@@ -121,17 +119,23 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
         MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, (UnitsAndScale.Scale)structure_graph.scale, colorMap, GetVolumeUrl());
         TlpGraph.SaveTLP(userOutputFileFullPath);
 
-        return RedirectToFile(outputFile);
+        return PhysicalFile(userOutputFileFullPath, "text/plain", outputFile);
     }
 
     /// <summary>
     /// Exports morphology data in JSON format via POST request.
     /// </summary>
-    /// <returns>Redirect to the generated JSON file.</returns>
+    /// <remarks>
+    /// POST accepts the structure ID list in the request body, which avoids the URL length limit that
+    /// constrains the equivalent GET.
+    /// </remarks>
+    /// <returns>The generated JSON file for download.</returns>
+    [HttpPost("json")]
     [HttpPost("PostJSON")]
+    [RequestSizeLimit(RequestBodyIds.MaxBodyBytes)]
     public async Task<IActionResult> PostJSON()
     {
-        ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
+        ICollection<long> requestIDs = await RequestVariables.GetIDsFromRequestAsync(Request, GetODataUrl(), HttpContext.RequestAborted);
         string outputFile = GetOutputFilename(requestIDs, "json");
         string userOutputDirectory = GetAndCreateOutputDirectory();
         string userOutputFileFullPath = Path.Combine(userOutputDirectory, outputFile);
@@ -145,7 +149,7 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
         MorphologyJSONView JSONGraph = MorphologyJSONView.ToJSON(structure_graph);
         JSONGraph.SaveJSON(userOutputFileFullPath);
 
-        return RedirectToFile(outputFile);
+        return PhysicalFile(userOutputFileFullPath, "application/json", outputFile);
     }
 
     /*

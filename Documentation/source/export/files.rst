@@ -102,6 +102,56 @@ Export directly from a URL
    multi-line value works, but a comma does not.
 
 
+Long lists: POST the IDs instead
+--------------------------------
+
+  IIS caps a query string near 2048 bytes, which is roughly 300 structure IDs.  Beyond that
+  the request is rejected before it reaches the export service.
+
+  Every Network and Morphology export therefore also answers **POST** at the same URL, taking
+  the ID list from the request body instead of the query string.  There is no practical limit
+  on the number of IDs, so a long list is one request producing one file.  This matters for
+  Network in particular: ``hops`` traversal explores whatever arrives in a single request, so
+  splitting a list across several requests explores a smaller graph than asking for all of it
+  at once.
+
+  Two body formats are accepted.  A raw ``text/plain`` body:
+
+  .. code-block:: bash
+
+     curl -X POST -H "Content-Type: text/plain" --data-binary @ids.txt \
+       -OJ "https://websvc.codepharm.net/RC1/Export/Morphology/tlp"
+
+  Or a ``multipart/form-data`` upload of a single **.txt** file:
+
+  .. code-block:: bash
+
+     curl -X POST -F "file=@ids.txt" \
+       -OJ "https://websvc.codepharm.net/RC1/Export/Network/gml?hops=2"
+
+  The body holds IDs only, separated by semicolons or newlines, so a text file with one ID
+  per line works as-is.  Other parameters such as ``hops`` and ``stick`` stay in the query
+  string, and IDs given in the query string are merged with those in the body.
+
+  The response is the file itself, exactly as it is for GET.
+
+.. note::
+
+   Limits on the body, which apply because these endpoints are anonymous: at most 200 KB,
+   at most 50,000 IDs, valid UTF-8 text, and exactly one uploaded file whose name ends in
+   ``.txt``.  Anything else is refused with a ProblemDetails response rather than a file.
+
+   A body that contains no recognisable ID is also refused.  This is deliberate: an empty
+   ID set means "export the whole volume", and a caller who sent a body clearly wanted a
+   subset.  To export a whole volume, send no body at all.
+
+.. note::
+
+   Before September 2026 the POST actions were named ``PostTLP``, ``PostJSON``, ``PostDot``
+   and ``PostGML``, and they read their IDs from the query string, ignoring the body.  Those
+   names still route, and now read the body as well.
+
+
 Neuron connectivity network
 ===========================
 
@@ -117,7 +167,7 @@ Neuron connectivity network
       * **GML** - GraphML file format, ``gml``
       * **JSON** - Java script object notation, ``json``
         
-   :query ids: ID numbers of cells to include in connectivity graph.  Semicolons separate multiple IDs.  Omit to export the whole volume.
+   :query ids: ID numbers of cells to include in connectivity graph.  Semicolons separate multiple IDs.  Omit to export the whole volume.  For lists too long for a URL, POST them to the same address instead; see `Long lists: POST the IDs instead`_.
    :query hops: Degrees of seperation to include additional neurons in graph
    
    :resheader Content-Type: text/plain
@@ -239,7 +289,7 @@ Morphology
       * **TLP** - Tulip file format, ``tlp``
       * **JSON** - Java script object notation, ``json``
      
-   :query ids: ID numbers of cells to include in the graph.  Semicolons separate multiple IDs.
+   :query ids: ID numbers of cells to include in the graph.  Semicolons separate multiple IDs.  For lists too long for a URL, POST them to the same address instead; see `Long lists: POST the IDs instead`_.
    :query stick: When set to a number greater than 0 the morphology graph is simplified.  Only nodes representing process terminations or branching points are represented.
    
    :resheader Content-Type: text/plain

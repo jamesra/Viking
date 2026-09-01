@@ -1,3 +1,4 @@
+using DataExport.Controllers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,6 +50,8 @@ foreach (var dir in requiredDirs)
 }
 
 // Configure the HTTP request pipeline.
+app.UseIdRequestExceptionHandler();
+
 app.UseStaticFiles();
 
 // Add URL rewrite middleware to handle case-insensitive URLs

@@ -54,84 +54,96 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
         return outputDir;
     }
 
-    private IActionResult RedirectToFile(string outputFilename)
-    {
-        string url = $"/Output/{outputFilename}";
-        Response.StatusCode = StatusCodes.Status201Created;
-        Response.Headers.Location = url;
-        return Redirect(url);
-    }
-
     /// <summary>
     /// Exports network data in DOT format via POST request.
     /// </summary>
-    /// <param name="req">The form file (not used, but required for routing).</param>
-    /// <returns>Redirect to the generated DOT file.</returns>
+    /// <remarks>
+    /// POST accepts the structure ID list in the request body, which avoids the URL length limit that
+    /// constrains the equivalent GET.
+    /// </remarks>
+    /// <returns>The generated DOT file for download.</returns>
+    [HttpPost("dot")]
     [HttpPost("PostDot")]
-    public async Task<IActionResult> PostDot([FromForm] IFormFile? req)
+    [RequestSizeLimit(RequestBodyIds.MaxBodyBytes)]
+    public async Task<IActionResult> PostDot()
     {
-        ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
+        ICollection<long> requestIDs = await RequestVariables.GetIDsFromRequestAsync(Request, GetODataUrl(), HttpContext.RequestAborted);
         string outputFilename = GetOutputFilename(requestIDs, "dot");
         string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
         NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
         NeuronDOTView DotGraph = NeuronDOTView.ToDOT(neuronGraph, false);
         DotGraph.SaveDOT(outputFileFullPath);
-        return RedirectToFile(outputFilename);
+        return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
     }
 
     /// <summary>
     /// Exports network data in TLP (Tulip) format via POST request.
     /// </summary>
-    /// <param name="req">The form file (not used, but required for routing).</param>
-    /// <returns>Redirect to the generated TLP file.</returns>
+    /// <remarks>
+    /// POST accepts the structure ID list in the request body, which avoids the URL length limit that
+    /// constrains the equivalent GET.
+    /// </remarks>
+    /// <returns>The generated TLP file for download.</returns>
+    [HttpPost("tlp")]
     [HttpPost("PostTLP")]
-    public async Task<IActionResult> PostTLP([FromForm] IFormFile? req)
+    [RequestSizeLimit(RequestBodyIds.MaxBodyBytes)]
+    public async Task<IActionResult> PostTLP()
     {
-        ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
+        ICollection<long> requestIDs = await RequestVariables.GetIDsFromRequestAsync(Request, GetODataUrl(), HttpContext.RequestAborted);
         string outputFilename = GetOutputFilename(requestIDs, "tlp");
         string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
         NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
         NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, GetVolumeUrl());
         TlpGraph.SaveTLP(outputFileFullPath);
-        return RedirectToFile(outputFilename);
+        return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
     }
 
     /// <summary>
     /// Exports network data in GraphML format via POST request.
     /// </summary>
-    /// <param name="req">The form file (not used, but required for routing).</param>
-    /// <returns>Redirect to the generated GraphML file.</returns>
+    /// <remarks>
+    /// POST accepts the structure ID list in the request body, which avoids the URL length limit that
+    /// constrains the equivalent GET.
+    /// </remarks>
+    /// <returns>The generated GraphML file for download.</returns>
+    [HttpPost("gml")]
     [HttpPost("PostGML")]
-    public async Task<IActionResult> PostGML([FromForm] IFormFile? req)
+    [RequestSizeLimit(RequestBodyIds.MaxBodyBytes)]
+    public async Task<IActionResult> PostGML()
     {
-        ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
+        ICollection<long> requestIDs = await RequestVariables.GetIDsFromRequestAsync(Request, GetODataUrl(), HttpContext.RequestAborted);
         string outputFilename = GetOutputFilename(requestIDs, "graphml");
         string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
         NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
         NeuronGMLView GmlGraph = NeuronGMLView.ToGML(neuronGraph, GetVolumeUrl());
         GmlGraph.SaveGML(outputFileFullPath);
-        return RedirectToFile(outputFilename);
+        return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
     }
 
     /// <summary>
     /// Exports network data in JSON format via POST request.
     /// </summary>
-    /// <param name="req">The form file (not used, but required for routing).</param>
-    /// <returns>Redirect to the generated JSON file.</returns>
+    /// <remarks>
+    /// POST accepts the structure ID list in the request body, which avoids the URL length limit that
+    /// constrains the equivalent GET.
+    /// </remarks>
+    /// <returns>The generated JSON file for download.</returns>
+    [HttpPost("json")]
     [HttpPost("PostJSON")]
-    public async Task<IActionResult> PostJSON([FromForm] IFormFile? req)
+    [RequestSizeLimit(RequestBodyIds.MaxBodyBytes)]
+    public async Task<IActionResult> PostJSON()
     {
-        ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
+        ICollection<long> requestIDs = await RequestVariables.GetIDsFromRequestAsync(Request, GetODataUrl(), HttpContext.RequestAborted);
         string outputFilename = GetOutputFilename(requestIDs, "json");
         string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
         NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
         NeuronJSONView JsonGraph = NeuronJSONView.ToJSON(neuronGraph);
         JsonGraph.SaveJSON(outputFileFullPath);
-        return RedirectToFile(outputFilename);
+        return PhysicalFile(outputFileFullPath, "application/json", outputFilename);
     }
 
     /// <summary>
