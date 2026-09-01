@@ -31,6 +31,8 @@ namespace MonogameTestbed
         //public PointSetViewView[] PolyPointsView = null;
         public PointSetView IncompletedVertexView = null;
 
+        //Unculled by default: a slice between two polyline annotations is a flat sheet with a single winding, so
+        //backface culling erases it from one side and it reads as a gap in the process rather than a surface.
         public CullMode CullMode = CullMode.None;
 
         public ConcurrentQueue<BajajGeneratorMesh> CompletedMeshes = new();
@@ -362,7 +364,7 @@ namespace MonogameTestbed
                     try
                     {
                         drawlock.Wait();
-                        MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, window.Scene, CullMode.CullCounterClockwiseFace);
+                        MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, window.Scene, BajajMultiAssignmentTest.CullModeForView(CullMode));
                         ViewLabels.AppendLine(MeshViews[iShownMesh.Value].Name);
                     }
                     finally
@@ -375,7 +377,7 @@ namespace MonogameTestbed
             {
                 if (CompositeMeshView != null)
                 {
-                    CompositeMeshView.Draw(window.GraphicsDevice, window.Scene, CullMode.CullCounterClockwiseFace);
+                    CompositeMeshView.Draw(window.GraphicsDevice, window.Scene, BajajMultiAssignmentTest.CullModeForView(CullMode));
                     ViewLabels.AppendLine(CompositeMeshView.Name);
                 }
             }
