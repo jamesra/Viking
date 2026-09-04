@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using Geometry;
+using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace MorphologyMesh
 {
@@ -36,6 +37,18 @@ namespace MorphologyMesh
         /// Map Polygons[] index from this topology to the morphology node key generating that polygon in the parent SliceGraph
         /// </summary>
         public readonly ulong[] ShapeIndexToMorphNodeIndex;
+
+        /// <summary>
+        /// Location type of each shape in <see cref="Shapes"/>, indexed in lockstep.
+        /// Circle annotations stay polygons in <see cref="Shapes"/> but are capped with a scaled circle, not a medial-axis dome.
+        /// </summary>
+        public readonly LocationType[] ShapeLocationTypes;
+
+        /// <summary>
+        /// Volume-space circle for each shape when <see cref="ShapeLocationTypes"/> is <see cref="LocationType.CIRCLE"/>,
+        /// in the same translated XY frame as <see cref="Shapes"/>. Null when no circle metadata was supplied.
+        /// </summary>
+        public readonly Circle[] ShapeCircles;
 
         /// <summary>
         /// Map a UpperPolygons index to Polygons index
@@ -170,8 +183,8 @@ namespace MorphologyMesh
         /// Per-shape virtual overlap translations already applied to <paramref name="shapes"/>, indexed in lockstep
         /// with them, or null to let the constructor compute them.
         /// </param>
-        public SliceTopology(ulong key, IEnumerable<IShape2D> shapes, IEnumerable<bool> isUpper, IEnumerable<double> shapeZ, IEnumerable<ulong> shapeIndexToMorphNodeIndex, double sliceThickness = double.NaN, Vector2[] virtualOverlapOffsets = null, bool[,] shapesAreLinked = null, bool buildForkPartition = false)
-            : this(shapes, isUpper, shapeZ, shapeIndexToMorphNodeIndex, sliceThickness, virtualOverlapOffsets, shapesAreLinked, buildForkPartition, key)
+        public SliceTopology(ulong key, IEnumerable<IShape2D> shapes, IEnumerable<bool> isUpper, IEnumerable<double> shapeZ, IEnumerable<ulong> shapeIndexToMorphNodeIndex, double sliceThickness = double.NaN, Vector2[] virtualOverlapOffsets = null, bool[,] shapesAreLinked = null, bool buildForkPartition = false, IEnumerable<LocationType> shapeLocationTypes = null, IEnumerable<Circle> shapeCircles = null)
+            : this(shapes, isUpper, shapeZ, shapeIndexToMorphNodeIndex, sliceThickness, virtualOverlapOffsets, shapesAreLinked, buildForkPartition, key, shapeLocationTypes, shapeCircles)
         {
             SliceKey = key;
         }
@@ -180,7 +193,7 @@ namespace MorphologyMesh
         /// Per-shape virtual overlap translations already applied to <paramref name="shapes"/>, indexed in lockstep
         /// with them, or null to let the constructor compute them.
         /// </param>
-        public SliceTopology(IEnumerable<IShape2D> shapes, IEnumerable<bool> isUpper, IEnumerable<double> shapeZ, IEnumerable<ulong> shapeIndexToMorphNodeIndex = null, double sliceThickness = double.NaN, Vector2[] virtualOverlapOffsets = null, bool[,] shapesAreLinked = null, bool buildForkPartition = false, ulong sliceKeyForTrace = 0)
+        public SliceTopology(IEnumerable<IShape2D> shapes, IEnumerable<bool> isUpper, IEnumerable<double> shapeZ, IEnumerable<ulong> shapeIndexToMorphNodeIndex = null, double sliceThickness = double.NaN, Vector2[] virtualOverlapOffsets = null, bool[,] shapesAreLinked = null, bool buildForkPartition = false, ulong sliceKeyForTrace = 0, IEnumerable<LocationType> shapeLocationTypes = null, IEnumerable<Circle> shapeCircles = null)
         {
             SliceKey = 0;
 
@@ -195,6 +208,11 @@ namespace MorphologyMesh
 
             ShapeIndexToMorphNodeIndex = shapeIndexToMorphNodeIndex?.ToArray();
 
+            int shapeCount = Shapes.Length;
+            ShapeLocationTypes = shapeLocationTypes?.ToArray()
+                ?? [.. Enumerable.Repeat(LocationType.POLYGON, shapeCount)];
+            ShapeCircles = shapeCircles?.ToArray();
+
             //These arrays are indexed in lockstep by shape index.  A mismatch means a caller filtered one of them
             //without filtering the others, which silently attributes a shape's Z or upper/lower flag to a different
             //shape.  Fail loudly rather than build a mesh from scrambled correspondence.
@@ -206,6 +224,12 @@ namespace MorphologyMesh
 
             if (ShapeIndexToMorphNodeIndex is not null && ShapeIndexToMorphNodeIndex.Length != Shapes.Length)
                 throw new ArgumentException($"ShapeIndexToMorphNodeIndex has {ShapeIndexToMorphNodeIndex.Length} entries for {Shapes.Length} shapes.  These must be indexed in lockstep.", nameof(shapeIndexToMorphNodeIndex));
+
+            if (ShapeLocationTypes.Length != Shapes.Length)
+                throw new ArgumentException($"ShapeLocationTypes has {ShapeLocationTypes.Length} entries for {Shapes.Length} shapes.  These must be indexed in lockstep.", nameof(shapeLocationTypes));
+
+            if (ShapeCircles is not null && ShapeCircles.Length != Shapes.Length)
+                throw new ArgumentException($"ShapeCircles has {ShapeCircles.Length} entries for {Shapes.Length} shapes.  These must be indexed in lockstep.", nameof(shapeCircles));
 
             if (shapesAreLinked is not null &&
                 (shapesAreLinked.GetLength(0) != Shapes.Length || shapesAreLinked.GetLength(1) != Shapes.Length))

@@ -16,6 +16,7 @@ namespace MonogameTestbed
 {
     class MeshTest : IGraphicsTest
     {
+        readonly TestInputContext Input = new();
         public string Title => this.GetType().Name;
         MeshView<VertexPositionColor> meshView;
         MeshView<VertexPositionNormalColor> meshViewWithLighting;
@@ -26,8 +27,6 @@ namespace MonogameTestbed
 
         LabelView labelCamera;
 
-
-        readonly GamePadStateTracker Gamepad = new();
 
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
@@ -240,10 +239,9 @@ private MeshModel<VertexPositionNormalColor> BuildCircleConvexHull(ICircle2D cir
 public void Update()
 {
     StandardCameraManipulator.Update(this.Scene.Camera);
-    GamePadState state = GamePad.GetState(PlayerIndex.One);
-    Gamepad.Update(state);
+    GamePadState state = Input.UpdateTrackers();
 
-    if (Gamepad.Y_Clicked)
+    if (Input.Gamepad.Y_Clicked)
     {
         meshView.WireFrame = !meshView.WireFrame;
         meshViewWithLighting.WireFrame = meshView.WireFrame;
@@ -255,7 +253,7 @@ public void Update()
 public void Draw(MonoTestbed window)
 {
     this.Scene.Viewport = window.GraphicsDevice.Viewport;
-    window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, 1.0f, 0);
+    window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, MonoTestbed.DefaultBackground, 1.0f, 0);
 
     DepthStencilState dstate = new DepthStencilState
     {

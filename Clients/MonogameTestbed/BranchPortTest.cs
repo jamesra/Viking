@@ -218,12 +218,11 @@ namespace MonogameTestbed
     class BranchPointTest : IGraphicsTest
     {
         public string Title => this.GetType().Name;
+        readonly TestInputContext Input = new();
         Scene scene;
         readonly List<PointSet> PointSets = [];
         readonly List<PointSetView> PointSetViews = [];
         readonly BranchPortView PortView = new();
-        readonly GamePadStateTracker Gamepad = new();
-
         Geometry.Vector2 Cursor;
         CircleView cursorView;
         LabelView cursorLabel;
@@ -261,7 +260,7 @@ namespace MonogameTestbed
                 PointSetViews.Add(view);
             }
 
-            Gamepad.Update(GamePad.GetState(PlayerIndex.One));
+            Input.UpdateTrackers();
 
             UpdateCursorViews(Cursor);
             return Task.CompletedTask;
@@ -282,8 +281,7 @@ namespace MonogameTestbed
 
         public void Update()
         {
-            GamePadState state = GamePad.GetState(PlayerIndex.One);
-            Gamepad.Update(state);
+            GamePadState state = Input.UpdateTrackers();
 
             //StandardCameraManipulator.Update(this.Scene.Camera);
 
@@ -318,31 +316,31 @@ namespace MonogameTestbed
                 }
             }
 
-            if (Gamepad.RightStick_Clicked)
+            if (Input.Gamepad.RightStick_Clicked)
             {
                 scene.Camera.Downsample = 1;
                 scene.Camera.LookAt = Vector2.Zero;
             }
 
-            if (Gamepad.A_Clicked)
+            if (Input.Gamepad.A_Clicked)
             {
                 PointSets[0].Toggle(Cursor);
                 //Points_A.Toggle(Cursor);
             }
 
-            if (Gamepad.B_Clicked)
+            if (Input.Gamepad.B_Clicked)
             {
                 PointSets[1].Toggle(Cursor);
                 //Points_B.Toggle(Cursor);
             }
 
-            if (Gamepad.Y_Clicked)
+            if (Input.Gamepad.Y_Clicked)
             {
                 PointSets[2].Toggle(Cursor);
                 //Points_C.Toggle(Cursor);
             }
 
-            if (Gamepad.X_Clicked)
+            if (Input.Gamepad.X_Clicked)
             {
                 PointSets[3].Toggle(Cursor);
                 //Points_D.Toggle(Cursor);

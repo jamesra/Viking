@@ -107,17 +107,24 @@ namespace MonogameTestbed
         public bool ShowAssemblyBoundingBoxes = true;
 
         /// <summary>
-        /// When false, hides problem-colored slice boxes (red/orange/yellow) while in-progress gray boxes remain.
-        /// Toggle with R. Requires <see cref="ShowAssemblyBoundingBoxes"/>.
+        /// When false, hides only red (critical / non-manifold) error boxes. Orange and yellow problem boxes
+        /// and in-progress gray boxes stay visible. Toggle with R. Requires <see cref="ShowAssemblyBoundingBoxes"/>.
         /// </summary>
-        public bool ShowFailedBoundingBoxes
+        public bool ShowRedErrorBoxes
         {
-            get => meshIncompleteView?.ShowFailedBoundingBoxes ?? true;
+            get => meshIncompleteView?.ShowRedErrorBoxes ?? true;
             set
             {
                 if (meshIncompleteView != null)
-                    meshIncompleteView.ShowFailedBoundingBoxes = value;
+                    meshIncompleteView.ShowRedErrorBoxes = value;
             }
+        }
+
+        /// <summary>Alias for <see cref="ShowRedErrorBoxes"/>.</summary>
+        public bool ShowFailedBoundingBoxes
+        {
+            get => ShowRedErrorBoxes;
+            set => ShowRedErrorBoxes = value;
         }
 
         public IndexLabelType VertexLabelType
@@ -833,9 +840,25 @@ namespace MonogameTestbed
 /// <summary>
 /// Generates a single mesh for a cell or a subset of a cell based on a Z range.  Used to debug the generation of whole cells and the merging of multiple slice meshes.
 /// </summary>
-class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
+class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
 {
     public string Title => this.GetType().Name;
+
+    public IReadOnlyList<HotkeyBinding> GetHotkeyBindings() =>
+    [
+        new("B / Right stick", "Toggle assembly bounding-box overlay"),
+        new("R", "Toggle red (critical) error bounding boxes only"),
+        new("K / Left stick", "Toggle backface culling"),
+        new("P", "Toggle crosshair mesh pick readout"),
+        new("F", "Frame camera on rendered mesh"),
+        new("I", "Toggle invert-Z in the 3D view"),
+        new("Ctrl+S / Back", "Save assembled meshes"),
+        new("PrintScreen / Back", "Save current structure mesh when assembled"),
+        new("Left shoulder", "Toggle composite vs slice mesh"),
+        new("Start", "Regenerate mesh for focused structure"),
+        new("A / X buttons", "Cycle shown mesh / lines / regions (gamepad)"),
+        new("Right shoulder", "Cycle vertex label modes"),
+    ];
 
     public string ModeDescription => string.Empty;
 
@@ -876,9 +899,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
     Scene scene;
     Scene3D scene3D;
     MonoTestbed _window;
-    readonly GamePadStateTracker Gamepad = new();
-    readonly KeyboardStateTracker keyboard = new();
-
+    readonly TestInputContext Input = new();
     /// <summary>
     /// World transform that reflects volume Z through the XY plane when <see cref="Program.CommandLineOptions.InvertZ"/> is set.
     /// Camera3D uses +Z as up; this keeps exported DAE in volume coordinates.
@@ -911,7 +932,6 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
 
     readonly PointSetViewCollection Points_A = new(Color.Blue, Color.BlueViolet, Color.PowderBlue);
     readonly PointSetViewCollection Points_B = new(Color.Red, Color.Pink, Color.Plum);
-    readonly Cursor2DCameraManipulator CameraManipulator = new();
     readonly Camera3DManipulator Camera3DManipulator = new();
     readonly List<BajajMultiOTVAssignmentView> _wrapViews = [];
 
@@ -1148,8 +1168,8 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
             World = ViewZAxisWorld
         };
 
-        Gamepad.Update(GamePad.GetState(PlayerIndex.One));
-        keyboard.Update(Keyboard.GetState());
+        Input.UpdateTrackers();
+        Input.Keyboard.Update(Keyboard.GetState());
 
         Console.Write("Begin OData fetch");
 
@@ -1311,19 +1331,6 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
         {
             window.Exit();
         }
-        /*
-        A = SqlGeometry.STPolyFromText(PolyA.ToSqlChars(), 0).ToPolygon();
-        B = SqlGeometry.STPolyFromText(PolyB.ToSqlChars(), 0).ToPolygon();
-
-        Geometry.Vector2 Centroid = A.Centroid;
-        A = A.Translate(-Centroid);
-        B = B.Translate(-Centroid);
-
-        Points_A.Points = new MonogameTestbed.PointSet(A.ExteriorRing);
-        Points_B.Points = new MonogameTestbed.PointSet(B.ExteriorRing);
-
-        wrapView = new TriangulationShapeWrapView(A, B);
-        */
     }
 
     /// <summary>
@@ -1381,11 +1388,11 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
     {
         PlayerIndex? InputSource = GamePadStateTracker.GetFirstConnectedController() ?? PlayerIndex.One;
         GamePadState state = GamePad.GetState(InputSource.Value);
-        Gamepad.Update(state);
-        keyboard.Update(Keyboard.GetState());
+        Input.Gamepad.Update(state);
+        Input.Keyboard.Update(Keyboard.GetState());
 
         if (!Draw3D)
-            CameraManipulator.Update(scene.Camera);
+            Input.CameraManipulator.Update(scene.Camera);
         else
         {
             Camera3DManipulator.Update(this.scene3D.Camera, scene3D.Viewport.Width, scene3D.Viewport.Height);
@@ -1395,7 +1402,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
         foreach (var wrapView in WrapViews)
         {
 
-            if (Gamepad.A_Clicked)
+            if (Input.Gamepad.A_Clicked)
             {
                 wrapView.iShownMesh = wrapView.iShownMesh.HasValue ? wrapView.iShownMesh.Value + 1 : 0;
                 if (wrapView.iShownMesh.HasValue && wrapView.iShownMesh.Value >= wrapView.MeshViews.Count)
@@ -1404,7 +1411,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
                 }
             }
 
-            if (Gamepad.B_Clicked)
+            if (Input.Gamepad.B_Clicked)
             {
                 wrapView.iShownLineView = wrapView.iShownLineView.HasValue ? wrapView.iShownLineView.Value + 1 : 0;
                 if (wrapView.iShownLineView.HasValue && wrapView.iShownLineView.Value >= wrapView.listLineViews.Count)
@@ -1419,7 +1426,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
                 */
             }
 
-            if (Gamepad.Y_Clicked)
+            if (Input.Gamepad.Y_Clicked)
             {
                 //Cycle throught the various region passes as Y is clicked
                 wrapView.iShownRegion = wrapView.iShownRegion.HasValue ? wrapView.iShownRegion.Value + 1 : 0;
@@ -1429,18 +1436,18 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
                 }
             }
 
-            if (Gamepad.X_Clicked)
+            if (Input.Gamepad.X_Clicked)
             {
                 wrapView.ShowCompletedVerticies = !wrapView.ShowCompletedVerticies;
             }
 
-            if (Gamepad.Start_Clicked && wrapView.IsGeneratingMesh == false)
+            if (Input.Gamepad.Start_Clicked && wrapView.IsGeneratingMesh == false)
             {
                 _ = wrapView.GenerateMesh();
                 _crosshairPickStale = true;
             }
 
-            if (Gamepad.RightShoulder_Clicked)
+            if (Input.Gamepad.RightShoulder_Clicked)
             {
                 if ((wrapView.VertexLabelType & (IndexLabelType.MESH | IndexLabelType.POLYGON)) == 0)
                 {
@@ -1461,47 +1468,47 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
                     wrapView.VertexLabelType ^= IndexLabelType.MESH;
                 }
             }
-            if (Gamepad.RightStick_Clicked || keyboard.Pressed(Keys.B))
+            if (Input.Gamepad.RightStick_Clicked || Input.Keyboard.Pressed(Keys.B))
             {
                 wrapView.ShowAssemblyBoundingBoxes = !wrapView.ShowAssemblyBoundingBoxes;
             }
 
-            if (keyboard.Pressed(Keys.R))
+            if (Input.Keyboard.Pressed(Keys.R))
             {
-                wrapView.ShowFailedBoundingBoxes = !wrapView.ShowFailedBoundingBoxes;
+                wrapView.ShowRedErrorBoxes = !wrapView.ShowRedErrorBoxes;
             }
 
-            if (Gamepad.LeftStick_Clicked || keyboard.Pressed(Keys.K))
+            if (Input.Gamepad.LeftStick_Clicked || Input.Keyboard.Pressed(Keys.K))
             {
                 wrapView.CullMode = wrapView.CullMode == CullMode.None ? CullMode.CullCounterClockwiseFace : CullMode.None;
             }
 
-            if (Gamepad.LeftShoulder_Clicked)
+            if (Input.Gamepad.LeftShoulder_Clicked)
             {
                 //this.Draw3D = !this.Draw3D;
                 wrapView.ShowCompositeMesh = !wrapView.ShowCompositeMesh;
             }
 
-            if (Gamepad.Back_Clicked || keyboard.Pressed(Keys.PrintScreen))
+            if (Input.Gamepad.Back_Clicked || Input.Keyboard.Pressed(Keys.PrintScreen))
             {
                 if (wrapView.meshAssemblyPlan != null && wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
                     SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, PlacementTranslation(wrapView), wrapView.Graph);
             }
         }
 
-        if (keyboard.Pressed(Keys.P))
+        if (Input.Keyboard.Pressed(Keys.P))
         {
             _showCrosshairPick = !_showCrosshairPick;
             _crosshairPickStale = true;
         }
 
-        if (keyboard.Pressed(Keys.F) && _window != null)
+        if (Input.Keyboard.Pressed(Keys.F) && _window != null)
         {
             FrameCameraOnRenderedMesh(_window);
             _crosshairPickStale = true;
         }
 
-        if (keyboard.Pressed(Keys.I) && Program.options != null)
+        if (Input.Keyboard.Pressed(Keys.I) && Program.options != null)
         {
             Program.options.InvertZ = !Program.options.InvertZ;
             if (scene3D != null)
@@ -1513,24 +1520,24 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
             _crosshairPickStale = true;
         }
 
-        if (Gamepad.Back_Clicked || (keyboard.Pressed(Keys.S) && (keyboard.Pressed(Keys.LeftControl) || keyboard.Pressed(Keys.RightControl))))
+        if (Input.Gamepad.Back_Clicked || (Input.Keyboard.Pressed(Keys.S) && (Input.Keyboard.Pressed(Keys.LeftControl) || Input.Keyboard.Pressed(Keys.RightControl))))
         {
             //if (wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
             //SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, wrapView.Graph.StructureID);
             SaveMeshes("BajajMultitest");
         }
         /*
-        if(Gamepad.RightShoulder_Clicked)
+        if(Input.Gamepad.RightShoulder_Clicked)
         {
             wrapView.NumLinesToDraw++;
         }
 
-        if (Gamepad.LeftShoulder_Clicked)
+        if (Input.Gamepad.LeftShoulder_Clicked)
         {
             wrapView.NumLinesToDraw--;
         }
 
-        if (Gamepad.Y_Clicked)
+        if (Input.Gamepad.Y_Clicked)
         {
             wrapView.ShowFinalLines = !wrapView.ShowFinalLines;
         }*/
@@ -1541,7 +1548,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
         MonoTestbed.SyncViewport(scene, window.GraphicsDevice);
         MonoTestbed.SyncViewport(scene3D, window.GraphicsDevice);
         scene3D.World = ViewZAxisWorld;
-        window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, 1.0f, 0);
+        window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, MonoTestbed.DefaultBackground, 1.0f, 0);
 
 
         foreach (var wrapView in WrapViews)
@@ -1594,7 +1601,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
 
         if (WrapViews.Any(w => w.ShowAssemblyBoundingBoxes))
         {
-            hud.AppendLine("Boxes: B=all  R=problem");
+            hud.AppendLine("Boxes: B=all  R=red errors");
             hud.AppendLine("  gray=in progress  blue=section ready");
             hud.AppendLine("  yellow=minor  orange=holes/winding  red=non-manifold");
         }
@@ -1797,7 +1804,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
 
         foreach (var boundary in boundaryViewModels)
         {
-            System.Drawing.Color color = System.Drawing.Color.FromArgb(0x7F7F7F7F);
+            RgbaColor color = RgbaColor.FromArgb(0x7F, 0x7F, 0x7F, 0x7F);
             ulong structure_id = boundary.Type.ID + structure_type_id_adjustment;
             StructureModel rootModel = new(structure_id, boundary.Mesh,
                 new MaterialLighting(MaterialLighting.CreateKey(COLORSOURCE.STRUCTURETYPE, structure_id), color))
@@ -1820,7 +1827,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
             {
                 var mesh = view.meshAssemblyPlan.Root.MeshModel.composite;
                 StructureModel rootModel = new(structure_id, mesh,
-                new MaterialLighting(MaterialKey(view.Graph), System.Drawing.Color.CornflowerBlue))
+                new MaterialLighting(MaterialKey(view.Graph), RgbaColor.CornflowerBlue))
                 {
                     Translation = PlacementTranslation(view) * 0.001
                 };
@@ -1875,7 +1882,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend
         };
 
         StructureModel rootModel = new(structure_id, mesh,
-            new MaterialLighting(MaterialKey(structureGraph), System.Drawing.Color.CornflowerBlue))
+            new MaterialLighting(MaterialKey(structureGraph), RgbaColor.CornflowerBlue))
         {
             Translation = Position * 0.001
         };

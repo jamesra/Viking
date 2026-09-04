@@ -16,9 +16,8 @@ namespace MonogameTestbed
 {
     class MorphologyTest : IGraphicsTest
     {
+        readonly TestInputContext Input = new();
         public string Title => this.GetType().Name;
-
-        readonly GamePadStateTracker Gamepad = new();
 
         VikingXNAGraphics.MeshView<VertexPositionNormalColor> meshView;
 
@@ -272,15 +271,14 @@ namespace MonogameTestbed
         {
             StandardCameraManipulator.Update(this.Scene.Camera);
 
-            GamePadState state = GamePad.GetState(PlayerIndex.One);
-            Gamepad.Update(state);
+            GamePadState state = Input.UpdateTrackers();
 
-            if (Gamepad.Y_Clicked)
+            if (Input.Gamepad.Y_Clicked)
             {
                 meshView.WireFrame = !meshView.WireFrame;
             }
 
-            if (Gamepad.A_Clicked)
+            if (Input.Gamepad.A_Clicked)
             {
                 this.Scene.Camera.Rotation = Vector3.Zero;
                 this.Scene.Camera.Position = new Vector3(0, -10, 0);
@@ -295,7 +293,7 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window)
         {
-            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, 1.0f, 0);
+            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, MonoTestbed.DefaultBackground, 1.0f, 0);
 
             DepthStencilState dstate = new()
             {

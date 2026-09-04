@@ -11,9 +11,7 @@
 		<Platforms>x64</Platforms>
 		<PlatformTarget>x64</PlatformTarget>
 		<MonoGamePlatform>DesktopGL</MonoGamePlatform>
-		<SignManifests>true</SignManifests>
-		<ManifestCertificateThumbprint>2BADCE24EC984EC73C686B32B12C48B543B4441C</ManifestCertificateThumbprint>
-		<UseWPF>False</UseWPF>
+		<UseWPF>true</UseWPF>
 		<ProduceReferenceAssembly>False</ProduceReferenceAssembly>
 		<PublishAot>False</PublishAot>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -42,7 +40,8 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 	<ItemGroup> 
-		<None Include="**\*.json" CopyToOutputDirectory="PreserveNewest" /> 
+		<None Include="**\*.json" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="Testdata\**\*.*" CopyToOutputDirectory="PreserveNewest" /> 
 		<Compile Remove=".vs\**" /> 
 		<Compile Remove="bin\**" /> 
 		<Compile Remove="obj\**" /> 
@@ -59,27 +58,16 @@
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.5-preview.3" />
-		<PackageReference Include="MonoGame.Framework.Native" Version="3.8.5-preview.3" />
 		<PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.5-preview.3" />
-		<Reference Include="System.Drawing" />
 		<PackageReference Include="CommandLineParser" Version="2.9.1" />
-		<PackageReference Include="EntityFramework" Version="6.5.1" />
 		<PackageReference Include="FsCheck" Version="2.16.3" />
 		<PackageReference Include="FSharp.Core" Version="5.0.2" />
 		<PackageReference Include="MathNet.Numerics" Version="5.0.0" />
 		<PackageReference Include="MIConvexHull" Version="1.1.19.1019" />
-		<PackageReference Include="Microsoft.Net.Http" Version="2.2.29" />
-		<PackageReference Include="Microsoft.OData.Client" Version="8.1.0" />
-		<PackageReference Include="Microsoft.OData.Core" Version="8.1.0" />
-		<PackageReference Include="Microsoft.OData.Edm" Version="8.1.0" />
-		<PackageReference Include="Microsoft.Spatial" Version="8.1.0" />
 		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="System.Collections.Immutable" Version="9.0.8" />
-		<PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
 		<PackageReference Include="System.Text.Json" Version="9.0.8" />
 		<PackageReference Include="System.Drawing.Common" Version="9.0.8" />
-		<PackageReference Include="System.Diagnostics.Debug" Version="4.3.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.8" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
@@ -92,6 +80,7 @@
 		<ProjectReference Include="..\..\AnnotationVizLibODataClient\AnnotationVizLibODataClient.csproj" />
 		<ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj" />
 		<ProjectReference Include="..\..\ColladaIO\ColladaIO.csproj" />
+		<ProjectReference Include="..\Common\Common.csproj" />
 		<ProjectReference Include="..\..\GeometryTests\GeometryTests.csproj" />
 		<ProjectReference Include="..\..\Geometry\Geometry.csproj" />
 		<ProjectReference Include="..\..\GraphLib\GraphLib.csproj" />

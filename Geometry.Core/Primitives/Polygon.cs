@@ -216,7 +216,10 @@ namespace Geometry
 
         public Polygon(Vector2[] exteriorRing, IEnumerable<Vector2[]> interiorRings)
         {
-            Debug.Assert(exteriorRing.Length < 5000, "This is a huge polygon, why?");
+            //Keep in sync with SqlGeometryUtils.SqlToMyGeometryConverters.MaxPolygonRingPointsBeforeSimplify.
+            const int MaxExteriorRingPointsForAssert = 5000;
+            Debug.Assert(exteriorRing.Length < MaxExteriorRingPointsForAssert,
+                "This is a huge polygon, why? Callers that load SQL geometry should pre-simplify via ToPolygon(tolerance).");
 
             if (!exteriorRing.IsValidClosedRing())
             {

@@ -3,6 +3,7 @@ using Microsoft.SqlServer.Types;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlTypes;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 #if NET48
@@ -36,32 +37,119 @@ namespace SqlGeometryUtils
 
     public static class SqlToMyGeometryConverters
     {
-        public static Polygon ToPolygon(this SqlGeometry shape)
+        /// <summary>
+        /// Matches the Debug.Assert ceiling in <see cref="Polygon"/>'s constructor. Rings at or above this
+        /// size are Douglas–Peucker reduced before the Polygon is built.
+        /// </summary>
+        public const int MaxPolygonRingPointsBeforeSimplify = 5000;
+
+        public static Polygon ToPolygon(this SqlGeometry shape) => shape.ToPolygon(simplifyTolerance: 0);
+
+        /// <summary>
+        /// Converts a SQL polygon/curvepolygon to a <see cref="Polygon"/>. When the exterior (or an interior)
+        /// ring has <see cref="MaxPolygonRingPointsBeforeSimplify"/> or more vertices, the ring is simplified
+        /// with Douglas–Peucker before construction, escalating the tolerance until the ring fits under the
+        /// limit (or a uniform subsample is used as a last resort).
+        /// </summary>
+        /// <param name="simplifyTolerance">
+        /// Preferred Douglas–Peucker distance. When zero and the ring is still huge, a starting tolerance of 1
+        /// is used and doubled on each retry.
+        /// </param>
+        public static Polygon ToPolygon(this SqlGeometry shape, double simplifyTolerance)
         {
             if (shape.GeometryType() != SupportedGeometryType.POLYGON && shape.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
                 throw new ArgumentException("SqlGeometry must be a polygon type");
 
-            Vector2[] ExteriorRing = shape.ToPoints();
-            ICollection<Vector2[]> InteriorRings = shape.InteriorRingPoints();
+            Vector2[] ExteriorRing = EnsureRingUnderMaxPoints(shape.ToPoints(), MaxPolygonRingPointsBeforeSimplify, simplifyTolerance, closed: true);
+            ICollection<Vector2[]> InteriorRings = [.. shape.InteriorRingPoints()
+                .Select(r => EnsureRingUnderMaxPoints(r, MaxPolygonRingPointsBeforeSimplify, simplifyTolerance, closed: true))];
 
             try
             {
                 return new Polygon(ExteriorRing, InteriorRings);
             }
-            catch (ArgumentException e)
+            catch (ArgumentException)
             {
                 return new Polygon([.. ExteriorRing.RemoveAdjacentDuplicates()], InteriorRings.Select(ir => ir.RemoveAdjacentDuplicates().ToArray()));
             }
         }
 
+        /// <summary>
+        /// Douglas–Peucker reduce a ring/polyline until its point count is below <paramref name="maxPoints"/>.
+        /// For closed rings the first and last points stay equal after reduction.
+        /// </summary>
+        internal static Vector2[] EnsureRingUnderMaxPoints(Vector2[] points, int maxPoints, double simplifyTolerance, bool closed)
+        {
+            if (points is null || points.Length < maxPoints)
+                return points;
+
+            int originalCount = points.Length;
+            double tol = simplifyTolerance > 0 ? simplifyTolerance : 1.0;
+
+            for (int attempt = 0; attempt < 16; attempt++)
+            {
+                List<Vector2> reduced = points.DouglasPeuckerReduction(tol);
+                Vector2[] candidate = closed ? EnsureClosed(reduced) : [.. reduced];
+
+                if (candidate.Length < maxPoints && candidate.Length >= (closed ? 4 : 2))
+                {
+                    Trace.WriteLine(
+                        $"Pre-simplified geometry ring from {originalCount} to {candidate.Length} points (Douglas–Peucker tolerance {tol:G4}).");
+                    return candidate;
+                }
+
+                tol *= 2.0;
+            }
+
+            //Uniform subsample keeps endpoints and stays under the constructor assert.
+            Vector2[] subsampled = SubsampleToMaxPoints(points, maxPoints, closed);
+            Trace.WriteLine(
+                $"Pre-simplified geometry ring from {originalCount} to {subsampled.Length} points by uniform subsample after Douglas–Peucker retries.");
+            return subsampled;
+        }
+
+        private static Vector2[] EnsureClosed(List<Vector2> points)
+        {
+            if (points.Count == 0)
+                return [];
+
+            if (points[0] != points[points.Count - 1])
+                points.Add(points[0]);
+
+            return [.. points];
+        }
+
+        private static Vector2[] SubsampleToMaxPoints(Vector2[] points, int maxPoints, bool closed)
+        {
+            //Reserve one slot for the closing duplicate when the ring is closed.
+            int uniqueBudget = closed ? Math.Max(3, maxPoints - 1) : Math.Max(2, maxPoints);
+            int uniqueCount = closed && points.Length > 1 && points[0] == points[points.Length - 1]
+                ? points.Length - 1
+                : points.Length;
+
+            if (uniqueCount <= uniqueBudget)
+                return closed ? EnsureClosed([.. points.Take(uniqueCount)]) : points;
+
+            List<Vector2> kept = new(uniqueBudget + 1);
+            for (int i = 0; i < uniqueBudget; i++)
+            {
+                int src = (int)Math.Round(i * (uniqueCount - 1) / (double)(uniqueBudget - 1));
+                kept.Add(points[src]);
+            }
+
+            return closed ? EnsureClosed(kept) : [.. kept];
+        }
+
         public static SqlGeometry ToSqlGeometry(this Polygon shape) => shape.ExteriorRing.ToPolygon([.. shape.InteriorRings]);
 
-        public static Polyline ToPolyLine(this SqlGeometry shape)
+        public static Polyline ToPolyLine(this SqlGeometry shape) => shape.ToPolyLine(simplifyTolerance: 0);
+
+        public static Polyline ToPolyLine(this SqlGeometry shape, double simplifyTolerance)
         {
             if (shape.GeometryType() != SupportedGeometryType.POLYLINE)
                 throw new ArgumentException("SqlGeometry must be a polygon type");
 
-            Vector2[] points = shape.ToPoints();
+            Vector2[] points = EnsureRingUnderMaxPoints(shape.ToPoints(), MaxPolygonRingPointsBeforeSimplify, simplifyTolerance, closed: false);
             return new Polyline(points.Cast<IPoint2D>());
         }
 

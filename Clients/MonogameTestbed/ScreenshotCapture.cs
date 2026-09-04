@@ -242,7 +242,7 @@ namespace MonogameTestbed
             device.SetRenderTarget(target);
             try
             {
-                device.Clear(ClearOptions.Target | ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.DarkGray, 1f, 0);
+                device.Clear(ClearOptions.Target | ClearOptions.DepthBuffer | ClearOptions.Stencil, MonoTestbed.DefaultBackground, 1f, 0);
                 draw();
             }
             finally

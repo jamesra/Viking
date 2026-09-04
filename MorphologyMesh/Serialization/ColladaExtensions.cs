@@ -2,7 +2,7 @@
 {
     public static class ColladaExtensions
     {
-        public static double[] ToElements(this System.Drawing.Color color)
+        public static double[] ToElements(this RgbaColor color)
         {
             return [
                 (double)color.R / 255.0,

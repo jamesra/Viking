@@ -14,15 +14,13 @@ namespace MonogameTestbed
 
     class TriangleAlgorithmTest : IGraphicsTest
     {
+        readonly TestInputContext Input = new();
         public string Title => this.GetType().Name;
         Scene scene;
         readonly PointSetViewCollection Points_A = new(Color.Blue, Color.BlueViolet, Color.PowderBlue);
         readonly PointSetViewCollection Points_B = new(Color.Red, Color.Pink, Color.Plum);
         readonly PointSetViewCollection Points_C = new(Color.Red, Color.Pink, Color.GreenYellow);
         readonly UntiledRegionView PolyBorderView = new();
-        readonly GamePadStateTracker Gamepad = new();
-        readonly Cursor2DCameraManipulator CameraManipulator = new();
-
         Geometry.Vector2 Cursor;
         CircleView cursorView;
         LabelView cursorLabel;
@@ -38,7 +36,7 @@ namespace MonogameTestbed
 
             this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
 
-            Gamepad.Update(GamePad.GetState(PlayerIndex.One));
+            Input.UpdateTrackers();
 
             PolyBorderView.AddSet(Points_A.Points);
             PolyBorderView.AddSet(Points_B.Points);
@@ -55,10 +53,7 @@ namespace MonogameTestbed
 
         public void Update()
         {
-            GamePadState state = GamePad.GetState(PlayerIndex.One);
-            Gamepad.Update(state);
-
-            CameraManipulator.Update(scene.Camera);
+            GamePadState state = Input.Update(scene);
 
             if (state.ThumbSticks.Left != Vector2.Zero)
             {
@@ -82,19 +77,19 @@ namespace MonogameTestbed
                 };
             }
 
-            if (Gamepad.A_Clicked)
+            if (Input.Gamepad.A_Clicked)
             {
                 Points_A.TogglePoint(Cursor);
                 PolyBorderView.UpdateSet(Points_A.Points, 0);
             }
 
-            if (Gamepad.B_Clicked)
+            if (Input.Gamepad.B_Clicked)
             {
                 Points_B.TogglePoint(Cursor);
                 PolyBorderView.UpdateSet(Points_B.Points, 1);
             }
 
-            if (Gamepad.Y_Clicked)
+            if (Input.Gamepad.Y_Clicked)
             {
                 Points_C.TogglePoint(Cursor);
                 PolyBorderView.UpdateSet(Points_C.Points, 2);

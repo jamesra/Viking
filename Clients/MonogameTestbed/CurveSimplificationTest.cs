@@ -13,14 +13,12 @@ namespace MonogameTestbed
 {
     class CurveSimplificationTest : IGraphicsTest
     {
+        readonly TestInputContext Input = new();
         public string Title => this.GetType().Name;
         Scene scene;
 
         bool _initialized = false;
         public bool Initialized => _initialized;
-
-        readonly GamePadStateTracker Gamepad = new();
-        readonly Cursor2DCameraManipulator CameraManipulator = new();
 
         Geometry.Vector2 Cursor;
         CircleView cursorView;
@@ -71,7 +69,7 @@ namespace MonogameTestbed
 
             this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
 
-            Gamepad.Update(GamePad.GetState(PlayerIndex.One));
+            Input.UpdateTrackers();
             return Task.CompletedTask;
         }
 
@@ -121,10 +119,7 @@ namespace MonogameTestbed
         double lastDownsample = 0;
         public void Update()
         {
-            GamePadState state = GamePad.GetState(PlayerIndex.One);
-            Gamepad.Update(state);
-
-            CameraManipulator.Update(scene.Camera);
+            GamePadState state = Input.Update(scene);
 
             if (state.ThumbSticks.Left != Vector2.Zero)
             {
@@ -145,7 +140,7 @@ namespace MonogameTestbed
                 }
             }
 
-            if (Gamepad.RightShoulder_Clicked)
+            if (Input.Gamepad.RightShoulder_Clicked)
             {
                 if (path.Count > 0)
                 {
@@ -154,13 +149,13 @@ namespace MonogameTestbed
                 }
             }
 
-            if (Gamepad.B_Clicked)
+            if (Input.Gamepad.B_Clicked)
             {
                 this.IsClosed = !this.IsClosed;
                 UpdateViews();
             }
 
-            if (Gamepad.Y_Clicked)
+            if (Input.Gamepad.Y_Clicked)
             {
                 UpdateViews();
             }

@@ -3,6 +3,7 @@ using Geometry.Meshing;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Viking.AnnotationServiceTypes.Interfaces;
 
 //using TriangleNet.Meshing;
 
@@ -12,9 +13,10 @@ namespace MorphologyMesh
     public static class RegionGraphExtensions
     {
         /// <summary>
-        /// XY scale of a polyline end-cap relative to the section polyline, about the vertex-average centroid.
+        /// XY scale of an open-end cap relative to the section contour, about the shape centroid or circle center.
+        /// Polylines scale each vertex toward the vertex-average centroid; circles use the same factor on the radius.
         /// </summary>
-        private const double PolylineCapScale = 0.5;
+        private const double EndCapScale = 0.5;
 
         /// <summary>
         /// Find nodes with only one edge, attempt to create chords between the nodes.  If we are successful remove the edge. 
@@ -495,6 +497,9 @@ namespace MorphologyMesh
 
                 if (mesh.Shapes[iPoly] is Polygon poly)
                 {
+                    if (TryCapCirclePolygon(mesh, poly, iPoly, CloseUpper, halfThickness))
+                        continue;
+
                     Vector2 polyCenter = poly.Centroid;
                     Polygon centeredPolygon = poly.Translate(-polyCenter);
 
@@ -618,6 +623,93 @@ namespace MorphologyMesh
         }
 
         /// <summary>
+        /// When the source annotation is a circle, cap with a concentric circle at 50% radius instead of a medial-axis dome.
+        /// </summary>
+        private static bool TryCapCirclePolygon(BajajGeneratorMesh mesh, Polygon poly, int iPoly, bool closeUpper, double halfThickness)
+        {
+            if (mesh.Topology.IsValid == false)
+                return false;
+
+            LocationType[] types = mesh.Topology.ShapeLocationTypes;
+            Circle[] circles = mesh.Topology.ShapeCircles;
+            if (types is null || iPoly >= types.Length || types[iPoly] != LocationType.CIRCLE)
+                return false;
+
+            Circle sourceCircle = circles is not null && iPoly < circles.Length && circles[iPoly].Radius > 0
+                ? circles[iPoly]
+                : InferCircleFromPolygon(poly);
+
+            CapCircleEnd(mesh, poly, iPoly, closeUpper, halfThickness, sourceCircle);
+            return true;
+        }
+
+        private static Circle InferCircleFromPolygon(Polygon poly)
+        {
+            Vector2 center = poly.Centroid;
+            Vector2[] ring = poly.ExteriorRing;
+            double radius = 0;
+            for (int i = 0; i < ring.Length; i++)
+                radius += Vector2.Distance(center, ring[i]);
+            radius /= System.Math.Max(1, ring.Length);
+            return new Circle(center, radius);
+        }
+
+        /// <summary>
+        /// Loft a circle contour to a concentric inner ring at <see cref="EndCapScale"/> radius, offset ± half a section in Z.
+        /// </summary>
+        private static void CapCircleEnd(BajajGeneratorMesh mesh, Polygon poly, int iPoly, bool closeUpper, double halfThickness, Circle sourceCircle)
+        {
+            double contourZ = mesh.ShapeZ[iPoly];
+            double peakOffset = closeUpper ? halfThickness : -halfThickness;
+            Vector2 center = sourceCircle.Center;
+            double capRadius = sourceCircle.Radius * EndCapScale;
+
+            List<PolygonIndex> contour = [];
+            foreach (PolygonIndex idx in new PolygonVertexEnum(poly, iPoly))
+                contour.Add(idx);
+            if (contour.Count < 3 || capRadius <= 0)
+                return;
+
+            int n = contour.Count;
+            int[] inner = new int[n];
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 outerXY = mesh[contour[i]].Position.XY();
+                Vector2 dir = outerXY - center;
+                Vector2 innerXY;
+                if (dir.Magnitude > Global.Epsilon)
+                    innerXY = center + (dir / dir.Magnitude) * capRadius;
+                else
+                {
+                    double angle = (2.0 * System.Math.PI * i) / n;
+                    innerXY = center + new Vector2(System.Math.Cos(angle), System.Math.Sin(angle)) * capRadius;
+                }
+
+                MorphMeshVertex capVert = new(default(MedialAxisIndex), innerXY.ToVector3(contourZ + peakOffset));
+                inner[i] = mesh.AddVertex(capVert);
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                int next = (i + 1) % n;
+                int a = mesh[contour[i]].Index;
+                int b = mesh[contour[next]].Index;
+                int aPrime = inner[i];
+                int bPrime = inner[next];
+
+                if (mesh.Contains(a, aPrime) == false)
+                    mesh.AddEdge(new MorphMeshEdge(EdgeType.CONTOUR_TO_MEDIALAXIS, a, aPrime));
+                if (mesh.Contains(b, bPrime) == false)
+                    mesh.AddEdge(new MorphMeshEdge(EdgeType.CONTOUR_TO_MEDIALAXIS, b, bPrime));
+                if (mesh.Contains(aPrime, bPrime) == false)
+                    mesh.AddEdge(new MorphMeshEdge(EdgeType.MEDIALAXIS, aPrime, bPrime));
+
+                AddCappedTriangle(mesh, [a, b, bPrime], closeUpper);
+                AddCappedTriangle(mesh, [a, bPrime, aPrime], closeUpper);
+            }
+        }
+
+        /// <summary>
         /// Loft an open-end polyline to a copy scaled 50% about the vertex-average centroid and offset
         /// ± half a section in Z. Called from <see cref="CapMeshEnd"/> so synapses and other polyline
         /// structures occupy their terminal section instead of collapsing onto the contour plane.
@@ -643,7 +735,7 @@ namespace MorphologyMesh
             for (int i = 0; i < contour.Count; i++)
             {
                 Vector2 xy = mesh[contour[i]].Position.XY();
-                Vector2 scaled = centroid + ((xy - centroid) * PolylineCapScale);
+                Vector2 scaled = centroid + ((xy - centroid) * EndCapScale);
                 MorphMeshVertex capVert = new(default(MedialAxisIndex), scaled.ToVector3(contourZ + peakOffset));
                 extruded[i] = mesh.AddVertex(capVert);
             }

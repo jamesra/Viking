@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Viking.AnnotationServiceTypes.Interfaces;
 
 
 namespace MorphologyMesh
@@ -161,36 +162,20 @@ namespace MorphologyMesh
 
                 MorphologyEdge e = Edges.First();
 
-                //We remove cycles from the graph as we work, so there is a remote chance the edge has been removed, so just move on in that case
-                if (graph.Edges.ContainsKey(e) == false)
-                {
-                    Edges.Remove(e);
-                    continue;
-                }
-
                 MorphologyNode Source = graph[e.SourceNodeKey];
                 MorphologyNode Target = graph[e.TargetNodeKey];
 
                 ZDirection SearchDirection = Source.Z < Target.Z ? ZDirection.Increasing : ZDirection.Decreasing;
 
-                BuildMeshingCrossSection(graph, Source, SearchDirection, out var MeshGroupNodesAbove, out SortedSet<ulong> MeshGroupNodesBelow, out SortedSet<MorphologyEdge> MeshGroupEdges);
+                BuildMeshingCrossSection(graph, Source, Target, SearchDirection, out var MeshGroupNodesAbove, out SortedSet<ulong> MeshGroupNodesBelow, out SortedSet<MorphologyEdge> MeshGroupEdges);
 
-                if (graph.Edges.ContainsKey(e)) //If the edge wasn't removed to stop a cycle it should be in the result set
+                if (MeshGroupNodesAbove.Count == 0 || MeshGroupNodesBelow.Count == 0 || !MeshGroupEdges.Contains(e))
                 {
-                    Debug.Assert(MeshGroupNodesAbove.Count > 0, "Search should have found at least one node above and below.");
-                    Debug.Assert(MeshGroupNodesBelow.Count > 0, "Search should have found at least one node above and below.");
-                    Debug.Assert(MeshGroupEdges.Contains(e), "The edge we used to start the search is not in the search results.");
-                    if (MeshGroupEdges.Contains(e) == false) //This is an edge cases that shouldn't happen if deleting edges from graphs works, but removing the edge from our list so we don't loop infinitely should fix it
-                    {
-                        Edges.Remove(e);
-                    }
-                }
-                else
-                {
-                    //We removed the edge from the graph, probably a cycle, move on
+                    LogSkippedCrossSection(e, MeshGroupNodesAbove.Count, MeshGroupNodesBelow.Count, MeshGroupEdges.Contains(e));
                     Edges.Remove(e);
                     continue;
                 }
+
                 Slice group = new(iNextKey, MeshGroupNodesAbove, MeshGroupNodesBelow, MeshGroupEdges);
 
                 foreach (ulong id in group.AllNodes)
@@ -212,7 +197,6 @@ namespace MorphologyMesh
             }
 
             //Check nodes with no edges, and add them if they are not in the slicegraph
-            //Sanity check that the edge wasn't removed to eliminate a cycle and the node is not somehow in the slicegraph 
             foreach (var Node in graph.Nodes.Values.Where(n => !n.Edges.Any() && !MorphNodeToSliceNodes.ContainsKey(n.ID)))
             {
                 Slice abovegroup = new(iNextKey, [Node.ID], [], []);
@@ -278,17 +262,7 @@ namespace MorphologyMesh
             return output;
         }
 
-        internal class CycleInGraphException(ulong[] cycle, string msg = null) : Exception(msg)
-        {
-            /// <summary>
-            /// This set is not a path that describes a cycle.  It is a set of nodes who have cycles that may or may not be the same.
-            /// </summary>
-            public ulong[] NodesWithACycle = cycle;
-        }
-
-
-
-        static void BuildMeshingCrossSection(MorphologyGraph graph, MorphologyNode seed, ZDirection CheckDirection, out SortedSet<ulong> NodesAbove, out SortedSet<ulong> NodesBelow, out SortedSet<MorphologyEdge> FollowedEdges)
+        static void BuildMeshingCrossSection(MorphologyGraph graph, MorphologyNode seed, MorphologyNode partner, ZDirection CheckDirection, out SortedSet<ulong> NodesAbove, out SortedSet<ulong> NodesBelow, out SortedSet<MorphologyEdge> FollowedEdges)
         {
             NodesAbove = [];
             NodesBelow = [];
@@ -301,38 +275,40 @@ namespace MorphologyMesh
             {
                 NodesBelow.Add(seed.ID);
                 NewNodesAbove.UnionWith(seed.GetEdgesAbove(graph));
+                IncludePartnerOnOppositeSide(graph, seed, partner, NodesBelow, NewNodesAbove, ref FollowedEdges);
                 FollowedEdges.UnionWith(NewNodesAbove.Select(n => new MorphologyEdge(graph, n, seed.ID)));
             }
             else
             {
                 NodesAbove.Add(seed.ID);
                 NewNodesBelow.UnionWith(seed.GetEdgesBelow(graph));
+                IncludePartnerOnOppositeSide(graph, seed, partner, NodesAbove, NewNodesBelow, ref FollowedEdges);
                 FollowedEdges.UnionWith(NewNodesBelow.Select(n => new MorphologyEdge(graph, n, seed.ID)));
             }
 
-            try
-            {
-                BuildMeshingCrossSection(graph, ref NodesAbove, ref NodesBelow, NewNodesAbove, NewNodesBelow, ref FollowedEdges);
-            }
-            catch (CycleInGraphException e)
-            {
-                //Try to remove the cycle and try again if we succeeded, otherwiese we need to fail this cross section generation
-                if (TryRemoveCycle(graph, e.NodesWithACycle))
-                {
-                    BuildMeshingCrossSection(graph, seed, CheckDirection, out NodesAbove, out NodesBelow, out FollowedEdges);
-                    return;
-                }
-                else
-                {
-                    ///Hmm... return what we have?
-                    Trace.WriteLine($"Bailing out of one MeshingCrossSection build because I found a cycle at {e.NodesWithACycle[0]} I couldn't remove automatically.");
-                    return;
-                }
-            }
+            BuildMeshingCrossSection(graph, ref NodesAbove, ref NodesBelow, NewNodesAbove, NewNodesBelow, ref FollowedEdges);
         }
 
         /// <summary>
-        /// This returns a meshing cross section, but cycles aren't compatible with the mesh generator, so it has a kludgy boolean return value.  If a cycle is found it should be removed and then the 
+        /// Same-section links are invisible to GetEdgesAbove/Below. The seed edge's other endpoint must still land on the opposite side.
+        /// </summary>
+        static void IncludePartnerOnOppositeSide(MorphologyGraph graph, MorphologyNode seed, MorphologyNode partner, SortedSet<ulong> seedSide, SortedSet<ulong> oppositeSide, ref SortedSet<MorphologyEdge> followedEdges)
+        {
+            if (partner is null || partner.ID == seed.ID || seedSide.Contains(partner.ID) || oppositeSide.Contains(partner.ID))
+                return;
+
+            oppositeSide.Add(partner.ID);
+            followedEdges.Add(new MorphologyEdge(graph, partner.ID, seed.ID));
+        }
+
+        static void LogSkippedCrossSection(MorphologyEdge edge, int aboveCount, int belowCount, bool includesSeedEdge)
+        {
+            Trace.WriteLine($"Skipping mesh cross-section for edge {edge}: above={aboveCount}, below={belowCount}, includesSeedEdge={includesSeedEdge}");
+        }
+
+        /// <summary>
+        /// Expands a meshing cross section above/below a seed. Morphology graphs may contain cycles (e.g. vasculature loops);
+        /// when frontier expansion would revisit a node on the opposite side, that branch is pruned without mutating the graph.
         /// </summary>
         /// <param name="graph"></param>
         /// <param name="NodesAbove"></param>
@@ -356,13 +332,13 @@ namespace MorphologyMesh
             SortedSet<ulong> NextNodesBelow = [.. NewNodesAbove.SelectMany(n => graph[n].GetEdgesBelow(graph))];
             SortedSet<ulong> NextNodesAbove = [.. NewNodesBelow.SelectMany(n => graph[n].GetEdgesAbove(graph))];
 
-            var CycleWithAbove = NodesAbove.Intersect(NextNodesBelow).ToArray();
-            if (CheckForCycle(CycleWithAbove))
-                throw new CycleInGraphException(CycleWithAbove);
+            ulong[] cycleClosureAbove = [.. NodesAbove.Intersect(NextNodesBelow)];
+            if (cycleClosureAbove.Length > 0)
+                PruneCycleClosure("above", cycleClosureAbove, ref NextNodesBelow, NodesAbove);
 
-            var CycleWithBelow = NodesBelow.Intersect(NextNodesAbove).ToArray();
-            if (CheckForCycle(CycleWithBelow))
-                throw new CycleInGraphException(CycleWithBelow);
+            ulong[] cycleClosureBelow = [.. NodesBelow.Intersect(NextNodesAbove)];
+            if (cycleClosureBelow.Length > 0)
+                PruneCycleClosure("below", cycleClosureBelow, ref NextNodesAbove, NodesBelow);
 
             NextNodesAbove.ExceptWith(NodesAbove);
             NextNodesBelow.ExceptWith(NodesBelow);
@@ -378,55 +354,12 @@ namespace MorphologyMesh
             }
         }
 
-        private static bool CheckForCycle(ulong[] cycle_ids)
+        static void PruneCycleClosure(string side, ulong[] nodeIds, ref SortedSet<ulong> nextFrontier, SortedSet<ulong> oppositeSide)
         {
-            if (cycle_ids.Length > 0)
-            {
-                foreach (var id in cycle_ids)
-                {
-                    Trace.WriteLine($"Location {id} forms a cycle in the morphology graph");
-                }
+            foreach (ulong id in nodeIds)
+                Trace.WriteLine($"Location {id} closes a morphology cycle during mesh cross-section expansion ({side}); pruning frontier without removing graph edges.");
 
-                //Debug.Assert(cycle_ids.Length == 0, string.Format("Cycle found in graph: {0}", cycle_ids[0]));
-                return true;
-            }
-
-            return false;
-        }
-
-        private static bool TryRemoveCycle(MorphologyGraph graph, ulong[] cycle_ids)
-        {
-            if (cycle_ids.Length == 0)
-                return true;
-
-            foreach (var id in cycle_ids)
-            {
-                //Find a cycle path, find the longest edge, and break it
-                var cycle = graph.FindCycle(id);
-                if (cycle is null)
-                {
-                    Trace.WriteLine($"I couldn't find a cycle for location {id}, which is weird because I found one earlier.  Bug in the graph cycle travelling code?");
-                }
-
-                //Measure the distance in Z between all nodes in the cycle.  Remove the edge with the largest difference.
-                MorphologyNode current = graph[cycle[0]];
-                SortedList<double, MorphologyEdge> sortedEdgeLength = [];
-                for (int i = 1; i < cycle.Count - 1; i++)
-                {
-                    MorphologyNode next = graph[cycle[i]];
-
-                    //I'm just using straight Z distance as my metric, but it could be XYZ if it doesn't work well.
-                    double distance = current.Z - next.Z;
-                    MorphologyEdge edge = new(graph, current.Key, next.Key);
-                    sortedEdgeLength.Add(distance, edge);
-                }
-
-                var edgeToRemove = sortedEdgeLength.Last().Value;
-                graph.RemoveEdge(edgeToRemove);
-                return true;
-            }
-
-            return false;
+            nextFrontier.ExceptWith(oppositeSide);
         }
 
         /// <summary>
@@ -551,24 +484,36 @@ namespace MorphologyMesh
                             //Start a task to simplify the polygon
                             Task<IShape2D> t = new((node_) =>
                             {
-                                var poly = ((MorphologyNode)node_).Geometry.ToPolygon();
-                                if (poly.BoundingBox.Area < MinAnnotationArea)
-                                    return null;
-
-                                poly = poly.Translate(translationToCenter);
-
+                                var morphNode = (MorphologyNode)node_;
                                 try
                                 {
-                                    return poly.Simplify(tolerance);
+                                    //Pass tolerance so rings that exceed MaxPolygonRingPointsBeforeSimplify are
+                                    //Douglas–Peucker reduced before Polygon construction (avoids the huge-polygon assert).
+                                    var poly = morphNode.Geometry.ToPolygon(tolerance);
+                                    if (poly.BoundingBox.Area < MinAnnotationArea)
+                                        return null;
+
+                                    poly = poly.Translate(translationToCenter);
+
+                                    try
+                                    {
+                                        return poly.Simplify(tolerance);
+                                    }
+                                    catch (ArgumentException e)
+                                    {
+                                        Trace.WriteLine(
+                                            $"Could not simplify location #{morphNode.ID}.  Using original (more detailed) polygon instead.");
+#if DEBUG
+                                        Trace.WriteLine($"{e}");
+#endif
+                                        return poly;
+                                    }
                                 }
-                                catch (ArgumentException e)
+                                catch (Exception e)
                                 {
                                     Trace.WriteLine(
-                                        $"Could not simplify location #{node.ID}.  Using original (more detailed) polygon instead.");
-#if DEBUG
-                                    Trace.WriteLine($"{e}");
-#endif
-                                    return poly;
+                                        $"Skipping shape initialization for location #{morphNode.ID}: {e.Message}");
+                                    return null;
                                 }
                             }, node);
 
@@ -578,7 +523,7 @@ namespace MorphologyMesh
                         break;
                     case SupportedGeometryType.POLYLINE:
                         {
-                            Task<IShape2D> t = new((node_) => ((MorphologyNode)node_).Geometry.ToPolyLine().Translate(translationToCenter).Simplify(tolerance), node);
+                            Task<IShape2D> t = new((node_) => ((MorphologyNode)node_).Geometry.ToPolyLine(tolerance).Translate(translationToCenter).Simplify(tolerance), node);
                             t.Start();
                             tasks.Add(t);
                         }
@@ -612,9 +557,9 @@ namespace MorphologyMesh
                         throw new NotImplementedException($"Initializing unknown shape: {output}");
                     }
                 }
-                catch (AggregateException e)
+                catch (Exception e)
                 {
-                    //Oh well, we'll not simplify this one
+                    Trace.WriteLine($"Could not initialize shape for a morphology node: {e.Message}");
                     continue;
                 }
             }
@@ -657,7 +602,7 @@ namespace MorphologyMesh
         /// separate parallel lists, which desynchronized as soon as a shape was filtered out (a polyline, or a
         /// polygon the shape cache dropped), pairing each surviving shape with another shape's Z and upper/lower flag.
         /// </summary>
-        private readonly record struct SliceShape(IShape2D Shape, bool IsUpper, double Z, ulong MorphNodeIndex);
+        private readonly record struct SliceShape(IShape2D Shape, bool IsUpper, double Z, ulong MorphNodeIndex, LocationType LocationType, Circle SourceCircle);
 
         internal SliceTopology GetSliceTopology(Slice group, IReadOnlyDictionary<ulong, IShape2D> polyLookup = null)
         {
@@ -716,7 +661,9 @@ namespace MorphologyMesh
                 this.SectionThickness,
                 tileableOffsets,
                 BuildShapeLinkMatrix(group, tileable),
-                buildForkPartition: true);
+                buildForkPartition: true,
+                tileable.Select(s => s.LocationType),
+                tileable.Select(s => s.SourceCircle));
         }
 
         /// <summary>
@@ -829,7 +776,25 @@ namespace MorphologyMesh
                 shape = Graph[id].Geometry.ToShape2D().Translate(TranslationToCenter);
             }
 
-            return new SliceShape(shape, isUpper, Graph[id].Z, id);
+            LocationType locationType = Graph[id].Location.TypeCode;
+            Circle sourceCircle = default;
+            if (locationType == LocationType.CIRCLE)
+            {
+                try
+                {
+                    Circle circle = Graph[id].Geometry.ToCircle();
+                    if (polyLookup is not null)
+                        circle = circle.Translate(TranslationToCenter);
+                    sourceCircle = circle;
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"Slice shape {id}: could not read circle geometry ({ex.Message}); capping will use polygon rules.");
+                    locationType = LocationType.POLYGON;
+                }
+            }
+
+            return new SliceShape(shape, isUpper, Graph[id].Z, id, locationType, sourceCircle);
         }
 
         /// <summary>

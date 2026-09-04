@@ -244,124 +244,6 @@ namespace MonogameTestbed
             return false;
         }
 
-        private static Color GetColorForLine(PolygonIndex APoly, PolygonIndex BPoly, Polygon[] Polygons, Geometry.Vector2 midpoint)
-        {
-            Polygon A = Polygons[APoly.ShapeIndex];
-            Polygon B = Polygons[BPoly.ShapeIndex];
-
-            if (APoly.ShapeIndex != BPoly.ShapeIndex)
-            {
-                bool midInA = A.Covers(midpoint);
-                bool midInB = B.Covers(midpoint);
-
-                //lineViews[i].Color = Color.Blue;
-
-                if (!(midInA ^ midInB)) //Midpoint in both or neither polygon. Line may be on exterior surface
-                {
-                    if (!midInA && !midInB) //Midpoing not in either polygon.  Passes through empty space that cannot be on the surface
-                    {
-                        return Color.Black.SetAlpha(0.1f); //Exclude from port.  Line covers empty space.  If the triangle contains an intersection point we may need to adjust faces
-                        /*
-                        if (A.InteriorPolygonContains(midpoint) ^ B.InteriorPolygonContains(midpoint))
-                        {
-                            //Include in port.
-                            //Line runs from exterior ring to the far side of an overlapping interior hole
-                            lineViews[i].Color = Color.Black.SetAlpha(0.25f); //exclude from port, line covers empty space
-                        }
-                        else
-                        {
-                            lineViews[i].Color = Color.White.SetAlpha(0.25f); //Exclude from port.  Line covers empty space
-                        }
-                        */
-                    }
-                    else //Midpoing in both polygons.  The line passes through solid space
-                    {
-                        if (APoly.IsInner ^ BPoly.IsInner) //One or the other vertex is on an interior polygon, but not both
-                        {
-                            return Color.White.SetAlpha(0.25f); //Exclude. Line from interior polygon to exterior ring through solid space
-                        }
-                        else
-                        {
-                            return Color.Orange.SetAlpha(0.25f);  //Exclude. Two interior polygons connected and inside the cells.  Consider using this to vote for branch connection for interior polys
-                        }
-                    }
-                }
-                else //Midpoint in one or the other polygon, but not both
-                {
-                    if (APoly.IsInner ^ BPoly.IsInner) //One or the other is an interior polygon, but not both
-                    {
-                        if (A.InteriorPolygonContains(midpoint) ^ B.InteriorPolygonContains(midpoint))
-                        {
-                            //Include in port.
-                            //Line runs from exterior ring to the near side of an overlapping interior hole
-                            return Color.RoyalBlue;
-                        }
-                        else //Find out if the midpoint is contained by the same polygon with the inner polygon
-                        {
-                            if ((midInA && APoly.IsInner) || (midInB && BPoly.IsInner))
-                            {
-                                return Color.Gold;
-                            }
-                            else
-                            {
-                                return Color.Pink;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        return Color.Blue;
-                    }
-                }
-            }
-            else if (APoly.ShapeIndex == BPoly.ShapeIndex)
-            {
-                bool midInA = A.Covers(midpoint);
-                bool midInB = midInA;
-
-                if (PolygonIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.ShapeIndex]))
-                {
-                    return Color.White;//PolyPointsView[APoly.ShapeIndex].Color;
-
-                }
-
-                if (!midInA)
-                {
-                    return Color.Black.SetAlpha(0.1f); //Exclude
-                }
-                else
-                {
-                    bool LineIntersectsAnyOtherPoly = Polygons.Where((p, iP) => iP != APoly.ShapeIndex).Any(p => p.Covers(midpoint));
-                    if (APoly.IsInner ^ BPoly.IsInner)
-                    {
-                        //Two options, the line is outside other shapes or inside other shapes.
-                        //If outside other shapes we want to keep this edge, otherwise it is discarded
-                        if (!LineIntersectsAnyOtherPoly)
-                        {
-                            return Color.Green; //Include, standalone faces
-                        }
-                        else
-                        {
-                            return Color.Green.SetAlpha(0.1f); //Exclude
-                        }
-                    }
-                    else
-                    {
-                        if (!LineIntersectsAnyOtherPoly)
-                        {
-                            return Color.Turquoise;  //Include, standalone faces
-                        }
-                        else
-                        {
-                            return Color.Turquoise.SetAlpha(0.1f); //Exclude
-                        }
-                    }
-                }
-            }
-
-            return Color.Blue;
-        }
-
 
         public static void Draw(MonoTestbed window, Scene scene)
         {
@@ -371,8 +253,7 @@ namespace MonogameTestbed
     class Delaunay3DTest : IGraphicsTest
     {
         public string Title => this.GetType().Name;
-
-        readonly GamePadStateTracker Gamepad = new();
+        readonly TestInputContext Input = new();
 
         VikingXNAGraphics.MeshView<VertexPositionNormalColor> meshView;
 
@@ -462,15 +343,14 @@ namespace MonogameTestbed
         {
             StandardCameraManipulator.Update(this.Scene.Camera);
 
-            GamePadState state = GamePad.GetState(PlayerIndex.One);
-            Gamepad.Update(state);
+            GamePadState state = Input.UpdateTrackers();
 
-            if (Gamepad.Y_Clicked)
+            if (Input.Gamepad.Y_Clicked)
             {
                 meshView.WireFrame = !meshView.WireFrame;
             }
 
-            if (Gamepad.A_Clicked)
+            if (Input.Gamepad.A_Clicked)
             {
                 this.Scene.Camera.Rotation = Vector3.Zero;
                 this.Scene.Camera.Position = new Vector3(0, -10, 0);
@@ -485,7 +365,7 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window)
         {
-            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, 1.0f, 0);
+            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, MonoTestbed.DefaultBackground, 1.0f, 0);
 
             DepthStencilState dstate = new()
             {

@@ -557,6 +557,19 @@ namespace MonogameTestbed
     }
 
     /// <summary>
+    /// Severity of a failed leaf mesh used to color and filter assembly bounding boxes.
+    /// </summary>
+    enum AssemblyBoxFailureSeverity
+    {
+        /// <summary>No mesh or non-manifold edges — drawn red.</summary>
+        Critical,
+        /// <summary>Holes or inconsistent winding — drawn orange.</summary>
+        Warning,
+        /// <summary>Softer issues such as isolated edges — drawn yellow.</summary>
+        Minor
+    }
+
+    /// <summary>
     /// Visualize the incomplete nodes of a mesh assembly plan
     /// </summary>
     class MeshAssemblyPlannerIncompleteView : MeshAssemblyPlannerViewBase
@@ -574,20 +587,21 @@ namespace MonogameTestbed
         private readonly ReaderWriterLockSlim ReadyModelLock = new();
         private readonly SortedSet<ulong> NodesThatFailedMeshing = [];
         private readonly Dictionary<ulong, MeshManifoldReport> NodeFailureReports = [];
+        private readonly Dictionary<ulong, AssemblyBoxFailureSeverity> NodeFailureSeverity = [];
 
         /// <summary>
-        /// When false, problem-colored slice boxes (red/orange/yellow) are hidden while in-progress gray boxes remain.
-        /// Toggle with R in BajajMultiTest.
+        /// When false, hides only red (critical / non-manifold) error boxes. Orange and yellow problem boxes
+        /// and in-progress gray boxes stay visible. Toggle with R in BajajMultiTest.
         /// </summary>
-        public bool ShowFailedBoundingBoxes
+        public bool ShowRedErrorBoxes
         {
-            get => _showFailedBoundingBoxes;
+            get => _showRedErrorBoxes;
             set
             {
-                if (_showFailedBoundingBoxes == value)
+                if (_showRedErrorBoxes == value)
                     return;
 
-                _showFailedBoundingBoxes = value;
+                _showRedErrorBoxes = value;
                 try
                 {
                     ReadyModelLock.EnterWriteLock();
@@ -600,7 +614,14 @@ namespace MonogameTestbed
             }
         }
 
-        private bool _showFailedBoundingBoxes = true;
+        private bool _showRedErrorBoxes = true;
+
+        /// <summary>Backward-compatible alias for <see cref="ShowRedErrorBoxes"/>. </summary>
+        public bool ShowFailedBoundingBoxes
+        {
+            get => ShowRedErrorBoxes;
+            set => ShowRedErrorBoxes = value;
+        }
 
         /// <summary>
         /// The scale-and-centre transform each box was built with.  A box is a unit cube that carries all of its
@@ -662,8 +683,15 @@ namespace MonogameTestbed
             {
                 if (NodesThatFailedMeshing.Contains(item.Key))
                 {
-                    if (ShowFailedBoundingBoxes)
-                        listModels.Add(item.Value);
+                    AssemblyBoxFailureSeverity severity = NodeFailureSeverity.TryGetValue(item.Key, out AssemblyBoxFailureSeverity s)
+                        ? s
+                        : AssemblyBoxFailureSeverity.Critical;
+
+                    //R only suppresses red/critical boxes; soft warnings stay for inspection.
+                    if (severity == AssemblyBoxFailureSeverity.Critical && !ShowRedErrorBoxes)
+                        continue;
+
+                    listModels.Add(item.Value);
                 }
                 else if (CanShowBoundingBoxModel(this.Plan[item.Key]))
                 {
@@ -697,17 +725,26 @@ namespace MonogameTestbed
         internal static bool CanShowBoundingBoxModel(IAssemblyPlannerNode node) =>
             !node.MeshComplete && (node.IsLeaf || !HasIncompleteDescendantLeaf(node));
 
-        internal static Color ColorForFailure(MeshManifoldReport? report)
+        internal static AssemblyBoxFailureSeverity SeverityForFailure(MeshManifoldReport? report)
         {
             if (report is null || report.Value.NonManifoldEdges > 0)
-                return Color.Red.SetAlpha(0.5f);
+                return AssemblyBoxFailureSeverity.Critical;
 
             MeshManifoldReport r = report.Value;
             if (r.UnexpectedBoundaryEdges > 0 || r.InconsistentManifoldEdges > 0)
-                return Color.Orange.SetAlpha(0.5f);
+                return AssemblyBoxFailureSeverity.Warning;
 
-            return Color.Yellow.SetAlpha(0.5f);
+            return AssemblyBoxFailureSeverity.Minor;
         }
+
+        internal static Color ColorForFailure(MeshManifoldReport? report) => ColorForFailure(SeverityForFailure(report));
+
+        internal static Color ColorForFailure(AssemblyBoxFailureSeverity severity) => severity switch
+        {
+            AssemblyBoxFailureSeverity.Critical => Color.Red.SetAlpha(0.5f),
+            AssemblyBoxFailureSeverity.Warning => Color.Orange.SetAlpha(0.5f),
+            _ => Color.Yellow.SetAlpha(0.5f)
+        };
 
 
         public MeshAssemblyPlannerIncompleteView(MeshAssemblyPlanner plan, SliceGraph sliceGraph) : base(plan)
@@ -738,13 +775,16 @@ namespace MonogameTestbed
                     BoundingBoxModels.Remove(node.Key);
                     NodesThatFailedMeshing.Remove(node.Key);
                     NodeFailureReports.Remove(node.Key);
+                    NodeFailureSeverity.Remove(node.Key);
                 }
                 else if (BoundingBoxModels.TryGetValue(node.Key, out MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor> model))
                 {
+                    AssemblyBoxFailureSeverity severity = SeverityForFailure(report);
                     NodesThatFailedMeshing.Add(node.Key);
+                    NodeFailureSeverity[node.Key] = severity;
                     if (report.HasValue)
                         NodeFailureReports[node.Key] = report.Value;
-                    model.SetColor(ColorForFailure(report));
+                    model.SetColor(ColorForFailure(severity));
                 }
 
                 this._MeshModels = null;

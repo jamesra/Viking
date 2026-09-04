@@ -14,6 +14,7 @@ namespace MonogameTestbed
 
     class Delaunay2DTest : IGraphicsTest
     {
+        readonly TestInputContext Input = new();
         //private static string DebugJSONA = "{\r\n  \"ExteriorRing\": [\r\n    {\r\n      \"X\": 65556.440150145616,\r\n      \"Y\": 37461.394236647327\r\n    },\r\n    {\r\n      \"X\": 65623.795745788157,\r\n      \"Y\": 37340.634756433836\r\n    },\r\n    {\r\n      \"X\": 65481.145457048129,\r\n      \"Y\": 37619.657109034073\r\n    },\r\n    {\r\n      \"X\": 65453.03425733441,\r\n      \"Y\": 37620.828845929325\r\n    },\r\n    {\r\n      \"X\": 65423.55231018005,\r\n      \"Y\": 37620.539564983766\r\n    },\r\n    {\r\n      \"X\": 65230.697691251393,\r\n      \"Y\": 37376.1248026202\r\n    },\r\n    {\r\n      \"X\": 65288.818296405661,\r\n      \"Y\": 37448.20716172336\r\n    },\r\n    {\r\n      \"X\": 65294.323697228123,\r\n      \"Y\": 37454.244785137482\r\n    },\r\n    {\r\n      \"X\": 65307.593301397268,\r\n      \"Y\": 37466.139604615077\r\n    },\r\n    {\r\n      \"X\": 65323.117809354466,\r\n      \"Y\": 37477.594797420978\r\n    },\r\n    {\r\n      \"X\": 65339.989021606634,\r\n      \"Y\": 37488.3714953102\r\n    },\r\n    {\r\n      \"X\": 65357.298738660626,\r\n      \"Y\": 37498.230830037784\r\n    },\r\n    {\r\n      \"X\": 65374.138761023394,\r\n      \"Y\": 37506.933933358756\r\n    },\r\n    {\r\n      \"X\": 65389.600889201785,\r\n      \"Y\": 37514.241937028135\r\n    },\r\n    {\r\n      \"X\": 65402.776923702739,\r\n      \"Y\": 37519.915972800969\r\n    },\r\n    {\r\n      \"X\": 65409.813133387033,\r\n      \"Y\": 37522.691114898967\r\n    },\r\n    {\r\n      \"X\": 65416.49077915887,\r\n      \"Y\": 37525.092403418144\r\n    },\r\n    {\r\n      \"X\": 65422.89954588269,\r\n      \"Y\": 37527.086207041961\r\n    },\r\n    {\r\n      \"X\": 65429.129118422927,\r\n      \"Y\": 37528.638894453929\r\n    },\r\n    {\r\n      \"X\": 65435.269181644006,\r\n      \"Y\": 37529.71683433748\r\n    },\r\n    {\r\n      \"X\": 65441.409420410375,\r\n      \"Y\": 37530.286395376126\r\n    },\r\n    {\r\n      \"X\": 65447.639519586482,\r\n      \"Y\": 37530.313946253322\r\n    },\r\n    {\r\n      \"X\": 65454.049164036733,\r\n      \"Y\": 37529.765855652557\r\n    },\r\n    {\r\n      \"X\": 65460.728038625559,\r\n      \"Y\": 37528.608492257285\r\n    },\r\n    {\r\n      \"X\": 65470.4927750453,\r\n      \"Y\": 37525.925763142237\r\n    },\r\n    {\r\n      \"X\": 65481.08136075714,\r\n      \"Y\": 37521.956384041747\r\n    },\r\n    {\r\n      \"X\": 65492.163831850943,\r\n      \"Y\": 37516.849318173066\r\n    },\r\n    {\r\n      \"X\": 65503.410224416541,\r\n      \"Y\": 37510.753528753419\r\n    },\r\n    {\r\n      \"X\": 65514.490574543743,\r\n      \"Y\": 37503.81797900005\r\n    },\r\n    {\r\n      \"X\": 65525.074918322454,\r\n      \"Y\": 37496.191632130227\r\n    },\r\n    {\r\n      \"X\": 65534.833291842428,\r\n      \"Y\": 37488.023451361143\r\n    },\r\n    {\r\n      \"X\": 65543.43573119356,\r\n      \"Y\": 37479.462399910088\r\n    },\r\n    {\r\n      \"X\": 65550.552272465648,\r\n      \"Y\": 37470.657440994248\r\n    },\r\n    {\r\n      \"X\": 65556.440150145616,\r\n      \"Y\": 37461.394236647327\r\n    }\r\n  ],\r\n  \"InteriorRings\": []\r\n}";
         private static readonly string DebugJSONA = "{\r\n  \"ExteriorRing\": [\r\n  {\r\n    \"X\": 134.72428660436708,\r\n    \"Y\": -109.69079229545241\r\n  },\r\n  {\r\n    \"X\": 168.5224203121179,\r\n    \"Y\": -38.085358362324769\r\n  },\r\n  {\r\n    \"X\": 173.52636094947957,\r\n    \"Y\": -1.028579892757989\r\n  },\r\n  {\r\n    \"X\": 172.23208834991965,\r\n    \"Y\": 17.081788841023808\r\n  },\r\n  {\r\n    \"X\": 168.52242031212518,\r\n    \"Y\": 36.028198576808791\r\n  },\r\n  {\r\n    \"X\": 134.72428660436708,\r\n    \"Y\": 107.63363250994371\r\n  },\r\n  {\r\n    \"X\": 56.6623435746078,\r\n    \"Y\": 161.17835646583626\r\n  },\r\n  {\r\n    \"X\": -17.66022361501382,\r\n    \"Y\": 170.75336333838641\r\n  },\r\n  {\r\n    \"X\": -92.191801055138058,\r\n    \"Y\": 144.01956497065839\r\n  },\r\n  {\r\n    \"X\": -108.21206728393736,\r\n    \"Y\": 133.24556159282656\r\n  },\r\n  {\r\n    \"X\": -121.93322075722244,\r\n    \"Y\": 121.35478598323607\r\n  },\r\n  {\r\n    \"X\": -144.5979997446484,\r\n    \"Y\": 91.613366281151684\r\n  },\r\n  {\r\n    \"X\": -171.33179811237642,\r\n    \"Y\": 17.081788841023808\r\n  },\r\n  {\r\n    \"X\": -167.62213007457467,\r\n    \"Y\": -38.085358362317493\r\n  },\r\n  {\r\n    \"X\": -133.82399636681657,\r\n    \"Y\": -109.69079229544877\r\n  },\r\n  {\r\n    \"X\": -121.93322075722244,\r\n    \"Y\": -123.41194576875205\r\n  },\r\n  {\r\n    \"X\": -55.762053337071848,\r\n    \"Y\": -163.23551625135588\r\n  },\r\n  {\r\n    \"X\": 56.662343574622355,\r\n    \"Y\": -163.23551625135588\r\n  },\r\n  {\r\n    \"X\": 134.72428660436708,\r\n    \"Y\": -109.69079229545241\r\n  }\r\n],\r\n  \"InteriorRings\": []\r\n}";
 
@@ -25,9 +26,6 @@ namespace MonogameTestbed
         readonly PolygonContourView PolyAView = new();
         readonly PolygonContourView PolyBView = new();
         readonly PolygonContourView PolyCView = new();
-        readonly GamePadStateTracker Gamepad = new();
-        readonly Cursor2DCameraManipulator CameraManipulator = new();
-
         Geometry.Vector2 Cursor = Geometry.Vector2.Zero;
         CircleView cursorView;
         LabelView cursorLabel;
@@ -54,7 +52,7 @@ namespace MonogameTestbed
 
             cursorView = new CircleView(new Circle(Cursor, PointRadius), Color.Gray);
 
-            Gamepad.Update(GamePad.GetState(PlayerIndex.One));
+            Input.UpdateTrackers();
             return Task.CompletedTask;
         }
 
@@ -64,10 +62,7 @@ namespace MonogameTestbed
 
         public void Update()
         {
-            GamePadState state = GamePad.GetState(PlayerIndex.One);
-            Gamepad.Update(state);
-
-            CameraManipulator.Update(scene.Camera);
+            GamePadState state = Input.Update(scene);
 
             if (state.ThumbSticks.Left != Vector2.Zero)
             {
@@ -91,7 +86,7 @@ namespace MonogameTestbed
                 };
             }
 
-            if (Gamepad.A_Clicked)
+            if (Input.Gamepad.A_Clicked)
             {
                 Points_A.TogglePoint(Cursor);
                 if (Points_A.Points.Count >= 3)
@@ -100,7 +95,7 @@ namespace MonogameTestbed
                 }
             }
 
-            if (Gamepad.B_Clicked)
+            if (Input.Gamepad.B_Clicked)
             {
                 Points_B.TogglePoint(Cursor);
                 if (Points_B.Points.Count >= 3)
@@ -109,7 +104,7 @@ namespace MonogameTestbed
                 }
             }
 
-            if (Gamepad.Y_Clicked)
+            if (Input.Gamepad.Y_Clicked)
             {
                 Points_C.TogglePoint(Cursor);
                 if (Points_C.Points.Count >= 3)

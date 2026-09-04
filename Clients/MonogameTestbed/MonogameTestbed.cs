@@ -92,6 +92,9 @@ namespace MonogameTestbed
         private readonly HashSet<TestMode> _initStartedModes = [];
         private readonly HashSet<TestMode> _initFailedModes = [];
 
+        TestbedMenuBar _menuBar;
+        bool MenuEnabled => Program.options?.Quiet != true && Program.options?.Screenshots != true;
+
         LabelView testLabel = null;
 
         /// <summary>1x1 white texture for drawing solid color swatches in the legend HUD.</summary>
@@ -104,6 +107,11 @@ namespace MonogameTestbed
         internal Texture2D WhitePixel => _whitePixel;
 
         public static uint NumCurveInterpolations = 10;
+
+        /// <summary>
+        /// Default scene clear: dark grey at 64/256 per channel.
+        /// </summary>
+        public static readonly Color DefaultBackground = new Color(64f / 256f, 64f / 256f, 64f / 256f);
 
         GraphicsDevice IPrimitiveRenderInfo.device => this.GraphicsDevice;
 
@@ -272,6 +280,8 @@ namespace MonogameTestbed
             listTests.Add(TestMode.CONSTRAINEDDELAUNAY2D, constrainedDelaunay2DTest);
             listTests.Add(TestMode.POLYGONINTERSECTION, polygonIntersectionTest);
 
+            if (MenuEnabled)
+                _menuBar = new TestbedMenuBar(this);
         }
 
         /// <summary>
@@ -312,6 +322,39 @@ namespace MonogameTestbed
             //this.channelEffect.ViewMatrix = viewMatrix;
         }
 
+        /// <summary>
+        /// Activates a registered test mode. Shared by F-key switching and the Test menu.
+        /// </summary>
+        internal void SwitchToTest(TestMode mode)
+        {
+            if (!listTests.ContainsKey(mode))
+            {
+                Console.WriteLine("Test not found: " + mode);
+                return;
+            }
+
+            if (Mode == mode)
+                return;
+
+            Mode = mode;
+            AllowInitRetry(Mode);
+            testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperRight, anchor: Anchor.TopRight, scaleFontWithScene: true);
+            Window.Title = WindowTitleForMode(Mode);
+            BeginTestInit(Mode);
+        }
+
+        /// <summary>
+        /// Opens the WPF Help dialog for the active test. No-op in quiet/screenshot runs.
+        /// </summary>
+        internal void ShowHotkeyHelp()
+        {
+            if (!MenuEnabled || !listTests.TryGetValue(Mode, out IGraphicsTest test))
+                return;
+
+            var sections = TestHotkeyRegistry.ForTest(Mode, test);
+            WpfDialogHost.ShowHotkeyHelp(test.Title, sections);
+        }
+
         private void ProcessKeyboard()
         {
             KeyboardState keyboardState = Keyboard.GetState();
@@ -319,66 +362,56 @@ namespace MonogameTestbed
             if (pressedKeys.Length == 0)
                 return;
 
-            var StartMode = this.Mode;
-            if (keyboardState.IsKeyDown(Keys.F1))
-                this.Mode = TestMode.CURVE;
+            //Shift+F1 is Help; plain F1 still switches to the Curve test.
+            bool shift = keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift);
+            TestMode? requested = null;
+            if (keyboardState.IsKeyDown(Keys.F1) && !shift)
+                requested = TestMode.CURVE;
             if (keyboardState.IsKeyDown(Keys.F2))
-                this.Mode = TestMode.CURVE_LABEL;
+                requested = TestMode.CURVE_LABEL;
             if (keyboardState.IsKeyDown(Keys.F3))
-                this.Mode = TestMode.TEXT;
+                requested = TestMode.TEXT;
             if (keyboardState.IsKeyDown(Keys.F4))
-                this.Mode = TestMode.LINESTYLES;
+                requested = TestMode.LINESTYLES;
             if (keyboardState.IsKeyDown(Keys.F5))
-                this.Mode = TestMode.CURVESTYLES;
+                requested = TestMode.CURVESTYLES;
             if (keyboardState.IsKeyDown(Keys.F6))
-                this.Mode = TestMode.CLOSEDCURVE;
+                requested = TestMode.CLOSEDCURVE;
             if (keyboardState.IsKeyDown(Keys.F7))
-                this.Mode = TestMode.POLYGON2D;
+                requested = TestMode.POLYGON2D;
             if (keyboardState.IsKeyDown(Keys.F8))
-                this.Mode = TestMode.MESH;
+                requested = TestMode.MESH;
             if (keyboardState.IsKeyDown(Keys.F9))
-                this.Mode = TestMode.GEOMETRY;
+                requested = TestMode.GEOMETRY;
             if (keyboardState.IsKeyDown(Keys.F10))
-                this.Mode = TestMode.MORPHOLOGY;
+                requested = TestMode.MORPHOLOGY;
             if (keyboardState.IsKeyDown(Keys.F11))
-                this.Mode = TestMode.TRIANGLEALGORITHM;
+                requested = TestMode.TRIANGLEALGORITHM;
             if (keyboardState.IsKeyDown(Keys.F12))
-                this.Mode = TestMode.BRANCHPORT;
+                requested = TestMode.BRANCHPORT;
             if (keyboardState.IsKeyDown(Keys.NumPad1) || keyboardState.IsKeyDown(Keys.D1))
-                this.Mode = TestMode.POLYWRAPPING;
+                requested = TestMode.POLYWRAPPING;
             if (keyboardState.IsKeyDown(Keys.NumPad2) || keyboardState.IsKeyDown(Keys.D2))
-                this.Mode = TestMode.BRANCHASSIGNMENT;
+                requested = TestMode.BRANCHASSIGNMENT;
             if (keyboardState.IsKeyDown(Keys.NumPad3) || keyboardState.IsKeyDown(Keys.D3))
-                this.Mode = TestMode.DELAUNAY3D;
+                requested = TestMode.DELAUNAY3D;
             if (keyboardState.IsKeyDown(Keys.NumPad4) || keyboardState.IsKeyDown(Keys.D4))
-                this.Mode = TestMode.BAJAJTEST;
+                requested = TestMode.BAJAJTEST;
             if (keyboardState.IsKeyDown(Keys.NumPad5) || keyboardState.IsKeyDown(Keys.D5))
-                this.Mode = TestMode.DELAUNAY2D;
+                requested = TestMode.DELAUNAY2D;
             if (keyboardState.IsKeyDown(Keys.NumPad6) || keyboardState.IsKeyDown(Keys.D6))
-                this.Mode = TestMode.CURVE_SIMPLIFICATION;
+                requested = TestMode.CURVE_SIMPLIFICATION;
             if (keyboardState.IsKeyDown(Keys.NumPad7) || keyboardState.IsKeyDown(Keys.D7))
-                this.Mode = TestMode.BAJAJMULTITEST;
+                requested = TestMode.BAJAJMULTITEST;
             if (keyboardState.IsKeyDown(Keys.NumPad8) || keyboardState.IsKeyDown(Keys.D8))
-                this.Mode = TestMode.CONSTRAINEDDELAUNAY2D;
+                requested = TestMode.CONSTRAINEDDELAUNAY2D;
             if (keyboardState.IsKeyDown(Keys.NumPad9) || keyboardState.IsKeyDown(Keys.D9))
-                this.Mode = TestMode.POLYGONINTERSECTION;
+                requested = TestMode.POLYGONINTERSECTION;
             if (keyboardState.IsKeyDown(Keys.NumPad0) || keyboardState.IsKeyDown(Keys.D0))
-                this.Mode = TestMode.LABELED_RECTANGLES;
+                requested = TestMode.LABELED_RECTANGLES;
 
-            if (!listTests.ContainsKey(Mode))
-            {
-                Console.WriteLine("Test not found: " + Mode);
-                this.Mode = StartMode;
-                return;
-            }
-
-            if (StartMode != this.Mode)
-            {
-                AllowInitRetry(Mode);
-                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperRight, anchor: Anchor.TopRight, scaleFontWithScene: true);
-            }
-
-            BeginTestInit(Mode);
+            if (requested.HasValue)
+                SwitchToTest(requested.Value);
         }
 
         /// <summary>
@@ -471,11 +504,19 @@ namespace MonogameTestbed
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
+            if (MenuEnabled)
+            {
+                _menuBar ??= new TestbedMenuBar(this);
+                _menuBar.Update(listTests, Mode);
+            }
+
+            bool menuCaptures = MenuEnabled && _menuBar != null && _menuBar.CapturesInput;
+
             if (!listTests[Mode].Initialized)
             {
                 BeginTestInit(Mode);
             }
-            else
+            else if (!menuCaptures)
             {
                 listTests[Mode].Update();
             }
@@ -499,9 +540,10 @@ namespace MonogameTestbed
                 Environment.Exit(1);
             }
 
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape))
+            //Escape closes an open Test dropdown first; otherwise it exits the app.
+            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed
+                || (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape) && !menuCaptures))
             {
-                //Close the game, but Monogame won't allow it?
                 base.Exit();
             }
 
@@ -516,7 +558,7 @@ namespace MonogameTestbed
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(new Color(1.0f / 8.0f, 1.0f / 8.0f, 1.0f / 8.0f));
+            GraphicsDevice.Clear(DefaultBackground);
 
             //GraphicsDevice.SetRenderTarget(renderTarget);
             //meshView.Draw(GraphicsDevice);
@@ -557,6 +599,10 @@ namespace MonogameTestbed
 
                 DrawLegendHUD();
             }
+
+            if (MenuEnabled && _menuBar != null)
+                _menuBar.Draw(spriteBatch, fontArial, _whitePixel, listTests, Mode);
+
             /*
             testLabel.Position = this.Scene.VisibleWorldBounds.UpperRight - new Geometry.Vector2(testLabel.BoundingRect.Width/2.0, 0);//testLabel.BoundingRect.Height);
             testLabel.ScaleFontWithScene = false;
