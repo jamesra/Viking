@@ -32,7 +32,9 @@ namespace MonogameTestbed
         public PointSetView IncompletedVertexView = null;
 
         //Top-level cell shells are translucent with backface culling so nested children remain visible inside.
-        //Child sheets stay opaque and double-sided (CullMode.None) — a flat wall between sections has one winding.
+        //Store CullClockwiseFace: with --invert-z, CullModeForView flips winding-sensitive cull modes so the
+        //outward (front) faces remain. CullCounterClockwiseFace + InvertZ culls the exterior instead.
+        //Child sheets stay opaque and double-sided (CullMode.None) - a flat wall between sections has one winding.
         public CullMode CullMode;
 
         /// <summary>
@@ -316,7 +318,7 @@ namespace MonogameTestbed
             Graph = graph;
             SliceOrigin = sliceOrigin ?? graph.NodesBoundingBox.CenterPoint.XY();
             CullMode = IsTopLevelStructure
-                ? CullMode.CullCounterClockwiseFace
+                ? CullMode.CullClockwiseFace
                 : CullMode.None;
             //Same origin SliceGraph subtracts; apply immediately so incomplete overlays are correct
             //before GenerateMesh finishes (children must not wait on parent assembly).
@@ -1883,7 +1885,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
 
             if (toggleCull)
             {
-                wrapView.CullMode = wrapView.CullMode == CullMode.None ? CullMode.CullCounterClockwiseFace : CullMode.None;
+                wrapView.CullMode = wrapView.CullMode == CullMode.None ? CullMode.CullClockwiseFace : CullMode.None;
             }
 
             if (leftShoulder)
