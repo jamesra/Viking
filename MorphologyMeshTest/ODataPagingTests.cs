@@ -20,7 +20,7 @@ namespace MorphologyMeshTest
         /// <summary>Locations reported by Structures(476)/Locations, which the service returns unpaged.</summary>
         private const int ExpectedLocationCount = 3161;
 
-        private static readonly Uri Endpoint = new("http://websvc.codepharm.net/RC1/OData");
+        private static readonly Uri Endpoint = Viking.Common.ODataEndpointCatalog.EndpointMap[Viking.Common.Endpoint.RC1];
 
         [TestMethod]
         [TestCategory("LiveData")]

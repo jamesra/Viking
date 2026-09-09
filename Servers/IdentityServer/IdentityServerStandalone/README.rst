@@ -80,14 +80,14 @@ Server/
 
 ## Running with Network Access
 
-The IdentityServerStandalone container exposes ports **6000** (HTTP) and **6001** (HTTPS). Here are several ways to run it with network access:
+The IdentityServerStandalone container exposes ports **5000** (HTTP) and **5001** (HTTPS). Here are several ways to run it with network access:
 
 ### Option A: Using Docker Run Command
 ```bash
 docker run -d \
   --name identityserver-standalone \
-  -p 6000:6000 \
-  -p 6001:6001 \
+  -p 5000:5000 \
+  -p 5001:5001 \
   identityserver-standalone:latest
 ```
 
@@ -106,8 +106,8 @@ docker network create identity-network
 docker run -d \
   --name identityserver-standalone \
   --network identity-network \
-  -p 6000:6000 \
-  -p 6001:6001 \
+  -p 5000:5000 \
+  -p 5001:5001 \
   identityserver-standalone:latest
 ```
 
@@ -121,8 +121,8 @@ You can override configuration using environment variables:
 ```bash
 docker run -d \
   --name identityserver-standalone \
-  -p 6000:6000 \
-  -p 6001:6001 \
+  -p 5000:5000 \
+  -p 5001:5001 \
   -e ASPNETCORE_ENVIRONMENT=Development \
   -e ConnectionStrings__IdentityConnection="Server=your-db-server;Database=IdentityViking;User ID=your-user;Password=your-password;MultipleActiveResultSets=true;TrustServerCertificate=True" \
   -e ConnectionStrings__ConfigConnection="Server=your-db-server;Database=IdentityConfig;User ID=your-user;Password=your-password;MultipleActiveResultSets=true;TrustServerCertificate=True" \
@@ -139,8 +139,8 @@ docker run -d \
 # Ensure the files exist on your host first
 docker run -d \
   --name identityserver-standalone \
-  -p 6000:6000 \
-  -p 6001:6001 \
+  -p 5000:5000 \
+  -p 5001:5001 \
   -v /path/to/your/appsettings.json:/app/appsettings.json \
   -v /path/to/your/appsettings.Production.json:/app/appsettings.Production.json \
   identityserver-standalone:latest
@@ -151,8 +151,8 @@ docker run -d \
 # Mount the entire config directory (recommended)
 docker run -d \
   --name identityserver-standalone \
-  -p 6000:6000 \
-  -p 6001:6001 \
+  -p 5000:5000 \
+  -p 5001:5001 \
   -v /path/to/your/config:/app/config \
   identityserver-standalone:latest
 ```
@@ -196,8 +196,8 @@ The application uses these main configuration sections:
 ## Accessing the Application
 
 Once running, you can access:
-- **HTTP**: `http://localhost:6000`
-- **HTTPS**: `https://localhost:6001`
+- **HTTP**: `http://localhost:5000`
+- **HTTPS**: `https://localhost:5001`
 
 ## Docker Compose Example
 
@@ -211,8 +211,8 @@ services:
       context: .
       dockerfile: IdentityServerStandalone/Dockerfile
     ports:
-      - "6000:6000"
-      - "6001:6001"
+      - "5000:5000"
+      - "5001:5001"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__IdentityConnection=Server=your-db;Database=IdentityViking;User ID=user;Password=pass;MultipleActiveResultSets=true;TrustServerCertificate=True

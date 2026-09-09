@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
 
-namespace Viking.Identity.Server.WebManagement.Extensions
+namespace Viking.Identity.Server.Extensions
 {
     public class UserScopeTokenRequestValidator : ICustomTokenRequestValidator
     {

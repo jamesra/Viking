@@ -100,6 +100,18 @@ namespace MonogameTestbed
         /// <summary>1x1 white texture for drawing solid color swatches in the legend HUD.</summary>
         private Texture2D _whitePixel = null;
 
+        /// <summary>Shared host rasterizer (CullMode.None); allocated once instead of every Draw.</summary>
+        private RasterizerState _noCullRasterizer;
+
+        TestMode _legendCacheMode;
+        float _legendCacheWrapWidth = float.NaN;
+        float _legendCacheHudScale = float.NaN;
+        string _legendCacheDescription;
+        string _legendCacheActiveView;
+        IReadOnlyList<LegendEntry> _legendCacheEntriesSource;
+        List<string> _legendCacheDescriptionLines = [];
+        List<string> _legendCacheActiveViewLines = [];
+
         /// <summary>
         /// 1x1 white texture tests can stretch into solid rectangles (crosshairs, bars) via SpriteBatch.
         /// Null until LoadContent runs.
@@ -247,13 +259,13 @@ namespace MonogameTestbed
             lineManager.Init(GraphicsDevice, Content);
             curveManager.Init(GraphicsDevice, Content);
 
-            RasterizerState state = new()
+            _noCullRasterizer = new RasterizerState
             {
                 CullMode = CullMode.None
             };
             //state.FillMode = FillMode.WireFrame;
 
-            GraphicsDevice.RasterizerState = state;
+            GraphicsDevice.RasterizerState = _noCullRasterizer;
 
             InitializeEffects();
 
@@ -572,10 +584,7 @@ namespace MonogameTestbed
 
             // TODO: Add your drawing code here
 
-            RasterizerState state = new()
-            {
-                CullMode = CullMode.None
-            };
+            _noCullRasterizer ??= new RasterizerState { CullMode = CullMode.None };
 
             //The window is resizable, so the shared scene has to follow the back buffer or its projection and any
             //screen-space label placement drift from what is actually being drawn.
@@ -584,7 +593,7 @@ namespace MonogameTestbed
             UpdateEffectMatricies(this.Scene);
 
             //SamplerState sampler = new SamplerState();
-            GraphicsDevice.RasterizerState = state;
+            GraphicsDevice.RasterizerState = _noCullRasterizer;
 
             // spriteBatch.Begin();
             if (!listTests[Mode].Initialized)
@@ -653,36 +662,43 @@ namespace MonogameTestbed
             float lineHeight = scaledLineHeight + LineSpacing;
             float swatchSize = scaledLineHeight * 0.9f;
 
-            List<string> Wrap(string text)
-            {
-                List<string> lines = [];
-                foreach (string rawLine in text.Replace("\r\n", "\n").Split('\n'))
-                {
-                    if (rawLine.Length == 0)
-                        continue;
-                    lines.AddRange(WrapText(rawLine, WrapWidth, HudScale));
-                }
-                return lines;
-            }
-
-            List<string> descriptionLines = string.IsNullOrWhiteSpace(legend.ModeDescription)
-                ? []
-                : Wrap(legend.ModeDescription);
-
-            List<string> activeViewLines = [];
-            if (!string.IsNullOrWhiteSpace(legend.ActiveViewDescription))
-            {
-                activeViewLines.Add("Active views:");
-                foreach (string rawLine in legend.ActiveViewDescription.Replace("\r\n", "\n").Split('\n'))
-                {
-                    if (rawLine.Length == 0)
-                        continue;
-                    foreach (string wrapped in WrapText(rawLine, WrapWidth, HudScale))
-                        activeViewLines.Add("  " + wrapped);
-                }
-            }
-
+            string description = legend.ModeDescription ?? string.Empty;
+            string activeView = legend.ActiveViewDescription ?? string.Empty;
             IReadOnlyList<LegendEntry> entries = legend.LegendEntries ?? [];
+
+            bool legendCacheValid = Mode == _legendCacheMode
+                && WrapWidth == _legendCacheWrapWidth
+                && HudScale == _legendCacheHudScale
+                && description == _legendCacheDescription
+                && activeView == _legendCacheActiveView
+                && ReferenceEquals(entries, _legendCacheEntriesSource);
+
+            if (!legendCacheValid)
+            {
+                _legendCacheDescriptionLines = WrapCached(description, WrapWidth, HudScale);
+                _legendCacheActiveViewLines = [];
+                if (!string.IsNullOrWhiteSpace(activeView))
+                {
+                    _legendCacheActiveViewLines.Add("Active views:");
+                    foreach (string rawLine in activeView.Replace("\r\n", "\n").Split('\n'))
+                    {
+                        if (rawLine.Length == 0)
+                            continue;
+                        foreach (string wrapped in WrapText(rawLine, WrapWidth, HudScale))
+                            _legendCacheActiveViewLines.Add("  " + wrapped);
+                    }
+                }
+
+                _legendCacheMode = Mode;
+                _legendCacheWrapWidth = WrapWidth;
+                _legendCacheHudScale = HudScale;
+                _legendCacheDescription = description;
+                _legendCacheActiveView = activeView;
+                _legendCacheEntriesSource = entries;
+            }
+
+            List<string> descriptionLines = _legendCacheDescriptionLines;
+            List<string> activeViewLines = _legendCacheActiveViewLines;
             int legendLineCount = entries.Count > 0 ? 1 + entries.Count : 0;
 
             static float SectionHeight(int lineCount, float scaled, float spacing) =>
@@ -741,6 +757,21 @@ namespace MonogameTestbed
             {
                 spriteBatch.End();
             }
+        }
+
+        List<string> WrapCached(string text, float wrapWidth, float hudScale)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return [];
+
+            List<string> lines = [];
+            foreach (string rawLine in text.Replace("\r\n", "\n").Split('\n'))
+            {
+                if (rawLine.Length == 0)
+                    continue;
+                lines.AddRange(WrapText(rawLine, wrapWidth, hudScale));
+            }
+            return lines;
         }
 
         /// <summary>

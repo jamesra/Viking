@@ -67,14 +67,14 @@ When using Visual Studio's Docker tools, ensure the build context is properly co
 
 ## Running with Network Access
 
-The Viking.Identity.Server.WebApi container exposes ports **5000** (HTTP) and **5001** (HTTPS). Here are several ways to run it with network access:
+The Viking.Identity.Server.WebApi container exposes ports **6000** (HTTP) and **6001** (HTTPS). Here are several ways to run it with network access:
 
 ### Option A: Using Docker Run Command
 ```bash
 docker run -d \
   --name identity-webapi \
-  -p 5000:5000 \
-  -p 5001:5001 \
+  -p 6000:6000 \
+  -p 6001:6001 \
   identity-webapi:latest
 ```
 
@@ -93,8 +93,8 @@ docker network create identity-network
 docker run -d \
   --name identity-webapi \
   --network identity-network \
-  -p 5000:5000 \
-  -p 5001:5001 \
+  -p 6000:6000 \
+  -p 6001:6001 \
   identity-webapi:latest
 ```
 
@@ -131,8 +131,8 @@ You can override configuration using environment variables:
 ```bash
 docker run -d \
   --name identity-webapi \
-  -p 5000:5000 \
-  -p 5001:5001 \
+  -p 6000:6000 \
+  -p 6001:6001 \
   -e ASPNETCORE_ENVIRONMENT=Development \
   -e ConnectionStrings__IdentityConnection="Server=your-db-server;Database=IdentityViking;User ID=your-user;Password=your-password;MultipleActiveResultSets=true;TrustServerCertificate=True" \
   -e JwtBearerOptions__Authority="https://your-identity-server.com/identityserver/" \
@@ -150,8 +150,8 @@ docker run -d \
 # Ensure the files exist on your host first
 docker run -d \
   --name identity-webapi \
-  -p 5000:5000 \
-  -p 5001:5001 \
+  -p 6000:6000 \
+  -p 6001:6001 \
   -v /path/to/your/appsettings.json:/app/appsettings.json \
   -v /path/to/your/appsettings.Production.json:/app/appsettings.Production.json \
   identity-webapi:latest
@@ -162,8 +162,8 @@ docker run -d \
 # Mount the entire config directory (recommended)
 docker run -d \
   --name identity-webapi \
-  -p 5000:5000 \
-  -p 5001:5001 \
+  -p 6000:6000 \
+  -p 6001:6001 \
   -v /path/to/your/config:/app/config \
   identity-webapi:latest
 ```
@@ -264,9 +264,9 @@ Server=YourServer;Database=IdentityViking;Trusted_Connection=False;User ID=YourU
 ## Accessing the Application
 
 Once running, you can access:
-- **HTTP**: `http://localhost:5000`
-- **HTTPS**: `https://localhost:5001`
-- **Swagger UI** (Development only): `https://localhost:5001/swagger`
+- **HTTP**: `http://localhost:6000`
+- **HTTPS**: `https://localhost:6001`
+- **Swagger UI** (Development only): `https://localhost:6001/swagger`
 
 ## API Endpoints
 
@@ -287,8 +287,8 @@ services:
       context: .
       dockerfile: Viking.Identity.Server.WebApi/Dockerfile
     ports:
-      - "5000:5000"
-      - "5001:5001"
+      - "6000:6000"
+      - "6001:6001"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__IdentityConnection=Server=your-db;Database=IdentityViking;User ID=user;Password=pass;MultipleActiveResultSets=true;TrustServerCertificate=True
@@ -307,7 +307,7 @@ networks:
 
 This WebApi is designed to work with the IdentityServerStandalone project:
 
-1. **IdentityServerStandalone** runs on ports 6000/6001 and provides authentication
-2. **Viking.Identity.Server.WebApi** runs on ports 5000/5001 and consumes JWT tokens from the Identity Server
+1. **IdentityServerStandalone** runs on ports 5000/5001 and provides authentication
+2. **Viking.Identity.Server.WebApi** runs on ports 6000/6001 and consumes JWT tokens from the Identity Server
 3. Configure the `JwtBearerOptions.Authority` to point to your IdentityServerStandalone instance
 4. Ensure both containers can communicate (use the same Docker network)

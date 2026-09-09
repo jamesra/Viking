@@ -31,7 +31,6 @@ using Viking.Identity.Server;
 using Viking.Identity.Server.Authorization;
 using Viking.Identity.Server.Extensions.Services;
 using Viking.Identity.Server.Services;
-using Viking.Identity.Server.WebManagement.Extensions;
 using Viking.SSL;
 
 public class Program
@@ -194,7 +193,7 @@ public class Program
                     .Build();
             });
 
-            builder.Services.AddTransient<Duende.IdentityServer.Validation.ICustomTokenRequestValidator, Viking.Identity.Server.WebManagement.Extensions.UserScopeTokenRequestValidator>();
+            builder.Services.AddTransient<Duende.IdentityServer.Validation.ICustomTokenRequestValidator, Viking.Identity.Server.Extensions.UserScopeTokenRequestValidator>();
             builder.Services.AddScoped<IAuthorizationHandler, ResourceIdPermissionsAuthorizationHandler>();
             builder.Services.AddScoped<IAuthorizationHandler, ResourcePermissionsAuthorizationHandler>();
 

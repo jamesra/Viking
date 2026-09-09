@@ -33,6 +33,8 @@ namespace MonogameTestbed
             new("0 / Numpad0", "Switch to Labeled Rectangles test"),
             new("Esc", "Exit testbed"),
             new("? / Shift+F1", "Open this Help dialog (when menu is available)"),
+            new("View menu", "Slice Status overlays (Bajaj Multi)"),
+            new("Left click", "Select mesh slice under cursor (Bajaj Multi); empty click clears"),
         ];
 
         /// <summary>

@@ -218,7 +218,7 @@ namespace WebAnnotation
             private const double DEFAULT_POLYGON_POINT_DIAMETER = 12.0;
             private const double MIN_SMALLEST_RENDERED_SIZE = 0.5;
             private const double MAX_SMALLEST_RENDERED_SIZE = 10.0;
-            private const double DEFAULT_SMALLEST_RENDERED_SIZE = 0.5;
+            private const double DEFAULT_SMALLEST_RENDERED_SIZE = 10.0;
             private const double MIN_POLYGON_VERTEX_VISIBLE_FRACTION = 0.0001;  // 0.01%
             private const double MAX_POLYGON_VERTEX_VISIBLE_FRACTION = 0.02;     // 2%
             private const double DEFAULT_POLYGON_VERTEX_VISIBLE_FRACTION = 0.0025;  // 0.25%

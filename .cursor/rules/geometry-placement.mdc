@@ -1,0 +1,36 @@
+---
+description: Coordinate frames for annotations, slice graphs, meshes, rendering, and Collada export
+globs: MorphologyMesh/**/*.cs,Clients/MonogameTestbed/**/*.cs,ColladaIO/**/*.cs
+---
+
+# Geometry placement
+
+There are three coordinate frames. Every placement bug in this codebase has been a value used in the wrong one, and none of them throw — the geometry is simply somewhere else.
+
+| Frame | Definition | Who lives here |
+|---|---|---|
+| **Volume** | Annotation coordinates, nm | `MorphologyGraph` nodes, `NodesBoundingBox`, camera targets |
+| **Slice-graph local** | `volume - (XYOrigin.X, XYOrigin.Y, 0)` | `SliceGraph` shapes, `SliceTopology`, every generated mesh vertex, assembly bounding boxes |
+| **Collada geometry** | `(local - own mesh AABB center) * 0.001`, microns | DAE `<source>` positions only |
+
+## Rules
+
+**1. A structure's position is its own annotation AABB center: `Graph.NodesBoundingBox.CenterPoint`.** Never a subgraph-inclusive box, never a mesh-derived value where an annotation value will do. This is the one number that defines where a structure belongs.
+
+**2. Only XY is ever re-centered. Z stays in volume from annotation to mesh.** `InitializeShapes` translates by `-XYOrigin`; nothing translates Z. A `Vector3` offset in this codebase should have `Z == 0` unless you can say why not.
+
+**3. A parent and all of its descendants share one `XYOrigin`.** `SliceGraph.Create` defaults to the graph's own center, which is only correct for a root. `QueueMeshViews` threads `familyOrigin` down so children mesh in the cell's frame. A child that takes its own center meshes correctly and then renders on top of the cell body.
+
+**4. Placement is a transform applied at draw time, never baked into vertices.** Mesh vertices stay slice-graph local; `ApplySliceGraphPlacement` supplies `Matrix.CreateTranslation(offset)`. Picking undoes the same offset on the ray rather than transforming the mesh. If you translate geometry *and* apply the transform, you have doubled it.
+
+**5. Compose onto a model's existing `ModelMatrix`; do not assign over it.** A bounding box from `ToMeshModelEdgesOnly` is a unit cube whose size and position live entirely in its `ModelMatrix`. Assigning placement to it produces a 2-unit cube at the origin — invisible at cell scale. Mesh models built from real vertices are the only ones that may take placement verbatim.
+
+**6. A Collada node translation is the structure's own annotation AABB center, scaled by 0.001.** `MeshSerializer.CreateMesh` strips every mesh to its own AABB center and scales to microns, so the node translation alone decides where the structure lands. Anchoring it to the annotations keeps the export correct regardless of which frame the mesh was built in. It is **not** the render-time placement offset: that offset assumes the vertices still carry their local displacement, which the serializer has already removed, and for a child it evaluates to the parent's center — which stacks every synapse in a cell on the cell's centroid. Root translations are absolute; `StructureModel.AddChild` makes children relative by subtracting the parent's.
+
+## Checks before you commit a placement change
+
+- Does the value cross a frame boundary? Name the frame in the variable or the comment.
+- Is any translation applied twice — once to the data and once as a transform?
+- For a Collada translation: would `geometry + translation` reproduce the volume coordinate? Work it through for a *child*, where the local mesh center is far from zero. Roots hide this class of bug because their local center is near zero by construction.
+- Verify an export against the source data, not against a picture. Sum the root and child `<translate>` values in the DAE, divide by 0.001, and compare to the child's annotation AABB center. RC1 is 2.176 nm/pixel in XY and 70 nm/section in Z. Agreement to a few tens of nm is expected, since the annotation box includes location radii and the mesh follows the contours.
+- `PlacementDeviation` and `DescribePlacement` on `BajajMultiOTVAssignmentView` report the live numbers; `MorphologyMeshTest/SynapsePlacementDiagnostic` compares a real cell's mesh against its annotations.

@@ -39,6 +39,9 @@ class TextureReaderV2 : IDisposable
     static readonly System.Net.Cache.RequestCachePolicy HeaderCachePolicy = new(System.Net.Cache.RequestCacheLevel.Revalidate);
     static readonly System.Net.Cache.RequestCachePolicy BodyCachePolicy = new(System.Net.Cache.RequestCacheLevel.NoCacheNoStore);
 
+    // net48 BCL HttpStatusCode lacks TooManyRequests; 429 is defined on newer runtimes.
+    const HttpStatusCode StatusTooManyRequests = (HttpStatusCode)429;
+
     private bool _TextureNotFound = false;
 
 
@@ -312,10 +315,10 @@ class TextureReaderV2 : IDisposable
                     {
                         if (response.StatusCode == HttpStatusCode.ServiceUnavailable ||
                             response.StatusCode == HttpStatusCode.RequestTimeout ||
-                            response.StatusCode == HttpStatusCode.TooManyRequests)
+                            response.StatusCode == StatusTooManyRequests)
                         {
                             nRetries--;
-                            TimeSpan delay = response.StatusCode == HttpStatusCode.TooManyRequests
+                            TimeSpan delay = response.StatusCode == StatusTooManyRequests
                                 ? DelayForTooManyRequests(response)
                                 : TimeSpan.FromMilliseconds(Geometry.Global.GetRandomRequestDelay());
                             Debug.WriteLine($"Failed to load {textureUri} : {response.StatusCode}, delaying {delay.TotalMilliseconds:F0}ms for retry");

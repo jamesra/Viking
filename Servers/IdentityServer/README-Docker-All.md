@@ -1,9 +1,11 @@
 # Identity Server - All Services Docker Setup
 
+**Canonical ports:** see [README.md](./README.md#ports-canonical). This file matches those defaults.
+
 This setup allows you to run all three Identity Server components in a single Docker container:
 - **IdentityServerStandalone** (Ports 5000/5001) - Core Identity Server
 - **WebApi** (Ports 6000/6001) - API endpoints  
-- **IdentityServer** (Ports 4000/4001) - Management website
+- **IdentityServer** / WebManagement (Ports 4000/4001) - Management website
 
 ## Quick Start
 

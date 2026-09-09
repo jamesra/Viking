@@ -50,7 +50,7 @@ Accounts are only required to write to the database.  Read-only access via Vikin
 
 Create accounts and do some basic visualization on the `original visualization site`_
 
-.. image::  Footer_v2.jpg  
+.. image::  Footer_V2.jpg  
    :width: 768
    :align: center
    

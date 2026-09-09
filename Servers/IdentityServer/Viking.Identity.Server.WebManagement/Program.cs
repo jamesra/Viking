@@ -21,6 +21,7 @@ using Serilog;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
 using Viking.Identity.Server.Authorization;
+using Viking.Identity.Server.Extensions;
 using Viking.Identity.Server.WebManagement.Extensions;
 using Viking.Identity.Server.Services;
 using Viking.Identity.Server.Extensions.Services;

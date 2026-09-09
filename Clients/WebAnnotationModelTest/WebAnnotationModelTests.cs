@@ -19,8 +19,16 @@ namespace WebAnnotationModelTest
     [TestClass]
     public class WebAnnotationModelTests
     {
-        readonly string Username = "VikingUnitTests";
-        readonly string Password = "4%W%o06";
+        public WebAnnotationModelTests()
+        {
+            Username = Environment.GetEnvironmentVariable("IDENTITY_USERNAME")
+                ?? throw new InvalidOperationException("Set IDENTITY_USERNAME for WebAnnotationModelTests.");
+            Password = Environment.GetEnvironmentVariable("IDENTITY_PASSWORD")
+                ?? throw new InvalidOperationException("Set IDENTITY_PASSWORD for WebAnnotationModelTests.");
+        }
+
+        readonly string Username;
+        readonly string Password;
         readonly string VolumeName = "RC1Test";
         public System.Net.NetworkCredential TestCredentials;
         //static public EndpointAddress Endpoint;
@@ -51,6 +59,7 @@ namespace WebAnnotationModelTest
             TokenHelper = new BearerTokenHelper()
             {
                 IdentityServerURL = new Uri(IdentityEndpoint),
+                ClientSecret = IdentityClientSecret.Resolve()
             };
 
             // Create IdentityApiHelper - need to determine IdentityApiURL (typically same host, port 6001)

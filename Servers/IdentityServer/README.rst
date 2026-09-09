@@ -2,6 +2,8 @@
 Viking Identity Server - Complete Guide
 =============================================
 
+**Ports and project layout:** see ``README.md`` (canonical). Do not trust older port tables in this file that swap Standalone and WebApi.
+
 .. contents:: Table of Contents
    :depth: 3
    :local:
@@ -10,12 +12,12 @@ Viking Identity Server - Complete Guide
 Overview
 ========
 
-Viking Identity Server is a comprehensive authentication and authorization system built on ASP.NET Identity and IdentityServer. It provides role-based access control, organizational unit management, and fine-grained permission management for the Viking application ecosystem.
+Viking Identity Server is a comprehensive authentication and authorization system built on ASP.NET Identity and Duende IdentityServer. It provides role-based access control, organizational unit management, and fine-grained permission management for the Viking application ecosystem.
 
-The system consists of three main components:
+The system consists of three main components (ports match ``README.md`` / ``docker-compose-all.yml`` / launchSettings):
 
-- **IdentityServerStandalone** (Ports 6000/6001) - Core Identity Server providing OAuth2/OIDC authentication
-- **Viking.Identity.Server.WebApi** (Ports 5000/5001) - REST API for permission and identity management
+- **IdentityServerStandalone** (Ports 5000/5001) - Core Identity Server providing OAuth2/OIDC authentication
+- **Viking.Identity.Server.WebApi** (Ports 6000/6001) - REST API for permission and identity management
 - **Viking.Identity.Server.WebManagement** (Ports 4000/4001) - Web-based management interface for users, roles, and permissions
 
 =================
@@ -508,15 +510,15 @@ Service Endpoints
 Once running:
 
 **IdentityServerStandalone** (Authentication Server)
-    - HTTP: http://localhost:6000
-    - HTTPS: https://localhost:6001
-    - Discovery: https://localhost:6001/.well-known/openid-configuration
-
-**Viking.Identity.Server.WebApi** (REST API)
     - HTTP: http://localhost:5000
     - HTTPS: https://localhost:5001
-    - Swagger: https://localhost:5001/swagger (Development only)
-    - Health: https://localhost:5001/health
+    - Discovery: https://localhost:5001/.well-known/openid-configuration
+
+**Viking.Identity.Server.WebApi** (REST API)
+    - HTTP: http://localhost:6000
+    - HTTPS: https://localhost:6001
+    - Swagger: https://localhost:6001/swagger (Development only)
+    - Health: https://localhost:6001/health
 
 **IdentityServer** (Management Website)
     - HTTP: http://localhost:4000
@@ -533,7 +535,7 @@ Build from the **Server folder** (parent of IdentityServer)::
 
 Run::
 
-    docker run -d --name identityserver-standalone -p 6000:6000 -p 6001:6001 identityserver-standalone:latest
+    docker run -d --name identityserver-standalone -p 5000:5000 -p 5001:5001 identityserver-standalone:latest
 
 **Viking.Identity.Server.WebApi**
 
@@ -543,7 +545,7 @@ Build from the **Server folder**::
 
 Run::
 
-    docker run -d --name identity-webapi -p 5000:5000 -p 5001:5001 identity-webapi:latest
+    docker run -d --name identity-webapi -p 6000:6000 -p 6001:6001 identity-webapi:latest
 
 Environment Variables and .env Files
 ------------------------------------
@@ -568,7 +570,7 @@ The system uses environment files to configure Docker deployments. Create these 
     SSL_KEY_PATH=/path/to/private.key
 
     # Authority URL (IdentityServerStandalone endpoint)
-    AUTHORITY=https://your-domain.com:6001/
+    AUTHORITY=https://your-domain.com:5001/
 
     # Duende IdentityServer License (optional)
     DUENDE_KEY_PATH=/path/to/Duende_License.key
@@ -692,8 +694,8 @@ Complete setup with custom configuration:
           context: .
           dockerfile: IdentityServer/IdentityServerStandalone/Dockerfile
         ports:
-          - "6000:6000"
-          - "6001:6001"
+          - "5000:5000"
+          - "5001:5001"
         environment:
           - ASPNETCORE_ENVIRONMENT=Production
           - ConnectionStrings__IdentityConnection=Server=your-db;Database=IdentityViking;User ID=user;Password=pass;MultipleActiveResultSets=true;TrustServerCertificate=True
@@ -707,12 +709,12 @@ Complete setup with custom configuration:
           context: .
           dockerfile: IdentityServer/Viking.Identity.Server.WebApi/Dockerfile
         ports:
-          - "5000:5000"
-          - "5001:5001"
+          - "6000:6000"
+          - "6001:6001"
         environment:
           - ASPNETCORE_ENVIRONMENT=Production
           - ConnectionStrings__IdentityConnection=Server=your-db;Database=IdentityViking;User ID=user;Password=pass;MultipleActiveResultSets=true;TrustServerCertificate=True
-          - JwtBearerOptions__Authority=https://localhost:6001/
+          - JwtBearerOptions__Authority=https://localhost:5001/
         volumes:
           - ./custom-appsettings-webapi.json:/app/appsettings.Production.json
         networks:
@@ -733,7 +735,7 @@ Volume Mounting for Configuration
 
     docker run -d \
       --name identityserver-standalone \
-      -p 6000:6000 -p 6001:6001 \
+      -p 5000:5000 -p 5001:5001 \
       -v /path/to/appsettings.json:/app/appsettings.json \
       -v /path/to/appsettings.Production.json:/app/appsettings.Production.json \
       identityserver-standalone:latest
@@ -742,7 +744,7 @@ Volume Mounting for Configuration
 
     docker run -d \
       --name identityserver-standalone \
-      -p 6000:6000 -p 6001:6001 \
+      -p 5000:5000 -p 5001:5001 \
       -v /path/to/config:/app/config \
       identityserver-standalone:latest
 

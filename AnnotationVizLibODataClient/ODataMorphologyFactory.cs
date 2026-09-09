@@ -1,6 +1,7 @@
 ﻿using Microsoft.OData.Client;
 using ODataClient.ConnectomeDataModel;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -48,8 +49,9 @@ namespace AnnotationVizLib.OData
         /// its whole duration.  Fanning out one task per ID lets a structure with hundreds of children queue more
         /// requests than the pool has threads; they then sit unstarted until the transport timeout cancels them,
         /// which surfaces as TaskCanceledException even though the server is answering in well under a second.
+        /// Keep this low: openresty in front of RPC1 returns 502 when too many expands / link queries pile up.
         /// </summary>
-        private const int MaxConcurrentRequests = 8;
+        private const int MaxConcurrentRequests = 4;
 
         /// <summary>
         /// Run <paramref name="query"/> over every item with at most <see cref="MaxConcurrentRequests"/> in flight.
@@ -136,7 +138,7 @@ namespace AnnotationVizLib.OData
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                QueryOperationResponse<T> page = container.Execute(continuation);
+                QueryOperationResponse<T> page = ExecuteContinuationWithRetry(container, continuation, cancellationToken);
                 foreach (T item in page)
                     collection.Add(item);
 
@@ -176,7 +178,7 @@ namespace AnnotationVizLib.OData
             List<(ICollection<Location> Collection, DataServiceQueryContinuation<Location> Continuation)> pendingLocations = [];
             List<(ICollection<Structure> Collection, DataServiceQueryContinuation<Structure> Continuation)> pendingChildren = [];
 
-            List<Structure> structures = ExecuteAllPages(container, query, cancellationToken, (response, s) =>
+            List<Structure> structures = ExecuteAllPagesWithRetry(container, query, cancellationToken, (response, s) =>
             {
                 DataServiceQueryContinuation<Location> locations = NestedContinuation(response, s.Locations);
                 if (locations != null)
@@ -275,7 +277,7 @@ namespace AnnotationVizLib.OData
             try
             {
                 List<Location>[] results = await RunThrottledAsync(locationIDs.Distinct(), id =>
-                    ExecuteAllPages(container,
+                    ExecuteAllPagesWithRetry(container,
                         (DataServiceQuery<Location>)container.Locations.Where(l => l.ID == id),
                         cancellationToken), cancellationToken);
 
@@ -308,7 +310,7 @@ namespace AnnotationVizLib.OData
                     structures.Where(s => s.LocationLinks is null || !s.LocationLinks.Any()),
                     s =>
                     {
-                        List<LocationLink> links = ExecuteAllPages(container, container.StructureLocationLinks(s.ID), cancellationToken);
+                        List<LocationLink> links = ExecuteAllPagesWithRetry(container, container.StructureLocationLinks(s.ID), cancellationToken);
 
                         s.LocationLinks = new DataServiceCollection<LocationLink>(null, TrackingMode.None);
                         foreach (var link in links)
@@ -378,6 +380,309 @@ namespace AnnotationVizLib.OData
 
             var scale = await GetScaleAsync(container, cancellationToken);
             return await FromODataAsync(StructureIDs, include_children, Endpoint, scale, cancellationToken);
+        }
+
+        /// <summary>
+        /// Synapse / junction type IDs — blobs, not Z-traveling processes. Excluded from neighbor hop corpus.
+        /// </summary>
+        static readonly HashSet<long> ExcludedNeighborTypeIds = [28, 34, 35, 73, 85];
+
+        /// <summary>
+        /// Soft cap so a huge AABB does not pull an entire volume into memory for the PoC.
+        /// </summary>
+        public const int MaxNeighborStructures = 32;
+
+        /// <summary>
+        /// Cap metadata lookups before filtering to <see cref="MaxNeighborStructures"/>. Loading Type/Parent for
+        /// every ParentID in a Muller AABB (often 1000+) 502s the gateway and stalls Init for minutes.
+        /// </summary>
+        const int MaxNeighborMetadataQueries = 96;
+
+        /// <summary>
+        /// Cap on per-section Location queries during neighbor discovery (full Z stacks would 502 the gateway).
+        /// </summary>
+        const int MaxNeighborSectionQueries = 40;
+
+        /// <summary>
+        /// Discover top-level structure IDs with at least one location inside the padded AABB of
+        /// <paramref name="root"/>'s cells, across a subsample of occupied sections. VolumeX/Y filters use
+        /// unscaled DB units; <paramref name="radiusNm"/> pads the scaled morphology bbox.
+        /// </summary>
+        public static async Task<List<long>> FindNearbyStructureIdsAsync(
+            MorphologyGraph root,
+            Uri endpoint,
+            double radiusNm,
+            CancellationToken cancellationToken = default)
+        {
+            if (root is null || endpoint is null)
+                return [];
+
+            List<MorphologyGraph> cells = [.. root.Subgraphs.Values.Where(sg => sg.StructureID != 0)];
+            if (cells.Count == 0 && root.StructureID != 0 && root.Nodes.Count > 0)
+                cells.Add(root);
+            if (cells.Count == 0)
+                return [];
+
+            HashSet<ulong> excludeIds = [.. cells.Select(c => c.StructureID)];
+
+            Geometry.Box union = default;
+            foreach (MorphologyGraph cell in cells)
+            {
+                Geometry.Box box = cell.NodesBoundingBox;
+                if (box == default)
+                    continue;
+                union = union == default ? box : Geometry.Box.Union(union, box);
+            }
+
+            if (union == default)
+                return [];
+
+            double scaleX = root.scale?.X.Value ?? 1.0;
+            double scaleY = root.scale?.Y.Value ?? 1.0;
+            if (scaleX <= 0 || scaleY <= 0)
+            {
+                scaleX = 1.0;
+                scaleY = 1.0;
+            }
+
+            double pad = Math.Max(0, radiusNm);
+            double minX = (union.MinCorner.X - pad) / scaleX;
+            double maxX = (union.MaxCorner.X + pad) / scaleX;
+            double minY = (union.MinCorner.Y - pad) / scaleY;
+            double maxY = (union.MaxCorner.Y + pad) / scaleY;
+
+            int[] allSections = [.. cells
+                .SelectMany(c => c.Nodes.Values.Select(n => (int)Math.Round(n.UnscaledZ)))
+                .Distinct()
+                .OrderBy(z => z)];
+
+            if (allSections.Length == 0)
+                return [];
+
+            int[] sections = SubsampleSections(allSections, MaxNeighborSectionQueries);
+            Console.WriteLine($"Neighbor discover: querying {sections.Length}/{allSections.Length} sections in padded AABB");
+
+            Container container = new(endpoint)
+            {
+                MergeOption = MergeOption.NoTracking
+            };
+
+            ConcurrentDictionary<long, byte> parentIds = new();
+
+            // Throttle: unbounded Task.WhenAll over a Muller Z-stack 502s openresty.
+            await RunThrottledAsync(sections, z =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    long sectionZ = z;
+                    DataServiceQuery<Location> query = (DataServiceQuery<Location>)container.Locations
+                        .Where(l => l.Z == sectionZ
+                            && l.VolumeX >= minX && l.VolumeX <= maxX
+                            && l.VolumeY >= minY && l.VolumeY <= maxY);
+
+                    List<Location> locs = ExecuteAllPagesWithRetry(container, query, cancellationToken);
+                    foreach (Location loc in locs)
+                    {
+                        if (excludeIds.Contains((ulong)loc.ParentID))
+                            continue;
+                        parentIds.TryAdd(loc.ParentID, 0);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    Console.WriteLine($"Neighbor discover Z={z}: {ex.Message}");
+                }
+
+                return 0;
+            }, cancellationToken);
+
+            if (parentIds.IsEmpty)
+                return [];
+
+            // Metadata only (no Locations expand) — LoadStructuresByIDsAsync would 502 on dozens of full expands.
+            long[] candidates = [.. parentIds.Keys.OrderBy(id => id)];
+            if (candidates.Length > MaxNeighborMetadataQueries)
+            {
+                Console.WriteLine($"Neighbor discover: sampling {MaxNeighborMetadataQueries}/{candidates.Length} ParentIDs for metadata (cap before full morphology load)");
+                candidates = SubsampleIds(candidates, MaxNeighborMetadataQueries);
+            }
+
+            Console.WriteLine($"Neighbor discover: {candidates.Length} candidate ParentIDs; loading structure metadata");
+            List<Structure> structures = await LoadStructureMetadataByIDsAsync(container, candidates, cancellationToken);
+
+            List<long> neighbors = [.. structures
+                .Where(s => !s.ParentID.HasValue)
+                .Where(s => !ExcludedNeighborTypeIds.Contains(s.TypeID))
+                .Select(s => s.ID)
+                .Distinct()
+                .OrderBy(id => id)];
+
+            if (neighbors.Count > MaxNeighborStructures)
+            {
+                Console.WriteLine($"Neighbor discover: truncating {neighbors.Count} structures to {MaxNeighborStructures}");
+                neighbors = neighbors.Take(MaxNeighborStructures).ToList();
+            }
+
+            return neighbors;
+        }
+
+        /// <summary>
+        /// Load morphology for structures near <paramref name="root"/> (no children) for hop-field sampling.
+        /// Returns null when nothing was found or the OData gateway fails (non-fatal for meshing).
+        /// </summary>
+        public static async Task<MorphologyGraph> LoadNeighborHopSourcesAsync(
+            MorphologyGraph root,
+            Uri endpoint,
+            double radiusNm,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                List<long> ids = await FindNearbyStructureIdsAsync(root, endpoint, radiusNm, cancellationToken);
+                if (ids.Count == 0)
+                {
+                    Console.WriteLine("Neighbor discover: no nearby structures found");
+                    return null;
+                }
+
+                Console.WriteLine($"Neighbor discover: loading {ids.Count} structures within {radiusNm:F0} nm");
+                return await FromODataAsync(ids, include_children: false, endpoint, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                Console.WriteLine($"Neighbor discover failed (continuing without neighbor corpus): {ex.Message}");
+                return null;
+            }
+        }
+
+        static int[] SubsampleSections(int[] sections, int maxQueries)
+        {
+            if (sections.Length <= maxQueries)
+                return sections;
+
+            int stride = (int)Math.Ceiling(sections.Length / (double)maxQueries);
+            List<int> sampled = [];
+            for (int i = 0; i < sections.Length; i += stride)
+                sampled.Add(sections[i]);
+            if (sampled[^1] != sections[^1])
+                sampled.Add(sections[^1]);
+            return [.. sampled];
+        }
+
+        static long[] SubsampleIds(long[] ids, int maxQueries)
+        {
+            if (ids.Length <= maxQueries)
+                return ids;
+
+            int stride = (int)Math.Ceiling(ids.Length / (double)maxQueries);
+            List<long> sampled = [];
+            for (int i = 0; i < ids.Length; i += stride)
+                sampled.Add(ids[i]);
+            if (sampled[^1] != ids[^1])
+                sampled.Add(ids[^1]);
+            return [.. sampled];
+        }
+
+        /// <summary>
+        /// Structure rows only (Type / ParentID) — no Locations expand.
+        /// </summary>
+        static async Task<List<Structure>> LoadStructureMetadataByIDsAsync(
+            Container container,
+            ICollection<long> structureIDs,
+            CancellationToken cancellationToken)
+        {
+            List<Structure>[] results = await RunThrottledAsync(structureIDs, id =>
+            {
+                try
+                {
+                    return ExecuteAllPagesWithRetry(container,
+                        (DataServiceQuery<Structure>)container.Structures
+                            .Expand(s => s.Type)
+                            .Where(s => s.ID == id),
+                        cancellationToken);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    Console.WriteLine($"Neighbor metadata Structure {id}: {ex.Message}");
+                    return [];
+                }
+            }, cancellationToken);
+
+            List<Structure> all = [];
+            foreach (List<Structure> list in results)
+                all.AddRange(list);
+            return all;
+        }
+
+        static List<T> ExecuteAllPagesWithRetry<T>(
+            Container container,
+            DataServiceQuery<T> query,
+            CancellationToken cancellationToken,
+            Action<QueryOperationResponse<T>, T> onEntry = null,
+            int maxAttempts = 5)
+        {
+            Exception last = null;
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    return ExecuteAllPages(container, query, cancellationToken, onEntry);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException && IsTransientODataFailure(ex))
+                {
+                    last = ex;
+                    int delayMs = 500 * attempt * attempt;
+                    Console.WriteLine($"OData transient failure (attempt {attempt}/{maxAttempts}), retry in {delayMs}ms: {ex.Message}");
+                    Thread.Sleep(delayMs);
+                }
+            }
+
+            throw last ?? new InvalidOperationException("OData query failed with no exception");
+        }
+
+        static QueryOperationResponse<T> ExecuteContinuationWithRetry<T>(
+            Container container,
+            DataServiceQueryContinuation<T> continuation,
+            CancellationToken cancellationToken,
+            int maxAttempts = 5)
+        {
+            Exception last = null;
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    return container.Execute(continuation);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException && IsTransientODataFailure(ex))
+                {
+                    last = ex;
+                    int delayMs = 500 * attempt * attempt;
+                    Console.WriteLine($"OData continuation transient failure (attempt {attempt}/{maxAttempts}), retry in {delayMs}ms: {ex.Message}");
+                    Thread.Sleep(delayMs);
+                }
+            }
+
+            throw last ?? new InvalidOperationException("OData continuation failed with no exception");
+        }
+
+        static bool IsTransientODataFailure(Exception ex)
+        {
+            for (Exception e = ex; e != null; e = e.InnerException)
+            {
+                string msg = e.Message ?? string.Empty;
+                if (msg.Contains("502", StringComparison.OrdinalIgnoreCase)
+                    || msg.Contains("503", StringComparison.OrdinalIgnoreCase)
+                    || msg.Contains("504", StringComparison.OrdinalIgnoreCase)
+                    || msg.Contains("Bad Gateway", StringComparison.OrdinalIgnoreCase)
+                    || msg.Contains("Gateway Time-out", StringComparison.OrdinalIgnoreCase)
+                    || msg.Contains("timed out", StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -598,11 +903,19 @@ namespace AnnotationVizLib.OData
 
             MorphologyGraph graph = new((ulong)s.ID, scale, new ODataStructureAdapter(s));
 
+            // OData $expand + nextLink drain can surface the same Location twice; Graph.AddNode rejects duplicate keys.
+            HashSet<ulong> seenLocationIds = [];
             foreach (Location loc in locations)
             {
+                ulong id = (ulong)loc.ID;
+                if (!seenLocationIds.Add(id))
+                    continue;
 
-                graph.AddNode(new MorphologyNode((ulong)loc.ID, new ODataLocationAdapter(loc, scale), graph));
+                graph.AddNode(new MorphologyNode(id, new ODataLocationAdapter(loc, scale), graph));
             }
+
+            if (graph.Nodes.Count == 0)
+                return null;
 
             AddLocationEdges(graph, location_links);
 

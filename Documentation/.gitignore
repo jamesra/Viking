@@ -1,2 +1,8 @@
 /build/
 /.git/
+
+# `sphinx-build -b html source _build/html` writes here; make.bat uses build/.
+/_build/
+
+# Local environment for building the docs.
+/.venv-docs/

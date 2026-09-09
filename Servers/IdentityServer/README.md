@@ -1,14 +1,37 @@
-IdentityManager AspNetIdentity
-===========================================
-[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/IdentityManager/IdentityManager?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+# Viking Identity Server
 
-## Overview ##
+Authentication and authorization for the Viking ecosystem (Duende IdentityServer 7 + ASP.NET Identity).
 
-IdentityManager AspNetIdentity is an IdentityManagerService implementation for IdentityManager that uses ASP.NET Identity as the identity management system. In other words, you're using IdentityManager and you want to use ASP.NET Identity as your database for users, then this is the project you're looking for.
+## Project layout
 
-More details can be found on the [IdentityManager wiki](https://github.com/IdentityManager/IdentityManager/wiki).
+Keep concerns split across these projects (do not fold them back together):
 
----
+| Project | Role |
+|---------|------|
+| `Servers/Identity.Models` | Domain entities (`Viking.Identity.Models`) |
+| `Servers/Identity.DataContext` | EF Core `ApplicationDbContext` and DI registration |
+| `Servers/IdentityServer/Viking.Identity.Server.Extensions` | Shared services, permission queries, token validation |
+| `Servers/IdentityServer/Identity.Configuration` | Shared options / config types |
+| `Servers/IdentityServer/IdentityServerStandalone` | OIDC/OAuth authority |
+| `Servers/IdentityServer/Viking.Identity.Server.WebApi` | Permissions / launch REST API |
+| `Servers/IdentityServer/Viking.Identity.Server.WebManagement` | Admin / management website |
+| `Servers/Identity.Tests` | Unit / integration tests |
+
+Sample / scratch projects (`Client/`, `SmtpTest/`, `DevTestAPI/`) remain on disk but are not in `IdentityServer.sln`. **DevTest** stays in the solution.
+
+## Ports (canonical)
+
+Source of truth: `Properties/launchSettings.json` (local) and `docker-compose-all.yml` (Docker defaults).
+
+| Service | HTTP | HTTPS | Local launch profile |
+|---------|------|-------|----------------------|
+| **IdentityServerStandalone** | 5000 | 5001 | `https://localhost:5001` |
+| **Viking.Identity.Server.WebApi** | 6000 | 6001 | `https://localhost:6001;http://localhost:6000` |
+| **WebManagement** (IdentityManagementWebsite) | 4000 | 4001 | `https://localhost:4001` |
+
+Docker env overrides use `IDENTITY_STANDALONE_*`, `IDENTITY_WEBAPI_*`, and `IDENTITY_MANAGEMENT_*` (see `docker-compose-all.yml`). Do not hardcode ports in new compose/scripts.
+
+Older README sections that swapped Standalone (500x) and WebApi (600x) are wrong; prefer this table.
 
 ## Configuration and Secrets Management
 
@@ -119,9 +142,14 @@ The following patterns are already ignored by `.gitignore`:
 - `secrets.json` - Any secrets.json files in the project directories
 - User secrets directories are automatically excluded (they're in user-specific system directories outside the repository)
 
+### Client-side libraries (WebManagement)
+
+`wwwroot/lib` is restored on build via LibMan (`libman.json` + `Microsoft.Web.LibraryManager.Build`). Do not commit `wwwroot/lib/**`. Manual restore: `dotnet tool restore` (if needed) then `libman restore` from the WebManagement project directory, or just `dotnet build`.
+
 ### Additional Resources
 
 - See project-specific README files for detailed configuration:
   - `Identity.DataContext/README.md` - Database and migrations configuration
   - `Viking.Identity.Server.WebApi/README.md` - WebApi configuration and Docker setup
   - `README-Docker-All.md` - Docker deployment configuration
+  - `README.rst` - Longer historical guide (ports: prefer the **Ports (canonical)** table above)

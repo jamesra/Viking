@@ -55,42 +55,6 @@ namespace Viking
         public static string AppWebsite = "";
 
         /// <summary>
-        /// From Stack Overflow: http://stackoverflow.com/questions/8301587/how-to-detect-xna-version-at-runtime
-        /// </summary>
-        /// <param name="ok"></param>
-        /// <returns></returns>
-        public static bool XNAFrameworkInstalled(string baseKeyName)
-        {
-            Microsoft.Win32.RegistryKey FrameworkKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(baseKeyName);
-
-            if (FrameworkKey is null)
-            {
-                return false;
-            }
-
-            if (FrameworkKey.GetValueKind("Installed") != Microsoft.Win32.RegistryValueKind.DWord)
-            {
-                return false;
-            }
-
-            int installedValue = Convert.ToInt32(FrameworkKey.GetValue("Installed"));
-
-            return installedValue != 0;
-        }
-
-        /// <summary>
-        /// Check the known registry entries for an XNA install
-        /// </summary>
-        /// <returns></returns>
-        public static bool XNAFrameworkInstalled()
-        {
-            return XNAFrameworkInstalled(@"SOFTWARE\Microsoft\XNA\Game Studio\v4.0") ||
-             XNAFrameworkInstalled(@"SOFTWARE\Wow6432Node\Microsoft\XNA\Game Studio\v4.0") ||
-             XNAFrameworkInstalled(@"SOFTWARE\Microsoft\XNA\Framework\v4.0") ||
-             XNAFrameworkInstalled(@"SOFTWARE\Wow6432Node\Microsoft\XNA\Framework\v4.0");
-        }
-
-        /// <summary>
         /// The main entry point for the application.
         /// </summary>
         [STAThread]

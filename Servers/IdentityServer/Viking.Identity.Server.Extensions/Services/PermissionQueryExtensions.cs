@@ -9,6 +9,11 @@ using Viking.Identity.Models;
 
 namespace Viking.Identity.Data
 {
+    /// <summary>
+    /// Permission and group-membership query helpers over <see cref="ApplicationDbContext"/>.
+    /// Lives in Viking.Identity.Server.Extensions (see PermissionQueryExtensions.cs) so DataContext
+    /// stays a pure EF/model project; call sites keep using the Viking.Identity.Data namespace.
+    /// </summary>
     public static class ApplicationDBContextExtensions
     {
         /// <summary>

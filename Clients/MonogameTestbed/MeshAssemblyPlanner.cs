@@ -4,10 +4,12 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MorphologyMesh;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using VikingXNAGraphics;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
@@ -590,45 +592,101 @@ namespace MonogameTestbed
         private readonly Dictionary<ulong, AssemblyBoxFailureSeverity> NodeFailureSeverity = [];
 
         /// <summary>
-        /// When false, hides only red (critical / non-manifold) error boxes. Orange and yellow problem boxes
-        /// and in-progress gray boxes stay visible. Toggle with R in BajajMultiTest.
+        /// When false, hides red (critical / non-manifold) error overlays. Prefer the View menu Slice Status
+        /// flags for finer control.
         /// </summary>
         public bool ShowRedErrorBoxes
         {
-            get => _showRedErrorBoxes;
+            get => ShowCriticalSliceStatus;
+            set => ShowCriticalSliceStatus = value;
+        }
+
+        private bool _showCriticalSliceStatus = true;
+        private bool _showInProgressSliceStatus = true;
+        private bool _showSectionReadySliceStatus = true;
+        private bool _showMinorIssueSliceStatus = true;
+        private bool _showWarningSliceStatus = true;
+
+        /// <summary>In-progress leaf contour overlays (gray).</summary>
+        public bool ShowInProgressSliceStatus
+        {
+            get => _showInProgressSliceStatus;
             set
             {
-                if (_showRedErrorBoxes == value)
+                if (_showInProgressSliceStatus == value)
                     return;
-
-                _showRedErrorBoxes = value;
-                try
-                {
-                    ReadyModelLock.EnterWriteLock();
-                    _MeshModels = null;
-                }
-                finally
-                {
-                    ReadyModelLock.ExitWriteLock();
-                }
+                _showInProgressSliceStatus = value;
+                RequestVisibleListRebuild();
             }
         }
 
-        private bool _showRedErrorBoxes = true;
+        /// <summary>Blue branch / section-ready AABB overlays.</summary>
+        public bool ShowSectionReadySliceStatus
+        {
+            get => _showSectionReadySliceStatus;
+            set
+            {
+                if (_showSectionReadySliceStatus == value)
+                    return;
+                _showSectionReadySliceStatus = value;
+                RequestVisibleListRebuild();
+            }
+        }
 
-        /// <summary>Backward-compatible alias for <see cref="ShowRedErrorBoxes"/>. </summary>
+        /// <summary>Yellow minor-failure overlays.</summary>
+        public bool ShowMinorIssueSliceStatus
+        {
+            get => _showMinorIssueSliceStatus;
+            set
+            {
+                if (_showMinorIssueSliceStatus == value)
+                    return;
+                _showMinorIssueSliceStatus = value;
+                RequestVisibleListRebuild();
+            }
+        }
+
+        /// <summary>Orange warning (holes / winding) overlays.</summary>
+        public bool ShowWarningSliceStatus
+        {
+            get => _showWarningSliceStatus;
+            set
+            {
+                if (_showWarningSliceStatus == value)
+                    return;
+                _showWarningSliceStatus = value;
+                RequestVisibleListRebuild();
+            }
+        }
+
+        /// <summary>Red critical (non-manifold) overlays.</summary>
+        public bool ShowCriticalSliceStatus
+        {
+            get => _showCriticalSliceStatus;
+            set
+            {
+                if (_showCriticalSliceStatus == value)
+                    return;
+                _showCriticalSliceStatus = value;
+                RequestVisibleListRebuild();
+            }
+        }
+
+        /// <summary>Backward-compatible alias for <see cref="ShowCriticalSliceStatus"/>. </summary>
         public bool ShowFailedBoundingBoxes
         {
-            get => ShowRedErrorBoxes;
-            set => ShowRedErrorBoxes = value;
+            get => ShowCriticalSliceStatus;
+            set => ShowCriticalSliceStatus = value;
         }
 
         /// <summary>
-        /// The scale-and-centre transform each box was built with.  A box is a unit cube that carries all of its
-        /// size and position in its ModelMatrix, so placement has to be composed onto this rather than assigned
-        /// over it.
+        /// Local transform for each overlay model before world placement. Branch AABB models carry scale and
+        /// centre here (unit box); leaf contour models use identity because vertices are already in slice space.
         /// </summary>
         private readonly Dictionary<ulong, Matrix> BoxLocalTransform = [];
+
+        /// <summary>Source of leaf contour geometry for in-progress overlays.</summary>
+        private readonly SliceGraph _sliceGraph;
 
         /// <summary>
         /// Slices that SliceGraph could not report a valid topology for. They get no box at all, so a run that
@@ -636,23 +694,95 @@ namespace MonogameTestbed
         /// </summary>
         private int _leavesWithoutBoundingBox;
 
-        private MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor>[] _MeshModels = null;
+        /// <summary>Last published snapshot for Draw. Never rebuilt on the draw thread.</summary>
+        private MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor>[] _MeshModels =
+            Array.Empty<MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor>>();
+
+        /// <summary>
+        /// Memo of <see cref="HasIncompleteDescendantLeaf"/> by node key. Cleared along the ancestor chain when a
+        /// node completes so unrelated subtrees keep their answers across visible-list rebuilds.
+        /// Concurrent because the rebuild task reads while meshing invalidates under write.
+        /// </summary>
+        private readonly ConcurrentDictionary<ulong, bool> _incompleteDescendantCache = new();
+
+        /// <summary>1 while a rebuild task owns the single-flight slot.</summary>
+        private int _rebuildRunning;
+
+        /// <summary>1 if a rebuild was requested while a rebuild was running (or before one started).</summary>
+        private int _rebuildRequested;
+
+        /// <summary>1 after <see cref="CancelRebuild"/>; rebuild loop exits and ignores further requests.</summary>
+        private int _rebuildCancelled;
+
+        /// <summary>
+        /// Published visible-box list. Draw only reads this snapshot; rebuilds run off the draw thread.
+        /// </summary>
         public MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor>[] MeshModels
         {
             get
             {
                 try
                 {
-                    ReadyModelLock.EnterUpgradeableReadLock();
+                    ReadyModelLock.EnterReadLock();
+                    return _MeshModels;
+                }
+                finally
+                {
+                    ReadyModelLock.ExitReadLock();
+                }
+            }
+        }
 
-                    if (_MeshModels != null)
-                        return _MeshModels;
+        /// <summary>
+        /// Mark the visible list dirty and ensure exactly one rebuild task is running.
+        /// If a rebuild is already in flight, it will notice <see cref="_rebuildRequested"/> when it finishes
+        /// and run another pass.
+        /// </summary>
+        public void RequestVisibleListRebuild()
+        {
+            if (Volatile.Read(ref _rebuildCancelled) != 0)
+                return;
 
-                    MeshModel<VertexPositionColor>[] models = [.. GetVisibleBoundingBoxModels()];
+            Volatile.Write(ref _rebuildRequested, 1);
 
-                    //Publishing the cache takes the write lock. The getter runs on the draw thread while meshing
-                    //threads invalidate it from OnNodeCompleted, so filling it under a read lock let two callers
-                    //build and publish concurrently.
+            if (Interlocked.CompareExchange(ref _rebuildRunning, 1, 0) != 0)
+                return;
+
+            Task.Run(RebuildVisibleListLoop);
+        }
+
+        /// <summary>
+        /// Stop scheduling rebuilds (e.g. when this view is replaced by a new mesh generation).
+        /// </summary>
+        public void CancelRebuild()
+        {
+            Volatile.Write(ref _rebuildCancelled, 1);
+            Volatile.Write(ref _rebuildRequested, 0);
+        }
+
+        void RebuildVisibleListLoop()
+        {
+            try
+            {
+                while (Volatile.Read(ref _rebuildCancelled) == 0)
+                {
+                    //Clear the request flag at the start of this pass so completions during the pass set it again.
+                    Interlocked.Exchange(ref _rebuildRequested, 0);
+
+                    MeshModel<VertexPositionColor>[] models;
+                    try
+                    {
+                        ReadyModelLock.EnterReadLock();
+                        models = [.. GetVisibleBoundingBoxModels()];
+                    }
+                    finally
+                    {
+                        ReadyModelLock.ExitReadLock();
+                    }
+
+                    if (Volatile.Read(ref _rebuildCancelled) != 0)
+                        return;
+
                     try
                     {
                         ReadyModelLock.EnterWriteLock();
@@ -663,11 +793,20 @@ namespace MonogameTestbed
                         ReadyModelLock.ExitWriteLock();
                     }
 
-                    return _MeshModels;
+                    //Another request arrived while we were building — run again; otherwise leave the single-flight slot.
+                    if (Volatile.Read(ref _rebuildRequested) == 0)
+                        return;
                 }
-                finally
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _rebuildRunning, 0);
+
+                //Request landed after the last requested-check but before we cleared running — start again.
+                if (Volatile.Read(ref _rebuildCancelled) == 0
+                    && Volatile.Read(ref _rebuildRequested) != 0)
                 {
-                    ReadyModelLock.ExitUpgradeableReadLock();
+                    RequestVisibleListRebuild();
                 }
             }
         }
@@ -687,14 +826,30 @@ namespace MonogameTestbed
                         ? s
                         : AssemblyBoxFailureSeverity.Critical;
 
-                    //R only suppresses red/critical boxes; soft warnings stay for inspection.
-                    if (severity == AssemblyBoxFailureSeverity.Critical && !ShowRedErrorBoxes)
+                    bool show = severity switch
+                    {
+                        AssemblyBoxFailureSeverity.Critical => ShowCriticalSliceStatus,
+                        AssemblyBoxFailureSeverity.Warning => ShowWarningSliceStatus,
+                        _ => ShowMinorIssueSliceStatus
+                    };
+                    if (!show)
                         continue;
 
                     listModels.Add(item.Value);
                 }
                 else if (CanShowBoundingBoxModel(this.Plan[item.Key]))
                 {
+                    IAssemblyPlannerNode node = this.Plan[item.Key];
+                    if (node.IsLeaf)
+                    {
+                        if (!ShowInProgressSliceStatus)
+                            continue;
+                    }
+                    else if (!ShowSectionReadySliceStatus)
+                    {
+                        continue;
+                    }
+
                     listModels.Add(item.Value);
                 }
             }
@@ -703,26 +858,46 @@ namespace MonogameTestbed
         }
 
         /// <summary>
-        /// True when any descendant leaf has not finished meshing.
+        /// True when any descendant leaf has not finished meshing. Results are memoized until
+        /// <see cref="InvalidateIncompleteDescendantCache"/> runs for that node or an ancestor.
         /// </summary>
-        private static bool HasIncompleteDescendantLeaf(IAssemblyPlannerNode node)
+        private bool HasIncompleteDescendantLeaf(IAssemblyPlannerNode node)
         {
-            if (node.IsLeaf)
-                return !node.MeshComplete;
+            if (_incompleteDescendantCache.TryGetValue(node.Key, out bool cached))
+                return cached;
 
-            if (node is IAssemblyPlannerBranch branch)
+            bool result;
+            if (node.IsLeaf)
             {
-                return (branch.Left != null && HasIncompleteDescendantLeaf(branch.Left))
+                result = !node.MeshComplete;
+            }
+            else if (node is IAssemblyPlannerBranch branch)
+            {
+                result = (branch.Left != null && HasIncompleteDescendantLeaf(branch.Left))
                     || (branch.Right != null && HasIncompleteDescendantLeaf(branch.Right));
             }
+            else
+            {
+                result = false;
+            }
 
-            return false;
+            _incompleteDescendantCache[node.Key] = result;
+            return result;
+        }
+
+        /// <summary>
+        /// Drop memoized incomplete-descendant answers for <paramref name="node"/> and every parent up to the root.
+        /// </summary>
+        private void InvalidateIncompleteDescendantCache(IAssemblyPlannerNode node)
+        {
+            for (IAssemblyPlannerNode n = node; n != null; n = n.Parent)
+                _incompleteDescendantCache.TryRemove(n.Key, out _);
         }
 
         /// <summary>
         /// A node is boxed until its own mesh exists. Branch boxes stay hidden while any inner slice box is still visible.
         /// </summary>
-        internal static bool CanShowBoundingBoxModel(IAssemblyPlannerNode node) =>
+        private bool CanShowBoundingBoxModel(IAssemblyPlannerNode node) =>
             !node.MeshComplete && (node.IsLeaf || !HasIncompleteDescendantLeaf(node));
 
         internal static AssemblyBoxFailureSeverity SeverityForFailure(MeshManifoldReport? report)
@@ -749,6 +924,7 @@ namespace MonogameTestbed
 
         public MeshAssemblyPlannerIncompleteView(MeshAssemblyPlanner plan, SliceGraph sliceGraph) : base(plan)
         {
+            _sliceGraph = sliceGraph ?? throw new ArgumentNullException(nameof(sliceGraph));
             CalculateAllBoundingBoxes(plan, sliceGraph);
             try
             {
@@ -762,6 +938,8 @@ namespace MonogameTestbed
 
             if (_leavesWithoutBoundingBox > 0)
                 Trace.WriteLine($"MeshAssemblyPlannerIncompleteView: {_leavesWithoutBoundingBox} slices reported invalid topology and have no bounding box. {BoundingBoxModels.Count} boxes generated.");
+
+            RequestVisibleListRebuild();
         }
 
         public override void OnNodeCompleted(IAssemblyPlannerNode node, bool success, MeshManifoldReport? report)
@@ -769,6 +947,9 @@ namespace MonogameTestbed
             try
             {
                 ReadyModelLock.EnterWriteLock();
+
+                //MeshComplete is set before this callback; ancestor CanShow answers are stale along this chain.
+                InvalidateIncompleteDescendantCache(node);
 
                 if (success)
                 {
@@ -786,13 +967,14 @@ namespace MonogameTestbed
                         NodeFailureReports[node.Key] = report.Value;
                     model.SetColor(ColorForFailure(severity));
                 }
-
-                this._MeshModels = null;
             }
             finally
             {
                 ReadyModelLock.ExitWriteLock();
             }
+
+            //Keep the last published snapshot for Draw; rebuild coalesces on a background task.
+            RequestVisibleListRebuild();
         }
 
         private void GenerateAllBoundingBoxMeshesRecursive(IAssemblyPlannerNode node)
@@ -844,30 +1026,156 @@ namespace MonogameTestbed
         }
 
         /// <summary>
-        /// Create a 3D Box of triangles showing the boundaries of the node
+        /// Leaf: contour line-list of shape rings. Branch: scaled AABB wireframe.
         /// </summary>
-        /// <param name="node"></param>
-        /// <returns></returns>
         private MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor> GenerateBoundingBoxMesh(IAssemblyPlannerNode node)
         {
-            IAssemblyPlannerBranch branch = node as IAssemblyPlannerBranch;
+            if (node.IsLeaf)
+            {
+                MeshModel<VertexPositionColor> contour = GenerateLeafContourMesh(node.Key);
+                if (contour is not null)
+                    return contour;
+            }
+
             if (NodeBoundingBox.TryGetValue(node.Key, out Box bbox) && bbox != default)
             {
                 if (node.Depth > 0)
                 {
-                    //For branches we scale the bounding box visual a bit to prevent overdrawing the leaf bounding box
+                    //For branches we scale the bounding box visual a bit to prevent overdrawing leaf geometry
                     bbox = bbox.Scale(new Geometry.Vector3(1.02, 1.02, 1));
                 }
 
-                //We have a bounding box from the cache, now build the mesh
-                var Color = node.IsLeaf ? Microsoft.Xna.Framework.Color.LightGray.SetAlpha(0.5f) : Microsoft.Xna.Framework.Color.DarkBlue.SetAlpha(0.5f);
-                var model = bbox.ToMeshModelEdgesOnly(Color);
-
-                //Scale the bounding box slightly based on the node depth
-                return model;
+                //Leaf fallback when contour build failed; branches always use the AABB overlay.
+                Color color = node.IsLeaf
+                    ? Color.LightGray.SetAlpha(0.5f)
+                    : Color.DarkBlue.SetAlpha(0.5f);
+                return bbox.ToMeshModelEdgesOnly(color);
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Line segments along each contour vertex ring (and polyline edges) in the slice's centered XY frame.
+        /// </summary>
+        private MeshModel<VertexPositionColor> GenerateLeafContourMesh(ulong sliceKey)
+        {
+            SliceTopology topology = _sliceGraph.GetTopology(sliceKey);
+            if (!topology.IsValid || topology.Shapes is null || topology.Shapes.Length == 0)
+                return null;
+
+            Color color = Color.LightGray.SetAlpha(0.75f);
+            List<VertexPositionColor> verts = new(256);
+            List<int> edges = new(512);
+
+            for (int i = 0; i < topology.Shapes.Length; i++)
+            {
+                double z = topology.ShapeZ[i];
+                AppendShapeContour(topology.Shapes[i], z, color, verts, edges);
+            }
+
+            if (edges.Count == 0)
+                return null;
+
+            return new MeshModel<VertexPositionColor>
+            {
+                Vertices = [.. verts],
+                Edges = [.. edges],
+                Primitive = PrimitiveType.LineList,
+                ModelMatrix = Matrix.Identity
+            };
+        }
+
+        private static void AppendShapeContour(
+            IShape2D shape,
+            double z,
+            Color color,
+            List<VertexPositionColor> verts,
+            List<int> edges)
+        {
+            switch (shape)
+            {
+                case Polygon poly:
+                    AppendClosedRing(poly.ExteriorRing, z, color, verts, edges);
+                    foreach (Geometry.Vector2[] hole in poly.InteriorRings)
+                        AppendClosedRing(hole, z, color, verts, edges);
+                    break;
+
+                case Polyline line:
+                    AppendOpenPolyline(line.Points, z, color, verts, edges);
+                    break;
+
+                case Circle circle:
+                    AppendClosedRing(TessellateCircle(circle, segments: 32), z, color, verts, edges);
+                    break;
+            }
+        }
+
+        private static void AppendClosedRing(
+            Geometry.Vector2[] ring,
+            double z,
+            Color color,
+            List<VertexPositionColor> verts,
+            List<int> edges)
+        {
+            if (ring is null || ring.Length < 2)
+                return;
+
+            //Closed rings store first == last; drop the duplicate for the vertex buffer.
+            int count = ring.Length > 1 && ring[0] == ring[ring.Length - 1]
+                ? ring.Length - 1
+                : ring.Length;
+            if (count < 2)
+                return;
+
+            int baseIdx = verts.Count;
+            for (int i = 0; i < count; i++)
+                verts.Add(new VertexPositionColor(ring[i].ToXNAVector3(z), color));
+
+            for (int i = 0; i < count; i++)
+            {
+                edges.Add(baseIdx + i);
+                edges.Add(baseIdx + ((i + 1) % count));
+            }
+        }
+
+        private static void AppendOpenPolyline(
+            IReadOnlyList<IPoint2D> points,
+            double z,
+            Color color,
+            List<VertexPositionColor> verts,
+            List<int> edges)
+        {
+            if (points is null || points.Count < 2)
+                return;
+
+            int baseIdx = verts.Count;
+            for (int i = 0; i < points.Count; i++)
+            {
+                IPoint2D p = points[i];
+                verts.Add(new VertexPositionColor(new Vector3((float)p.X, (float)p.Y, (float)z), color));
+            }
+
+            for (int i = 0; i < points.Count - 1; i++)
+            {
+                edges.Add(baseIdx + i);
+                edges.Add(baseIdx + i + 1);
+            }
+        }
+
+        private static Geometry.Vector2[] TessellateCircle(Circle circle, int segments)
+        {
+            Geometry.Vector2[] ring = new Geometry.Vector2[segments + 1];
+            for (int i = 0; i < segments; i++)
+            {
+                double angle = 2.0 * Math.PI * i / segments;
+                ring[i] = new Geometry.Vector2(
+                    circle.Center.X + circle.Radius * Math.Cos(angle),
+                    circle.Center.Y + circle.Radius * Math.Sin(angle));
+            }
+
+            ring[segments] = ring[0];
+            return ring;
         }
 
         /// <summary>

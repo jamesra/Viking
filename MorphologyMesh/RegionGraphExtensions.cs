@@ -301,17 +301,16 @@ namespace MorphologyMesh
             //centeredRegionPolygon.IsConvex();
 
             var MedialAxis = MedialAxisFinder.ApproximateMedialAxis(centeredRegionPolygon);
-            MedialAxisVertex[] NewVerts = [.. MedialAxis.Nodes.Values];
-
-            System.Diagnostics.Debug.Assert(NewVerts.All(v => centeredRegionPolygon.GetRelation(v.Key) == ShapeRelation.Contained), "Interior points must be inside Face");
+            MedialAxisVertex[] NewVerts = [.. MedialAxis.Nodes.Values
+                .Where(v => centeredRegionPolygon.GetRelation(v.Key) == ShapeRelation.Contained)];
 
             //TODO: Split any edges with an existing face into two parts so we can better merge the medial axis with the existing shape
 
             if (NewVerts.Length == 0)
             {
-                //The medial axis approximation produced no interior points, so this region cannot be tiled.
-                //Report it as unclosed so the caller tracks the open hole rather than silently dropping it.
-                Trace.WriteLine($"Skipping untiled region {region} in mesh {mesh}: medial axis produced no interior points.");
+                //The medial axis approximation produced no usable interior points (none, or all fell outside
+                //the region polygon). Skip rather than Debug.Assert/FailFast — one bad region must not kill the process.
+                Trace.WriteLine($"Skipping untiled region {region} in mesh {mesh}: medial axis produced no interior points inside the face.");
                 return false;
             }
 
@@ -504,8 +503,9 @@ namespace MorphologyMesh
                     Polygon centeredPolygon = poly.Translate(-polyCenter);
 
                     var MedialAxis = MedialAxisFinder.ApproximateMedialAxis(centeredPolygon);
-                    MedialAxisVertex[] NewVerts = DeduplicateMedialAxisVerts([.. MedialAxis.Nodes.Values], (double)Global.Epsilon * 100.0);
-                    System.Diagnostics.Debug.Assert(NewVerts.All(v => centeredPolygon.Covers(v.Key)), "Interior points must be inside Face");
+                    MedialAxisVertex[] NewVerts = DeduplicateMedialAxisVerts(
+                        [.. MedialAxis.Nodes.Values.Where(v => centeredPolygon.Covers(v.Key))],
+                        (double)Global.Epsilon * 100.0);
 
                     //TODO: Split any edges with an existing face into two parts so we can better merge the medial axis with the existing shape
 

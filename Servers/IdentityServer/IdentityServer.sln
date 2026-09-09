@@ -3,11 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36414.22
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client", "Client\Client.csproj", "{C8DF0CE3-BAA9-48E4-922B-3251F61EC255}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DevTest", "DevTest\DevTest.csproj", "{7FDB5CCE-22AE-4CAD-A881-98F7DB0B21C4}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DevTestAPI", "DevTestAPI\DevTestAPI.csproj", "{67F0903E-0CE0-436D-BEF7-F2EF27EAA170}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VikingWebAppSettings", "..\WebAppSettings\VikingWebAppSettings.csproj", "{CD19DFB6-2201-431D-9DB3-C8AD6AD629BF}"
 EndProject
@@ -47,8 +43,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdentityManagementWebsite",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeyGenerator", "KeyGenerator\KeyGenerator.csproj", "{5263CDBC-4E98-9912-38C3-E782AEB23551}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SmtpTest", "SmtpTest\SmtpTest.csproj", "{10F899B2-8B6C-4E90-9B18-2B0C0B1D4C9F}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -56,24 +50,12 @@ Global
 		ReleaseWithSymbols|Any CPU = ReleaseWithSymbols|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{C8DF0CE3-BAA9-48E4-922B-3251F61EC255}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C8DF0CE3-BAA9-48E4-922B-3251F61EC255}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C8DF0CE3-BAA9-48E4-922B-3251F61EC255}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C8DF0CE3-BAA9-48E4-922B-3251F61EC255}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C8DF0CE3-BAA9-48E4-922B-3251F61EC255}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
-		{C8DF0CE3-BAA9-48E4-922B-3251F61EC255}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
 		{7FDB5CCE-22AE-4CAD-A881-98F7DB0B21C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{7FDB5CCE-22AE-4CAD-A881-98F7DB0B21C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7FDB5CCE-22AE-4CAD-A881-98F7DB0B21C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7FDB5CCE-22AE-4CAD-A881-98F7DB0B21C4}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7FDB5CCE-22AE-4CAD-A881-98F7DB0B21C4}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
 		{7FDB5CCE-22AE-4CAD-A881-98F7DB0B21C4}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
-		{67F0903E-0CE0-436D-BEF7-F2EF27EAA170}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{67F0903E-0CE0-436D-BEF7-F2EF27EAA170}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{67F0903E-0CE0-436D-BEF7-F2EF27EAA170}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{67F0903E-0CE0-436D-BEF7-F2EF27EAA170}.Release|Any CPU.Build.0 = Release|Any CPU
-		{67F0903E-0CE0-436D-BEF7-F2EF27EAA170}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
-		{67F0903E-0CE0-436D-BEF7-F2EF27EAA170}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
 		{CD19DFB6-2201-431D-9DB3-C8AD6AD629BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{CD19DFB6-2201-431D-9DB3-C8AD6AD629BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CD19DFB6-2201-431D-9DB3-C8AD6AD629BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -140,12 +122,6 @@ Global
 		{5263CDBC-4E98-9912-38C3-E782AEB23551}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5263CDBC-4E98-9912-38C3-E782AEB23551}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
 		{5263CDBC-4E98-9912-38C3-E782AEB23551}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
-		{10F899B2-8B6C-4E90-9B18-2B0C0B1D4C9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{10F899B2-8B6C-4E90-9B18-2B0C0B1D4C9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{10F899B2-8B6C-4E90-9B18-2B0C0B1D4C9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{10F899B2-8B6C-4E90-9B18-2B0C0B1D4C9F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{10F899B2-8B6C-4E90-9B18-2B0C0B1D4C9F}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
-		{10F899B2-8B6C-4E90-9B18-2B0C0B1D4C9F}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

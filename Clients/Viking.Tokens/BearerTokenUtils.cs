@@ -82,7 +82,7 @@ namespace Viking.Tokens
     public class BearerTokenHelper
     {
         public string ClientId { get; set; } = "ro.viking";
-        public string ClientSecret { get; set; } = "CorrectHorseBatteryStaple";
+        public string ClientSecret { get; set; }
 
         /// <summary>
         /// Uri of service that provides tokens
@@ -119,8 +119,7 @@ namespace Viking.Tokens
                         {
                             return new BearerTokenHelper
                             {
-                                IdentityServerURL = identityServerUrl,
-                                ClientSecret = "CorrectHorseBatteryStaple"
+                                IdentityServerURL = identityServerUrl
                             };
                         }
                     }
@@ -192,7 +191,7 @@ namespace Viking.Tokens
             {
                 Address = disco.IntrospectionEndpoint,
                 ClientId = scope,
-                ClientSecret = ClientSecret,
+                ClientSecret = IdentityClientSecret.Resolve(ClientSecret),
                 Token = AccessToken,
             });
 
@@ -242,7 +241,7 @@ namespace Viking.Tokens
             {
                 Address = disco.TokenEndpoint,
                 ClientId = ClientId,
-                ClientSecret = ClientSecret,
+                ClientSecret = IdentityClientSecret.Resolve(ClientSecret),
                 Scope = scopes_string,
                 UserName = username,
                 Password = password
@@ -419,6 +418,7 @@ namespace Viking.Tokens
         /// <param name="identityApiUrl">Identity API base URL (from volume XML VolumeToEndpoint)</param>
         /// <param name="identityServerUrl">Identity server URL (token endpoint authority)</param>
         /// <param name="requireReviewRights">If true, throws if user does not have admin or Review permission on the volume</param>
+        /// <param name="clientSecret">Identity client secret; when omitted, IDENTITY_SERVER_SECRET is used.</param>
         /// <returns>The volume-scoped bearer token</returns>
         public static async Task<TokenResponse> RequestVolumeBearerTokenAsync(
             string username,
@@ -426,10 +426,11 @@ namespace Viking.Tokens
             string volumeName,
             Uri identityApiUrl,
             Uri identityServerUrl,
-            bool requireReviewRights = false)
+            bool requireReviewRights = false,
+            string clientSecret = null)
         {
-            var apiToken = await GetApiTokenAsync(username, password, identityServerUrl);
-            return await GetVolumeTokenAsync(username, password, volumeName, identityApiUrl, identityServerUrl, apiToken, requireReviewRights);
+            var apiToken = await GetApiTokenAsync(username, password, identityServerUrl, clientSecret);
+            return await GetVolumeTokenAsync(username, password, volumeName, identityApiUrl, identityServerUrl, apiToken, requireReviewRights, clientSecret);
         }
 
         /// <summary>
@@ -441,20 +442,23 @@ namespace Viking.Tokens
             string volumeName,
             Uri identityApiUrl,
             Uri identityServerUrl,
-            bool requireReviewRights = false)
+            bool requireReviewRights = false,
+            string clientSecret = null)
         {
-            var apiToken = await GetApiTokenAsync(username, password, identityServerUrl);
-            var volumeToken = await GetVolumeTokenAsync(username, password, volumeName, identityApiUrl, identityServerUrl, apiToken, requireReviewRights);
+            var apiToken = await GetApiTokenAsync(username, password, identityServerUrl, clientSecret);
+            var volumeToken = await GetVolumeTokenAsync(username, password, volumeName, identityApiUrl, identityServerUrl, apiToken, requireReviewRights, clientSecret);
             return (apiToken, volumeToken);
         }
 
-        private static async Task<TokenResponse> GetApiTokenAsync(string username, string password, Uri identityServerUrl)
+        private static async Task<TokenResponse> GetApiTokenAsync(string username, string password, Uri identityServerUrl, string clientSecret)
         {
+            // Use the Viking client rather than api: the Permissions API authorizes on the signed-in
+            // user, so the desktop never needs to hold the confidential api client secret.
             var apiTokenHelper = new BearerTokenHelper
             {
                 IdentityServerURL = identityServerUrl,
-                ClientId = "api",
-                ClientSecret = "Correct Horse Battery Staple"
+                ClientId = "Viking",
+                ClientSecret = IdentityClientSecret.Resolve(clientSecret)
             };
 
             var apiTokenResponse = await apiTokenHelper.RetrieveBearerToken(username, password);
@@ -473,7 +477,8 @@ namespace Viking.Tokens
             Uri identityApiUrl,
             Uri identityServerUrl,
             TokenResponse apiToken,
-            bool requireReviewRights)
+            bool requireReviewRights,
+            string clientSecret)
         {
             identityApiUrl = IdentityEndpoints.ResolvePermissionsApiUrl(identityApiUrl, identityServerUrl);
             var identityApiHelper = new IdentityApiHelper
@@ -502,7 +507,7 @@ namespace Viking.Tokens
             {
                 IdentityServerURL = identityServerUrl,
                 ClientId = "Viking",
-                ClientSecret = "Correct Horse Battery Staple"
+                ClientSecret = IdentityClientSecret.Resolve(clientSecret)
             };
 
             var permissionsList = new List<string>

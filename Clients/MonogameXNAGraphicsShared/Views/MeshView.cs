@@ -73,42 +73,42 @@ namespace VikingXNAGraphics
 
             //effect.CurrentTechnique = effect.Techniques[0];
 
-            //Find all of the models with something we can draw and group by characteristics
-            var modelGroups = models.Where(m => m != null &&
-                                                m.Edges != null &&
-                                                m.Vertices != null &&
-                                                m.Edges.Length != 0)
-                                    .GroupBy(m => new { m.HasNormal, m.HasColor });
+            Matrix sceneWorld = scene.World;
+            bool? lightingEnabled = null;
+            bool? vertexColorEnabled = null;
 
-            foreach (var group in modelGroups)
+            foreach (MeshModel<VERTEXTYPE> model in models)
             {
-                if (group.Key.HasNormal)
+                if (model is null || model.Edges is null || model.Vertices is null || model.Edges.Length == 0)
+                    continue;
+
+                if (lightingEnabled != model.HasNormal)
                 {
-                    effect.EnableDefaultLighting();
+                    lightingEnabled = model.HasNormal;
+                    if (model.HasNormal)
+                        effect.EnableDefaultLighting();
+                    else
+                        effect.LightingEnabled = false;
                 }
-                else
+
+                if (vertexColorEnabled != model.HasColor)
                 {
-                    effect.LightingEnabled = false;
+                    vertexColorEnabled = model.HasColor;
+                    effect.VertexColorEnabled = model.HasColor;
                 }
 
-                effect.VertexColorEnabled = group.Key.HasColor;
+                if (!model.EnsureBuffers(device))
+                    continue;
 
-                Matrix sceneWorld = scene.World;
-                foreach (MeshModel<VERTEXTYPE> model in group)
+                effect.World = model.ModelMatrix * sceneWorld;
+
+                foreach (EffectPass pass in effect.CurrentTechnique.Passes)
                 {
-                    if (!model.EnsureBuffers(device))
-                        continue;
+                    pass.Apply();
 
-                    effect.World = model.ModelMatrix * sceneWorld;
-
-                    foreach (EffectPass pass in effect.CurrentTechnique.Passes)
-                    {
-                        pass.Apply();
-
-                        device.SetVertexBuffer(model.VertexBuffer);
-                        device.Indices = model.IndexBuffer;
-                        device.DrawIndexedPrimitives(model.Primitive, 0, 0, model.PrimitiveCount);
-                    }
+                    device.SetVertexBuffer(model.VertexBuffer);
+                    device.Indices = model.IndexBuffer;
+                    device.DrawIndexedPrimitives(model.Primitive, 0, 0, model.PrimitiveCount);
                 }
             }
 
@@ -222,40 +222,41 @@ namespace VikingXNAGraphics
 
             Matrix worldOriginal = effect.World;
             Matrix sceneWorld = scene.World;
-            var modelGroups = meshmodels.Where(m => m != null &&
-                                                m.Edges != null &&
-                                                m.Vertices != null &&
-                                                m.Edges.Length != 0)
-                                    .GroupBy(m => new { m.HasNormal, m.HasColor });
+            bool? lightingEnabled = null;
+            bool? vertexColorEnabled = null;
 
-            foreach (var group in modelGroups)
+            foreach (MeshModel<VERTEXTYPE> model in meshmodels)
             {
-                if (group.Key.HasNormal)
+                if (model is null || model.Edges is null || model.Vertices is null || model.Edges.Length == 0)
+                    continue;
+
+                if (lightingEnabled != model.HasNormal)
                 {
-                    effect.EnableDefaultLighting();
+                    lightingEnabled = model.HasNormal;
+                    if (model.HasNormal)
+                        effect.EnableDefaultLighting();
+                    else
+                        effect.LightingEnabled = false;
                 }
-                else
+
+                if (vertexColorEnabled != model.HasColor)
                 {
-                    effect.LightingEnabled = false;
+                    vertexColorEnabled = model.HasColor;
+                    effect.VertexColorEnabled = model.HasColor;
                 }
 
-                effect.VertexColorEnabled = group.Key.HasColor;
+                if (!model.EnsureBuffers(device))
+                    continue;
 
-                foreach (MeshModel<VERTEXTYPE> model in group)
+                effect.World = model.ModelMatrix * sceneWorld;
+
+                foreach (EffectPass pass in effect.CurrentTechnique.Passes)
                 {
-                    if (!model.EnsureBuffers(device))
-                        continue;
+                    pass.Apply();
 
-                    effect.World = model.ModelMatrix * sceneWorld;
-
-                    foreach (EffectPass pass in effect.CurrentTechnique.Passes)
-                    {
-                        pass.Apply();
-
-                        device.SetVertexBuffer(model.VertexBuffer);
-                        device.Indices = model.IndexBuffer;
-                        device.DrawIndexedPrimitives(model.Primitive, 0, 0, model.PrimitiveCount);
-                    }
+                    device.SetVertexBuffer(model.VertexBuffer);
+                    device.Indices = model.IndexBuffer;
+                    device.DrawIndexedPrimitives(model.Primitive, 0, 0, model.PrimitiveCount);
                 }
             }
 

@@ -75,7 +75,7 @@
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="SmallestRenderedSize" Type="System.Double" Scope="User">
-      <Value Profile="(Default)">0.5</Value>
+      <Value Profile="(Default)">10</Value>
     </Setting>
     <Setting Name="PolygonVertexPointsVisibleAtWidthFraction" Type="System.Double" Scope="User">
       <Value Profile="(Default)">0.0025</Value>

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <AssemblyName>Viking.Identity.Models</AssemblyName>
-    <RootNamespace>IdentityServer.Models</RootNamespace>
+    <RootNamespace>Viking.Identity.Models</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

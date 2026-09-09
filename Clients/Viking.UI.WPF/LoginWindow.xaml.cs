@@ -320,7 +320,8 @@ namespace Viking.UI.WPF
                     volumeName,
                     identityApiUrl,
                     identityServerUrl,
-                    requireReviewRights: false);
+                    requireReviewRights: false,
+                    clientSecret: IdentityAppSettings.ClientSecret);
 
                 ApiToken = apiToken;
                 BearerToken = volumeToken;
@@ -655,12 +656,13 @@ namespace Viking.UI.WPF
         /// <returns></returns>
         private async Task<(Viking.Tokens.BearerTokenHelper, Viking.Tokens.IdentityApiHelper, TokenResponse)> RequestApiToken(Uri identityApiUrl, Uri identityServerUrl)
         {
-            // Create helper for API calls (using 'api' client)
+            // Create helper for API calls. The Viking client is used because the Permissions API
+            // authorizes on the signed-in user, so the desktop does not need the api client secret.
             BearerTokenHelper apiTokenHelper = new()
             {
                 IdentityServerURL = identityServerUrl,
-                ClientId = "api",
-                ClientSecret = "Correct Horse Battery Staple"
+                ClientId = "Viking",
+                ClientSecret = IdentityAppSettings.ClientSecret
             };
 
             // Create IdentityApiHelper for API operations
@@ -698,7 +700,8 @@ namespace Viking.UI.WPF
                     volumeName,
                     identityApiUrl,
                     identityServerUrl,
-                    requireReviewRights: false);
+                    requireReviewRights: false,
+                    clientSecret: IdentityAppSettings.ClientSecret);
                 return (apiToken, volumeToken);
             }
             catch (Exception ex)

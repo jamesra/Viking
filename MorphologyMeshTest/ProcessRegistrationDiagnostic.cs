@@ -18,7 +18,7 @@ namespace MorphologyMeshTest
     [TestClass]
     public class ProcessRegistrationDiagnostic
     {
-        private static readonly Uri Endpoint = new("http://websvc.codepharm.net/RC1/OData");
+        private static readonly Uri Endpoint = Viking.Common.ODataEndpointCatalog.EndpointMap[Viking.Common.Endpoint.RC1];
 
         [TestMethod]
         [TestCategory("LiveData")]

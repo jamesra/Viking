@@ -17,6 +17,15 @@ namespace MonogameTestbed
 #if WINDOWS || LINUX
 
     /// <summary>
+    /// Registration correction applied to morphology before meshing.
+    /// </summary>
+    public enum CorrectionMode
+    {
+        None = 0,
+        Neighbor = 1,
+    }
+
+    /// <summary>
     /// The main class.
     /// </summary>
     public static partial class Program
@@ -79,34 +88,36 @@ namespace MonogameTestbed
                 Separator = ' ')]
             public string EndpointParam { get; set; }
 
+            Uri _endpointUri;
+            bool _endpointUriResolved;
+
             public Uri EndpointUri
             {
                 get
                 {
-                    if (string.IsNullOrWhiteSpace(EndpointParam))
-                    {
-                        return null;
-                    }
+                    if (_endpointUriResolved)
+                        return _endpointUri;
 
-                    Uri Endpoint_uri;
+                    _endpointUriResolved = true;
+                    if (string.IsNullOrWhiteSpace(EndpointParam))
+                        return null;
 
                     try
                     {
                         var endpoint = EndpointParam.ToEnum<Endpoint>();
-                        if (DataSource.EndpointMap.TryGetValue(endpoint, out Endpoint_uri))
+                        if (DataSource.EndpointMap.TryGetValue(endpoint, out Uri mapped))
                         {
-                            return Endpoint_uri;
+                            _endpointUri = mapped;
+                            return _endpointUri;
                         }
                     }
                     catch
                     {
-
                     }
 
                     Console.WriteLine($"Could not convert {EndpointParam} to predefined Endpoint.  Trying as URI");
-
-                    Endpoint_uri = new Uri(EndpointParam);
-                    return Endpoint_uri;
+                    _endpointUri = new Uri(EndpointParam);
+                    return _endpointUri;
                 }
             }
 
@@ -146,6 +157,37 @@ namespace MonogameTestbed
             /// True unless <see cref="NoSmoothProcesses"/> was passed. Applied once after OData load in BajajMultiTest.
             /// </summary>
             public bool SmoothProcesses => !NoSmoothProcesses;
+
+            /// <summary>
+            /// Spatially varying registration correction applied after optional SmoothProcesses, before SliceGraph.Create.
+            /// Values: none (default), neighbor.
+            /// </summary>
+            [Option("correction", Default = "none",
+                HelpText = "Registration correction field: none (default), neighbor (spatially varying hop consensus; auto-loads nearby cells within --correction-radius).")]
+            public string CorrectionParam { get; set; }
+
+            /// <summary>
+            /// Parsed <see cref="CorrectionParam"/>; unknown values fall back to <see cref="CorrectionMode.None"/>.
+            /// </summary>
+            public CorrectionMode Correction
+            {
+                get
+                {
+                    if (string.IsNullOrWhiteSpace(CorrectionParam))
+                        return CorrectionMode.None;
+                    if (Enum.TryParse(CorrectionParam.Trim(), ignoreCase: true, out CorrectionMode mode))
+                        return mode;
+                    return CorrectionMode.None;
+                }
+            }
+
+            /// <summary>
+            /// XY search radius in nanometres when <see cref="Correction"/> is Neighbor. Pads the loaded cells' AABB
+            /// to discover neighboring structures on each occupied section.
+            /// </summary>
+            [Option("correction-radius", Default = 2000.0,
+                HelpText = "Neighbor search radius in nm for --correction neighbor (default 2000).")]
+            public double CorrectionRadiusNm { get; set; }
 
             /// <summary>
             /// The output file or path name

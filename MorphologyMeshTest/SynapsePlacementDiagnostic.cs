@@ -24,7 +24,7 @@ namespace MorphologyMeshTest
         [Ignore("Reporting tool, not a regression test: it takes about a minute and depends on RC1 being reachable. Remove this attribute to re-run it.")]
         public async Task ReportPsdPlacementRelativeToCell()
         {
-            Uri endpoint = new("http://websvc.codepharm.net/RC1/OData");
+            Uri endpoint = Viking.Common.ODataEndpointCatalog.EndpointMap[Viking.Common.Endpoint.RC1];
 
             MorphologyGraph root = await AnnotationVizLib.OData.ODataMorphologyFactory.FromODataAsync(
                 new long[] { (long)CellStructureId }, true, endpoint);
@@ -74,7 +74,7 @@ namespace MorphologyMeshTest
         [Ignore("Reporting tool: meshes a whole cell against RC1 and takes over a minute. Remove this attribute to re-run it.")]
         public async Task ReportCellMeshProximityToPsd()
         {
-            Uri endpoint = new("http://websvc.codepharm.net/RC1/OData");
+            Uri endpoint = Viking.Common.ODataEndpointCatalog.EndpointMap[Viking.Common.Endpoint.RC1];
 
             MorphologyGraph root = await AnnotationVizLib.OData.ODataMorphologyFactory.FromODataAsync(
                 new long[] { (long)CellStructureId }, true, endpoint);
@@ -144,7 +144,7 @@ namespace MorphologyMeshTest
         [Ignore("Reporting tool: needs RC1 and takes about half a minute. Remove this attribute to re-run it.")]
         public async Task ReportChildrenFurthestFromCell()
         {
-            Uri endpoint = new("http://websvc.codepharm.net/RC1/OData");
+            Uri endpoint = Viking.Common.ODataEndpointCatalog.EndpointMap[Viking.Common.Endpoint.RC1];
 
             MorphologyGraph root = await AnnotationVizLib.OData.ODataMorphologyFactory.FromODataAsync(
                 new long[] { (long)CellStructureId }, true, endpoint);
@@ -191,7 +191,7 @@ namespace MorphologyMeshTest
         [Ignore("Reporting tool: meshes a whole 2000+ node cell, so it is slow and needs RC1. Remove this attribute to re-run it.")]
         public async Task ReportCellMeshBoundsVersusAnnotationBounds()
         {
-            Uri endpoint = new("http://websvc.codepharm.net/RC1/OData");
+            Uri endpoint = Viking.Common.ODataEndpointCatalog.EndpointMap[Viking.Common.Endpoint.RC1];
 
             MorphologyGraph root = await AnnotationVizLib.OData.ODataMorphologyFactory.FromODataAsync(
                 new long[] { (long)CellStructureId }, false, endpoint);

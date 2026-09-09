@@ -111,16 +111,39 @@ namespace MonogameTestbed
         /// </summary>
         public void Update(Camera3D Camera, int viewportWidth, int viewportHeight)
         {
-            keyboard.Update(Keyboard.GetState());
-            mouse.Update(Mouse.GetState());
             PlayerIndex? InputSource = GamePadStateTracker.GetFirstConnectedController() ?? PlayerIndex.One;
-            GamePadState state = GamePad.GetState(InputSource.Value);
-            gamepad.Update(state);
+            Update(
+                Camera,
+                viewportWidth,
+                viewportHeight,
+                Keyboard.GetState(),
+                Microsoft.Xna.Framework.Input.Mouse.GetState(),
+                GamePad.GetState(InputSource.Value));
+        }
+
+        /// <summary>
+        /// Same as <see cref="Update(Camera3D, int, int)"/> but uses already-polled device states so callers
+        /// that share one input snapshot per frame avoid redundant GetState calls.
+        /// </summary>
+        public void Update(
+            Camera3D Camera,
+            int viewportWidth,
+            int viewportHeight,
+            KeyboardState keyboardState,
+            MouseState mouseState,
+            GamePadState gamePadState)
+        {
+            keyboard.Update(keyboardState);
+            mouse.Update(mouseState);
+            gamepad.Update(gamePadState);
 
             UpdateCameraFromGamepad(Camera);
             UpdateCameraFromKeyboard(Camera);
             UpdateCameraFromMouse(Camera, viewportWidth, viewportHeight);
         }
+
+        /// <summary>Last mouse sample from <see cref="Update"/>; used by click-pick without a second GetState.</summary>
+        public MouseStateTracker MouseTracker => mouse;
 
         public void UpdateCameraFromGamepad(Camera3D camera) => StandardCameraManipulator.Update(camera, UnitStepSize);
 

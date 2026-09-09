@@ -1,9 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-	<LangVersion>latest</LangVersion>
+		<LangVersion>latest</LangVersion>
 		<OutputType>Library</OutputType>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<RootNamespace>GraphLib</RootNamespace>
 		<AssemblyName>GraphLib</AssemblyName>
+		<Nullable>enable</Nullable>
 	</PropertyGroup>
 </Project>

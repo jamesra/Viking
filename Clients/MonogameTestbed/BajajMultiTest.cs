@@ -31,9 +31,25 @@ namespace MonogameTestbed
         //public PointSetViewView[] PolyPointsView = null;
         public PointSetView IncompletedVertexView = null;
 
-        //Unculled by default: a slice between two polyline annotations is a flat sheet with a single winding, so
-        //backface culling erases it from one side and it reads as a gap in the process rather than a surface.
-        public CullMode CullMode = CullMode.None;
+        //Top-level cell shells are translucent with backface culling so nested children remain visible inside.
+        //Child sheets stay opaque and double-sided (CullMode.None) — a flat wall between sections has one winding.
+        public CullMode CullMode;
+
+        /// <summary>
+        /// True when this structure is not nested under another real structure (factory root StructureID 0 does not count).
+        /// </summary>
+        internal bool IsTopLevelStructure => IsTopLevelMorphologyGraph(Graph);
+
+        /// <summary>
+        /// Factory roots use StructureID 0; real parentless cells and cells whose only parent is that root are top-level.
+        /// </summary>
+        internal static bool IsTopLevelMorphologyGraph(MorphologyGraph graph) =>
+            graph?.Parent is null || graph.Parent.StructureID == 0;
+
+        /// <summary>
+        /// Top-level meshes draw at half opacity so children inside the shell remain visible.
+        /// </summary>
+        internal const float TopLevelMeshOpacity = 0.5f;
 
         public ConcurrentQueue<BajajGeneratorMesh> CompletedMeshes = new();
 
@@ -107,24 +123,92 @@ namespace MonogameTestbed
         public bool ShowAssemblyBoundingBoxes = true;
 
         /// <summary>
-        /// When false, hides only red (critical / non-manifold) error boxes. Orange and yellow problem boxes
-        /// and in-progress gray boxes stay visible. Toggle with R. Requires <see cref="ShowAssemblyBoundingBoxes"/>.
+        /// When false, hides only red (critical / non-manifold) error overlays. Toggle with R or View menu.
+        /// Requires <see cref="ShowAssemblyBoundingBoxes"/>.
         /// </summary>
         public bool ShowRedErrorBoxes
         {
-            get => meshIncompleteView?.ShowRedErrorBoxes ?? true;
+            get => ShowCriticalSliceStatus;
+            set => ShowCriticalSliceStatus = value;
+        }
+
+        bool _showInProgressSliceStatus = true;
+        bool _showSectionReadySliceStatus = true;
+        bool _showMinorIssueSliceStatus = true;
+        bool _showWarningSliceStatus = true;
+        bool _showCriticalSliceStatus = true;
+
+        public bool ShowInProgressSliceStatus
+        {
+            get => meshIncompleteView?.ShowInProgressSliceStatus ?? _showInProgressSliceStatus;
             set
             {
+                _showInProgressSliceStatus = value;
                 if (meshIncompleteView != null)
-                    meshIncompleteView.ShowRedErrorBoxes = value;
+                    meshIncompleteView.ShowInProgressSliceStatus = value;
             }
         }
 
-        /// <summary>Alias for <see cref="ShowRedErrorBoxes"/>.</summary>
+        public bool ShowSectionReadySliceStatus
+        {
+            get => meshIncompleteView?.ShowSectionReadySliceStatus ?? _showSectionReadySliceStatus;
+            set
+            {
+                _showSectionReadySliceStatus = value;
+                if (meshIncompleteView != null)
+                    meshIncompleteView.ShowSectionReadySliceStatus = value;
+            }
+        }
+
+        public bool ShowMinorIssueSliceStatus
+        {
+            get => meshIncompleteView?.ShowMinorIssueSliceStatus ?? _showMinorIssueSliceStatus;
+            set
+            {
+                _showMinorIssueSliceStatus = value;
+                if (meshIncompleteView != null)
+                    meshIncompleteView.ShowMinorIssueSliceStatus = value;
+            }
+        }
+
+        public bool ShowWarningSliceStatus
+        {
+            get => meshIncompleteView?.ShowWarningSliceStatus ?? _showWarningSliceStatus;
+            set
+            {
+                _showWarningSliceStatus = value;
+                if (meshIncompleteView != null)
+                    meshIncompleteView.ShowWarningSliceStatus = value;
+            }
+        }
+
+        public bool ShowCriticalSliceStatus
+        {
+            get => meshIncompleteView?.ShowCriticalSliceStatus ?? _showCriticalSliceStatus;
+            set
+            {
+                _showCriticalSliceStatus = value;
+                if (meshIncompleteView != null)
+                    meshIncompleteView.ShowCriticalSliceStatus = value;
+            }
+        }
+
+        /// <summary>Alias for <see cref="ShowCriticalSliceStatus"/>.</summary>
         public bool ShowFailedBoundingBoxes
         {
-            get => ShowRedErrorBoxes;
-            set => ShowRedErrorBoxes = value;
+            get => ShowCriticalSliceStatus;
+            set => ShowCriticalSliceStatus = value;
+        }
+
+        void ApplySliceStatusFiltersToIncompleteView()
+        {
+            if (meshIncompleteView is null)
+                return;
+            meshIncompleteView.ShowInProgressSliceStatus = _showInProgressSliceStatus;
+            meshIncompleteView.ShowSectionReadySliceStatus = _showSectionReadySliceStatus;
+            meshIncompleteView.ShowMinorIssueSliceStatus = _showMinorIssueSliceStatus;
+            meshIncompleteView.ShowWarningSliceStatus = _showWarningSliceStatus;
+            meshIncompleteView.ShowCriticalSliceStatus = _showCriticalSliceStatus;
         }
 
         public IndexLabelType VertexLabelType
@@ -154,19 +238,23 @@ namespace MonogameTestbed
         Vector3? _placementOffset;
 
         /// <summary>
-        /// World translation that puts this mesh back in volume XY. Uses the mesh AABB when available so a
-        /// synapse centered on the cell origin is not shifted by its own bbox.
+        /// World translation that puts this mesh back in volume XY. Always the slice-graph frame origin
+        /// (parent cell center for synapses), so live placement stays registered for the whole run.
         /// </summary>
         internal Vector3 SliceGraphToVolumeOffset =>
             _placementOffset ?? new Vector3((float)SliceOrigin.X, (float)SliceOrigin.Y, 0f);
 
         /// <summary>
         /// Color from the structure type recorded on the morphology graph. Shared by the mesh and the BajajMultiTest legend.
+        /// Top-level structures use <see cref="TopLevelMeshOpacity"/> so nested children show through the shell.
         /// </summary>
         internal static Color ColorForGraph(MorphologyGraph graph)
         {
             uint argb = graph?.structure?.Type?.Color ?? 0xFF808080u;
             Color color = argb.ToXNAColor();
+            if (IsTopLevelMorphologyGraph(graph))
+                return color.SetAlpha(TopLevelMeshOpacity);
+
             if (color.A == 0)
                 color.A = 255;
             return color;
@@ -185,19 +273,54 @@ namespace MonogameTestbed
 
         private SliceGraph _sliceGraph;
 
+        /// <summary>Cached volume-space AABB for pick/framing; invalidated when mesh or placement changes.</summary>
+        private bool _renderedBoundsValid;
+        private Vector3 _renderedBoundsMin;
+        private Vector3 _renderedBoundsMax;
+
+        /// <summary>Last translation applied in <see cref="ApplySliceGraphPlacement"/>; skip redundant ModelMatrix writes.</summary>
+        private Vector3 _lastAppliedPlacementOffset = new(float.NaN);
+
         /// <summary>
         /// Slices that produced no geometry because their topology could not be built.  Surfaced so a run that
         /// quietly dropped part of a cell is not mistaken for a complete one.
         /// </summary>
         internal IReadOnlyDictionary<ulong, string> FailedTopologySlices =>
-            _sliceGraph?.FailedTopologySlices ?? new Dictionary<ulong, string>();
-        //SliceGraph sliceGraph;
+            _sliceGraph?.FailedTopologySlices ?? EmptyFailedTopology;
+
+        static readonly IReadOnlyDictionary<ulong, string> EmptyFailedTopology =
+            new Dictionary<ulong, string>();
+
+        /// <summary>Reusable single-element array for solid-mesh draws (avoids per-frame collection alloc).</summary>
+        readonly MeshModel<VertexPositionNormalColor>[] _solidDrawModels = new MeshModel<VertexPositionNormalColor>[1];
+
+        static readonly DepthStencilState OpaqueDepthState = new()
+        {
+            DepthBufferEnable = true,
+            StencilEnable = false,
+            DepthBufferWriteEnable = true,
+            DepthBufferFunction = CompareFunction.LessEqual
+        };
+
+        static readonly DepthStencilState TranslucentDepthState = new()
+        {
+            DepthBufferEnable = true,
+            StencilEnable = false,
+            DepthBufferWriteEnable = false,
+            DepthBufferFunction = CompareFunction.LessEqual
+        };
 
         public BajajMultiOTVAssignmentView(MorphologyGraph graph, Geometry.Vector2? sliceOrigin = null)
         {
             ///Takes a set of polygons and Z values and generates a meshView
             Graph = graph;
             SliceOrigin = sliceOrigin ?? graph.NodesBoundingBox.CenterPoint.XY();
+            CullMode = IsTopLevelStructure
+                ? CullMode.CullCounterClockwiseFace
+                : CullMode.None;
+            //Same origin SliceGraph subtracts; apply immediately so incomplete overlays are correct
+            //before GenerateMesh finishes (children must not wait on parent assembly).
+            _placementOffset = new Vector3((float)SliceOrigin.X, (float)SliceOrigin.Y, 0f);
 
             /*
             Trace.WriteLine("Begin Slice graph construction");
@@ -234,7 +357,11 @@ namespace MonogameTestbed
         /// </summary>
         internal void ResetMesh()
         {
-            _placementOffset = null;
+            InvalidateRenderedBoundsCache();
+            _lastAppliedPlacementOffset = new Vector3(float.NaN);
+            //Keep the live view in the slice-graph frame even across ResetMesh; children share the
+            //parent SliceOrigin and must not fall back to a transient null offset mid-regeneration.
+            _placementOffset = new Vector3((float)SliceOrigin.X, (float)SliceOrigin.Y, 0f);
             SliceMeshView = new MeshView<VertexPositionColor>
             {
                 Name = "Slice Mesh"
@@ -242,11 +369,11 @@ namespace MonogameTestbed
 
             this.RegionViews.Clear();
             this.listLineViews.Clear();
-            this.MeshViews.Clear();
 
             try
             {
                 drawlock.Wait();
+                this.MeshViews.Clear();
                 MeshViews.Add(SliceMeshView);
             }
             finally
@@ -297,7 +424,9 @@ namespace MonogameTestbed
 
                 meshAssemblyPlan = plan;
                 _sliceGraph = sliceGraph;
+                meshIncompleteView?.CancelRebuild();
                 meshIncompleteView = new MeshAssemblyPlannerIncompleteView(meshAssemblyPlan, sliceGraph);
+                ApplySliceStatusFiltersToIncompleteView();
                 meshCompletedView = new MeshAssemblyPlannerCompletedView(meshAssemblyPlan)
                 {
                     Color = ColorForGraph(Graph)
@@ -338,7 +467,12 @@ namespace MonogameTestbed
                     && meshAssemblyPlan.Root?.MeshModel?.composite is { } composite
                     && composite.Faces.Count > 0)
                 {
-                    _assembledDisplayModel = BuildDisplayModelFromComposite(composite, ColorForGraph(Graph));
+                    Color meshColor = ColorForGraph(Graph);
+                    meshAssemblyPlan.Root.MeshModel.Color = meshColor;
+                    _assembledDisplayModel = BuildDisplayModelFromComposite(composite, meshColor);
+                    InvalidateRenderedBoundsCache();
+                    //New model has Identity ModelMatrix; force placement to re-apply next Draw.
+                    _lastAppliedPlacementOffset = new Vector3(float.NaN);
                 }
             }
             catch (Exception ex)
@@ -521,85 +655,68 @@ namespace MonogameTestbed
             ApplySliceGraphPlacement();
             scene.Viewport = window.GraphicsDevice.Viewport;
 
-
-            DepthStencilState dstate = new()
-            {
-                DepthBufferEnable = true,
-                StencilEnable = false,
-                DepthBufferWriteEnable = true,
-                DepthBufferFunction = CompareFunction.LessEqual
-            };
-
-            window.GraphicsDevice.DepthStencilState = dstate;
+            bool translucent = IsTopLevelStructure;
+            window.GraphicsDevice.BlendState = translucent ? BlendState.AlphaBlend : BlendState.Opaque;
+            window.GraphicsDevice.DepthStencilState = translucent ? TranslucentDepthState : OpaqueDepthState;
             CullMode cull = BajajMultiAssignmentTest.CullModeForView(CullMode);
-            //window.GraphicsDevice.BlendState = BlendState.Opaque;
 
-            //Expand our model if we can
-            try
+            if (ShowCompositeMesh == false)
             {
-                drawlock.Wait();
-                if (ShowCompositeMesh == false)
+                MeshView<VertexPositionColor> sliceView = null;
+                try
                 {
+                    drawlock.Wait();
                     if (ViewIndex.InRange(iShownMesh, MeshViews.Count))
-                    {
-                        MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, scene, cull);
-                    }
+                        sliceView = MeshViews[iShownMesh.Value];
                 }
-                else
+                finally
                 {
-                    if (CompositeMeshView != null)
-                    {
-                        try
-                        {
-                            //CompositeMeshModel.ModelLock.EnterReadLock();
-                            //CompositeMeshView.Draw(window.GraphicsDevice, scene, CullMode);
-                            //MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene, window.basicEffect, CullMode, meshAssemblyPlan.MeshModels);
-                            if (ShowAssemblyBoundingBoxes && meshIncompleteView != null)
-                            {
-                                var incompleteModels = meshIncompleteView.MeshModels;
-                                if (incompleteModels.Length > 0)
-                                    MeshView<VertexPositionColor>.Draw(window.GraphicsDevice, scene, window.basicEffect,
-                                        cull, FillMode.WireFrame, incompleteModels);
-                            }
+                    drawlock.Release();
+                }
 
-                            bool drewSolidMesh = false;
-                            var rootMeshModel = meshAssemblyPlan?.Root?.MeshModel;
-                            if (rootMeshModel?.model?.Vertices?.Length > 0)
-                            {
-                                try
-                                {
-                                    rootMeshModel.ModelLock.EnterReadLock();
-                                    MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
-                                        window.basicEffect, cull, FillMode.Solid, [rootMeshModel.model]);
-                                    drewSolidMesh = true;
-                                }
-                                finally
-                                {
-                                    rootMeshModel.ModelLock.ExitReadLock();
-                                }
-                            }
+                sliceView?.Draw(window.GraphicsDevice, scene, cull);
+                return;
+            }
 
-                            if (!drewSolidMesh && _assembledDisplayModel != null)
-                            {
-                                MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
-                                    window.basicEffect, cull, FillMode.Solid, [_assembledDisplayModel]);
-                            }
-                            else if (!drewSolidMesh && meshCompletedView != null)
-                                MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
-                                    window.basicEffect, cull, FillMode.Solid, meshCompletedView.MeshModels);
-                        }
-                        finally
-                        {
-                            //CompositeMeshModel.ModelLock.ExitReadLock();
-                        }
+            if (CompositeMeshView is null)
+                return;
 
-                        //ViewLabels.AppendLine(CompositeMeshView.Name);
-                    }
+            if (ShowAssemblyBoundingBoxes && meshIncompleteView != null)
+            {
+                var incompleteModels = meshIncompleteView.MeshModels;
+                if (incompleteModels.Length > 0)
+                    MeshView<VertexPositionColor>.Draw(window.GraphicsDevice, scene, window.basicEffect,
+                        cull, FillMode.WireFrame, incompleteModels);
+            }
+
+            bool drewSolidMesh = false;
+            var rootMeshModel = meshAssemblyPlan?.Root?.MeshModel;
+            if (rootMeshModel?.model?.Vertices?.Length > 0)
+            {
+                try
+                {
+                    rootMeshModel.ModelLock.EnterReadLock();
+                    _solidDrawModels[0] = rootMeshModel.model;
+                    MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
+                        window.basicEffect, cull, FillMode.Solid, _solidDrawModels);
+                    drewSolidMesh = true;
+                }
+                finally
+                {
+                    rootMeshModel.ModelLock.ExitReadLock();
                 }
             }
-            finally
+
+            if (!drewSolidMesh && _assembledDisplayModel != null)
             {
-                drawlock.Release();
+                _solidDrawModels[0] = _assembledDisplayModel;
+                MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
+                    window.basicEffect, cull, FillMode.Solid, _solidDrawModels);
+            }
+            else if (!drewSolidMesh && meshCompletedView != null)
+            {
+                MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
+                    window.basicEffect, cull, FillMode.Solid, meshCompletedView.MeshModels);
             }
         }
 
@@ -608,7 +725,16 @@ namespace MonogameTestbed
         /// </summary>
         private void ApplySliceGraphPlacement()
         {
-            Matrix m = Matrix.CreateTranslation(SliceGraphToVolumeOffset);
+            Vector3 offset = SliceGraphToVolumeOffset;
+            //Placement is a pure translation that only changes when the structure's frame is recomputed.
+            //Rewriting every ModelMatrix (and every incomplete overlay) each frame dominated camera moves
+            //once dozens of child wrap views were assembled.
+            bool placementChanged = offset != _lastAppliedPlacementOffset;
+            if (!placementChanged)
+                return;
+
+            _lastAppliedPlacementOffset = offset;
+            Matrix m = Matrix.CreateTranslation(offset);
             var root = meshAssemblyPlan?.Root?.MeshModel?.model;
             if (root != null)
                 root.ModelMatrix = m;
@@ -629,18 +755,22 @@ namespace MonogameTestbed
         }
 
         /// <summary>
-        /// After assembly, translate so this structure's annotation AABB center lands at volume XY
-        /// even if the mesh was built in the parent cell's frame.
+        /// Live-view translation is always the inverse of the slice-graph XY origin.
+        ///
+        /// Children are meshed in the parent cell's frame (<see cref="SliceOrigin"/> = parent center), so
+        /// translating by that same origin keeps synapses registered to the cell for the whole run. Remapping
+        /// via mesh AABB after assembly made children jump whenever the mesh center disagreed with the
+        /// annotation-relative center, and left them misaligned with a parent still using <see cref="SliceOrigin"/>
+        /// mid-assembly.
+        ///
+        /// Collada export still uses <see cref="VolumePlacementCenter"/> (annotation AABB), which is independent
+        /// of this live-view offset.
         /// </summary>
         void RefreshPlacementOffset()
         {
-            Geometry.Vector2 target = Graph.Nodes.Count > 0
-                ? Graph.NodesBoundingBox.CenterPoint.XY()
-                : SliceOrigin;
-            if (TryGetLocalMeshXYCenter(out Geometry.Vector2 local))
-                _placementOffset = new Vector3((float)(target.X - local.X), (float)(target.Y - local.Y), 0f);
-            else
-                _placementOffset = new Vector3((float)SliceOrigin.X, (float)SliceOrigin.Y, 0f);
+            _placementOffset = new Vector3((float)SliceOrigin.X, (float)SliceOrigin.Y, 0f);
+            InvalidateRenderedBoundsCache();
+            _lastAppliedPlacementOffset = new Vector3(float.NaN);
         }
 
         /// <summary>
@@ -670,18 +800,6 @@ namespace MonogameTestbed
             }
         }
 
-        bool TryGetLocalMeshXYCenter(out Geometry.Vector2 center)
-        {
-            if (!TryGetLocalMeshBounds(out Vector3 min, out Vector3 max))
-            {
-                center = default;
-                return false;
-            }
-
-            center = new Geometry.Vector2((min.X + max.X) * 0.5, (min.Y + max.Y) * 0.5);
-            return true;
-        }
-
         bool TryGetLocalMeshBounds(out Vector3 min, out Vector3 max)
         {
             Vector3 boundsMin = new(float.MaxValue);
@@ -693,6 +811,21 @@ namespace MonogameTestbed
                 boundsMin = Vector3.Min(boundsMin, p);
                 boundsMax = Vector3.Max(boundsMax, p);
                 any = true;
+            }
+
+            //Prefer the composite AABB when assembly is finished — O(1) vs scanning every vertex.
+            var composite = meshAssemblyPlan?.Root?.MeshModel?.composite;
+            if (meshAssemblyPlan?.MeshAssembledEvent.IsSet == true
+                && composite is not null
+                && composite.Vertices.Count > 0)
+            {
+                Geometry.Box box = composite.BoundingBox;
+                if (box != default)
+                {
+                    min = box.MinCorner.ToXNAVector3();
+                    max = box.MaxCorner.ToXNAVector3();
+                    return true;
+                }
             }
 
             if (_assembledDisplayModel?.Vertices != null)
@@ -719,7 +852,6 @@ namespace MonogameTestbed
                 }
             }
 
-            var composite = meshAssemblyPlan?.Root?.MeshModel?.composite;
             if (composite?.Vertices != null)
             {
                 foreach (var v in composite.Vertices)
@@ -731,17 +863,29 @@ namespace MonogameTestbed
             return any;
         }
 
+        void InvalidateRenderedBoundsCache() => _renderedBoundsValid = false;
+
         /// <summary>
         /// Axis-aligned bounds of mesh geometry actually drawn in 3D (volume XY, slice-graph Z).
         /// </summary>
         public bool TryGetRenderedMeshBounds(out Vector3 min, out Vector3 max)
         {
+            if (_renderedBoundsValid)
+            {
+                min = _renderedBoundsMin;
+                max = _renderedBoundsMax;
+                return true;
+            }
+
             if (!TryGetLocalMeshBounds(out min, out max))
                 return false;
 
             Vector3 offset = SliceGraphToVolumeOffset;
             min += offset;
             max += offset;
+            _renderedBoundsMin = min;
+            _renderedBoundsMax = max;
+            _renderedBoundsValid = true;
             return true;
         }
 
@@ -755,10 +899,15 @@ namespace MonogameTestbed
         /// </summary>
         /// <param name="iVerts">Composite vertex indices of the struck triangle.</param>
         /// <param name="distance">Distance from the ray origin to the hit, in volume units.</param>
-        public bool TryPickCompositeFace(in Geometry.Ray3D volumeRay, out int[] iVerts, out double distance)
+        /// <param name="boxEntryDistance">
+        /// Ray parameter where the volume AABB is entered. Callers use this to skip structures whose box
+        /// is farther than an already-found face hit.
+        /// </param>
+        public bool TryPickCompositeFace(in Geometry.Ray3D volumeRay, out int[] iVerts, out double distance, out double boxEntryDistance)
         {
             iVerts = null;
             distance = double.MaxValue;
+            boxEntryDistance = double.MaxValue;
 
             //Background merges add faces and vertices to the root composite, so enumerating it mid-assembly threw
             //"Collection was modified after the enumerator was instantiated" on the draw thread.  MeshAssembledEvent
@@ -775,7 +924,7 @@ namespace MonogameTestbed
 
             Geometry.Vector3 min = new(boundsMin.X, boundsMin.Y, boundsMin.Z);
             Geometry.Vector3 max = new(boundsMax.X, boundsMax.Y, boundsMax.Z);
-            if (!Geometry.RayIntersection.TryIntersectBox(volumeRay, min, max, out _))
+            if (!Geometry.RayIntersection.TryIntersectBox(volumeRay, min, max, out boxEntryDistance))
                 return false;
 
             //ApplySliceGraphPlacement is a pure translation, so undoing it leaves the direction unit length
@@ -814,6 +963,10 @@ namespace MonogameTestbed
             return iVerts is not null;
         }
 
+        /// <inheritdoc cref="TryPickCompositeFace(in Geometry.Ray3D, out int[], out double, out double)"/>
+        public bool TryPickCompositeFace(in Geometry.Ray3D volumeRay, out int[] iVerts, out double distance) =>
+            TryPickCompositeFace(volumeRay, out iVerts, out distance, out _);
+
         /// <summary>
         /// Annotation provenance of a composite vertex.  Cap and medial-axis vertices carry no
         /// <see cref="Geometry.IShapeIndex"/> and therefore no annotation, which the caller must report
@@ -835,24 +988,53 @@ namespace MonogameTestbed
             locationID = (ulong)shapeIndex.ShapeIndex;
             return true;
         }
+
+        /// <summary>
+        /// GPU mesh currently drawn for picking highlight. Prefer the live root model; fall back to the
+        /// post-assembly display copy.  When <paramref name="modelLock"/> is non-null, callers must take a
+        /// write lock around vertex color mutations.
+        /// </summary>
+        public bool TryGetSelectableDisplayModel(
+            out MeshModel<VertexPositionNormalColor> model,
+            out ReaderWriterLockSlim modelLock)
+        {
+            model = null;
+            modelLock = null;
+
+            var rootMeshModel = meshAssemblyPlan?.Root?.MeshModel;
+            if (rootMeshModel?.model?.Vertices?.Length > 0)
+            {
+                model = rootMeshModel.model;
+                modelLock = rootMeshModel.ModelLock;
+                return true;
+            }
+
+            if (_assembledDisplayModel?.Vertices?.Length > 0)
+            {
+                model = _assembledDisplayModel;
+                return true;
+            }
+
+            return false;
+        }
     }
 
 /// <summary>
 /// Generates a single mesh for a cell or a subset of a cell based on a Z range.  Used to debug the generation of whole cells and the merging of multiple slice meshes.
 /// </summary>
-class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
+class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IViewMenuTarget, IFileMenuTarget
 {
     public string Title => this.GetType().Name;
 
-    public IReadOnlyList<HotkeyBinding> GetHotkeyBindings() =>
+    static readonly HotkeyBinding[] HotkeyBindings =
     [
         new("B / Right stick", "Toggle assembly bounding-box overlay"),
         new("R", "Toggle red (critical) error bounding boxes only"),
         new("K / Left stick", "Toggle backface culling"),
-        new("P", "Toggle crosshair mesh pick readout"),
+        new("Left click", "Select mesh slice under cursor (empty click clears)"),
         new("F", "Frame camera on rendered mesh"),
         new("I", "Toggle invert-Z in the 3D view"),
-        new("Ctrl+S / Back", "Save assembled meshes"),
+        new("Ctrl+S / Back", "Save assembled meshes (also File → Save Mesh)"),
         new("PrintScreen / Back", "Save current structure mesh when assembled"),
         new("Left shoulder", "Toggle composite vs slice mesh"),
         new("Start", "Regenerate mesh for focused structure"),
@@ -860,16 +1042,25 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
         new("Right shoulder", "Cycle vertex label modes"),
     ];
 
+    public IReadOnlyList<HotkeyBinding> GetHotkeyBindings() => HotkeyBindings;
+
     public string ModeDescription => string.Empty;
 
     public string ActiveViewDescription => string.Empty;
+
+    IReadOnlyList<LegendEntry> _cachedLegendEntries;
+    int _legendCacheWrapCount = -1;
 
     public IReadOnlyList<LegendEntry> LegendEntries
     {
         get
         {
+            IReadOnlyList<BajajMultiOTVAssignmentView> views = WrapViews;
+            if (_cachedLegendEntries != null && _legendCacheWrapCount == views.Count)
+                return _cachedLegendEntries;
+
             Dictionary<ulong, LegendEntry> byType = [];
-            foreach (var wrapView in WrapViews)
+            foreach (var wrapView in views)
             {
                 var type = wrapView.Graph?.structure?.Type;
                 if (type is null || byType.ContainsKey(type.ID))
@@ -885,13 +1076,11 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
             }
 
             List<LegendEntry> entries = [.. byType.Values.OrderBy(e => e.Text, StringComparer.OrdinalIgnoreCase)];
-            entries.Add(new LegendEntry(
-                _showCrosshairPick
-                    ? "Crosshair: LocationIDs of the face at screen center (P to hide)"
-                    : "Crosshair hidden (P to show LocationIDs at screen center)",
-                CrosshairColor));
+            entries.Add(new LegendEntry("Left click: select slice under cursor (empty clears)", Color.Magenta));
             entries.Add(new LegendEntry("F: frame camera on the mesh centroid", Color.White));
 
+            _legendCacheWrapCount = views.Count;
+            _cachedLegendEntries = entries;
             return entries;
         }
     }
@@ -946,8 +1135,37 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
 
     private void AddWrapView(BajajMultiOTVAssignmentView view)
     {
+        view.ShowInProgressSliceStatus = _showInProgressSliceStatus;
+        view.ShowSectionReadySliceStatus = _showSectionReadySliceStatus;
+        view.ShowMinorIssueSliceStatus = _showMinorIssueSliceStatus;
+        view.ShowWarningSliceStatus = _showWarningSliceStatus;
+        view.ShowCriticalSliceStatus = _showCriticalSliceStatus;
         _wrapViews.Add(view);
-        Volatile.Write(ref _wrapViewsSnapshot, [.. _wrapViews]);
+        _cachedLegendEntries = null;
+        _legendCacheWrapCount = -1;
+        PublishWrapViewsSnapshot();
+    }
+
+    /// <summary>
+    /// Opaque (child) structures first, then translucent top-level shells, so interiors stay visible.
+    /// </summary>
+    void PublishWrapViewsSnapshot()
+    {
+        BajajMultiOTVAssignmentView[] ordered = new BajajMultiOTVAssignmentView[_wrapViews.Count];
+        int write = 0;
+        foreach (var view in _wrapViews)
+        {
+            if (!view.IsTopLevelStructure)
+                ordered[write++] = view;
+        }
+
+        foreach (var view in _wrapViews)
+        {
+            if (view.IsTopLevelStructure)
+                ordered[write++] = view;
+        }
+
+        Volatile.Write(ref _wrapViewsSnapshot, ordered);
     }
 
     List<BoundarySurfaceViewModel> boundaryViewModels = [];
@@ -957,50 +1175,93 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
     bool _initialized = false;
     public bool Initialized => _initialized;
 
-    static readonly Color CrosshairColor = Color.Magenta;
-
     /// <summary>
-    /// Draw the center-screen crosshair and report the annotation LocationIDs of the mesh face beneath it.
+    /// Left-button press screen position for click-vs-drag detection. Camera uses left-drag to pan;
+    /// a release within <see cref="ClickPickSlopPixels"/> of the press is treated as a mesh pick.
     /// </summary>
-    bool _showCrosshairPick = true;
+    Point? _leftButtonPressScreen;
+    bool _leftButtonDragExceededSlop;
+    bool _leftButtonWasDown;
+    const int ClickPickSlopPixels = 5;
 
-    /// <summary>
-    /// Cached crosshair readout.  The pick is a linear scan of every composite face, so it is only redone
-    /// when the camera or viewport moves, or when a mesh is rebuilt.
-    /// </summary>
-    string _crosshairReadout = null;
-    bool _crosshairPickStale = true;
-    Vector3 _lastPickCameraPosition;
-    double _lastPickYaw;
-    double _lastPickPitch;
-    Vector3 _lastPickLookAt;
-    int _lastPickViewportWidth;
-    int _lastPickViewportHeight;
-    double _lastPickMilliseconds;
+    bool _showInProgressSliceStatus = true;
+    bool _showSectionReadySliceStatus = true;
+    bool _showMinorIssueSliceStatus = true;
+    bool _showWarningSliceStatus = true;
+    bool _showCriticalSliceStatus = true;
 
-    /// <summary>
-    /// Views become pickable only once their assembly finishes, so a change in this count has to re-run a pick
-    /// that a stationary camera would otherwise leave reading "no mesh face" indefinitely.
-    /// </summary>
-    int _lastPickAssembledViews;
-
-    int AssembledViewCount()
+    public bool ShowInProgressSliceStatus
     {
-        int count = 0;
-        foreach (var wrapView in WrapViews)
+        get => _showInProgressSliceStatus;
+        set
         {
-            if (wrapView?.meshAssemblyPlan?.MeshAssembledEvent.IsSet == true)
-                count++;
+            _showInProgressSliceStatus = value;
+            foreach (var wrapView in WrapViews)
+                wrapView.ShowInProgressSliceStatus = value;
         }
+    }
 
-        return count;
+    public bool ShowSectionReadySliceStatus
+    {
+        get => _showSectionReadySliceStatus;
+        set
+        {
+            _showSectionReadySliceStatus = value;
+            foreach (var wrapView in WrapViews)
+                wrapView.ShowSectionReadySliceStatus = value;
+        }
+    }
+
+    public bool ShowMinorIssueSliceStatus
+    {
+        get => _showMinorIssueSliceStatus;
+        set
+        {
+            _showMinorIssueSliceStatus = value;
+            foreach (var wrapView in WrapViews)
+                wrapView.ShowMinorIssueSliceStatus = value;
+        }
+    }
+
+    public bool ShowWarningSliceStatus
+    {
+        get => _showWarningSliceStatus;
+        set
+        {
+            _showWarningSliceStatus = value;
+            foreach (var wrapView in WrapViews)
+                wrapView.ShowWarningSliceStatus = value;
+        }
+    }
+
+    public bool ShowCriticalSliceStatus
+    {
+        get => _showCriticalSliceStatus;
+        set
+        {
+            _showCriticalSliceStatus = value;
+            foreach (var wrapView in WrapViews)
+                wrapView.ShowCriticalSliceStatus = value;
+        }
     }
 
     /// <summary>
-    /// Ray down the view axis through the center of the viewport, expressed in volume space (model
-    /// placement applied, scene Z-flip removed) so it can be tested directly against composite geometry.
+    /// HUD text for the last click pick. Cleared when the click misses every mesh.
     /// </summary>
-    bool TryBuildCenterVolumeRay(out Geometry.Ray3D ray)
+    string _selectionReadout = null;
+    double _lastPickMilliseconds;
+
+    BajajMultiOTVAssignmentView _selectedView;
+    MeshModel<VertexPositionNormalColor> _selectedModel;
+    ReaderWriterLockSlim _selectedModelLock;
+    Color[] _selectedOriginalColors;
+    int? _selectedSliceZ;
+
+    /// <summary>
+    /// Ray through a screen pixel, expressed in volume space (model placement applied, scene Z-flip
+    /// removed) so it can be tested directly against composite geometry.
+    /// </summary>
+    bool TryBuildVolumeRayAtScreen(float screenX, float screenY, out Geometry.Ray3D ray)
     {
         ray = default;
 
@@ -1008,13 +1269,10 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
         if (viewport.Width <= 0 || viewport.Height <= 0)
             return false;
 
-        float x = viewport.Width * 0.5f;
-        float y = viewport.Height * 0.5f;
-
         //MeshView multiplies each model's ModelMatrix by scene.World, so unprojecting with an identity
         //world yields final world space rather than any one model's space.
-        Vector3 near = viewport.Unproject(new Vector3(x, y, 0f), scene3D.Projection, scene3D.View, Matrix.Identity);
-        Vector3 far = viewport.Unproject(new Vector3(x, y, 1f), scene3D.Projection, scene3D.View, Matrix.Identity);
+        Vector3 near = viewport.Unproject(new Vector3(screenX, screenY, 0f), scene3D.Projection, scene3D.View, Matrix.Identity);
+        Vector3 far = viewport.Unproject(new Vector3(screenX, screenY, 1f), scene3D.Projection, scene3D.View, Matrix.Identity);
 
         //Undo the optional Z reflection so the ray lives in the same space as the mesh vertices.  The
         //reflection preserves distance, so hit distances remain meaningful.
@@ -1033,40 +1291,135 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
     }
 
     /// <summary>
-    /// Refresh <see cref="_crosshairReadout"/> when the view has changed since the last pick.
+    /// Restores vertex colors on the previously selected mesh and clears the selection HUD.
     /// </summary>
-    void UpdateCrosshairPick()
+    void ClearMeshSelection()
     {
-        if (!_showCrosshairPick)
-            return;
-
-        var cam = scene3D.Camera;
-        int assembledViews = AssembledViewCount();
-        bool viewMoved = _crosshairPickStale
-            || cam.Position != _lastPickCameraPosition
-            || cam.LookAt != _lastPickLookAt
-            || cam.Yaw != _lastPickYaw
-            || cam.Pitch != _lastPickPitch
-            || scene3D.Viewport.Width != _lastPickViewportWidth
-            || scene3D.Viewport.Height != _lastPickViewportHeight
-            || assembledViews != _lastPickAssembledViews;
-
-        if (!viewMoved)
-            return;
-
-        _lastPickAssembledViews = assembledViews;
-
-        _lastPickCameraPosition = cam.Position;
-        _lastPickLookAt = cam.LookAt;
-        _lastPickYaw = cam.Yaw;
-        _lastPickPitch = cam.Pitch;
-        _lastPickViewportWidth = scene3D.Viewport.Width;
-        _lastPickViewportHeight = scene3D.Viewport.Height;
-        _crosshairPickStale = false;
-
-        if (!TryBuildCenterVolumeRay(out Geometry.Ray3D ray))
+        if (_selectedModel?.Vertices != null && _selectedOriginalColors != null)
         {
-            _crosshairReadout = null;
+            bool locked = false;
+            try
+            {
+                if (_selectedModelLock != null)
+                {
+                    _selectedModelLock.EnterWriteLock();
+                    locked = true;
+                }
+
+                int n = Math.Min(_selectedModel.Vertices.Length, _selectedOriginalColors.Length);
+                for (int i = 0; i < n; i++)
+                    _selectedModel.Vertices[i].Color = _selectedOriginalColors[i];
+
+                _selectedModel.InvalidateBuffers();
+            }
+            finally
+            {
+                if (locked)
+                    _selectedModelLock.ExitWriteLock();
+            }
+        }
+
+        _selectedView = null;
+        _selectedModel = null;
+        _selectedModelLock = null;
+        _selectedOriginalColors = null;
+        _selectedSliceZ = null;
+        _selectionReadout = null;
+    }
+
+    static Color InvertColor(Color color) =>
+        new((byte)(255 - color.R), (byte)(255 - color.G), (byte)(255 - color.B), color.A);
+
+    /// <summary>
+    /// Dominant discrete Z among the hit triangle's composite vertices. Wall faces that span two
+    /// sections still resolve to one slice so only one band is inverted.
+    /// </summary>
+    static int ResolveSelectedSliceZ(Mesh3D<MorphMeshVertex> composite, int[] iVerts)
+    {
+        Dictionary<int, int> counts = [];
+        foreach (int iVert in iVerts)
+        {
+            if (iVert < 0 || iVert >= composite.Vertices.Count)
+                continue;
+
+            int z = (int)Math.Round(composite[iVert].Position.Z);
+            counts[z] = counts.TryGetValue(z, out int c) ? c + 1 : 1;
+        }
+
+        int bestZ = 0;
+        int bestCount = -1;
+        foreach (var pair in counts)
+        {
+            if (pair.Value <= bestCount)
+                continue;
+            bestCount = pair.Value;
+            bestZ = pair.Key;
+        }
+
+        return bestZ;
+    }
+
+    /// <summary>
+    /// Invert colors for every display vertex whose composite Z matches the selected slice.
+    /// </summary>
+    void ApplySliceSelectionHighlight(BajajMultiOTVAssignmentView view, int[] iVerts)
+    {
+        ClearMeshSelection();
+
+        if (!view.TryGetSelectableDisplayModel(out var model, out var modelLock))
+            return;
+
+        var composite = view.meshAssemblyPlan?.Root?.MeshModel?.composite;
+        if (composite is null || model.Vertices is null)
+            return;
+
+        int sliceZ = ResolveSelectedSliceZ(composite, iVerts);
+        int vertCount = Math.Min(model.Vertices.Length, composite.Vertices.Count);
+
+        bool locked = false;
+        try
+        {
+            if (modelLock != null)
+            {
+                modelLock.EnterWriteLock();
+                locked = true;
+            }
+
+            Color[] originals = new Color[model.Vertices.Length];
+            for (int i = 0; i < model.Vertices.Length; i++)
+                originals[i] = model.Vertices[i].Color;
+
+            for (int i = 0; i < vertCount; i++)
+            {
+                if ((int)Math.Round(composite[i].Position.Z) != sliceZ)
+                    continue;
+
+                model.Vertices[i].Color = InvertColor(originals[i]);
+            }
+
+            model.InvalidateBuffers();
+
+            _selectedView = view;
+            _selectedModel = model;
+            _selectedModelLock = modelLock;
+            _selectedOriginalColors = originals;
+            _selectedSliceZ = sliceZ;
+        }
+        finally
+        {
+            if (locked)
+                modelLock.ExitWriteLock();
+        }
+    }
+
+    /// <summary>
+    /// Hit-test at a screen pixel. Misses clear the selection display.
+    /// </summary>
+    void PickMeshAtScreen(float screenX, float screenY)
+    {
+        if (!TryBuildVolumeRayAtScreen(screenX, screenY, out Geometry.Ray3D ray))
+        {
+            ClearMeshSelection();
             return;
         }
 
@@ -1095,7 +1448,54 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
         timer.Stop();
         _lastPickMilliseconds = timer.Elapsed.TotalMilliseconds;
 
-        _crosshairReadout = hitView is null ? null : DescribeHit(hitView, hitVerts);
+        if (hitView is null || hitVerts is null)
+        {
+            ClearMeshSelection();
+            return;
+        }
+
+        ApplySliceSelectionHighlight(hitView, hitVerts);
+        _selectionReadout = DescribeHit(hitView, hitVerts, _selectedSliceZ);
+    }
+
+    /// <summary>
+    /// Treat a short left-button press/release as a pick; longer pans still go to the camera only.
+    /// </summary>
+    void UpdateClickPickInput(MouseState mouse)
+    {
+        if (!Draw3D || scene3D is null)
+            return;
+
+        bool leftDown = mouse.LeftButton == ButtonState.Pressed;
+
+        if (leftDown && !_leftButtonWasDown)
+        {
+            _leftButtonPressScreen = new Point(mouse.X, mouse.Y);
+            _leftButtonDragExceededSlop = false;
+        }
+
+        if (leftDown && _leftButtonPressScreen.HasValue)
+        {
+            int dx = mouse.X - _leftButtonPressScreen.Value.X;
+            int dy = mouse.Y - _leftButtonPressScreen.Value.Y;
+            if ((dx * dx) + (dy * dy) > ClickPickSlopPixels * ClickPickSlopPixels)
+                _leftButtonDragExceededSlop = true;
+        }
+
+        if (!leftDown && _leftButtonWasDown && _leftButtonPressScreen.HasValue && !_leftButtonDragExceededSlop)
+        {
+            //Pick at the press pixel; camera may have nudged during the click frame.
+            Point press = _leftButtonPressScreen.Value;
+            PickMeshAtScreen(press.X, press.Y);
+        }
+
+        if (!leftDown)
+        {
+            _leftButtonPressScreen = null;
+            _leftButtonDragExceededSlop = false;
+        }
+
+        _leftButtonWasDown = leftDown;
     }
 
     /// <summary>
@@ -1103,7 +1503,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
     /// they have no annotation, and silently dropping them would make a two-ID wall triangle
     /// indistinguishable from a triangle that touches a cap.
     /// </summary>
-    static string DescribeHit(BajajMultiOTVAssignmentView view, int[] iVerts)
+    static string DescribeHit(BajajMultiOTVAssignmentView view, int[] iVerts, int? sliceZ)
     {
         List<ulong> locationIDs = [];
         int unannotated = 0;
@@ -1124,36 +1524,15 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
         locationIDs.Sort();
 
         StringBuilder text = new();
-        text.Append($"Structure {view.Graph?.StructureID}  Locations ");
+        text.Append($"Structure {view.Graph?.StructureID}");
+        if (sliceZ.HasValue)
+            text.Append($"  Slice Z {sliceZ.Value}");
+        text.Append("  Locations ");
         text.Append(locationIDs.Count == 0 ? "none" : string.Join(", ", locationIDs));
         if (unannotated > 0)
             text.Append($" (+{unannotated} cap/medial)");
 
         return text.ToString();
-    }
-
-    /// <summary>
-    /// Two short lines through the viewport center, marking the pixel the readout describes.
-    /// </summary>
-    static void DrawCrosshair(MonoTestbed window)
-    {
-        Texture2D pixel = window.WhitePixel;
-        if (pixel is null)
-            return;
-
-        const int ArmLength = 12;
-        const int Thickness = 1;
-        const int GapFromCenter = 3;
-
-        Viewport viewport = window.GraphicsDevice.Viewport;
-        int x = viewport.Width / 2;
-        int y = viewport.Height / 2;
-
-        //A gap at the center keeps the crosshair from covering the very geometry it is identifying.
-        window.spriteBatch.Draw(pixel, new Microsoft.Xna.Framework.Rectangle(x - GapFromCenter - ArmLength, y, ArmLength, Thickness), CrosshairColor);
-        window.spriteBatch.Draw(pixel, new Microsoft.Xna.Framework.Rectangle(x + GapFromCenter, y, ArmLength, Thickness), CrosshairColor);
-        window.spriteBatch.Draw(pixel, new Microsoft.Xna.Framework.Rectangle(x, y - GapFromCenter - ArmLength, Thickness, ArmLength), CrosshairColor);
-        window.spriteBatch.Draw(pixel, new Microsoft.Xna.Framework.Rectangle(x, y + GapFromCenter, Thickness, ArmLength), CrosshairColor);
     }
 
     public async Task Init(MonoTestbed window)
@@ -1230,6 +1609,19 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
         {
             Console.WriteLine("Smoothing unbranched process centroids");
             AnnotationVizLib.MorphologyGraph.SmoothProcesses(graph);
+        }
+
+        if (Program.options.Correction == CorrectionMode.Neighbor)
+        {
+            Uri neighborEndpoint = Program.options.EndpointUri ?? DataSource.EndpointMap[Endpoint.RC1];
+            double radiusNm = Program.options.CorrectionRadiusNm;
+            Console.WriteLine($"Applying neighbor hop correction field (radius={radiusNm:F0} nm)");
+
+            AnnotationVizLib.MorphologyGraph neighborSources = await AnnotationVizLib.OData.ODataMorphologyFactory
+                .LoadNeighborHopSourcesAsync(graph, neighborEndpoint, radiusNm);
+
+            IEnumerable<AnnotationVizLib.MorphologyGraph> extras = neighborSources?.Subgraphs.Values;
+            AnnotationVizLib.MorphologyGraph.ApplyNeighborCorrection(graph, extras);
         }
 
         //graph = graph.Subgraphs.Values.First();
@@ -1335,13 +1727,11 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
 
     /// <summary>
     /// A whole cell can contain thousands of children, and each pipeline is itself internally parallel: it fans
-    /// slice topology and Bajaj generation out over the thread pool.  Starting them all at once cannot make the
-    /// CPU-bound work finish sooner, and it does make each structure's peak working set live simultaneously.
-    /// Half the cores keeps the pool fed while one pipeline is in a serial stretch without asking it to interleave
-    /// hundreds of working sets.  Measured on a 32 core machine against RC1 cell 172, the meshing phases already
-    /// run at roughly 80% of theoretical core saturation, so a larger bound has no throughput left to win.
+    /// slice topology and Bajaj generation out over the thread pool.  Cap concurrent pipelines at the logical
+    /// core count so multi-structure runs can saturate the machine without starting every child at once (which
+    /// only grows simultaneous working sets when the pool is already full).
     /// </summary>
-    private static readonly int MaxConcurrentMeshPipelines = Math.Max(2, Environment.ProcessorCount / 2);
+    private static readonly int MaxConcurrentMeshPipelines = Math.Max(1, Environment.ProcessorCount);
 
     /// <summary>
     /// Starts Bajaj generation for every nested subgraph. Children share the parent cell's XY origin so their
@@ -1387,22 +1777,42 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
     public void Update()
     {
         PlayerIndex? InputSource = GamePadStateTracker.GetFirstConnectedController() ?? PlayerIndex.One;
-        GamePadState state = GamePad.GetState(InputSource.Value);
-        Input.Gamepad.Update(state);
-        Input.Keyboard.Update(Keyboard.GetState());
+        GamePadState gamePadState = GamePad.GetState(InputSource.Value);
+        KeyboardState keyboardState = Keyboard.GetState();
+        MouseState mouseState = Mouse.GetState();
+
+        Input.Gamepad.Update(gamePadState);
+        Input.Keyboard.Update(keyboardState);
 
         if (!Draw3D)
             Input.CameraManipulator.Update(scene.Camera);
         else
         {
-            Camera3DManipulator.Update(this.scene3D.Camera, scene3D.Viewport.Width, scene3D.Viewport.Height);
-            //StandardCameraManipulator.Update(this.scene3D.Camera);
+            Camera3DManipulator.Update(
+                this.scene3D.Camera,
+                scene3D.Viewport.Width,
+                scene3D.Viewport.Height,
+                keyboardState,
+                mouseState,
+                gamePadState);
         }
+
+        UpdateClickPickInput(mouseState);
+
+        bool toggleBoxes = Input.Gamepad.RightStick_Clicked || Input.Keyboard.Pressed(Keys.B);
+        bool toggleCull = Input.Gamepad.LeftStick_Clicked || Input.Keyboard.Pressed(Keys.K);
+        bool saveCurrent = Input.Gamepad.Back_Clicked || Input.Keyboard.Pressed(Keys.PrintScreen);
+        bool aClicked = Input.Gamepad.A_Clicked;
+        bool bClicked = Input.Gamepad.B_Clicked;
+        bool yClicked = Input.Gamepad.Y_Clicked;
+        bool xClicked = Input.Gamepad.X_Clicked;
+        bool startClicked = Input.Gamepad.Start_Clicked;
+        bool rightShoulder = Input.Gamepad.RightShoulder_Clicked;
+        bool leftShoulder = Input.Gamepad.LeftShoulder_Clicked;
 
         foreach (var wrapView in WrapViews)
         {
-
-            if (Input.Gamepad.A_Clicked)
+            if (aClicked)
             {
                 wrapView.iShownMesh = wrapView.iShownMesh.HasValue ? wrapView.iShownMesh.Value + 1 : 0;
                 if (wrapView.iShownMesh.HasValue && wrapView.iShownMesh.Value >= wrapView.MeshViews.Count)
@@ -1411,7 +1821,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
                 }
             }
 
-            if (Input.Gamepad.B_Clicked)
+            if (bClicked)
             {
                 wrapView.iShownLineView = wrapView.iShownLineView.HasValue ? wrapView.iShownLineView.Value + 1 : 0;
                 if (wrapView.iShownLineView.HasValue && wrapView.iShownLineView.Value >= wrapView.listLineViews.Count)
@@ -1420,15 +1830,10 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
                 }
 
                 Trace.WriteLine(wrapView.iShownLineView.ToString());
-
-                /*wrapView.ShowPolygons = !wrapView.ShowPolygons;
-                wrapView.ShowAllEdges = !wrapView.ShowAllEdges;
-                */
             }
 
-            if (Input.Gamepad.Y_Clicked)
+            if (yClicked)
             {
-                //Cycle throught the various region passes as Y is clicked
                 wrapView.iShownRegion = wrapView.iShownRegion.HasValue ? wrapView.iShownRegion.Value + 1 : 0;
                 if (wrapView.iShownRegion.HasValue && wrapView.iShownRegion.Value >= wrapView.RegionViews.Count)
                 {
@@ -1436,18 +1841,19 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
                 }
             }
 
-            if (Input.Gamepad.X_Clicked)
+            if (xClicked)
             {
                 wrapView.ShowCompletedVerticies = !wrapView.ShowCompletedVerticies;
             }
 
-            if (Input.Gamepad.Start_Clicked && wrapView.IsGeneratingMesh == false)
+            if (startClicked && wrapView.IsGeneratingMesh == false)
             {
+                if (ReferenceEquals(_selectedView, wrapView))
+                    ClearMeshSelection();
                 _ = wrapView.GenerateMesh();
-                _crosshairPickStale = true;
             }
 
-            if (Input.Gamepad.RightShoulder_Clicked)
+            if (rightShoulder)
             {
                 if ((wrapView.VertexLabelType & (IndexLabelType.MESH | IndexLabelType.POLYGON)) == 0)
                 {
@@ -1468,44 +1874,39 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
                     wrapView.VertexLabelType ^= IndexLabelType.MESH;
                 }
             }
-            if (Input.Gamepad.RightStick_Clicked || Input.Keyboard.Pressed(Keys.B))
+
+            if (toggleBoxes)
             {
                 wrapView.ShowAssemblyBoundingBoxes = !wrapView.ShowAssemblyBoundingBoxes;
+                _hudDirty = true;
             }
 
-            if (Input.Keyboard.Pressed(Keys.R))
-            {
-                wrapView.ShowRedErrorBoxes = !wrapView.ShowRedErrorBoxes;
-            }
-
-            if (Input.Gamepad.LeftStick_Clicked || Input.Keyboard.Pressed(Keys.K))
+            if (toggleCull)
             {
                 wrapView.CullMode = wrapView.CullMode == CullMode.None ? CullMode.CullCounterClockwiseFace : CullMode.None;
             }
 
-            if (Input.Gamepad.LeftShoulder_Clicked)
+            if (leftShoulder)
             {
-                //this.Draw3D = !this.Draw3D;
                 wrapView.ShowCompositeMesh = !wrapView.ShowCompositeMesh;
             }
 
-            if (Input.Gamepad.Back_Clicked || Input.Keyboard.Pressed(Keys.PrintScreen))
+            if (saveCurrent)
             {
                 if (wrapView.meshAssemblyPlan != null && wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
                     SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, PlacementTranslation(wrapView), wrapView.Graph);
             }
         }
 
-        if (Input.Keyboard.Pressed(Keys.P))
+        if (Input.Keyboard.Pressed(Keys.R))
         {
-            _showCrosshairPick = !_showCrosshairPick;
-            _crosshairPickStale = true;
+            ShowCriticalSliceStatus = !ShowCriticalSliceStatus;
+            _hudDirty = true;
         }
 
         if (Input.Keyboard.Pressed(Keys.F) && _window != null)
         {
             FrameCameraOnRenderedMesh(_window);
-            _crosshairPickStale = true;
         }
 
         if (Input.Keyboard.Pressed(Keys.I) && Program.options != null)
@@ -1515,32 +1916,13 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
                 scene3D.World = ViewZAxisWorld;
             if (_window != null)
                 FrameCameraOnRenderedMesh(_window);
-
-            //The volume-space ray depends on scene3D.World, which just changed under a stationary camera.
-            _crosshairPickStale = true;
+            _hudDirty = true;
         }
 
         if (Input.Gamepad.Back_Clicked || (Input.Keyboard.Pressed(Keys.S) && (Input.Keyboard.Pressed(Keys.LeftControl) || Input.Keyboard.Pressed(Keys.RightControl))))
         {
-            //if (wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
-            //SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, wrapView.Graph.StructureID);
-            SaveMeshes("BajajMultitest");
+            TrySaveMesh();
         }
-        /*
-        if(Input.Gamepad.RightShoulder_Clicked)
-        {
-            wrapView.NumLinesToDraw++;
-        }
-
-        if (Input.Gamepad.LeftShoulder_Clicked)
-        {
-            wrapView.NumLinesToDraw--;
-        }
-
-        if (Input.Gamepad.Y_Clicked)
-        {
-            wrapView.ShowFinalLines = !wrapView.ShowFinalLines;
-        }*/
     }
 
     public void Draw(MonoTestbed window)
@@ -1549,7 +1931,6 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
         MonoTestbed.SyncViewport(scene3D, window.GraphicsDevice);
         scene3D.World = ViewZAxisWorld;
         window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, MonoTestbed.DefaultBackground, 1.0f, 0);
-
 
         foreach (var wrapView in WrapViews)
         {
@@ -1567,55 +1948,100 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
         {
             MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene3D,
                                 window.basicEffect, CullMode.None, FillMode.Solid, boundaryView.models);
-
-            //boundaryView.Draw(window.GraphicsDevice, scene, CullMode.CullCounterClockwiseFace);
         }
 
         if (Draw3D)
         {
-            UpdateCrosshairPick();
             Draw3DDebugHud(window);
         }
     }
 
+    string _hudText;
+    Vector3 _hudCamPosition;
+    Vector3 _hudLookAt;
+    double _hudYaw;
+    double _hudPitch;
+    string _hudSelectionReadout;
+    bool _hudInvertZ;
+    int _hudDropped;
+    bool _hudShowBoxes;
+    bool _hudDirty = true;
+
     private void Draw3DDebugHud(MonoTestbed window)
     {
         var cam = scene3D.Camera;
-        float camDistance = (cam.Position - cam.LookAt).Length();
-        StringBuilder hud = new();
-        hud.AppendLine($"Cam ({cam.Position.X:F0}, {cam.Position.Y:F0}, {cam.Position.Z:F0})");
-        hud.AppendLine($"LookAt ({cam.LookAt.X:F0}, {cam.LookAt.Y:F0}, {cam.LookAt.Z:F0})");
-        hud.AppendLine($"Yaw {cam.Yaw * 180 / Math.PI:F1} deg  Pitch {cam.Pitch * 180 / Math.PI:F1} deg  Dist {camDistance:F0}");
-        hud.AppendLine(Program.options?.InvertZ == true ? "Z inverted (I to toggle)" : "Z volume (I / --invert-z)");
-        if (graph?.BoundingBox != null)
+        bool invertZ = Program.options?.InvertZ == true;
+        bool showBoxes = false;
+        foreach (var wrapView in WrapViews)
         {
-            var bbox = graph.BoundingBox;
-            hud.AppendLine($"Mesh XY +/-{bbox.Width / 2:F0}  Z {bbox.MinVals[2]:F0}-{bbox.MaxVals[2]:F0}");
-        }
-
-        if (_showCrosshairPick)
-        {
-            hud.AppendLine(_crosshairReadout ?? "Crosshair: no mesh face (P to hide)");
-            hud.AppendLine($"Pick {_lastPickMilliseconds:F1} ms");
-        }
-
-        if (WrapViews.Any(w => w.ShowAssemblyBoundingBoxes))
-        {
-            hud.AppendLine("Boxes: B=all  R=red errors");
-            hud.AppendLine("  gray=in progress  blue=section ready");
-            hud.AppendLine("  yellow=minor  orange=holes/winding  red=non-manifold");
+            if (wrapView.ShowAssemblyBoundingBoxes)
+            {
+                showBoxes = true;
+                break;
+            }
         }
 
         int dropped = DroppedSliceCount();
-        if (dropped > 0)
-            hud.AppendLine($"WARNING: {dropped} slice(s) dropped - no topology");
+
+        bool cameraChanged = cam.Position != _hudCamPosition
+            || cam.LookAt != _hudLookAt
+            || cam.Yaw != _hudYaw
+            || cam.Pitch != _hudPitch;
+        bool contentChanged = _hudDirty
+            || cameraChanged
+            || !ReferenceEquals(_selectionReadout, _hudSelectionReadout)
+            || invertZ != _hudInvertZ
+            || dropped != _hudDropped
+            || showBoxes != _hudShowBoxes;
+
+        if (contentChanged || _hudText is null)
+        {
+            float camDistance = (cam.Position - cam.LookAt).Length();
+            StringBuilder hud = new();
+            hud.AppendLine($"Cam ({cam.Position.X:F0}, {cam.Position.Y:F0}, {cam.Position.Z:F0})");
+            hud.AppendLine($"LookAt ({cam.LookAt.X:F0}, {cam.LookAt.Y:F0}, {cam.LookAt.Z:F0})");
+            hud.AppendLine($"Yaw {cam.Yaw * 180 / Math.PI:F1} deg  Pitch {cam.Pitch * 180 / Math.PI:F1} deg  Dist {camDistance:F0}");
+            hud.AppendLine(invertZ ? "Z inverted (I to toggle)" : "Z volume (I / --invert-z)");
+            if (graph?.BoundingBox != null)
+            {
+                var bbox = graph.BoundingBox;
+                hud.AppendLine($"Mesh XY +/-{bbox.Width / 2:F0}  Z {bbox.MinVals[2]:F0}-{bbox.MaxVals[2]:F0}");
+            }
+
+            if (_selectionReadout != null)
+            {
+                hud.AppendLine(_selectionReadout);
+                hud.AppendLine($"Pick {_lastPickMilliseconds:F1} ms");
+            }
+
+            if (showBoxes)
+            {
+                hud.AppendLine("Slice status: View menu or B=master  R=red");
+                hud.AppendLine("  gray=in progress  blue=section ready");
+                hud.AppendLine("  yellow=minor  orange=holes/winding  red=non-manifold");
+            }
+
+            if (dropped > 0)
+                hud.AppendLine($"WARNING: {dropped} slice(s) dropped - no topology");
+
+            _hudText = hud.ToString();
+            _hudCamPosition = cam.Position;
+            _hudLookAt = cam.LookAt;
+            _hudYaw = cam.Yaw;
+            _hudPitch = cam.Pitch;
+            _hudSelectionReadout = _selectionReadout;
+            _hudInvertZ = invertZ;
+            _hudDropped = dropped;
+            _hudShowBoxes = showBoxes;
+            _hudDirty = false;
+        }
 
         window.GraphicsDevice.BlendState = BlendState.AlphaBlend;
         window.spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
         const float hudScale = 0.3f;
         window.spriteBatch.DrawString(
             window.fontArial,
-            hud.ToString(),
+            _hudText,
             new Vector2(8, 8),
             Color.Yellow,
             rotation: 0f,
@@ -1623,9 +2049,6 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
             scale: hudScale,
             effects: SpriteEffects.None,
             layerDepth: 0f);
-
-        if (_showCrosshairPick)
-            DrawCrosshair(window);
 
         window.spriteBatch.End();
     }
@@ -1788,6 +2211,15 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp
 
         int digits = (int)Math.Floor(Math.Log10(maxId)) + 1;
         return (ulong)Math.Pow(10, digits + 2);
+    }
+
+    public bool TrySaveMesh()
+    {
+        if (!Initialized)
+            return false;
+
+        SaveMeshes("BajajMultitest");
+        return true;
     }
 
     public void SaveMeshes(string title, string outputDir = null)

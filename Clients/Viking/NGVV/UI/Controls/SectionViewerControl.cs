@@ -3555,7 +3555,7 @@ namespace Viking.UI.Controls
             Viking.PendingTextureQueue.UpdateSortInterval(viewModel.VisibleTileSortIntervalMs);
             Viking.TextureReaderV2.ApplyMaxConcurrentRequestPreference(
                 viewModel.MaxConcurrentTextureRequests,
-                Section?.VolumeViewModel?.DefaultTileWidth);
+                UI.State.volume?.DefaultTileWidth);
         }
 
         #endregion

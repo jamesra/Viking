@@ -24,7 +24,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         private readonly ILogger _logger;
 
         public UserRolesController(ApplicationDbContext context,
-            ILogger<AccountController> logger)
+            ILogger<UserRolesController> logger)
         {
             _context = context;
             _logger = logger;
@@ -33,8 +33,6 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // GET: UserRoles 
         public Task<IActionResult> Index()
         {
-            //var Group = ViewData["Group"] as Group; 
-
             List<ApplicationRole> AvailableRoles = _context.ApplicationRole.ToList();
 
             var UserRolesModels = (from user in _context.ApplicationUser 
@@ -46,65 +44,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
             var listRoles = new ListUserRolesViewModel() { AvailableRoles = AvailableRoles, UsersRoles = UserRolesModels };
 
-            /*
-            List < UserRolesViewModel > UserRolesModels = _context.ApplicationUser.Where(u => u.Groups.Any(g => g.Id == GroupId)).Select(
-                user => new UserRolesViewModel
-                {
-                    Username = user.UserName,
-                    Roles = _context.UserRoles.Where(ur => ur.UserId == user.Id).Select(ur => ur.RoleId).ToList(),
-                    AvailableRoles = AvailableRoles,
-                }).ToList();
-            */
-
             return Task<IActionResult>.FromResult((IActionResult)View(listRoles));
-            /*
-            return View(await _context.ApplicationUser.Select(
-                user => new UserRolesViewModel
-                {
-                    Username = user.UserName,
-                    Roles = _context.UserRoles.Where(ur => ur.UserId == user.Id).Select(ur => ur.RoleId).ToList(),
-                    AvailableRoles = AvailableRoles,
-                })..ToListAsync());
-                */
         }
-
-        // GET: UserRoles/Details/5
-        public ActionResult Details(int id)
-        {
-            return View();
-        }
-        /*
-        // GET: UserRoles/Create
-        public ActionResult Create()
-        {
-            return View();
-        }
-        */
-        /*
-        // POST: UserRoles/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
-        {
-            try
-            {
-                // TODO: Add insert logic here
-
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
-        }
-        */
-        /*
-        [HttpPost]
-        // GET: UserRoles/Edit/5
-        public ActionResult Edit(string id)
-        {
-            return View();
-        }*/
 
         private bool IsChecked(Microsoft.Extensions.Primitives.StringValues val)
         {
@@ -121,7 +62,6 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             {
                 var User = _context.ApplicationUser.FirstOrDefault(u => u.UserName == id.Username);
                 List<ApplicationRole> AvailableRoles = _context.ApplicationRole.ToList();
-                // TODO: Add update logic here
                 var listUserRoles = _context.UserRoles.Where(ur => ur.UserId == User.Id).ToList();
                 
                 foreach(var userRole in AvailableRoles)
@@ -165,37 +105,5 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return View("~/Views/Shared/Error.cshtml",errorModel); 
             }
         }
-        /*
-        [HttpPost]
-        public JsonResult UpdatePublicPostStatus(string id, bool isPublicPost)
-        { 
-            var result = _context.UserRoles.FirstOrDefault(user => user.UserId == id);
-           
-            return Json(null);
-        }
-        */
-        /*
-        // GET: UserRoles/Delete/5
-        public ActionResult Delete(int id)
-        {
-            return View();
-        }
-
-        // POST: UserRoles/Delete/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Delete(int id, IFormCollection collection)
-        {
-            try
-            {
-                // TODO: Add delete logic here
-
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
-        }*/
     }
 }

@@ -318,12 +318,13 @@ namespace Viking.UI.WPF.ViewModels
                     return;
                 }
 
+                // The Viking client is used rather than api so the desktop never holds the
+                // confidential api client secret; the Permissions API authorizes on the user.
                 BearerTokenHelper tokenHelper = new()
                 {
                     IdentityServerURL = identityUri,
-                    //ClientId = "Viking",
-                    ClientId = "api",
-                    ClientSecret = "Correct Horse Battery Staple" // Default secret, should be configured
+                    ClientId = "Viking",
+                    ClientSecret = IdentityAppSettings.ClientSecret
                 };
 
                 var tokenResponse = await tokenHelper.RetrieveBearerToken(Username, Password);
@@ -379,8 +380,8 @@ namespace Viking.UI.WPF.ViewModels
                 BearerTokenHelper tokenHelper = new()
                 {
                     IdentityServerURL = identityUri,
-                    ClientId = "api",
-                    ClientSecret = "Correct Horse Battery Staple"
+                    ClientId = "Viking",
+                    ClientSecret = IdentityAppSettings.ClientSecret
                 };
 
                 var tokenResponse = await tokenHelper.RetrieveBearerToken("anonymous", anonymousPassword);

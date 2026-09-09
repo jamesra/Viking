@@ -86,10 +86,10 @@
 &lt;/ArrayOfString&gt;</Value>
     </Setting>
     <Setting Name="ApiClientSecret" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">Correct Horse Battery Staple</Value>
+      <Value Profile="(Default)"></Value>
     </Setting>
     <Setting Name="VikingSecret" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">Correct Horse Battery Staple</Value>
+      <Value Profile="(Default)"></Value>
     </Setting>
     <Setting Name="IdentityServerURL" Type="System.String" Scope="User">
       <Value Profile="(Default)">https://identity.codepharm.net:5001/</Value>

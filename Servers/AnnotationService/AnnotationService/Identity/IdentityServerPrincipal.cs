@@ -24,17 +24,18 @@ namespace Annotation.Identity
                 _tokenHelper = BearerTokenHelper.CreateFromAppSettings();
                 if (_tokenHelper is null)
                 {
-                    // Fallback: create from settings directly
                     string IdentityServerEndpoint = VikingWebAppSettings.AppSettings.GetIdentityServerURLString();
                     if (System.Uri.TryCreate(IdentityServerEndpoint, UriKind.Absolute, out Uri identityServerUrl))
                     {
                         _tokenHelper = new BearerTokenHelper
                         {
-                            IdentityServerURL = identityServerUrl,
-                            ClientSecret = "CorrectHorseBatteryStaple"
+                            IdentityServerURL = identityServerUrl
                         };
                     }
                 }
+
+                if (_tokenHelper != null)
+                    _tokenHelper.ClientSecret = VikingWebAppSettings.AppSettings.GetIdentityServerClientSecret();
             }
             return _tokenHelper;
         }

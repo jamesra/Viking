@@ -546,7 +546,7 @@ namespace WebAnnotation.WPF.Forms
             _circleOpacityWithParent = 1.0;
             _segmentationPointRadius = 5.0;
             _polygonPointDiameter = 12.0;
-            _smallestRenderedSize = 0.5;
+            _smallestRenderedSize = 10.0;
             _polygonVertexPointsVisibleAtWidthFraction = 0.0025;
             _polygonVertexPointsHiddenAtWidthFraction = 0.002;
 

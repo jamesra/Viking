@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
-using Viking.Identity.Server.WebManagement.Extensions;
+using Viking.Identity.Server.Extensions;
 using Xunit;
 
 namespace TestIdentityModel
