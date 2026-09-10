@@ -210,6 +210,9 @@ namespace MorphologyMesh
             Polyline A = Polylines[APoly.ShapeIndex];
             Polyline B = Polylines[BPoly.ShapeIndex];
 
+            if (A[APoly] == B[BPoly])
+                return APoly.ShapeIndex == BPoly.ShapeIndex && APoly.AreAdjacent(BPoly) ? EdgeType.CONTOUR : EdgeType.INVALID;
+
             LineSegment chord = new(A[APoly], B[BPoly]);
 
             if (APoly.ShapeIndex != BPoly.ShapeIndex)
@@ -425,7 +428,17 @@ namespace MorphologyMesh
 
             if (ALine.ShapeIndex != BLine.ShapeIndex)
             {
-                LineSegment segment = new(ALine.Point(A), BLine.Point(B));
+                Vector2 a = ALine.Point(A);
+                Vector2 b = BLine.Point(B);
+
+                //Corresponding verticies on two polylines share XY, so a chord between their neighbours can collapse to a
+                //point when the shapes also share a neighbour vertex.  A zero-length chord is not a surface edge, and
+                //LineSegment refuses to build one; report it as invalid instead of aborting the slice
+                //(RPC1 locations 368401/368399).
+                if (a == b)
+                    return EdgeType.INVALID;
+
+                LineSegment segment = new(a, b);
                 bool lineIntersectsAnyOtherShape = Shapes.Where((p, iP) => iP != ALine.ShapeIndex && iP != BLine.ShapeIndex)
                     .Any(p => p.GetRelation(segment) != ShapeRelation.None);
                 if (lineIntersectsAnyOtherShape)

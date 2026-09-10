@@ -801,7 +801,10 @@ namespace MorphologyMesh
                     return false;
                 }
 
-                if (working[partner].Intersects(working[center]))
+                //Judged with the same test the placement search uses.  Asking Intersects here treated two parallel
+                //polylines whose boxes already overlap as "not overlapping", drove the lower one onto the upper's
+                //centroid, and left near-identical curves sitting on top of each other (RPC1 368401/368399).
+                if (OverlapsForVirtualPlacement(working[partner], working[center]))
                     continue;
 
                 if (TryPlaceOverlapping(working[partner], working[center], centerPoint, moveToCentroid, out Vector2 offset, out double depth) == false)
@@ -892,7 +895,7 @@ namespace MorphologyMesh
                         original[partner], working[center], settledDepth * step / VirtualOverlapDepthSteps);
 
                     IShape2D candidate = original[partner].Translate(candidateOffset);
-                    if (OverlapsInterior(candidate, working[center]) == false)
+                    if (OverlapsForVirtualPlacement(candidate, working[center]) == false)
                         continue;
 
                     if (obstacles.Any(other => candidate.Intersects(working[other])))
@@ -926,7 +929,11 @@ namespace MorphologyMesh
         {
             depthUsed = double.NaN;
 
-            if (moveToCentroid == false)
+            //Polylines never take the centroid shortcut.  Two open curves drawn on adjacent sections are usually
+            //near-copies of each other, so centring one on the other lays it on top of its partner and every
+            //corresponding-vertex chord degenerates; the minimal box move keeps the ribbon's width.
+            bool preferMinimalMove = moveToCentroid == false || (moving is IPolyLine2D && target is IPolyLine2D);
+            if (preferMinimalMove)
             {
                 for (double depth = VirtualOverlapBoxDepth; depth <= VirtualOverlapMaxBoxDepth; depth += VirtualOverlapBoxDepth)
                 {
@@ -934,7 +941,7 @@ namespace MorphologyMesh
                     if (candidate == Vector2.Zero)
                         break;
 
-                    if (OverlapsInterior(moving.Translate(candidate), target))
+                    if (OverlapsForVirtualPlacement(moving.Translate(candidate), target))
                     {
                         offset = candidate;
                         depthUsed = depth;
@@ -947,7 +954,26 @@ namespace MorphologyMesh
             if (offset == Vector2.Zero)
                 return true;
 
-            return OverlapsInterior(moving.Translate(offset), target);
+            return OverlapsForVirtualPlacement(moving.Translate(offset), target);
+        }
+
+        /// <summary>
+        /// True when the translated placement is good enough for Bajaj to tile the pair.
+        ///
+        /// Polygons must share interior area: mere tangency creates near-coincident correspondence
+        /// verticies that crash divide-and-conquer Delaunay.
+        ///
+        /// Polylines have no interior. Requiring a crossing forces an artificial X that invents a
+        /// correspondence site and still leaves many real OPENCURVE pairs (RPC1 381857/381868)
+        /// unable to place. Axis-aligned bounding-box overlap is the polyline stand-in for "share
+        /// area"; a crossing or touch is also accepted.
+        /// </summary>
+        private static bool OverlapsForVirtualPlacement(IShape2D a, IShape2D b)
+        {
+            if (a is IPolyLine2D && b is IPolyLine2D)
+                return PolylinesAreTileablyClose(a, b);
+
+            return OverlapsInterior(a, b);
         }
 
         /// <summary>
@@ -960,6 +986,21 @@ namespace MorphologyMesh
         {
             ShapeRelation relation = a.GetRelation(b);
             return relation != ShapeRelation.None && relation != ShapeRelation.Touching;
+        }
+
+        /// <summary>
+        /// Polyline–polyline placement succeeds when the lines cross/touch or their boxes overlap on both axes.
+        /// </summary>
+        private static bool PolylinesAreTileablyClose(IShape2D a, IShape2D b)
+        {
+            if (a.Intersects(b))
+                return true;
+
+            Rectangle ba = a.BoundingBox;
+            Rectangle bb = b.BoundingBox;
+            bool xOverlap = ba.Left < bb.Right && bb.Left < ba.Right;
+            bool yOverlap = ba.Bottom < bb.Top && bb.Bottom < ba.Top;
+            return xOverlap && yOverlap;
         }
 
         /// <summary>

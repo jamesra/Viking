@@ -18,7 +18,9 @@ namespace MorphologyMesh
         MergeAddSlice,
         MergeCombine,
         MergeNormals,
-        RootFinalize
+        RootFinalize,
+        /// <summary>Building the gray in-progress contour / AABB overlays shown before a slice has a mesh.</summary>
+        IncompleteViewContours
     }
 
     /// <summary>
@@ -97,7 +99,7 @@ namespace MorphologyMesh
 
             StringBuilder sb = new();
             sb.AppendLine("Mesh phase timings (phases overlap across concurrent structures; compare run to run, not to wall clock)");
-            sb.AppendLine($"{"phase",-18}{"seconds",12}{"calls",12}{"items",14}{"us/call",12}{"us/item",12}");
+            sb.AppendLine($"{"phase",-24}{"seconds",12}{"calls",12}{"items",14}{"us/call",12}{"us/item",12}");
 
             double freq = Stopwatch.Frequency;
             foreach (MeshPhase phase in Enum.GetValues<MeshPhase>())
@@ -113,7 +115,7 @@ namespace MorphologyMesh
                 double usPerCall = seconds * 1e6 / calls;
                 double usPerItem = items > 0 ? seconds * 1e6 / items : double.NaN;
 
-                sb.AppendLine($"{phase,-18}{seconds,12:F3}{calls,12:N0}{items,14:N0}{usPerCall,12:F1}{usPerItem,12:F3}");
+                sb.AppendLine($"{phase,-24}{seconds,12:F3}{calls,12:N0}{items,14:N0}{usPerCall,12:F1}{usPerItem,12:F3}");
             }
 
             return sb.ToString();

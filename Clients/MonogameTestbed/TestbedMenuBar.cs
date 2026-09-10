@@ -306,7 +306,7 @@ namespace MonogameTestbed
                     spriteBatch.Draw(whitePixel, item.Bounds, selected ? new Color(60, 90, 140) : new Color(48, 48, 52));
                     string mark = selected ? "> " : "  ";
                     string title = tests.TryGetValue(item.Mode, out IGraphicsTest t) ? t.Title : item.Mode.ToString();
-                    string text = $"{mark}{item.Mode} — {title}";
+                    string text = $"{mark}{item.Mode} - {title}";
                     DrawDropdownText(spriteBatch, font, text, item.Bounds);
                 }
             }
@@ -402,6 +402,7 @@ namespace MonogameTestbed
 
         private static void DrawDropdownText(SpriteBatch spriteBatch, SpriteFont font, string text, Rectangle bounds)
         {
+            text = SanitizeForSpriteFont(font, text);
             Vector2 size = font.MeasureString(text) * MenuScale;
             float y = bounds.Y + (bounds.Height - size.Y) * 0.5f;
             spriteBatch.DrawString(font, text, new Vector2(bounds.X + 8, y), Color.White,
@@ -414,11 +415,45 @@ namespace MonogameTestbed
             if (highlight)
                 spriteBatch.Draw(whitePixel, bounds, new Color(60, 90, 140));
 
+            text = SanitizeForSpriteFont(font, text);
             Vector2 size = font.MeasureString(text) * MenuScale;
             float x = bounds.X + (bounds.Width - size.X) * 0.5f;
             float y = bounds.Y + (bounds.Height - size.Y) * 0.5f;
             spriteBatch.DrawString(font, text, new Vector2(x, y), Color.White,
                 0f, Vector2.Zero, MenuScale, SpriteEffects.None, 0f);
+        }
+
+        /// <summary>
+        /// Bitmap SpriteFonts only contain glyphs listed in the .spritefont file. Menu labels sometimes
+        /// pick up en/em dashes or other Unicode from titles; replace missing glyphs so MeasureString
+        /// and DrawString do not throw ArgumentException.
+        /// </summary>
+        private static string SanitizeForSpriteFont(SpriteFont font, string text)
+        {
+            if (string.IsNullOrEmpty(text) || font is null)
+                return text ?? string.Empty;
+
+            bool needsSanitize = false;
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (!font.Characters.Contains(text[i]))
+                {
+                    needsSanitize = true;
+                    break;
+                }
+            }
+
+            if (!needsSanitize)
+                return text;
+
+            char[] chars = text.ToCharArray();
+            for (int i = 0; i < chars.Length; i++)
+            {
+                if (!font.Characters.Contains(chars[i]))
+                    chars[i] = '?';
+            }
+
+            return new string(chars);
         }
 
         private static bool IsHelpHotkey(KeyboardState keyboard)

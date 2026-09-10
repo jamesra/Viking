@@ -129,6 +129,58 @@ namespace MorphologyMesh
                 || ForkPartition.IsForkBoundaryVertex(indexB.ShapeIndex, indexB.VertexIndex);
         }
 
+        /// <summary>
+        /// True when a single-face edge lies on the legitimate boundary of an open polyline ribbon.  A ribbon is a
+        /// sheet, not a tube, so the manifold report must not count these as holes:
+        ///
+        ///  - the chord at each end of the sheet, joining a free endpoint of one open polyline to a free endpoint of
+        ///    a different open polyline on the other band;
+        ///  - the outline of an end cap.  <c>CapPolylineEnd</c> lofts the last contour to a scaled copy half a
+        ///    section away, and that copy's edges, plus the two edges joining it to the contour's free endpoints, are
+        ///    the sheet's new boundary.
+        ///
+        /// Anything on a polygon mesh, touching an interior contour vertex, or on a closed ring is not exempt.
+        /// </summary>
+        public bool IsRibbonBoundaryEdge(IEdgeKey edge)
+        {
+            if (HasPolygonShapes)
+                return false;
+
+            IShapeIndex indexA = this[edge.A].ShapeIndex;
+            IShapeIndex indexB = this[edge.B].ShapeIndex;
+
+            //Cap verticies carry no shape index.  Two of them form the taper outline.
+            if (indexA is null && indexB is null)
+                return true;
+
+            //One cap vertex and one contour vertex is the side of the taper, legitimate only at a free endpoint.
+            if (indexA is null || indexB is null)
+            {
+                IShapeIndex contour = indexA ?? indexB;
+                return contour is PolylineIndex end && IsFreeEndpoint(end);
+            }
+
+            if (indexA is not PolylineIndex a || indexB is not PolylineIndex b)
+                return false;
+
+            if (a.ShapeIndex == b.ShapeIndex || IsUpperShape[a.ShapeIndex] == IsUpperShape[b.ShapeIndex])
+                return false;
+
+            return IsFreeEndpoint(a) && IsFreeEndpoint(b);
+        }
+
+        private bool IsFreeEndpoint(PolylineIndex index)
+        {
+            if (Shapes[index.ShapeIndex] is not Polyline line)
+                return false;
+
+            //A CLOSEDCURVE is stored as a polyline whose first and last verticies coincide; it has no free end.
+            if (line.PointCount > 1 && new Vector2(line.Points[0]) == new Vector2(line.Points[line.PointCount - 1]))
+                return false;
+
+            return index.IsFirstIndex || index.IsLastIndex;
+        }
+
         /// <inheritdoc/>
         /// <remarks>
         /// Called from the base constructor via PopulateMesh.  C# runs a derived class's field initializers before

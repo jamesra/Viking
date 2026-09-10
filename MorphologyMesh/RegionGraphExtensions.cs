@@ -655,7 +655,9 @@ namespace MorphologyMesh
         }
 
         /// <summary>
-        /// Loft a circle contour to a concentric inner ring at <see cref="EndCapScale"/> radius, offset ± half a section in Z.
+        /// Loft a circle contour to a concentric inner ring at <see cref="EndCapScale"/> radius, offset ± half a section
+        /// in Z, then close the inner ring with a fan to its centre.  Without the fan the cap is an open frustum and
+        /// every inner-ring edge reports as a hole (RPC1 368453/368452: holes:20 on a two-circle structure).
         /// </summary>
         private static void CapCircleEnd(BajajGeneratorMesh mesh, Polygon poly, int iPoly, bool closeUpper, double halfThickness, Circle sourceCircle)
         {
@@ -689,6 +691,8 @@ namespace MorphologyMesh
                 inner[i] = mesh.AddVertex(capVert);
             }
 
+            int pole = mesh.AddVertex(new MorphMeshVertex(default(MedialAxisIndex), center.ToVector3(contourZ + peakOffset)));
+
             for (int i = 0; i < n; i++)
             {
                 int next = (i + 1) % n;
@@ -703,9 +707,12 @@ namespace MorphologyMesh
                     mesh.AddEdge(new MorphMeshEdge(EdgeType.CONTOUR_TO_MEDIALAXIS, b, bPrime));
                 if (mesh.Contains(aPrime, bPrime) == false)
                     mesh.AddEdge(new MorphMeshEdge(EdgeType.MEDIALAXIS, aPrime, bPrime));
+                if (mesh.Contains(aPrime, pole) == false)
+                    mesh.AddEdge(new MorphMeshEdge(EdgeType.MEDIALAXIS, aPrime, pole));
 
                 AddCappedTriangle(mesh, [a, b, bPrime], closeUpper);
                 AddCappedTriangle(mesh, [a, bPrime, aPrime], closeUpper);
+                AddCappedTriangle(mesh, [aPrime, bPrime, pole], closeUpper);
             }
         }
 

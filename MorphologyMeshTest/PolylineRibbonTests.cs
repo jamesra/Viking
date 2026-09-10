@@ -1,10 +1,17 @@
+using AnnotationVizLib;
 using Geometry;
 using Geometry.Meshing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MorphologyMesh;
+using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using UnitsAndScale;
+using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace MorphologyMeshTest
 {
@@ -113,12 +120,13 @@ namespace MorphologyMeshTest
         }
 
         /// <summary>
-        /// Records what an open polyline ribbon actually reports, because the two ends of an open ribbon carry
-        /// single-face chords that count as unexpected boundary edges.  That predates fork support, so fork tests
-        /// must not expect a fork to reach zero unexpected boundary edges either.
+        /// An open polyline ribbon is a sheet: the single-face chord at each end is its legitimate boundary, not a
+        /// hole.  Counting those two chords as holes marked every gap-junction slice an invalid surface in
+        /// BajajMultiTest, so they are attributed to <see cref="MeshManifoldReport.RibbonBoundaryEdges"/> and the
+        /// ribbon validates.
         /// </summary>
         [TestMethod]
-        public void GenerateFaces_OpenRibbonEndsAreReportedAsBoundary()
+        public void GenerateFaces_OpenRibbonEndsAreReportedAsRibbonEnds()
         {
             Polyline lower = HorizontalLine(0, 0, 30, 3);
             Polyline upper = HorizontalLine(5, 0, 30, 3);
@@ -130,8 +138,29 @@ namespace MorphologyMeshTest
 
             Assert.AreEqual(0, report.NonManifoldEdges, $"A simple ribbon should not be non-manifold.  {report}");
             Assert.AreEqual(0, report.PolylineForkBoundaryEdges, $"There is no fork here.  {report}");
-            Assert.AreEqual(2, report.UnexpectedBoundaryEdges,
-                $"An open ribbon has exactly two unclosed ends.  {report}");
+            Assert.AreEqual(2, report.RibbonBoundaryEdges,
+                $"An open ribbon has exactly two end chords.  {report}");
+            Assert.AreEqual(0, report.UnexpectedBoundaryEdges,
+                $"The end chords are the sheet boundary, not holes.  {report}");
+            Assert.IsTrue(report.IsValidSliceSurface, $"A clean ribbon must validate.  {report}");
+        }
+
+        /// <summary>
+        /// The ribbon-end exemption must not leak onto polygon meshes or closed rings; there every single-face
+        /// non-contour edge is still a hole.
+        /// </summary>
+        [TestMethod]
+        public void IsRibbonBoundaryEdge_RejectsPolygonsAndClosedRings()
+        {
+            BajajGeneratorMesh squares = new([Square(10), Square(10)], [0.0, 10.0], [false, true]);
+            foreach (var edge in squares.Edges.Keys)
+                Assert.IsFalse(squares.IsRibbonBoundaryEdge(edge), "Polygon meshes have no ribbon ends.");
+
+            Polyline ringLower = new([new Vector2(0, 0), new Vector2(10, 0), new Vector2(10, 10), new Vector2(0, 10), new Vector2(0, 0)]);
+            Polyline ringUpper = new([new Vector2(1, 1), new Vector2(11, 1), new Vector2(11, 11), new Vector2(1, 11), new Vector2(1, 1)]);
+            BajajGeneratorMesh rings = new([ringLower, ringUpper], [0.0, 10.0], [false, true]);
+            foreach (var edge in rings.Edges.Keys)
+                Assert.IsFalse(rings.IsRibbonBoundaryEdge(edge), "A CLOSEDCURVE ring has no free endpoint.");
         }
 
         /// <summary>
@@ -154,6 +183,46 @@ namespace MorphologyMeshTest
             //Polygon pairs still answer, so the guard has not swallowed the case this overload does handle.  The
             //midpoint sits inside both squares, which is exactly what INTERNAL means.
             Assert.AreEqual(EdgeType.INTERNAL, chord.GetEdgeType(square, Square(10)));
+        }
+
+        /// <summary>
+        /// Two polylines that share a vertex XY produce a zero-length chord between the neighbours of a corresponding
+        /// vertex.  LineSegment refuses to build one, and the exception used to abort the whole slice
+        /// (RPC1 368401/368399: "Can't create line with two identical points").  The chord must type as INVALID.
+        /// </summary>
+        [TestMethod]
+        public void GetEdgeType_CoincidentPolylineVerticies_IsInvalidNotThrow()
+        {
+            Polyline lower = new([new Vector2(0, 0), new Vector2(10, 0), new Vector2(20, 0), new Vector2(30, 0)]);
+            Polyline upper = new([new Vector2(10, 0), new Vector2(20, 0), new Vector2(20, 10), new Vector2(20, 20)]);
+            IShape2D[] shapes = [lower, upper];
+
+            PolylineIndex a = new(0, 2, lower.PointCount);
+            PolylineIndex b = new(1, 1, upper.PointCount);
+            Assert.AreEqual(lower[a], upper[b], "Fixture: the two indices must land on the same XY.");
+
+            Vector2 midpoint = lower[a];
+            Assert.AreEqual(EdgeType.INVALID, EdgeTypeExtensions.GetEdgeType(a, b, shapes, midpoint));
+            Assert.AreEqual(EdgeType.INVALID, EdgeTypeExtensions.GetContourEdgeTypeWithOrientation(a, b, shapes, midpoint));
+
+            Polyline[] lines = [lower, upper];
+            Assert.AreEqual(EdgeType.INVALID, EdgeTypeExtensions.GetEdgeType(a, b, lines, midpoint));
+        }
+
+        /// <summary>
+        /// End to end: a polyline pair sharing a whole segment must reach a mesh instead of throwing out of
+        /// CompleteCorrespondingVertexFaces.  Quality is not asserted; the crash is.
+        /// </summary>
+        [TestMethod]
+        public void GenerateFaces_PolylinesSharingASegment_DoesNotThrow()
+        {
+            Polyline lower = new([new Vector2(0, 0), new Vector2(10, 0), new Vector2(20, 0), new Vector2(30, 0)]);
+            Polyline upper = new([new Vector2(10, 0), new Vector2(20, 0), new Vector2(20, 10), new Vector2(20, 20)]);
+
+            BajajGeneratorMesh mesh = new([lower, upper], [0.0, 10.0], [false, true]);
+            BajajMeshGenerator.GenerateFaces(mesh);
+
+            Assert.IsTrue(mesh.Faces.Count > 0, $"Expected some ribbon faces. {mesh.ManifoldReport}");
         }
 
         /// <summary>
@@ -247,6 +316,155 @@ namespace MorphologyMeshTest
 
             Assert.IsTrue(xyArea > 1.0, $"Bent polyline cap loft should have XY area, was {xyArea}.");
         }
+
+        /// <summary>
+        /// A closed LINESTRING (first==last) must not receive filled same-polyline Delaunay faces.
+        /// CLOSEDCURVE interiors are not part of the annotation shape.
+        /// </summary>
+        [TestMethod]
+        public void AddDelaunayEdges_ClosedPolyline_DoesNotAddSameShapeFaces()
+        {
+            Polyline lower = ClosedSquarePolyline(0, 0, 20);
+            Polyline upper = ClosedSquarePolyline(1, 1, 20);
+            BajajGeneratorMesh mesh = new([lower, upper], [0.0, 10.0], [false, true]);
+
+            int contourBefore = mesh.MorphEdges.Count(e => e.Type == EdgeType.CONTOUR);
+            Assert.IsTrue(contourBefore >= 8, "Closed polylines should contribute closing contour edges.");
+
+            BajajMeshGenerator.AddDelaunayEdges(mesh);
+
+            foreach (IFace face in mesh.Faces)
+            {
+                HashSet<int> shapeIds = [];
+                foreach (int iVert in face.iVerts)
+                {
+                    IShapeIndex index = mesh[iVert].ShapeIndex;
+                    if (index is not null)
+                        shapeIds.Add(index.ShapeIndex);
+                }
+
+                Assert.IsFalse(
+                    shapeIds.Count == 1 && mesh.Shapes[shapeIds.First()] is Polyline,
+                    "Delaunay must not fill the interior of a single polyline contour.");
+            }
+        }
+
+        /// <summary>
+        /// Curved open polylines must also reject same-shape Delaunay fill (the 368202/368203 failure mode).
+        /// </summary>
+        [TestMethod]
+        public void AddDelaunayEdges_BentOpenPolyline_DoesNotAddSameShapeFaces()
+        {
+            Polyline lower = new(
+            [
+                new Vector2(0, 0),
+                new Vector2(20, 0),
+                new Vector2(20, 20),
+                new Vector2(0, 20),
+            ]);
+            Polyline upper = new(
+            [
+                new Vector2(1, 1),
+                new Vector2(21, 1),
+                new Vector2(21, 21),
+                new Vector2(1, 21),
+            ]);
+            BajajGeneratorMesh mesh = new([lower, upper], [0.0, 10.0], [false, true]);
+
+            BajajMeshGenerator.AddDelaunayEdges(mesh);
+
+            foreach (IFace face in mesh.Faces)
+            {
+                HashSet<int> shapeIds = [];
+                foreach (int iVert in face.iVerts)
+                {
+                    IShapeIndex index = mesh[iVert].ShapeIndex;
+                    if (index is not null)
+                        shapeIds.Add(index.ShapeIndex);
+                }
+
+                Assert.IsFalse(
+                    shapeIds.Count == 1 && mesh.Shapes[shapeIds.First()] is Polyline,
+                    "Bent open polylines must not receive same-shape Delaunay fill faces.");
+            }
+        }
+
+        private static Polyline ClosedSquarePolyline(double offsetX, double offsetY, double size) =>
+            new(
+            [
+                new Vector2(offsetX, offsetY),
+                new Vector2(offsetX + size, offsetY),
+                new Vector2(offsetX + size, offsetY + size),
+                new Vector2(offsetX, offsetY + size),
+                new Vector2(offsetX, offsetY),
+            ]);
+
+        /// <summary>
+        /// OPENCURVE LINESTRINGs that accidentally repeat the first point must be opened in InitializeShapes.
+        /// </summary>
+        [TestMethod]
+        public async Task InitializeShapes_OpenCurveWithClosingDuplicate_IsOpened()
+        {
+            Vector2[] closedPts =
+            [
+                new Vector2(0, 0),
+                new Vector2(10, 0),
+                new Vector2(10, 10),
+                new Vector2(0, 10),
+                new Vector2(0, 0),
+            ];
+            MorphologyGraph graph = new(1, new Scale(new AxisUnits(1, "nm"), new AxisUnits(1, "nm"), new AxisUnits(90, "nm")));
+            TestLocation loc = PolylineLocation(1, closedPts, LocationType.OPENCURVE, section: 1);
+            Assert.IsNotNull(loc.Geometry(), "Test WKT must parse as SqlGeometry.");
+            Assert.AreEqual(SupportedGeometryType.POLYLINE, loc.Geometry().GeometryType());
+
+            graph.AddNode(new MorphologyNode(1, loc, graph));
+
+            Dictionary<ulong, IShape2D> shapes = await SliceGraph.InitializeShapes(graph, Vector2.Zero, ContourSimplifyOptions.Disabled);
+            Assert.AreEqual(1, shapes.Count, $"Expected one shape, got keys: {string.Join(',', shapes.Keys)}");
+            Assert.IsTrue(shapes.TryGetValue(1, out IShape2D shape));
+            Assert.IsInstanceOfType(shape, typeof(Polyline));
+            Polyline line = (Polyline)shape;
+            Assert.AreEqual(4, line.PointCount, "OPENCURVE should drop the duplicate closing vertex.");
+            Assert.AreNotEqual(line.Points[0], line.Points[^1]);
+        }
+
+        /// <summary>
+        /// CLOSEDCURVE keeps first==last so a thin closed ribbon can still form; fill is blocked separately.
+        /// </summary>
+        [TestMethod]
+        public async Task InitializeShapes_ClosedCurveKeepsClosingDuplicate()
+        {
+            Vector2[] closedPts =
+            [
+                new Vector2(0, 0),
+                new Vector2(10, 0),
+                new Vector2(10, 10),
+                new Vector2(0, 10),
+                new Vector2(0, 0),
+            ];
+            MorphologyGraph graph = new(1, new Scale(new AxisUnits(1, "nm"), new AxisUnits(1, "nm"), new AxisUnits(90, "nm")));
+            graph.AddNode(new MorphologyNode(1, PolylineLocation(1, closedPts, LocationType.CLOSEDCURVE, section: 1), graph));
+
+            Dictionary<ulong, IShape2D> shapes = await SliceGraph.InitializeShapes(graph, Vector2.Zero, ContourSimplifyOptions.Disabled);
+            Assert.IsTrue(shapes.TryGetValue(1, out IShape2D shape));
+            Polyline line = (Polyline)shape;
+            Assert.AreEqual(5, line.PointCount, "CLOSEDCURVE should keep the closing duplicate.");
+        }
+
+        static TestLocation PolylineLocation(ulong id, Vector2[] points, LocationType typeCode, int section) =>
+            new()
+            {
+                ID = id,
+                ParentID = 1,
+                UnscaledZ = section,
+                Z = section * 90.0,
+                TypeCode = typeCode,
+                VolumeGeometryWKT = LineStringWkt(points)
+            };
+
+        static string LineStringWkt(IReadOnlyList<Vector2> points) =>
+            "LINESTRING (" + string.Join(", ", points.Select(p => string.Format(CultureInfo.InvariantCulture, "{0} {1}", p.X, p.Y))) + ")";
 
         private static Vector2[] PolylinePoints(Polyline line)
         {

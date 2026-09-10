@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using MathNet.Numerics;
+using MorphologyMesh;
 using VikingXNAGraphics;
 
 namespace MonogameTestbed
@@ -190,6 +191,29 @@ namespace MonogameTestbed
             public double CorrectionRadiusNm { get; set; }
 
             /// <summary>
+            /// Simplify closed polygon contours denser than one unique vertex per this many nanometres of length
+            /// (closing duplicate excluded). Polylines are never simplified. Default 20. Set &lt;= 0 to disable.
+            /// </summary>
+            [Option("contour-simplify-spacing-nm", Default = 20.0,
+                HelpText = "Simplify a closed polygon contour when it has more than 1 vertex per this many nm of length (exclude closing duplicate). Polylines are never simplified. Default 20. Set <= 0 to disable.")]
+            public double ContourSimplifySpacingNm { get; set; }
+
+            /// <summary>
+            /// Max distance (nm) from the simplified closed contour to the original when density simplify runs. Default 10.
+            /// </summary>
+            [Option("contour-simplify-tol-nm", Default = 10.0,
+                HelpText = "Max distance in nm from simplified closed contour to original when density simplify runs. Polylines are never simplified. Default 10.")]
+            public double ContourSimplifyTolNm { get; set; }
+
+            /// <summary>
+            /// Density-gated closed-contour simplify for BajajMulti / SliceGraph.Create. Geometry is already in nm.
+            /// </summary>
+            public ContourSimplifyOptions ContourSimplify =>
+                ContourSimplifySpacingNm <= 0 || ContourSimplifyTolNm <= 0
+                    ? ContourSimplifyOptions.Disabled
+                    : new ContourSimplifyOptions(ContourSimplifySpacingNm, ContourSimplifyTolNm);
+
+            /// <summary>
             /// The output file or path name
             /// </summary>
             [Option('o', "output", Required = false, HelpText = "Output folder name", Separator = ' ', Default = null)]
@@ -248,6 +272,17 @@ namespace MonogameTestbed
             public string ReproLocationsParam { get; set; }
 
             public List<ulong> ReproLocations { get; private set; }
+
+            /// <summary>
+            /// Text file with one failed slice per line (LocationIDs), typically written by BajajMultiTest as
+            /// <c>bajajmultitest_failed_slices.txt</c>. Each non-comment line becomes an ad-hoc BajajTest case.
+            /// </summary>
+            [Option("repro-locations-file", Required = false,
+                HelpText = "BAJAJTEST: text file with one slice per line of LocationIDs (from BajajMultiTest failed-slice report)")]
+            public string ReproLocationsFile { get; set; }
+
+            /// <summary>Parsed slices from <see cref="ReproLocationsFile"/> (each entry has at least two LocationIDs).</summary>
+            public List<ulong[]> ReproLocationSlicesFromFile { get; private set; }
 
             [Option("repro-tolerance", Required = false, HelpText = "Polygon simplification tolerance for --repro-locations", Default = 1.0)]
             public double ReproTolerance { get; set; }
@@ -376,6 +411,7 @@ namespace MonogameTestbed
                 ParseStartupMode();
                 ParseReproParam();
                 ParseReproLocations();
+                ParseReproLocationsFile();
                 LoadCaptureRequest();
                 MorphologyMesh.MeshPhaseTimings.Enabled = Timings;
             }
@@ -443,6 +479,45 @@ namespace MonogameTestbed
 
                 if (ReproLocations.Count < 2)
                     throw new ArgumentException("--repro-locations needs at least two LocationIDs to form a slice");
+            }
+
+            private void ParseReproLocationsFile()
+            {
+                if (string.IsNullOrWhiteSpace(ReproLocationsFile))
+                    return;
+
+                if (!File.Exists(ReproLocationsFile))
+                    throw new FileNotFoundException($"Repro locations file was not found: {ReproLocationsFile}");
+
+                ReproLocationSlicesFromFile = [];
+                int lineNumber = 0;
+                foreach (string rawLine in File.ReadLines(ReproLocationsFile))
+                {
+                    lineNumber++;
+                    string line = rawLine;
+                    int comment = line.IndexOf('#');
+                    if (comment >= 0)
+                        line = line[..comment];
+                    line = line.Trim();
+                    if (line.Length == 0)
+                        continue;
+
+                    List<ulong> ids = [];
+                    foreach (string chunk in line.Split([',', ';', ' ', '/'], StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        if (ulong.TryParse(chunk.Trim(), out ulong id) == false)
+                            throw new ArgumentException($"'{chunk}' on line {lineNumber} of --repro-locations-file is not a LocationID");
+                        ids.Add(id);
+                    }
+
+                    if (ids.Count < 2)
+                        throw new ArgumentException($"Line {lineNumber} of --repro-locations-file needs at least two LocationIDs");
+
+                    ReproLocationSlicesFromFile.Add([.. ids]);
+                }
+
+                if (ReproLocationSlicesFromFile.Count == 0)
+                    throw new ArgumentException($"--repro-locations-file '{ReproLocationsFile}' contained no LocationID slices");
             }
 
             private void LoadCaptureRequest()
@@ -610,6 +685,7 @@ namespace MonogameTestbed
 
             bool logToFile = Program.options.Log;
             bool logToConsole = Program.options.Verbose;
+            MorphologyMesh.BajajMeshGenerator.VerboseLogging = logToConsole;
 
             if (!logToFile && !logToConsole)
                 return;

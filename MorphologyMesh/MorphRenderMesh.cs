@@ -499,120 +499,186 @@ namespace MorphologyMesh
                 //Check for a corresponding edge, if it exists split on the corresponding edge
                 for (var iVert = 0; iVert < Face.Count; iVert++)
                 {
+                    int iNextVert = (iVert + 1) % Face.Count;
                     var vA = mesh[Face[iVert]];
-                    var vB = mesh[Face[iVert + 1]];
+                    var vB = mesh[Face[iNextVert]];
 
-                    EdgeKey key;
-                    if (mesh.Contains(vA.Index, vB.Index))
-                    {
-                        key = new EdgeKey(vA.Index, vB.Index);
-                    }
-                    else
-                    {
+                    if (!mesh.Contains(vA.Index, vB.Index))
                         continue;
-                    }
 
-                    var edge = mesh.GetEdge(key);
-                    if (edge.Type == EdgeType.CORRESPONDING)
-                    {
-                        //Split the face along the corresponding edge
-                        var iPrev = iVert - 1 < 0 ? Face.Count - 1 : iVert - 1;
-                        var iNext = iVert + 2 >= Face.Count ? 0 : iVert + 2;
+                    //TODO: When not CORRESPONDING, prefer the shortest diagonal instead of always cutting here.
+                    var iPrev = iVert - 1 < 0 ? Face.Count - 1 : iVert - 1;
+                    var iNext = (iVert + 2) % Face.Count;
 
-                        List<MorphMeshFace> listFaces =
-                        [
-                            new([Face[iPrev], Face[iVert], Face[iVert + 1]]),
-                            new([Face[iVert], Face[iVert + 1], Face[iNext]])
-                        ];
-                        return listFaces;
-                    }
-                    else
-                    {
-                        //TODO: Check for the shortest distance to cut the face along
-                        //Split the face along the corresponding edge
-                        var iPrev = iVert - 1 < 0 ? Face.Count - 1 : iVert - 1;
-                        var iNext = iVert + 2 >= Face.Count ? 0 : iVert + 2;
-
-                        List<MorphMeshFace> listFaces =
-                        [
-                            new([Face[iPrev], Face[iVert], Face[iVert + 1]]),
-                            new([Face[iVert], Face[iVert + 1], Face[iNext]])
-                        ];
-                        return listFaces;
-                    }
+                    List<MorphMeshFace> listFaces =
+                    [
+                        new([Face[iPrev], Face[iVert], Face[iNextVert]]),
+                        new([Face[iVert], Face[iNextVert], Face[iNext]])
+                    ];
+                    return listFaces;
                 }
 
                 return [newFace];
             }
             else
             {
-                var CleanedFace = TryRemoveCorrespondingVerticiesFromRegionFaces(mesh, Face);
-
-                if (CleanedFace.Count <= 2)
-                    return [];
-
-                //Nothing left but a single face we can create.  Build it from the cleaned perimeter: the original
-                //Face still holds the corresponding verticies that were just removed, so using it here produced a
-                //face with more verticies than the region actually has.
-                if (CleanedFace.Count == 3)
+                // Corresponding verts share XY and break triangulation. Strip adjacent pairs first, then
+                // either triangulate a clean perimeter, split non-adjacent duplicates into two loops, or
+                // triangulate a half that only duplicates at its endpoints (closed in XY).
+                while (RemoveFirstAdjacentCorrespondingVerticies(mesh, ref Face))
                 {
-                    MorphMeshFace newFace = new(CleanedFace);
-                    return [newFace];
                 }
 
-                //Create a polygon for the region
-                Polygon regionBorder = new(CleanedFace.EnsureClosedRing().Select(iVert => mesh[iVert].Position.XY()).ToArray());
-                PolygonVertexEnum vertEnumerator = new(regionBorder);
+                if (Face.Count <= 2)
+                    return [];
 
-                Dictionary<PolygonIndex, int> IndexToVertex = vertEnumerator.ToDictionary(pIndex => pIndex, pIndex => pIndex.VertexIndex); //Converts a PointIndex to a Mesh Index
+                if (Face.Count == 3)
+                    return [new MorphMeshFace(Face)];
 
-                //string json = regionBorder.ToJSON();
+                if (PerimeterHasInteriorDuplicateXY(mesh, Face))
+                {
+                    if (!TrySplitPerimeterAtDuplicateXY(mesh, Face, out List<int> partA, out List<int> partB))
+                    {
+                        Trace.WriteLine(
+                            $"Skipping region perimeter with corresponding points that could not be split ({Face.Count} verts).");
+                        return [];
+                    }
 
-                //Polygon loadedFromJSON = GeometryJSONExtensions.PolygonFromJSON(json);
-                //Triangulate the region
+                    List<MorphMeshFace> splitFaces = [];
+                    splitFaces.AddRange(RegionPerimeterToFaces(mesh, partA, OnProgress));
+                    splitFaces.AddRange(RegionPerimeterToFaces(mesh, partB, OnProgress));
+                    return splitFaces;
+                }
+
+                //Create a polygon for the region. Endpoint-only XY duplicates (a split half closed in XY)
+                //are fine: EnsureClosedRing collapses them to a closed 2D ring.
+                List<int> closedIndices = [.. Face.EnsureClosedRing()];
+                Polygon regionBorder = new([.. closedIndices.Select(iVert => mesh[iVert].Position.XY())]);
+
                 var regionMesh = regionBorder.Triangulate(iPoly: 0, OnProgress: OnProgress);
 
                 List<MorphMeshFace> listRegionFaces = new(regionMesh.Faces.Count);
 
-                //Experimental: Handle the case where we had to add new points to the mesh.  It would be better if these points weren't added at all...
-
-                //for(int i = Face.Count; i < regionMesh.Vertices.Count; i++)
-                //{
-                //mesh.AddVertex(regionMesh.Vertices[i])
-                //}
-
-                //List<int[]> listXYPointIndicies = listTriangles.Select(t => regionMesh.IndiciesForPointsXY(t.Points)).ToList();
-                //List<int[]> listMeshFaces = listXYPointIndicies.Select(iPoints => iPoints.Select(i => Face[i]).ToArray()).ToList();
-                /*
-                List<LineSegment> lines = regionMesh.ToLines();
-
-                List<int[]> listLineIndicies = lines.Select(l => regionMesh.IndiciesForPointsXY(new Vector2[] { l.A, l.B })).ToList();
-                 */
                 foreach (var f in regionMesh.Faces)
                 {
-                    //if (false == tri.Points.All(p => PointToMeshIndex.ContainsKey(p)))
-                    //    continue; 
-
-                    //int[] iMeshVerts = regionMesh.IndiciesForPointsXY(tri.Points);
-                    int[] iMeshVerts;
-                    //try
-                    //{
-                    //iMeshVerts = f.iVerts.Select(v => IndexToVertex[regionMesh[v].Data]).ToArray();
-                    iMeshVerts = [.. f.iVerts.Select(v => CleanedFace[v])];
-                    //}
-                    //catch(System.Collections.Generic.KeyNotFoundException e)
-                    //{
-                    //    Trace.WriteLine("Key not found when assigning triangulated faces to regions");
-                    //    continue;
-                    //}
-
-                    //MorphMeshFace newFace = new MorphMeshFace(iMeshVerts.Select(i => Face[i]));
+                    int[] iMeshVerts = [.. f.iVerts.Select(v => closedIndices[v])];
                     MorphMeshFace newFace = new(iMeshVerts);
                     listRegionFaces.Add(newFace);
                 }
 
                 return listRegionFaces;
             }
+        }
+
+        /// <summary>
+        /// True when some XY appears more than once on the perimeter excluding the trivial closed-ring
+        /// case where only the first and last entries share XY.
+        /// </summary>
+        private static bool PerimeterHasInteriorDuplicateXY(MorphRenderMesh mesh, List<int> face)
+        {
+            if (face is null || face.Count < 2)
+                return false;
+
+            Vector2[] xys = [.. face.Select(i => mesh[i].Position.XY())];
+            bool endpointsMatch = xys[0] == xys[^1];
+
+            for (int i = 0; i < xys.Length; i++)
+            {
+                int count = 0;
+                for (int j = 0; j < xys.Length; j++)
+                {
+                    if (xys[i] == xys[j])
+                        count++;
+                }
+
+                if (count <= 1)
+                    continue;
+
+                // First/last only: a split half closed in XY — not an interior pinch.
+                if (endpointsMatch && count == 2
+                    && (i == 0 || i == xys.Length - 1)
+                    && xys[i] == xys[0])
+                    continue;
+
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Split a perimeter at a non-adjacent duplicate-XY pair (usually mutual Corresponding partners)
+        /// into two closed-in-XY loops that can be triangulated separately.
+        /// </summary>
+        private static bool TrySplitPerimeterAtDuplicateXY(MorphRenderMesh mesh, List<int> face, out List<int> partA, out List<int> partB)
+        {
+            partA = null;
+            partB = null;
+            int n = face.Count;
+            if (n < 4)
+                return false;
+
+            static bool AreCyclicAdjacent(int i, int j, int count)
+            {
+                int dist = Math.Abs(i - j);
+                return dist == 1 || dist == count - 1;
+            }
+
+            // Prefer mutual corresponding partners on the perimeter.
+            for (int i = 0; i < n; i++)
+            {
+                MorphMeshVertex vi = mesh[face[i]];
+                if (!vi.Corresponding.HasValue)
+                    continue;
+
+                int j = face.IndexOf(vi.Corresponding.Value);
+                if (j < 0 || j == i || AreCyclicAdjacent(i, j, n))
+                    continue;
+                if (BuildSplitParts(face, i, j, out partA, out partB))
+                    return true;
+            }
+
+            // Fallback: any non-adjacent duplicate XY.
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 xy = mesh[face[i]].Position.XY();
+                for (int j = i + 1; j < n; j++)
+                {
+                    if (mesh[face[j]].Position.XY() != xy)
+                        continue;
+                    if (AreCyclicAdjacent(i, j, n))
+                        continue;
+                    if (BuildSplitParts(face, i, j, out partA, out partB))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool BuildSplitParts(List<int> face, int i, int j, out List<int> partA, out List<int> partB)
+        {
+            partA = null;
+            partB = null;
+            if (i > j)
+                (i, j) = (j, i);
+
+            // Arc i..j inclusive, and the complementary arc j..i inclusive (wrapping).
+            partA = face.GetRange(i, j - i + 1);
+            partB = [];
+            for (int k = j; k < face.Count; k++)
+                partB.Add(face[k]);
+            for (int k = 0; k <= i; k++)
+                partB.Add(face[k]);
+
+            if (partA.Count < 3 || partB.Count < 3)
+            {
+                partA = null;
+                partB = null;
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -679,71 +745,6 @@ namespace MorphologyMesh
             }
 
             return false;
-        }
-
-        /// <summary>
-        /// The region mesh generator cannot accurately triangulate regions with two corresponding verticies at the same X,Y position.
-        /// This function attempts to remove such verticies from the region.
-        /// At this time it only handles cases where there is one face on the corresponding edge. It could be improved by handling the case where the 
-        /// corresponding edge is missing both faces.  This would be done by splitting the region at the corresponding vertex into two parts and meshing both separately.       
-        /// </summary>
-        /// <param name="mesh"></param>
-        /// <param name="Face"></param>
-        /// <returns></returns>
-        private static List<int> TryRemoveCorrespondingVerticiesFromRegionFaces(MorphRenderMesh mesh, List<int> Face)
-        {
-            Debug.Assert(Face.Count >= 4, "I expect the 3 or 4 vert cases to be handled earlier");
-
-            //Triangulate the region border to identify faces of the region
-            var region_border_points = Face.Select(iVert => mesh[iVert].Position).ToArray();
-
-            //If there are any duplicate points that indicates a corresponding contour was involved.  In this case we cut the polygon into two halves and triangulate those
-            var countInstances = region_border_points.Select(v => region_border_points.Count(v2 => v2.XY() == v.XY())).ToArray();
-
-            if (countInstances.Max() <= 1)
-            {
-                return Face;
-            }
-
-            /////////////////////////////////////////////////////////////
-            //Case 0: 
-            //If the corresponding verticies are adjacent in the face then we can add a quad using the index before and after the corresponding verticies
-            // 
-            // Z = 0    <-- A -- B                  <-- A -- B
-            //                   |      becomes         | \  |  with B,C being removed from the face
-            // Z = 0    <-- D -- C                  <-- D -- C
-
-            while (RemoveFirstAdjacentCorrespondingVerticies(mesh, ref Face))
-            {
-                //Remove every instance of an adjacent corresponding vertex we can find
-            }
-
-            //If there are only 3 verts remaining in the face the caller can create a region...
-            if (Face.Count <= 3)
-                return Face;
-
-            region_border_points = [.. Face.Select(iVert => mesh[iVert].Position)];
-
-            //TODO: The next case is not implemented, so throw an error if corresponding verts remain in region
-            countInstances = [.. region_border_points.Select(v => region_border_points.Count(v2 => v2.XY() == v.XY()))];
-
-            if (countInstances.Max() <= 1)
-            {
-                return Face;
-            }
-
-            var corresponding = mesh[Face].Where(v => v.Corresponding.HasValue).First();
-
-#if DEBUG
-            throw new NotImplementedException($"Corresponding points in region {corresponding.ShapeIndex}");
-#else
-            return new List<int>();
-#endif
-            //If there are corresponding verticies we can have duplicate points in the set which will break triangulation.
-            // //Break the corresponding verticies into sub-polygons and build triangles for each
-            //
-
-            //Find the verticies before and after the corresponding pair and add a face
         }
 
         /// <summary>

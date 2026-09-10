@@ -269,6 +269,10 @@ namespace MonogameTestbed
                 if (edge.Type == EdgeType.CORRESPONDING) //Avoid creating perfectly vertical lines with the same start and end points
                     continue;
 
+                // Degenerate XY (same start/end) throws in LineSegment; skip rather than abort the whole view.
+                if (mesh.Vertices[edgeKey.A].Position.XY() == mesh.Vertices[edgeKey.B].Position.XY())
+                    continue;
+
                 LineSegment segment = mesh.ToSegment(edgeKey);
                 LineView lineView = new(segment, lineWidth, edge.Type.GetColor(), LineStyle.Standard);
                 lineViews.Add(lineView);

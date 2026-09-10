@@ -32,6 +32,7 @@ namespace MonogameTestbed
         public PointSetView IncompletedVertexView = null;
 
         //Top-level cell shells are translucent with backface culling so nested children remain visible inside.
+        //Depth write stays on so only the nearest shell surface wins; far walls of the same body do not blend through.
         //Store CullClockwiseFace: with --invert-z, CullModeForView flips winding-sensitive cull modes so the
         //outward (front) faces remain. CullCounterClockwiseFace + InvertZ culls the exterior instead.
         //Child sheets stay opaque and double-sided (CullMode.None) - a flat wall between sections has one winding.
@@ -52,8 +53,6 @@ namespace MonogameTestbed
         /// Top-level meshes draw at half opacity so children inside the shell remain visible.
         /// </summary>
         internal const float TopLevelMeshOpacity = 0.5f;
-
-        public ConcurrentQueue<BajajGeneratorMesh> CompletedMeshes = new();
 
         public int? iShownLineView = null;
         public List<LineSetView> listLineViews = [];
@@ -126,7 +125,7 @@ namespace MonogameTestbed
 
         /// <summary>
         /// When false, hides only red (critical / non-manifold) error overlays. Toggle with R or View menu.
-        /// Requires <see cref="ShowAssemblyBoundingBoxes"/>.
+        /// Requires <see cref="ShowAssemblyBoundingBoxes"/>. Off by default in non-DEBUG builds.
         /// </summary>
         public bool ShowRedErrorBoxes
         {
@@ -136,9 +135,15 @@ namespace MonogameTestbed
 
         bool _showInProgressSliceStatus = true;
         bool _showSectionReadySliceStatus = true;
+#if DEBUG
         bool _showMinorIssueSliceStatus = true;
         bool _showWarningSliceStatus = true;
         bool _showCriticalSliceStatus = true;
+#else
+        bool _showMinorIssueSliceStatus = false;
+        bool _showWarningSliceStatus = false;
+        bool _showCriticalSliceStatus = false;
+#endif
 
         public bool ShowInProgressSliceStatus
         {
@@ -266,7 +271,6 @@ namespace MonogameTestbed
         /// Used to lock the mesh views for individual slices
         /// </summary>
         private readonly SemaphoreSlim drawlock = new(1);
-        readonly System.Threading.Thread BuildCompositeThread = null;
         private int _meshGeneration;
         private int _generateRunning;
 
@@ -282,6 +286,12 @@ namespace MonogameTestbed
 
         /// <summary>Last translation applied in <see cref="ApplySliceGraphPlacement"/>; skip redundant ModelMatrix writes.</summary>
         private Vector3 _lastAppliedPlacementOffset = new(float.NaN);
+
+        /// <summary>
+        /// Incomplete overlays are allocated after the first placement pass; remember which instance we stamped
+        /// so a replaced view cannot sit forever in slice-local space under an offset-equality early-out.
+        /// </summary>
+        private MeshAssemblyPlannerIncompleteView _lastPlacedIncompleteView;
 
         /// <summary>
         /// Slices that produced no geometry because their topology could not be built.  Surfaced so a run that
@@ -304,12 +314,35 @@ namespace MonogameTestbed
             DepthBufferFunction = CompareFunction.LessEqual
         };
 
+        /// <summary>
+        /// Translucent top-level shells: test and write depth so only the nearest fragment along a ray
+        /// updates color. Farther shell surfaces (e.g. the far wall of a closed cell) fail the depth test
+        /// instead of alpha-blending through. Opaque children are drawn first, so their pixels remain
+        /// under the blended shell.
+        /// </summary>
         static readonly DepthStencilState TranslucentDepthState = new()
         {
             DepthBufferEnable = true,
             StencilEnable = false,
-            DepthBufferWriteEnable = false,
+            DepthBufferWriteEnable = true,
             DepthBufferFunction = CompareFunction.LessEqual
+        };
+
+        /// <summary>
+        /// Depth-only: write Z without touching color so back faces can occlude exterior children
+        /// behind the cell before the translucent front pass runs.
+        /// </summary>
+        static readonly BlendState DepthOnlyBlendState = new()
+        {
+            ColorWriteChannels = ColorWriteChannels.None
+        };
+
+        /// <summary>Opposite winding cull so a front-face-culled mesh draws its back faces.</summary>
+        internal static CullMode FlipCullMode(CullMode mode) => mode switch
+        {
+            CullMode.CullClockwiseFace => CullMode.CullCounterClockwiseFace,
+            CullMode.CullCounterClockwiseFace => CullMode.CullClockwiseFace,
+            _ => mode
         };
 
         public BajajMultiOTVAssignmentView(MorphologyGraph graph, Geometry.Vector2? sliceOrigin = null)
@@ -331,11 +364,6 @@ namespace MonogameTestbed
             */
 
             ResetMesh();
-
-
-            //BuildCompositeThread = new System.Threading.Thread(this.MeshCompositeTask);
-            //BuildCompositeThread.IsBackground = true;
-            //BuildCompositeThread.Start();
         }
 
 
@@ -344,8 +372,6 @@ namespace MonogameTestbed
         /// </summary>
         public void OnUnloadContent()
         {
-            if (BuildCompositeThread is null)
-                return;
         }
 
         private void OnSliceCompleted(Slice slice, BajajGeneratorMesh mesh, bool Success) => this.AddMesh(slice, mesh, Success);
@@ -361,6 +387,7 @@ namespace MonogameTestbed
         {
             InvalidateRenderedBoundsCache();
             _lastAppliedPlacementOffset = new Vector3(float.NaN);
+            _lastPlacedIncompleteView = null;
             //Keep the live view in the slice-graph frame even across ResetMesh; children share the
             //parent SliceOrigin and must not fall back to a transient null offset mid-regeneration.
             _placementOffset = new Vector3((float)SliceOrigin.X, (float)SliceOrigin.Y, 0f);
@@ -408,8 +435,10 @@ namespace MonogameTestbed
                     ResetMesh();
 
                 Trace.WriteLine("Begin Slice graph construction");
-                SliceGraph sliceGraph = await SliceGraph.Create(Graph, 2.0, SliceOrigin);
-                Trace.WriteLine("End Slice graph construction");
+                //Two-step creation: the plan and the in-progress overlay exist before any topology does, and the
+                //topology initializer feeds contours into the overlay as each slice finishes.  A large cell used to
+                //show nothing until every topology was done and then every contour at once.
+                SliceGraph sliceGraph = await SliceGraph.CreateWithoutTopology(Graph, Program.options?.ContourSimplify ?? ContourSimplifyOptions.Default, SliceOrigin);
 
                 if (!IsCurrent())
                     return;
@@ -424,15 +453,40 @@ namespace MonogameTestbed
                 if (!IsCurrent())
                     return;
 
+                plan.MeshColor = ColorForGraph(Graph);
                 meshAssemblyPlan = plan;
                 _sliceGraph = sliceGraph;
                 meshIncompleteView?.CancelRebuild();
-                meshIncompleteView = new MeshAssemblyPlannerIncompleteView(meshAssemblyPlan, sliceGraph);
+                MeshAssemblyPlannerIncompleteView incompleteView = new(plan, sliceGraph, deferLeafContours: true);
+                meshIncompleteView = incompleteView;
                 ApplySliceStatusFiltersToIncompleteView();
                 meshCompletedView = new MeshAssemblyPlannerCompletedView(meshAssemblyPlan)
                 {
                     Color = ColorForGraph(Graph)
                 };
+                //Overlays and completed models are created after the first Draw may already have cached
+                //placement as "applied". Force the next ApplySliceGraphPlacement to stamp ModelMatrix.
+                _lastAppliedPlacementOffset = new Vector3(float.NaN);
+
+                //The handler captures this generation's view rather than the field so a restart mid-topology
+                //cannot feed a replaced view's contours into the new one.
+                await sliceGraph.InitializeTopologyAsync((slice, topology) =>
+                {
+                    if (!IsCurrent())
+                        return;
+                    incompleteView.PublishLeafContour(slice.Key, topology);
+                }).ConfigureAwait(false);
+                Trace.WriteLine("End Slice graph construction");
+
+                if (!IsCurrent())
+                    return;
+
+                //Branch AABBs only draw once their leaves have meshed, so they need not delay the first faces.
+                Task branchOverlays = Task.Run(() =>
+                {
+                    if (IsCurrent())
+                        incompleteView.CompleteBranchOverlays();
+                });
 
                 await BajajMeshGenerator.ConvertToMesh(sliceGraph, (slice, mesh, success) =>
                 {
@@ -440,6 +494,17 @@ namespace MonogameTestbed
                         return;
                     OnSliceCompleted(slice, mesh, success);
                 }).ConfigureAwait(false);
+
+                await branchOverlays.ConfigureAwait(false);
+
+                if (!IsCurrent())
+                {
+                    plan.Abandon();
+                    return;
+                }
+
+                //Merges run on a dedicated consumer; wait until the root composite is final.
+                await plan.AssembledTask.ConfigureAwait(false);
 
                 if (!IsCurrent())
                     return;
@@ -617,40 +682,6 @@ namespace MonogameTestbed
             LabelView label = new(ViewLabels.ToString(), scene.VisibleWorldBounds.UpperLeft, anchor: Anchor.BottomLeft, scaleFontWithScene: false);
             LabelView.Draw(window.spriteBatch, window.fontArial, scene, new LabelView[] { label });
         }
-        /*
-        /// <summary>
-        /// Dequeues entries from the CompletedMeshes
-        /// </summary>
-        private void MeshCompositeTask()
-        {
-            while(true)
-            {
-                bool NewMesh = false;
-                while(CompletedMeshes.TryDequeue(out BajajGeneratorMesh completedMesh))
-                {
-                    //CompositeMeshModel.AddSlice(completedMesh)
-                    //System.Threading.Thread.Sleep(1000); 
-                    //var leaf = meshAssemblyPlan.Slices[completedMesh.Slice.Key];
-
-                    NewMesh = true;
-                }
-
-                if (NewMesh)
-                {
-                    lock (drawlock)
-                    { 
-                        CompositeMeshView.models.Clear();
-
-                        foreach (var model in meshAssemblyPlan.MeshModels)
-                        {
-                            CompositeMeshView.models.Add(model);
-                        }
-                    }
-                }
-
-                System.Threading.Thread.Sleep(100); //Consume all of the objects in the queue every interval
-            }
-        }*/
 
         public void Draw3D(MonoTestbed window, Scene3D scene)
         {
@@ -691,22 +722,53 @@ namespace MonogameTestbed
                         cull, FillMode.WireFrame, incompleteModels);
             }
 
+            DrawSolidCompositeMesh(window, scene, cull);
+        }
+
+        /// <summary>
+        /// Depth-only back faces of a top-level shell. Run before opaque children so geometry behind the
+        /// cell fails the depth test; interior children (in front of that far wall) still draw and remain
+        /// visible under the later translucent front pass.
+        /// Skipped when cull is <see cref="CullMode.None"/> (both faces already drawn in the color pass).
+        /// </summary>
+        public void Draw3DShellDepthOccluder(MonoTestbed window, Scene3D scene)
+        {
+            if (!IsTopLevelStructure || !ShowCompositeMesh || CompositeMeshView is null)
+                return;
+
+            CullMode frontCull = BajajMultiAssignmentTest.CullModeForView(CullMode);
+            if (frontCull == CullMode.None)
+                return;
+
+            ApplySliceGraphPlacement();
+            scene.Viewport = window.GraphicsDevice.Viewport;
+
+            var device = window.GraphicsDevice;
+            BlendState previousBlend = device.BlendState;
+            DepthStencilState previousDepth = device.DepthStencilState;
+            try
+            {
+                device.BlendState = DepthOnlyBlendState;
+                device.DepthStencilState = OpaqueDepthState;
+                DrawSolidCompositeMesh(window, scene, FlipCullMode(frontCull));
+            }
+            finally
+            {
+                device.BlendState = previousBlend;
+                device.DepthStencilState = previousDepth;
+            }
+        }
+
+        void DrawSolidCompositeMesh(MonoTestbed window, Scene3D scene, CullMode cull)
+        {
             bool drewSolidMesh = false;
             var rootMeshModel = meshAssemblyPlan?.Root?.MeshModel;
             if (rootMeshModel?.model?.Vertices?.Length > 0)
             {
-                try
-                {
-                    rootMeshModel.ModelLock.EnterReadLock();
-                    _solidDrawModels[0] = rootMeshModel.model;
-                    MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
-                        window.basicEffect, cull, FillMode.Solid, _solidDrawModels);
-                    drewSolidMesh = true;
-                }
-                finally
-                {
-                    rootMeshModel.ModelLock.ExitReadLock();
-                }
+                _solidDrawModels[0] = rootMeshModel.model;
+                MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
+                    window.basicEffect, cull, FillMode.Solid, _solidDrawModels);
+                drewSolidMesh = true;
             }
 
             if (!drewSolidMesh && _assembledDisplayModel != null)
@@ -728,32 +790,35 @@ namespace MonogameTestbed
         private void ApplySliceGraphPlacement()
         {
             Vector3 offset = SliceGraphToVolumeOffset;
-            //Placement is a pure translation that only changes when the structure's frame is recomputed.
-            //Rewriting every ModelMatrix (and every incomplete overlay) each frame dominated camera moves
-            //once dozens of child wrap views were assembled.
-            bool placementChanged = offset != _lastAppliedPlacementOffset;
-            if (!placementChanged)
-                return;
-
-            _lastAppliedPlacementOffset = offset;
             Matrix m = Matrix.CreateTranslation(offset);
+
+            bool offsetChanged = offset != _lastAppliedPlacementOffset;
+            bool incompleteChanged = !ReferenceEquals(_lastPlacedIncompleteView, meshIncompleteView);
+            if (offsetChanged || incompleteChanged)
+            {
+                //Bounding boxes keep their size in their own ModelMatrix, so they compose placement.
+                meshIncompleteView?.ApplyPlacement(m);
+                _lastPlacedIncompleteView = meshIncompleteView;
+            }
+
+            //Mesh models are born with Identity ModelMatrix as slices merge. A pure offset-equality early-out
+            //left those new models in slice-local space while the camera framed volume bounds (children that
+            //had already been stamped looked correct; parent progress sat in a cloud offset by SliceOrigin).
             var root = meshAssemblyPlan?.Root?.MeshModel?.model;
-            if (root != null)
+            if (root != null && root.ModelMatrix.Translation != offset)
                 root.ModelMatrix = m;
-            if (_assembledDisplayModel != null)
+            if (_assembledDisplayModel != null && _assembledDisplayModel.ModelMatrix.Translation != offset)
                 _assembledDisplayModel.ModelMatrix = m;
             if (meshCompletedView?.MeshModels != null)
             {
                 foreach (var model in meshCompletedView.MeshModels)
                 {
-                    if (model != null)
+                    if (model != null && model.ModelMatrix.Translation != offset)
                         model.ModelMatrix = m;
                 }
             }
 
-            //Bounding boxes keep their size in their own ModelMatrix, so they compose placement instead of
-            //taking it verbatim like the mesh models above.
-            meshIncompleteView?.ApplyPlacement(m);
+            _lastAppliedPlacementOffset = offset;
         }
 
         /// <summary>
@@ -773,6 +838,7 @@ namespace MonogameTestbed
             _placementOffset = new Vector3((float)SliceOrigin.X, (float)SliceOrigin.Y, 0f);
             InvalidateRenderedBoundsCache();
             _lastAppliedPlacementOffset = new Vector3(float.NaN);
+            _lastPlacedIncompleteView = null;
         }
 
         /// <summary>
@@ -1149,7 +1215,8 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
     }
 
     /// <summary>
-    /// Opaque (child) structures first, then translucent top-level shells, so interiors stay visible.
+    /// Opaque (child) structures first, then translucent top-level shells. <see cref="Draw"/> also
+    /// inserts a top-level back-face depth occluder pass before children.
     /// </summary>
     void PublishWrapViewsSnapshot()
     {
@@ -1254,8 +1321,8 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
     double _lastPickMilliseconds;
 
     BajajMultiOTVAssignmentView _selectedView;
-    MeshModel<VertexPositionNormalColor> _selectedModel;
-    ReaderWriterLockSlim _selectedModelLock;
+    SliceGraphMeshModel _selectedSliceGraphModel;
+    MeshModel<VertexPositionNormalColor> _selectedAssembledModel;
     Color[] _selectedOriginalColors;
     int? _selectedSliceZ;
 
@@ -1297,33 +1364,25 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
     /// </summary>
     void ClearMeshSelection()
     {
-        if (_selectedModel?.Vertices != null && _selectedOriginalColors != null)
+        if (_selectedOriginalColors != null)
         {
-            bool locked = false;
-            try
+            if (_selectedSliceGraphModel != null)
             {
-                if (_selectedModelLock != null)
-                {
-                    _selectedModelLock.EnterWriteLock();
-                    locked = true;
-                }
-
-                int n = Math.Min(_selectedModel.Vertices.Length, _selectedOriginalColors.Length);
-                for (int i = 0; i < n; i++)
-                    _selectedModel.Vertices[i].Color = _selectedOriginalColors[i];
-
-                _selectedModel.InvalidateBuffers();
+                Color[] restore = _selectedOriginalColors;
+                _selectedSliceGraphModel.EditWorkingVertexColors(_ => restore);
             }
-            finally
+            else if (_selectedAssembledModel?.Vertices != null)
             {
-                if (locked)
-                    _selectedModelLock.ExitWriteLock();
+                int n = Math.Min(_selectedAssembledModel.Vertices.Length, _selectedOriginalColors.Length);
+                for (int i = 0; i < n; i++)
+                    _selectedAssembledModel.Vertices[i].Color = _selectedOriginalColors[i];
+                _selectedAssembledModel.InvalidateBuffers();
             }
         }
 
         _selectedView = null;
-        _selectedModel = null;
-        _selectedModelLock = null;
+        _selectedSliceGraphModel = null;
+        _selectedAssembledModel = null;
         _selectedOriginalColors = null;
         _selectedSliceZ = null;
         _selectionReadout = null;
@@ -1368,54 +1427,73 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
     {
         ClearMeshSelection();
 
-        if (!view.TryGetSelectableDisplayModel(out var model, out var modelLock))
-            return;
-
         var composite = view.meshAssemblyPlan?.Root?.MeshModel?.composite;
-        if (composite is null || model.Vertices is null)
+        if (composite is null)
             return;
 
         int sliceZ = ResolveSelectedSliceZ(composite, iVerts);
-        int vertCount = Math.Min(model.Vertices.Length, composite.Vertices.Count);
+        var rootModel = view.meshAssemblyPlan?.Root?.MeshModel;
 
-        bool locked = false;
-        try
+        if (rootModel != null)
         {
-            if (modelLock != null)
+            Color[] originals = null;
+            bool applied = rootModel.EditWorkingVertexColors(working =>
             {
-                modelLock.EnterWriteLock();
-                locked = true;
-            }
+                originals = new Color[working.Count];
+                Color[] next = new Color[working.Count];
+                int vertCount = Math.Min(working.Count, composite.Vertices.Count);
+                for (int i = 0; i < working.Count; i++)
+                    originals[i] = working[i].Color;
 
-            Color[] originals = new Color[model.Vertices.Length];
-            for (int i = 0; i < model.Vertices.Length; i++)
-                originals[i] = model.Vertices[i].Color;
+                for (int i = 0; i < working.Count; i++)
+                    next[i] = working[i].Color;
 
-            for (int i = 0; i < vertCount; i++)
-            {
-                if ((int)Math.Round(composite[i].Position.Z) != sliceZ)
-                    continue;
+                for (int i = 0; i < vertCount; i++)
+                {
+                    if ((int)Math.Round(composite[i].Position.Z) != sliceZ)
+                        continue;
+                    next[i] = InvertColor(originals[i]);
+                }
 
-                model.Vertices[i].Color = InvertColor(originals[i]);
-            }
+                return next;
+            });
 
-            model.InvalidateBuffers();
+            if (!applied || originals is null)
+                return;
 
             _selectedView = view;
-            _selectedModel = model;
-            _selectedModelLock = modelLock;
+            _selectedSliceGraphModel = rootModel;
             _selectedOriginalColors = originals;
             _selectedSliceZ = sliceZ;
+            return;
         }
-        finally
+
+        if (!view.TryGetSelectableDisplayModel(out var model, out _) || model.Vertices is null)
+            return;
+
+        int assembledCount = Math.Min(model.Vertices.Length, composite.Vertices.Count);
+        Color[] assembledOriginals = new Color[model.Vertices.Length];
+        for (int i = 0; i < model.Vertices.Length; i++)
+            assembledOriginals[i] = model.Vertices[i].Color;
+
+        for (int i = 0; i < assembledCount; i++)
         {
-            if (locked)
-                modelLock.ExitWriteLock();
+            if ((int)Math.Round(composite[i].Position.Z) != sliceZ)
+                continue;
+            model.Vertices[i].Color = InvertColor(assembledOriginals[i]);
         }
+
+        model.InvalidateBuffers();
+        _selectedView = view;
+        _selectedAssembledModel = model;
+        _selectedOriginalColors = assembledOriginals;
+        _selectedSliceZ = sliceZ;
     }
 
     /// <summary>
     /// Hit-test at a screen pixel. Misses clear the selection display.
+    /// Prefers nested (non-top-level) meshes when both a translucent parent shell and a child
+    /// intersect the ray, matching what the user sees through the shell.
     /// </summary>
     void PickMeshAtScreen(float screenX, float screenY)
     {
@@ -1427,9 +1505,13 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
 
         Stopwatch timer = Stopwatch.StartNew();
 
-        BajajMultiOTVAssignmentView hitView = null;
-        int[] hitVerts = null;
-        double nearest = double.MaxValue;
+        BajajMultiOTVAssignmentView hitChildView = null;
+        int[] hitChildVerts = null;
+        double nearestChild = double.MaxValue;
+
+        BajajMultiOTVAssignmentView hitTopView = null;
+        int[] hitTopVerts = null;
+        double nearestTop = double.MaxValue;
 
         foreach (var wrapView in WrapViews)
         {
@@ -1439,13 +1521,26 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
             if (!wrapView.TryPickCompositeFace(ray, out int[] iVerts, out double distance))
                 continue;
 
-            if (distance >= nearest)
-                continue;
-
-            nearest = distance;
-            hitVerts = iVerts;
-            hitView = wrapView;
+            if (!wrapView.IsTopLevelStructure)
+            {
+                if (distance >= nearestChild)
+                    continue;
+                nearestChild = distance;
+                hitChildVerts = iVerts;
+                hitChildView = wrapView;
+            }
+            else
+            {
+                if (distance >= nearestTop)
+                    continue;
+                nearestTop = distance;
+                hitTopVerts = iVerts;
+                hitTopView = wrapView;
+            }
         }
+
+        BajajMultiOTVAssignmentView hitView = hitChildView ?? hitTopView;
+        int[] hitVerts = hitChildView != null ? hitChildVerts : hitTopVerts;
 
         timer.Stop();
         _lastPickMilliseconds = timer.Elapsed.TotalMilliseconds;
@@ -1716,7 +1811,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
             }
         }
 
-        ReportDroppedSlices();
+        ReportFailedSlices();
 
         Console.WriteLine($"All rendering complete");
         Console.WriteLine(MeshPhaseTimings.Report());
@@ -1934,16 +2029,34 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
         scene3D.World = ViewZAxisWorld;
         window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, MonoTestbed.DefaultBackground, 1.0f, 0);
 
-        foreach (var wrapView in WrapViews)
+        if (Draw3D)
         {
-            if (!Draw3D)
+            //1) Top-level back faces write depth only so exterior children behind the cell are occluded.
+            //2) Opaque children.
+            //3) Translucent top-level front faces (nearest shell surface + alpha over interiors).
+            IReadOnlyList<BajajMultiOTVAssignmentView> views = WrapViews;
+            foreach (var wrapView in views)
             {
+                if (wrapView != null && wrapView.IsTopLevelStructure)
+                    wrapView.Draw3DShellDepthOccluder(window, scene3D);
+            }
+
+            foreach (var wrapView in views)
+            {
+                if (wrapView != null && !wrapView.IsTopLevelStructure)
+                    wrapView.Draw3D(window, scene3D);
+            }
+
+            foreach (var wrapView in views)
+            {
+                if (wrapView != null && wrapView.IsTopLevelStructure)
+                    wrapView.Draw3D(window, scene3D);
+            }
+        }
+        else
+        {
+            foreach (var wrapView in WrapViews)
                 wrapView?.Draw(window, scene);
-            }
-            else
-            {
-                wrapView?.Draw3D(window, scene3D);
-            }
         }
 
         if (boundaryView != null)
@@ -1965,7 +2078,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
     double _hudPitch;
     string _hudSelectionReadout;
     bool _hudInvertZ;
-    int _hudDropped;
+    SliceFailureCounts _hudDropped;
     bool _hudShowBoxes;
     bool _hudDirty = true;
 
@@ -1983,7 +2096,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
             }
         }
 
-        int dropped = DroppedSliceCount();
+        SliceFailureCounts dropped = CountFailedSlices();
 
         bool cameraChanged = cam.Position != _hudCamPosition
             || cam.LookAt != _hudLookAt
@@ -2023,8 +2136,8 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
                 hud.AppendLine("  yellow=minor  orange=holes/winding  red=non-manifold");
             }
 
-            if (dropped > 0)
-                hud.AppendLine($"WARNING: {dropped} slice(s) dropped - no topology");
+            if (dropped.Total > 0)
+                hud.AppendLine($"WARNING: {dropped.Total} slice(s) failed: {dropped}");
 
             _hudText = hud.ToString();
             _hudCamPosition = cam.Position;
@@ -2056,36 +2169,122 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
     }
 
     /// <summary>
-    /// Slices across every structure that produced no geometry because their topology could not be built.
+    /// Per-kind failed slice counts across every structure.  Before a plan exists only topology failures are known.
     /// </summary>
-    int DroppedSliceCount()
+    readonly record struct SliceFailureCounts(int Topology, int FaceGenerationException, int InvalidSurface)
     {
-        int count = 0;
-        foreach (var wrapView in WrapViews)
-            count += wrapView.FailedTopologySlices.Count;
+        public int Total => Topology + FaceGenerationException + InvalidSurface;
 
-        return count;
+        public override string ToString()
+        {
+            List<string> parts = new(3);
+            if (Topology > 0)
+                parts.Add($"{Topology} no topology");
+            if (FaceGenerationException > 0)
+                parts.Add($"{FaceGenerationException} face-gen threw");
+            if (InvalidSurface > 0)
+                parts.Add($"{InvalidSurface} invalid surface");
+            return string.Join(", ", parts);
+        }
+    }
+
+    SliceFailureCounts CountFailedSlices()
+    {
+        int topology = 0, threw = 0, invalid = 0;
+        foreach (var wrapView in WrapViews)
+        {
+            var plan = wrapView.meshAssemblyPlan;
+            if (plan is null)
+            {
+                topology += wrapView.FailedTopologySlices.Count;
+                continue;
+            }
+
+            foreach (FailedSliceReproRecord record in plan.FailedSlicesForRepro.Values)
+            {
+                switch (record.Kind)
+                {
+                    case SliceFailureKind.Topology: topology++; break;
+                    case SliceFailureKind.FaceGenerationException: threw++; break;
+                    default: invalid++; break;
+                }
+            }
+        }
+
+        return new SliceFailureCounts(topology, threw, invalid);
     }
 
     /// <summary>
-    /// Name the slices a run silently lost.  These failures already reach Trace one at a time, but an export
-    /// that dropped part of a cell still finished with a success message, so the total belongs in the summary.
+    /// Default name for the BajajTest <c>--repro-locations-file</c> written when BajajMultiTest finishes.
     /// </summary>
-    void ReportDroppedSlices()
-    {
-        int dropped = DroppedSliceCount();
-        if (dropped == 0)
-            return;
+    internal const string FailedSlicesReproFileName = "bajajmultitest_failed_slices.txt";
 
-        Console.WriteLine($"WARNING: {dropped} slice(s) produced no geometry because their topology could not be built.");
+    /// <summary>
+    /// List every slice that failed to mesh (location IDs, one slice per line) to the console and a distinct
+    /// log file that BajajTest can load with <c>--repro-locations-file</c>.
+    /// </summary>
+    void ReportFailedSlices()
+    {
+        List<FailedSliceReproRecord> failures = [];
         foreach (var wrapView in WrapViews)
         {
-            var failures = wrapView.FailedTopologySlices;
-            if (failures.Count == 0)
+            var plan = wrapView.meshAssemblyPlan;
+            if (plan is null)
                 continue;
-
-            Console.WriteLine($"  Structure {wrapView.Graph?.StructureID}: {failures.Count} slice(s) at {string.Join("; ", failures.Values)}");
+            foreach (var record in plan.FailedSlicesForRepro.Values.OrderBy(r => r.StructureId).ThenBy(r => r.LocationIdsLine))
+                failures.Add(record);
         }
+
+        string path = ResolveFailedSlicesReproPath();
+        try
+        {
+            string directory = System.IO.Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
+            using StreamWriter writer = new(path, append: false, Encoding.UTF8);
+            writer.WriteLine("# BajajMultiTest failed slices — one LocationID list per line");
+            writer.WriteLine("# Feed to BajajTest: --mode BajajTest --repro-locations-file <this file>");
+            writer.WriteLine($"# Generated {DateTime.Now:yyyy-MM-dd HH:mm:ss}, {failures.Count} slice(s)");
+
+            if (failures.Count == 0)
+            {
+                writer.WriteLine("# (none)");
+                Console.WriteLine($"No failed slices. Empty repro list written to {path}");
+                return;
+            }
+
+            var byKind = failures.GroupBy(f => f.Kind).OrderBy(g => g.Key)
+                .Select(g => $"{g.Count()} {g.Key}");
+            Console.WriteLine($"WARNING: {failures.Count} slice(s) failed to mesh ({string.Join(", ", byKind)}). Writing repro list to {path}");
+            writer.WriteLine($"# By kind: {string.Join(", ", byKind)}");
+            foreach (FailedSliceReproRecord record in failures)
+            {
+                if (record.LocationIds.Length < 2)
+                {
+                    writer.WriteLine($"# structure={record.StructureId} skipped (fewer than 2 locations): {record.LocationIdsLine} — [{record.Kind}] {record.Reason}");
+                    continue;
+                }
+
+                writer.WriteLine($"# structure={record.StructureId} — [{record.Kind}] {record.Reason}");
+                writer.WriteLine(record.LocationIdsLine);
+                Console.WriteLine($"  structure {record.StructureId}: {record.LocationIdsLine}  ([{record.Kind}] {record.Reason})");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Could not write failed-slice repro file '{path}': {ex.Message}");
+            foreach (FailedSliceReproRecord record in failures)
+                Console.WriteLine($"  structure {record.StructureId}: {record.LocationIdsLine}  ([{record.Kind}] {record.Reason})");
+        }
+    }
+
+    static string ResolveFailedSlicesReproPath()
+    {
+        if (!string.IsNullOrWhiteSpace(Program.options?.OutputPath))
+            return System.IO.Path.Combine(Program.options.OutputPath, FailedSlicesReproFileName);
+
+        return System.IO.Path.Combine(Directory.GetCurrentDirectory(), FailedSlicesReproFileName);
     }
 
     /// <summary>

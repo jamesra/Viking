@@ -149,8 +149,10 @@ namespace SqlGeometryUtils
             if (shape.GeometryType() != SupportedGeometryType.POLYLINE)
                 throw new ArgumentException("SqlGeometry must be a polygon type");
 
+            // Use the Vector2[] constructor so a LINESTRING that repeats its first point (CLOSEDCURVE-style)
+            // can load; the IPoint2D constructor's Add() path rejects that closing duplicate as a self-hit.
             Vector2[] points = EnsureRingUnderMaxPoints(shape.ToPoints(), MaxPolygonRingPointsBeforeSimplify, simplifyTolerance, closed: false);
-            return new Polyline(points.Cast<IPoint2D>());
+            return new Polyline(points);
         }
 
         public static Circle ToCircle(this SqlGeometry shape)

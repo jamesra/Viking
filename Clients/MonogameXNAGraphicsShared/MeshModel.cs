@@ -47,6 +47,10 @@ namespace VikingXNAGraphics
         private VertexBuffer _vertexBuffer;
         private IndexBuffer _indexBuffer;
         private bool _bufferDirty = true;
+        private int _gpuVertexCapacity;
+        private int _gpuIndexCapacity;
+        private int _drawnVertexCount;
+        private int _drawnIndexCount;
 
         /// <summary>
         /// Vertex buffer for drawing. Valid after EnsureBuffers(device) returns true.
@@ -64,15 +68,15 @@ namespace VikingXNAGraphics
         public PrimitiveType Primitive { get; set; } = PrimitiveType.TriangleList;
 
         /// <summary>
-        /// Primitives to draw. Reports what the index buffer actually holds when one has been uploaded, because
-        /// <see cref="Edges"/> can be replaced by a meshing thread between EnsureBuffers and the draw call.
+        /// Primitives to draw. Uses the last uploaded index count so a geometrically grown GPU buffer
+        /// (capacity &gt; used) does not over-draw.
         /// </summary>
         public int PrimitiveCount
         {
             get
             {
                 int indexCount = _indexBuffer != null && !_indexBuffer.IsDisposed
-                    ? _indexBuffer.IndexCount
+                    ? _drawnIndexCount
                     : this.Edges?.Length ?? 0;
 
                 return Primitive switch
@@ -136,7 +140,7 @@ namespace VikingXNAGraphics
                 return false;
 
             if (!wasDirty && _vertexBuffer != null && !_vertexBuffer.IsDisposed && _indexBuffer != null && !_indexBuffer.IsDisposed &&
-                _vertexBuffer.VertexCount == verticies.Length && _indexBuffer.IndexCount == edges.Length)
+                _drawnVertexCount == verticies.Length && _drawnIndexCount == edges.Length)
                 return true;
 
             //Verticies and edges are published independently, so a partially applied update can leave indices
@@ -154,19 +158,47 @@ namespace VikingXNAGraphics
                 }
             }
 
-            _vertexBuffer?.Dispose();
-            _vertexBuffer = null;
-            _indexBuffer?.Dispose();
-            _indexBuffer = null;
-
             int marshalSize = Marshal.SizeOf<VERTEXTYPE>();
-            _vertexBuffer = new VertexBuffer(device, typeof(VERTEXTYPE), verticies.Length, BufferUsage.None);
+
+            if (_vertexBuffer is null || _vertexBuffer.IsDisposed || _gpuVertexCapacity < verticies.Length)
+            {
+                _vertexBuffer?.Dispose();
+                _gpuVertexCapacity = GrowBufferCapacity(_gpuVertexCapacity, verticies.Length);
+                _vertexBuffer = new VertexBuffer(device, typeof(VERTEXTYPE), _gpuVertexCapacity, BufferUsage.None);
+            }
+
             _vertexBuffer.SetData(0, verticies, 0, verticies.Length, marshalSize);
 
-            _indexBuffer = new IndexBuffer(device, IndexElementSize.ThirtyTwoBits, edges.Length, BufferUsage.None);
+            if (_indexBuffer is null || _indexBuffer.IsDisposed || _gpuIndexCapacity < edges.Length)
+            {
+                _indexBuffer?.Dispose();
+                _gpuIndexCapacity = GrowBufferCapacity(_gpuIndexCapacity, edges.Length);
+                _indexBuffer = new IndexBuffer(device, IndexElementSize.ThirtyTwoBits, _gpuIndexCapacity, BufferUsage.None);
+            }
+
             _indexBuffer.SetData(edges, 0, edges.Length);
+            _drawnVertexCount = verticies.Length;
+            _drawnIndexCount = edges.Length;
 
             return true;
+        }
+
+        /// <summary>Grow GPU buffer capacity by ~1.5x so merges do not dispose+recreate every time.</summary>
+        private static int GrowBufferCapacity(int current, int needed)
+        {
+            if (needed <= 0)
+                return 0;
+            if (current >= needed)
+                return current;
+
+            int capacity = current > 0 ? current : needed;
+            while (capacity < needed)
+            {
+                int grown = (int)(capacity * 1.5);
+                capacity = grown > capacity ? grown : capacity + 1;
+            }
+
+            return capacity;
         }
 
         /// <summary>

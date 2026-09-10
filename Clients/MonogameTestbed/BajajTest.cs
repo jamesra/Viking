@@ -1753,6 +1753,14 @@ namespace MonogameTestbed
 
             if (Program.options?.ReproLocations is { Count: > 1 } locations)
                 yield return new BajajRepro([.. locations], Program.options.EndpointUri, $"ad-hoc {string.Join("/", locations)}", Program.options.ReproTolerance);
+
+            foreach (ulong[] sliceLocs in Program.options?.ReproLocationSlicesFromFile ?? [])
+            {
+                if (sliceLocs is not { Length: > 1 })
+                    continue;
+                yield return new BajajRepro(sliceLocs, Program.options.EndpointUri,
+                    $"file {string.Join("/", sliceLocs)}", Program.options.ReproTolerance);
+            }
         }
 
         private static Uri ResolveEndpoint(string name)

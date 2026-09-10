@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework;
 using MorphologyMesh;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using VikingXNAGraphics;
@@ -13,20 +14,23 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 namespace MonogameTestbed
 {
     /// <summary>
-    /// Builds a single merged mesh from all of the completed slices of a slice graph. 
-    /// Exposes a lock for using the model safely from a renderer.
+    /// Builds a single merged mesh from all of the completed slices of a slice graph.
+    /// Merges append into growable working buffers; a throttled (~25 Hz) snapshot is published to
+    /// <see cref="model"/> so Draw can read without holding <see cref="ModelLock"/>.
     /// </summary>
     public class SliceGraphMeshModel : IColorView
     {
-        //SliceGraph Graph;
+        /// <summary>Minimum time between live publishes during assembly (~25 Hz).</summary>
+        static readonly long PublishIntervalTicks = Stopwatch.Frequency / 25;
 
         /// <summary>
-        /// The composite mesh.  Not thread safe or protected by modeLock
+        /// The composite mesh. Not thread safe or protected by ModelLock.
         /// </summary>
         public Mesh3D<MorphMeshVertex> composite = new();
 
         /// <summary>
-        /// A model of the final mesh.  Can be protected via modeLock for rendering the model as it is constructed
+        /// Published GPU-facing model. Arrays are swapped atomically on publish; do not mutate in place
+        /// from the draw thread. Color edits go through <see cref="EditWorkingVertexColors"/>.
         /// </summary>
         public MeshModel<VertexPositionNormalColor> model = new();
 
@@ -35,11 +39,15 @@ namespace MonogameTestbed
         readonly List<MorphMeshOutwardOrientation.ShapeAtZ> _shapesAtZ = [];
         readonly Dictionary<int, bool> _isUpperByMorphShape = [];
 
+        readonly List<VertexPositionNormalColor> _workingVerts = [];
+        readonly List<int> _workingEdges = [];
+        long _lastPublishTimestamp;
+        int _publishDirty;
 
         public ReaderWriterLockSlim ModelLock = new();
 
         /// <summary>
-        /// The manifold state of the merged composite, measured after the winding pass.  A correct reconstruction
+        /// The manifold state of the merged composite, measured after the winding pass. A correct reconstruction
         /// is closed: every slice seam is shared by two faces once its neighbor has been merged in.
         /// </summary>
         public MeshManifoldReport CompositeManifoldReport { get; private set; }
@@ -50,13 +58,29 @@ namespace MonogameTestbed
             get => _color;
             set
             {
-                if (value != _color)
+                if (value == _color)
+                    return;
+
+                _color = value;
+                try
                 {
-                    model.SetColor(value);
-                    _color = value;
+                    ModelLock.EnterWriteLock();
+                    for (int i = 0; i < _workingVerts.Count; i++)
+                    {
+                        VertexPositionNormalColor v = _workingVerts[i];
+                        v.Color = value;
+                        _workingVerts[i] = v;
+                    }
+
+                    PublishUnlocked(force: true);
+                }
+                finally
+                {
+                    ModelLock.ExitWriteLock();
                 }
             }
         }
+
         public float Alpha
         {
             get => Color.GetAlpha();
@@ -71,6 +95,12 @@ namespace MonogameTestbed
         {
         }
 
+        /// <summary>Bake structure color at construction so leaf merges never recolor every vertex later.</summary>
+        public SliceGraphMeshModel(Color color)
+        {
+            _color = color;
+        }
+
         /// <summary>
         /// </summary>
         /// <param name="mesh"></param>
@@ -80,20 +110,16 @@ namespace MonogameTestbed
 
             AccumulateSliceTopology(mesh.Topology);
 
-
-            //Maps mesh vertex index to the global vertex index
             int[] mesh_to_global = new int[mesh.Vertices.Count];
 
             List<VertexPositionNormalColor> modelVerts = new(mesh.Vertices.Count);
 
-            ///Add all new verticies to the mesh and populate a map for vertex indicies
             for (int iVert = 0; iVert < mesh.Vertices.Count; iVert++)
             {
                 MorphMeshVertex vertex = mesh[iVert];
 
                 if (vertex.ShapeIndex is null)
                 {
-                    //It is not part of a polygon, so we know the vertex will not collide with another vertex and need remapping
                     MorphMeshVertex composite_vertex = MorphMeshVertex.Duplicate(vertex);
                     int iNewVert = composite.AddVertex(composite_vertex);
 
@@ -103,13 +129,11 @@ namespace MonogameTestbed
                 }
                 else
                 {
-                    //Check if the PointIndex for this vertex already exists in the model
                     ulong iShape = mesh.Topology.ShapeIndexToMorphNodeIndex[vertex.ShapeIndex.ShapeIndex];
                     MorphMeshVertex composite_vertex = MorphMeshVertex.Reindex(vertex, (int)iShape);
 
                     if (false == ShapeIndexToVertex.TryGetValue(composite_vertex.ShapeIndex, out int iGlobalVert))
                     {
-                        //If the vertex is not in the mesh already, then add it.
                         iGlobalVert = composite.AddVertex(composite_vertex);
                         ShapeIndexToVertex.Add(composite_vertex.ShapeIndex, iGlobalVert);
 
@@ -120,25 +144,16 @@ namespace MonogameTestbed
                 }
             }
 
-            //Translate edges and faces to the composite mesh
             AddEdgesToComposite(mesh.Edges.Keys, mesh_to_global);
 
             int[] NewModelEdges = AddFacesToComposite(mesh.Faces, mesh_to_global);
 
-            //Update the normals for any vertex that was affected
             using (MeshPhaseTimings.Measure(MeshPhase.MergeNormals, composite.Vertices.Count))
                 composite.RecalculateNormals(mesh_to_global);
 
             UpdateModel(modelVerts, NewModelEdges, mesh_to_global);
-
         }
 
-        /// <summary>
-        /// Adds edges to the composite mesh, mapping indicies using mesh_to_global
-        /// </summary>
-        /// <param name="edges"></param>
-        /// <param name="mesh_to_global"></param>
-        /// <returns></returns>
         private Geometry.Meshing.Edge[] AddEdgesToComposite(IEnumerable<IEdgeKey> edges, int[] mesh_to_global)
         {
             Edge[] newEdges = [.. edges.Select(k => new Edge(mesh_to_global[k.A], mesh_to_global[k.B]))];
@@ -150,12 +165,6 @@ namespace MonogameTestbed
             return newEdges;
         }
 
-        /// <summary>
-        /// Adds faces to the composite mesh, mapping indicies using mesh_to_global
-        /// </summary>
-        /// <param name="faces"></param>
-        /// <param name="mesh_to_global"></param>
-        /// <returns></returns>
         private int[] AddFacesToComposite(SortedSet<IFace> faces, int[] mesh_to_global)
         {
             Face[] composite_faces = new Face[faces.Count];
@@ -166,23 +175,19 @@ namespace MonogameTestbed
             int iModelFace = 0;
             foreach (Face f in faces.Cast<Face>())
             {
-
                 int[] iMapped = new int[f.iVerts.Length];
                 for (int i = 0; i < f.iVerts.Length; i++)
                     iMapped[i] = mesh_to_global[f.iVerts[i]];
 
                 Face composite_face = new(iMapped);
-                //composite.AddFace(composite_face);
                 composite_faces[iCompositeFace] = composite_face;
 
                 Array.Copy(iMapped, 0, NewModelEdges, iModelFace, iMapped.Length);
 
-                //Add the face to our model
                 iModelFace += iMapped.Length;
                 iCompositeFace += 1;
             }
 
-            //Add the composite faces in one bulk move
             composite.AddFaces(composite_faces);
 
             return NewModelEdges;
@@ -204,17 +209,12 @@ namespace MonogameTestbed
             }
         }
 
-        /// <summary>
-        /// Merge another model's accumulated contour context into this one.  Used when compositing two
-        /// SliceGraphMeshModels so the survivor retains the shapes needed for outward winding orientation.
-        /// </summary>
         private void MergeAccumulatedSliceTopology(SliceGraphMeshModel other)
         {
             _shapesAtZ.AddRange(other._shapesAtZ);
 
             foreach (var kvp in other._isUpperByMorphShape)
                 _isUpperByMorphShape[kvp.Key] = kvp.Value;
-
         }
 
         /// <summary>
@@ -225,8 +225,6 @@ namespace MonogameTestbed
         /// </summary>
         public void EnsureCompositeWinding()
         {
-            // A slice that produced no mesh still completes the assembly leaf so parents can merge.
-            // The display model Vertices array is never allocated in that case.
             if (composite.Faces.Count == 0)
                 return;
 
@@ -244,39 +242,35 @@ namespace MonogameTestbed
             var outwardCtx = MorphMeshOutwardOrientation.ShapeContext.FromAccumulated(_shapesAtZ, _isUpperByMorphShape);
             int outwardFlips = MorphMeshOutwardOrientation.OrientComponentsOutward(composite, outwardCtx);
 
-            //Greedy repair walks every inconsistent pair and flips one face.  On a composite with
-            //non-manifold junctions that pass does not converge: RC1 structure 1724 spent 98k reversals
-            //and finished with *more* inconsistent edges than Reorient left.  Those reversed walls are
-            //what backface culling turns into gaps in the tube.  Repair while the surface is manifold.
             int repairAfterOutward = 0;
             var afterOutward = MeshWindingDiagnostics.Analyze(composite);
             if (afterOutward.NonManifoldEdges == 0)
                 repairAfterOutward = MeshWindingReorientation.RepairManifoldConsistency(composite);
 
-
             composite.RecalculateNormals();
+
+            //Build the published arrays outside the lock, then swap once.
+            int[] newEdges = [.. composite.Faces.SelectMany(f => f.iVerts)];
+            VertexPositionNormalColor[] newVerts = new VertexPositionNormalColor[composite.Vertices.Count];
+            for (int i = 0; i < newVerts.Length; i++)
+            {
+                MorphMeshVertex cv = composite[i];
+                Color color = i < _workingVerts.Count ? _workingVerts[i].Color : _color;
+                newVerts[i] = new VertexPositionNormalColor(
+                    cv.Position.ToXNAVector3(),
+                    cv.Normal.ToXNAVector3(),
+                    color);
+            }
 
             try
             {
                 ModelLock.EnterWriteLock();
 
-                //Triangle index order must match reoriented composite faces or backface culling ignores the fix.
-                model.Edges = [.. composite.Faces.SelectMany(f => f.iVerts)];
-
-                if (model.Vertices is { Length: > 0 })
-                {
-                    int n = Math.Min(composite.Vertices.Count, model.Vertices.Length);
-                    for (int i = 0; i < n; i++)
-                    {
-                        var v = model.Vertices[i];
-                        v.Normal = composite[i].Normal.ToXNAVector3();
-                        model.Vertices[i] = v;
-                    }
-
-                    //In-place vertex edits do not mark buffers dirty; reassign to force GPU refresh.
-                    model.Vertices = [.. model.Vertices];
-                }
-
+                _workingVerts.Clear();
+                _workingVerts.AddRange(newVerts);
+                _workingEdges.Clear();
+                _workingEdges.AddRange(newEdges);
+                PublishUnlocked(force: true);
             }
             finally
             {
@@ -292,33 +286,112 @@ namespace MonogameTestbed
                 $"Composite {CompositeManifoldReport}");
         }
 
-
         /// <summary>
-        /// Update our mesh model with new verticies and edges from a merge or additional slice operation.  Thread safe.
+        /// Update working buffers from a merge or additional slice. Thread safe. Publishes at most ~25 Hz
+        /// unless this is the first geometry for the model.
         /// </summary>
-        /// <param name="verts">Vertices to append to our model</param>
-        /// <param name="edges">Triangles to add to the model, expects sets of three indicating triangles.</param>
-        /// <param name="mesh_to_global">The indicies of vertices whose normal needs to be updated using the composite mesh normal</param>
         private void UpdateModel(ICollection<VertexPositionNormalColor> modelVerts, int[] NewModelEdges, int[] mesh_to_global = null)
         {
             try
             {
                 ModelLock.EnterWriteLock();
 
-                //Add all new verticies to our model
-                model.AppendVerticies(modelVerts);
-                model.AppendEdges(NewModelEdges); //Add all new edges to our model
+                if (modelVerts.Count > 0)
+                    _workingVerts.AddRange(modelVerts);
 
-                if (mesh_to_global is null)
-                    return;
-
-                //Update the normals for our model
-                for (int i = 0; i < mesh_to_global.Length; i++)
+                if (mesh_to_global is not null)
                 {
-                    int iVert = mesh_to_global[i];
+                    for (int i = 0; i < mesh_to_global.Length; i++)
+                    {
+                        int iVert = mesh_to_global[i];
+                        if ((uint)iVert >= (uint)_workingVerts.Count)
+                            continue;
 
-                    model.Vertices[iVert].Normal = composite[iVert].Normal.ToXNAVector3();
+                        VertexPositionNormalColor v = _workingVerts[iVert];
+                        v.Normal = composite[iVert].Normal.ToXNAVector3();
+                        _workingVerts[iVert] = v;
+                    }
                 }
+
+                if (NewModelEdges is { Length: > 0 })
+                    _workingEdges.AddRange(NewModelEdges);
+
+                Volatile.Write(ref _publishDirty, 1);
+                PublishUnlocked(force: false);
+            }
+            finally
+            {
+                ModelLock.ExitWriteLock();
+            }
+        }
+
+        /// <summary>
+        /// Swap immutable arrays onto <see cref="model"/> for the draw thread. Caller must hold the write lock.
+        /// </summary>
+        void PublishUnlocked(bool force)
+        {
+            if (!force && Volatile.Read(ref _publishDirty) == 0)
+                return;
+
+            long now = Stopwatch.GetTimestamp();
+            if (!force && _lastPublishTimestamp != 0 && (now - _lastPublishTimestamp) < PublishIntervalTicks)
+                return;
+
+            if (_workingVerts.Count == 0 || _workingEdges.Count == 0)
+            {
+                Volatile.Write(ref _publishDirty, 0);
+                return;
+            }
+
+            VertexPositionNormalColor[] verts = [.. _workingVerts];
+            int[] edges = [.. _workingEdges];
+            model.Vertices = verts;
+            model.Edges = edges;
+            _lastPublishTimestamp = now;
+            Volatile.Write(ref _publishDirty, 0);
+        }
+
+        /// <summary>
+        /// Force a publish of the current working buffers (e.g. root finalize already did; exposed for callers
+        /// that need the latest geometry before Draw).
+        /// </summary>
+        public void PublishNow()
+        {
+            try
+            {
+                ModelLock.EnterWriteLock();
+                PublishUnlocked(force: true);
+            }
+            finally
+            {
+                ModelLock.ExitWriteLock();
+            }
+        }
+
+        /// <summary>
+        /// Mutate working vertex colors under the write lock and force-publish. Used for slice selection highlight.
+        /// </summary>
+        public bool EditWorkingVertexColors(Func<IReadOnlyList<VertexPositionNormalColor>, Color[]> edit)
+        {
+            try
+            {
+                ModelLock.EnterWriteLock();
+                if (_workingVerts.Count == 0)
+                    return false;
+
+                Color[] next = edit(_workingVerts);
+                if (next is null || next.Length != _workingVerts.Count)
+                    return false;
+
+                for (int i = 0; i < _workingVerts.Count; i++)
+                {
+                    VertexPositionNormalColor v = _workingVerts[i];
+                    v.Color = next[i];
+                    _workingVerts[i] = v;
+                }
+
+                PublishUnlocked(force: true);
+                return true;
             }
             finally
             {
@@ -332,27 +405,16 @@ namespace MonogameTestbed
         /// <param name="other"></param>
         public void Merge(SliceGraphMeshModel other)
         {
-            // When we merge another SliceGraphMeshModel we know the PolyIndex values for the other model match our own.  We need to create new verticies, edges, and faces into our models
             Mesh3D<MorphMeshVertex> mesh = other.composite;
 
             using var _phase = MeshPhaseTimings.Measure(MeshPhase.MergeCombine, mesh.Vertices.Count);
 
-            //Carry over the other model's accumulated contour context.  The binary-tree assembly merges child
-            //models into a single survivor; without this the root's EnsureCompositeWinding would only see the
-            //shapes from one subtree and orient the rest of the surface using incomplete context.
             MergeAccumulatedSliceTopology(other);
 
-            //Note: verticies with a null ShapeIndex (medial-axis / cap verticies) are intentionally not merged
-            //across slices.  Each slice places its medial-axis verticies at that slice's center Z and caps only
-            //exist on open ends, so these interior points never coincide between slices.  Merging them by
-            //position would risk welding distinct points and pinching the surface.
-
-            //Maps mesh vertex index to the global vertex index
             int[] mesh_to_global = new int[mesh.Vertices.Count];
 
             List<VertexPositionNormalColor> modelVerts = new(mesh.Vertices.Count);
 
-            ///Add all new verticies to the mesh and populate a map for vertex indicies
             for (int iVert = 0; iVert < mesh.Vertices.Count; iVert++)
             {
                 MorphMeshVertex vertex = mesh[iVert];
@@ -360,8 +422,6 @@ namespace MonogameTestbed
 
                 if (vertex.ShapeIndex is null)
                 {
-                    //It is not part of a polygon, so we know the vertex will not collide with another vertex and need remapping
-
                     int iNewVert = composite.AddVertex(composite_vertex);
 
                     modelVerts.Add(new VertexPositionNormalColor(composite_vertex.Position.ToXNAVector3(), Vector3.Zero, Color));
@@ -370,12 +430,8 @@ namespace MonogameTestbed
                 }
                 else
                 {
-                    // When we merge another SliceGraphMeshModel we know the PolyIndex values for the other model match our own.  We need to create new verticies, edges, and faces into our models
-
-                    //Check if the PointIndex for this vertex already exists in the model 
                     if (false == ShapeIndexToVertex.TryGetValue(composite_vertex.ShapeIndex, out int iGlobalVert))
                     {
-                        //If the vertex is not in the mesh already, then add it.
                         iGlobalVert = composite.AddVertex(composite_vertex);
                         ShapeIndexToVertex.Add(composite_vertex.ShapeIndex, iGlobalVert);
 
@@ -386,18 +442,14 @@ namespace MonogameTestbed
                 }
             }
 
-            //Translate edges and faces to the composite mesh
             AddEdgesToComposite(mesh.Edges.Keys, mesh_to_global);
 
             int[] NewModelEdges = AddFacesToComposite(mesh.Faces, mesh_to_global);
 
-            //Update the normals for any vertex that was affected
             using (MeshPhaseTimings.Measure(MeshPhase.MergeNormals, composite.Vertices.Count))
                 composite.RecalculateNormals(mesh_to_global);
 
             UpdateModel(modelVerts, NewModelEdges, mesh_to_global);
         }
-
-
     }
 }

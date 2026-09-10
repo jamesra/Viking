@@ -453,11 +453,11 @@ namespace MorphologyMeshTest
                 $"One gap has exactly two bordering chords, one per partner.  {report}\n" +
                 $"single-face non-contour edges: {DescribeSingleFaceNonContourEdges(mesh)}");
 
-            //An open polyline ribbon always leaves its two ends unclosed, which predates fork support; see
-            //PolylineRibbonTests.GenerateFaces_OpenRibbonEndsAreReportedAsBoundary.  What matters here is that the
-            //fork gap adds nothing to that count instead of showing up as two more holes.
-            Assert.AreEqual(2, report.UnexpectedBoundaryEdges,
-                $"The fork gap must not add holes beyond the ribbon's own two open ends.  {report}\n" +
+            //The ribbon's own two open ends are ribbon-end boundary (see
+            //PolylineRibbonTests.GenerateFaces_OpenRibbonEndsAreReportedAsRibbonEnds).  The fork gap must add
+            //nothing to the hole count.
+            Assert.AreEqual(0, report.UnexpectedBoundaryEdges,
+                $"The fork gap must not report holes.  {report}\n" +
                 $"single-face non-contour edges: {DescribeSingleFaceNonContourEdges(mesh)}");
         }
 

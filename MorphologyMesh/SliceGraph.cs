@@ -14,6 +14,13 @@ using Viking.AnnotationServiceTypes.Interfaces;
 namespace MorphologyMesh
 {
     /// <summary>
+    /// Raised by <see cref="SliceGraph.InitializeTopologyAsync"/> as each slice's topology is computed.  Runs on
+    /// a worker thread; <paramref name="topology"/> is invalid (<see cref="SliceTopology.IsValid"/> false) for a
+    /// slice whose initialization failed.
+    /// </summary>
+    public delegate void SliceTopologyReadyHandler(Slice slice, SliceTopology topology);
+
+    /// <summary>
     /// A view of a morphology graph optimized to generate meshes
     /// 
     /// /// We need to group sets of connected nodes in slices so we do not miss any branches in the final mesh.  
@@ -52,6 +59,9 @@ namespace MorphologyMesh
     {
         readonly MorphologyGraph Graph;
 
+        /// <summary>Source morphology for this slice graph (structure id, scale, nodes).</summary>
+        public MorphologyGraph Morphology => Graph;
+
         public double SectionThickness => this.Graph.SectionThickness;
 
         /// <summary>
@@ -77,6 +87,12 @@ namespace MorphologyMesh
         private Vector2 TranslationToCenter => -XYOrigin;
 
         private Dictionary<ulong, SliceTopology> SliceToTopology = null;
+
+        /// <summary>Simplify options captured at creation so <see cref="InitializeTopologyAsync"/> can rebuild a missing shape cache the same way.</summary>
+        private ContourSimplifyOptions _simplify = ContourSimplifyOptions.Default;
+
+        /// <summary>Set once <see cref="InitializeTopologyAsync"/> has run, so a second call is a no-op instead of a second pass over every slice.</summary>
+        private bool _topologyInitialized;
 
         private readonly System.Collections.Concurrent.ConcurrentDictionary<ulong, string> _failedTopologySlices = new();
 
@@ -132,10 +148,33 @@ namespace MorphologyMesh
         }
 
         /// <summary>
+        /// Build a slice graph. <paramref name="tolerance"/> always simplifies at that nm distance
+        /// (legacy). Prefer <see cref="Create(MorphologyGraph, ContourSimplifyOptions, Vector2?)"/> for density-gated simplify.
+        /// </summary>
+        public static Task<SliceGraph> Create(MorphologyGraph graph, double tolerance = 0, Vector2? xyOrigin = null) =>
+            Create(graph, ContourSimplifyOptions.Always(tolerance), xyOrigin);
+
+        /// <summary>
         /// Build a slice graph. <paramref name="xyOrigin"/> is the volume XY subtracted from shapes
         /// (defaults to this graph's own location AABB). Pass a parent cell origin so child synapses share that frame.
+        /// Contours denser than <see cref="ContourSimplifyOptions.MinNmPerVertex"/> are simplified to
+        /// <see cref="ContourSimplifyOptions.ToleranceNm"/>. Closed polygon contours only; polylines are unchanged.
         /// </summary>
-        public static async Task<SliceGraph> Create(MorphologyGraph graph, double tolerance = 0, Vector2? xyOrigin = null)
+        public static async Task<SliceGraph> Create(MorphologyGraph graph, ContourSimplifyOptions simplify, Vector2? xyOrigin = null)
+        {
+            SliceGraph output = await CreateWithoutTopology(graph, simplify, xyOrigin).ConfigureAwait(false);
+            await output.InitializeTopologyAsync().ConfigureAwait(false);
+            return output;
+        }
+
+        /// <summary>
+        /// Build the slice nodes, their edges and the shape cache, but no slice topology.  The graph is not ready
+        /// to mesh until <see cref="InitializeTopologyAsync"/> completes; the split exists so a caller can create
+        /// its per-slice bookkeeping (and start showing contours) while topologies are still being computed.
+        /// Do not call <see cref="GetTopology(ulong)"/> before <see cref="InitializeTopologyAsync"/> finishes:
+        /// it would build a topology outside the initializer that serializes slices sharing a shape.
+        /// </summary>
+        public static async Task<SliceGraph> CreateWithoutTopology(MorphologyGraph graph, ContourSimplifyOptions simplify, Vector2? xyOrigin = null)
         {
             //An empty morphology graph has no bounding box; downstream code (InitializeShapes ->
             //graph.NodesBoundingBox.CenterPoint) would otherwise dereference a default Box and throw an opaque
@@ -151,6 +190,7 @@ namespace MorphologyMesh
 
             Vector2 origin = xyOrigin ?? graph.NodesBoundingBox.CenterPoint.XY();
             SliceGraph output = new(graph, origin);
+            output._simplify = simplify;
 
             SortedSet<MorphologyEdge> Edges = [.. graph.Edges.Values];
 
@@ -249,17 +289,26 @@ namespace MorphologyMesh
                 }
             }
 
-            output.MorphNodeToShape = await InitializeShapes(graph, -origin, tolerance);
-            await output.InitializeSliceTopology(tolerance);
-
-            /*output.SliceToTopology = new Dictionary<ulong, SliceTopology>(output.Nodes.Count);
-            foreach(Slice s in output.Nodes.Values)
-            {
-                output.SliceToTopology[s.Key] = output.GetTopology(s);
-            }
-            */
+            output.MorphNodeToShape = await InitializeShapes(graph, -origin, simplify).ConfigureAwait(false);
 
             return output;
+        }
+
+        /// <summary>
+        /// Compute every slice topology (see <see cref="ConcurrentTopologyInitializer"/>) and reconcile the moved
+        /// shape copies afterwards.  <paramref name="onSliceTopologyReady"/> is raised on a worker thread as each
+        /// slice finishes, before the slices sharing its shapes start, so the handler may read the topology's shapes
+        /// without racing corresponding-vertex insertion.  Meshing must still wait for this task: only after every
+        /// topology exists are the cached contours final.
+        /// </summary>
+        public async Task InitializeTopologyAsync(SliceTopologyReadyHandler onSliceTopologyReady = null)
+        {
+            if (_topologyInitialized)
+                return;
+
+            using var _phase = MeshPhaseTimings.Measure(MeshPhase.SliceGraphCreate, Nodes.Count);
+            await InitializeSliceTopology(_simplify, onSliceTopologyReady).ConfigureAwait(false);
+            _topologyInitialized = true;
         }
 
         static void BuildMeshingCrossSection(MorphologyGraph graph, MorphologyNode seed, MorphologyNode partner, ZDirection CheckDirection, out SortedSet<ulong> NodesAbove, out SortedSet<ulong> NodesBelow, out SortedSet<MorphologyEdge> FollowedEdges)
@@ -365,16 +414,15 @@ namespace MorphologyMesh
         /// <summary>
         /// Populates the lookup table mapping morph nodes to shapes.  Allows user option to simplify shapes.  Ensures all shapes have matching corresponding verticies if they participate in two or more slices
         /// </summary>
-        /// <param name="tolerance"></param>
-        private async Task InitializeSliceTopology(double tolerance = 0)
+        private async Task InitializeSliceTopology(ContourSimplifyOptions simplify, SliceTopologyReadyHandler onSliceTopologyReady)
         {
             try
             {
-                this.MorphNodeToShape ??= await SliceGraph.InitializeShapes(this.Graph, TranslationToCenter, tolerance);
+                this.MorphNodeToShape ??= await SliceGraph.InitializeShapes(this.Graph, TranslationToCenter, simplify);
 
-                ConcurrentTopologyInitializer concurrentInitializer = new(this);
+                ConcurrentTopologyInitializer concurrentInitializer = new(this, onSliceTopologyReady);
 
-                this.SliceToTopology = await concurrentInitializer.InitializeSliceTopologyAsync(tolerance);
+                this.SliceToTopology = await concurrentInitializer.InitializeSliceTopologyAsync(0);
 
                 RefreshMovedShapesFromCachedShapes();
 
@@ -454,16 +502,22 @@ namespace MorphologyMesh
         /// <summary>
         /// Generate a dictionary of polygons we can use as a lookup table for shapes.
         /// </summary>
-        /// <param name="graph"></param>
-        /// <param name="tolerance"></param>
-        /// <returns></returns>
         public static Task<Dictionary<ulong, IShape2D>> InitializeShapes(MorphologyGraph graph, double tolerance = 0) =>
-            InitializeShapes(graph, -graph.NodesBoundingBox.CenterPoint.XY(), tolerance);
+            InitializeShapes(graph, -graph.NodesBoundingBox.CenterPoint.XY(), ContourSimplifyOptions.Always(tolerance));
 
         /// <summary>
-        /// Cache simplified shapes translated by <paramref name="translationToCenter"/> (usually âˆ’cell XY origin).
+        /// Cache simplified shapes translated by <paramref name="translationToCenter"/> (usually −cell XY origin).
+        /// Contours denser than <see cref="ContourSimplifyOptions.MinNmPerVertex"/> are simplified within
+        /// <see cref="ContourSimplifyOptions.ToleranceNm"/> of the original curve. Closed polygons only.
         /// </summary>
-        public static async Task<Dictionary<ulong, IShape2D>> InitializeShapes(MorphologyGraph graph, Vector2 translationToCenter, double tolerance = 0)
+        public static Task<Dictionary<ulong, IShape2D>> InitializeShapes(MorphologyGraph graph, Vector2 translationToCenter, double tolerance = 0) =>
+            InitializeShapes(graph, translationToCenter, ContourSimplifyOptions.Always(tolerance));
+
+        /// <summary>
+        /// Cache shapes translated by <paramref name="translationToCenter"/>, applying density-gated simplify to closed
+        /// polygon contours only. Polylines are translated but never simplified.
+        /// </summary>
+        public static async Task<Dictionary<ulong, IShape2D>> InitializeShapes(MorphologyGraph graph, Vector2 translationToCenter, ContourSimplifyOptions simplify)
         {
             Dictionary<ulong, IShape2D> result = new(graph.Nodes.Count);
 
@@ -481,23 +535,30 @@ namespace MorphologyMesh
                     case SupportedGeometryType.CURVEPOLYGON:
                     case SupportedGeometryType.POLYGON:
                         {
-                            //Start a task to simplify the polygon
+                            ContourSimplifyOptions simplifyCapture = simplify;
                             Task<IShape2D> t = new((node_) =>
                             {
                                 var morphNode = (MorphologyNode)node_;
                                 try
                                 {
-                                    //Pass tolerance so rings that exceed MaxPolygonRingPointsBeforeSimplify are
-                                    //Douglas–Peucker reduced before Polygon construction (avoids the huge-polygon assert).
-                                    var poly = morphNode.Geometry.ToPolygon(tolerance);
+                                    // Prefer the density-gated tolerance for huge-ring pre-simplify; fall back to
+                                    // the configured ToleranceNm so MaxPolygonRingPointsBeforeSimplify still fires.
+                                    double preTol = simplifyCapture.IsActiveForPreSimplify
+                                        ? simplifyCapture.ToleranceNm
+                                        : 0;
+                                    var poly = morphNode.Geometry.ToPolygon(preTol);
                                     if (poly.BoundingBox.Area < MinAnnotationArea)
                                         return null;
 
                                     poly = poly.Translate(translationToCenter);
 
+                                    double tol = simplifyCapture.ToleranceFor(poly);
+                                    if (tol <= 0)
+                                        return poly;
+
                                     try
                                     {
-                                        return poly.Simplify(tolerance);
+                                        return poly.Simplify(tol);
                                     }
                                     catch (ArgumentException e)
                                     {
@@ -523,7 +584,25 @@ namespace MorphologyMesh
                         break;
                     case SupportedGeometryType.POLYLINE:
                         {
-                            Task<IShape2D> t = new((node_) => ((MorphologyNode)node_).Geometry.ToPolyLine(tolerance).Translate(translationToCenter).Simplify(tolerance), node);
+                            Task<IShape2D> t = new((node_) =>
+                            {
+                                var morphNode = (MorphologyNode)node_;
+                                Polyline line = morphNode.Geometry.ToPolyLine(0).Translate(translationToCenter);
+
+                                // POLYLINE / OPENCURVE must stay open; a duplicate closing vertex becomes a CONTOUR
+                                // edge that Delaunay then fills. CLOSEDCURVE keeps first==last for a thin closed ribbon.
+                                LocationType typeCode = morphNode.Location.TypeCode;
+                                if (typeCode is LocationType.POLYLINE or LocationType.OPENCURVE)
+                                {
+                                    Vector2[] open = line.Points.Select(p => new Vector2(p)).ToArray().EnsureOpenRing();
+                                    if (open.Length != line.PointCount)
+                                        line = new Polyline(open, line.AllowsSelfIntersection);
+
+                                    line = PolylineRibbonMeshGenerator.PrepareOpenPolyline(line);
+                                }
+
+                                return line;
+                            }, node);
                             t.Start();
                             tasks.Add(t);
                         }

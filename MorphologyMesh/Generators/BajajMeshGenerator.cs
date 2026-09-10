@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 
@@ -311,223 +312,139 @@ namespace MorphologyMesh
         }
         */
 
+        /// <summary>
+        /// Caps concurrent <see cref="GenerateFaces"/> work across all structures so nested pipelines cannot
+        /// oversubscribe the thread pool. Pipeline count remains bounded separately by MaxConcurrentMeshPipelines.
+        /// </summary>
+        static readonly SemaphoreSlim SliceFaceLimiter = new(Math.Max(1, Environment.ProcessorCount));
+
+        /// <summary>
+        /// When true, face-generation workers emit Trace lines for routine per-slice progress. Failures always trace.
+        /// </summary>
+        public static bool VerboseLogging { get; set; }
+
         /// Convert a morphology graph to an unprocessed mesh graph
         /// </summary>
         /// <param name="graph"></param>
         /// <returns></returns>
         public static async Task<List<BajajGeneratorMesh>> ConvertToMesh(SliceGraph sliceGraph, OnMeshGeneratedEventHandler OnMeshGenerated = null)
         {
-            //List<MeshingGroup> MeshingGroups = CalculateMeshingGroups(graph);
             List<BajajGeneratorMesh> listBajajMeshGenerators = [];
+            object listLock = new();
+            List<Task> faceTasks = new(sliceGraph.Nodes.Count);
 
-            List<Task<(Slice slice, BajajGeneratorMesh mesh)>> meshGenTasks = [];
-
-            //var SimplerPolygon = CreateSimplerPolygonLookup(graph, 2.0);
-
+            //Topology is already cached by SliceGraph.Create. Start GenerateFaces immediately per slice
+            //instead of a Phase-A barrier that only constructed empty generators.
             foreach (Slice slice in sliceGraph.Nodes.Values)
             {
-                //Trace.WriteLine(string.Format("Creating group {0}", group.ToString()));
-
-                //Capture the slice in the result so a slice that fails to produce a mesh can still be reported.
                 Slice capturedSlice = slice;
-                meshGenTasks.Add(Task.Factory.StartNew(() =>
+                faceTasks.Add(Task.Run(() =>
                 {
+                    SliceFaceLimiter.Wait();
                     try
                     {
-                        var topology = sliceGraph.GetTopology(capturedSlice);
+                        SliceTopology topology = sliceGraph.GetTopology(capturedSlice);
                         if (topology.IsValid == false)
                         {
                             string sectionText = sliceGraph.FormatSectionNumbers(capturedSlice);
                             Trace.WriteLine($"Slice {capturedSlice.Key} produced no mesh: topology initialisation failed ({sectionText}).");
-                            return (capturedSlice, (BajajGeneratorMesh)null);
+                            OnMeshGenerated?.Invoke(capturedSlice, null, false);
+                            return;
                         }
 
-                        return (capturedSlice, new BajajGeneratorMesh(topology, capturedSlice));
+                        BajajGeneratorMesh mesh = new(topology, capturedSlice);
+                        lock (listLock)
+                            listBajajMeshGenerators.Add(mesh);
+
+                        GenerateFaces(mesh);
+                        OnMeshGenerated?.Invoke(mesh.Slice, mesh, !mesh.GenerationHadErrors);
                     }
                     catch (Exception e)
                     {
                         Trace.WriteLine($"Slice {capturedSlice} produced no mesh:\n{e}");
-                        return (capturedSlice, (BajajGeneratorMesh)null);
+                        OnMeshGenerated?.Invoke(capturedSlice, null, false);
+                    }
+                    finally
+                    {
+                        SliceFaceLimiter.Release();
                     }
                 }));
             }
 
-            //The tasks capture their own failures, so none of them fault and every slice yields a result.
-            var meshGenResults = await Task.WhenAll(meshGenTasks).ConfigureAwait(false);
+            await Task.WhenAll(faceTasks).ConfigureAwait(false);
 
-            foreach (var (slice, mesh) in meshGenResults)
-            {
-                if (mesh is null)
-                {
-                    //Report the slice anyway.  A consumer merging slices into one model waits on a result for each
-                    //one, and silently skipping a slice leaves it waiting forever.
-                    OnMeshGenerated?.Invoke(slice, null, false);
-                    continue;
-                }
-
-                listBajajMeshGenerators.Add(mesh);
-            }
-
-            listBajajMeshGenerators.Sort(Comparer<BajajGeneratorMesh>.Create((a, b) => a.AverageZ.CompareTo(b.AverageZ)));  //Sorting the bajaj generators before launching tasks is optional but built the model in a predictable order for debug viewing
-            List<Task> bajajTasks = [];
-
-            BajajGeneratorMesh[] BajajGeneratorMeshArray = [.. listBajajMeshGenerators];
-            //TODO: THis should be parallelizable
-            for (int iMesh = 0; iMesh < BajajGeneratorMeshArray.Length; iMesh++)
-            {
-                //BajajGeneratorMesh mesh = listBajajMeshGenerators[iMesh];
-                bajajTasks.Add(Task.Factory.StartNew((i) =>
-                   {
-                       BajajGeneratorMesh mesh = BajajGeneratorMeshArray[(int)i];
-                       try
-                       {
-                           GenerateFaces(mesh);
-                           //A non-fatal error (e.g. a region that could not be closed) leaves a partial mesh.
-                           //Report success only if generation completed without flagged errors.
-                           OnMeshGenerated?.Invoke(mesh.Slice, mesh, !mesh.GenerationHadErrors);
-                       }
-                       catch (Exception e)
-                       {
-                           Trace.WriteLine($"Exception building mesh {mesh}\n{e}");
-                           OnMeshGenerated?.Invoke(mesh.Slice, mesh, false);
-                       }
-                   }, iMesh));
-
-                //try
-                //{
-                //GenerateFaces(mesh);
-                /*}
-                catch (Exception e)
-                {
-                    Trace.WriteLine(string.Format("Exception building mesh {0}:\n{1}", listBajajMeshGenerators[iMesh].ToString(), e));
-                    continue;
-                }*/
-            }
-
-            foreach (var t in bajajTasks)
-            {
-                await t;
-            }
-
-            //Task<BajajGeneratorMesh>.Factory.ContinueWhenAll(bajajTasks);
-
-            /*
-            int counter = 0;
-            for(int iTask = 0; iTask < bajajTasks.Count; iTask++)
-            {
-                var t = bajajTasks[iTask];
-                try
-                {
-                    t.Wait(500);
-                    counter++;
-                    Trace.WriteLine(string.Format("{0} completed", counter));
-                }
-                catch(Exception e)
-                {
-                    Trace.WriteLine(string.Format("Exception building mesh {0}:\n{1}", listBajajMeshGenerators[iTask].ToString(), e));
-                    continue; 
-                }
-            }*/
-
-
-            /*
-            int counter = 0;
-            for (int iTask = 0; iTask < bajajTasks.Count; iTask++)
-            {
-                var t = bajajTasks[iTask];
-                try
-                {
-                    t.Wait(500);
-                    counter++;
-                    Trace.WriteLine(string.Format("{0} completed", counter));
-                }
-                catch (Exception e)
-                {
-                    Trace.WriteLine(string.Format("Exception building mesh {0}:\n{1}", listBajajMeshGenerators[iTask].ToString(), e));
-                    continue;
-                }
-            }
-            */
-
-
-            //MeshGraph meshGraph = new MeshGraph();
-            /*
-            Dictionary<ulong, IShape2D> IDToContour = FindCorrespondences(graph);
-
-            meshGraph.SectionThickness = graph.SectionThickness;
-
-            //Create a graph where each node is a set of verticies.
-            ConcurrentBag<MeshNode> nodes = new ConcurrentBag<MeshNode>();
-
-#if !DEBUG
-            graph.Nodes.Values.AsParallel().ForAll(node =>
-            {
-                MeshNode newNode = SmoothMeshGraphGenerator.CreateNode(node.Key, IDToContour[node.Key], node.Z, false);
-                newNode.MeshGraph = meshGraph;
-                newNode.Contour = node.Geometry.ToShape2D();
-                nodes.Add(newNode);
-            });
-#else 
-            foreach (var node in graph.Nodes.Values)
-            {
-                MeshNode newNode = SmoothMeshGraphGenerator.CreateNode(node.Key, IDToContour[node.Key], node.Z, false);
-                newNode.MeshGraph = meshGraph;
-                nodes.Add(newNode);
-            }
-#endif
-*/
+            //Optional stable order for callers that inspect the returned list (live assembly uses OnMeshGenerated).
+            listBajajMeshGenerators.Sort(Comparer<BajajGeneratorMesh>.Create((a, b) => a.AverageZ.CompareTo(b.AverageZ)));
             return listBajajMeshGenerators;
         }
 
+        /// <summary>
+        /// Tile one slice.  A slice with any polygon takes the Bajaj polygon path (regions, medial-axis closing);
+        /// a polyline-only slice is a ruled ribbon and goes to <see cref="PolylineRibbonMeshGenerator"/>.  Both end
+        /// in <see cref="FinishSliceMesh"/> for caps, virtual-overlap restore, normals, and validation.
+        /// </summary>
         public static void GenerateFaces(BajajGeneratorMesh mesh)
         {
-            //Trace.WriteLine(string.Format("Creating mesh {0}", mesh.ToString()));
-
             using var _phase = MeshPhaseTimings.Measure(MeshPhase.FaceGeneration, mesh.Vertices.Count);
 
-            AddDelaunayEdges(mesh);
-
-            bool hasPolygons = mesh.HasPolygonShapes;
-            if (hasPolygons)
+            int singleTrianglePolylinePairs;
+            if (mesh.HasPolygonShapes)
             {
-                var RegionPairingGraph = GenerateRegionGraph(mesh);
-
-                mesh.RemoveInvalidEdges();
-
-                CompleteCorrespondingVertexFaces(mesh);
-
-                SliceChordRTree rTree = mesh.CreateChordTree(mesh.ShapeZ);
-                List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(mesh, rTree);
-
-                var IncompleteVerticies = IdentifyIncompleteVerticies(mesh);
-
-                List<MorphMeshVertex> FirstPassIncompleteVerticies = FirstPassSliceChordGeneration(mesh, mesh.ShapeZ);
-
-                BajajMeshGenerator.FirstPassFaceGeneration(mesh);
-
-                try
-                {
-                    MorphMeshRegionGraph SecondPassRegions = MorphRenderMesh.SecondPassRegionDetection(mesh, FirstPassIncompleteVerticies);
-                    SecondPassRegions.MergeAndCloseRegionsPass(mesh, rTree);
-                }
-                catch (Exception e)
-                {
-                    mesh.GenerationHadErrors = true;
-                    Trace.WriteLine(string.Format("Exception building mesh {0}\n{1}", mesh.ToString(), e));
-                }
-
-                BajajMeshGenerator.FirstPassFaceGeneration(mesh);
+                GeneratePolygonFaces(mesh);
+                singleTrianglePolylinePairs = 0;
             }
             else
             {
-                mesh.RemoveInvalidEdges();
-                CompleteCorrespondingVertexFaces(mesh);
-                FirstPassSliceChordGeneration(mesh, mesh.ShapeZ);
-                BajajMeshGenerator.FirstPassFaceGeneration(mesh);
+                singleTrianglePolylinePairs = PolylineRibbonMeshGenerator.GenerateRibbonFaces(mesh);
             }
 
-            int singleTrianglePolylinePairs = EnforceTwoFaceMinimumForPolylinePairs(mesh);
+            FinishSliceMesh(mesh, singleTrianglePolylinePairs);
+        }
 
+        /// <summary>
+        /// Bajaj 1996 / Edwards 2011 tiling for closed contours: Delaunay, region graph, untiled-region closing via
+        /// the medial axis, then OTV slice chords and face generation in two passes.  Polylines never reach here as
+        /// tileable shapes; SliceGraph keeps them correspondence-only when the slice has a polygon.
+        /// </summary>
+        private static void GeneratePolygonFaces(BajajGeneratorMesh mesh)
+        {
+            AddDelaunayEdges(mesh);
+
+            var RegionPairingGraph = GenerateRegionGraph(mesh);
+
+            mesh.RemoveInvalidEdges();
+
+            CompleteCorrespondingVertexFaces(mesh);
+
+            SliceChordRTree rTree = mesh.CreateChordTree(mesh.ShapeZ);
+            List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(mesh, rTree);
+
+            var IncompleteVerticies = IdentifyIncompleteVerticies(mesh);
+
+            List<MorphMeshVertex> FirstPassIncompleteVerticies = FirstPassSliceChordGeneration(mesh, mesh.ShapeZ);
+
+            BajajMeshGenerator.FirstPassFaceGeneration(mesh);
+
+            try
+            {
+                MorphMeshRegionGraph SecondPassRegions = MorphRenderMesh.SecondPassRegionDetection(mesh, FirstPassIncompleteVerticies);
+                SecondPassRegions.MergeAndCloseRegionsPass(mesh, rTree);
+            }
+            catch (Exception e)
+            {
+                mesh.GenerationHadErrors = true;
+                Trace.WriteLine(string.Format("Exception building mesh {0}\n{1}", mesh.ToString(), e));
+            }
+
+            BajajMeshGenerator.FirstPassFaceGeneration(mesh);
+        }
+
+        /// <summary>
+        /// Steps shared by the polygon and polyline paths once the band between sections has faces.
+        /// </summary>
+        /// <param name="singleTrianglePolylinePairs">Sliver count from the ribbon path; zero for polygons.</param>
+        internal static void FinishSliceMesh(BajajGeneratorMesh mesh, int singleTrianglePolylinePairs)
+        {
             if (mesh.Slice != null)
             {
 
@@ -545,94 +462,13 @@ namespace MorphologyMesh
 
             mesh.RecalculateNormals();
 
-            mesh.ManifoldReport = MeshManifoldValidator.Validate(mesh, mesh.IsForkGapBoundaryEdge, singleTrianglePolylinePairs);
+            mesh.ManifoldReport = MeshManifoldValidator.Validate(mesh, mesh.IsForkGapBoundaryEdge, singleTrianglePolylinePairs, mesh.IsRibbonBoundaryEdge);
 
             if (mesh.ManifoldReport.IsValidSliceSurface == false)
             {
                 mesh.GenerationHadErrors = true;
                 Trace.WriteLine($"Mesh {mesh} is not a valid slice surface: {mesh.ManifoldReport}");
             }
-        }
-
-        /// <summary>
-        /// Two polylines on different sections should share a full quad or nothing at all.  A lone triangle is a
-        /// sliver: it puts a single face where the surface needs two, and it leaves the odd vertex out with a
-        /// boundary edge that reads as a hole.  Remove those triangles so the result is a clean gap.
-        ///
-        /// Scoped to polyline pairs on purpose.  <c>TryClosingUntiledRegion</c> legitimately closes a three-vertex
-        /// region with one triangle, and that path only runs on the polygon branch, so a backstop that also swept
-        /// polygon pairs would delete correct region-closing output and reopen the hole it had just filled.
-        ///
-        /// This removes rather than trying to complete the quad.  FirstPassFaceGeneration has already run by this
-        /// point and its whole job is to add the second face wherever the existing chords admit one, so a pair still
-        /// holding one face is a pair whose complementary triangle was rejected.  Adding it here anyway would mean
-        /// re-adding a face the chord tests already refused, which trades a gap for crossing edges.
-        /// </summary>
-        /// <returns>How many cross-band polyline pairs were left with exactly one face.</returns>
-        private static int EnforceTwoFaceMinimumForPolylinePairs(BajajGeneratorMesh mesh)
-        {
-            //Group faces by the cross-band polyline pair they join.  A face touching three shapes, or any polygon,
-            //is not this pass's business.
-            Dictionary<(int Lower, int Upper), List<IFace>> facesByPair = [];
-
-            foreach (IFace face in mesh.Faces)
-            {
-                if (TryGetCrossBandPolylinePair(mesh, face, out (int Lower, int Upper) pair) == false)
-                    continue;
-
-                if (facesByPair.TryGetValue(pair, out List<IFace> faces) == false)
-                    facesByPair[pair] = faces = [];
-
-                faces.Add(face);
-            }
-
-            int slivers = 0;
-            foreach (KeyValuePair<(int Lower, int Upper), List<IFace>> kvp in facesByPair)
-            {
-                if (kvp.Value.Count != 1)
-                    continue;
-
-                slivers++;
-                mesh.RemoveFace(kvp.Value[0]);
-                Trace.WriteLine($"Mesh {mesh}: removed the single triangle joining polyline shapes {kvp.Key.Lower} and {kvp.Key.Upper}; a cross-section polyline pair needs two faces or none.");
-            }
-
-            return slivers;
-        }
-
-        /// <summary>
-        /// True when every vertex of the face belongs to one of exactly two polyline shapes that sit on opposite
-        /// bands, and both bands are represented.
-        /// </summary>
-        private static bool TryGetCrossBandPolylinePair(BajajGeneratorMesh mesh, IFace face, out (int Lower, int Upper) pair)
-        {
-            pair = default;
-
-            int lower = -1;
-            int upper = -1;
-
-            foreach (int iVert in face.iVerts)
-            {
-                IShapeIndex index = mesh[iVert].ShapeIndex;
-                if (index is null)
-                    return false;
-
-                int iShape = index.ShapeIndex;
-                if (mesh.Shapes[iShape] is not Polyline)
-                    return false;
-
-                ref int side = ref mesh.IsUpperShape[iShape] ? ref upper : ref lower;
-                if (side >= 0 && side != iShape)
-                    return false;
-
-                side = iShape;
-            }
-
-            if (lower < 0 || upper < 0)
-                return false;
-
-            pair = (lower, upper);
-            return true;
         }
 
         /// <summary>
@@ -825,9 +661,16 @@ namespace MorphologyMesh
         /// True when the face respects the annotation topology: every pair of shapes it touches is joined by a
         /// LocationLink, and no pair crosses a fork gap.  A mesh with neither link data nor a fork partition allows
         /// everything, which keeps hand-built topologies working.
+        ///
+        /// Always rejects Delaunay faces that lie entirely on a single <see cref="Polyline"/>: contour
+        /// triangulation may fill polygons, but polyline interiors (including accidentally closed LINESTRINGs
+        /// and CLOSEDCURVE rings) are not part of the shape.
         /// </summary>
         private static bool FaceRespectsShapeLinks(BajajGeneratorMesh mesh, MorphMeshFace face)
         {
+            if (IsSamePolylineFace(mesh, face))
+                return false;
+
             Func<int, int, bool> isLinked = mesh.ShapeLinkPredicate;
             PolylineForkPartition forkPartition = mesh.ForkPartition;
             if (isLinked is null && forkPartition is null)
@@ -860,6 +703,32 @@ namespace MorphologyMesh
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// True when every annotated vertex of the face belongs to the same polyline shape.
+        /// </summary>
+        private static bool IsSamePolylineFace(BajajGeneratorMesh mesh, MorphMeshFace face)
+        {
+            ImmutableArray<int> iVerts = face.iVerts;
+            int? shapeId = null;
+            for (int i = 0; i < iVerts.Length; i++)
+            {
+                IShapeIndex index = mesh[iVerts[i]].ShapeIndex;
+                if (index is null)
+                    continue;
+
+                if (shapeId is null)
+                    shapeId = index.ShapeIndex;
+                else if (shapeId.Value != index.ShapeIndex)
+                    return false;
+            }
+
+            if (shapeId is null)
+                return false;
+
+            int id = shapeId.Value;
+            return id >= 0 && id < mesh.Shapes.Length && mesh.Shapes[id] is Polyline;
         }
 
         /*

@@ -44,6 +44,16 @@ namespace MorphologyMesh
         public int PolylineForkBoundaryEdges { get; init; }
 
         /// <summary>
+        /// Single-face edges on the legitimate boundary of an open polyline ribbon: the chord at each end of the
+        /// sheet and the outline of a tapered end cap.  Expected, not a hole.
+        ///
+        /// A ribbon between open curves is a sheet, not a tube: its boundary is the two contours (the seam the
+        /// adjacent slices close) plus one chord at each end.  Nothing will ever put a second face on those, so
+        /// counting them as holes flagged every gap-junction slice as an invalid surface.
+        /// </summary>
+        public int RibbonBoundaryEdges { get; init; }
+
+        /// <summary>
         /// Cross-band polyline pairs joined by exactly one triangle.  Two polylines on different sections should
         /// share a full quad or nothing; a lone triangle is a sliver.  The one legitimate exception, an annotation
         /// consisting of a single point, is not implemented and so cannot occur.
@@ -71,7 +81,7 @@ namespace MorphologyMesh
         public override string ToString() =>
             $"faces:{FaceCount} manifold:{ManifoldEdges} nonManifold:{NonManifoldEdges} inconsistent:{InconsistentManifoldEdges} " +
             $"contourSeam:{ContourBoundaryEdges} holes:{UnexpectedBoundaryEdges} isolated:{IsolatedEdges} " +
-            $"forkGap:{PolylineForkBoundaryEdges} singleTriPolyline:{SingleTrianglePolylinePairs}";
+            $"forkGap:{PolylineForkBoundaryEdges} ribbonEdge:{RibbonBoundaryEdges} singleTriPolyline:{SingleTrianglePolylinePairs}";
     }
 
     /// <summary>
@@ -85,7 +95,10 @@ namespace MorphologyMesh
         /// hole, which is the behavior for meshes with no fork information.</param>
         /// <param name="singleTrianglePolylinePairs">Count of cross-band polyline pairs sharing exactly one face,
         /// which the caller measures because it needs shape identity rather than just edges.</param>
-        public static MeshManifoldReport Validate<T>(IReadOnlyMesh<T> mesh, Func<IEdgeKey, bool> isForkGapBoundary = null, int singleTrianglePolylinePairs = 0) where T : IVertex
+        /// <param name="isRibbonBoundary">Identifies single-face edges on the legitimate boundary of an open polyline
+        /// ribbon (end chords, cap taper outline).  Null reports those as holes, which is correct for a polygon mesh
+        /// where every boundary should close.</param>
+        public static MeshManifoldReport Validate<T>(IReadOnlyMesh<T> mesh, Func<IEdgeKey, bool> isForkGapBoundary = null, int singleTrianglePolylinePairs = 0, Func<IEdgeKey, bool> isRibbonBoundary = null) where T : IVertex
         {
             int manifold = 0;
             int nonManifold = 0;
@@ -94,6 +107,7 @@ namespace MorphologyMesh
             int contourBoundary = 0;
             int unexpectedBoundary = 0;
             int forkBoundary = 0;
+            int ribbonBoundary = 0;
 
             foreach (var kvp in mesh.Edges)
             {
@@ -111,6 +125,8 @@ namespace MorphologyMesh
                         contourBoundary++;
                     else if (isForkGapBoundary is not null && isForkGapBoundary(kvp.Key))
                         forkBoundary++;
+                    else if (isRibbonBoundary is not null && isRibbonBoundary(kvp.Key))
+                        ribbonBoundary++;
                     else
                         unexpectedBoundary++;
                     continue;
@@ -139,6 +155,7 @@ namespace MorphologyMesh
                 ContourBoundaryEdges = contourBoundary,
                 UnexpectedBoundaryEdges = unexpectedBoundary,
                 PolylineForkBoundaryEdges = forkBoundary,
+                RibbonBoundaryEdges = ribbonBoundary,
                 SingleTrianglePolylinePairs = singleTrianglePolylinePairs
             };
         }

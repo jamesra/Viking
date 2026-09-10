@@ -28,15 +28,25 @@ namespace MorphologyMesh
 
         readonly Dictionary<ulong, SliceTopology> SliceToTopology;
 
-        public ConcurrentTopologyInitializer(SliceGraph graph)
+        /// <summary>
+        /// Optional per-slice notification so a caller can show a slice's contours as soon as they exist instead of
+        /// waiting for every topology in the graph.
+        /// </summary>
+        readonly SliceTopologyReadyHandler OnSliceTopologyReady;
+
+        public ConcurrentTopologyInitializer(SliceGraph graph, SliceTopologyReadyHandler onSliceTopologyReady = null)
         {
             Graph = graph;
+            OnSliceTopologyReady = onSliceTopologyReady;
             UnprocessedSlices = [.. Graph.Nodes.Keys];
             SliceToTopology = new Dictionary<ulong, SliceTopology>(Graph.Nodes.Count);
         }
 
         private void OnTopologyComplete(Slice s, SliceTopology st)
         {
+            List<ulong> slicesToStart = [];
+            bool signalDone = false;
+
             try
             {
                 rwLock.EnterWriteLock();
@@ -48,69 +58,84 @@ namespace MorphologyMesh
 
                 foreach (ulong adjacent in s.Edges.Keys)
                 {
-                    TryStartSlice(adjacent);
+                    if (TryClaimSliceUnlocked(adjacent))
+                        slicesToStart.Add(adjacent);
                 }
 
                 if (UnprocessedSlices.Count == 0 && SlicesWithActiveTasks.Count == 0)
-                {
-                    AllDone.TrySetResult(SliceToTopology);
-                }
+                    signalDone = true;
             }
             finally
             {
                 rwLock.ExitWriteLock();
             }
+
+            //Notify before the adjacent slices start.  Those slices share cached shapes with this one and insert
+            //corresponding verticies into them while they build, so reading the contours after they start would
+            //race with that mutation.  Nothing else can touch these shapes until the adjacent tasks are launched.
+            if (OnSliceTopologyReady is not null)
+            {
+                try
+                {
+                    OnSliceTopologyReady(s, st);
+                }
+                catch (Exception e)
+                {
+                    System.Diagnostics.Trace.WriteLine($"Slice {s.Key} topology-ready handler threw; topology initialization continues.\n{e}");
+                }
+            }
+
+            foreach (ulong id in slicesToStart)
+                StartSliceTask(id);
+
+            if (signalDone)
+                AllDone.TrySetResult(SliceToTopology);
         }
 
         /// <summary>
-        /// Return true if a task can be safely launched for this slice
+        /// Return true if a task can be safely launched for this slice. Caller must hold the write lock.
         /// </summary>
-        /// <param name="node"></param>
-        /// <returns></returns>
         private bool CanStartSlice(Slice node)
         {
             if (UnprocessedSlices.Contains(node.Key) == false)
                 return false;
 
-            //Do not process a slice if the adjacent slices are being processed and could change the polygons it would be compared against
             return !node.Edges.Keys.Any(key => SlicesWithActiveTasks.Contains(key));
         }
 
         /// <summary>
-        /// If a slice is eligible to be processed then start a task.
+        /// Claim eligibility under the write lock without starting the task. Returns false if not eligible.
         /// </summary>
-        /// <param name="slice_id"></param>
-        /// <returns></returns>
-        private Task TryStartSlice(in ulong slice_id)
+        private bool TryClaimSliceUnlocked(ulong slice_id)
         {
             Slice slice = Graph[slice_id];
-
             if (CanStartSlice(slice) is false)
-                return null;
+                return false;
 
             UnprocessedSlices.Remove(slice_id);
             SlicesWithActiveTasks.Add(slice_id);
+            return true;
+        }
 
-            void GetTopologyTask()
+        private void StartSliceTask(ulong slice_id)
+        {
+            Slice slice = Graph[slice_id];
+            Task.Run(() =>
             {
                 SliceTopology st;
                 try
                 {
                     st = Graph.GetSliceTopology(slice);
-                    this.OnTopologyComplete(slice, st);
+                    OnTopologyComplete(slice, st);
                 }
                 catch (Exception e)
                 {
-                    //Log the failure rather than silently emitting an empty topology.  An empty topology
-                    //still has to be reported so dependent slices can proceed, but the cause must be visible.
                     string sectionText = Graph.FormatSectionNumbers(slice);
                     System.Diagnostics.Trace.WriteLine($"Slice {slice.Key} topology initialization failed for {sectionText}. Emitting empty topology.\n{e}");
                     Graph.RecordTopologyFailure(slice.Key, sectionText);
-                    this.OnTopologyComplete(slice, new SliceTopology());
+                    OnTopologyComplete(slice, new SliceTopology());
                 }
-            }
-
-            return Task.Run(GetTopologyTask);
+            });
         }
 
         /// <summary>
@@ -119,17 +144,18 @@ namespace MorphologyMesh
         /// <param name="tolerance"></param>
         public Task<Dictionary<ulong, SliceTopology>> InitializeSliceTopologyAsync(double tolerance = 0)
         {
-            bool TasksStarted = false;
+            List<ulong> slicesToStart = [];
             try
             {
                 rwLock.EnterWriteLock();
 
                 ulong[] UnprocessedSlicesArray = [.. UnprocessedSlices];
 
-                for (int iSlice = UnprocessedSlices.Count - 1; iSlice >= 0; iSlice--)
+                for (int iSlice = UnprocessedSlicesArray.Length - 1; iSlice >= 0; iSlice--)
                 {
-                    var outputTask = TryStartSlice(UnprocessedSlicesArray[iSlice]);
-                    TasksStarted = TasksStarted || outputTask != null;
+                    ulong id = UnprocessedSlicesArray[iSlice];
+                    if (TryClaimSliceUnlocked(id))
+                        slicesToStart.Add(id);
                 }
             }
             finally
@@ -137,9 +163,11 @@ namespace MorphologyMesh
                 rwLock.ExitWriteLock();
             }
 
-            //We need to ensure there are tasks to wait on. This was an edge case for structures with one annotation.
-            if (TasksStarted == false)
-                AllDone.TrySetResult(this.SliceToTopology);
+            foreach (ulong id in slicesToStart)
+                StartSliceTask(id);
+
+            if (slicesToStart.Count == 0)
+                AllDone.TrySetResult(SliceToTopology);
 
             return AllDone.Task;
         }
