@@ -33,6 +33,7 @@ using System.Threading.Tasks;
 using Viking.Identity;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
+using Viking.Identity.Server;
 using Viking.SSL;
 using DotNetEnv;
 using ConfigurationSubstitution;
@@ -163,8 +164,9 @@ namespace Viking.Identity.Server.Standalone
             // Configure Identity Server
             ConfigureIdentityServer(services, configuration, sslCert);
             
-            // Configure Data Protection
-            ConfigureDataProtection(services, sslCert);
+            // Configure Data Protection (shared with WebManagement)
+            SharedIdentityDataProtection.AddSharedIdentityDataProtection(
+                services, sslCert, AllowDeveloperSigningCredential());
             
             // Configure Email services
             ConfigureEmailServices(services, configuration);
@@ -180,6 +182,7 @@ namespace Viking.Identity.Server.Standalone
                 options.RedirectStatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status308PermanentRedirect;
                 options.HttpsPort = httpsPort;
             });
+            services.AddControllersWithViews();
             services.AddRazorPages();
         }
 
@@ -224,6 +227,9 @@ namespace Viking.Identity.Server.Standalone
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
 
+            services.ConfigureSharedApplicationCookie();
+            services.AddTransient<Microsoft.AspNetCore.Authentication.IClaimsTransformation, MapNameIdentifierToSubClaimsTransformation>();
+
             string licenseKey = null;
             var hostingEnv = configuration.GetValue<string>("HOSTING_ENVIRONMENT") ?? "Local";
             if (hostingEnv == "Local")
@@ -252,11 +258,16 @@ namespace Viking.Identity.Server.Standalone
                 // options.KeyManagement.Enabled = false; // Commented out - will use default behavior or proper operational store
                 options.EmitStaticAudienceClaim = true;
                 options.LicenseKey = licenseKey;
+                options.UserInteraction.AllowOriginInReturnUrl = true;
+                options.UserInteraction.ErrorUrl = "/Home/Error";
+                options.Authentication.CookieAuthenticationScheme = IdentityConstants.ApplicationScheme;
                  
                 if (serverOptions != null)
                 {
                     options.IssuerUri = serverOptions.Authority;
+                    options.UserInteraction.LoginUrl = serverOptions.GetManagementLoginUrl();
                     Log.Information("Set IdentityServer IssuerUri to: {IssuerUri}", options.IssuerUri);
+                    Log.Information("Set IdentityServer LoginUrl to: {LoginUrl}", options.UserInteraction.LoginUrl);
                 }
                 else
                 {
@@ -401,55 +412,6 @@ namespace Viking.Identity.Server.Standalone
             }
         }
 
-        /// <summary>
-        /// PersistKeysToFileSystem disables default at-rest encryption. Docker and Production must
-        /// wrap the key ring with the SSL cert. Existing unencrypted key XML remains readable;
-        /// new keys are written encrypted.
-        /// </summary>
-        private static void ConfigureDataProtection(IServiceCollection services, X509Certificate2 sslCert)
-        {
-            // In Docker, use the shared volume path so the same key ring is used across restarts and
-            // matches the keys that protect IdentityServer signing keys in the operational store.
-            // Otherwise the app would use ./DataProtectionKeys (relative to CWD) and get a different
-            // key ring, causing "Error unprotecting the IdentityServer signing key" (key not available).
-            var isDockerEnvironment = string.Equals(
-                Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT"),
-                "Docker",
-                StringComparison.OrdinalIgnoreCase);
-            var dataProtectionKeysPath = isDockerEnvironment
-                ? "/app/DataProtectionKeys"
-                : @"./DataProtectionKeys/";
-            var dataProtectionBuilder = services.AddDataProtection()
-                .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
-                .SetApplicationName("VikingIdentityServer");
-
-            if (sslCert != null)
-            {
-                try
-                {
-                    dataProtectionBuilder.ProtectKeysWithCertificate(sslCert);
-                    Log.Information(
-                        "Data Protection configured with certificate encryption. Subject: {Subject}, Thumbprint: {Thumbprint}",
-                        sslCert.Subject, sslCert.Thumbprint);
-                    return;
-                }
-                catch (Exception ex) when (AllowDeveloperSigningCredential())
-                {
-                    Log.Warning(ex, "Failed to configure Data Protection with certificate, using file system protection only");
-                    return;
-                }
-            }
-
-            if (AllowDeveloperSigningCredential())
-            {
-                Log.Warning("No certificate found for Data Protection, using file system protection only");
-                return;
-            }
-
-            throw new InvalidOperationException(
-                "Data Protection requires the SSL certificate to encrypt keys at rest outside local Development.");
-        }
-
         private static void ConfigureEmailServices(IServiceCollection services, IConfiguration configuration)
         {
             // Configure email options
@@ -476,7 +438,7 @@ namespace Viking.Identity.Server.Standalone
             else
             {
                 Log.Information("Using Error page for exceptions...");
-                app.UseExceptionHandler("/Error");
+                app.UseExceptionHandler("/Home/Error");
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
@@ -490,6 +452,11 @@ namespace Viking.Identity.Server.Standalone
             app.UseIdentityServer();
             Log.Information("IdentityServer middleware added successfully.");
             app.UseAuthorization();
+
+            // Protocol UI (Logout / Error). Do not put these under MapRazorPages().RequireAuthorization().
+            app.MapControllerRoute(
+                name: "default",
+                pattern: "{controller=Home}/{action=Index}/{id?}");
 
             // Modern top-level route registrations (replaces UseEndpoints)
             app.MapRazorPages().RequireAuthorization();

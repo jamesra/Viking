@@ -1,6 +1,7 @@
 services:
   identity-all-services:
     platform: linux/amd64
+    restart: unless-stopped
     env_file:
       - ${IDENTITY_BUILD_ENV_PATH:-D:/Docker/Builds/IdentityServer}/.env.All
       - ${IDENTITY_BUILD_ENV_PATH:-D:/Docker/Builds/IdentityServer}/.env.All.Docker
@@ -55,11 +56,15 @@ services:
       - SQL_SERVER_IDENTITY_DB=${SQL_SERVER_IDENTITY_DB}
       - SQL_SERVER_CONFIG_DB=${SQL_SERVER_CONFIG_DB}
       - SQL_SERVER_GRANTS_DB=${SQL_SERVER_GRANTS_DB}
+      # How long to wait for the DB VM after host reboot (seconds)
+      - SQL_WAIT_TIMEOUT_SECONDS=${SQL_WAIT_TIMEOUT_SECONDS:-900}
+      - SQL_WAIT_INTERVAL_SECONDS=${SQL_WAIT_INTERVAL_SECONDS:-5}
       - AUTHORITY=${AUTHORITY}
       - IDENTITY_SERVER_SECRET=${IDENTITY_SERVER_SECRET}
       - IDENTITY_SERVER_API_SECRET=${IDENTITY_SERVER_API_SECRET}
       - IDENTITY_SERVER_MVC_SECRET=${IDENTITY_SERVER_MVC_SECRET}
       - IDENTITY_SERVER_RO_VIKING_SECRET=${IDENTITY_SERVER_RO_VIKING_SECRET}
+      - SBFSEM_TOOLS_CLIENT_SECRET=${SBFSEM_TOOLS_CLIENT_SECRET:-}
       # Port configuration for applications
       - IDENTITY_WEBAPI_HTTP_PORT=${IDENTITY_WEBAPI_HTTP_PORT:-6000}
       - IDENTITY_WEBAPI_HTTPS_PORT=${IDENTITY_WEBAPI_HTTPS_PORT:-6001}
@@ -108,7 +113,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      # Cover SQL wait (default 900s) plus app warm-up after host/DB VM reboot
+      start_period: 960s
 
   identity-certbot-renewer:
     container_name: identity-certbot-renewer

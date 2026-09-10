@@ -74,25 +74,7 @@
                                         @(string.IsNullOrEmpty(service.Description) ? "No description" : service.Description)
                                     </p>
 
-                                    @{
-                                        var uniqueUserCount = service.UsersWithPermissions?.Select(p => p.UserId).Distinct().Count() ?? 0;
-                                    }
-                                    @if (uniqueUserCount > 0)
-                                    {
-                                        <div class="mb-2">
-                                            <span class="badge bg-info">
-                                                <i class="bi bi-person"></i> @uniqueUserCount unique user(s)
-                                            </span>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div class="mb-2">
-                                            <span class="badge bg-warning text-dark">
-                                                <i class="bi bi-exclamation-triangle"></i> No users with permissions
-                                            </span>
-                                        </div>
-                                    }
+                                    @await Html.PartialAsync("_ResourceAccessBadge", (Viking.Identity.Models.Resource)service)
 
                                     @if (!string.IsNullOrEmpty(service.Endpoint?.ToString()))
                                     {

@@ -1,0 +1,18 @@
+@model Viking.Identity.Server.Standalone.Controllers.ErrorViewModel
+@{
+    ViewData["Title"] = "Error";
+}
+
+<h1>Error</h1>
+@if (Model?.Error != null)
+{
+    <p><strong>@Model.Error.Error</strong></p>
+    @if (!string.IsNullOrWhiteSpace(Model.Error.ErrorDescription))
+    {
+        <p class="muted">@Model.Error.ErrorDescription</p>
+    }
+}
+else
+{
+    <p class="muted">An error occurred while processing your request.</p>
+}

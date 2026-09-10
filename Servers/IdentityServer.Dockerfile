@@ -59,7 +59,7 @@ WORKDIR /src
 
 RUN mkdir IdentityServer
 
-# Copy all project dependencies
+# Copy project sources (publish restores as needed)
 COPY Identity.DataContext/ Identity.DataContext/
 COPY Identity.Models/ Identity.Models/
 COPY IdentityServer/Identity.Configuration/ IdentityServer/Identity.Configuration/
@@ -70,43 +70,25 @@ COPY IdentityServer/Viking.Identity.Server.WebApi/ IdentityServer/Viking.Identit
 COPY IdentityServer/Viking.Identity.Server.WebManagement/ IdentityServer/Viking.Identity.Server.WebManagement/
 COPY IdentityServer/KeyGenerator/ IdentityServer/KeyGenerator/
 
-# Build IdentityServerStandalone
-WORKDIR "/src/IdentityServer/IdentityServerStandalone"
-RUN dotnet restore "IdentityServerStandalone.csproj"
-RUN dotnet build "IdentityServerStandalone.csproj" -c $BUILD_CONFIGURATION -o /app/build/identity-standalone
-
-# Build WebApi
-WORKDIR "/src/IdentityServer/Viking.Identity.Server.WebApi"
-RUN dotnet restore "Viking.Identity.Server.WebApi.csproj"
-RUN dotnet build "Viking.Identity.Server.WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/build/identity-webapi
-
-# Build Viking.Identity.Server.WebManagement (main management website)
-WORKDIR "/src/IdentityServer/Viking.Identity.Server.WebManagement"
-RUN dotnet restore "IdentityManagementWebsite.csproj"
-RUN dotnet build "IdentityManagementWebsite.csproj" -c $BUILD_CONFIGURATION -o /app/build/identity-server
-
-# Publish all services
+# Publish all services (restore+compile in one step per project)
 FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
 
-# Publish IdentityServerStandalone
 WORKDIR "/src/IdentityServer/IdentityServerStandalone"
 RUN dotnet publish "IdentityServerStandalone.csproj" -c $BUILD_CONFIGURATION -o /app/publish/identity-standalone /p:UseAppHost=false --runtime linux-x64 --self-contained false /p:DebugType=portable
 
-# Publish WebApi
 WORKDIR "/src/IdentityServer/Viking.Identity.Server.WebApi"
 RUN dotnet publish "Viking.Identity.Server.WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish/identity-webapi /p:UseAppHost=false --runtime linux-x64 --self-contained false /p:DebugType=portable
 
-# Publish Viking.Identity.Server.WebManagement
 WORKDIR "/src/IdentityServer/Viking.Identity.Server.WebManagement"
 RUN dotnet publish "IdentityManagementWebsite.csproj" -c $BUILD_CONFIGURATION -o /app/publish/identity-server /p:UseAppHost=false --runtime linux-x64 --self-contained false /p:DebugType=portable
 # secrets.json is not copied into the image; load it at runtime via docker-compose volume from IDENTITY_CONFIG_PATH (e.g. D:/Docker/mounted-configs/IdentityServer)
 
 # Generate Data Protection keys (consistent keys across restarts; used to protect data stored on disk)
 FROM build AS keygenerator
+ARG BUILD_CONFIGURATION=Release
 WORKDIR "/src/IdentityServer/KeyGenerator"
-RUN dotnet restore "KeyGenerator.csproj"
-RUN dotnet build "KeyGenerator.csproj" -c $BUILD_CONFIGURATION -o /app/build/KeyGenerator
-RUN dotnet run -- /app/DataProtectionKeys VikingIdentityServer
+RUN dotnet run -c $BUILD_CONFIGURATION -- /app/DataProtectionKeys VikingIdentityServer
 
 # Final stage
 FROM base AS final
@@ -153,8 +135,8 @@ directory=/app/identity-standalone
 user=app
 autostart=true
 autorestart=true
-startsecs=3
-startretries=3
+startsecs=10
+startretries=100
 stdout_logfile=/dev/stdout
 stdout_logfile_maxbytes=0
 stderr_logfile=/dev/stderr
@@ -167,8 +149,8 @@ directory=/app/identity-webapi
 user=app
 autostart=true
 autorestart=true
-startsecs=3
-startretries=3
+startsecs=10
+startretries=100
 stdout_logfile=/dev/stdout
 stdout_logfile_maxbytes=0
 stderr_logfile=/dev/stderr
@@ -181,8 +163,8 @@ directory=/app/identity-server
 user=app
 autostart=true
 autorestart=true
-startsecs=3
-startretries=3
+startsecs=10
+startretries=100
 stdout_logfile=/dev/stdout
 stdout_logfile_maxbytes=0
 stderr_logfile=/dev/stderr
@@ -200,6 +182,10 @@ RUN chown -R app:app /var/log/supervisor
 RUN chmod +x /app/identity-standalone/Viking.Identity.Server.Standalone.dll
 RUN chmod +x /app/identity-webapi/Viking.Identity.Server.WebApi.dll
 RUN chmod +x /app/identity-server/Viking.Identity.Server.WebManagement.dll
+
+# Wait for external SQL Server before starting apps (host reboot / DB VM lag)
+COPY IdentityServer/scripts/wait-for-sql.sh /app/wait-for-sql.sh
+RUN dos2unix /app/wait-for-sql.sh && chmod +x /app/wait-for-sql.sh && chown app:app /app/wait-for-sql.sh
 
 # Create startup script
 RUN echo '#!/bin/bash' > /app/start-services.sh && \
@@ -224,9 +210,8 @@ RUN echo '#!/bin/bash' > /app/start-services.sh && \
     echo '  cp -n /app/DataProtectionKeysBuild/*.xml /app/DataProtectionKeys/ 2>/dev/null && echo "Seeded Data Protection keys from image into volume"' >> /app/start-services.sh && \
     echo 'fi' >> /app/start-services.sh && \
     echo '' >> /app/start-services.sh && \
-    echo '# Wait for database to be ready (if using external database)' >> /app/start-services.sh && \
-    echo 'echo "Waiting for database connection..."' >> /app/start-services.sh && \
-    echo 'sleep 1' >> /app/start-services.sh && \
+    echo '# Wait for SQL Server (DB VM often starts after this container on host reboot)' >> /app/start-services.sh && \
+    echo '/app/wait-for-sql.sh || exit 1' >> /app/start-services.sh && \
     echo '' >> /app/start-services.sh && \
     echo '# Start supervisor' >> /app/start-services.sh && \
     echo 'exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf' >> /app/start-services.sh && \
@@ -247,8 +232,6 @@ RUN echo '#!/bin/bash' > /app/run-identity-standalone.sh && \
     echo 'if [ -n "${ASPNETCORE_ENVIRONMENT}" ] && [ -f "/app/.env.${ASPNETCORE_ENVIRONMENT}" ]; then ENV_FILES="$ENV_FILES /app/.env.${ASPNETCORE_ENVIRONMENT}"; fi' >> /app/run-identity-standalone.sh && \
     echo 'if [ -n "${HOSTING_ENVIRONMENT}" ] && [ -f "/app/.env.${HOSTING_ENVIRONMENT}" ]; then ENV_FILES="$ENV_FILES /app/.env.${HOSTING_ENVIRONMENT}"; fi' >> /app/run-identity-standalone.sh && \
     echo 'export $(cat $ENV_FILES 2>/dev/null | sed "s/\\r\$//" | grep -v "^#" | grep -v "^$" | grep "=" | cut -d= -f1 | grep -E "^[A-Za-z_][A-Za-z0-9_]*$" | tr "\n" " ")' >> /app/run-identity-standalone.sh && \
-    echo 'echo "[IS] Loaded environment variables:"' >> /app/run-identity-standalone.sh && \
-    echo 'env | grep -E "(IDENTITY_|SQL_|SSL_|AUTHORITY)" | sort' >> /app/run-identity-standalone.sh && \
     echo 'cd /app/identity-standalone' >> /app/run-identity-standalone.sh && \
     echo 'dotnet Viking.Identity.Server.Standalone.dll 2>&1 | while IFS= read -r line; do echo -e "\033[32m[IS]\033[0m $line"; done' >> /app/run-identity-standalone.sh && \
     chmod +x /app/run-identity-standalone.sh && \
@@ -290,16 +273,20 @@ RUN echo '#!/bin/bash' > /app/run-identity-server.sh && \
     chmod +x /app/run-identity-server.sh && \
     chown app:app /app/run-identity-server.sh
 
-# Health check script
-RUN cat > /app/health-check.sh <<EOF
+# Health check: HTTPS ports the processes bind. -k skips TLS verify for localhost probes.
+# Heredocs from Windows hosts can inject CRLF; dos2unix so the shebang is executable.
+RUN cat > /app/health-check.sh <<'EOF'
 #!/bin/bash
-# Check if all services are running
-curl -f http://localhost:5001/.well-known/openid-configuration || exit 1
-curl -f http://localhost:6001/health || exit 1
-curl -f http://localhost:80/ || exit 1
+set -e
+curl -fsSk https://localhost:5001/.well-known/openid-configuration >/dev/null
+curl -fsSk https://localhost:6001/health >/dev/null
+curl -fsSk https://localhost:4001/ >/dev/null
 EOF
 
-RUN chmod +x /app/health-check.sh
+RUN dos2unix /app/health-check.sh /app/start-services.sh /app/wait-for-sql.sh \
+        /app/run-identity-standalone.sh /app/run-identity-webapi.sh /app/run-identity-server.sh && \
+    chmod +x /app/health-check.sh /app/start-services.sh /app/wait-for-sql.sh \
+        /app/run-identity-standalone.sh /app/run-identity-webapi.sh /app/run-identity-server.sh
 
 # Switch to non-root user
 USER 1654

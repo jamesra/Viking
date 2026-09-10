@@ -161,7 +161,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 complete.InviteUrl = Url.CollaboratorInviteRegistrationLink(
                     result.InviteToken,
                     Request.Scheme,
-                    _identityServerOptions?.Authority);
+                    _identityServerOptions.GetManagementPublicBaseUrl());
 
                 try
                 {

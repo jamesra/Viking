@@ -37,6 +37,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         {
             var allVolumes = await _context.Volume
                 .Include(v => v.Parent)
+                .Include(v => v.UsersWithPermissions)
+                .Include(v => v.GroupsWithPermissions)
                 .ToListAsync();
 
             var accessibleVolumes = await _authorization.FilterAccessibleResourcesAsync(

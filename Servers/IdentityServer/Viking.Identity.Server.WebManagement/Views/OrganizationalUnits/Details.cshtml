@@ -164,25 +164,7 @@
                                     @(string.IsNullOrEmpty(service.Description) ? "No description" : service.Description)
                                 </p>
 
-                                @{
-                                    var uniqueUserCount = service.UsersWithPermissions?.Select(p => p.UserId).Distinct().Count() ?? 0;
-                                }
-                                @if (uniqueUserCount > 0)
-                                {
-                                    <div class="mb-2">
-                                        <span class="badge bg-info">
-                                            <i class="bi bi-person"></i> @uniqueUserCount unique user(s)
-                                        </span>
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div class="mb-2">
-                                        <span class="badge bg-warning text-dark">
-                                            <i class="bi bi-exclamation-triangle"></i> No users with permissions
-                                        </span>
-                                    </div>
-                                }
+                                @await Html.PartialAsync("_ResourceAccessBadge", (Viking.Identity.Models.Resource)service)
 
                                 @if (!string.IsNullOrEmpty(service.Endpoint?.ToString()))
                                 {
@@ -254,25 +236,7 @@
                                     @(string.IsNullOrEmpty(volume.Description) ? "No description" : volume.Description)
                                 </p>
                                 
-                                @{
-                                    var uniqueUserCount = volume.UsersWithPermissions?.Select(p => p.UserId).Distinct().Count() ?? 0;
-                                }
-                                @if (uniqueUserCount > 0)
-                                {
-                                    <div class="mb-2">
-                                        <span class="badge bg-info">
-                                            <i class="bi bi-person"></i> @uniqueUserCount unique user(s)
-                                        </span>
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div class="mb-2">
-                                        <span class="badge bg-warning text-dark">
-                                            <i class="bi bi-exclamation-triangle"></i> No users with permissions
-                                        </span>
-                                    </div>
-                                }
+                                @await Html.PartialAsync("_ResourceAccessBadge", (Viking.Identity.Models.Resource)volume)
                                 
                                 @if (!string.IsNullOrEmpty(volume.Endpoint?.ToString()))
                                 {
@@ -289,9 +253,16 @@
                                         <a asp-controller="VikingLaunch" asp-action="CreateCode" asp-route-volume="@(volume.Endpoint?.ToString())" class="btn btn-sm btn-primary">
                                             <i class="bi bi-box-arrow-up-right"></i> Open in Viking
                                         </a>
+                                        @await Html.PartialAsync("_VolumeSbfsemToolsLink", volume.Name)
                                         <a href="https://websvc.codepharm.net/Software/Viking/Viking-win-Setup.exe" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary" title="Download Viking if not installed">
                                             <i class="bi bi-download"></i> Install Viking
                                         </a>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="card-text mb-2">
+                                        @await Html.PartialAsync("_VolumeSbfsemToolsLink", volume.Name)
                                     </div>
                                 }
                                 

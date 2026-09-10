@@ -28,6 +28,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         {
             var allServices = await _context.SegmentationServices
                 .Include(s => s.Parent)
+                .Include(s => s.UsersWithPermissions)
+                .Include(s => s.GroupsWithPermissions)
                 .ToListAsync();
 
             var accessibleServices = await _authorization.FilterAccessibleResourcesAsync(

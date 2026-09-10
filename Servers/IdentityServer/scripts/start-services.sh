@@ -96,9 +96,12 @@ if [ "$IDENTITY_ENABLE_REMOTE_DEBUG" = "true" ] || [ "$ASPNETCORE_ENVIRONMENT" =
     echo "Remote debugger ready on port $DEBUG_PORT"
 fi
 
-# Wait for database to be ready (if using external database)
-echo "Waiting for database connection..."
-sleep 1
+# Wait for database to be ready (external DB VM can boot after this container)
+if [ -x /app/wait-for-sql.sh ]; then
+  /app/wait-for-sql.sh || exit 1
+else
+  echo "WARNING: /app/wait-for-sql.sh missing; continuing without database wait"
+fi
 
 # Start supervisor
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

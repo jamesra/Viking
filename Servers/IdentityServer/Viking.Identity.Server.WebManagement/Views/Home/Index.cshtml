@@ -195,6 +195,7 @@
                                                     <i class="bi bi-box-arrow-up-right"></i> Access Volume
                                                 </a>
                                             }
+                                            @await Html.PartialAsync("_VolumeSbfsemToolsLink", volume.Name)
                                             <a asp-controller="Volumes" asp-action="Details" asp-route-id="@volume.Id" class="btn btn-sm btn-outline-secondary">
                                                 <i class="bi bi-info-circle"></i> Details
                                             </a>

@@ -323,7 +323,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                                 if (_env == null || !_env.IsDevelopment())
                                 {
                                     var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                                    var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme, _identityServerOptions?.Authority);
+                                    var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme, ManagementLinkBaseUrl);
                                     await _emailSender.SendEmailConfirmationAsync(model.Email, callbackUrl);
                                 }
                             }
@@ -346,7 +346,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                         if (_env == null || !_env.IsDevelopment())
                         {
                             var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                            var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme, _identityServerOptions?.Authority);
+                            var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme, ManagementLinkBaseUrl);
                             await _emailSender.SendEmailConfirmationAsync(model.Email, callbackUrl);
                         }
                     }
@@ -535,7 +535,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 // For more information on how to enable account confirmation and password reset please
                 // visit https://go.microsoft.com/fwlink/?LinkID=532713
                 var code = await _userManager.GeneratePasswordResetTokenAsync(user);
-                var callbackUrl = Url.ResetPasswordCallbackLink(user.Id, code, Request.Scheme, _identityServerOptions?.Authority);
+                var callbackUrl = Url.ResetPasswordCallbackLink(user.Id, code, Request.Scheme, ManagementLinkBaseUrl);
                 await _emailSender.SendEmailAsync(new string[] { model.Email }, "Reset Password",
                    $"Please reset your password by clicking here: <a href='{callbackUrl}'>link</a>");
                 return RedirectToAction(nameof(ForgotPasswordConfirmation));
@@ -618,11 +618,53 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             {
                 return Redirect(returnUrl);
             }
-            else
+
+            if (IsSafeIssuerAuthorizeReturnUrl(returnUrl))
             {
-                return RedirectToAction(nameof(HomeController.Index), "Home");
+                return Redirect(returnUrl);
             }
+
+            _logger.LogWarning(
+                "Rejected non-local login ReturnUrl (not issuer authorize). ReturnUrl={ReturnUrl}, Authority={Authority}",
+                returnUrl,
+                _identityServerOptions?.Authority);
+            return RedirectToAction(nameof(HomeController.Index), "Home");
         }
+
+        /// <summary>
+        /// Allows Duende's absolute ReturnUrl back to the issuer authorize endpoint after login on :4001.
+        /// Only the Authority host and /connect/authorize paths are accepted (open-redirect safe).
+        /// Authority must be the OIDC issuer (:5001), not ManagementPublicUrl (:4001).
+        /// </summary>
+        private bool IsSafeIssuerAuthorizeReturnUrl(string returnUrl)
+        {
+            if (string.IsNullOrWhiteSpace(returnUrl) || string.IsNullOrWhiteSpace(_identityServerOptions?.Authority))
+            {
+                return false;
+            }
+
+            if (!Uri.TryCreate(returnUrl, UriKind.Absolute, out var returnUri))
+            {
+                return false;
+            }
+
+            if (!Uri.TryCreate(_identityServerOptions.Authority.TrimEnd('/') + "/", UriKind.Absolute, out var authorityUri))
+            {
+                return false;
+            }
+
+            if (!string.Equals(returnUri.Scheme, authorityUri.Scheme, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(returnUri.Authority, authorityUri.Authority, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var path = returnUri.AbsolutePath.TrimEnd('/');
+            return path.Equals("/connect/authorize", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("/connect/authorize/callback", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private string ManagementLinkBaseUrl => _identityServerOptions.GetManagementPublicBaseUrl();
 
         #endregion
     }

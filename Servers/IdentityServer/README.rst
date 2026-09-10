@@ -139,9 +139,39 @@ The system defines several OAuth2/OIDC clients for different use cases:
     - Read-only client for annotation data
     - May support anonymous users
 
-**Client Secret**
-    All clients share a configured secret (``CorrectHorseBatteryStaple`` in the example configuration).
-    **Important:** Change this secret in production and store it securely.
+**sbfsem-tools** - Third-party web application (sbfsem-tools.com)
+    - Client ID: ``sbfsem-tools``
+    - Allowed Grant Types: Authorization Code with PKCE (required)
+    - Used for: An external web tool whose Python backend signs users in and reads volume permissions
+    - Requires Consent: No
+    - Allows Offline Access: Yes (refresh tokens)
+    - Scopes: ``openid``, ``profile``, ``Viking.Annotation``. No volume scopes; the Permissions API
+      authorizes on the user, not the scope.
+    - Access Token Type: Reference, so the WebApi can validate it by introspection
+    - Redirect URIs: ``VikingIdentityServerOptions:SbfsemToolsRedirectUris``
+      (default production ``https://sbfsem-tools.com/auth/callback`` plus localhost
+      ``http://localhost:8765/auth/callback`` and ``http://127.0.0.1:8765/auth/callback``)
+    - Post Logout URIs: ``VikingIdentityServerOptions:SbfsemToolsPostLogoutRedirectUris``
+      (default ``https://sbfsem-tools.com/``)
+    - Secret: ``SBFSEM_TOOLS_CLIENT_SECRET``. When it is empty the client is not served at all.
+    - Interactive login: Duende ``UserInteraction.LoginUrl`` points at
+      ``VikingIdentityServerOptions:ManagementPublicUrl`` (management site ``:4001``). Standalone
+      and WebManagement share Data Protection keys and the Identity cookie so authorize on
+      ``:5001`` accepts that session.
+    - Integration guide for the third party: ``Documentation/source/server/Identity/sbfsem-tools.rst``
+    - Copy-ready reply: ``Documentation/source/server/Identity/sbfsem-tools-reply-2026-09-10.rst``
+
+**Client Secrets**
+    Each client has its own secret so that a leaked desktop secret cannot authenticate the others.
+    ``GetClientSecret`` throws when the secret for a client is not configured.
+
+    - ``Viking`` uses ``IDENTITY_SERVER_SECRET``
+    - ``api`` uses ``IDENTITY_SERVER_API_SECRET``
+    - ``mvc`` and ``web`` use ``IDENTITY_SERVER_MVC_SECRET``
+    - ``ro.viking`` uses ``IDENTITY_SERVER_RO_VIKING_SECRET``
+    - ``sbfsem-tools`` uses ``SBFSEM_TOOLS_CLIENT_SECRET``
+
+    **Important:** Store these outside the repository and rotate any value that has been committed.
 
 Scopes
 ------

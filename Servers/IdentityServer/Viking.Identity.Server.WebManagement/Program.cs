@@ -32,6 +32,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.AspNetCore.Hosting;
 using Viking.Identity;
+using Viking.Identity.Server;
 using DotNetEnv;
 using ConfigurationSubstitution;
 
@@ -218,6 +219,14 @@ namespace Viking.Identity.Server.WebManagement
                 .AddEntityFrameworkStores<ApplicationDbContext>() 
                 .AddDefaultTokenProviders();
 
+            services.ConfigureSharedApplicationCookie();
+            services.AddTransient<Microsoft.AspNetCore.Authentication.IClaimsTransformation, MapNameIdentifierToSubClaimsTransformation>();
+
+            var sslOptions = configuration.GetSection("SSL").Get<SSLOptions>();
+            var sslCert = Certs.LoadSSLCertificate(sslOptions);
+            SharedIdentityDataProtection.AddSharedIdentityDataProtection(
+                services, sslCert, AllowUnencryptedDataProtectionKeys());
+
             // Add application services
             services.AddTransient<IEmailSender, EmailSender>();
             services.AddTransient<IPermissionsViewModelHelper, PermissionsViewModelHelper>();
@@ -355,6 +364,23 @@ namespace Viking.Identity.Server.WebManagement
             // Database initialization logic can be added here if needed
             // Currently commented out in the original Startup.cs
             return app;
+        }
+
+        /// <summary>
+        /// Matches Standalone: unencrypted Data Protection keys only for local Development-style hosts.
+        /// </summary>
+        private static bool AllowUnencryptedDataProtectionKeys()
+        {
+            var hostingEnv = Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") ?? "Local";
+            if (string.Equals(hostingEnv, "Docker", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var aspnetCoreEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+            return string.Equals(aspnetCoreEnv, "Development", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(aspnetCoreEnv, "DevelopmentTest", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(aspnetCoreEnv, "Local", StringComparison.OrdinalIgnoreCase);
         }
     }
 

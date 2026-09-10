@@ -18,7 +18,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Identity.Web;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using System;
@@ -33,9 +32,16 @@ using Viking.Identity.Server.Extensions.Services;
 using Viking.Identity.Server.Services;
 using Viking.Identity.Server.WebManagement.Extensions;
 using Viking.SSL;
+using Viking.Identity;
 
 public class Program
 {
+    /// <summary>
+    /// Named auth scheme for opaque reference-token introspection.
+    /// Must not be "Bearer" — IdentityModel's default is Bearer and would collide with JWT.
+    /// </summary>
+    public const string IntrospectionScheme = "Introspection";
+
     public static void Main(string[] args)
     {
         // Configure Serilog
@@ -163,24 +169,43 @@ public class Program
 
             var vikingConfig = builder.Configuration.GetSection("VikingIdentityServerOptions").Get<VikingIdentityServerOptions>();
 
-            // Configure Authentication
-            builder.Services.AddAuthentication(OAuth2IntrospectionDefaults.AuthenticationScheme)
-                .AddOAuth2Introspection(options =>
+            // Introspection authenticates as an ApiResource (name + ApiSecret), not as the OAuth "api" client.
+            // Duende returns active:false when the caller is not an API that owns the token's scopes.
+            builder.Services.AddMemoryCache();
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddOAuth2Introspection(IntrospectionScheme, options =>
                 {
                     options.Authority = vikingConfig?.Authority;
+                    options.ClientId = IdentityApiResources.PermissionsApiResourceName;
                     options.ClientSecret = vikingConfig?.GetClientSecret("api");
-                    options.ClientId = "api";
                     options.ClientCredentialStyle = IdentityModel.Client.ClientCredentialStyle.AuthorizationHeader;
                     options.EnableCaching = true;
+                    options.CacheDuration = TimeSpan.FromMinutes(5);
                     options.NameClaimType = "name";
                     options.RoleClaimType = "role";
+                })
+                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+                {
+                    builder.Configuration.Bind(nameof(JwtBearerOptions), options);
+
+                    if (!string.IsNullOrWhiteSpace(vikingConfig?.Authority))
+                        options.Authority = vikingConfig.Authority;
+
+                    // Tokens issued to the Viking client carry the scope name as their audience,
+                    // not the API resource name bound from configuration.
+                    options.TokenValidationParameters.ValidAudiences =
+                        new[] { IdentityApiResources.PermissionsApiResourceName, "Viking.Annotation.API" };
+                    options.TokenValidationParameters.NameClaimType = "name";
+                    options.TokenValidationParameters.RoleClaimType = "role";
+
+                    options.ForwardDefaultSelector = PolicySchemeSelector.SchemeSelector;
                 });
 
             // Configure Authorization — require bearer token on all endpoints unless [AllowAnonymous]
             builder.Services.AddAuthorization(options =>
             {
                 options.FallbackPolicy = new AuthorizationPolicyBuilder()
-                    .AddAuthenticationSchemes(OAuth2IntrospectionDefaults.AuthenticationScheme)
+                    .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, IntrospectionScheme)
                     .RequireAuthenticatedUser()
                     .Build();
             });
@@ -188,11 +213,12 @@ public class Program
             builder.Services.AddScoped<IAuthorizationHandler, ResourceIdPermissionsAuthorizationHandler>();
             builder.Services.AddScoped<IAuthorizationHandler, ResourcePermissionsAuthorizationHandler>();
 
-            // Configure Identity
-            builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(config =>
+            // API has no interactive cookie UI — IdentityCore avoids registering cookie auth schemes.
+            builder.Services.AddIdentityCore<ApplicationUser>(config =>
                 {
                     config.SignIn.RequireConfirmedEmail = true;
                 })
+                .AddRoles<ApplicationRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
 
@@ -267,5 +293,36 @@ public class Program
         {
             Log.CloseAndFlush();
         }
+    }
+}
+
+/// <summary>
+/// Routes an incoming bearer token to the handler that can validate it.
+/// Reference tokens are opaque; JWTs always contain dots.
+/// </summary>
+public static class PolicySchemeSelector
+{
+    public static string SchemeSelector(HttpContext context)
+    {
+        var (scheme, token) = GetSchemeAndCredential(context);
+
+        if (!string.Equals(scheme, "Bearer", StringComparison.OrdinalIgnoreCase))
+            return JwtBearerDefaults.AuthenticationScheme;
+
+        return token.Contains('.')
+            ? JwtBearerDefaults.AuthenticationScheme
+            : Program.IntrospectionScheme;
+    }
+
+    private static (string scheme, string credential) GetSchemeAndCredential(HttpContext context)
+    {
+        var header = context.Request.Headers["Authorization"].FirstOrDefault();
+
+        if (string.IsNullOrEmpty(header))
+            return ("", "");
+
+        var parts = header.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        return parts.Length != 2 ? ("", "") : (parts[0], parts[1]);
     }
 }

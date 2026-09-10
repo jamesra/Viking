@@ -70,10 +70,18 @@
                             <a asp-controller="VikingLaunch" asp-action="CreateCode" asp-route-volume="@(Model.Endpoint?.ToString())" class="btn btn-primary btn-sm">
                                 <i class="bi bi-box-arrow-up-right"></i> Open in Viking
                             </a>
+                            @await Html.PartialAsync("_VolumeSbfsemToolsLink", Model.Name)
                             <a href="https://websvc.codepharm.net/Software/Viking/Viking-win-Setup.exe" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary btn-sm" title="Download Viking if not installed">
                                 <i class="bi bi-download"></i> Install Viking
                             </a>
                             <small class="text-muted ms-2">@Model.Endpoint</small>
+                        </dd>
+                    }
+                    else
+                    {
+                        <dt class="col-sm-3">External tools</dt>
+                        <dd class="col-sm-9">
+                            @await Html.PartialAsync("_VolumeSbfsemToolsLink", Model.Name)
                         </dd>
                     }
                 </dl>
@@ -114,6 +122,9 @@
                         <i class="bi bi-download"></i> Install Viking
                     </a>
                 }
+                <div class="list-group-item">
+                    @await Html.PartialAsync("_VolumeSbfsemToolsLink", Model.Name)
+                </div>
                 @if (Model.Parent != null)
                 {
                     <a asp-controller="OrganizationalUnits" asp-action="Details" asp-route-id="@Model.Parent.Id" class="list-group-item list-group-item-action">

@@ -6,6 +6,7 @@ using Duende.IdentityServer;
 using Duende.IdentityServer.Models;
 using System.Collections.Generic;
 using System.Linq;
+using Viking.Identity;
 using Viking.Identity.Server;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
@@ -36,7 +37,7 @@ namespace Viking.Identity
         {
             return new List<ApiResource>
             {
-                new ApiResource("Viking.Annotation.API", "Viking Annotation API")
+                new ApiResource(IdentityApiResources.PermissionsApiResourceName, "Viking Annotation API")
                 {
                     UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name},
                     ApiSecrets = { new Secret(options.GetClientSecret("api").Sha256())},

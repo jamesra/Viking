@@ -1,0 +1,30 @@
+@model Viking.Identity.Models.Resource
+@{
+    var uniqueUserCount = Model.UsersWithPermissions?.Select(p => p.UserId).Distinct().Count() ?? 0;
+    var uniqueGroupCount = Model.GroupsWithPermissions?.Select(p => p.GroupId).Distinct().Count() ?? 0;
+}
+@if (uniqueUserCount > 0 || uniqueGroupCount > 0)
+{
+    <div class="mb-2 d-flex flex-wrap gap-1">
+        @if (uniqueUserCount > 0)
+        {
+            <span class="badge bg-info">
+                <i class="bi bi-person"></i> @uniqueUserCount unique user(s)
+            </span>
+        }
+        @if (uniqueGroupCount > 0)
+        {
+            <span class="badge bg-info">
+                <i class="bi bi-people"></i> @uniqueGroupCount group(s)
+            </span>
+        }
+    </div>
+}
+else
+{
+    <div class="mb-2">
+        <span class="badge bg-warning text-dark">
+            <i class="bi bi-exclamation-triangle"></i> No users or groups with permissions
+        </span>
+    </div>
+}

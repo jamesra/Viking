@@ -1,0 +1,8 @@
+@model string
+@using Viking.Identity.Server.WebManagement.Helpers
+@if (!string.IsNullOrWhiteSpace(Model))
+{
+    <a href="@SbfsemToolsLinks.OpenVolume(Model)" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-box-arrow-up-right"></i> Open in SBFSEM-tools
+    </a>
+}

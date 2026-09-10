@@ -255,7 +255,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             }
 
             var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme, _identityServerOptions?.Authority);
+            var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme, _identityServerOptions.GetManagementPublicBaseUrl());
             var email = user.Email;
             await _emailSender.SendEmailConfirmationAsync(email, callbackUrl);
 

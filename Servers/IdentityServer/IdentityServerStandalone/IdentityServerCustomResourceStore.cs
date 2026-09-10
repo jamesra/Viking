@@ -32,6 +32,12 @@ namespace Viking.Identity
             new ApiScope("Viking.Annotation")
         };
 
+        /// <summary>
+        /// ApiResource name used for Permissions WebApi introspection (client_id at /connect/introspect).
+        /// Must match <see cref="StandardResources"/>; must not be the OAuth client id "api".
+        /// </summary>
+        public const string PermissionsApiResourceName = IdentityApiResources.PermissionsApiResourceName;
+
         internal readonly ApiResource[] StandardResources;
 
         internal IdentityResource[] StandardIdentityResources = new IdentityResource[]
@@ -56,7 +62,7 @@ namespace Viking.Identity
 
             StandardResources = new ApiResource[]
             {
-                new ApiResource("Viking.Annotation", "Viking Annotation API")
+                new ApiResource(PermissionsApiResourceName, "Viking Annotation API")
                 {
                     UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name},
                     ApiSecrets = { _Secret },
