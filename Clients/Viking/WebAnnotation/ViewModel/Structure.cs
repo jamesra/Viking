@@ -193,6 +193,11 @@ namespace WebAnnotation.ViewModel
                 ToolStripMenuItem propertiesItem = new("Properties");
                 propertiesItem.Click += ContextMenu_OnProperties;
                 menu.Items.Add(propertiesItem);
+
+                long? cellId = SbfsemToolsLauncher.GetRootStructureId(modelObj);
+                if (cellId.HasValue)
+                    SbfsemToolsLauncher.AddOpenMenuItem(menu, cellId.Value, locationId: null);
+
                 menu.Items.Add(new ToolStripSeparator());
                 ToolStripMenuItem deleteItem = new("Delete");
                 deleteItem.Click += ContextMenu_OnDelete;

@@ -456,6 +456,38 @@ namespace Viking.Identity.Data.Migrations
                     b.ToTable("UserToGroupAssignments");
                 });
 
+            modelBuilder.Entity("Viking.Identity.Models.VikingLaunchCode", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("UsedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("VolumeName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("VolumeUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.HasKey("Code");
+
+                    b.HasIndex("ExpiresAtUtc");
+
+                    b.ToTable("VikingLaunchCodes");
+                });
+
             modelBuilder.Entity("Viking.Identity.Models.ApplicationRole", b =>
                 {
                     b.HasBaseType("Microsoft.AspNetCore.Identity.IdentityRole");

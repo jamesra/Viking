@@ -174,6 +174,24 @@ namespace Viking.UI
         }
 
         /// <summary>
+        /// Identity resource name for the open volume (e.g. RC2). Used for SBFSEM-tools deep links.
+        /// Falls back to VikingXML volume name when the user opened a URL without the Identity tree.
+        /// </summary>
+        public static string? IdentityVolumeName { get; set; }
+
+        /// <summary>
+        /// Base URL for opening a cell in SBFSEM-tools (default https://sbfsem-tools.com/open).
+        /// Used by Identity bounce after auth; the menu opens the bounce URL, not this directly.
+        /// </summary>
+        public static string SbfsemToolsOpenUrl { get; set; } = "https://sbfsem-tools.com/open";
+
+        /// <summary>
+        /// Identity WebManagement bounce URL for Open in SBFSEM-tools
+        /// (default https://identity.codepharm.net:4001/SbfsemOpen/Redirect).
+        /// </summary>
+        public static string SbfsemToolsIdentityBounceUrl { get; set; } = "https://identity.codepharm.net:4001/SbfsemOpen/Redirect";
+
+        /// <summary>
         /// Arguments passed to Viking on startup
         /// </summary>
         public static System.Collections.Specialized.NameValueCollection StartupArguments = [];

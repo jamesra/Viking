@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using Duende.IdentityModel.Client;
 using Viking.UI.WPF.ViewModels;
 using Viking.Tokens;
@@ -35,7 +36,80 @@ namespace Viking.UI.WPF
         {
             InitializeComponent();
 
+            Loaded += OnLoaded;
             InitializeLoginStage();
+            PreviewMouseDown += OnPreviewMouseDown;
+        }
+
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(InitialApiToken))
+                return;
+            if (_loginViewModel == null)
+                return;
+            if (!string.IsNullOrWhiteSpace(InitialIdentityServerUrl))
+                _loginViewModel.IdentityServerUrl = InitialIdentityServerUrl;
+            var apiToken = CreateTokenResponseFromAccessToken(InitialApiToken);
+            if (apiToken == null)
+                return;
+            ApiToken = apiToken;
+            BearerToken = apiToken;
+            Credentials ??= new NetworkCredential("anonymous", "connectome");
+            ShowVolumeStage(apiToken);
+            if (!string.IsNullOrWhiteSpace(InitialVolumeUrl) && _volumeSelectionViewModel != null)
+            {
+                _volumeSelectionViewModel.ManualVolumeUrl = InitialVolumeUrl;
+                // Auto-advance: select the linked volume without waiting for a click.
+                Dispatcher.BeginInvoke(new System.Action(() =>
+                {
+                    if (_volumeSelectionViewModel?.SelectCommand?.CanExecute(null) == true)
+                        _volumeSelectionViewModel.SelectCommand.Execute(null);
+                }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            }
+        }
+
+        /// <summary>Creates a minimal TokenResponse from a raw access token (e.g. from launch code exchange).</summary>
+        private static TokenResponse CreateTokenResponseFromAccessToken(string accessToken)
+        {
+            if (string.IsNullOrWhiteSpace(accessToken))
+                return null;
+            var response = new TokenResponse();
+            SetTokenResponseAccessToken(response, accessToken);
+            return response;
+        }
+
+        private static void SetTokenResponseAccessToken(TokenResponse response, string accessToken)
+        {
+            var type = typeof(TokenResponse);
+            var prop = type.GetProperty("AccessToken", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            if (prop?.CanWrite == true)
+            {
+                prop.SetValue(response, accessToken);
+                return;
+            }
+            var backingField = type.GetField("<AccessToken>k__BackingField", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                ?? type.GetField("_accessToken", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (backingField != null)
+                backingField.SetValue(response, accessToken);
+        }
+
+        private void OnPreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton != MouseButton.XButton1)
+                return;
+
+            ICommand cancelCommand = CurrentStage switch
+            {
+                LoginStage.VolumeSelection => _volumeSelectionViewModel?.CancelCommand,
+                LoginStage.SegmentationServiceSelection => _segmentationServiceSelectionViewModel?.CancelCommand,
+                _ => null
+            };
+
+            if (cancelCommand is null || !cancelCommand.CanExecute(null))
+                return;
+
+            cancelCommand.Execute(null);
+            e.Handled = true;
         }
 
         public LoginStage CurrentStage
@@ -69,6 +143,18 @@ namespace Viking.UI.WPF
         public TokenResponse ApiToken { get; private set; }
 
         public string InitialSegmentationServiceUrl { get; set; }
+
+        /// <summary>When set (e.g. from viking://open code exchange), skip login and use this as the API token.</summary>
+        public string InitialApiToken { get; set; }
+
+        /// <summary>Identity server URL when launching with a code (from exchange response).</summary>
+        public string InitialIdentityServerUrl { get; set; }
+
+        /// <summary>Optional initial volume URL (from command line or code exchange).</summary>
+        public string InitialVolumeUrl { get; set; }
+
+        /// <summary>Optional Identity volume name from launch-exchange (e.g. RC2).</summary>
+        public string InitialVolumeName { get; set; }
 
         private void InitializeLoginStage()
         {
@@ -156,7 +242,7 @@ namespace Viking.UI.WPF
         private async void OnVolumeSelected(object sender, VolumeSelectedEventArgs e)
         {
             VolumeURL = e.Url;
-            VolumeName = e.Name;
+            VolumeName = !string.IsNullOrWhiteSpace(InitialVolumeName) ? InitialVolumeName : e.Name;
 
             // Validate the volume endpoint before proceeding
             bool isValid = await ValidateVolumeEndpointAsync(VolumeURL);
@@ -168,7 +254,7 @@ namespace Viking.UI.WPF
                 return;
             }
 
-            await PrepareSegmentationStageAsync(e.Name, VolumeURL);
+            await PrepareSegmentationStageAsync(VolumeName, VolumeURL);
 
             // Update the recent volumes list in the UI (remove duplicates and add to top)
             _volumeSelectionViewModel?.AddRecentVolume(VolumeURL, VolumeName);
@@ -218,17 +304,41 @@ namespace Viking.UI.WPF
                     throw new Exception("Invalid Identity Server URL");
                 }
 
-                var (_, _, apiToken) = await RequestApiToken(identityApiUrl, identityServerUrl);
-                ApiToken = apiToken;
+                TokenResponse apiToken;
+                if (!string.IsNullOrWhiteSpace(InitialApiToken) && ApiToken != null)
+                {
+                    apiToken = ApiToken;
+                }
+                else
+                {
+                    var (_, _, requestedApiToken) = await RequestApiToken(identityApiUrl, identityServerUrl);
+                    apiToken = requestedApiToken;
+                    ApiToken = apiToken;
+                }
 
                 Task<Dictionary<long, object>> segmentationTask = FetchSegmentationServicesAsync(apiToken, identityApiUrl);
                 SetViewModelStatusMessage($"Authenticating to volume '{volumeName}'...");
 
-                TokenResponse volumeToken = await RequestVolumePermissionsWithApiToken(volumeName, identityApiUrl, identityServerUrl, apiToken);
+                TokenResponse volumeToken;
+                if (!string.IsNullOrWhiteSpace(_savedUsername) && !string.IsNullOrWhiteSpace(_savedPassword))
+                {
+                    volumeToken = await RequestVolumePermissionsWithApiToken(volumeName, identityApiUrl, identityServerUrl, apiToken);
+                }
+                else
+                {
+                    // Launch-code path: no password available; use the exchanged API token for the session.
+                    System.Diagnostics.Trace.WriteLine("[LoginWindow] Using launch API token as volume bearer token (no password for ROPC).");
+                    volumeToken = apiToken;
+                }
+
                 BearerToken = volumeToken;
+                Credentials ??= new NetworkCredential(_savedUsername ?? "anonymous", _savedPassword ?? "connectome");
                 // Set TokenInjector immediately so WCF AnnotationService calls use the volume-scoped token (critical for non-anonymous users after pre-load segmentation flow).
                 TokenInjector.BearerToken = volumeToken;
                 TokenInjector.BearerTokenAuthority = identityServerUrl?.ToString() ?? _loginViewModel?.IdentityServerUrl;
+
+                if (!string.IsNullOrWhiteSpace(volumeName))
+                    VolumeName = volumeName;
 
                 UpdateViewModelStatus(false, "Authentication successful!");
 
@@ -240,6 +350,13 @@ namespace Viking.UI.WPF
                 _segmentationServiceSelectionViewModel.SegmentationServiceSelected += OnSegmentationServiceSelected;
                 _segmentationServiceSelectionViewModel.SegmentationSelectionSkipped += OnSegmentationSelectionSkipped;
                 _segmentationServiceSelectionViewModel.SelectionCancelled += OnSegmentationSelectionCancelled;
+
+                // Launch-code path: auto-complete without showing the segmentation picker.
+                if (!string.IsNullOrWhiteSpace(InitialApiToken))
+                {
+                    await AutoCompleteSegmentationForLaunchAsync(preselectedEndpoint, servicesDict);
+                    return;
+                }
 
                 ShowSegmentationStageWithViewModel(_segmentationServiceSelectionViewModel, preselectedEndpoint);
             }
@@ -253,6 +370,44 @@ namespace Viking.UI.WPF
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
+        }
+
+        /// <summary>
+        /// After launch-code volume auth, pick last-used / only segmentation service or skip.
+        /// </summary>
+        private Task AutoCompleteSegmentationForLaunchAsync(string preselectedEndpoint, Dictionary<long, object> servicesDict)
+        {
+            if (!string.IsNullOrWhiteSpace(preselectedEndpoint))
+            {
+                SegmentationServiceUrl = preselectedEndpoint;
+                DialogResult = true;
+                return Task.CompletedTask;
+            }
+
+            _segmentationServiceSelectionViewModel.SelectMostRecentServiceIfAvailable();
+            if (_segmentationServiceSelectionViewModel.SelectedService?.Service?.Endpoint is string endpoint
+                && !string.IsNullOrWhiteSpace(endpoint))
+            {
+                SegmentationServiceUrl = endpoint;
+                DialogResult = true;
+                return Task.CompletedTask;
+            }
+
+            // Exactly one accessible service
+            var only = _segmentationServiceSelectionViewModel.ServiceNodes?
+                .Select(n => n.Service?.Endpoint)
+                .FirstOrDefault(e => !string.IsNullOrWhiteSpace(e));
+            if (_segmentationServiceSelectionViewModel.ServiceNodes?.Count == 1 && !string.IsNullOrWhiteSpace(only))
+            {
+                SegmentationServiceUrl = only;
+                DialogResult = true;
+                return Task.CompletedTask;
+            }
+
+            // Segmentation is optional — skip and open the volume.
+            SegmentationServiceUrl = null;
+            DialogResult = true;
+            return Task.CompletedTask;
         }
 
         private async Task<Dictionary<long, object>> FetchSegmentationServicesAsync(TokenResponse apiToken, Uri identityApiUrl)

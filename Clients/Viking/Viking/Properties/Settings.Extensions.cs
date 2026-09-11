@@ -10,6 +10,12 @@ namespace Viking.Properties
     {
         private const string SegmentationServiceUrlsKey = "SegmentationServiceUrls";
         private const string LastSegmentationServiceUrlKey = "SegmentationServiceUrl";
+        private const string LaunchExchangeBaseUrlKey = "LaunchExchangeBaseUrl";
+        private const string SbfsemToolsOpenUrlKey = "SbfsemToolsOpenUrl";
+        private const string SbfsemToolsIdentityBounceUrlKey = "SbfsemToolsIdentityBounceUrl";
+        private const string DefaultLaunchExchangeBaseUrl = "https://identity.codepharm.net:6001";
+        private const string DefaultSbfsemToolsOpenUrl = "https://sbfsem-tools.com/open";
+        private const string DefaultSbfsemToolsIdentityBounceUrl = "https://identity.codepharm.net:4001/SbfsemOpen/Redirect";
 
         public StringCollection SegmentationServiceUrls
         {
@@ -21,6 +27,27 @@ namespace Viking.Properties
         {
             get => (string)GetOrCreateSetting(LastSegmentationServiceUrlKey, () => string.Empty, typeof(string), SettingsSerializeAs.String);
             set => this[LastSegmentationServiceUrlKey] = value;
+        }
+
+        /// <summary>Base URL of the Identity WebApi for viking://open code exchange.</summary>
+        public string LaunchExchangeBaseUrl
+        {
+            get => (string)GetOrCreateSetting(LaunchExchangeBaseUrlKey, () => DefaultLaunchExchangeBaseUrl, typeof(string), SettingsSerializeAs.String);
+            set => this[LaunchExchangeBaseUrlKey] = value;
+        }
+
+        /// <summary>SBFSEM-tools /open endpoint (used by Identity bounce target).</summary>
+        public string SbfsemToolsOpenUrl
+        {
+            get => (string)GetOrCreateSetting(SbfsemToolsOpenUrlKey, () => DefaultSbfsemToolsOpenUrl, typeof(string), SettingsSerializeAs.String);
+            set => this[SbfsemToolsOpenUrlKey] = value;
+        }
+
+        /// <summary>Identity bounce URL for Open in SBFSEM-tools (establishes browser SSO cookie).</summary>
+        public string SbfsemToolsIdentityBounceUrl
+        {
+            get => (string)GetOrCreateSetting(SbfsemToolsIdentityBounceUrlKey, () => DefaultSbfsemToolsIdentityBounceUrl, typeof(string), SettingsSerializeAs.String);
+            set => this[SbfsemToolsIdentityBounceUrlKey] = value;
         }
 
         private object GetOrCreateSetting(string key, Func<object> defaultFactory, Type valueType, SettingsSerializeAs serializeAs)

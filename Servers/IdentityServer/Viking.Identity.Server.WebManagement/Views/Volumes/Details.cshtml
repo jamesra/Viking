@@ -67,6 +67,9 @@
                             <a href="@Model.Endpoint" target="_blank" class="btn btn-success btn-sm">
                                 <i class="bi bi-box-arrow-up-right"></i> Open Volume
                             </a>
+                            <a asp-controller="VikingLaunch" asp-action="CreateCode" asp-route-volume="@(Model.Endpoint?.ToString())" class="btn btn-primary btn-sm">
+                                <i class="bi bi-box-arrow-up-right"></i> Open in Viking
+                            </a>
                             <small class="text-muted ms-2">@Model.Endpoint</small>
                         </dd>
                     }
@@ -100,6 +103,9 @@
                 {
                     <a href="@Model.Endpoint" target="_blank" class="list-group-item list-group-item-action">
                         <i class="bi bi-box-arrow-up-right"></i> Open Volume
+                    </a>
+                    <a asp-controller="VikingLaunch" asp-action="CreateCode" asp-route-volume="@(Model.Endpoint?.ToString())" class="list-group-item list-group-item-action">
+                        <i class="bi bi-box-arrow-up-right"></i> Open in Viking
                     </a>
                 }
                 @if (Model.Parent != null)

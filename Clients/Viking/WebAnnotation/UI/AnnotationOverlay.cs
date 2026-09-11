@@ -9,6 +9,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -107,6 +108,38 @@ namespace WebAnnotation
 
             //    AnnotationCache.AnnotationChanged += AnnotationChangedEventHandler;      
             _CurrentOverlay = this;
+        }
+
+        /// <summary>
+        /// After the viewer is ready, navigate to a Location ID from viking://open?location=... if present.
+        /// </summary>
+        private void TryApplyStartupLocation()
+        {
+            string locStr = Viking.UI.State.StartupArguments?["Location"];
+            if (string.IsNullOrWhiteSpace(locStr))
+                return;
+
+            if (!long.TryParse(locStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out long locID))
+                return;
+
+            // Consume so we do not re-apply if overlays are recreated
+            Viking.UI.State.StartupArguments.Remove("Location");
+
+            LocationObj loc = Store.Locations.GetObjectByID(locID, true);
+            if (loc is null)
+            {
+                string volumeLabel = Viking.UI.State.IdentityVolumeName
+                    ?? Viking.UI.State.volume?.Name
+                    ?? "(unknown volume)";
+                MessageBox.Show(
+                    $"Location ID {locID} was not found in volume {volumeLabel}.\n\nStructure and Location IDs are numbered per volume.",
+                    "Goto Location",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            GoToLocation(loc);
         }
 
         /// <summary>
@@ -475,6 +508,12 @@ namespace WebAnnotation
             if (_annotationLoadWorkerTask is null || _annotationLoadWorkerTask.IsCompleted)
                 _annotationLoadWorkerTask = Task.Run(() => RunAnnotationLoadWorkerAsync(), _annotationLoadWorkerCts.Token);
             RequestSectionAnnotationsLoad(_currentSectionNumber);
+
+            // ViewerForm is assigned after SectionViewerForm construction; defer until the message pump runs.
+            if (_Parent.IsHandleCreated)
+                _Parent.BeginInvoke(new System.Action(TryApplyStartupLocation));
+            else
+                _Parent.HandleCreated += (_, _) => _Parent.BeginInvoke(new System.Action(TryApplyStartupLocation));
         }
 
         private void OnCameraPropertyChanged(object sender, PropertyChangedEventArgs e)

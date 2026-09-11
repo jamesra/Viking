@@ -244,5 +244,7 @@ namespace Viking.Identity.Data
         public DbSet<GrantedGroupPermission> GrantedGroupPermissions { get; set; }
 
         public DbSet<GrantedUserPermission> GrantedUserPermissions { get; set; }
+
+        public DbSet<VikingLaunchCode> VikingLaunchCodes { get; set; }
     }
 }

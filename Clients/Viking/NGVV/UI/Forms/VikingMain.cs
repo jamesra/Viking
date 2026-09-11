@@ -165,9 +165,9 @@ namespace Viking
                     else
                     {
                         UseDefaultPosition = false;
-                        float X = System.Convert.ToSingle(strX);
-                        float Y = System.Convert.ToSingle(strY);
-                        int Z = System.Convert.ToInt32(strZ);
+                        float X = System.Convert.ToSingle(strX, System.Globalization.CultureInfo.InvariantCulture);
+                        float Y = System.Convert.ToSingle(strY, System.Globalization.CultureInfo.InvariantCulture);
+                        int Z = System.Convert.ToInt32(strZ, System.Globalization.CultureInfo.InvariantCulture);
 
                         SectionViewer.GoToLocation(new Vector2(X, Y), Z, false);
                     }
@@ -187,7 +187,7 @@ namespace Viking
                 string strDownsample = UI.State.StartupArguments["DS"];
                 if (strDownsample != null)
                 {
-                    float Downsample = System.Convert.ToSingle(strDownsample);
+                    float Downsample = System.Convert.ToSingle(strDownsample, System.Globalization.CultureInfo.InvariantCulture);
                     SectionViewer.CameraDownsample = Downsample;
                 }
                 else

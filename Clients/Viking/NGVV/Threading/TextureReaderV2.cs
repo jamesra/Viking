@@ -390,10 +390,10 @@ class TextureReaderV2 : IDisposable
                     {
                         if (response.StatusCode == HttpStatusCode.ServiceUnavailable ||
                             response.StatusCode == HttpStatusCode.RequestTimeout ||
-                            response.StatusCode == HttpStatusCode.TooManyRequests)
+                            response.StatusCode == (HttpStatusCode)429)
                         {
                             nRetries--;
-                            TimeSpan delay = response.StatusCode == HttpStatusCode.TooManyRequests
+                            TimeSpan delay = response.StatusCode == (HttpStatusCode)429
                                 ? DelayForTooManyRequests(response)
                                 : TimeSpan.FromMilliseconds(Geometry.Global.GetRandomRequestDelay());
                             Debug.WriteLine($"Failed to load {textureUri} : {response.StatusCode}, delaying {delay.TotalMilliseconds:F0}ms for retry");
