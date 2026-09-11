@@ -57,6 +57,8 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             public string AccessToken { get; set; }
             public string IdentityServerUrl { get; set; }
             public string VolumeUrl { get; set; }
+            /// <summary>Identity volume name for desktop deep-links / volume-scoped tokens.</summary>
+            public string VolumeName { get; set; }
         }
 
         /// <summary>
@@ -111,6 +113,11 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             var authority = _identityOptions.Authority?.TrimEnd('/') ?? "";
             var tokenEndpoint = authority + "/connect/token";
             var scopes = "openid profile " + _identityOptions.ApiScopeNames;
+            if (!string.IsNullOrWhiteSpace(launchCode.VolumeName))
+            {
+                var n = launchCode.VolumeName.Trim();
+                scopes += $" {n}.Read {n}.Annotate {n}.Review";
+            }
 
             var form = new Dictionary<string, string>
             {
@@ -158,7 +165,8 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             {
                 AccessToken = accessToken,
                 IdentityServerUrl = authority,
-                VolumeUrl = launchCode.VolumeUrl ?? ""
+                VolumeUrl = launchCode.VolumeUrl ?? "",
+                VolumeName = launchCode.VolumeName ?? ""
             };
 
             return Ok(response);

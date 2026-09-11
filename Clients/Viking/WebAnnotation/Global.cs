@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using Viking.Common;
 //using WebAnnotation.AuthenticationService;
@@ -291,6 +292,7 @@ namespace WebAnnotation
             if (GetEndpointFromXML(volume.VolumeElement))
             {
                 LoadUserPreferences();
+                ScheduleStartupLocationJump();
                 return true;
             }
             else
@@ -303,6 +305,46 @@ namespace WebAnnotation
             //LoadUserPreferences(); 
             //XDocument AboutXML = GetAboutXML(new Uri(volume.Host + "/About.xml"));
             //return GetEndpointFromXML(AboutXML);
+        }
+
+        /// <summary>
+        /// After the viewer is up, jump to StartupArguments["location"] if it is a Location ID
+        /// (same action as Annotation → Goto Location ID). Coordinate jumps use X/Y/Z/DS instead.
+        /// </summary>
+        private static void ScheduleStartupLocationJump()
+        {
+            var args = Viking.UI.State.StartupArguments;
+            if (args == null)
+                return;
+
+            var location = args["location"] ?? args["Location"];
+            if (string.IsNullOrWhiteSpace(location) || !long.TryParse(location.Trim(), out long locId))
+                return;
+
+            Task.Run(async () =>
+            {
+                for (int i = 0; i < 50; i++)
+                {
+                    await Task.Delay(200).ConfigureAwait(false);
+                    if (Viking.UI.State.ViewerForm == null || Viking.UI.State.MainThreadDispatcher == null)
+                        continue;
+
+                    await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
+                    {
+                        try
+                        {
+                            AnnotationOverlay.GoToLocation(locId);
+                        }
+                        catch (Exception ex)
+                        {
+                            Trace.WriteLine("Startup Goto Location failed: " + ex.Message, "WebAnnotation");
+                        }
+                    });
+                    return;
+                }
+
+                Trace.WriteLine("Startup Goto Location timed out waiting for viewer.", "WebAnnotation");
+            });
         }
 
         private static XDocument GetAboutXML(Uri AboutURI)

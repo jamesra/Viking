@@ -168,13 +168,16 @@ namespace Viking
             {
                 try
                 {
+                    // Location ID is handled by WebAnnotation after the overlay is ready.
+                    var startupLocationId = UI.State.StartupArguments["location"] ?? UI.State.StartupArguments["Location"];
+                    if (!string.IsNullOrWhiteSpace(startupLocationId) && long.TryParse(startupLocationId.Trim(), out _))
+                        UseDefaultPosition = false;
+
                     string strX = UI.State.StartupArguments["X"];
                     string strY = UI.State.StartupArguments["Y"];
                     string strZ = UI.State.StartupArguments["Z"];
-                    
-                    if (strX == null || strY == null || strZ == null)
-                        UseDefaultPosition = true;
-                    else
+
+                    if (strX != null && strY != null && strZ != null)
                     {
                         UseDefaultPosition = false;
                         float X = System.Convert.ToSingle(strX);

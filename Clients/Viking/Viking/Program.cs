@@ -1,10 +1,13 @@
 ﻿//#define USEASPMEMBERSHIP
 
 using CommandLine;
+using IdentityModel.Client;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Viking.UI.Forms;
@@ -103,6 +106,20 @@ namespace Viking
                 MessageBox.Show("XNA framework 4.0 does not appear to be installed.  Viking will display a blank gray screen without it.  Please check the documentation or internet for links to the XNA Framework 4.0 Redistributable.", "Missing XNA 4.0 Redistributable", MessageBoxButtons.OK);
             }
 
+            if (args.Length > 0 && args[0].StartsWith("viking://", StringComparison.OrdinalIgnoreCase))
+            {
+                website = TryOpenFromVikingProtocol(args[0]);
+                if (website is null)
+                    return;
+                if (UI.State.UserBearerToken == null || string.IsNullOrEmpty(UI.State.UserBearerToken.AccessToken))
+                {
+                    website = ShowLoginWindow(website);
+                    if (website is null)
+                        return;
+                }
+            }
+            else
+            {
             var options = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
 
             /*
@@ -183,6 +200,7 @@ namespace Viking
             });
 
             options.WithNotParsed((o) => { website = ShowLoginWindow(website); });
+            }
 
             //Close the program if no website is configured
             if (website is null)
@@ -253,6 +271,137 @@ namespace Viking
 
             if (DebugLogFile != null)
                 DebugLogFile.Close();
+        }
+
+        /// <summary>
+        /// Handles viking://open?code=&amp;volume=&amp;location=&amp;api= from Identity CreateCode / SBFSEM-tools.
+        /// Location may be a Location ID or x,y,z[,downsample]. Volume is required for an unambiguous open.
+        /// </summary>
+        private static string TryOpenFromVikingProtocol(string vikingUri)
+        {
+            Trace.WriteLine("Protocol launch: " + vikingUri, "Viking");
+            Uri uri;
+            try
+            {
+                uri = new Uri(vikingUri);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine("Invalid viking:// URI: " + ex.Message, "Viking");
+                MessageBox.Show("Could not parse the Viking launch link.", "Viking", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return null;
+            }
+
+            var query = System.Web.HttpUtility.ParseQueryString(uri.Query ?? "");
+            UI.State.StartupArguments = query;
+
+            ApplyLocationStartupArguments(query["location"] ?? query["Location"]);
+
+            var volume = query["volume"] ?? query["Volume"];
+            if (string.IsNullOrWhiteSpace(volume))
+            {
+                MessageBox.Show("The Viking launch link did not include a volume. Volume is required.", "Viking", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return null;
+            }
+
+            var code = query["code"] ?? query["Code"];
+            var apiBase = query["api"] ?? query["Api"];
+            if (!string.IsNullOrWhiteSpace(code) && !string.IsNullOrWhiteSpace(apiBase))
+            {
+                try
+                {
+                    if (!TryExchangeLaunchCode(apiBase.Trim(), code.Trim(), out var exchangedVolume, out var identityUrl, out var exchangedVolumeName))
+                    {
+                        Trace.WriteLine("Launch code exchange failed; falling back to login.", "Viking");
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrWhiteSpace(exchangedVolume))
+                            volume = exchangedVolume;
+                        if (!string.IsNullOrWhiteSpace(exchangedVolumeName))
+                            UI.State.StartupArguments["volumeName"] = exchangedVolumeName;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(identityUrl))
+                        Viking.Tokens.TokenInjector.BearerTokenAuthority = identityUrl;
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine("Launch code exchange exception: " + ex.Message, "Viking");
+                }
+            }
+
+            return volume.Trim();
+        }
+
+        private static void ApplyLocationStartupArguments(string location)
+        {
+            if (string.IsNullOrWhiteSpace(location))
+                return;
+
+            location = location.Trim();
+            if (long.TryParse(location, out _))
+            {
+                UI.State.StartupArguments["location"] = location;
+                return;
+            }
+
+            // x,y,z[,downsample] — same shape as the SBFSEM-tools pick readout
+            var parts = location.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 3)
+            {
+                UI.State.StartupArguments["X"] = parts[0].Trim();
+                UI.State.StartupArguments["Y"] = parts[1].Trim();
+                UI.State.StartupArguments["Z"] = parts[2].Trim();
+                if (parts.Length >= 4)
+                    UI.State.StartupArguments["DS"] = parts[3].Trim();
+            }
+            else
+            {
+                UI.State.StartupArguments["location"] = location;
+            }
+        }
+
+        private static bool TryExchangeLaunchCode(string apiBase, string code, out string volumeUrl, out string identityServerUrl, out string volumeName)
+        {
+            volumeUrl = null;
+            identityServerUrl = null;
+            volumeName = null;
+
+            var exchangeUrl = apiBase.TrimEnd('/') + "/api/viking/launch-exchange";
+            using (var client = new HttpClient())
+            {
+                client.Timeout = TimeSpan.FromSeconds(30);
+                var body = new StringContent("{\"code\":\"" + code.Replace("\"", "") + "\"}", Encoding.UTF8, "application/json");
+                var response = client.PostAsync(exchangeUrl, body).GetAwaiter().GetResult();
+                var json = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                if (!response.IsSuccessStatusCode)
+                {
+                    Trace.WriteLine($"Launch exchange HTTP {(int)response.StatusCode}: {json}", "Viking");
+                    return false;
+                }
+
+                using (var doc = Newtonsoft.Json.Linq.JObject.Parse(json))
+                {
+                    string accessToken = (string)(doc["accessToken"] ?? doc["access_token"]);
+                    volumeUrl = (string)(doc["volumeUrl"] ?? doc["volume_url"]);
+                    identityServerUrl = (string)(doc["identityServerUrl"] ?? doc["identity_server_url"]);
+                    volumeName = (string)(doc["volumeName"] ?? doc["volume_name"]);
+
+                    if (string.IsNullOrEmpty(accessToken))
+                        return false;
+
+                    var oauthJson = "{\"access_token\":\"" + accessToken.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\",\"token_type\":\"Bearer\"}";
+                    var oauthResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                    {
+                        Content = new StringContent(oauthJson, Encoding.UTF8, "application/json")
+                    };
+                    var tokenResponse = ProtocolResponse.FromHttpResponseAsync<TokenResponse>(oauthResponse).GetAwaiter().GetResult();
+                    UI.State.UserBearerToken = tokenResponse;
+                    Viking.Tokens.TokenInjector.BearerToken = tokenResponse;
+                    return true;
+                }
+            }
         }
 
         private static string TryBypassSplash(CommandLineOptions options)

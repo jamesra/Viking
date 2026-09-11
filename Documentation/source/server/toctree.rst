@@ -12,6 +12,7 @@ Developer Documentation
    Identity Server <Identity/identity.rst>
    sbfsem-tools Integration <Identity/sbfsem-tools.rst>
    sbfsem-tools Reply 2026-09-10 <Identity/sbfsem-tools-reply-2026-09-10.rst>
+   sbfsem-tools Follow-ups 2026-09-10 <Identity/sbfsem-tools-reply-2026-09-10-followups.rst>
    Webservices <IIS/webservices.rst>
    VikingXML <viking_volume_xml>
    Troubleshooting <troubleshooting.rst>

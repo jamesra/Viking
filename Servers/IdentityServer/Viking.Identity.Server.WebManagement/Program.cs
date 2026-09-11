@@ -146,6 +146,8 @@ namespace Viking.Identity.Server.WebManagement
             var serverOptions = configuration.GetSection(nameof(VikingIdentityServerOptions)).Get<VikingIdentityServerOptions>();
             services.Configure<VikingIdentityServerOptions>(
                 configuration.GetSection(nameof(VikingIdentityServerOptions)));
+            services.Configure<WebApiOptions>(configuration.GetSection(nameof(WebApiOptions)));
+            services.Configure<SbfsemToolsOptions>(configuration.GetSection(nameof(SbfsemToolsOptions)));
 
             // Configure OAuth2 Introspection options
             Console.WriteLine(" Loading OAuth2IntrospectionOptions configuration...");

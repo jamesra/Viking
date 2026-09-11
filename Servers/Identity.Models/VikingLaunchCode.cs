@@ -24,6 +24,13 @@ namespace Viking.Identity.Models
         [MaxLength(2048)]
         public string VolumeUrl { get; set; }
 
+        /// <summary>
+        /// Optional Identity volume name (AccessibleVolumes name). Stored so launch-exchange
+        /// can mint volume-scoped tokens; location stays on the viking:// URL only.
+        /// </summary>
+        [MaxLength(128)]
+        public string VolumeName { get; set; }
+
         /// <summary>When the code expires (UTC).</summary>
         [Required]
         public DateTime ExpiresAtUtc { get; set; }

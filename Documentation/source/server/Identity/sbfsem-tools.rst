@@ -275,7 +275,47 @@ The management website links volumes with Identity ``name`` values only:
     https://sbfsem-tools.com/open?volume=RC1
 
 Use the ``AccessibleVolumes`` ``name`` (``InferiorMonkey``, ``NM``, ``RC1``, …) as ``volume=``.
-Optional ``cells`` and ``technique`` query parameters are for Viking’s context menu, not the
+Optional ``cells`` and ``technique`` query parameters are for a future Viking context menu, not the
 management site. Map your renderer ids on your side.
+
+Opening a place in Viking from SBFSEM-tools
+==========================================
+
+With the user already signed in to Identity (cookie on the management site), send the browser to:
+
+.. code-block:: text
+
+    https://identity.codepharm.net:4001/VikingLaunch/CreateCode?volumeName=RC2&location=769111
+
+=============  =============================================================
+Parameter      Meaning
+=============  =============================================================
+``volumeName`` Identity volume name (``AccessibleVolumes`` ``name``). Preferred.
+``volume``     Alternate: volume id, endpoint URL, or name (legacy).
+``location``   Optional Location ID, or ``x,y,z[,downsample]`` for a camera jump.
+=============  =============================================================
+
+``CreateCode`` persists ``VolumeName`` on the launch code (for volume-scoped
+tokens at exchange). ``location`` remains query-only on the ``viking://`` URL.
+
+Opening SBFSEM-tools from Viking
+================================
+
+Viking opens an Identity bounce (so the browser has / reuses the Identity cookie),
+not SBFSEM-tools directly:
+
+.. code-block:: text
+
+    https://identity.codepharm.net:4001/SbfsemOpen/Redirect?volume=RC1&cells=598&location=16568
+
+After authentication (or if a cookie already exists), Identity checks volume
+access and redirects to:
+
+.. code-block:: text
+
+    https://sbfsem-tools.com/open?volume=RC1&cells=598&location=16568
+
+Configure the final ``/open`` base with ``SbfsemToolsOptions:OpenUrl`` on
+WebManagement (default ``https://sbfsem-tools.com/open``).
 
 See also the reply note :doc:`sbfsem-tools-reply-2026-09-10` for the confirmed mapping table.

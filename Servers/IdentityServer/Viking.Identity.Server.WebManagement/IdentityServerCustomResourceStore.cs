@@ -235,7 +235,7 @@ namespace Viking.Identity.Server.WebManagement
             var ApiScopes = results.SelectMany(r => r.ApiScopes).ToList();
             ApiScopes.AddRange(StandardScopes);
               
-            return new Resources(new IdentityResource[] { },
+            return new Resources(StandardIdentityResources,
                 results.Select(r => r.ApiResource),
                 ApiScopes.ToList()
                 );
