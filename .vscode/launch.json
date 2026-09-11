@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Viking",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-viking",
+      "program": "${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48/Viking.exe",
+      "args": [],
+      "cwd": "${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48",
+      "console": "internalConsole",
+      "stopAtEntry": false
+    },
+    {
+      "name": "Viking (no build)",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48/Viking.exe",
+      "args": [],
+      "cwd": "${workspaceFolder}/Clients/Viking/Viking/bin/Debug/net48",
+      "console": "internalConsole",
+      "stopAtEntry": false
+    },
+    {
+      "name": "Attach to Viking",
+      "type": "coreclr",
+      "request": "attach",
+      "processName": "Viking"
+    }
+  ]
+}
