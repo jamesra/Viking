@@ -34,6 +34,106 @@ namespace MonogameTestbed
         public List<ReproLocationRequest> ReproLocations { get; set; }
 
         public List<CaptureShotRequest> Shots { get; set; }
+
+        /// <summary>
+        /// Cameras applied to every 3D shot that does not list its own <see cref="CaptureShotRequest.Cameras"/>.
+        /// Each camera produces a separate PNG.  Without this a 3D shot is taken straight down, which is the 2D
+        /// view with shading and hides the Z structure of walls, caps, and folds.
+        /// </summary>
+        public List<CaptureCameraRequest> Cameras3D { get; set; }
+    }
+
+    /// <summary>
+    /// One 3D camera placement.  Either a <see cref="Preset"/> name, an orbit (<see cref="Azimuth"/>,
+    /// <see cref="Elevation"/>, <see cref="Distance"/>) about the slice centre, or an explicit <see cref="Position"/>.
+    /// Coordinates are the slice's XY frame; Z is relative to the slice's centre Z, so 0 is mid-slice.
+    /// </summary>
+    public sealed class CaptureCameraRequest
+    {
+        /// <summary>Suffix for the PNG name; defaults to the preset name or "azA-elE".</summary>
+        public string Name { get; set; }
+
+        /// <summary>One of <see cref="Camera3DPlacement.PresetNames"/>: top, oblique, oblique-back, side, front, below.</summary>
+        public string Preset { get; set; }
+
+        /// <summary>Degrees around Z from +X toward +Y, measured from the slice centre to the camera.</summary>
+        public double? Azimuth { get; set; }
+
+        /// <summary>Degrees above the XY plane; 90 looks straight down, negative looks up from below.</summary>
+        public double? Elevation { get; set; }
+
+        /// <summary>Multiplier on the distance that fits the whole slice in view (default 1).</summary>
+        public double? Distance { get; set; }
+
+        /// <summary>Point the camera looks at; defaults to the slice centre.</summary>
+        public float[] LookAt { get; set; }
+
+        /// <summary>Explicit camera position; overrides the orbit parameters.</summary>
+        public float[] Position { get; set; }
+
+        /// <summary>
+        /// Back-face cull as the viewer does (default false).  A slice mesh is an open sheet whose winding faces an
+        /// arbitrary side, so with culling on, half the orbit positions render nothing.
+        /// </summary>
+        public bool? Cull { get; set; }
+    }
+
+    /// <summary>
+    /// Resolved camera placement: orbit angles or an absolute position, applied by BajajTest against the slice bounds
+    /// when the shot is framed.
+    /// </summary>
+    internal sealed record Camera3DPlacement(string Name, double AzimuthDegrees, double ElevationDegrees, double DistanceScale, float[] LookAt, float[] Position, bool Cull = false)
+    {
+        public static readonly IReadOnlyDictionary<string, (double Azimuth, double Elevation)> Presets =
+            new Dictionary<string, (double, double)>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["top"] = (0, 90),
+                ["oblique"] = (240, 35),
+                ["oblique-back"] = (60, 35),
+                ["side"] = (0, 8),
+                ["front"] = (270, 8),
+                ["below"] = (240, -35),
+            };
+
+        public static IEnumerable<string> PresetNames => Presets.Keys;
+
+        public static Camera3DPlacement FromPreset(string preset)
+        {
+            if (!Presets.TryGetValue(preset, out (double Azimuth, double Elevation) angles))
+                throw new ArgumentException($"Unknown 3D camera preset '{preset}'. Known presets: {string.Join(", ", Presets.Keys)}");
+
+            return new Camera3DPlacement(preset.ToLowerInvariant(), angles.Azimuth, angles.Elevation, 1.0, null, null);
+        }
+
+        public static Camera3DPlacement FromRequest(CaptureCameraRequest request)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            Camera3DPlacement placement = string.IsNullOrWhiteSpace(request.Preset)
+                ? new Camera3DPlacement(null, 240, 35, 1.0, null, null)
+                : FromPreset(request.Preset);
+
+            if (request.Azimuth.HasValue)
+                placement = placement with { AzimuthDegrees = request.Azimuth.Value };
+            if (request.Elevation.HasValue)
+                placement = placement with { ElevationDegrees = request.Elevation.Value };
+            if (request.Distance.HasValue)
+                placement = placement with { DistanceScale = request.Distance.Value };
+            if (request.LookAt is { Length: >= 2 })
+                placement = placement with { LookAt = request.LookAt };
+            if (request.Position is { Length: 3 })
+                placement = placement with { Position = request.Position };
+            if (request.Cull.HasValue)
+                placement = placement with { Cull = request.Cull.Value };
+
+            string name = request.Name;
+            if (string.IsNullOrWhiteSpace(name))
+                name = placement.Name ?? (placement.Position is not null
+                    ? "pos"
+                    : $"az{Math.Round(placement.AzimuthDegrees):0}-el{Math.Round(placement.ElevationDegrees):0}");
+
+            return placement with { Name = ScreenshotCapture.SanitizeFilePart(name) };
+        }
     }
 
     /// <summary>
@@ -63,6 +163,9 @@ namespace MonogameTestbed
         public float[] LookAt { get; set; }
 
         public double? Downsample { get; set; }
+
+        /// <summary>3D shots only: one PNG per camera.  Falls back to <see cref="CaptureRequestFile.Cameras3D"/>.</summary>
+        public List<CaptureCameraRequest> Cameras { get; set; }
     }
 
     internal sealed class CaptureManifest
@@ -84,6 +187,20 @@ namespace MonogameTestbed
 
         public string Folder { get; set; }
 
+        /// <summary>Manifold validation of the finished slice; null when generation never reached the final mesh.</summary>
+        public string ManifoldReport { get; set; }
+
+        public bool? IsValidSliceSurface { get; set; }
+
+        /// <summary>First published stage whose mesh already had a hole, non-manifold or inconsistent edge.</summary>
+        public string FirstInvalidStage { get; set; }
+
+        /// <summary>"stage: report" per published stage, in generation order.</summary>
+        public List<string> StageReports { get; set; }
+
+        /// <summary>Individual defect edges of the final mesh (capped).</summary>
+        public List<string> Defects { get; set; }
+
         public List<CaptureManifestShot> Shots { get; set; } = [];
     }
 
@@ -100,6 +217,13 @@ namespace MonogameTestbed
         public float LookAtY { get; set; }
 
         public double Downsample { get; set; }
+
+        /// <summary>3D shots: the camera placement name from the request or preset.</summary>
+        public string Camera { get; set; }
+
+        public float[] CameraPosition { get; set; }
+
+        public float[] CameraLookAt { get; set; }
     }
 
     /// <summary>
@@ -123,19 +247,39 @@ namespace MonogameTestbed
 
         public bool ClearVertexLabels { get; init; }
 
+        /// <summary>
+        /// Draw the stage's edges without their type labels so the mesh vertex indices are the only text.  Edge labels
+        /// and vertex labels compete for the same pixels along a contour, and the vertex numbers are what a defect
+        /// report (<c>v12[L:0 iVert:3]</c>) has to be matched against.
+        /// </summary>
+        public bool VertexIndicesOnly { get; init; }
+
         public float? LookAtX { get; set; }
 
         public float? LookAtY { get; set; }
 
         public double? Downsample { get; set; }
 
+        /// <summary>3D shots only.  Null means the default straight-down framing.</summary>
+        public Camera3DPlacement Camera { get; set; }
+
         public string FileSlug
         {
             get
             {
                 string stage = ScreenshotCapture.SanitizeFilePart(Stage);
-                return Draw3D ? $"{stage}-3d" : $"{stage}-2d";
+                if (!Draw3D)
+                    return $"{stage}-2d";
+
+                return Camera is null ? $"{stage}-3d" : $"{stage}-3d-{Camera.Name}";
             }
+        }
+
+        public BajajCaptureShot WithCamera3D(Camera3DPlacement placement)
+        {
+            BajajCaptureShot copy = (BajajCaptureShot)MemberwiseClone();
+            copy.Camera = placement;
+            return copy;
         }
 
         public static BajajCaptureShot Overview2D() => new()
@@ -173,6 +317,14 @@ namespace MonogameTestbed
             Stage = $"region-{index}",
             View = "2d",
             RegionIndex = index
+        };
+
+        public static BajajCaptureShot VertexIndices(int lineIndex) => new()
+        {
+            Stage = "vertex-indices",
+            View = "2d",
+            LineIndex = lineIndex,
+            VertexIndicesOnly = true
         };
 
         public BajajCaptureShot WithCamera(CaptureShotRequest request)
@@ -282,10 +434,26 @@ namespace MonogameTestbed
             return string.Equals(NormalizeStageKey(left), NormalizeStageKey(right), StringComparison.Ordinal);
         }
 
-        public static List<BajajCaptureShot> ResolveRequestedShots(IReadOnlyList<BajajCaptureShot> defaults, IReadOnlyList<CaptureShotRequest> requests)
+        public static List<BajajCaptureShot> ResolveRequestedShots(IReadOnlyList<BajajCaptureShot> defaults, IReadOnlyList<CaptureShotRequest> requests) =>
+            ResolveRequestedShots(defaults, requests, defaultCameras: null);
+
+        /// <summary>
+        /// Match requests to the default shot list.  A 3D shot is emitted once per camera: its own
+        /// <see cref="CaptureShotRequest.Cameras"/>, else <paramref name="defaultCameras"/>, else the single
+        /// straight-down framing.  With no requests every default shot is used, and <paramref name="defaultCameras"/>
+        /// still fans out the 3D ones.
+        /// </summary>
+        public static List<BajajCaptureShot> ResolveRequestedShots(IReadOnlyList<BajajCaptureShot> defaults, IReadOnlyList<CaptureShotRequest> requests, IReadOnlyList<CaptureCameraRequest> defaultCameras)
         {
+            List<Camera3DPlacement> fallback = ResolveCameras(defaultCameras);
+
             if (requests is null || requests.Count == 0)
-                return [.. defaults];
+            {
+                List<BajajCaptureShot> all = [];
+                foreach (BajajCaptureShot shot in defaults)
+                    all.AddRange(FanOutCameras(shot, fallback));
+                return all;
+            }
 
             List<BajajCaptureShot> resolved = [];
             foreach (CaptureShotRequest request in requests)
@@ -300,10 +468,50 @@ namespace MonogameTestbed
                     continue;
                 }
 
-                resolved.Add(match.WithCamera(request));
+                List<Camera3DPlacement> cameras = request.Cameras is { Count: > 0 } ? ResolveCameras(request.Cameras) : fallback;
+                resolved.AddRange(FanOutCameras(match.WithCamera(request), cameras));
             }
 
             return resolved;
+        }
+
+        private static IEnumerable<BajajCaptureShot> FanOutCameras(BajajCaptureShot shot, List<Camera3DPlacement> cameras)
+        {
+            if (!shot.Draw3D || cameras is null || cameras.Count == 0)
+            {
+                yield return shot;
+                yield break;
+            }
+
+            foreach (Camera3DPlacement camera in cameras)
+                yield return shot.WithCamera3D(camera);
+        }
+
+        private static List<Camera3DPlacement> ResolveCameras(IReadOnlyList<CaptureCameraRequest> requests)
+        {
+            if (requests is null || requests.Count == 0)
+                return null;
+
+            return [.. requests.Select(Camera3DPlacement.FromRequest)];
+        }
+
+        /// <summary>
+        /// Parse a comma-separated list of preset names (the <c>--cameras</c> option) into camera requests.
+        /// </summary>
+        public static List<CaptureCameraRequest> ParseCameraPresets(string list)
+        {
+            if (string.IsNullOrWhiteSpace(list))
+                return null;
+
+            List<CaptureCameraRequest> cameras = [];
+            foreach (string part in list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                //Validates the name now so a typo fails at startup rather than after the mesh is built.
+                Camera3DPlacement.FromPreset(part);
+                cameras.Add(new CaptureCameraRequest { Preset = part });
+            }
+
+            return cameras.Count == 0 ? null : cameras;
         }
 
         private static string NormalizeStageKey(string value)

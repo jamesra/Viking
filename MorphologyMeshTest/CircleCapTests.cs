@@ -73,6 +73,47 @@ namespace MorphologyMeshTest
         }
 
         /// <summary>
+        /// An isolated annotation lives in a slice with its contour on one band and nothing on the other.  Tiling has
+        /// nothing to do there: the polygon path used to fill the lone contour flat at the contour Z, and the cap
+        /// (which closes the empty band) never found a shape on that band, so a single circle rendered as a
+        /// zero-thickness disc (RPC1 structure 51309 / location 365314).  The cap must instead be built from the
+        /// populated band and reach half a section toward the empty one.
+        /// </summary>
+        [TestMethod]
+        public void SingleBandSlice_CapsTowardEmptyBand()
+        {
+            Circle source = new(0, 0, 52.7);
+            Polygon contour = CirclePolygon(source, 10);
+
+            SliceTopology topology = new(
+                [contour],
+                [true],
+                [85400.0],
+                shapeLocationTypes: [LocationType.CIRCLE],
+                shapeCircles: [source],
+                sliceThickness: 70.0);
+
+            BajajGeneratorMesh mesh = new(topology);
+            BajajMeshGenerator.GenerateFaces(mesh);
+            Assert.AreEqual(0, mesh.Faces.Count, "A single-band slice has nothing to tile; it must not fill the contour flat.");
+
+            //The contour is the upper band, so closing the (empty) lower band caps it downward.
+            mesh.CapMeshEnd(false);
+
+            Assert.IsTrue(mesh.Faces.Count > 0, "The cap must be built from the populated band.");
+            double minZ = mesh.Vertices.Min(v => v.Position.Z);
+            double maxZ = mesh.Vertices.Max(v => v.Position.Z);
+            Assert.AreEqual(85400.0, maxZ, 1e-6, "The contour stays at its own Z.");
+            Assert.AreEqual(85400.0 - 35.0, minZ, 1e-6, "The cap reaches half a section below the contour.");
+
+            MeshManifoldReport report = MeshManifoldValidator.Validate(mesh);
+            Assert.AreEqual(0, report.UnexpectedBoundaryEdges, $"The dome must be closed.  {report}");
+            Assert.AreEqual(0, report.NonManifoldEdges, report.ToString());
+            Assert.AreEqual(contour.ExteriorRing.Length - 1, report.ContourBoundaryEdges,
+                $"Each contour edge carries only the cap face until the slice above supplies the other.  {report}");
+        }
+
+        /// <summary>
         /// A two-circle structure is capped at both ends; the caps must close the surface rather than leave the
         /// inner ring as an open frustum (RPC1 368453/368452 reported holes:20).
         /// </summary>

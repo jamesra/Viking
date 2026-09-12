@@ -15,6 +15,13 @@
 		<ProduceReferenceAssembly>False</ProduceReferenceAssembly>
 		<PublishAot>False</PublishAot>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<!-- A/B tested vs. workstation GC for BajajMultiTest: high per-slice allocation rate drives gen0 GC very
+		     hard (40k+ collections on RC1 410), and the parallel Server GC collector consistently halved wall
+		     clock and GC pause fraction across repeated RC1 410 and RPC1 2628 runs (free system RAM stayed at
+		     15+ GB throughout, ruling out memory pressure as the cause). See MeshPhaseTimings' timings report
+		     for the per-run system RAM / CPU / core-utilization instrumentation used to validate this. -->
+		<ServerGarbageCollection>true</ServerGarbageCollection>
+		<ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
 	</PropertyGroup>
 	<ItemGroup>
 		<InternalsVisibleTo Include="MonogameTestbedTests" />

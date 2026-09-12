@@ -92,6 +92,11 @@ namespace MonogameTestbed
         public MeshAssemblyPlannerCompletedView meshCompletedView = null;
 
         /// <summary>
+        /// Run-wide failed-slice log shared by every structure in the test; each new plan reports into it.
+        /// </summary>
+        public FailedSliceReport FailedSliceLog { get; set; }
+
+        /// <summary>
         /// GPU mesh built from the assembled composite (same geometry as DAE export).
         /// </summary>
         MeshModel<VertexPositionNormalColor> _assembledDisplayModel = null;
@@ -421,16 +426,27 @@ namespace MonogameTestbed
         /// Rebuilds the slice graph and Bajaj mesh. Overlapping Start clicks are ignored until the current run finishes
         /// so completed slices cannot land on a planner that was replaced mid-run.
         /// </summary>
-        internal async Task GenerateMesh()
+        /// <param name="prepThrottle">
+        /// When set, limits how many structure pipelines run concurrently (prep through assembly wait). Face
+        /// generation remains capped by <see cref="MeshParallelism.FaceSlots"/> inside each pipeline.
+        /// </param>
+        internal async Task GenerateMesh(SemaphoreSlim prepThrottle = null)
         {
             if (Interlocked.CompareExchange(ref _generateRunning, 1, 0) != 0)
                 return;
 
             int generation = Interlocked.Increment(ref _meshGeneration);
             bool IsCurrent() => generation == Volatile.Read(ref _meshGeneration);
+            bool holdsPrep = false;
 
             try
             {
+                if (prepThrottle is not null)
+                {
+                    await prepThrottle.WaitAsync().ConfigureAwait(false);
+                    holdsPrep = true;
+                }
+
                 if (MeshViews.Count > 0)
                     ResetMesh();
 
@@ -454,12 +470,19 @@ namespace MonogameTestbed
                     return;
 
                 plan.MeshColor = ColorForGraph(Graph);
+                if (FailedSliceLog is not null)
+                    plan.FailedSliceRecorded += FailedSliceLog.Record;
                 meshAssemblyPlan = plan;
                 _sliceGraph = sliceGraph;
                 meshIncompleteView?.CancelRebuild();
-                MeshAssemblyPlannerIncompleteView incompleteView = new(plan, sliceGraph, deferLeafContours: true);
+                //Quiet/headless runs never draw the in-progress overlay; skip its rebuild traffic.
+                bool buildIncompleteOverlay = Program.options?.Quiet != true;
+                MeshAssemblyPlannerIncompleteView incompleteView = buildIncompleteOverlay
+                    ? new(plan, sliceGraph, deferLeafContours: true)
+                    : null;
                 meshIncompleteView = incompleteView;
-                ApplySliceStatusFiltersToIncompleteView();
+                if (incompleteView is not null)
+                    ApplySliceStatusFiltersToIncompleteView();
                 meshCompletedView = new MeshAssemblyPlannerCompletedView(meshAssemblyPlan)
                 {
                     Color = ColorForGraph(Graph)
@@ -472,7 +495,7 @@ namespace MonogameTestbed
                 //cannot feed a replaced view's contours into the new one.
                 await sliceGraph.InitializeTopologyAsync((slice, topology) =>
                 {
-                    if (!IsCurrent())
+                    if (!IsCurrent() || incompleteView is null)
                         return;
                     incompleteView.PublishLeafContour(slice.Key, topology);
                 }).ConfigureAwait(false);
@@ -482,18 +505,20 @@ namespace MonogameTestbed
                     return;
 
                 //Branch AABBs only draw once their leaves have meshed, so they need not delay the first faces.
-                Task branchOverlays = Task.Run(() =>
-                {
-                    if (IsCurrent())
-                        incompleteView.CompleteBranchOverlays();
-                });
+                Task branchOverlays = incompleteView is null
+                    ? Task.CompletedTask
+                    : Task.Run(() =>
+                    {
+                        if (IsCurrent())
+                            incompleteView.CompleteBranchOverlays();
+                    });
 
                 await BajajMeshGenerator.ConvertToMesh(sliceGraph, (slice, mesh, success) =>
                 {
                     if (!IsCurrent())
                         return;
                     OnSliceCompleted(slice, mesh, success);
-                }).ConfigureAwait(false);
+                }, retainMeshes: false).ConfigureAwait(false);
 
                 await branchOverlays.ConfigureAwait(false);
 
@@ -548,6 +573,9 @@ namespace MonogameTestbed
             }
             finally
             {
+                if (holdsPrep)
+                    prepThrottle.Release();
+
                 RefreshPlacementOffset();
                 Interlocked.Exchange(ref _generateRunning, 0);
             }
@@ -1251,7 +1279,20 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
     Point? _leftButtonPressScreen;
     bool _leftButtonDragExceededSlop;
     bool _leftButtonWasDown;
+
+    /// <summary>
+    /// Right-button press for short-click context menu vs camera orbit drag.
+    /// </summary>
+    Point? _rightButtonPressScreen;
+    bool _rightButtonDragExceededSlop;
+    bool _rightButtonWasDown;
+
     const int ClickPickSlopPixels = 5;
+
+    readonly SliceContextMenu _sliceContextMenu = new();
+    string _contextMenuStatus;
+    Geometry.Vector3? _selectedHitVolumePoint;
+    int[] _selectedHitVerts;
 
     bool _showInProgressSliceStatus = true;
     bool _showSectionReadySliceStatus = true;
@@ -1386,6 +1427,8 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
         _selectedOriginalColors = null;
         _selectedSliceZ = null;
         _selectionReadout = null;
+        _selectedHitVolumePoint = null;
+        _selectedHitVerts = null;
     }
 
     static Color InvertColor(Color color) =>
@@ -1495,12 +1538,13 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
     /// Prefers nested (non-top-level) meshes when both a translucent parent shell and a child
     /// intersect the ray, matching what the user sees through the shell.
     /// </summary>
-    void PickMeshAtScreen(float screenX, float screenY)
+    /// <returns>True when a composite face was selected.</returns>
+    bool PickMeshAtScreen(float screenX, float screenY)
     {
         if (!TryBuildVolumeRayAtScreen(screenX, screenY, out Geometry.Ray3D ray))
         {
             ClearMeshSelection();
-            return;
+            return false;
         }
 
         Stopwatch timer = Stopwatch.StartNew();
@@ -1541,6 +1585,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
 
         BajajMultiOTVAssignmentView hitView = hitChildView ?? hitTopView;
         int[] hitVerts = hitChildView != null ? hitChildVerts : hitTopVerts;
+        double hitDistance = hitChildView != null ? nearestChild : nearestTop;
 
         timer.Stop();
         _lastPickMilliseconds = timer.Elapsed.TotalMilliseconds;
@@ -1548,11 +1593,46 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
         if (hitView is null || hitVerts is null)
         {
             ClearMeshSelection();
-            return;
+            return false;
         }
 
         ApplySliceSelectionHighlight(hitView, hitVerts);
+        _selectedHitVerts = hitVerts;
+        _selectedHitVolumePoint = ray.PointAt(hitDistance);
         _selectionReadout = DescribeHit(hitView, hitVerts, _selectedSliceZ);
+        return true;
+    }
+
+    /// <summary>
+    /// MonoGame's <see cref="Mouse.GetState"/> reports global button state. A click that activates another app
+    /// still looks like press→release over whatever client pixel the cursor last mapped to, which was clearing or
+    /// changing the mesh selection. Only accept gestures while focused and inside the client area.
+    /// </summary>
+    bool AcceptClientMouse(MouseState mouse)
+    {
+        if (_window is not null && !_window.IsActive)
+            return false;
+
+        if (scene3D is null)
+            return mouse.X >= 0 && mouse.Y >= 0;
+
+        return mouse.X >= 0 && mouse.Y >= 0
+            && mouse.X < scene3D.Viewport.Width
+            && mouse.Y < scene3D.Viewport.Height;
+    }
+
+    /// <summary>
+    /// Sync press trackers to the current buttons without arming a click, so a focus-stealing press cannot
+    /// complete as a pick when the button is later released.
+    /// </summary>
+    void DiscardPendingClickGestures(MouseState mouse)
+    {
+        _leftButtonWasDown = mouse.LeftButton == ButtonState.Pressed;
+        _leftButtonPressScreen = null;
+        _leftButtonDragExceededSlop = false;
+        _rightButtonWasDown = mouse.RightButton == ButtonState.Pressed;
+        _rightButtonPressScreen = null;
+        _rightButtonDragExceededSlop = false;
     }
 
     /// <summary>
@@ -1562,6 +1642,12 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
     {
         if (!Draw3D || scene3D is null)
             return;
+
+        if (!AcceptClientMouse(mouse))
+        {
+            DiscardPendingClickGestures(mouse);
+            return;
+        }
 
         bool leftDown = mouse.LeftButton == ButtonState.Pressed;
 
@@ -1593,6 +1679,179 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
         }
 
         _leftButtonWasDown = leftDown;
+    }
+
+    /// <summary>
+    /// Short right-click opens a HUD context menu on the picked face; drag still orbits the camera.
+    /// </summary>
+    void UpdateContextMenuInput(MouseState mouse)
+    {
+        if (!Draw3D || scene3D is null)
+            return;
+
+        if (!AcceptClientMouse(mouse))
+        {
+            DiscardPendingClickGestures(mouse);
+            return;
+        }
+
+        int vpW = scene3D.Viewport.Width;
+        int vpH = scene3D.Viewport.Height;
+        if (_sliceContextMenu.Update(mouse, vpW, vpH))
+            return;
+
+        bool rightDown = mouse.RightButton == ButtonState.Pressed;
+
+        if (rightDown && !_rightButtonWasDown)
+        {
+            _rightButtonPressScreen = new Point(mouse.X, mouse.Y);
+            _rightButtonDragExceededSlop = false;
+        }
+
+        if (rightDown && _rightButtonPressScreen.HasValue)
+        {
+            int dx = mouse.X - _rightButtonPressScreen.Value.X;
+            int dy = mouse.Y - _rightButtonPressScreen.Value.Y;
+            if ((dx * dx) + (dy * dy) > ClickPickSlopPixels * ClickPickSlopPixels)
+                _rightButtonDragExceededSlop = true;
+        }
+
+        if (!rightDown && _rightButtonWasDown && _rightButtonPressScreen.HasValue && !_rightButtonDragExceededSlop)
+        {
+            Point press = _rightButtonPressScreen.Value;
+            if (PickMeshAtScreen(press.X, press.Y))
+                OpenSliceContextMenu(press);
+            else
+                _sliceContextMenu.Close();
+        }
+
+        if (!rightDown)
+        {
+            _rightButtonPressScreen = null;
+            _rightButtonDragExceededSlop = false;
+        }
+
+        _rightButtonWasDown = rightDown;
+    }
+
+    void OpenSliceContextMenu(Point screenAnchor)
+    {
+        List<(string Label, Action Action, bool Enabled)> items = [];
+
+        List<ulong> locationIds = CollectHitLocationIds(_selectedView, _selectedHitVerts, _selectedSliceZ);
+        bool haveVolume = VikingDeeplinkLauncher.TryGetVolumeUrlFromODataEndpoint(
+            Program.options?.EndpointUri, out string volumeUrl);
+
+        if (locationIds.Count > 0)
+        {
+            foreach (ulong locationId in locationIds)
+            {
+                ulong id = locationId;
+                items.Add((
+                    $"Open in Viking: Location {id}",
+                    () => LaunchVikingForLocation(volumeUrl, haveVolume, id),
+                    haveVolume));
+                items.Add((
+                    $"Copy Location ID: {id}",
+                    () => CopyLocationIdToClipboard(id),
+                    true));
+            }
+        }
+        else if (_selectedHitVolumePoint.HasValue)
+        {
+            Geometry.Vector3 hit = _selectedHitVolumePoint.Value;
+            int z = _selectedSliceZ ?? (int)Math.Round(hit.Z);
+            items.Add((
+                $"Open in Viking: ({hit.X:F0}, {hit.Y:F0}, {z})",
+                () => LaunchVikingForCoordinates(volumeUrl, haveVolume, hit.X, hit.Y, z),
+                haveVolume));
+        }
+        else
+        {
+            items.Add(("Open in Viking (no location)", () => { }, false));
+        }
+
+        if (!haveVolume)
+            _contextMenuStatus = "No -e endpoint; cannot map volume URL for Viking.";
+
+        _sliceContextMenu.Open(screenAnchor, items);
+    }
+
+    void LaunchVikingForLocation(string volumeUrl, bool haveVolume, ulong locationId)
+    {
+        if (!haveVolume)
+        {
+            _contextMenuStatus = "No -e endpoint; cannot open Viking.";
+            return;
+        }
+
+        string url = VikingDeeplinkLauncher.BuildOpenLocationUrl(volumeUrl, locationId);
+        if (VikingDeeplinkLauncher.TryLaunch(url, out string error))
+            _contextMenuStatus = $"Opened Viking at Location {locationId}";
+        else
+            _contextMenuStatus = error;
+    }
+
+    void LaunchVikingForCoordinates(string volumeUrl, bool haveVolume, double x, double y, double z)
+    {
+        if (!haveVolume)
+        {
+            _contextMenuStatus = "No -e endpoint; cannot open Viking.";
+            return;
+        }
+
+        string url = VikingDeeplinkLauncher.BuildOpenCoordinateUrl(volumeUrl, x, y, z);
+        if (VikingDeeplinkLauncher.TryLaunch(url, out string error))
+            _contextMenuStatus = $"Opened Viking at ({x:F0}, {y:F0}, {z:F0})";
+        else
+            _contextMenuStatus = error;
+    }
+
+    static void CopyLocationIdToClipboard(ulong locationId)
+    {
+        try
+        {
+            System.Windows.Clipboard.SetText(locationId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+        catch (Exception ex)
+        {
+            Trace.WriteLine($"[SliceContextMenu] Clipboard failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Location IDs on the hit face. Prefers vertices on the selected slice Z when any are annotated.
+    /// </summary>
+    static List<ulong> CollectHitLocationIds(BajajMultiOTVAssignmentView view, int[] iVerts, int? preferredSliceZ)
+    {
+        List<ulong> all = [];
+        List<ulong> preferred = [];
+        if (view is null || iVerts is null)
+            return all;
+
+        var composite = view.meshAssemblyPlan?.Root?.MeshModel?.composite;
+        foreach (int iVert in iVerts)
+        {
+            if (!view.TryGetVertexLocationID(iVert, out ulong locationID))
+                continue;
+
+            if (!all.Contains(locationID))
+                all.Add(locationID);
+
+            if (preferredSliceZ.HasValue
+                && composite is not null
+                && iVert >= 0
+                && iVert < composite.Vertices.Count
+                && (int)Math.Round(composite[iVert].Position.Z) == preferredSliceZ.Value
+                && !preferred.Contains(locationID))
+            {
+                preferred.Add(locationID);
+            }
+        }
+
+        List<ulong> result = preferred.Count > 0 ? preferred : all;
+        result.Sort();
+        return result;
     }
 
     /// <summary>
@@ -1649,7 +1908,15 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
 
         Console.Write("Begin OData fetch");
 
+        if (Program.options.Timings)
+        {
+            MeshPhaseTimings.Reset();
+            await MeshPhaseTimings.RecordCpuSnapshotAsync("pre-OData");
+        }
+
         Task<MorphologyGraph> boundary_graph_task = null;
+        using (MeshPhaseTimings.Measure(MeshPhase.ODataFetch))
+        {
         if (Program.options.BoundaryIDs.Any() && Program.options.EndpointUri != null)
         {
             Uri endpoint = Program.options.EndpointUri;
@@ -1673,53 +1940,22 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
         {
             Console.WriteLine("From hard coded test case (no command line paramters)");
 
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(GlialDebug1, DataSource.EndpointMap[ENDPOINT.RPC1]);
-
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { 180 }, false, DataSource.EndpointMap[ENDPOINT.RC1]);
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { 40429 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
-
-            //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 822, 23082, 23084 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
-
-            //Becca's paper, first render
-            //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 822, 2386, 23084, 23098, 31097, 31108, 23093 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
-
-            //Becca's paper, 2nd render
-            //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] {933, 23122, 31687, 23095, 23017, 23856, 39762 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
-
             //Endpoint.TEST (webdev.codepharm.net) has no DNS address record any more, so the previous default of
             //structure 476 there could not load at all. Structure 180 on RC1 is the whole-cell case this mode is
             //usually exercised against, and it is reachable.
             graph = await Task.Run(() => AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { 180 }, Program.options.IncludeChildren, DataSource.EndpointMap[Endpoint.RC1]));
-
-            //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 30804, 2713 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 933 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 933 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 23082 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 1161 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 1537 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 30804 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
         }
 
         Console.WriteLine("End OData fetch");
-
-        if (Program.options.SmoothProcesses)
-        {
-            Console.WriteLine("Smoothing unbranched process centroids");
-            AnnotationVizLib.MorphologyGraph.SmoothProcesses(graph);
         }
 
-        if (Program.options.Correction == CorrectionMode.Neighbor)
+        if (Program.options.Timings)
         {
-            Uri neighborEndpoint = Program.options.EndpointUri ?? DataSource.EndpointMap[Endpoint.RC1];
-            double radiusNm = Program.options.CorrectionRadiusNm;
-            Console.WriteLine($"Applying neighbor hop correction field (radius={radiusNm:F0} nm)");
-
-            AnnotationVizLib.MorphologyGraph neighborSources = await AnnotationVizLib.OData.ODataMorphologyFactory
-                .LoadNeighborHopSourcesAsync(graph, neighborEndpoint, radiusNm);
-
-            IEnumerable<AnnotationVizLib.MorphologyGraph> extras = neighborSources?.Subgraphs.Values;
-            AnnotationVizLib.MorphologyGraph.ApplyNeighborCorrection(graph, extras);
+            await MeshPhaseTimings.RecordCpuSnapshotAsync("post-OData");
+            MeshPhaseTimings.StartContinuousSampling();
         }
+
+        await MorphologyRegistration.ApplyAsync(graph, Program.options);
 
         //graph = graph.Subgraphs.Values.First();
 
@@ -1769,6 +2005,12 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
                                                      graph.BoundingBox.Height / Math.Max(1, viewport.Height));
         }
 
+        _failedSliceLog = new FailedSliceReport(ResolveFailedSlicesReproDirectory(), Program.RunStamp, DescribeRunForReport(graph));
+        //Trace reaches the run's log file; without -v it does not reach the console, so say it there too.
+        Trace.WriteLine($"Failed slices are appended to {_failedSliceLog.Path} as they occur");
+        if (Program.options?.Verbose != true)
+            Console.WriteLine($"Failed slices are appended to {_failedSliceLog.Path} as they occur");
+
         List<Task> meshGenTasks = [];
         QueueMeshViews(graph, meshGenTasks);
 
@@ -1782,11 +2024,19 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
 
         await Task.WhenAll(meshGenTasks);
 
+        if (Program.options.Timings)
+        {
+            MeshPhaseTimings.StopContinuousSampling();
+            await MeshPhaseTimings.RecordCpuSnapshotAsync("mesh complete");
+        }
+
         FrameCameraOnRenderedMesh(window);
 
         //Save the output in a specific place upon request in the command line parameters
         if (string.IsNullOrWhiteSpace(Program.options.OutputPath) == false)
         {
+            using (MeshPhaseTimings.Measure(MeshPhase.Export))
+            {
             try
             {
                 SaveMeshes("BajajMultitest", Program.options.OutputPath);
@@ -1809,9 +2059,13 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
 
                 }
             }
+            }
         }
 
-        ReportFailedSlices();
+        _failedSliceLog.Complete();
+
+        if (Program.options.Timings)
+            await MeshPhaseTimings.RecordCpuSnapshotAsync("end");
 
         Console.WriteLine($"All rendering complete");
         Console.WriteLine(MeshPhaseTimings.Report());
@@ -1824,23 +2078,37 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
 
     /// <summary>
     /// A whole cell can contain thousands of children, and each pipeline is itself internally parallel: it fans
-    /// slice topology and Bajaj generation out over the thread pool.  Cap concurrent pipelines at the logical
-    /// core count so multi-structure runs can saturate the machine without starting every child at once (which
-    /// only grows simultaneous working sets when the pool is already full).
+    /// slice topology and Bajaj generation out over the thread pool. Cap concurrent pipelines so the shared
+    /// <see cref="MeshParallelism.DegreeOfParallelism"/> budget is not multiplied by every child structure.
+    /// Releasing the throttle before face generation (WS2) was measured slower on RC1 410 — keep the full hold.
     /// </summary>
-    private static readonly int MaxConcurrentMeshPipelines = Math.Max(1, Environment.ProcessorCount);
+    private static int MaxConcurrentMeshPipelines => Math.Max(1, MeshParallelism.DegreeOfParallelism);
 
     /// <summary>
     /// Starts Bajaj generation for every nested subgraph. Children share the parent cell's XY origin so their
     /// meshes sit on the cell instead of being recentered on each synapse bbox.
     ///
-    /// Pipelines are independent of one another, so throttling them against a shared semaphore cannot deadlock:
-    /// nothing a holder waits on is itself queued behind the semaphore.
+    /// Structures are queued largest-first (by location count) so the cell claims a pipeline and FaceSlots before
+    /// a flood of tiny children. Pipelines are independent, so the shared semaphore cannot deadlock: nothing a
+    /// holder waits on is itself queued behind the semaphore.
     /// </summary>
     private void QueueMeshViews(MorphologyGraph parent, List<Task> meshGenTasks, Geometry.Vector2? familyOrigin = null, SemaphoreSlim throttle = null)
     {
         throttle ??= new SemaphoreSlim(MaxConcurrentMeshPipelines);
 
+        List<(MorphologyGraph Graph, Geometry.Vector2? Origin)> work = [];
+        CollectMeshGraphs(parent, familyOrigin, work);
+
+        foreach ((MorphologyGraph graph, Geometry.Vector2? origin) in work.OrderByDescending(w => w.Graph.Nodes.Count))
+        {
+            BajajMultiOTVAssignmentView wrapView = new(graph, origin) { FailedSliceLog = _failedSliceLog };
+            AddWrapView(wrapView);
+            meshGenTasks.Add(GenerateMeshThrottled(wrapView, throttle));
+        }
+    }
+
+    private static void CollectMeshGraphs(MorphologyGraph parent, Geometry.Vector2? familyOrigin, List<(MorphologyGraph Graph, Geometry.Vector2? Origin)> work)
+    {
         foreach (var subgraph in parent.Subgraphs.Values)
         {
             Geometry.Vector2? origin = familyOrigin;
@@ -1848,28 +2116,14 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
                 origin = subgraph.NodesBoundingBox.CenterPoint.XY();
 
             if (subgraph.Nodes.Count > 0)
-            {
-                BajajMultiOTVAssignmentView wrapView = new(subgraph, origin);
-                AddWrapView(wrapView);
-                meshGenTasks.Add(GenerateMeshThrottled(wrapView, throttle));
-            }
+                work.Add((subgraph, origin));
 
-            QueueMeshViews(subgraph, meshGenTasks, origin, throttle);
+            CollectMeshGraphs(subgraph, origin, work);
         }
     }
 
-    private static async Task GenerateMeshThrottled(BajajMultiOTVAssignmentView wrapView, SemaphoreSlim throttle)
-    {
-        await throttle.WaitAsync();
-        try
-        {
-            await wrapView.GenerateMesh();
-        }
-        finally
-        {
-            throttle.Release();
-        }
-    }
+    private static Task GenerateMeshThrottled(BajajMultiOTVAssignmentView wrapView, SemaphoreSlim throttle) =>
+        wrapView.GenerateMesh(throttle);
 
     public void Update()
     {
@@ -1881,9 +2135,15 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
         Input.Gamepad.Update(gamePadState);
         Input.Keyboard.Update(keyboardState);
 
+        bool focused = _window is null || _window.IsActive;
+        if (!focused)
+            DiscardPendingClickGestures(mouseState);
+
+        UpdateContextMenuInput(mouseState);
+
         if (!Draw3D)
             Input.CameraManipulator.Update(scene.Camera);
-        else
+        else if (!_sliceContextMenu.IsOpen && focused)
         {
             Camera3DManipulator.Update(
                 this.scene3D.Camera,
@@ -2077,6 +2337,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
     double _hudYaw;
     double _hudPitch;
     string _hudSelectionReadout;
+    string _hudContextMenuStatus;
     bool _hudInvertZ;
     SliceFailureCounts _hudDropped;
     bool _hudShowBoxes;
@@ -2105,6 +2366,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
         bool contentChanged = _hudDirty
             || cameraChanged
             || !ReferenceEquals(_selectionReadout, _hudSelectionReadout)
+            || !ReferenceEquals(_contextMenuStatus, _hudContextMenuStatus)
             || invertZ != _hudInvertZ
             || dropped != _hudDropped
             || showBoxes != _hudShowBoxes;
@@ -2129,6 +2391,9 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
                 hud.AppendLine($"Pick {_lastPickMilliseconds:F1} ms");
             }
 
+            if (_contextMenuStatus != null)
+                hud.AppendLine(_contextMenuStatus);
+
             if (showBoxes)
             {
                 hud.AppendLine("Slice status: View menu or B=master  R=red");
@@ -2145,6 +2410,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
             _hudYaw = cam.Yaw;
             _hudPitch = cam.Pitch;
             _hudSelectionReadout = _selectionReadout;
+            _hudContextMenuStatus = _contextMenuStatus;
             _hudInvertZ = invertZ;
             _hudDropped = dropped;
             _hudShowBoxes = showBoxes;
@@ -2157,7 +2423,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
         window.spriteBatch.DrawString(
             window.fontArial,
             _hudText,
-            new Vector2(8, 8),
+            new Vector2(8, window.MenuBarHeight + 8),
             Color.Yellow,
             rotation: 0f,
             origin: Vector2.Zero,
@@ -2166,6 +2432,8 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
             layerDepth: 0f);
 
         window.spriteBatch.End();
+
+        _sliceContextMenu.Draw(window.spriteBatch, window.fontArial, window.WhitePixel, window.GraphicsDevice.Viewport.Height);
     }
 
     /// <summary>
@@ -2215,77 +2483,36 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
     }
 
     /// <summary>
-    /// Default name for the BajajTest <c>--repro-locations-file</c> written when BajajMultiTest finishes.
+    /// Failed-slice log for this run; created in <see cref="Init"/> before any mesh task starts so no failure is
+    /// missed, and completed after the last structure finishes.
     /// </summary>
-    internal const string FailedSlicesReproFileName = "bajajmultitest_failed_slices.txt";
+    FailedSliceReport _failedSliceLog;
 
     /// <summary>
-    /// List every slice that failed to mesh (location IDs, one slice per line) to the console and a distinct
-    /// log file that BajajTest can load with <c>--repro-locations-file</c>.
+    /// Header comments for <see cref="FailedSliceReport"/>: what was meshed and how, so two report files can be
+    /// compared knowing whether the inputs were the same.
     /// </summary>
-    void ReportFailedSlices()
+    static IEnumerable<string> DescribeRunForReport(MorphologyGraph graph)
     {
-        List<FailedSliceReproRecord> failures = [];
-        foreach (var wrapView in WrapViews)
-        {
-            var plan = wrapView.meshAssemblyPlan;
-            if (plan is null)
-                continue;
-            foreach (var record in plan.FailedSlicesForRepro.Values.OrderBy(r => r.StructureId).ThenBy(r => r.LocationIdsLine))
-                failures.Add(record);
-        }
+        yield return $"Command line: {string.Join(' ', Environment.GetCommandLineArgs().Skip(1))}";
+        yield return $"Endpoint: {Program.options?.EndpointUri?.ToString() ?? "(hard coded test case)"}";
 
-        string path = ResolveFailedSlicesReproPath();
-        try
-        {
-            string directory = System.IO.Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(directory))
-                Directory.CreateDirectory(directory);
+        ulong[] roots = [.. graph.Subgraphs.Keys.OrderBy(id => id)];
+        yield return $"Structures: {string.Join(' ', roots)}" + (Program.options?.IncludeChildren == false ? " (children excluded)" : " (with children)");
 
-            using StreamWriter writer = new(path, append: false, Encoding.UTF8);
-            writer.WriteLine("# BajajMultiTest failed slices — one LocationID list per line");
-            writer.WriteLine("# Feed to BajajTest: --mode BajajTest --repro-locations-file <this file>");
-            writer.WriteLine($"# Generated {DateTime.Now:yyyy-MM-dd HH:mm:ss}, {failures.Count} slice(s)");
-
-            if (failures.Count == 0)
-            {
-                writer.WriteLine("# (none)");
-                Console.WriteLine($"No failed slices. Empty repro list written to {path}");
-                return;
-            }
-
-            var byKind = failures.GroupBy(f => f.Kind).OrderBy(g => g.Key)
-                .Select(g => $"{g.Count()} {g.Key}");
-            Console.WriteLine($"WARNING: {failures.Count} slice(s) failed to mesh ({string.Join(", ", byKind)}). Writing repro list to {path}");
-            writer.WriteLine($"# By kind: {string.Join(", ", byKind)}");
-            foreach (FailedSliceReproRecord record in failures)
-            {
-                if (record.LocationIds.Length < 2)
-                {
-                    writer.WriteLine($"# structure={record.StructureId} skipped (fewer than 2 locations): {record.LocationIdsLine} — [{record.Kind}] {record.Reason}");
-                    continue;
-                }
-
-                writer.WriteLine($"# structure={record.StructureId} — [{record.Kind}] {record.Reason}");
-                writer.WriteLine(record.LocationIdsLine);
-                Console.WriteLine($"  structure {record.StructureId}: {record.LocationIdsLine}  ([{record.Kind}] {record.Reason})");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Could not write failed-slice repro file '{path}': {ex.Message}");
-            foreach (FailedSliceReproRecord record in failures)
-                Console.WriteLine($"  structure {record.StructureId}: {record.LocationIdsLine}  ([{record.Kind}] {record.Reason})");
-        }
+        int structureCount = CountStructures(graph);
+        yield return $"Structure count incl. children: {structureCount}";
+        ContourSimplifyOptions simplify = Program.options?.ContourSimplify ?? ContourSimplifyOptions.Default;
+        yield return $"Contour simplify: 1 vertex per {simplify.MinNmPerVertex} nm gate, tolerance {simplify.ToleranceNm} nm";
     }
 
-    static string ResolveFailedSlicesReproPath()
-    {
-        if (!string.IsNullOrWhiteSpace(Program.options?.OutputPath))
-            return System.IO.Path.Combine(Program.options.OutputPath, FailedSlicesReproFileName);
+    static int CountStructures(MorphologyGraph graph) =>
+        graph.Subgraphs.Values.Sum(sub => 1 + CountStructures(sub));
 
-        return System.IO.Path.Combine(Directory.GetCurrentDirectory(), FailedSlicesReproFileName);
-    }
+    static string ResolveFailedSlicesReproDirectory() =>
+        string.IsNullOrWhiteSpace(Program.options?.OutputPath)
+            ? Directory.GetCurrentDirectory()
+            : Program.options.OutputPath;
 
     /// <summary>
     /// Union bounding box of assembled mesh geometry, in volume space.

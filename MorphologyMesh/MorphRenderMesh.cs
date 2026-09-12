@@ -278,6 +278,37 @@ namespace MorphologyMesh
             return iVert;
         }
 
+        /// <summary>
+        /// Faces refused because one of their edges already carried two faces.  Non-zero after generation means a
+        /// pass tried to build a third wall on a chord; the mesh is left with a hole there instead of a fin.
+        /// </summary>
+        public int FacesRefusedAtEdgeCapacity { get; private set; }
+
+        /// <summary>
+        /// A slice surface is a 2-manifold with boundary: no edge may carry more than two faces.  Every face pass
+        /// (CloseFaces, IdentifyIncompleteFace, region closing) reaches this method, so the invariant is enforced
+        /// here rather than by each caller.  Two triangles on one chord whose apexes are 0.05 nm apart in XY (RPC1
+        /// 133336/133341, chord 177-188 with apexes 178 and 189) are the case the per-caller guards missed.
+        /// </summary>
+        public override void AddFace(IFace face)
+        {
+            if (!Faces.Contains(face))
+            {
+                foreach (IEdgeKey key in face.Edges)
+                {
+                    if (Edges.TryGetValue(key, out IEdge existing) && existing.Faces.Count >= 2)
+                    {
+                        FacesRefusedAtEdgeCapacity++;
+                        if (BajajMeshGenerator.VerboseLogging)
+                            Trace.WriteLine($"Face {face} refused: edge {key} already carries {existing.Faces.Count} faces.");
+                        return;
+                    }
+                }
+            }
+
+            base.AddFace(face);
+        }
+
         public int AddVerticies(ICollection<MorphMeshVertex> verts)
         {
             //int iStartVert = base.AddVerticies(verts.Select(v => (IVertex3D)v).ToArray());
@@ -459,14 +490,15 @@ namespace MorphologyMesh
 
                         facesAlreadyInRegions.UnionWith(listRegionFaces);
 
-                        region = new MorphMeshRegion(mesh, listRegionFaces, RegionType.UNTILED);
-
-                        /*foreach (MorphMeshFace rFace in region.Faces)
+                        //A perimeter split at a corresponding pair comes back as two loops that share no vertex.
+                        //One region holding both has a boundary the perimeter walk cannot order, so closing it
+                        //failed and every edge of both loops stayed open (RPC1 82622/82684, 83509/83711).
+                        foreach (List<MorphMeshFace> connectedFaces in SplitIntoEdgeConnectedGroups(listRegionFaces))
                         {
-                            mesh.AddFace(rFace);
-                        }*/
+                            region = new MorphMeshRegion(mesh, connectedFaces, RegionType.UNTILED);
+                            graph.AddNode(region);
+                        }
 
-                        graph.AddNode(region);
                         break;
                     }
 
@@ -475,6 +507,53 @@ namespace MorphologyMesh
             }
 
             return graph;
+        }
+
+        /// <summary>
+        /// Partitions faces into groups connected through shared edges.
+        /// </summary>
+        private static List<List<MorphMeshFace>> SplitIntoEdgeConnectedGroups(List<MorphMeshFace> faces)
+        {
+            Dictionary<IEdgeKey, List<MorphMeshFace>> facesByEdge = [];
+            foreach (MorphMeshFace face in faces)
+            {
+                foreach (IEdgeKey edge in face.Edges)
+                {
+                    if (!facesByEdge.TryGetValue(edge, out List<MorphMeshFace> sharing))
+                        facesByEdge[edge] = sharing = [];
+
+                    sharing.Add(face);
+                }
+            }
+
+            List<List<MorphMeshFace>> groups = [];
+            HashSet<MorphMeshFace> visited = [];
+            foreach (MorphMeshFace seed in faces)
+            {
+                if (!visited.Add(seed))
+                    continue;
+
+                List<MorphMeshFace> group = [];
+                Stack<MorphMeshFace> pending = new();
+                pending.Push(seed);
+                while (pending.Count > 0)
+                {
+                    MorphMeshFace face = pending.Pop();
+                    group.Add(face);
+                    foreach (IEdgeKey edge in face.Edges)
+                    {
+                        foreach (MorphMeshFace neighbour in facesByEdge[edge])
+                        {
+                            if (visited.Add(neighbour))
+                                pending.Push(neighbour);
+                        }
+                    }
+                }
+
+                groups.Add(group);
+            }
+
+            return groups;
         }
 
         /// <summary>
@@ -510,10 +589,12 @@ namespace MorphologyMesh
                     var iPrev = iVert - 1 < 0 ? Face.Count - 1 : iVert - 1;
                     var iNext = (iVert + 2) % Face.Count;
 
+                    //Both triangles must share the diagonal Prev-Next1, not the existing edge Vert-Next1: a pair
+                    //sharing the perimeter edge put two faces on it and none on Next-Prev (RPC1 145474/145475).
                     List<MorphMeshFace> listFaces =
                     [
                         new([Face[iPrev], Face[iVert], Face[iNextVert]]),
-                        new([Face[iVert], Face[iNextVert], Face[iNext]])
+                        new([Face[iPrev], Face[iNextVert], Face[iNext]])
                     ];
                     return listFaces;
                 }
@@ -553,7 +634,19 @@ namespace MorphologyMesh
                 //Create a polygon for the region. Endpoint-only XY duplicates (a split half closed in XY)
                 //are fine: EnsureClosedRing collapses them to a closed 2D ring.
                 List<int> closedIndices = [.. Face.EnsureClosedRing()];
-                Polygon regionBorder = new([.. closedIndices.Select(iVert => mesh[iVert].Position.XY())]);
+                Polygon regionBorder;
+                try
+                {
+                    regionBorder = new([.. closedIndices.Select(iVert => mesh[iVert].Position.XY())]);
+                }
+                catch (ArgumentException e)
+                {
+                    //A perimeter half produced by the duplicate-XY split can still self-intersect when the region
+                    //pinches a second time (RPC1 102434/102614/364316..., 102803/145352/...).  Leaving that region
+                    //untiled costs a hole in one slice; letting the exception out fails the whole slice.
+                    Trace.WriteLine($"Skipping region perimeter that is not a valid ring ({Face.Count} verts): {e.Message}");
+                    return [];
+                }
 
                 var regionMesh = regionBorder.Triangulate(iPoly: 0, OnProgress: OnProgress);
 
@@ -582,15 +675,16 @@ namespace MorphologyMesh
             Vector2[] xys = [.. face.Select(i => mesh[i].Position.XY())];
             bool endpointsMatch = xys[0] == xys[^1];
 
+            Dictionary<Vector2, int> counts = new(xys.Length);
             for (int i = 0; i < xys.Length; i++)
             {
-                int count = 0;
-                for (int j = 0; j < xys.Length; j++)
-                {
-                    if (xys[i] == xys[j])
-                        count++;
-                }
+                counts.TryGetValue(xys[i], out int c);
+                counts[xys[i]] = c + 1;
+            }
 
+            for (int i = 0; i < xys.Length; i++)
+            {
+                int count = counts[xys[i]];
                 if (count <= 1)
                     continue;
 
@@ -730,7 +824,14 @@ namespace MorphologyMesh
                 //OK, create a quad using the indicies before and after the adjacent corresponding verts.  Then split the quad.
                 Face quad = new([FaceIndex[i - 1], FaceIndex[i], FaceIndex[i + 1], FaceIndex[i + 2]]);
 
-                mesh.SplitFace(quad);
+                //Either diagonal puts one triangle on the corresponding edge.  Where the contours cross, the wedge
+                //faces already own both sides of that edge, and splitting anyway made it a 3-face edge (RPC1
+                //83509/83711, 82622/82684).  The quad is then left for the region to close without the pair.
+                MorphMeshEdge correspondingEdge = (MorphMeshEdge)mesh[new EdgeKey(index, next_index)];
+                if (correspondingEdge.Faces.Count < 2)
+                    mesh.SplitFace(quad);
+                else
+                    Trace.WriteLine($"Region perimeter: corresponding edge {correspondingEdge} already has two faces; quad {quad} not split.");
 
                 //Remove the corresponding verticies we created.
                 if (i <= Face.Count - 2)
@@ -1048,6 +1149,15 @@ namespace MorphologyMesh
                                                                      (((MorphMeshEdge)e).Type != EdgeType.ARTIFICIAL) &&
                                                                      (((MorphMeshEdge)e).Type != EdgeType.CORRESPONDING)))
             {
+                //Two verticies at one XY that were not paired as CORRESPONDING (a vertex a shape repeats, or two
+                //shapes on one band touching at a vertex) leave a zero-length chord.  It cannot intersect anything
+                //and LineSegment refuses to build it, which used to abort the whole slice (RPC1 365345/365348).
+                if (this[e.A].Position.XY() == this[e.B].Position.XY())
+                {
+                    Trace.WriteLine($"CreateChordTree: skipping zero-length {((MorphMeshEdge)e).Type} edge {e.A}[{this[e.A].ShapeIndex}] - {e.B}[{this[e.B].ShapeIndex}] at {this[e.A].Position}");
+                    continue;
+                }
+
                 var bbox = this.ToSegment(e).BoundingBox.ToRTreeRect(0);
                 if (!(this[e.A].ShapeIndex is null || this[e.B].ShapeIndex is null))
                 {

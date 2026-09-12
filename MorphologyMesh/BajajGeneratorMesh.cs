@@ -202,6 +202,27 @@ namespace MorphologyMesh
         /// </summary>
         public bool GenerationHadErrors { get; set; } = false;
 
+        private readonly System.Collections.Concurrent.ConcurrentQueue<string> _generationErrors = new();
+
+        /// <summary>
+        /// Why <see cref="GenerationHadErrors"/> was set, in the order the problems were found.  Each entry is
+        /// short (no stack) so a failure report can carry it without the reader having to find the matching
+        /// lines in the full trace log.
+        /// </summary>
+        public IReadOnlyCollection<string> GenerationErrors => _generationErrors;
+
+        /// <summary>
+        /// Flag the mesh as suspect and remember why.  Face generation for one slice runs on one worker, but
+        /// caps and regions can be closed from helper code that does not know about each other, so keep it
+        /// safe to call from anywhere.
+        /// </summary>
+        public void RecordGenerationError(string reason)
+        {
+            GenerationHadErrors = true;
+            if (!string.IsNullOrWhiteSpace(reason))
+                _generationErrors.Enqueue(reason);
+        }
+
         /// <summary>
         /// The manifold state measured at the end of face generation.  Lets callers and tests inspect why a
         /// slice was flagged rather than only knowing that something went wrong.
@@ -335,48 +356,37 @@ namespace MorphologyMesh
 
             checkedEdges.Add(testEdge.Key);
             if (path.Count > 4) //We must return only triangles or quads, and we return closed loops
+            {
+                checkedEdges.Remove(testEdge.Key);
                 return null;
+            }
 
             if (current.Index == targetVert)
             {
-                return [.. path];
-            }
-            else
-            {
-                path.Push(current.Index);
+                List<int> closed = [.. path];
+                checkedEdges.Remove(testEdge.Key);
+                return closed;
             }
 
-            //Test all of the edges we have not examined yet who do not have two faces already
+            path.Push(current.Index);
+
+            //Test all of the edges we have not examined yet who do not have two faces already.
+            //Mutate checkedEdges/path in place and undo on return so each recursive branch does not clone them.
             List<int> shortestFace = null;
             foreach (IEdge edge in current.Edges.Where(e => !checkedEdges.Contains(e)).Select(e => this.Edges[e]).Where(e => ((MorphMeshEdge)e).FacesComplete == false))
             {
-                List<int> Face = FindCloseableFace(targetVert, this[edge.OppositeEnd(current.Index)], edge, [.. checkedEdges], new Stack<int>(path));
+                List<int> Face = FindCloseableFace(targetVert, this[edge.OppositeEnd(current.Index)], edge, checkedEdges, path);
 
                 if (Face != null)
                 {
-                    if (shortestFace is null)
-                    {
+                    if (shortestFace is null || shortestFace.Count > Face.Count)
                         shortestFace = Face;
-                    }
-                    else
-                    {
-                        if (shortestFace.Count > Face.Count)
-                        {
-                            shortestFace = Face;
-                        }
-                    }
                 }
             }
 
-            if (shortestFace != null)
-            {
-                return shortestFace;
-            }
-
-            //Take this index off the stack since we did not locate a path
             path.Pop();
-
-            return null;
+            checkedEdges.Remove(testEdge.Key);
+            return shortestFace;
         }
 
         /// <summary>

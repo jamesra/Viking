@@ -198,7 +198,7 @@ namespace MonogameTestbed
             //SelectZRange(graph, 231, 235);
             //SelectSubsetOfIDs(graph, TroubleIDS);
 
-            AnnotationVizLib.MorphologyGraph.SmoothProcesses(graph);
+            AnnotationVizLib.MorphologyGraph.CurveFitProcesses(graph);
 
             //MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
             return RecursivelyGenerateMeshes(graph);

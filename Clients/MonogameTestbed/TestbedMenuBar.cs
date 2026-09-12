@@ -12,7 +12,17 @@ namespace MonogameTestbed
     /// </summary>
     sealed class TestbedMenuBar
     {
-        public const int Height = 28;
+        private const int BaseHeight = 28;
+        private const float BaseMenuScale = 0.22f;
+
+        /// <summary>
+        /// Current strip height in pixels. Grows with the viewport (see <see cref="MonoTestbed.HudSizeFactorFor"/>) so
+        /// the menu is not a hairline when the window is maximised on a high-resolution display.
+        /// </summary>
+        public int Height { get; private set; } = BaseHeight;
+
+        private float _sizeFactor = 1f;
+        private float _textScale = BaseMenuScale;
 
         enum OpenMenu
         {
@@ -86,7 +96,7 @@ namespace MonogameTestbed
             tests.TryGetValue(currentMode, out IGraphicsTest current);
             IViewMenuTarget viewTarget = current as IViewMenuTarget;
             IFileMenuTarget fileTarget = current as IFileMenuTarget;
-            Layout(vpWidth, tests);
+            Layout(vpWidth, _game.GraphicsDevice.Viewport.Height, tests);
 
             Point p = new(mouse.X, mouse.Y);
             bool overBar = p.Y >= 0 && p.Y < Height && p.X >= 0 && p.X < vpWidth;
@@ -272,7 +282,7 @@ namespace MonogameTestbed
             tests.TryGetValue(currentMode, out IGraphicsTest current);
             IViewMenuTarget viewTarget = current as IViewMenuTarget;
             IFileMenuTarget fileTarget = current as IFileMenuTarget;
-            Layout(vpWidth, tests);
+            Layout(vpWidth, _game.GraphicsDevice.Viewport.Height, tests);
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
 
@@ -350,25 +360,30 @@ namespace MonogameTestbed
             spriteBatch.End();
         }
 
-        private const float MenuScale = 0.22f;
-
         private static string CheckMark(bool on) => on ? "[x]" : "[ ]";
 
-        private void Layout(int vpWidth, IReadOnlyDictionary<TestMode, IGraphicsTest> tests)
+        private int Scaled(int basePixels) => (int)Math.Round(basePixels * _sizeFactor);
+
+        private void Layout(int vpWidth, int vpHeight, IReadOnlyDictionary<TestMode, IGraphicsTest> tests)
         {
-            const int itemWidth = 64;
-            _fileItemBounds = new Rectangle(4, 0, itemWidth, Height);
-            _testItemBounds = new Rectangle(4 + itemWidth + 4, 0, itemWidth, Height);
-            _viewItemBounds = new Rectangle(4 + 2 * (itemWidth + 4), 0, itemWidth, Height);
-            _helpItemBounds = new Rectangle(4 + 3 * (itemWidth + 4), 0, itemWidth, Height);
+            _sizeFactor = MonoTestbed.HudSizeFactorFor(vpHeight);
+            _textScale = BaseMenuScale * _sizeFactor;
+            Height = Scaled(BaseHeight);
+
+            int itemWidth = Scaled(64);
+            int gap = Scaled(4);
+            _fileItemBounds = new Rectangle(gap, 0, itemWidth, Height);
+            _testItemBounds = new Rectangle(gap + itemWidth + gap, 0, itemWidth, Height);
+            _viewItemBounds = new Rectangle(gap + 2 * (itemWidth + gap), 0, itemWidth, Height);
+            _helpItemBounds = new Rectangle(gap + 3 * (itemWidth + gap), 0, itemWidth, Height);
 
             _fileDropdownItems.Clear();
             _testDropdownItems.Clear();
             _viewDropdownItems.Clear();
             _sliceStatusItems.Clear();
 
-            int rowHeight = 22;
-            int dropWidth = Math.Min(480, Math.Max(280, vpWidth / 2));
+            int rowHeight = Scaled(22);
+            int dropWidth = Math.Min(Scaled(480), Math.Max(Scaled(280), vpWidth / 2));
             int y = Height;
             foreach (TestMode mode in tests.Keys.OrderBy(m => m.ToString()))
             {
@@ -376,14 +391,14 @@ namespace MonogameTestbed
                 y += rowHeight;
             }
 
-            _fileDropdownItems.Add((new Rectangle(_fileItemBounds.X, Height, 180, rowHeight), FileItemId.SaveMesh));
+            _fileDropdownItems.Add((new Rectangle(_fileItemBounds.X, Height, Scaled(180), rowHeight), FileItemId.SaveMesh));
 
-            int viewDropWidth = 260;
+            int viewDropWidth = Scaled(260);
             int viewX = _viewItemBounds.X;
             _viewDropdownItems.Add((new Rectangle(viewX, Height, viewDropWidth, rowHeight), ViewItemId.SliceStatus));
 
             int sliceX = viewX + viewDropWidth;
-            int sliceWidth = 280;
+            int sliceWidth = Scaled(280);
             int sliceY = Height;
             SliceStatusItemId[] sliceIds =
             [
@@ -400,27 +415,27 @@ namespace MonogameTestbed
             }
         }
 
-        private static void DrawDropdownText(SpriteBatch spriteBatch, SpriteFont font, string text, Rectangle bounds)
+        private void DrawDropdownText(SpriteBatch spriteBatch, SpriteFont font, string text, Rectangle bounds)
         {
             text = SanitizeForSpriteFont(font, text);
-            Vector2 size = font.MeasureString(text) * MenuScale;
+            Vector2 size = font.MeasureString(text) * _textScale;
             float y = bounds.Y + (bounds.Height - size.Y) * 0.5f;
-            spriteBatch.DrawString(font, text, new Vector2(bounds.X + 8, y), Color.White,
-                0f, Vector2.Zero, MenuScale, SpriteEffects.None, 0f);
+            spriteBatch.DrawString(font, text, new Vector2(bounds.X + Scaled(8), y), Color.White,
+                0f, Vector2.Zero, _textScale, SpriteEffects.None, 0f);
         }
 
-        private static void DrawMenuLabel(SpriteBatch spriteBatch, SpriteFont font, Texture2D whitePixel,
+        private void DrawMenuLabel(SpriteBatch spriteBatch, SpriteFont font, Texture2D whitePixel,
             string text, Rectangle bounds, bool highlight)
         {
             if (highlight)
                 spriteBatch.Draw(whitePixel, bounds, new Color(60, 90, 140));
 
             text = SanitizeForSpriteFont(font, text);
-            Vector2 size = font.MeasureString(text) * MenuScale;
+            Vector2 size = font.MeasureString(text) * _textScale;
             float x = bounds.X + (bounds.Width - size.X) * 0.5f;
             float y = bounds.Y + (bounds.Height - size.Y) * 0.5f;
             spriteBatch.DrawString(font, text, new Vector2(x, y), Color.White,
-                0f, Vector2.Zero, MenuScale, SpriteEffects.None, 0f);
+                0f, Vector2.Zero, _textScale, SpriteEffects.None, 0f);
         }
 
         /// <summary>

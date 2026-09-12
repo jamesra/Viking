@@ -277,13 +277,25 @@ namespace MonogameTestbed
                 ModelLock.ExitWriteLock();
             }
 
-            CompositeManifoldReport = MeshManifoldValidator.Validate(composite);
-            int awayFromNonManifold = MeshWindingDiagnostics.CountInconsistentAwayFromNonManifold(composite);
-            System.Diagnostics.Trace.WriteLine(
-                $"Composite winding: {result.BeforeInconsistent} -> {result.AfterInconsistent} inconsistent edges, " +
-                $"awayFromNonManifold={awayFromNonManifold} (after Reorient {result.AfterInconsistentAwayFromNonManifold}), " +
-                $"{result.TotalReversals} reversals, {outwardFlips} components flipped outward, {repairAfterOutward} repaired.  " +
-                $"Composite {CompositeManifoldReport}");
+            CompositeManifoldReport = default;
+            if (BajajMeshGenerator.VerboseLogging || MeshPhaseTimings.Enabled)
+            {
+                using (MeshPhaseTimings.Measure(MeshPhase.ManifoldValidate, composite.Faces.Count))
+                    CompositeManifoldReport = MeshManifoldValidator.Validate(composite);
+
+                int awayFromNonManifold = MeshWindingDiagnostics.CountInconsistentAwayFromNonManifold(composite);
+                System.Diagnostics.Trace.WriteLine(
+                    $"Composite winding: {result.BeforeInconsistent} -> {result.AfterInconsistent} inconsistent edges, " +
+                    $"awayFromNonManifold={awayFromNonManifold} (after Reorient {result.AfterInconsistentAwayFromNonManifold}), " +
+                    $"{result.TotalReversals} reversals, {outwardFlips} components flipped outward, {repairAfterOutward} repaired.  " +
+                    $"Composite {CompositeManifoldReport}");
+            }
+            else
+            {
+                System.Diagnostics.Trace.WriteLine(
+                    $"Composite winding: {result.BeforeInconsistent} -> {result.AfterInconsistent} inconsistent edges, " +
+                    $"{result.TotalReversals} reversals, {outwardFlips} components flipped outward, {repairAfterOutward} repaired.");
+            }
         }
 
         /// <summary>

@@ -222,6 +222,7 @@ namespace MonogameTestbed
                 psv.Points = points;
                 psv.PointRadius = this.PointRadius;
                 psv.Color = PolyVertexColors[iPoly];
+                psv.LabelColor = PolyLineColors[iPoly];
                 psv.LabelIndex = false;
 
 

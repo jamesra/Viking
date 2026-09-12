@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using VikingXNAGraphics;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
@@ -78,31 +77,31 @@ namespace MonogameTestbed
 
         /// <summary>
         /// Slices that produced no usable mesh (topology or face-generation failure), keyed by slice id.
-        /// Written at the end of BajajMultiTest as a BajajTest <c>--repro-locations-file</c>.
+        /// BajajMultiTest logs these as a BajajTest <c>--repro-locations-file</c>.
         /// </summary>
         public ConcurrentDictionary<ulong, FailedSliceReproRecord> FailedSlicesForRepro { get; } = new();
+
+        /// <summary>
+        /// Raised on the completing worker thread as soon as a slice is added to <see cref="FailedSlicesForRepro"/>,
+        /// so the failure can be logged while the run is still going rather than only after it ends.
+        /// </summary>
+        public event Action<FailedSliceReproRecord> FailedSliceRecorded;
 
         /// <summary>Source morphology grouping; used when recording failed-slice location IDs.</summary>
         public SliceGraph SliceGraph { get; private set; }
 
         /// <summary>
-        /// Face-generation workers enqueue merge work here; a single consumer per planner runs
-        /// <see cref="CheckForMerge"/> so merges do not steal face-gen thread-pool slots.
+        /// Merges run on the completing slice's worker (or any thread that calls <see cref="OnMeshCompleted"/>).
+        /// Each branch is claimed with <see cref="Interlocked.CompareExchange(ref int, int, int)"/> so sibling
+        /// subtrees can merge concurrently; a single channel consumer used to serialize every merge on a large cell.
         /// </summary>
-        readonly Channel<AssemblyPlannerBranch> _mergeChannel =
-            Channel.CreateUnbounded<AssemblyPlannerBranch>(new UnboundedChannelOptions
-            {
-                SingleReader = true,
-                SingleWriter = false
-            });
-
-        readonly Task _mergeConsumer;
-
         readonly TaskCompletionSource _assembledTcs =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <summary>Completes when the root composite has been finalized (or the plan had nothing to assemble).</summary>
         public Task AssembledTask => _assembledTcs.Task;
+
+        long _lastLeafCompletedTimestamp;
 
         public delegate void OnNodeMeshCompletedDelegate(IAssemblyPlannerNode node, bool success, MeshManifoldReport? report);
 
@@ -126,6 +125,8 @@ namespace MonogameTestbed
         /// </summary>
         public static MeshAssemblyPlanner Create(SliceGraph sliceGraph)
         {
+            using var _phase = MeshPhaseTimings.Measure(MeshPhase.AssemblyPlanCreate, sliceGraph.Nodes.Count);
+
             MorphologyGraph morphology = sliceGraph.Morphology;
             AssemblyPlannerLeaf[] firstLayer = [.. sliceGraph.Nodes.Values.OrderBy(slice =>
             {
@@ -167,20 +168,6 @@ namespace MonogameTestbed
             Root = root;
             Nodes = nodes;
             Slices = slices;
-            _mergeConsumer = Task.Run(MergeConsumerLoop);
-        }
-
-        async Task MergeConsumerLoop()
-        {
-            try
-            {
-                await foreach (AssemblyPlannerBranch branch in _mergeChannel.Reader.ReadAllAsync().ConfigureAwait(false))
-                    CheckForMerge(branch);
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine($"MeshAssemblyPlanner merge consumer failed: {ex}");
-            }
         }
 
 
@@ -243,39 +230,50 @@ namespace MonogameTestbed
                     //mesh; the slice graph knows which slices never had a topology.
                     bool topologyFailed = SliceGraph?.FailedTopologySlices.ContainsKey(slice.Key) == true;
                     kind = topologyFailed ? SliceFailureKind.Topology : SliceFailureKind.FaceGenerationException;
-                    reason = topologyFailed ? "topology initialisation failed" : "face generation threw (see trace)";
+                    string error = null;
+                    if (!topologyFailed)
+                        SliceGraph?.FaceGenerationErrors.TryGetValue(slice.Key, out error);
+                    reason = topologyFailed
+                        ? "topology initialisation failed"
+                        : error ?? "face generation threw (see trace)";
                 }
                 else
                 {
                     kind = SliceFailureKind.InvalidSurface;
-                    reason = mesh.ManifoldReport.ToString();
+                    reason = mesh.GenerationErrors.Count == 0
+                        ? mesh.ManifoldReport.ToString()
+                        : $"{mesh.ManifoldReport}\n{string.Join("\n", mesh.GenerationErrors)}";
                 }
 
                 if (BajajMeshGenerator.VerboseLogging)
                     Trace.WriteLine($"Slice {slice.Key} merged without a complete mesh ({kind}): {reason}.");
 
-                FailedSlicesForRepro[slice.Key] = new FailedSliceReproRecord(
+                FailedSliceReproRecord record = new(
                     SliceGraph?.Morphology?.StructureID ?? 0,
                     [.. slice.AllNodes],
                     kind,
                     reason);
+                FailedSlicesForRepro[slice.Key] = record;
+                FailedSliceRecorded?.Invoke(record);
             }
 
             leaf.OnMeshCompletion(mesh, MeshColor);
             OnNodeCompleted?.Invoke(leaf, Success, mesh?.ManifoldReport);
 
+            if (MeshPhaseTimings.Enabled)
+                Interlocked.Exchange(ref _lastLeafCompletedTimestamp, Stopwatch.GetTimestamp());
+
             if (leaf.Parent != null)
-                _mergeChannel.Writer.TryWrite(leaf.Parent);
+                CheckForMerge(leaf.Parent);
             else if (leaf == Root)
                 FinalizeRootComposite();
         }
 
         /// <summary>
-        /// Stop the merge consumer when this plan is superseded by a newer GenerateMesh run.
+        /// Stop waiting for assembly when this plan is superseded by a newer GenerateMesh run.
         /// </summary>
         internal void Abandon()
         {
-            _mergeChannel.Writer.TryComplete();
             _assembledTcs.TrySetResult();
         }
 
@@ -310,9 +308,12 @@ namespace MonogameTestbed
             }
             finally
             {
+                long lastLeaf = Interlocked.Read(ref _lastLeafCompletedTimestamp);
+                if (lastLeaf != 0)
+                    MeshPhaseTimings.AddRawTicks(MeshPhase.MergeTail, Stopwatch.GetTimestamp() - lastLeaf);
+
                 MeshAssembledEvent.Set();
                 _assembledTcs.TrySetResult();
-                _mergeChannel.Writer.TryComplete();
             }
         }
 

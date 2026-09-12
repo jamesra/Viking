@@ -72,7 +72,7 @@ namespace MorphologyMesh
             //A skipped region leaves an open hole in the mesh.  Flag the mesh so callers do not treat it as a
             //fully successful reconstruction.
             if (skippedRegions > 0)
-                mesh.GenerationHadErrors = true;
+                mesh.RecordGenerationError($"{skippedRegions} of {closedRegions + skippedRegions} untiled region(s) could not be closed");
 
             rTree ??= mesh.CreateChordTree(graph.ZLevels);
 
@@ -280,21 +280,21 @@ namespace MorphologyMesh
         /// <returns>True if the region was closed (or required no work); false if it was skipped because the triangulation failed on degenerate geometry.</returns>
         private static bool TryClosingUntiledRegion(BajajGeneratorMesh mesh, MorphMeshRegion region, SliceChordRTree rTree, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
         {
-            if (region.Vertices.Length == 3)
-            {
-                MorphMeshFace face = new(region.Vertices);
-                mesh.AddFace(face);
-                return true;
-            }
-            else if (region.Vertices.Length == 4)
-            {
-                MorphMeshFace face = new(region.Vertices);
-                //Split face will add the face too
-                mesh.SplitFace(face);
-                return true;
-            }
+            if (region.Vertices.Length == 3 || region.Vertices.Length == 4)
+                return TryClosingSmallRegion(mesh, region);
 
-            Polygon regionPolygon = region.Polygon;
+            Polygon regionPolygon;
+            try
+            {
+                regionPolygon = region.Polygon;
+            }
+            catch (System.ArgumentException)
+            {
+                //A corresponding pair at two non-adjacent perimeter positions pinches the region into a figure-8 in
+                //XY, which is not a polygon.  RegionPerimeterToFaces already splits such perimeters at the shared XY
+                //and tiles each loop (RPC1 145474/145475, region 25-31-26-28-...).
+                return TryClosingPinchedRegion(mesh, region);
+            }
             Vector2 regionPolygonCenter = regionPolygon.Centroid;
             Polygon centeredRegionPolygon = regionPolygon.Translate(-regionPolygonCenter);
 
@@ -311,6 +311,7 @@ namespace MorphologyMesh
                 //The medial axis approximation produced no usable interior points (none, or all fell outside
                 //the region polygon). Skip rather than Debug.Assert/FailFast — one bad region must not kill the process.
                 Trace.WriteLine($"Skipping untiled region {region} in mesh {mesh}: medial axis produced no interior points inside the face.");
+                mesh.RecordGenerationError($"region {region}: medial axis produced no interior points");
                 return false;
             }
 
@@ -366,6 +367,7 @@ namespace MorphologyMesh
             {
                 //No mesh verticies have been committed yet, so there is nothing to roll back.
                 Trace.WriteLine($"Skipping untiled region {region}: fewer than 3 unique perimeter points after cleaning.");
+                mesh.RecordGenerationError($"region {region}: fewer than 3 unique perimeter points");
                 return false;
             }
 
@@ -381,6 +383,17 @@ namespace MorphologyMesh
                 //aborting the entire region-closing pass for this mesh.  No mesh verticies were committed yet,
                 //so the failed region leaves no orphan geometry behind.
                 Trace.WriteLine($"Skipping untiled region {region} in mesh {mesh}: triangulation failed ({e.GetType().Name}: {e.Message})\n{DescribeTriangulationInput(cleanedPerimeter, cleanedInterior)}");
+                mesh.RecordGenerationError($"region {region}: triangulation failed ({e.GetType().Name}: {e.Message})");
+                return false;
+            }
+
+            //A perimeter walked out from a pinched corresponding pair can run along edges that already carry their
+            //full complement of faces; tiling it would turn those into 3 and 4-face edges (RPC1 83509/83711, 82622/82684
+            //after the split-loop regions started closing).  Leaving the region open is the smaller defect.
+            if (TryFindEdgeAtFaceCapacity(mesh, polyMesh, out string fullEdge))
+            {
+                Trace.WriteLine($"Skipping untiled region {region} in mesh {mesh}: perimeter edge {fullEdge} already has its full complement of faces.");
+                mesh.RecordGenerationError($"region {region}: perimeter edge {fullEdge} already at face capacity");
                 return false;
             }
 
@@ -407,20 +420,248 @@ namespace MorphologyMesh
                 }
             }
 
+            //The triangulation tiles one planar patch, so its faces are wound consistently once each is made CCW in
+            //XY.  Deciding the outward side face by face with FaceHasCCWWinding gave neighbouring faces of the same
+            //patch opposite answers near the contour, and because the faces are anchored (NormalIsKnownCorrect) the
+            //final reorientation could not repair them (RPC1 82671/82673, 82659/82660).  Vote once for the patch.
+            List<int[]> patch = [];
+            int reverseVotes = 0;
             foreach (var polyFace in polyMesh.Faces)
             {
-                var MeshFaceVerts = polyFace.iVerts.Select(i => polyMesh[i].Data).ToArray();
+                int[] triIndicies = [.. polyFace.iVerts];
+                if (triIndicies.Length == 3)
+                {
+                    Vector2 a = polyMesh[triIndicies[0]].Position;
+                    Vector2 b = polyMesh[triIndicies[1]].Position;
+                    Vector2 c = polyMesh[triIndicies[2]].Position;
+                    if (a.Winding(b, c) == RotationDirection.Clockwise)
+                        System.Array.Reverse(triIndicies);
+                }
 
-                MorphMeshFace newFace = new(MeshFaceVerts);
+                int[] meshFaceVerts = [.. triIndicies.Select(i => polyMesh[i].Data)];
+                patch.Add(meshFaceVerts);
 
-                if (mesh.FaceHasCCWWinding(newFace))
-                    newFace = new MorphMeshFace(MeshFaceVerts.Reverse());
+                if (mesh.FaceHasCCWWinding(new MorphMeshFace(meshFaceVerts)))
+                    reverseVotes++;
+            }
 
+            //Patch faces are anchored, so a patch that disagrees with an anchored neighbour (an earlier patch or a
+            //cap) along a shared edge can never be repaired afterwards (RPC1 364005/364006/364007, where a second
+            //closing pass tiled up to a first-pass patch).  When such a neighbour exists it decides the flip; the
+            //XY heuristic only breaks the tie for a patch with no fixed neighbours.
+            if (CountAnchoredNeighbourDirections(mesh, patch, out int sameDirection, out int oppositeDirection))
+                reverseVotes = sameDirection > oppositeDirection ? patch.Count : 0;
+
+            bool reversePatch = reverseVotes * 2 > patch.Count;
+            foreach (int[] meshFaceVerts in patch)
+            {
+                MorphMeshFace newFace = reversePatch ? new MorphMeshFace(meshFaceVerts.Reverse()) : new MorphMeshFace(meshFaceVerts);
                 newFace.NormalIsKnownCorrect = true;
                 mesh.AddFace(newFace);
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Closes a three or four vertex region with one or two triangles.  The ring comes from the ordered perimeter
+        /// rather than <see cref="MorphMeshRegion.Vertices"/>, which lists the verticies in face enumeration order
+        /// and so does not describe a quad's boundary, and a triangle that would overfill an existing edge is
+        /// refused: a four vertex region walked out from a pinched corresponding pair sat on a CORRESPONDING edge
+        /// that already had both its faces (RPC1 83509/83711).
+        /// </summary>
+        /// <summary>
+        /// Tiles a region whose perimeter revisits one XY at a corresponding pair, by splitting it into loops at the
+        /// shared point.  The whole patch is skipped if any face would overfill a perimeter edge.
+        /// </summary>
+        private static bool TryClosingPinchedRegion(BajajGeneratorMesh mesh, MorphMeshRegion region)
+        {
+            List<int> ring = [];
+            foreach (MorphMeshVertex v in region.RegionPerimeter)
+            {
+                if (ring.Count == 0 || ring[^1] != v.Index)
+                    ring.Add(v.Index);
+            }
+            while (ring.Count > 1 && ring[0] == ring[^1])
+                ring.RemoveAt(ring.Count - 1);
+
+            List<MorphMeshFace> patch = MorphRenderMesh.RegionPerimeterToFaces(mesh, ring);
+            if (patch.Count == 0)
+            {
+                Trace.WriteLine($"Skipping pinched untiled region {region} in mesh {mesh}: perimeter could not be split into loops.");
+                mesh.RecordGenerationError($"region {region}: pinched perimeter could not be tiled");
+                return false;
+            }
+
+            //The loops are independent surfaces, so a face that would overfill an edge (typically the corresponding
+            //edge at the pinch, which a sliver face already occupies) is dropped alone rather than with the patch.
+            int added = 0;
+            foreach (MorphMeshFace face in patch)
+            {
+                bool fits = true;
+                foreach (IEdgeKey key in face.Edges)
+                {
+                    if (mesh.Contains(key.A, key.B) == false)
+                        continue;
+
+                    MorphMeshEdge edge = (MorphMeshEdge)mesh[key];
+                    int capacity = edge.Type == EdgeType.CONTOUR ? 1 : 2;
+                    if (edge.Faces.Count >= capacity)
+                    {
+                        Trace.WriteLine($"Pinched untiled region {region} in mesh {mesh}: face {face} dropped, edge {edge} already has its full complement of faces.");
+                        fits = false;
+                        break;
+                    }
+                }
+
+                if (!fits)
+                    continue;
+
+                mesh.AddFace(face);
+                added++;
+            }
+
+            //Dropped faces are not recorded as generation errors: the slots they wanted are already occupied, so the
+            //surface there is complete (RPC1 366418/366419 is whole with two of three dropped) and a real gap shows
+            //up in the manifold report anyway.
+            return added > 0;
+        }
+
+        private static bool TryClosingSmallRegion(BajajGeneratorMesh mesh, MorphMeshRegion region)
+        {
+            List<int> ring = [];
+            foreach (MorphMeshVertex v in region.RegionPerimeter)
+            {
+                if (ring.Contains(v.Index) == false)
+                    ring.Add(v.Index);
+            }
+
+            if (ring.Count < 3)
+            {
+                Trace.WriteLine($"Skipping untiled region {region} in mesh {mesh}: perimeter has fewer than 3 verticies.");
+                mesh.RecordGenerationError($"region {region}: perimeter has fewer than 3 verticies");
+                return false;
+            }
+
+            List<int[]> patch = [];
+            if (ring.Count == 3)
+            {
+                patch.Add([.. ring]);
+            }
+            else
+            {
+                Vector3[] p = [.. ring.Select(i => mesh[i].Position)];
+                if (Vector3.Distance(p[0], p[2]) < Vector3.Distance(p[1], p[3]))
+                {
+                    patch.Add([ring[0], ring[1], ring[2]]);
+                    patch.Add([ring[0], ring[2], ring[3]]);
+                }
+                else
+                {
+                    patch.Add([ring[0], ring[1], ring[3]]);
+                    patch.Add([ring[1], ring[2], ring[3]]);
+                }
+            }
+
+            foreach (int[] faceVerts in patch)
+            {
+                for (int i = 0; i < faceVerts.Length; i++)
+                {
+                    int a = faceVerts[i];
+                    int b = faceVerts[(i + 1) % faceVerts.Length];
+                    if (mesh.Contains(a, b) == false)
+                        continue;
+
+                    MorphMeshEdge edge = (MorphMeshEdge)mesh[new EdgeKey(a, b)];
+                    int capacity = edge.Type == EdgeType.CONTOUR ? 1 : 2;
+                    if (edge.Faces.Count >= capacity)
+                    {
+                        Trace.WriteLine($"Skipping untiled region {region} in mesh {mesh}: perimeter edge {edge} already has its full complement of faces.");
+                        mesh.RecordGenerationError($"region {region}: perimeter edge {edge} already at face capacity");
+                        return false;
+                    }
+                }
+            }
+
+            foreach (int[] faceVerts in patch)
+                mesh.AddFace(new MorphMeshFace(faceVerts));
+
+            return true;
+        }
+
+        /// <summary>
+        /// True when a triangle of the region triangulation would add a face to a mesh edge that already carries as
+        /// many faces as a slice surface allows (one on a contour edge, two elsewhere).  Only edges between existing
+        /// mesh verticies are considered; edges to the not-yet-committed medial axis verticies are new.
+        /// </summary>
+        private static bool TryFindEdgeAtFaceCapacity(BajajGeneratorMesh mesh, TriangulationMesh<IVertex2D<int>> polyMesh, out string fullEdge)
+        {
+            foreach (IFace polyFace in polyMesh.Faces)
+            {
+                foreach (IEdgeKey polyEdge in polyFace.Edges)
+                {
+                    int iA = polyMesh[polyEdge.A].Data;
+                    int iB = polyMesh[polyEdge.B].Data;
+                    if (iA >= mesh.Vertices.Count || iB >= mesh.Vertices.Count || mesh.Contains(iA, iB) == false)
+                        continue;
+
+                    MorphMeshEdge edge = (MorphMeshEdge)mesh[new EdgeKey(iA, iB)];
+                    int capacity = edge.Type == EdgeType.CONTOUR ? 1 : 2;
+                    if (edge.Faces.Count >= capacity)
+                    {
+                        fullEdge = edge.ToString();
+                        return true;
+                    }
+                }
+            }
+
+            fullEdge = null;
+            return false;
+        }
+
+        /// <summary>
+        /// For every edge of the (CCW in XY) patch that already carries an anchored face, records whether that face
+        /// walks the edge in the same direction as the patch face (inconsistent, so the patch must flip) or the
+        /// opposite direction (consistent).  Returns false when no anchored neighbour touches the patch.
+        /// </summary>
+        private static bool CountAnchoredNeighbourDirections(BajajGeneratorMesh mesh, List<int[]> patch, out int sameDirection, out int oppositeDirection)
+        {
+            sameDirection = 0;
+            oppositeDirection = 0;
+            foreach (int[] faceVerts in patch)
+            {
+                for (int i = 0; i < faceVerts.Length; i++)
+                {
+                    int a = faceVerts[i];
+                    int b = faceVerts[(i + 1) % faceVerts.Length];
+                    if (mesh.Contains(a, b) == false)
+                        continue;
+
+                    foreach (IFace neighbour in mesh[new EdgeKey(a, b)].Faces)
+                    {
+                        if (neighbour is not MorphMeshFace morphFace || morphFace.NormalIsKnownCorrect == false)
+                            continue;
+
+                        if (TraversesForward(neighbour.iVerts, a, b))
+                            sameDirection++;
+                        else
+                            oppositeDirection++;
+                    }
+                }
+            }
+
+            return sameDirection + oppositeDirection > 0;
+        }
+
+        private static bool TraversesForward(System.Collections.Immutable.ImmutableArray<int> iVerts, int a, int b)
+        {
+            for (int i = 0; i < iVerts.Length; i++)
+            {
+                if (iVerts[i] == a && iVerts[(i + 1) % iVerts.Length] == b)
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -488,10 +729,18 @@ namespace MorphologyMesh
             //rather than collapsing onto the contour plane.
             double halfThickness = mesh.SliceThickness / 2.0;
 
+            //Normally the shapes to cap sit on the band being closed.  An isolated annotation is the exception: its
+            //slice holds the contour on one band and nothing on the other, and the open side is the empty band, so
+            //the cap has to be built from the populated band and extended toward the empty one.
+            bool capBandIsUpper = CloseUpper;
+            if (CloseUpper && mesh.UpperShapeIndicies.Count == 0)
+                capBandIsUpper = false;
+            else if (CloseUpper == false && mesh.LowerShapeIndicies.Count == 0)
+                capBandIsUpper = true;
+
             for (int iPoly = 0; iPoly < mesh.Shapes.Length; iPoly++)
             {
-                bool ClosePoly = CloseUpper ? mesh.IsUpperShape[iPoly] : !mesh.IsUpperShape[iPoly];
-                if (ClosePoly == false)
+                if (mesh.IsUpperShape[iPoly] != capBandIsUpper)
                     continue;
 
                 if (mesh.Shapes[iPoly] is Polygon poly)
@@ -556,7 +805,7 @@ namespace MorphologyMesh
                         //Capping one polygon must not abandon the rest of the mesh.  This end of this polygon stays
                         //open, which the manifold report will show as a hole, but the tiled surface is still usable.
                         Trace.WriteLine($"Could not cap shape {iPoly} of mesh {mesh}: triangulation failed ({e.GetType().Name}: {e.Message})");
-                        mesh.GenerationHadErrors = true;
+                        mesh.RecordGenerationError($"cap of shape {iPoly}: triangulation failed ({e.GetType().Name}: {e.Message})");
                         continue;
                     }
 
@@ -747,6 +996,12 @@ namespace MorphologyMesh
                 extruded[i] = mesh.AddVertex(capVert);
             }
 
+            //A straight polyline scaled toward its own centroid stays on the same line, so the strip between the
+            //contour and the cap copy is vertical and every triangle's normal has Z of about zero.  Orienting each
+            //triangle from the sign of its own Z then flips neighbours at random and the cap's shared edges come
+            //out inconsistent (RPC1 364267 and every other isolated gap junction).  The strip is built in one
+            //consistent winding and flipped as a whole from the summed normal instead.
+            List<int[]> strip = [];
             for (int i = 0; i + 1 < contour.Count; i++)
             {
                 int a = mesh[contour[i]].Index;
@@ -761,8 +1016,29 @@ namespace MorphologyMesh
                 if (mesh.Contains(aPrime, bPrime) == false)
                     mesh.AddEdge(new MorphMeshEdge(EdgeType.MEDIALAXIS, aPrime, bPrime));
 
-                AddCappedTriangle(mesh, [a, b, bPrime], closeUpper);
-                AddCappedTriangle(mesh, [a, bPrime, aPrime], closeUpper);
+                strip.Add([a, b, bPrime]);
+                strip.Add([a, bPrime, aPrime]);
+            }
+
+            AddCappedStrip(mesh, strip, closeUpper);
+        }
+
+        /// <summary>
+        /// Adds triangles that already share a consistent winding, reversing all of them together when the summed
+        /// normal points the wrong way for the cap's end.
+        /// </summary>
+        private static void AddCappedStrip(BajajGeneratorMesh mesh, List<int[]> strip, bool closeUpper)
+        {
+            double sumZ = 0;
+            foreach (int[] verts in strip)
+                sumZ += mesh.Normal(verts).Z;
+
+            bool reverse = closeUpper ? sumZ > 0 : sumZ < 0;
+            foreach (int[] verts in strip)
+            {
+                MorphMeshFace face = reverse ? new MorphMeshFace(verts.Reverse()) : new MorphMeshFace(verts);
+                face.NormalIsKnownCorrect = true;
+                mesh.AddFace(face);
             }
         }
 

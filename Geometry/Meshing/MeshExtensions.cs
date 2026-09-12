@@ -2,7 +2,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace Geometry.Meshing
 {
@@ -269,12 +271,17 @@ namespace Geometry.Meshing
 
         /// <summary>
         /// Removes degenerate input before triangulating a region: perimeter vertices that sit within
-        /// <see cref="Global.Epsilon"/> of the previously kept perimeter vertex (or the ring start), perimeter
-        /// vertices that are colinear with their neighbors (redundant midpoints), and interior points that
-        /// coincide with a kept perimeter vertex or a previously kept interior point.
+        /// <see cref="Global.Epsilon"/> of the previously kept perimeter vertex (or the ring start), and interior
+        /// points that coincide with a kept perimeter vertex or a previously kept interior point.
         /// The original vertex <see cref="IVertex.Index"/> values are preserved so callers can map the
         /// triangulation result back to their source mesh.  Without this the divide-and-conquer Delaunay
-        /// generator throws on coincident or near-colinear points (e.g. "Can't create line with two identical points").
+        /// generator throws on coincident points (e.g. "Can't create line with two identical points").
+        ///
+        /// Colinear perimeter vertices are kept.  They used to be dropped as redundant midpoints, but every
+        /// perimeter vertex is a mesh vertex whose contour edges need a face: dropping the middle of a straight run
+        /// tiled the region with one triangle spanning the run and left the contour edges along it with no face
+        /// (RPC1 82605/82606, a five-vertex region with four colinear contour vertices).  The constrained
+        /// triangulation honours a straight run of ring edges without help.
         /// </summary>
         /// <param name="perimeter">Ordered perimeter ring of the region.</param>
         /// <param name="interior">Interior (e.g. medial-axis) points that must lie inside the region.</param>
@@ -292,27 +299,6 @@ namespace Geometry.Meshing
             //Drop a trailing point that closes the ring back onto the first point
             while (cleanedPerimeter.Count > 1 && Vector2.Equals(cleanedPerimeter[0].Position, cleanedPerimeter[cleanedPerimeter.Count - 1].Position))
                 cleanedPerimeter.RemoveAt(cleanedPerimeter.Count - 1);
-
-            //Remove redundant colinear midpoints.  Keep removing while the middle of a triplet lies on the line
-            //connecting its neighbors, but never reduce the ring below a triangle.
-            bool removed = true;
-            while (removed && cleanedPerimeter.Count > 3)
-            {
-                removed = false;
-                for (int i = 0; i < cleanedPerimeter.Count; i++)
-                {
-                    Vector2 prev = cleanedPerimeter[(i - 1 + cleanedPerimeter.Count) % cleanedPerimeter.Count].Position;
-                    Vector2 curr = cleanedPerimeter[i].Position;
-                    Vector2 next = cleanedPerimeter[(i + 1) % cleanedPerimeter.Count].Position;
-
-                    if (prev.Winding(curr, next) == RotationDirection.Colinear)
-                    {
-                        cleanedPerimeter.RemoveAt(i);
-                        removed = true;
-                        break;
-                    }
-                }
-            }
 
             List<IVertex2D> cleanedInterior = new(interior?.Count ?? 0);
             if (interior != null)
@@ -359,7 +345,18 @@ namespace Geometry.Meshing
             var interiorVerts = InteriorPoints is null ? System.Array.Empty<Vertex2D<int>>() : [.. InteriorPoints.Select((v, i) => new Vertex2D<int>(i + faceVerts.Length, v.Position - shapeCenter, v.Index))];
 
             Polygon centeredPoly = new(faceVerts.Select(v => v.Position).ToArray().EnsureClosedRing());
-            System.Diagnostics.Debug.Assert(interiorVerts.All(v => centeredPoly.Covers(v.Position)), "Interior points must be inside Face");
+
+            //Interior points are Steiner points: they refine the triangulation but the ring alone still tiles.
+            //One that falls outside the ring (a medial-axis estimate on a nearly self-touching polygon) would
+            //pull faces outside the polygon, so drop it and continue rather than reject the whole region.
+            if (interiorVerts.Length > 0 && !interiorVerts.All(v => centeredPoly.Covers(v.Position)))
+            {
+                Vertex2D<int>[] insideVerts = [.. interiorVerts.Where(v => centeredPoly.Covers(v.Position))];
+                Trace.WriteLine($"Triangulate: dropping {interiorVerts.Length - insideVerts.Length} of {interiorVerts.Length} interior points that lie outside the face ring.");
+
+                //Re-number so the mesh indicies stay contiguous after the ring verticies.
+                interiorVerts = [.. insideVerts.Select((v, i) => new Vertex2D<int>(i + faceVerts.Length, v.Position, v.Data))];
+            }
 
             var tri_mesh_verts = faceVerts.Union(interiorVerts).ToArray();
 
@@ -415,15 +412,46 @@ namespace Geometry.Meshing
                 }
             }
 
-#if DEBUG
-            bool[] constrainedEdgeInMesh = [.. expectedConstrainedEdges.Select(e => tri_mesh.Contains(e))];
-            int[] constrainedEdgeFaces = [.. expectedConstrainedEdges.Where(e => tri_mesh.Contains(e)).Select(e => tri_mesh[e].Faces.Count)];
+            ThrowIfRingNotHonoured(tri_mesh, expectedConstrainedEdges);
 
-            System.Diagnostics.Debug.Assert(constrainedEdgeInMesh.All(hasEdge => hasEdge), "Triangulation of polygon should create at least one face");
-            System.Diagnostics.Debug.Assert(tri_mesh.Faces.Count > 0, "Triangulation of polygon should create at least one face");
-            System.Diagnostics.Debug.Assert(constrainedEdgeFaces.All(facecount => facecount == 1), "All constrained edges should have one face");
-#endif
             return tri_mesh;
+        }
+
+        /// <summary>
+        /// A single ring with optional interior points must end up with every ring edge in the mesh, bordered by
+        /// exactly one face, and at least one face overall.  Anything else means the mesh has a hole or a face
+        /// outside the ring, and a caller that stitched it in would produce a non-manifold surface.  This used to
+        /// be a Debug.Assert, which terminates the process in a debug build; the caller already knows how to skip
+        /// a region it cannot close, so report it as the typed exception those handlers catch.
+        /// </summary>
+        private static void ThrowIfRingNotHonoured(TriangulationMesh<IVertex2D<int>> tri_mesh, SortedSet<IEdgeKey> expectedConstrainedEdges)
+        {
+            List<IEdgeKey> missing = [];
+            List<KeyValuePair<IEdgeKey, int>> misbounded = [];
+            foreach (IEdgeKey key in expectedConstrainedEdges)
+            {
+                if (!tri_mesh.Contains(key))
+                {
+                    missing.Add(key);
+                    continue;
+                }
+
+                int faceCount = tri_mesh[key].Faces.Count;
+                if (faceCount != 1)
+                    misbounded.Add(new KeyValuePair<IEdgeKey, int>(key, faceCount));
+            }
+
+            if (missing.Count == 0 && misbounded.Count == 0 && tri_mesh.Faces.Count > 0)
+                return;
+
+            StringBuilder sb = new("Constrained triangulation did not honour its ring: ");
+            sb.Append(tri_mesh.Faces.Count).Append(" faces");
+            if (missing.Count > 0)
+                sb.Append("; missing ring edges ").Append(string.Join(", ", missing));
+            if (misbounded.Count > 0)
+                sb.Append("; ring edges with face count != 1 ").Append(string.Join(", ", misbounded.Select(m => $"{m.Key}x{m.Value}")));
+
+            throw new ConstrainedTriangulationException(missing, misbounded, tri_mesh.Faces.Count, sb.ToString());
         }
     }
 }

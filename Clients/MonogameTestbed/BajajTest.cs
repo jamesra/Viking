@@ -49,6 +49,9 @@ namespace MonogameTestbed
     {
         public readonly IShape2D[] Shapes = null;
         public readonly double[] ShapeZ = null;
+
+        /// <summary>Z extent the mesh views were normalized by; see <see cref="ViewZRange"/>.</summary>
+        internal double MeshViewZRange { get; private set; } = 1.0;
         //public PointSetView[] PolyPointsView = null;
         public PointSetView IncompletedVertexView = null;
 
@@ -70,7 +73,10 @@ namespace MonogameTestbed
 
         public List<RegionView> RegionViews = [];
 
-        public CullMode CullMode = CullMode.CullCounterClockwiseFace;
+        //Same convention as BajajMultiTest: outward-wound faces are the front, so CullClockwiseFace keeps the exterior.
+        //CullCounterClockwiseFace discarded the exterior and showed the far interior walls instead, which made a
+        //single upward cap (nothing behind it) vanish entirely in 3D.
+        public CullMode CullMode = CullMode.CullClockwiseFace;
 
         public int? iShownMesh = null;
         public List<MeshView<VertexPositionColor>> MeshViews = [];
@@ -99,7 +105,7 @@ namespace MonogameTestbed
         //slice makes the constructor defaults sub-pixel.  These are the sizes we want on screen instead, in
         //pixels, so a slice reads the same whether it spans 200nm or 20um and whatever the capture resolution is.
         private const double VertexRadiusPixels = 4.0;
-        private const double LineWidthPixels = 2.0;
+        private const double LineWidthPixels = 0.75;
         private const double RegionEdgePixels = 3.5;
         private const double LabelHeightPixels = 15.0;
 
@@ -165,6 +171,11 @@ namespace MonogameTestbed
 
         public bool ShowOtvChords { get; set; }
 
+        /// <summary>
+        /// Suppress edge-type labels on the shown line view so only the vertex index labels draw.
+        /// </summary>
+        public bool VertexIndicesOnly { get; set; }
+
         public bool IsMeshGenerationFinished => BajajMeshGenerationTask is null || BajajMeshGenerationTask.IsCompleted;
 
         public bool IsMeshFaulted => BajajMeshGenerationTask?.IsFaulted == true;
@@ -204,7 +215,7 @@ namespace MonogameTestbed
             ShapeZ = topology.ShapeZ;
 
             //Create our mesh with only the verticies
-            PolyViews = new PolygonSetView(Shapes.Select(s => s as Polygon), PolygonSetView.DefaultColorMapping)
+            PolyViews = new PolygonSetView(Shapes.Select(s => s as Polygon), ContourShapeColors(topology.IsUpper))
             {
                 PointLabelType = IndexLabelType.MESH
             };
@@ -301,6 +312,8 @@ namespace MonogameTestbed
             string JSONPolyString = Shapes.ToJArray().ToString();
             Trace.WriteLine(JSONPolyString);
 
+            MeshViewZRange = ViewZRange(FirstPassTriangulation);
+
             lock (ViewsLock)
             {
                 this.RegionViews.Clear();
@@ -311,14 +324,14 @@ namespace MonogameTestbed
                 VertexPositionAverage = FirstPassTriangulation.CalculateAverageVertexPositionXY();
 
                 //Create our mesh with only the verticies
-                PolyViews = new PolygonSetView(Shapes.Select(s => s as Polygon), PolygonSetView.DefaultColorMapping, 2)
+                PolyViews = new PolygonSetView(Shapes.Select(s => s as Polygon), ContourShapeColors(FirstPassTriangulation.IsUpperShape), 2)
                 {
                     PointLabelType = IndexLabelType.MESH
                 };
                 if (this.VertexLabelType == IndexLabelType.NONE)
                     this.VertexLabelType = IndexLabelType.MESH;
 
-                this.MeshVertsView = PointSetView.CreateFor(FirstPassTriangulation);
+                this.MeshVertsView = CreateMeshVertexView(FirstPassTriangulation);
             }
 
             InvalidateAnnotationScale();
@@ -327,6 +340,92 @@ namespace MonogameTestbed
 
             string temp = FirstPassTriangulation.Vertices.Select(v => v.Position.XY()).Distinct().ToJSON();
             Trace.WriteLine(temp);
+
+            //Mirror BajajMeshGenerator.GenerateFaces: a single-band slice (isolated annotation) has nothing to tile,
+            //a polyline-only slice is a ribbon, anything with a polygon takes the Bajaj region path.
+            bool singleBand = FirstPassTriangulation.UpperShapeIndicies.Count == 0 || FirstPassTriangulation.LowerShapeIndicies.Count == 0;
+            if (singleBand)
+                Trace.WriteLine("Single-band slice: no tiling stages, cap only.");
+            else if (FirstPassTriangulation.HasPolygonShapes)
+                RunPolygonStages(FirstPassTriangulation);
+            else
+                RunRibbonStages(FirstPassTriangulation);
+
+            // Match BajajMeshGenerator.GenerateFaces: only cap open stack ends, not interior slice pairs.
+            if (FirstPassTriangulation.Slice?.HasSliceAbove == false)
+            {
+                FirstPassTriangulation.CapMeshEnd(true, OnTriangulateRegionProgress);
+                AddMeshView(FirstPassTriangulation, "Cap upper polygons");
+                AddLineView(FirstPassTriangulation, "Cap upper polygons");
+            }
+
+            if (FirstPassTriangulation.Slice?.HasSliceBelow == false)
+            {
+                FirstPassTriangulation.CapMeshEnd(false, OnTriangulateRegionProgress);
+                AddMeshView(FirstPassTriangulation, "Cap lower polygons");
+                AddLineView(FirstPassTriangulation, "Cap lower polygons");
+            }
+
+            //The normals pass marks every face anchored afterwards, so the faces it was actually forbidden to flip
+            //have to be remembered here for the defect report to say whether a winding defect was repairable.
+            HashSet<IFace> anchoredBeforeRepair = [.. FirstPassTriangulation.MorphFaces.Where(f => f.NormalIsKnownCorrect)];
+
+            FirstPassTriangulation.EnsureFacesHaveExternalNormals();
+            FirstPassTriangulation.RecalculateNormals();
+
+            AddMeshView(FirstPassTriangulation, "Final mesh");
+            AddLineView(FirstPassTriangulation, "Final mesh");
+            RecordFinalReport(FirstPassTriangulation, anchoredBeforeRepair);
+
+            lock (ViewsLock)
+            {
+                this.MeshVertsView = CreateMeshVertexView(FirstPassTriangulation);
+            }
+
+            InvalidateAnnotationScale();
+
+            //Seed the interactive selection now that every view exists.  Without this nothing is selected, so Draw
+            //skips every branch and the window stays empty until the user steps to a shot.  The screenshot path
+            //assigns shot indices directly afterwards, so it is unaffected.
+            CheckViewIndexBoundaries();
+        }
+
+        /// <summary>
+        /// Polyline-only slice: the stages of <c>PolylineRibbonMeshGenerator</c>, each published as a view.
+        /// </summary>
+        private void RunRibbonStages(BajajGeneratorMesh FirstPassTriangulation)
+        {
+            BajajMeshGenerator.AddDelaunayEdges(FirstPassTriangulation, OnProgress: null);
+            AddLineView(FirstPassTriangulation, "FirstPassDelaunay");
+
+            FirstPassTriangulation.RemoveInvalidEdges();
+            AddLineView(FirstPassTriangulation, "Remove Invalid Edges");
+            AddMeshView(FirstPassTriangulation, "Remove Invalid Edges");
+
+            BajajMeshGenerator.CompleteCorrespondingVertexFaces(FirstPassTriangulation);
+            AddLineView(FirstPassTriangulation, "CompleteCorrespondingVertexFaces");
+            AddMeshView(FirstPassTriangulation, "CompleteCorrespondingVertexFaces");
+
+            List<MorphMeshVertex> incomplete = BajajMeshGenerator.FirstPassSliceChordGeneration(FirstPassTriangulation, ShapeZ);
+            AddMeshView(FirstPassTriangulation, "FirstPassSliceChordGeneration");
+            AddLineView(FirstPassTriangulation, "FirstPassSliceChordGeneration");
+
+            BajajMeshGenerator.FirstPassFaceGeneration(FirstPassTriangulation, incomplete);
+            AddMeshView(FirstPassTriangulation, "FirstPassFaceGeneration");
+            AddLineView(FirstPassTriangulation, "FirstPassFaceGeneration");
+
+            int slivers = PolylineRibbonMeshGenerator.CleanRibbonFaces(FirstPassTriangulation);
+            if (slivers > 0)
+                Trace.WriteLine($"Ribbon cleanup removed {slivers} single-triangle polyline pair(s).");
+            AddMeshView(FirstPassTriangulation, "CleanRibbonFaces");
+            AddLineView(FirstPassTriangulation, "CleanRibbonFaces");
+        }
+
+        /// <summary>
+        /// Slice with at least one polygon: the Bajaj region path, each stage published as a view.
+        /// </summary>
+        private void RunPolygonStages(BajajGeneratorMesh FirstPassTriangulation)
+        {
             BajajMeshGenerator.AddDelaunayEdges(FirstPassTriangulation, OnProgress: null);
 
             AddLineView(FirstPassTriangulation, "FirstPassDelaunay");
@@ -354,7 +453,7 @@ namespace MonogameTestbed
             PointSetView incompleteView = CreateCompletedVertexView(IncompleteVerticies, Color.DarkRed);
             incompleteView.LabelIndex = false;
             incompleteView.LabelPosition = false;
-            PointSetView meshVerts = PointSetView.CreateFor(FirstPassTriangulation);
+            PointSetView meshVerts = CreateMeshVertexView(FirstPassTriangulation);
             lock (ViewsLock)
             {
                 IncompletedVertexView = incompleteView;
@@ -383,30 +482,11 @@ namespace MonogameTestbed
             AddMeshView(FirstPassTriangulation, "Second MergeAndCloseRegionsPass");
             AddLineView(FirstPassTriangulation, "Second MergeAndCloseRegionsPass");
 
-            // Match BajajMeshGenerator.GenerateFaces: only cap open stack ends, not interior slice pairs.
-            if (FirstPassTriangulation.Slice?.HasSliceAbove == false)
-            {
-                FirstPassTriangulation.CapMeshEnd(true, OnTriangulateRegionProgress);
-                AddMeshView(FirstPassTriangulation, "Cap upper polygons");
-                AddLineView(FirstPassTriangulation, "Cap upper polygons");
-            }
-
-            if (FirstPassTriangulation.Slice?.HasSliceBelow == false)
-            {
-                FirstPassTriangulation.CapMeshEnd(false, OnTriangulateRegionProgress);
-                AddMeshView(FirstPassTriangulation, "Cap lower polygons");
-                AddLineView(FirstPassTriangulation, "Cap lower polygons");
-            }
-
-            FirstPassTriangulation.EnsureFacesHaveExternalNormals();
-            FirstPassTriangulation.RecalculateNormals();
-
-            AddLineView(FirstPassTriangulation, "Second MergeAndCloseRegionsPass");
-
-            //Seed the interactive selection now that every view exists.  Without this nothing is selected, so Draw
-            //skips every branch and the window stays empty until the user steps to a shot.  The screenshot path
-            //assigns shot indices directly afterwards, so it is unaffected.
-            CheckViewIndexBoundaries();
+            //BajajMeshGenerator.GeneratePolygonFaces runs face generation once more after the second region pass so
+            //the chords that pass added become faces.  Without this the test showed holes the multi test never had.
+            BajajMeshGenerator.FirstPassFaceGeneration(FirstPassTriangulation);
+            AddMeshView(FirstPassTriangulation, "Second FirstPassFaceGeneration");
+            AddLineView(FirstPassTriangulation, "Second FirstPassFaceGeneration");
         }
 
         private void AddLineView(BajajGeneratorMesh mesh, string name)
@@ -420,6 +500,8 @@ namespace MonogameTestbed
 
         private void AddMeshView(BajajGeneratorMesh mesh, string name)
         {
+            RecordStageReport(mesh, name);
+
             try
             {
                 MeshView<VertexPositionColor> view = CreateMeshView(mesh, name);
@@ -429,6 +511,76 @@ namespace MonogameTestbed
             catch (Exception ex)
             {
                 Trace.WriteLine($"AddMeshView({name}) failed: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Manifold state after each published stage, in order.  The stage where holes or non-manifold edges first
+        /// appear points at the pass responsible, which a screenshot of the final mesh alone cannot.
+        /// </summary>
+        public IReadOnlyList<(string Stage, MeshManifoldReport Report)> StageReports => _stageReports;
+        private readonly List<(string Stage, MeshManifoldReport Report)> _stageReports = [];
+
+        /// <summary>Validation of the finished slice, matching what BAJAJMULTITEST records for a failed slice.</summary>
+        public MeshManifoldReport? FinalReport { get; private set; }
+
+        /// <summary>Edges behind <see cref="FinalReport"/>'s defect counts (capped).</summary>
+        public IReadOnlyList<MeshManifoldDefect> FinalDefects { get; private set; } = [];
+
+        /// <summary>
+        /// Input-geometry conditions the Bajaj tiling does not model, recorded so a failed slice can be attributed
+        /// to the annotation rather than the generator.  Currently: shapes on the same section that intersect.
+        /// </summary>
+        public IReadOnlyList<string> GeometryNotes { get; private set; } = [];
+
+        private static List<string> DescribeGeometryNotes(BajajGeneratorMesh mesh)
+        {
+            List<string> notes = [];
+            for (int a = 0; a < mesh.Shapes.Length; a++)
+            {
+                for (int b = a + 1; b < mesh.Shapes.Length; b++)
+                {
+                    if (mesh.IsUpperShape[a] != mesh.IsUpperShape[b])
+                        continue;
+
+                    if (mesh.Shapes[a].Intersects(mesh.Shapes[b]))
+                        notes.Add($"same-section shapes {a} and {b} intersect");
+                }
+            }
+
+            return notes;
+        }
+
+        private void RecordStageReport(BajajGeneratorMesh mesh, string name)
+        {
+            try
+            {
+                MeshManifoldReport report = MeshManifoldValidator.Validate(mesh, mesh.IsForkGapBoundaryEdge, 0, mesh.IsRibbonBoundaryEdge);
+                lock (_stageReports)
+                    _stageReports.Add((name, report));            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Manifold report for stage {name} failed: {ex}");
+            }
+        }
+
+        private void RecordFinalReport(BajajGeneratorMesh mesh, HashSet<IFace> anchoredBeforeRepair)
+        {
+            try
+            {
+                FinalReport = MeshManifoldValidator.Validate(mesh, mesh.IsForkGapBoundaryEdge, 0, mesh.IsRibbonBoundaryEdge);
+                FinalDefects = MeshManifoldValidator.DescribeDefects(mesh, mesh.IsForkGapBoundaryEdge, mesh.IsRibbonBoundaryEdge,
+                    isAnchored: anchoredBeforeRepair.Contains);
+                GeometryNotes = DescribeGeometryNotes(mesh);
+                Trace.WriteLine($"Final slice surface: {FinalReport}");
+                foreach (MeshManifoldDefect defect in FinalDefects)
+                    Trace.WriteLine($"  {defect}");
+                foreach (string note in GeometryNotes)
+                    Trace.WriteLine($"  note: {note}");
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Final manifold report failed: {ex}");
             }
         }
 
@@ -679,7 +831,19 @@ namespace MonogameTestbed
 
             foreach (MorphMeshRegion region in regions)
             {
-                Polygon poly = region.Polygon;
+                Polygon poly;
+                try
+                {
+                    poly = region.Polygon;
+                }
+                catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+                {
+                    //The generator skips a region it cannot describe as a polygon; the debug view must not abort the
+                    //whole slice for it, or the test cannot show the failure the multi test reported.
+                    Trace.WriteLine($"Region view skipped for {region}: {ex.Message}");
+                    continue;
+                }
+
                 LineSetView lineView = new();
                 Color c = region.Type.GetColor();
                 c.A = 128;
@@ -698,16 +862,26 @@ namespace MonogameTestbed
             return regionView;
         }
 
+        /// <summary>
+        /// Z extent used to normalize mesh views.  A single-band slice (isolated annotation) has every contour at one
+        /// Z, which made the range zero and the model matrix scale by infinity, so nothing drew in 3D; its geometry
+        /// is the cap, which spans the slice thickness.
+        /// </summary>
+        internal static double ViewZRange(BajajGeneratorMesh mesh)
+        {
+            double range = mesh.ShapeZ.Max() - mesh.ShapeZ.Min();
+            if (range > 0)
+                return range;
+
+            return double.IsFinite(mesh.SliceThickness) && mesh.SliceThickness > 0 ? mesh.SliceThickness : 1.0;
+        }
+
         public static MeshView<VertexPositionColor> CreateMeshView(BajajGeneratorMesh mesh, string name)
         {
             MeshModel<VertexPositionColor> meshViewModel = CreateFaceView(mesh);
 
             //Adjust the meshViewModel Z coordinates so we can see the mesh in 2D
-
-
-            double maxZ = mesh.ShapeZ.Max();
-            double minZ = mesh.ShapeZ.Min();
-            double ZRange = maxZ - minZ;
+            double ZRange = ViewZRange(mesh);
 
             meshViewModel.ModelMatrix = Microsoft.Xna.Framework.Matrix.CreateTranslation(new Microsoft.Xna.Framework.Vector3(0, 0, -(float)mesh.BoundingBox.CenterPoint.Z)) * Microsoft.Xna.Framework.Matrix.CreateScale(1, 1, 1f / (float)ZRange);//).ToXNAVector3());
 
@@ -776,6 +950,47 @@ namespace MonogameTestbed
             };
             return psv;
         }
+
+        /// <summary>Upper-contour markers and index labels in line views (distinct from LimeGreen face-complete).</summary>
+        internal static readonly Color UpperContourColor = Color.DodgerBlue;
+
+        /// <summary>Lower-contour markers and index labels in line views (distinct from ForestGreen face-complete).</summary>
+        internal static readonly Color LowerContourColor = Color.Gold;
+
+        /// <summary>
+        /// Colour for a mesh vertex marker/label by which contour it sits on.  Medial-axis and cap verts keep their
+        /// special colours; everything else is upper vs lower so a line view's numbers read which section they belong to.
+        /// </summary>
+        private static Color ContourVertColor(MorphRenderMesh mesh, MorphMeshVertex v)
+        {
+            if (v.MedialAxisIndex.HasValue)
+                return Color.MediumPurple;
+            if (v.ShapeIndex is null)
+                return Color.Aqua;
+            return mesh.IsUpperShape[v.ShapeIndex.ShapeIndex] ? UpperContourColor : LowerContourColor;
+        }
+
+        /// <summary>
+        /// Labeled mesh vertices coloured by upper/lower contour.  Replaces the uniform gray
+        /// <see cref="PointSetView.CreateFor(IReadOnlyMesh3D{IVertex3D})"/> used for BajajTest line views.
+        /// </summary>
+        public static PointSetView CreateMeshVertexView(MorphRenderMesh mesh)
+        {
+            Color[] colors = [.. mesh.Vertices.Select(v => ContourVertColor(mesh, (MorphMeshVertex)v))];
+            PointSetView psv = new(Color.Gray)
+            {
+                LabelColor = Color.White,
+                PointRadius = 2,
+                Points = [.. mesh.Vertices.Select(p => p.Position.XY())],
+                PointColors = colors,
+                LabelIndex = true,
+                LabelPosition = false
+            };
+            return psv;
+        }
+
+        private static Color[] ContourShapeColors(bool[] isUpper) =>
+            [.. isUpper.Select(upper => upper ? UpperContourColor : LowerContourColor)];
 
         /*
         public void UpdatePolyViews()
@@ -1097,14 +1312,21 @@ namespace MonogameTestbed
 
                 //CurveLabel.Draw(window.GraphicsDevice, window.Scene, window.spriteBatch, window.fontArial, window.curveManager, lineView.LineLables.ToArray());
                 //Edge colors still carry the edge type, so the view stays useful where the text had to be dropped.
-                LabelView[] legible = [.. lineView.LineLabels.Where(IsLegible)];
-                foreach (var labelsByFont in legible.GroupBy(l => l.font))
+                if (VertexIndicesOnly)
                 {
-                    LabelView.Draw(window.spriteBatch, labelsByFont.Key, scene, [.. labelsByFont]);
+                    ViewLabels.AppendLine("B: " + lineView.Name + " (edges only; vertex indices below)");
                 }
+                else
+                {
+                    LabelView[] legible = [.. lineView.LineLabels.Where(IsLegible)];
+                    foreach (var labelsByFont in legible.GroupBy(l => l.font))
+                    {
+                        LabelView.Draw(window.spriteBatch, labelsByFont.Key, scene, [.. labelsByFont]);
+                    }
 
-                ViewLabels.AppendLine("B: " + lineView.Name +
-                    (legible.Length < lineView.LineLabels.Count ? $" ({lineView.LineLabels.Count - legible.Length} labels too small, zoom in)" : ""));
+                    ViewLabels.AppendLine("B: " + lineView.Name +
+                        (legible.Length < lineView.LineLabels.Count ? $" ({lineView.LineLabels.Count - legible.Length} labels too small, zoom in)" : ""));
+                }
             }
             /*
             if (lineViews != null && ShowPolygons && !ShowRegionPolygons)
@@ -1198,9 +1420,7 @@ namespace MonogameTestbed
 
             if (ViewIndex.InRange(iShownMesh, MeshViews.Count))
             {
-                double maxZ = this.ShapeZ.Max();
-                double minZ = this.ShapeZ.Min();
-                double ZRange = maxZ - minZ;
+                double ZRange = MeshViewZRange;
 
                 Microsoft.Xna.Framework.Matrix oldWorld = scene.World;
                 scene.World = Microsoft.Xna.Framework.Matrix.CreateScale(new Microsoft.Xna.Framework.Vector3(1, 1, (float)ZRange));
@@ -1244,6 +1464,11 @@ namespace MonogameTestbed
                 shots.Add(BajajCaptureShot.Lines(i, name));
             }
 
+            //Vertex indices do not change between stages (later passes only append), so one shot over the final
+            //edge set is enough to map a defect report's vertex numbers onto the picture.
+            if (listLineViews.Count > 0)
+                shots.Add(BajajCaptureShot.VertexIndices(listLineViews.Count - 1));
+
             for (int i = 0; i < RegionViews.Count; i++)
             {
                 if (RegionViews[i].HasGeometry)
@@ -1265,6 +1490,9 @@ namespace MonogameTestbed
                 string name = string.IsNullOrWhiteSpace(listLineViews[i].Name) ? $"lines-{i}" : listLineViews[i].Name;
                 shots.Add(BajajCaptureShot.Lines(i, name));
             }
+
+            if (listLineViews.Count > 0)
+                shots.Add(BajajCaptureShot.VertexIndices(listLineViews.Count - 1));
 
             for (int i = 0; i < MeshViews.Count; i++)
             {
@@ -1353,12 +1581,41 @@ namespace MonogameTestbed
         internal void ApplyShotUnlocked(BajajCaptureShot shot)
         {
             iShownMesh = shot.MeshIndex;
-            iShownLineView = shot.LineIndex;
+            //A shaded 2D mesh render on its own says nothing about why a face is missing; the classified edges and
+            //labels of the same stage do.  Overlay them so every 2D stage capture carries the chord classification.
+            iShownLineView = shot.LineIndex ?? (shot.Draw3D ? null : FindLineViewForMeshUnlocked(shot.MeshIndex));
             iShownRegion = shot.RegionIndex;
             ShowOtvChords = shot.ShowOtvChords;
+            VertexIndicesOnly = shot.VertexIndicesOnly;
             // Overview/OTV clear mesh labels so contour PolyViews draw. Other shots restore MESH
             // labels, which hides that overlay so line/mesh/region geometry is visible.
             VertexLabelType = shot.ClearVertexLabels ? IndexLabelType.NONE : IndexLabelType.MESH;
+        }
+
+        /// <summary>
+        /// The line view published for the same stage as a mesh view.  Stages publish both under one name; a stage
+        /// with only a mesh view falls back to the most recent line view before it in pipeline order, which is the
+        /// edge state that stage started from.
+        /// </summary>
+        private int? FindLineViewForMeshUnlocked(int? meshIndex)
+        {
+            if (meshIndex is not int iMesh || !ViewIndex.InRange(iMesh, MeshViews.Count) || listLineViews.Count == 0)
+                return null;
+
+            string name = MeshViews[iMesh].Name;
+            int match = listLineViews.FindIndex(v => string.Equals(v.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (match >= 0)
+                return match;
+
+            int lastMatched = -1;
+            for (int i = 0; i <= iMesh; i++)
+            {
+                int j = listLineViews.FindIndex(v => string.Equals(v.Name, MeshViews[i].Name, StringComparison.OrdinalIgnoreCase));
+                if (j >= 0)
+                    lastMatched = j;
+            }
+
+            return lastMatched >= 0 ? lastMatched : null;
         }
     }
 
@@ -1394,6 +1651,14 @@ namespace MonogameTestbed
         public double Tolerance = 2.0;
 
         /// <summary>
+        /// Contour simplification to build the slice graph with.  Null means always simplify at <see cref="Tolerance"/>
+        /// (the historical ReproSet behaviour).  Ad-hoc repros of BAJAJMULTITEST failures set this to the density-gated
+        /// options that run used, because a slice simplified differently has different vertices and a different mesh:
+        /// the multi test reported ~1300 faces for slices this test rebuilt with ~730 and no defect.
+        /// </summary>
+        public ContourSimplifyOptions? Simplify;
+
+        /// <summary>
         /// Morphology graph containing annotations from the server.
         /// </summary>
         public AnnotationVizLib.MorphologyGraph Morphology;
@@ -1410,31 +1675,43 @@ namespace MonogameTestbed
             this.Tolerance = tolerance;
         }
 
-        public BajajRepro(ulong[] slice, Uri endpoint, string description = null, double tolerance = 1) : this(endpoint, description)
+        public BajajRepro(ulong[] slice, Uri endpoint, string description = null, double tolerance = 1) : this(endpoint, description, tolerance)
         {
             SliceLocations = slice;
         }
 
-        public BajajRepro(ulong A, ulong B, Uri endpoint, string description = null, double tolerance = 1) : this(endpoint, description)
+        public BajajRepro(ulong A, ulong B, Uri endpoint, string description = null, double tolerance = 1) : this(endpoint, description, tolerance)
         {
             SliceLocations = [A, B];
         }
 
-        public BajajRepro(ulong A, ulong B, ulong C, Uri endpoint, string description = null, double tolerance = 1) : this(endpoint, description)
+        public BajajRepro(ulong A, ulong B, ulong C, Uri endpoint, string description = null, double tolerance = 1) : this(endpoint, description, tolerance)
         {
             SliceLocations = [A, B, C];
         }
 
-        public BajajRepro(ulong A, ulong B, ulong C, ulong D, Uri endpoint, string description = null, double tolerance = 1) : this(endpoint, description)
+        public BajajRepro(ulong A, ulong B, ulong C, ulong D, Uri endpoint, string description = null, double tolerance = 1) : this(endpoint, description, tolerance)
         {
             SliceLocations = [A, B, C, D];
         }
 
-        public void Initialize(double tolerance = 2.0, int hops = 1)
+        public void Initialize(int hops = 1)
         {
             //SliceLocations are LOCATION IDs (not structure IDs), so fetch by location: this loads the parent
             //structure and its neighborhood so the slice's locations and edges are present in the graph.
-            Morphology = AnnotationVizLib.OData.ODataMorphologyFactory.FromODataLocationIDs([.. SliceLocations.Select(id => (long)id)], Endpoint, hops);
+            //
+            //BajajMultiTest applies --correction before building its slice graph. Match that here so a
+            //failed-slice repro shows the same geometry. Neighbor mode needs a wider hop load for the curve window.
+            CorrectionMode correction = Program.options?.Correction ?? CorrectionMode.All;
+            bool needsWideLoad = correction is CorrectionMode.CurveFit or CorrectionMode.All or CorrectionMode.Neighbor;
+            int loadHops = needsWideLoad ? Math.Max(hops, 3) : hops;
+            Morphology = AnnotationVizLib.OData.ODataMorphologyFactory.FromODataLocationIDs([.. SliceLocations.Select(id => (long)id)], Endpoint, loadHops);
+
+            if (Program.options is not null && correction != CorrectionMode.None)
+            {
+                MorphologyRegistration.ApplyAsync(Morphology, Program.options).GetAwaiter().GetResult();
+                Trace.WriteLine($"Applied registration correction --correction {correction}.");
+            }
 
             //Find the linked locations and add those to the graph
             //////////////
@@ -1444,7 +1721,9 @@ namespace MonogameTestbed
             AnnotationVizLib.MorphologyNode[] nodes = [.. Morphology.Nodes.Values];
             //wrapView = new MonogameTestbed.BajajOTVAssignmentView(nodes.Select(n => n.Geometry.ToPolygon()).ToArray(), nodes.Select(n=> n.Z).ToArray()); 
 
-            Graph = SliceGraph.Create(Morphology, tolerance).Result;
+            ContourSimplifyOptions simplify = Simplify ?? ContourSimplifyOptions.Always(Tolerance);
+            Trace.WriteLine($"Slice graph contour simplify: gate {simplify.MinNmPerVertex} nm/vertex, tolerance {simplify.ToleranceNm} nm");
+            Graph = SliceGraph.Create(Morphology, simplify).Result;
         }
 
         /// <summary>
@@ -1453,7 +1732,7 @@ namespace MonogameTestbed
         /// <returns></returns>
         public Slice GetSlice()
         {
-            Slice slice = Graph.Nodes.FirstOrDefault(n => SliceLocations.All(id => n.Value.AllNodes.Contains(id))).Value;
+            Slice slice = GetSlice(Graph, SliceLocations);
             if (slice is null)
             {
                 throw new InvalidOperationException(
@@ -1469,7 +1748,11 @@ namespace MonogameTestbed
         /// <returns></returns>
         public static Slice GetSlice(SliceGraph graph, ulong[] SliceLocations)
         {
-            Slice slice = graph.Nodes.FirstOrDefault(n => SliceLocations.All(id => n.Value.AllNodes.Contains(id))).Value;
+            Slice[] matches = [.. graph.Nodes.Values.Where(n => SliceLocations.All(id => n.AllNodes.Contains(id)))];
+
+            //An isolated annotation sits in two single-band slices, one below it and one above.  Show the one that
+            //caps upward so it reads like an ordinary top cap.
+            Slice slice = matches.FirstOrDefault(s => s.NodesBelow.Count > 0 && s.NodesAbove.Count == 0) ?? matches.FirstOrDefault();
             Debug.Assert(slice != null, "We should be able to find the slice we are trying to test");
             return slice;
         }
@@ -1519,6 +1802,8 @@ namespace MonogameTestbed
 
         private static readonly LegendEntry[] _legendEntries =
         [
+            new("Upper contour vertex / label", Color.DodgerBlue),
+            new("Lower contour vertex / label", Color.Gold),
             new("Medial axis vertex", Color.MediumPurple),
             new("Corresponding vertex", Color.DarkSlateBlue),
             new("Face complete (upper shape)", Color.LimeGreen),
@@ -1742,25 +2027,37 @@ namespace MonogameTestbed
         {
             foreach (var request in Program.options?.CaptureRequest?.ReproLocations ?? [])
             {
-                if (request.Locations is not { Length: > 1 })
+                if (request.Locations is not { Length: > 0 })
                     continue;
 
                 Uri endpoint = ResolveEndpoint(request.Endpoint) ?? Program.options?.EndpointUri;
-                yield return new BajajRepro(request.Locations, endpoint,
-                                            request.Description ?? $"ad-hoc {string.Join("/", request.Locations)}",
-                                            request.Tolerance ?? 1.0);
+                yield return AdHocRepro(request.Locations, endpoint,
+                                        request.Description ?? $"ad-hoc {string.Join("/", request.Locations)}",
+                                        request.Tolerance);
             }
 
-            if (Program.options?.ReproLocations is { Count: > 1 } locations)
-                yield return new BajajRepro([.. locations], Program.options.EndpointUri, $"ad-hoc {string.Join("/", locations)}", Program.options.ReproTolerance);
+            if (Program.options?.ReproLocations is { Count: > 0 } locations)
+                yield return AdHocRepro([.. locations], Program.options.EndpointUri, $"ad-hoc {string.Join("/", locations)}", Program.options.ReproTolerance);
 
             foreach (ulong[] sliceLocs in Program.options?.ReproLocationSlicesFromFile ?? [])
             {
-                if (sliceLocs is not { Length: > 1 })
+                if (sliceLocs is not { Length: > 0 })
                     continue;
-                yield return new BajajRepro(sliceLocs, Program.options.EndpointUri,
+                yield return AdHocRepro(sliceLocs, Program.options.EndpointUri,
                     $"file {string.Join("/", sliceLocs)}", Program.options.ReproTolerance);
             }
+        }
+
+        /// <summary>
+        /// A repro named by LocationIDs.  Without an explicit tolerance it simplifies contours exactly as
+        /// BajajMultiTest does, since these cases almost always come from that test's failed-slice list.
+        /// </summary>
+        private static BajajRepro AdHocRepro(ulong[] locations, Uri endpoint, string description, double? tolerance)
+        {
+            BajajRepro repro = new(locations, endpoint, description, tolerance ?? 1.0);
+            if (tolerance is null)
+                repro.Simplify = Program.options?.ContourSimplify ?? ContourSimplifyOptions.Default;
+            return repro;
         }
 
         private static Uri ResolveEndpoint(string name)
@@ -1969,7 +2266,7 @@ namespace MonogameTestbed
 
             if (Input.Gamepad.LeftStick_Clicked || Input.Keyboard.Pressed(Keys.K))
             {
-                wrapView.CullMode = wrapView.CullMode == CullMode.None ? CullMode.CullCounterClockwiseFace : CullMode.None;
+                wrapView.CullMode = wrapView.CullMode == CullMode.None ? CullMode.CullClockwiseFace : CullMode.None;
             }
 
             //Keyboard alternative to the shoulder button, which is the only way to reach the 3D view without a
@@ -2078,7 +2375,7 @@ namespace MonogameTestbed
                 Folder = _currentCaseFolder
             };
 
-            CurrentTestCase.Initialize(tolerance: 1.0);
+            CurrentTestCase.Initialize();
             Slice slice = CurrentTestCase.GetSlice();
             wrapView = new BajajOTVAssignmentView(CurrentTestCase.Graph, slice);
             FitCameras(window, restoreCamera);
@@ -2107,7 +2404,9 @@ namespace MonogameTestbed
                 return;
 
             Box bbox = new(bRect, morphology.Nodes.Values.Min(n => n.Z), morphology.Nodes.Values.Max(n => n.Z));
-            double depth = Math.Max(bbox.Depth, 1);
+            //Caps reach half a section past the contours, so a one-section structure still has a section of depth;
+            //without this floor the camera sat inside the cap of an isolated annotation.
+            double depth = Math.Max(Math.Max(bbox.Depth, morphology.SectionThickness), 1);
             scene3D.Camera.Position = (bbox.CenterPoint.XY().ToVector3(0) + new Geometry.Vector3(0, 0, 10f * (float)depth)).ToXNAVector3();
             scene3D.Camera.LookAt = new Microsoft.Xna.Framework.Vector3((float)bbox.CenterPoint.X, (float)bbox.CenterPoint.Y, 0);
         }
@@ -2136,11 +2435,104 @@ namespace MonogameTestbed
         }
 
         /// <summary>
+        /// Place the 3D camera from a capture-request placement.  Orbit angles are taken about the slice centre at
+        /// a distance that fits the slice's bounding sphere in the vertical field of view, so the same preset frames
+        /// a 400 nm gap junction and a 20 µm soma alike.  World Z is volume Z minus the slice centre (see the mesh
+        /// view ModelMatrix), so the slice is centred on Z = 0 and requested Z values are relative to that.
+        /// </summary>
+        private void Place3DCamera(Camera3DPlacement placement)
+        {
+            if (wrapView?.Shapes is null || wrapView.Shapes.Length == 0)
+                return;
+
+            Geometry.Rectangle bRect = wrapView.Shapes.BoundingBox();
+            AnnotationVizLib.MorphologyGraph morphology = CurrentTestCase?.Morphology;
+            double sectionThickness = morphology?.SectionThickness ?? 0;
+            //Caps extend half a section past the outermost contour on each side.
+            double depth = Math.Max(wrapView.MeshViewZRange, sectionThickness) + sectionThickness;
+
+            Geometry.Vector2 centerXY = bRect.Center;
+            Microsoft.Xna.Framework.Vector3 center = new((float)centerXY.X, (float)centerXY.Y, 0);
+            Microsoft.Xna.Framework.Vector3 lookAt = placement.LookAt is { Length: >= 2 }
+                ? new Microsoft.Xna.Framework.Vector3(placement.LookAt[0], placement.LookAt[1], placement.LookAt.Length > 2 ? placement.LookAt[2] : 0)
+                : center;
+
+            Microsoft.Xna.Framework.Vector3 position;
+            if (placement.Position is { Length: 3 })
+            {
+                position = new Microsoft.Xna.Framework.Vector3(placement.Position[0], placement.Position[1], placement.Position[2]);
+            }
+            else
+            {
+                double az = Microsoft.Xna.Framework.MathHelper.ToRadians((float)placement.AzimuthDegrees);
+                double el = Microsoft.Xna.Framework.MathHelper.ToRadians((float)Math.Clamp(placement.ElevationDegrees, -89.9, 89.9));
+                Microsoft.Xna.Framework.Vector3 toCamera = new(
+                    (float)(Math.Cos(el) * Math.Cos(az)),
+                    (float)(Math.Cos(el) * Math.Sin(az)),
+                    (float)Math.Sin(el));
+
+                Box bounds = new(bRect, -depth / 2, depth / 2);
+                double fitDistance = FitDistance(bounds, lookAt, toCamera);
+                double distance = fitDistance * (placement.DistanceScale > 0 ? placement.DistanceScale : 1.0);
+                position = lookAt + (toCamera * (float)distance);
+            }
+
+            if (position == lookAt)
+                position.Z += 1;
+
+            //Position first: the LookAt setter derives yaw/pitch from the current position.
+            scene3D.Camera.Position = position;
+            scene3D.Camera.LookAt = lookAt;
+        }
+
+        /// <summary>
+        /// Smallest distance along <paramref name="toCamera"/> from <paramref name="lookAt"/> that keeps every corner
+        /// of <paramref name="bounds"/> inside the perspective frustum.  Slices are long thin diagonals, so fitting
+        /// their bounding sphere instead left the mesh in a third of the frame.
+        /// </summary>
+        private double FitDistance(Box bounds, Microsoft.Xna.Framework.Vector3 lookAt, Microsoft.Xna.Framework.Vector3 toCamera)
+        {
+            double tanHalfV = Math.Tan(scene3D.FieldOfView / 2.0);
+            double tanHalfH = tanHalfV * Math.Max(scene3D.Viewport.AspectRatio, 0.1);
+
+            Microsoft.Xna.Framework.Vector3 worldUp = Math.Abs(toCamera.Z) > 0.999f ? Microsoft.Xna.Framework.Vector3.UnitY : Microsoft.Xna.Framework.Vector3.UnitZ;
+            Microsoft.Xna.Framework.Vector3 right = Microsoft.Xna.Framework.Vector3.Normalize(Microsoft.Xna.Framework.Vector3.Cross(worldUp, toCamera));
+            Microsoft.Xna.Framework.Vector3 up = Microsoft.Xna.Framework.Vector3.Normalize(Microsoft.Xna.Framework.Vector3.Cross(toCamera, right));
+
+            Geometry.Vector3 min = bounds.MinCorner;
+            Geometry.Vector3 max = bounds.MaxCorner;
+            double required = 1;
+            for (int i = 0; i < 8; i++)
+            {
+                Microsoft.Xna.Framework.Vector3 c = new(
+                    (float)((i & 1) == 0 ? min.X : max.X),
+                    (float)((i & 2) == 0 ? min.Y : max.Y),
+                    (float)((i & 4) == 0 ? min.Z : max.Z));
+                c -= lookAt;
+                //The corner's depth shrinks by its component toward the camera, so that component is paid back
+                //before the angular fit is applied.
+                double along = Microsoft.Xna.Framework.Vector3.Dot(c, toCamera);
+                double needV = along + (Math.Abs(Microsoft.Xna.Framework.Vector3.Dot(c, up)) / tanHalfV);
+                double needH = along + (Math.Abs(Microsoft.Xna.Framework.Vector3.Dot(c, right)) / tanHalfH);
+                required = Math.Max(required, Math.Max(needV, needH));
+            }
+
+            return required * 1.1;
+        }
+
+        /// <summary>
         /// Honor an explicit capture-request camera, otherwise zoom 2D chord/region shots to their overlay bounds.
         /// Overview and mesh shots fall back to the slice-pair framing from <see cref="FitCameras"/>.
         /// </summary>
         private void FrameShotCamera(MonoTestbed window, BajajCaptureShot shot)
         {
+            if (shot.Draw3D && shot.Camera is not null)
+            {
+                FitCameras(window, restoreSaved: false);
+                Place3DCamera(shot.Camera);
+                return;
+            }
+
             if (shot.LookAtX.HasValue || shot.Downsample.HasValue)
             {
                 ApplyShotCamera(shot);
@@ -2302,16 +2694,26 @@ namespace MonogameTestbed
             SyncCaptureViewports(window);
             FitCameras(window, restoreSaved: false);
             List<BajajCaptureShot> defaults = wrapView.EnumerateDefaultShots();
-            List<BajajCaptureShot> shots = ScreenshotCapture.ResolveRequestedShots(defaults, Program.options?.CaptureRequest?.Shots);
+            List<BajajCaptureShot> shots = ScreenshotCapture.ResolveRequestedShots(defaults, Program.options?.CaptureRequest?.Shots, Program.options?.CaptureRequest?.Cameras3D);
+            //The default shot list is 2D only unless --3d asks for the renders; a capture request that names a 3D
+            //shot explicitly (the difficult-cases baseline script does) is honoured as written.
+            bool explicitShots = Program.options?.CaptureRequest?.Shots is { Count: > 0 };
+            if (Program.options?.Capture3D != true && !explicitShots)
+                shots.RemoveAll(s => s.Draw3D);
 
             string caseDir = System.IO.Path.Combine(_screenshotRoot, _currentCaseFolder);
             Directory.CreateDirectory(caseDir);
 
+            CullMode interactiveCull = wrapView.CullMode;
             for (int i = 0; i < shots.Count; i++)
             {
                 BajajCaptureShot shot = shots[i];
                 wrapView.ApplyShot(shot);
                 Draw3D = shot.Draw3D;
+                //A placed camera may look at the back of the slice sheet, so it decides culling for its own PNG.
+                wrapView.CullMode = shot.Draw3D && shot.Camera is not null
+                    ? (shot.Camera.Cull ? CullMode.CullClockwiseFace : CullMode.None)
+                    : interactiveCull;
                 FrameShotCamera(window, shot);
 
                 string fileName = $"{i:D2}-{shot.FileSlug}.png";
@@ -2329,9 +2731,14 @@ namespace MonogameTestbed
                     RelativePath = System.IO.Path.Combine(_currentCaseFolder, fileName).Replace('\\', '/'),
                     LookAtX = scene.Camera.LookAt.X,
                     LookAtY = scene.Camera.LookAt.Y,
-                    Downsample = scene.Camera.Downsample
+                    Downsample = scene.Camera.Downsample,
+                    Camera = shot.Draw3D ? shot.Camera?.Name ?? "top-default" : null,
+                    CameraPosition = shot.Draw3D ? [scene3D.Camera.Position.X, scene3D.Camera.Position.Y, scene3D.Camera.Position.Z] : null,
+                    CameraLookAt = shot.Draw3D ? [scene3D.Camera.LookAt.X, scene3D.Camera.LookAt.Y, scene3D.Camera.LookAt.Z] : null
                 });
             }
+
+            wrapView.CullMode = interactiveCull;
 
             if (wrapView.IsMeshFaulted)
             {
@@ -2340,9 +2747,59 @@ namespace MonogameTestbed
                 File.WriteAllText(System.IO.Path.Combine(caseDir, "error.txt"), message);
             }
 
+            RecordManifoldState(_currentManifestCase, caseDir);
+
             _manifest.Cases.Add(_currentManifestCase);
             ScreenshotCapture.WriteManifest(_screenshotRoot, _manifest);
             DrawCurrentView(window);
+        }
+
+        /// <summary>
+        /// Copies the per-stage and final manifold reports into the manifest and a <c>manifold.txt</c> beside the
+        /// PNGs, so a batch over a failed-slice list can be triaged without opening every image.
+        /// </summary>
+        private void RecordManifoldState(CaptureManifestCase manifestCase, string caseDir)
+        {
+            if (wrapView is null)
+                return;
+
+            List<string> stageLines = [];
+            string firstInvalid = null;
+            foreach ((string stage, MeshManifoldReport report) in wrapView.StageReports)
+            {
+                stageLines.Add($"{stage}: {report}");
+                if (firstInvalid is null && !report.IsValidSliceSurface)
+                    firstInvalid = stage;
+            }
+
+            manifestCase.StageReports = stageLines;
+            manifestCase.FirstInvalidStage = firstInvalid;
+
+            if (wrapView.FinalReport is MeshManifoldReport final)
+            {
+                manifestCase.ManifoldReport = final.ToString();
+                manifestCase.IsValidSliceSurface = final.IsValidSliceSurface;
+                manifestCase.Defects = [.. wrapView.FinalDefects.Select(d => d.ToString())];
+            }
+
+            try
+            {
+                List<string> lines = [];
+                lines.Add($"locations: {string.Join(",", manifestCase.LocationIds ?? [])}");
+                lines.Add($"final: {manifestCase.ManifoldReport ?? "(not reached)"}");
+                lines.Add($"firstInvalidStage: {firstInvalid ?? "(none)"}");
+                lines.Add("stages:");
+                lines.AddRange(stageLines.Select(l => "  " + l));
+                lines.Add("defects:");
+                lines.AddRange((manifestCase.Defects ?? []).Select(l => "  " + l));
+                lines.Add("notes:");
+                lines.AddRange(wrapView.GeometryNotes.Select(l => "  " + l));
+                File.WriteAllLines(System.IO.Path.Combine(caseDir, "manifold.txt"), lines);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Could not write manifold.txt: {ex.Message}");
+            }
         }
 
         private void DrawCurrentView(MonoTestbed window)

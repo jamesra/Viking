@@ -18,5 +18,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Testdata\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="DifficultCases\difficult-cases.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,8 @@
+locations: 364267
+final: faces:6 manifold:5 nonManifold:0 inconsistent:0 contourSeam:3 holes:0 isolated:0 forkGap:0 ribbonEdge:5 singleTriPolyline:0
+firstInvalidStage: (none)
+stages:
+  Cap upper polygons: faces:6 manifold:5 nonManifold:0 inconsistent:0 contourSeam:3 holes:0 isolated:0 forkGap:0 ribbonEdge:5 singleTriPolyline:0
+  Final mesh: faces:6 manifold:5 nonManifold:0 inconsistent:0 contourSeam:3 holes:0 isolated:0 forkGap:0 ribbonEdge:5 singleTriPolyline:0
+defects:
+notes:

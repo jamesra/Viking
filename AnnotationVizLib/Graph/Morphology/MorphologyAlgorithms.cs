@@ -1,7 +1,9 @@
 using Geometry;
+using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace AnnotationVizLib
@@ -392,42 +394,103 @@ namespace AnnotationVizLib
         }
 
         /// <summary>
-        /// Cap on XY translation in volume units (nm after scale) so a real bend is not pulled onto the fit.
+        /// Cap on XY translation in volume units (nm after scale) when an explicit max-offset is requested.
         /// </summary>
         public const double MaxProcessCentroidOffset = 80.0;
 
-        /// <summary>
-        /// Further cap: do not move more than this fraction of the contour's XY bounding-box width.
-        /// </summary>
-        public const double MaxProcessCentroidOffsetFractionOfWidth = 0.35;
+        /// <summary>Default leave-one-out half-window (±N process steps) for <see cref="CurveFitProcesses"/>.</summary>
+        public const int DefaultCurveFitHalfWindow = 7;
 
         /// <summary>
-        /// Fit a Z-parameterized open Catmull-Rom through each unbranched process (including pinned
-        /// branch/terminal endpoints) and rigidly translate only 1-up-and-1-down process contours.
-        /// Child subgraphs whose nearest parent node moved are co-translated so synapses stay on the wall.
-        /// Call once on the factory root before <c>SliceGraph.Create</c>; it recurses into subgraphs.
-        /// Mutates <see cref="MorphologyNode.Geometry"/> in place. Do not run after correspondence:
-        /// corresponding verts require identical XY.
+        /// Options for residual-ordered leave-one-out Catmull-Rom process registration correction.
         /// </summary>
-        public static void SmoothProcesses(MorphologyGraph graph)
+        public readonly struct CurveFitOptions
         {
-            List<ulong[]> listProcesses = graph.Processes();
+            public static CurveFitOptions Default => new(DefaultCurveFitHalfWindow, null, null);
 
-            foreach (ulong[] process in listProcesses)
-                SmoothProcessChain(graph, process);
+            public CurveFitOptions(int halfWindow, double? maxOffsetNm, ISet<ulong> onlyLocationIds)
+            {
+                HalfWindow = halfWindow < 1 ? 1 : halfWindow;
+                MaxOffsetNm = maxOffsetNm is > 0 ? maxOffsetNm : null;
+                OnlyLocationIds = onlyLocationIds;
+            }
+
+            public int HalfWindow { get; }
+            public double? MaxOffsetNm { get; }
+            public ISet<ulong> OnlyLocationIds { get; }
+        }
+
+        /// <summary>
+        /// Legacy entry point: residual-ordered curvefit with default window, no max-offset clamp, moving
+        /// processes and terminals. Prefer <see cref="CurveFitProcesses(MorphologyGraph, CurveFitOptions)"/>.
+        /// </summary>
+        public static void SmoothProcesses(MorphologyGraph graph) =>
+            CurveFitProcesses(graph, CurveFitOptions.Default);
+
+        /// <summary>
+        /// Residual-ordered leave-one-out Catmull-Rom correction of process and terminal centroids.
+        /// Branch points stay fixed as curve anchors. Child subgraphs co-move with their parent location.
+        /// Call before <c>SliceGraph.Create</c>. Mutates <see cref="MorphologyNode.Geometry"/> in place.
+        /// </summary>
+        public static void CurveFitProcesses(MorphologyGraph graph, CurveFitOptions options = default)
+        {
+            if (graph is null)
+                return;
+
+            if (options.HalfWindow < 1 && options.MaxOffsetNm is null && options.OnlyLocationIds is null)
+                options = CurveFitOptions.Default;
+
+            Dictionary<int, List<MorphologyNode>> nodesBySection = BuildSameSectionIndex(graph);
+            foreach (ulong[] process in graph.Processes())
+                CurveFitProcessChain(graph, process, nodesBySection, options);
 
             graph._RTree = null;
             graph.ResetCachedMeasurements();
 
             foreach (MorphologyGraph subgraph in graph.Subgraphs.Values)
-                SmoothProcesses(subgraph);
+                CurveFitProcesses(subgraph, options);
         }
 
         /// <summary>
-        /// Evaluates the Catmull-Rom at each process node's Z (skipping that node's own jittered centroid as a
-        /// control point so the spline actually damps section noise) and applies a clamped rigid XY Translate.
+        /// True when curvefit may translate this node: unbranched process shaft or process terminal.
+        /// Same-section / multi-edge branches are anchors only.
         /// </summary>
-        private static void SmoothProcessChain(MorphologyGraph graph, ulong[] process)
+        public static bool IsCurveFitMovable(MorphologyNode node, MorphologyGraph graph = null)
+        {
+            graph ??= node.Graph;
+            if (node is null)
+                return false;
+            if (node.IsSameSectionBranch(graph) || node.Edges.Count > 2)
+                return false;
+            return node.IsUnbranchedProcess(graph) || node.IsProcessTerminal();
+        }
+
+        /// <summary>
+        /// One pass over the graph so same-section overlap checks do not rescan every node for every smoothed contour.
+        /// </summary>
+        private static Dictionary<int, List<MorphologyNode>> BuildSameSectionIndex(MorphologyGraph graph)
+        {
+            Dictionary<int, List<MorphologyNode>> bySection = new();
+            foreach (MorphologyNode node in graph.Nodes.Values)
+            {
+                int section = (int)Math.Round(node.UnscaledZ);
+                if (!bySection.TryGetValue(section, out List<MorphologyNode> list))
+                {
+                    list = [];
+                    bySection[section] = list;
+                }
+
+                list.Add(node);
+            }
+
+            return bySection;
+        }
+
+        private static void CurveFitProcessChain(
+            MorphologyGraph graph,
+            ulong[] process,
+            Dictionary<int, List<MorphologyNode>> nodesBySection,
+            CurveFitOptions options)
         {
             if (process.Length < 3)
                 return;
@@ -436,68 +499,166 @@ namespace AnnotationVizLib
             Vector2[] centroids = [.. nodes.Select(n => n.Center.XY())];
             double[] z = [.. nodes.Select(n => n.Z)];
 
+            List<(int Index, double Residual)> movable = [];
             for (int i = 0; i < nodes.Length; i++)
             {
                 MorphologyNode node = nodes[i];
-                if (i == 0 || i == nodes.Length - 1 || !node.IsUnbranchedProcess())
+                if (!IsCurveFitMovable(node, graph))
+                    continue;
+                if (options.OnlyLocationIds is not null && !options.OnlyLocationIds.Contains(node.Key))
                     continue;
 
-                Vector2 smoothed = EvaluateProcessCentroid(centroids, z, i);
-                Vector2 offset = ClampProcessOffset(node, smoothed - centroids[i]);
+                Vector2 fitted = EvaluateLeaveOneOutCentroid(centroids, z, i, options.HalfWindow);
+                double residual = Vector2.Distance(centroids[i], fitted);
+                movable.Add((i, residual));
+            }
+
+            if (movable.Count == 0)
+                return;
+
+            movable.Sort((a, b) => b.Residual.CompareTo(a.Residual));
+
+            foreach ((int i, _) in movable)
+            {
+                MorphologyNode node = nodes[i];
+                Vector2 fitted = EvaluateLeaveOneOutCentroid(centroids, z, i, options.HalfWindow);
+                Vector2 offset = fitted - centroids[i];
+                offset = ClampProcessOffset(node, offset, options.MaxOffsetNm);
+                if (offset.Magnitude <= Tolerance.Epsilon)
+                    continue;
+
+                offset = LimitOffsetToAvoidSameSectionOverlap(node, offset, nodesBySection);
                 if (offset.Magnitude <= Tolerance.Epsilon)
                     continue;
 
                 TranslateNodeAndAttachedSubgraphs(graph, node, offset);
+                centroids[i] = node.Center.XY();
             }
         }
 
         /// <summary>
-        /// Catmull-Rom through the chain with this node's centroid omitted so jitter is not interpolated.
-        /// Parameter t is this node's Z between the previous and next samples, so a missing section does not stretch the fit.
+        /// Catmull-Rom evaluation at <paramref name="i"/> using up to <paramref name="halfWindow"/> neighbors
+        /// on each side, excluding the node itself so its jitter does not enter the fit.
         /// </summary>
-        private static Vector2 EvaluateProcessCentroid(Vector2[] centroids, double[] z, int i)
+        private static Vector2 EvaluateLeaveOneOutCentroid(Vector2[] centroids, double[] z, int i, int halfWindow)
         {
-            double dz = z[i + 1] - z[i - 1];
+            List<int> controlIdx = [];
+            int lo = Math.Max(0, i - halfWindow);
+            int hi = Math.Min(centroids.Length - 1, i + halfWindow);
+            for (int j = lo; j <= hi; j++)
+            {
+                if (j == i)
+                    continue;
+                controlIdx.Add(j);
+            }
+
+            if (controlIdx.Count == 0)
+                return centroids[i];
+            if (controlIdx.Count == 1)
+                return centroids[controlIdx[0]];
+
+            double queryZ = z[i];
+            int seg = 0;
+            while (seg + 1 < controlIdx.Count && z[controlIdx[seg + 1]] < queryZ)
+                seg++;
+
+            if (seg + 1 >= controlIdx.Count)
+                return centroids[controlIdx[^1]];
+
+            int i1 = controlIdx[seg];
+            int i2 = controlIdx[seg + 1];
+            double dz = z[i2] - z[i1];
             if (Math.Abs(dz) < Tolerance.Epsilon)
-                return centroids[i];
+                return centroids[i1];
 
-            if (Vector2.DistanceSquared(centroids[i - 1], centroids[i + 1]) <= Tolerance.EpsilonSquared)
-                return centroids[i];
+            if (Vector2.DistanceSquared(centroids[i1], centroids[i2]) <= Tolerance.EpsilonSquared)
+                return centroids[i1];
 
-            double t = (z[i] - z[i - 1]) / dz;
+            double t = (queryZ - z[i1]) / dz;
             if (t < 0)
                 t = 0;
             else if (t > 1)
                 t = 1;
 
-            List<Vector2> control = [];
-            if (i - 2 >= 0)
-                control.Add(centroids[i - 2]);
-            control.Add(centroids[i - 1]);
-            control.Add(centroids[i + 1]);
-            if (i + 2 < centroids.Length)
-                control.Add(centroids[i + 2]);
+            int i0 = seg > 0 ? controlIdx[seg - 1] : i1;
+            int i3 = seg + 2 < controlIdx.Count ? controlIdx[seg + 2] : i2;
 
-            int iStart = control.Count >= 3 && i - 2 >= 0 ? 1 : 0;
-            if (iStart + 1 >= control.Count)
-                return centroids[i];
-
-            Vector2[] fitted = CatmullRom.FitCurveSegment(control, iStart, [t]);
+            Vector2[] fitted = CatmullRom.FitCurveSegment(
+                centroids[i0], centroids[i1], centroids[i2], centroids[i3], [t]);
             if (fitted is null || fitted.Length == 0 || double.IsNaN(fitted[0].X) || double.IsNaN(fitted[0].Y))
-                return centroids[i - 1] + ((centroids[i + 1] - centroids[i - 1]) * t);
+                return centroids[i1] + ((centroids[i2] - centroids[i1]) * t);
 
             return fitted[0];
         }
 
-        private static Vector2 ClampProcessOffset(MorphologyNode node, Vector2 offset)
+        /// <summary>
+        /// Shrink a smoothing translation until the moved contour no longer intersects another contour of the same
+        /// structure on the same section that it did not already intersect.  Two processes of one cell running side
+        /// by side are often closer than a large registration hop; pushing one into the other creates a
+        /// same-section overlap the Bajaj tiler cannot handle (RPC1 108506/108520: clean raw, inconsistent after
+        /// smoothing), and that was the largest remaining failure class in the Muller glia after the generator fixes.
+        /// Halving is tried three times before the node is left where it was annotated.
+        /// </summary>
+        private static Vector2 LimitOffsetToAvoidSameSectionOverlap(
+            MorphologyNode node,
+            Vector2 offset,
+            Dictionary<int, List<MorphologyNode>> nodesBySection)
+        {
+            int section = (int)Math.Round(node.UnscaledZ);
+            if (!nodesBySection.TryGetValue(section, out List<MorphologyNode> sectionNodes))
+                return offset;
+
+            Rectangle reach = node.Geometry.BoundingBox();
+            double pad = offset.Magnitude;
+            List<MorphologyNode> neighbours = [];
+            foreach (MorphologyNode other in sectionNodes)
+            {
+                if (other.Key == node.Key)
+                    continue;
+
+                Rectangle otherBox = other.Geometry.BoundingBox();
+                if (otherBox.Left > reach.Right + pad || otherBox.Right < reach.Left - pad
+                    || otherBox.Bottom > reach.Top + pad || otherBox.Top < reach.Bottom - pad)
+                    continue;
+
+                if (node.Geometry.STIntersects(other.Geometry).IsTrue)
+                    continue;
+
+                neighbours.Add(other);
+            }
+
+            if (neighbours.Count == 0)
+                return offset;
+
+            Vector2 candidate = offset;
+            for (int attempt = 0; attempt < 4; attempt++)
+            {
+                SqlGeometry moved = node.Geometry.Translate(candidate);
+                if (neighbours.All(other => !moved.STIntersects(other.Geometry).IsTrue))
+                    return candidate;
+
+                candidate *= 0.5;
+            }
+
+            Trace.WriteLine($"CurveFitProcesses: location {node.Key} left in place; every translation toward the fit overlaps a same-section neighbour.");
+            return Vector2.Zero;
+        }
+
+        /// <summary>
+        /// When <paramref name="maxOffsetNm"/> is null, returns <paramref name="offset"/> unchanged.
+        /// When set, caps magnitude to that many nanometres.
+        /// </summary>
+        private static Vector2 ClampProcessOffset(MorphologyNode node, Vector2 offset, double? maxOffsetNm)
         {
             double length = offset.Magnitude;
             if (length <= Tolerance.Epsilon)
                 return Vector2.Zero;
 
-            Rectangle bbox = node.Geometry.BoundingBox();
-            double maxOffset = Math.Min(MaxProcessCentroidOffset, MaxProcessCentroidOffsetFractionOfWidth * bbox.Width);
-            if (maxOffset <= Tolerance.Epsilon || length <= maxOffset)
+            if (maxOffsetNm is null || maxOffsetNm.Value <= Tolerance.Epsilon)
+                return offset;
+
+            double maxOffset = maxOffsetNm.Value;
+            if (length <= maxOffset)
                 return offset;
 
             return offset * (maxOffset / length);
@@ -505,9 +666,8 @@ namespace AnnotationVizLib
 
         /// <summary>
         /// Rigidly translate a process node and every child subgraph whose nearest parent location is that node.
-        /// Pinned anchors never call this, so their synapses stay put.
         /// </summary>
-        private static void TranslateNodeAndAttachedSubgraphs(MorphologyGraph graph, MorphologyNode node, Vector2 offset)
+        internal static void TranslateNodeAndAttachedSubgraphs(MorphologyGraph graph, MorphologyNode node, Vector2 offset)
         {
             node.Geometry = node.Geometry.Translate(offset);
 

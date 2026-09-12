@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using MathNet.Numerics;
@@ -24,6 +25,8 @@ namespace MonogameTestbed
     {
         None = 0,
         Neighbor = 1,
+        CurveFit = 2,
+        All = 3,
     }
 
     /// <summary>
@@ -148,54 +151,46 @@ namespace MonogameTestbed
             public bool InvertZ { get; set; }
 
             /// <summary>
-            /// When set, skip Catmull-Rom centroid smoothing on unbranched processes. Smoothing is on by default so
-            /// long processes do not inherit section-registration jitter; pass this to A/B the same cell.
+            /// Registration correction before SliceGraph.Create.
+            /// Values: none, neighbor, curvefit, all (default).
             /// </summary>
-            [Option("no-smooth-processes", Default = false, HelpText = "Disable process centroid jitter smoothing before SliceGraph.Create (on by default).")]
-            public bool NoSmoothProcesses { get; set; }
-
-            /// <summary>
-            /// True unless <see cref="NoSmoothProcesses"/> was passed. Applied once after OData load in BajajMultiTest.
-            /// </summary>
-            public bool SmoothProcesses => !NoSmoothProcesses;
-
-            /// <summary>
-            /// Spatially varying registration correction applied after optional SmoothProcesses, before SliceGraph.Create.
-            /// Values: none (default), neighbor.
-            /// </summary>
-            [Option("correction", Default = "none",
-                HelpText = "Registration correction field: none (default), neighbor (spatially varying hop consensus; auto-loads nearby cells within --correction-radius).")]
+            [Option("correction", Default = "all",
+                HelpText = "Registration correction: none | neighbor (hop field, then curvefit Sample-null processes/terminals) | curvefit | all (neighbor, unmoved curvefit, then full curvefit). Default all.")]
             public string CorrectionParam { get; set; }
 
             /// <summary>
-            /// Parsed <see cref="CorrectionParam"/>; unknown values fall back to <see cref="CorrectionMode.None"/>.
+            /// Parsed <see cref="CorrectionParam"/>. Omitted / blank is <see cref="CorrectionMode.All"/>.
             /// </summary>
-            public CorrectionMode Correction
-            {
-                get
-                {
-                    if (string.IsNullOrWhiteSpace(CorrectionParam))
-                        return CorrectionMode.None;
-                    if (Enum.TryParse(CorrectionParam.Trim(), ignoreCase: true, out CorrectionMode mode))
-                        return mode;
-                    return CorrectionMode.None;
-                }
-            }
+            public CorrectionMode Correction { get; private set; } = CorrectionMode.All;
 
             /// <summary>
-            /// XY search radius in nanometres when <see cref="Correction"/> is Neighbor. Pads the loaded cells' AABB
+            /// XY search radius in nanometres when neighbor correction runs. Pads the loaded cells' AABB
             /// to discover neighboring structures on each occupied section.
             /// </summary>
             [Option("correction-radius", Default = 2000.0,
-                HelpText = "Neighbor search radius in nm for --correction neighbor (default 2000).")]
+                HelpText = "Neighbor search radius in nm for --correction neighbor|all (default 2000).")]
             public double CorrectionRadiusNm { get; set; }
 
             /// <summary>
-            /// Simplify closed polygon contours denser than one unique vertex per this many nanometres of length
-            /// (closing duplicate excluded). Polylines are never simplified. Default 20. Set &lt;= 0 to disable.
+            /// Optional cap on each registration translation magnitude in nm. Omitted = no ClampProcessOffset.
             /// </summary>
-            [Option("contour-simplify-spacing-nm", Default = 20.0,
-                HelpText = "Simplify a closed polygon contour when it has more than 1 vertex per this many nm of length (exclude closing duplicate). Polylines are never simplified. Default 20. Set <= 0 to disable.")]
+            [Option("correction-max-offset-nm", Required = false,
+                HelpText = "Optional max XY translation in nm for neighbor/curvefit. When omitted, translations are not magnitude-clamped.")]
+            public double? CorrectionMaxOffsetNm { get; set; }
+
+            /// <summary>
+            /// Leave-one-out Catmull-Rom half-window (neighbors below and above the peeled node).
+            /// </summary>
+            [Option("correction-curvefit-window", Default = 7,
+                HelpText = "Curvefit leave-one-out half-window size (default 7).")]
+            public int CorrectionCurveFitWindow { get; set; }
+
+            /// <summary>
+            /// Max density-gate spacing (nm/vert) for closed polygons; with hull-adaptive mode this is the
+            /// nearly-convex end (ratio ≥ 0.95). Convoluted rings lerp down to 20 nm. Default 50. Set &lt;= 0 to disable.
+            /// </summary>
+            [Option("contour-simplify-spacing-nm", Default = 50.0,
+                HelpText = "Max density-gate spacing in nm/vert for closed polygons (hull-adaptive: 50 at ratio≥0.95, 20 at ratio≤0.70). Polylines never simplified. Default 50. Set <= 0 to disable.")]
             public double ContourSimplifySpacingNm { get; set; }
 
             /// <summary>
@@ -207,11 +202,12 @@ namespace MonogameTestbed
 
             /// <summary>
             /// Density-gated closed-contour simplify for BajajMulti / SliceGraph.Create. Geometry is already in nm.
+            /// Uses hull-area–adaptive spacing (convex → spacing-nm, convoluted → 20 nm).
             /// </summary>
             public ContourSimplifyOptions ContourSimplify =>
                 ContourSimplifySpacingNm <= 0 || ContourSimplifyTolNm <= 0
                     ? ContourSimplifyOptions.Disabled
-                    : new ContourSimplifyOptions(ContourSimplifySpacingNm, ContourSimplifyTolNm);
+                    : new ContourSimplifyOptions(ContourSimplifySpacingNm, ContourSimplifyTolNm, adaptiveHullSpacing: true);
 
             /// <summary>
             /// The output file or path name
@@ -281,14 +277,29 @@ namespace MonogameTestbed
                 HelpText = "BAJAJTEST: text file with one slice per line of LocationIDs (from BajajMultiTest failed-slice report)")]
             public string ReproLocationsFile { get; set; }
 
-            /// <summary>Parsed slices from <see cref="ReproLocationsFile"/> (each entry has at least two LocationIDs).</summary>
+            /// <summary>Parsed slices from <see cref="ReproLocationsFile"/>; a one-ID entry is an isolated annotation.</summary>
             public List<ulong[]> ReproLocationSlicesFromFile { get; private set; }
 
-            [Option("repro-tolerance", Required = false, HelpText = "Polygon simplification tolerance for --repro-locations", Default = 1.0)]
-            public double ReproTolerance { get; set; }
+            /// <summary>
+            /// Null (the default) builds ad-hoc repro slices with the same density-gated <see cref="ContourSimplify"/>
+            /// BajajMultiTest uses, so a slice from its failed-slice list reproduces with the same vertices.  A value
+            /// forces the legacy always-simplify path at that tolerance.
+            /// </summary>
+            [Option("repro-tolerance", Required = false, HelpText = "Always simplify --repro-locations polygons at this tolerance (nm). Default: the density-gated --contour-simplify-* settings BajajMultiTest uses.")]
+            public double? ReproTolerance { get; set; }
 
             [Option("capture-request", Required = false, HelpText = "JSON file listing extra or replacement screenshot shots")]
             public string CaptureRequestPath { get; set; }
+
+            /// <summary>
+            /// Diagnosis runs on the 2D line/chord/index views; the shaded 3D renders cost the most capture time and
+            /// only matter for final verification, so they are opt-in.
+            /// </summary>
+            [Option("3d", Required = false, HelpText = "BAJAJTEST screenshots: also capture the shaded 3D mesh renders (final verification). Default captures only the 2D chord, index, and region views", Default = false)]
+            public bool Capture3D { get; set; }
+
+            [Option("cameras", Required = false, HelpText = "Comma-separated 3D camera presets for every 3D screenshot (top, oblique, oblique-back, side, front, below). One PNG per camera. A capture request's cameras3D takes precedence.")]
+            public string CamerasParam { get; set; }
 
             [Option("display", Required = false, HelpText = "Monitor to capture on: an index from --list-displays, or 'primary'. Defaults to a secondary monitor when capturing so the primary display is left alone.")]
             public string DisplayParam { get; set; }
@@ -408,12 +419,39 @@ namespace MonogameTestbed
                 this.LocationIDs = InputParameterListToIDs(LocationIDParams ?? []);
                 this.StructureIDs = InputParameterListToIDs(StructureIDParams ?? []);
                 ExcludeChildren |= ExcludeChildrenAlias;
+                ParseCorrection();
                 ParseStartupMode();
                 ParseReproParam();
                 ParseReproLocations();
                 ParseReproLocationsFile();
                 LoadCaptureRequest();
+                ApplyCameraPresets();
                 MorphologyMesh.MeshPhaseTimings.Enabled = Timings;
+            }
+
+            private void ParseCorrection()
+            {
+                if (string.IsNullOrWhiteSpace(CorrectionParam))
+                {
+                    Correction = CorrectionMode.All;
+                    return;
+                }
+
+                string raw = CorrectionParam.Trim();
+                if (raw.Equals("curvefit", StringComparison.OrdinalIgnoreCase))
+                {
+                    Correction = CorrectionMode.CurveFit;
+                    return;
+                }
+
+                if (Enum.TryParse(raw, ignoreCase: true, out CorrectionMode mode))
+                {
+                    Correction = mode;
+                    return;
+                }
+
+                string known = "none, neighbor, curvefit, all";
+                throw new ArgumentException($"Unknown --correction value '{CorrectionParam}'. Expected one of: {known}.");
             }
 
             private void ParseStartupMode()
@@ -477,8 +515,9 @@ namespace MonogameTestbed
                     ReproLocations.Add(id);
                 }
 
-                if (ReproLocations.Count < 2)
-                    throw new ArgumentException("--repro-locations needs at least two LocationIDs to form a slice");
+                //A single LocationID is an isolated annotation (its slice holds that one contour and a cap).
+                if (ReproLocations.Count < 1)
+                    throw new ArgumentException("--repro-locations needs at least one LocationID");
             }
 
             private void ParseReproLocationsFile()
@@ -510,8 +549,8 @@ namespace MonogameTestbed
                         ids.Add(id);
                     }
 
-                    if (ids.Count < 2)
-                        throw new ArgumentException($"Line {lineNumber} of --repro-locations-file needs at least two LocationIDs");
+                    if (ids.Count < 1)
+                        throw new ArgumentException($"Line {lineNumber} of --repro-locations-file needs at least one LocationID");
 
                     ReproLocationSlicesFromFile.Add([.. ids]);
                 }
@@ -531,6 +570,19 @@ namespace MonogameTestbed
                 string json = File.ReadAllText(CaptureRequestPath);
                 CaptureRequest = System.Text.Json.JsonSerializer.Deserialize<CaptureRequestFile>(json, CaptureRequestFile.JsonOptions)
                     ?? throw new ArgumentException($"Failed to parse capture request JSON: {CaptureRequestPath}");
+            }
+
+            private void ApplyCameraPresets()
+            {
+                List<CaptureCameraRequest> cameras = ScreenshotCapture.ParseCameraPresets(CamerasParam);
+                if (cameras is null)
+                    return;
+
+                CaptureRequest ??= new CaptureRequestFile();
+                if (CaptureRequest.Cameras3D is { Count: > 0 })
+                    return;
+
+                CaptureRequest.Cameras3D = cameras;
             }
 
             [GeneratedRegex(@"^(\d+)$")]
@@ -559,7 +611,16 @@ namespace MonogameTestbed
 
         static string LogPath;
 
-        static readonly string LogFile = DateTime.Now.ToString("MM.dd.yyyy HH.mm.ss") + ".log";
+        /// <summary>
+        /// Process start time.  The trace log and the BajajMultiTest failed-slice report both name their files
+        /// with this stamp so the two can be matched up afterwards.
+        /// </summary>
+        public static readonly DateTime RunStarted = DateTime.Now;
+
+        /// <summary>Timestamp shared by every per-run output file name.</summary>
+        public static string RunStamp => RunStarted.ToString("MM.dd.yyyy HH.mm.ss");
+
+        static readonly string LogFile = RunStamp + ".log";
 
         static string LogFullPath => System.IO.Path.Combine(LogPath, LogFile);
 
@@ -591,28 +652,25 @@ namespace MonogameTestbed
                 result
                     .WithParsed<CommandLineOptions>(o =>
                     {
-                        o.ToString();
-                        o.ProcessStrings();
-                        Program.options = o;
+                        try
+                        {
+                            o.ProcessStrings();
+                            Program.options = o;
+                        }
+                        catch (Exception ex) when (ex is ArgumentException or FileNotFoundException or FormatException or JsonException)
+                        {
+                            //Same outcome as an unknown flag: print the error, the full option list, and quit.
+                            AbortWithHelp(result, args, ex.Message);
+                        }
                     })
                     .WithNotParsed(errors =>
                     {
-                        // Create a new help text with error information
-                        HelpText errorHelpText = HelpText.AutoBuild<CommandLineOptions>(result);
-                        errorHelpText.AddPreOptionsLine("Aborting: Unable to parse command line arguments");
-                        errorHelpText.AddPreOptionsLine($"Arguments: {string.Join(' ', args)}");
-                        errorHelpText.AddPreOptionsLine("");
-                        Console.WriteLine(errorHelpText);
-#if DEBUG
-                        System.Diagnostics.Debugger.Break();
-#endif
-                        // Exit with error code
-                        Environment.Exit(1);
+                        AbortWithHelp(result, args, "Unable to parse command line arguments");
                     });
 
-                if (result.Tag == CommandLine.ParserResultType.NotParsed)
+                if (result.Tag == CommandLine.ParserResultType.NotParsed || Program.options is null)
                 {
-                    // If parsing failed, we exit
+                    //AbortWithHelp already exited; this covers the case where WithParsed never ran.
                     return;
                 }
 
@@ -662,6 +720,25 @@ namespace MonogameTestbed
         }
 
         /// <summary>
+        /// Print the error, the same option list -h would show, and exit.  Used for unknown flags and for
+        /// recognised options whose values fail validation in <see cref="CommandLineOptions.ProcessStrings"/>.
+        /// </summary>
+        private static void AbortWithHelp<T>(ParserResult<T> result, string[] args, string reason)
+        {
+            //The single-arg AutoBuild only accepts NotParsed; validation failures after a successful parse need
+            //the configuring overload so the option list still prints.
+            HelpText errorHelpText = HelpText.AutoBuild(result, h => HelpText.DefaultParsingErrorsHandler(result, h), e => e);
+            errorHelpText.AddPreOptionsLine($"Aborting: {reason}");
+            errorHelpText.AddPreOptionsLine($"Arguments: {string.Join(' ', args)}");
+            errorHelpText.AddPreOptionsLine("");
+            Console.WriteLine(errorHelpText);
+#if DEBUG
+            System.Diagnostics.Debugger.Break();
+#endif
+            Environment.Exit(1);
+        }
+
+        /// <summary>
         /// Initialize the Mathnet Numerics lib
         /// </summary>
         private static void InitializeMathnet()
@@ -680,6 +757,10 @@ namespace MonogameTestbed
         /// </summary>
         private static void ConfigureDiagnostics()
         {
+            //Installed regardless of the logging switches: it decides whether a failed Debug.Assert on a worker
+            //thread ends the run or is recorded as one failed slice.
+            AssertionExceptionTraceListener.Install();
+
             if (Program.options is null)
                 return;
 
@@ -690,7 +771,7 @@ namespace MonogameTestbed
             if (!logToFile && !logToConsole)
                 return;
 
-            Trace.AutoFlush = true;
+            Trace.AutoFlush = logToConsole;
 
             if (logToFile)
             {
@@ -702,6 +783,8 @@ namespace MonogameTestbed
                     Directory.CreateDirectory(LogPath);
 
                 DebugLogFile = File.CreateText(LogFullPath);
+                //File AutoFlush is enough for -l alone; Trace.AutoFlush with only a file listener made every
+                //Trace.WriteLine a synchronous disk flush under Trace's global lock.
                 DebugLogFile.AutoFlush = true;
 
                 SynchronizedLogWriter = TextWriter.Synchronized(DebugLogFile);

@@ -1,0 +1,12 @@
+locations: 368197,368198
+final: faces:14 manifold:13 nonManifold:0 inconsistent:0 contourSeam:14 holes:0 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0
+firstInvalidStage: Remove Invalid Edges
+stages:
+  Remove Invalid Edges: faces:10 manifold:8 nonManifold:0 inconsistent:0 contourSeam:10 holes:2 isolated:5 forkGap:0 ribbonEdge:2 singleTriPolyline:0
+  CompleteCorrespondingVertexFaces: faces:14 manifold:13 nonManifold:0 inconsistent:1 contourSeam:14 holes:0 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0
+  FirstPassSliceChordGeneration: faces:14 manifold:13 nonManifold:0 inconsistent:1 contourSeam:14 holes:0 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0
+  FirstPassFaceGeneration: faces:14 manifold:13 nonManifold:0 inconsistent:1 contourSeam:14 holes:0 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0
+  CleanRibbonFaces: faces:14 manifold:13 nonManifold:0 inconsistent:0 contourSeam:14 holes:0 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0
+  Final mesh: faces:14 manifold:13 nonManifold:0 inconsistent:0 contourSeam:14 holes:0 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0
+defects:
+notes:

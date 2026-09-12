@@ -85,7 +85,21 @@ namespace MorphologyMesh
                 if (_Polygon != null)
                     return _Polygon;
 
-                List<Vector2> poly_verts = [.. this.RegionPerimeter.Select(v => v.Position.XY())];
+                //A corresponding pair on the perimeter is two mesh verticies at one XY (different Z).  Polygon
+                //rejects the duplicate, which made every region touching such a pair unclosable (RPC1 83717/83724),
+                //so the ring is built from the distinct XY run; the mesh verticies themselves are untouched.
+                List<Vector2> poly_verts = new(this.RegionPerimeter.Length);
+                foreach (MorphMeshVertex v in this.RegionPerimeter)
+                {
+                    Vector2 xy = v.Position.XY();
+                    if (poly_verts.Count > 0 && poly_verts[^1] == xy)
+                        continue;
+                    poly_verts.Add(xy);
+                }
+
+                while (poly_verts.Count > 1 && poly_verts[0] == poly_verts[^1])
+                    poly_verts.RemoveAt(poly_verts.Count - 1);
+
                 _Polygon = new Polygon(poly_verts.EnsureClosedRing().ToArray());
 
                 return _Polygon;
@@ -106,13 +120,20 @@ namespace MorphologyMesh
 
                 PolygonIndex[] polyIndicies = [.. Vertices.Select(v => ((MorphMeshVertex)ParentMesh.Vertices[v]).ShapeIndex).Where(v => v is PolygonIndex).Cast<PolygonIndex>()];
 
-                //var all_exterior_edges = this.Faces.SelectMany(f => f.Edges).Distinct().Where(e => this.ParentMesh[e].Faces.Count == 1).Select(e => ParentMesh[e]).ToList();
                 List<IEdgeKey> all_region_face_edges = [.. this.Faces.SelectMany(f => f.Edges)];
-                List<IEdgeKey> all_possible_edges = [.. all_region_face_edges.Distinct()];
-#if DEBUG
-                List<int> counts = [.. all_possible_edges.Select(e => all_region_face_edges.Count(fe => e.Equals(fe)))];
-#endif
-                List<IEdgeKey> all_exterior_edges = [.. all_possible_edges.Where(e => all_region_face_edges.Count(fe => fe.Equals(e)) == 1)];
+                Dictionary<IEdgeKey, int> edgeCounts = new(all_region_face_edges.Count);
+                foreach (IEdgeKey e in all_region_face_edges)
+                {
+                    edgeCounts.TryGetValue(e, out int count);
+                    edgeCounts[e] = count + 1;
+                }
+
+                List<IEdgeKey> all_exterior_edges = new(edgeCounts.Count);
+                foreach (KeyValuePair<IEdgeKey, int> kvp in edgeCounts)
+                {
+                    if (kvp.Value == 1)
+                        all_exterior_edges.Add(kvp.Key);
+                }
 
                 //Identify all of the edges that are already in the mesh as 
                 //var all_exterior_edges = all_possible_edges.Where(e => this.ParentMesh.Contains(e) && ParentMesh[e].Faces.Intersect(this.Faces).Count == 1).ToList();
@@ -135,8 +156,9 @@ namespace MorphologyMesh
                     {
 #if DEBUG
                         throw new InvalidOperationException("We should always be able to find an edge to add to our perimeter until we exhaust the list of unassigned perimeter edges");
-#endif
+#else
                         break; //In Release just use what we found
+#endif
                     }
                     else if (connected_edge.A == LastVertIndex || connected_edge.B == LastVertIndex)
                     {

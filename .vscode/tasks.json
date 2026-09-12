@@ -72,6 +72,22 @@
       "problemMatcher": "$msCompile",
       "group": { "kind": "build", "isDefault": false },
       "presentation": { "reveal": "silent" }
+    },
+    {
+      "label": "build-monogame-testbed-release",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/Clients/MonogameTestbed/MonogameTestbed.csproj",
+        "/p:Configuration=Release",
+        "/p:Platform=x64",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary;ForceNoAlign"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": { "kind": "build", "isDefault": false },
+      "presentation": { "reveal": "silent" }
     }
   ]
 }

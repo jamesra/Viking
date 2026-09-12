@@ -12,7 +12,7 @@ namespace MorphologyMeshTest
 {
     /// <summary>
     /// Step-0 harness for section-registration investigation on a specific process chain.
-    /// Reports centroid hops, SmoothProcesses offsets, node pin/skip classification, and virtual-overlap
+    /// Reports centroid hops, CurveFitProcesses offsets, node pin/skip classification, and virtual-overlap
     /// translation magnitudes for slices spanning the requested LocationIDs.
     /// </summary>
     [TestClass]
@@ -54,15 +54,15 @@ namespace MorphologyMeshTest
             Console.WriteLine($"\nProcess chain ({chain.Length} nodes): {string.Join(" -> ", chain)}");
 
             ReportNodeClassification(cell, chain, targetLocations);
-            ReportCentroidHops(cell, chain, label: "BEFORE SmoothProcesses");
+            ReportCentroidHops(cell, chain, label: "BEFORE CurveFitProcesses");
 
             HashSet<ulong> reportIds = [.. chain, .. targetLocations];
             Dictionary<ulong, Vector2> centroidsBefore = reportIds.ToDictionary(id => id, id => cell.Nodes[id].Center.XY());
-            MorphologyGraph.SmoothProcesses(cell);
+            MorphologyGraph.CurveFitProcesses(cell);
             Dictionary<ulong, Vector2> centroidsAfter = reportIds.ToDictionary(id => id, id => cell.Nodes[id].Center.XY());
 
             ReportSmoothingOffsets(cell, [.. reportIds.OrderBy(id => cell.Nodes[id].Z)], centroidsBefore, centroidsAfter);
-            ReportCentroidHops(cell, chain, label: "AFTER SmoothProcesses");
+            ReportCentroidHops(cell, chain, label: "AFTER CurveFitProcesses");
 
             SliceGraph slices = await SliceGraph.Create(cell, 2.0, origin);
             Console.WriteLine($"\nSliceGraph: {slices.Nodes.Count} slices, failed topology: {slices.FailedTopologySlices.Count}");
@@ -247,7 +247,7 @@ namespace MorphologyMeshTest
             Dictionary<ulong, Vector2> before,
             Dictionary<ulong, Vector2> after)
         {
-            Console.WriteLine("\n=== SmoothProcesses offsets ===");
+            Console.WriteLine("\n=== CurveFitProcesses offsets ===");
             Console.WriteLine("LocationID   role                         |offset| nm  cap nm  applied?  reason if skipped");
             foreach (ulong id in chain)
             {
@@ -263,22 +263,19 @@ namespace MorphologyMeshTest
 
         private static double ComputeSmoothCap(MorphologyNode node)
         {
-            Rectangle bbox = node.Geometry.BoundingBox();
-            return Math.Min(
-                MorphologyGraph.MaxProcessCentroidOffset,
-                MorphologyGraph.MaxProcessCentroidOffsetFractionOfWidth * bbox.Width);
+            // Optional --correction-max-offset-nm is off by default; diagnostic still shows the legacy 80 nm reference.
+            _ = node;
+            return MorphologyGraph.MaxProcessCentroidOffset;
         }
 
         private static string SmoothSkipReason(MorphologyNode node, ulong[] reportOrder, double offsetMag)
         {
-            if (node.IsProcessTerminal())
-                return "terminal (Catmull anchor)";
-            if (node.IsSameSectionBranch())
-                return "branch/Y-junction (pinned)";
-            if (!node.IsUnbranchedProcess())
-                return "not 1-up-1-down process";
+            if (node.IsSameSectionBranch() || node.Edges.Count > 2)
+                return "branch (curvefit anchor)";
+            if (!MorphologyGraph.IsCurveFitMovable(node))
+                return "not curvefit-movable";
             if (offsetMag <= Tolerance.Epsilon)
-                return "fit matched centroid (or clamped to zero)";
+                return "fit matched centroid (or overlap-clamped to zero)";
             return "";
         }
 

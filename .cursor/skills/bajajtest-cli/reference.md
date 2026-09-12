@@ -16,6 +16,8 @@ C1: no self-intersection. C2: no vertical comb topology. C3: resampling a slice 
 
 | Entry | Color |
 |-------|--------|
+| Upper contour vertex / label | DodgerBlue |
+| Lower contour vertex / label | Gold |
 | Medial axis vertex | MediumPurple |
 | Corresponding vertex | DarkSlateBlue |
 | Face complete (upper / lower) | LimeGreen / ForestGreen |

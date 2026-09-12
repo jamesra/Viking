@@ -1,0 +1,133 @@
+{
+  "$comment": [
+    "Difficult slices the mesh generator once got wrong and now must keep getting right.",
+    "volume: a Viking.Common.Endpoint name (RC1, RPC1, ...) or a full OData URL.  locations: LocationIDs of the slice.",
+    "problem: what the mesh looked like and which stage caused it.  fix: the code change that made it right.",
+    "cameras: 3D placements worth capturing for this case (preset: top, oblique, oblique-back, side, front, below; or azimuth/elevation/distance).",
+    "shots2D (optional): extra 2D zooms, {stage, lookAt:[x,y], downsample} in the slice XY frame.",
+    "Every case is meshed raw and smoothed by DifficultCaseRegressionTests; its Final-mesh PNGs are compared against",
+    "baselines/<VOLUME>-<ids>/ by the mesh-difficult-cases skill scripts.  Append new cases; never remove one because it started failing."
+  ],
+  "cases": [
+    {
+      "volume": "RPC1",
+      "locations": [368195, 368197],
+      "problem": "Polyline ribbon (gap junction 52432): the lower line overshoots the upper line's start, so the Delaunay pass fanned the far endpoint across every segment of the other line from the wrong side and folded the sheet over itself; contour segments carried two faces and the fold's outer edge showed as a slit.",
+      "fix": "RemoveFoldedRibbonFaces in PolylineRibbonMeshGenerator: one face per contour segment per neighbouring shape.",
+      "cameras": [ { "preset": "oblique" }, { "preset": "side" } ]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [368197, 368198],
+      "problem": "Crossing polylines: chords across the twist at the crossing were typed SURFACE, so CompleteCorrespondingVertexFaces joined the upper line's previous vertex to the lower line's next vertex and left a 4-edge hole.",
+      "fix": "PolylineSpanPairing classifies chords that cross the twist as INVALID.",
+      "cameras": [ { "preset": "oblique" }, { "preset": "side" }, { "preset": "below" } ]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [368401, 368399],
+      "problem": "A chord between two vertices with identical XY threw 'Can't create line with two identical points' inside GetEdgeType and aborted the slice.",
+      "fix": "Coincident-XY chords are typed INVALID before any line is built.",
+      "cameras": [ { "preset": "oblique" } ]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [368453, 368452],
+      "problem": "Circle pair: the inner ring was capped as an open frustum, leaving holes:20 around the ring.",
+      "fix": "Cap generation closes the inner ring.",
+      "cameras": [ { "preset": "oblique" }, { "preset": "below" } ]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [381857, 381868],
+      "problem": "Two-point OPENCURVE pair: with only endpoints there were no interior chords and the ribbon was left as isolated edges.",
+      "fix": "PrepareOpenPolyline densifies two-point lines with 1/3 and 2/3 midpoints.",
+      "cameras": [ { "preset": "oblique" }, { "preset": "side" } ]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [82605, 82606],
+      "problem": "Five-vertex untiled region with four colinear contour vertices: CleanRegionTriangulationInput dropped the colinear perimeter midpoints, the region was tiled with one triangle over the run, and the contour edges along it were left without a face (holes:2..4 isolated:2..4).",
+      "fix": "Colinear perimeter vertices are kept; only coincident points are cleaned before the constrained triangulation.",
+      "cameras": [ { "preset": "oblique" }, { "preset": "top" } ]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [82671, 82673],
+      "problem": "Medial-axis patch closing an untiled region decided the outward side of every triangle separately (FaceHasCCWWinding), so neighbouring anchored triangles of one planar patch disagreed near the contour (inconsistent:3..9) and the final reorientation could not repair anchored faces.",
+      "fix": "TryClosingUntiledRegion normalises the patch CCW in XY, votes once per patch, and an anchored neighbour on a patch edge overrides the vote.",
+      "cameras": [ { "preset": "oblique" }, { "preset": "oblique-back" } ]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [364267],
+      "problem": "Isolated polyline: each end-cap triangle was wound independently (AddCappedTriangle), so triangles of one cap strip disagreed (inconsistent:1..3, ribbonEdge:5..12) and, being anchored, could not be repaired.",
+      "fix": "CapPolylineEnd collects the strip and AddCappedStrip decides the flip once from the summed normal Z.",
+      "cameras": [ { "preset": "below" }, { "preset": "oblique" } ]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [365345, 365348],
+      "problem": "Identical polygons on adjacent sections (every vertex has a corresponding twin at the same XY): CreateChordTree built a LineSegment for the zero-length corresponding chords and threw ArgumentException.",
+      "fix": "CreateChordTree skips zero-length edges; they cannot cross a chord.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" } ]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [365043, 365415],
+      "problem": "Three contour vertices within 0.005 nm of one line over 50 nm broke the divide-and-conquer Delaunay merge (EdgesIntersectTriangulationException 326-328 vs 306-327): the circumcircle test cannot separate the candidates.",
+      "fix": "AddDelaunayEdges retries the triangulation up to four times with a deterministic 0.001*attempt nm per-site offset (TriangulateSitesWithRetry); mesh vertices keep their real positions.",
+      "cameras": [ { "preset": "oblique" } ]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [368094, 368100],
+      "problem": "CompleteCorrespondingVertexFaces committed the wedge triangle of a corresponding-edge quad before the second triangle was tested; each of the four neighbour pairings added another wedge, stacking 3-4 faces on the CORRESPONDING edge (nonManifold) with one-face holes beside it.  This was the largest failure class in the Muller glia (2,3xx of 2478 slices).",
+      "fix": "TryAddCorrespondingNeighborPair only commits a face when it does not exist, contains no vertex, and none of its edges is at capacity (CONTOUR 1 face, others 2).",
+      "cameras": [ { "preset": "oblique" }, { "preset": "oblique-back" } ]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [365031, 365032],
+      "problem": "Two 50 nm polylines 14 um apart: every chord distance is ~equal, so the Delaunay/chord passes paired the lines in opposite directions on either side (bow-tie), and RemoveFoldedRibbonFaces kept the smallest-perimeter face per segment, which is always the fan from the nearest endpoint, removing the true ribbon triangles (holes:4).",
+      "fix": "TryRebuildTwoPolylineRibbon: a slice with one polyline per section is rebuilt as a ruled strip by marching both lines in arc-length order; rungs are typed SURFACE/CORRESPONDING directly.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" } ]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [139413, 139416],
+      "problem": "Two-polyline slice (8 + 7 vertices) tiled as a bow-tie by the chord passes; same class as 365031/365032 with a longer ladder.",
+      "fix": "TryRebuildTwoPolylineRibbon ruled strip.",
+      "cameras": [ { "preset": "oblique" }, { "preset": "side" } ]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [383872, 383873],
+      "problem": "Two-polyline slice with 30 + 23 vertices where the fold heuristic removed the true ribbon faces along the curved part of the lines (holes on the inner bend).",
+      "fix": "TryRebuildTwoPolylineRibbon ruled strip; 153 faces.",
+      "cameras": [ { "preset": "oblique" }, { "preset": "side" }, { "preset": "top" } ]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [133336, 133341],
+      "problem": "Vertices 178 (upper) and 189 (lower) sit 0.05 nm apart in XY, far outside the 0.001 nm correspondence snap, so they were two triangulation sites; the sliver between them let FirstPassFaceGeneration put a third face on chord 177-188 (nonManifold:1 holes:3).  Welding such pairs into corresponding vertices was tried and reverted: copy-pasted polygons on adjacent sections end up 0.1 nm apart after process smoothing and welding them broke seven slices that had always passed.",
+      "fix": "MorphRenderMesh.AddFace refuses any face whose edge already carries two faces; FirstPassFaceGeneration only revisits a vertex when a face was actually added.",
+      "cameras": [ { "preset": "oblique" }, { "preset": "oblique-back" } ],
+      "shots2D": [ { "stage": "Final mesh", "lookAt": [1330, 430], "downsample": 0.15 } ]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [140224, 140233],
+      "problem": "Two large polygons where a chord collected three faces (nonManifold:1 holes:3) because no face pass checked edge capacity before adding.",
+      "fix": "MorphRenderMesh.AddFace enforces the two-faces-per-edge invariant; FirstPassFaceGeneration only revisits a vertex when a face was actually added.",
+      "cameras": [ { "preset": "oblique" }, { "preset": "oblique-back" } ]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [108506, 108520, 108521],
+      "problem": "Meshes clean from the raw annotations but with CurveFitProcesses the two same-section contours were translated into each other (same-section shapes 0 and 1 intersect; inconsistent:3).  Curvefit can move process/terminal contours and two processes of one cell can run close enough to collide.",
+      "fix": "MorphologyGraph.CurveFitProcesses halves a node's translation until the moved contour no longer intersects a same-section contour it did not already touch (LimitOffsetToAvoidSameSectionOverlap).",
+      "cameras": [ { "preset": "top" }, { "preset": "oblique" } ]
+    }
+  ]
+}

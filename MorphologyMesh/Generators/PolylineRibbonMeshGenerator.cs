@@ -1,7 +1,9 @@
 using Geometry;
 using Geometry.Meshing;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace MorphologyMesh
 {
@@ -106,7 +108,248 @@ namespace MorphologyMesh
 
             BajajMeshGenerator.FirstPassFaceGeneration(mesh);
 
+            return CleanRibbonFaces(mesh);
+        }
+
+        /// <summary>
+        /// The ribbon-only cleanup that follows face generation: unfold segments carrying a second sheet, then drop
+        /// lone sliver triangles.  Public so the BajajTest harness can run the same steps stage by stage.
+        /// </summary>
+        /// <returns>Number of cross-band polyline pairs that were left with a single sliver triangle and had it removed.</returns>
+        public static int CleanRibbonFaces(BajajGeneratorMesh mesh)
+        {
+            if (TryRebuildTwoPolylineRibbon(mesh))
+                return 0;
+
+            RemoveFoldedRibbonFaces(mesh);
+
             return EnforceTwoFaceMinimumForPolylinePairs(mesh);
+        }
+
+        /// <summary>
+        /// A slice holding exactly one open polyline per section is a ruled strip and nothing else, so it is built
+        /// directly by marching both lines in arc-length order instead of trusting the Delaunay/chord faces.  Those
+        /// passes work from distances, which say nothing useful when the two lines are short compared with their
+        /// separation (RPC1 365031/365032: 50 nm lines 14 µm apart), and they then pair the lines in opposite
+        /// directions on either side, leaving a bow-tie that no per-segment cleanup can unfold.  Forks and mixed
+        /// slices keep the heuristic cleanup below.
+        /// </summary>
+        private static bool TryRebuildTwoPolylineRibbon(BajajGeneratorMesh mesh)
+        {
+            if (mesh.Shapes.Length != 2
+                || mesh.Shapes[0] is not Polyline lineA
+                || mesh.Shapes[1] is not Polyline lineB
+                || mesh.IsUpperShape[0] == mesh.IsUpperShape[1])
+            {
+                return false;
+            }
+
+            int[] a = ShapeVertexIndices(mesh, 0, lineA.PointCount);
+            int[] b = ShapeVertexIndices(mesh, 1, lineB.PointCount);
+            if (a is null || b is null)
+                return false;
+
+            bool reversed = Vector2.Distance(Start(lineA), Start(lineB)) + Vector2.Distance(End(lineA), End(lineB))
+                          > Vector2.Distance(Start(lineA), End(lineB)) + Vector2.Distance(End(lineA), Start(lineB));
+            double[] fa = ArcLengthFractions(lineA);
+            double[] fb = ArcLengthFractions(lineB);
+            if (reversed)
+            {
+                Array.Reverse(b);
+                fb = fb.Select(f => 1.0 - f).Reverse().ToArray();
+            }
+
+            foreach (IFace face in mesh.Faces.ToArray())
+                mesh.RemoveFace(face);
+
+            foreach (MorphMeshEdge edge in mesh.MorphEdges.Where(e => e.Type != EdgeType.CONTOUR).ToArray())
+                mesh.RemoveEdge(edge);
+
+            int i = 0, j = 0;
+            while (i < a.Length - 1 || j < b.Length - 1)
+            {
+                bool advanceA = j == b.Length - 1 || (i < a.Length - 1 && fa[i + 1] <= fb[j + 1]);
+                if (advanceA)
+                {
+                    mesh.AddFace(new MorphMeshFace(a[i], a[i + 1], b[j]));
+                    i++;
+                }
+                else
+                {
+                    mesh.AddFace(new MorphMeshFace(a[i], b[j + 1], b[j]));
+                    j++;
+                }
+            }
+
+            //The classifier would mark strip rungs INVALID wherever the two lines overlap in XY (the usual case for
+            //the same junction traced on adjacent sections); a rung of a ruled strip is a surface edge by construction.
+            foreach (MorphMeshEdge edge in mesh.MorphEdges.Where(e => e.Type == EdgeType.UNKNOWN))
+                edge.Type = mesh[edge.A].Position.XY() == mesh[edge.B].Position.XY() ? EdgeType.CORRESPONDING : EdgeType.SURFACE;
+
+            Trace.WriteLine($"Mesh {mesh}: rebuilt two-polyline ribbon as a ruled strip of {mesh.Faces.Count} faces{(reversed ? " (lines run in opposite directions)" : "")}.");
+            return true;
+        }
+
+        private static int[] ShapeVertexIndices(BajajGeneratorMesh mesh, int shape, int pointCount)
+        {
+            int[] indices = new int[pointCount];
+            Array.Fill(indices, -1);
+            foreach (MorphMeshVertex vertex in mesh.MorphVerticies)
+            {
+                if (vertex.ShapeIndex is PolylineIndex index && index.ShapeIndex == shape && index.VertexIndex < pointCount)
+                    indices[index.VertexIndex] = vertex.Index;
+            }
+
+            return indices.Any(v => v < 0) ? null : indices;
+        }
+
+        /// <summary>
+        /// A ribbon is a single sheet, so within one slice each contour segment of a polyline can carry only one face
+        /// toward any given neighbouring shape.  The Delaunay pass has no inside/outside to reject with on open
+        /// curves, so it fills the whole convex hull of the two lines; when one line runs past the end of the other
+        /// (RPC1 gap junction 52432, locations 368195/368197) the far endpoint fans across every segment of the other
+        /// line from the wrong side.  That second sheet folds the ribbon over on itself: the contour segments end up
+        /// with two faces here and three once the neighbouring slice adds its own, and the fan's outer edge shows as
+        /// a slit in the assembled surface.  Keep the smallest-perimeter face per segment and neighbour, which is the
+        /// one whose apex is the nearby part of the other line, and drop the rest.
+        ///
+        /// Grouped by neighbouring shape rather than simply "one face per segment" because a fork legitimately puts
+        /// faces to two different branches on either side of the same trunk segment.
+        /// </summary>
+        private static void RemoveFoldedRibbonFaces(BajajGeneratorMesh mesh)
+        {
+            int removed = 0;
+            foreach (MorphMeshEdge contour in mesh.MorphEdges.Where(e => e.Type == EdgeType.CONTOUR && e.Faces.Count > 1).ToArray())
+            {
+                if (mesh[contour.A].ShapeIndex is not PolylineIndex)
+                    continue;
+
+                Dictionary<int, List<IFace>> facesByNeighbour = [];
+                foreach (IFace face in contour.Faces)
+                {
+                    int apexShape = -1;
+                    foreach (int iVert in face.iVerts)
+                    {
+                        if (iVert == contour.A || iVert == contour.B)
+                            continue;
+
+                        IShapeIndex apex = mesh[iVert].ShapeIndex;
+                        apexShape = apex?.ShapeIndex ?? -1;
+                    }
+
+                    if (facesByNeighbour.TryGetValue(apexShape, out List<IFace> faces) == false)
+                        facesByNeighbour[apexShape] = faces = [];
+
+                    faces.Add(face);
+                }
+
+                foreach (KeyValuePair<int, List<IFace>> neighbourFaces in facesByNeighbour)
+                {
+                    List<IFace> faces = neighbourFaces.Value;
+                    if (faces.Count < 2)
+                        continue;
+
+                    IFace keep = ChooseRibbonFace(mesh, contour, neighbourFaces.Key, faces);
+                    foreach (IFace face in faces)
+                    {
+                        if (ReferenceEquals(face, keep))
+                            continue;
+
+                        mesh.RemoveFace(face);
+                        removed++;
+                    }
+                }
+            }
+
+            if (removed == 0)
+                return;
+
+            //The dropped faces leave their non-contour edges with nothing attached; those would otherwise be reported
+            //as isolated edges and confuse later passes.
+            foreach (MorphMeshEdge edge in mesh.MorphEdges.Where(e => e.Type != EdgeType.CONTOUR && e.Faces.Count == 0).ToArray())
+                mesh.RemoveEdge(edge);
+
+            Trace.WriteLine($"Mesh {mesh}: removed {removed} folded ribbon face(s) that put a second sheet on a polyline segment.");
+        }
+
+        /// <summary>
+        /// Picks the face a contour segment keeps toward one neighbouring polyline.  A ruled ribbon maps arc-length
+        /// along one line monotonically onto the other, so the right apex is the neighbour vertex whose arc-length
+        /// fraction matches the segment's (after deciding whether the lines run the same way from their endpoint
+        /// distances).  The smallest perimeter used to decide instead, but two short lines far apart (RPC1
+        /// 365031/365032: 50 nm lines 14 µm apart) have one endpoint nearer to every segment of the other line, so
+        /// the fan from that endpoint won every segment and the true ribbon triangles were the ones removed.
+        /// Perimeter still breaks ties and covers apexes that are not on a polyline.
+        /// </summary>
+        private static IFace ChooseRibbonFace(BajajGeneratorMesh mesh, MorphMeshEdge contour, int neighbourShape, List<IFace> faces)
+        {
+            if (neighbourShape < 0
+                || mesh[contour.A].ShapeIndex is not PolylineIndex a
+                || mesh.Shapes[a.ShapeIndex] is not Polyline line
+                || mesh.Shapes[neighbourShape] is not Polyline neighbour)
+            {
+                return faces.MinBy(f => Perimeter(mesh, f));
+            }
+
+            double[] lineFractions = ArcLengthFractions(line);
+            double[] neighbourFractions = ArcLengthFractions(neighbour);
+            bool reversed = Vector2.Distance(Start(line), Start(neighbour)) + Vector2.Distance(End(line), End(neighbour))
+                          > Vector2.Distance(Start(line), End(neighbour)) + Vector2.Distance(End(line), Start(neighbour));
+
+            int iB = ((PolylineIndex)mesh[contour.B].ShapeIndex).VertexIndex;
+            double segmentFraction = (lineFractions[a.VertexIndex] + lineFractions[iB]) / 2.0;
+
+            double Score(IFace face)
+            {
+                foreach (int iVert in face.iVerts)
+                {
+                    if (iVert == contour.A || iVert == contour.B)
+                        continue;
+
+                    if (mesh[iVert].ShapeIndex is PolylineIndex apex && apex.ShapeIndex == neighbourShape)
+                    {
+                        double s = neighbourFractions[apex.VertexIndex];
+                        return System.Math.Abs((reversed ? 1.0 - s : s) - segmentFraction);
+                    }
+                }
+
+                return double.MaxValue;
+            }
+
+            return faces.OrderBy(Score).ThenBy(f => Perimeter(mesh, f)).First();
+        }
+
+        private static Vector2 Start(Polyline line) => new(line.Points[0].X, line.Points[0].Y);
+
+        private static Vector2 End(Polyline line) => new(line.Points[^1].X, line.Points[^1].Y);
+
+        private static double[] ArcLengthFractions(Polyline line)
+        {
+            double[] fractions = new double[line.PointCount];
+            double total = 0;
+            for (int i = 1; i < line.PointCount; i++)
+            {
+                total += Vector2.Distance(new Vector2(line.Points[i - 1].X, line.Points[i - 1].Y), new Vector2(line.Points[i].X, line.Points[i].Y));
+                fractions[i] = total;
+            }
+
+            if (total > 0)
+            {
+                for (int i = 0; i < fractions.Length; i++)
+                    fractions[i] /= total;
+            }
+
+            return fractions;
+        }
+
+        private static double Perimeter(BajajGeneratorMesh mesh, IFace face)
+        {
+            double total = 0;
+            int n = face.iVerts.Length;
+            for (int i = 0; i < n; i++)
+                total += Vector3.Distance(mesh[face.iVerts[i]].Position, mesh[face.iVerts[(i + 1) % n]].Position);
+
+            return total;
         }
 
         /// <summary>

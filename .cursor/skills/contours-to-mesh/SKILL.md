@@ -78,15 +78,21 @@ Per-slice `GenerateFaces` order (see `BajajMeshGenerator.GenerateFaces`):
 - **Slice chords** must pass `SliceChordTestType` suites; passes intentionally loosen from strict to permissive.
 - **Untiled closing** triangulation input must be deduplicated (`MeshExtensions.CleanRegionTriangulationInput`) — degenerate/colinear points crash divide-and-conquer Delaunay.
 - **Winding** — use `MorphMeshOutwardOrientation` / `FaceHasCCWWinding`; fix normals after face edits.
+- **Edge face capacity** — a CONTOUR edge carries one face, every other edge two. `MorphRenderMesh.AddFace` refuses (and counts in `FacesRefusedAtEdgeCapacity`) any face whose edge already has two; the passes that add faces (`TryAddCorrespondingNeighborPair` wedges, `TryClosingUntiledRegion`, `TryClosingSmallRegion`, `TryClosingPinchedRegion`, the `SplitFace(quad)` in `RemoveFirstAdjacentCorrespondingVerticies`) still check the CONTOUR-1 limit themselves and prefer leaving a hole to creating a non-manifold edge. A loop that re-queues a vertex after `AddFace` must check that the face count grew, or a refused face spins it forever. Medial-axis patch faces are anchors that `MeshWindingReorientation` will not flip.
+- **Do not weld near-coincident cross-section vertices.** Correspondence is exact-XY only (`PositionToIndex` in `PopulateMesh`; insertion snaps within `Tolerance.Epsilon` = 0.001 nm). A 0.5 nm weld was tried to remove a 0.05 nm sliver (RPC1 133336/133341) and reverted: copy-pasted polygons on adjacent sections sit ~0.1 nm apart after process smoothing, and turning those pairs into corresponding vertices broke seven slices that had always meshed. The sliver case is handled by the `AddFace` capacity refusal instead.
+- **Registration correction** (`--correction`, before slicing) may translate process/terminal contours (neighbor hop field and/or residual-ordered Catmull-Rom curvefit). `LimitOffsetToAvoidSameSectionOverlap` halves a curvefit move until it no longer intersects a same-section contour of the same structure. A `same-section shapes a and b intersect` note that disappears with `--correction none` was correction; one that stays is the annotation.
+- **Delaunay input** — `AddDelaunayEdges` retries a failed triangulation up to four times with a ≤4 nm site jitter (`TriangulateSitesWithRetry`); a slice that still throws `EdgesIntersectTriangulationException` has genuinely degenerate input.
+- **Two-polyline slices** are rebuilt as a ruled strip in `PolylineRibbonMeshGenerator.CleanRibbonFaces`; only forks/mixed slices use the fold-removal heuristics.
 - **Coordinates** — mesh vertices are volume coordinates; see `coordinate-spaces` rule.
 
 ## Debugging workflow
 
 1. For a **single slice pair**, dump BAJAJTEST screenshots with the CLI (see [bajajtest-cli](../bajajtest-cli/SKILL.md)). For a whole cell, use `BajajMultiTest` or `MeshTest` and check Trace for `Exception building mesh U: … D: …`.
-2. Identify stage: correspondence warnings in slice-graph build vs pass-2 untiled triangulation vs slice-chord failure.
+2. Identify stage: step through every stage view in order, 2D line views first, and blame the first stage where the defect appears (see [bajaj-stage-walkthrough](../bajaj-stage-walkthrough/SKILL.md)); correspondence warnings in slice-graph build vs pass-2 untiled triangulation vs slice-chord failure.
 3. For one failing region, breakpoint `TryClosingUntiledRegion` or `SecondPassRegionDetection`; dump perimeter + medial-axis points before `Triangulate`.
 4. Fix upstream (correspondence) before downstream (Delaunay) when both fail.
 5. Add **GeometryTests** / FSCheck cases for minimal degenerate polygons; add location IDs to `ReproCase` arrays when found in the wild.
+6. Before and after the fix, re-check every previously fixed slice: unit tests plus baseline-image comparison, and append the new slice to the list (see [mesh-difficult-cases](../mesh-difficult-cases/SKILL.md)). Geometry changes that alter any past case must be judged improved/equivalent, not silently accepted.
 
 ## Testing targets
 

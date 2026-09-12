@@ -146,6 +146,118 @@ namespace MorphologyMeshTest
         }
 
         /// <summary>
+        /// RPC1 gap junction 52432, locations 368195 (upper) / 368197 (lower).  The lower line runs on past the
+        /// upper line's start, roughly collinear with it, so the Delaunay hull of the pair includes a fan from the
+        /// lower line's far endpoint across every segment of the upper line on the side away from the ribbon.  That
+        /// second sheet gave each upper segment two faces within the slice (three once the slice above added its
+        /// own) and left the fan's 960 nm outer edge as a slit in the assembled surface.  Within a slice a polyline
+        /// segment carries one face toward a given neighbour.
+        /// </summary>
+        [TestMethod]
+        public void GenerateFaces_LowerLineOvershootsUpperStart_DoesNotFoldRibbon()
+        {
+            Vector2 origin = new(48500, 35000);
+            Polyline upper = new(
+            [
+                new Vector2(48481.6, 35190.8) - origin, new Vector2(48532.2, 35104.4) - origin, new Vector2(48593.2, 35003.0) - origin,
+                new Vector2(48707.1, 34826.6) - origin, new Vector2(48821.8, 34652.1) - origin,
+            ]);
+            Polyline lower = new(
+            [
+                new Vector2(48348.0, 35488.1) - origin, new Vector2(48355.5, 35401.8) - origin, new Vector2(48372.1, 35311.0) - origin,
+                new Vector2(48409.0, 35238.5) - origin, new Vector2(48458.5, 35160.8) - origin, new Vector2(48563.9, 34980.9) - origin,
+                new Vector2(48672.1, 34797.0) - origin,
+            ]);
+
+            BajajGeneratorMesh mesh = new([lower, upper], [82460.0, 82530.0], [false, true]);
+            BajajMeshGenerator.GenerateFaces(mesh);
+
+            MeshManifoldReport report = mesh.ManifoldReport;
+            Assert.IsTrue(report.IsValidSliceSurface, report.ToString());
+
+            foreach (MorphMeshEdge edge in mesh.MorphEdges.Where(e => e.Type == EdgeType.CONTOUR))
+            {
+                Assert.AreEqual(1, edge.Faces.Count,
+                    $"Contour segment {edge.A}-{edge.B} carries {edge.Faces.Count} faces; a ribbon is one sheet, so a segment has one face in its slice.");
+            }
+
+            //Both free ends of each line must sit on the sheet boundary: the fold used to bury the upper line's
+            //start inside the surface and string the boundary from the lower line's start to the upper line's end.
+            int upperStart = mesh.Vertices.First(v => v.ShapeIndex is PolylineIndex { ShapeIndex: 1, VertexIndex: 0 }).Index;
+            Assert.IsTrue(mesh[upperStart].Edges.Any(e => mesh[e].Faces.Count == 1),
+                "The upper line's first vertex must lie on the ribbon boundary.");
+            Assert.AreEqual(2, report.RibbonBoundaryEdges, $"An open ribbon has two end chords.  {report}");
+        }
+
+        /// <summary>
+        /// RPC1 gap junction 52432, locations 368197 (upper) / 368198 (lower) after BajajMultiTest's process
+        /// smoothing.  The two lines cross in XY, so correspondence inserts a shared vertex and the ribbon is a
+        /// twisted sheet: before-crossing tiles with before-crossing, after with after.  Delaunay chords from one
+        /// line's "before" to the other's "after" used to be accepted as SURFACE edges; the corresponding-vertex
+        /// pass then closed quads through them, the contour segments beside the crossing carried two faces and the
+        /// proper span was left with a four-edge hole.  <see cref="PolylineSpanPairing"/> rejects those chords.
+        /// </summary>
+        [TestMethod]
+        public void GenerateFaces_CrossingPolylines_TileSpanBySpan()
+        {
+            Polyline upper = new(
+            [
+                new Vector2(-250.5, 410.1), new Vector2(-243.0, 323.8), new Vector2(-226.4, 233.0), new Vector2(-189.6, 160.4),
+                new Vector2(-140.0, 82.8), new Vector2(-34.6, -97.1), new Vector2(73.6, -281.1),
+            ]);
+            Polyline lower = new(
+            [
+                new Vector2(-279.4, 452.2), new Vector2(-266.7, 364.1), new Vector2(-248.2, 280.9), new Vector2(-231.7, 252.5),
+                new Vector2(-210.1, 222.9), new Vector2(-117.6, 69.1), new Vector2(-14.9, -104.2),
+            ]);
+
+            //SliceGraph inserts the shared crossing vertex before meshing; do the same here.
+            List<IShape2D> shapes = [lower, upper];
+            List<Vector2> corresponding = shapes.AddCorrespondingVertices();
+            SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(new[] { lower, upper }, corresponding);
+            Assert.AreEqual(1, corresponding.Count, "The lines cross once.");
+
+            BajajGeneratorMesh mesh = new([.. shapes], [82390.0, 82460.0], [false, true]);
+            BajajMeshGenerator.GenerateFaces(mesh);
+
+            MeshManifoldReport report = mesh.ManifoldReport;
+            Assert.IsTrue(report.IsValidSliceSurface, report.ToString());
+            Assert.IsTrue(mesh.Vertices.Any(v => v.Corresponding.HasValue), "The lines cross, so a corresponding vertex pair is expected.");
+
+            foreach (MorphMeshEdge edge in mesh.MorphEdges.Where(e => e.Type == EdgeType.CONTOUR))
+            {
+                Assert.AreEqual(1, edge.Faces.Count,
+                    $"Contour segment {edge.A}-{edge.B} carries {edge.Faces.Count} faces; each span of a twisted ribbon is still one sheet.");
+            }
+
+            Assert.AreEqual(2, report.RibbonBoundaryEdges, $"An open ribbon has two end chords.  {report}");
+        }
+
+        [TestMethod]
+        public void ChordStaysInSpan_SingleCrossing_RejectsChordsAcrossTheTwist()
+        {
+            //Two lines traced the same way that cross at (0,0); the crossing vertex is present on both.
+            Polyline a = new([new Vector2(-10, 5), new Vector2(0, 0), new Vector2(10, -5)]);
+            Polyline b = new([new Vector2(-10, -5), new Vector2(0, 0), new Vector2(10, 5)]);
+
+            Assert.IsTrue(PolylineSpanPairing.ChordStaysInSpan(a, 0, b, 0), "before-before is one span");
+            Assert.IsTrue(PolylineSpanPairing.ChordStaysInSpan(a, 2, b, 2), "after-after is one span");
+            Assert.IsFalse(PolylineSpanPairing.ChordStaysInSpan(a, 0, b, 2), "before-after crosses the twist");
+            Assert.IsFalse(PolylineSpanPairing.ChordStaysInSpan(a, 2, b, 0), "after-before crosses the twist");
+            Assert.IsTrue(PolylineSpanPairing.ChordStaysInSpan(a, 1, b, 2), "the crossing vertex sits on the seam");
+            Assert.IsTrue(PolylineSpanPairing.ChordStaysInSpan(a, 0, b, 1), "the crossing vertex sits on the seam");
+
+            //The same lines with b traced backwards: before on a pairs with after on b.
+            Polyline bReversed = new([new Vector2(10, 5), new Vector2(0, 0), new Vector2(-10, -5)]);
+            Assert.IsTrue(PolylineSpanPairing.ChordStaysInSpan(a, 0, bReversed, 2));
+            Assert.IsFalse(PolylineSpanPairing.ChordStaysInSpan(a, 0, bReversed, 0));
+
+            //Lines that never cross have a single span.
+            Polyline c = new([new Vector2(-10, 20), new Vector2(0, 20), new Vector2(10, 20)]);
+            Assert.IsTrue(PolylineSpanPairing.ChordStaysInSpan(a, 0, c, 2));
+        }
+
+        /// <summary>
         /// The ribbon-end exemption must not leak onto polygon meshes or closed rings; there every single-face
         /// non-contour edge is still a hole.
         /// </summary>

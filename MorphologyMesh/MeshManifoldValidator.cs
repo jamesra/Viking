@@ -1,5 +1,6 @@
 using Geometry.Meshing;
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -85,6 +86,17 @@ namespace MorphologyMesh
     }
 
     /// <summary>
+    /// One edge that breaks the slice-surface invariant: <c>nonManifold</c> (3+ faces), <c>hole</c> (single face,
+    /// not a contour seam), <c>isolated</c> (no face) or <c>inconsistent</c> (two faces with disagreeing winding).
+    /// </summary>
+    public sealed record MeshManifoldDefect(string Kind, int A, int B, string EdgeType, int FaceCount,
+        Geometry.Vector3 PositionA, Geometry.Vector3 PositionB, string ShapeA, string ShapeB, string Faces)
+    {
+        public override string ToString() =>
+            $"{Kind} {EdgeType} faces:{FaceCount} v{A}[{ShapeA}] ({PositionA.X:F1},{PositionA.Y:F1},{PositionA.Z:F1}) - v{B}[{ShapeB}] ({PositionB.X:F1},{PositionB.Y:F1},{PositionB.Z:F1}) {Faces}";
+    }
+
+    /// <summary>
     /// Measures whether a mesh satisfies the 2-manifold invariant the Bajaj reconstruction is supposed to produce.
     /// Nothing else in the pipeline enforced this, so defects propagated silently into the composite and the export.
     /// </summary>
@@ -158,6 +170,76 @@ namespace MorphologyMesh
                 RibbonBoundaryEdges = ribbonBoundary,
                 SingleTrianglePolylinePairs = singleTrianglePolylinePairs
             };
+        }
+
+        /// <summary>
+        /// Lists the individual edges behind the counts in <see cref="Validate"/>, so a failing slice can be traced to a
+        /// place in the annotation rather than just a tally.  Contour seams are not defects and are not listed.
+        /// </summary>
+        /// <param name="maxDefects">Cap on the number of entries; a badly broken mesh can have thousands.</param>
+        /// <param name="isAnchored">Marks faces the winding repair was not allowed to flip.  Defaults to the face's
+        /// current <see cref="MorphMeshFace.NormalIsKnownCorrect"/>, which the final normals pass sets on every face,
+        /// so a caller that wants the pre-repair state must capture it beforehand and pass it here.</param>
+        public static List<MeshManifoldDefect> DescribeDefects(MorphRenderMesh mesh, Func<IEdgeKey, bool> isForkGapBoundary = null,
+            Func<IEdgeKey, bool> isRibbonBoundary = null, int maxDefects = 200, Func<IFace, bool> isAnchored = null)
+        {
+            isAnchored ??= f => f is MorphMeshFace mf && mf.NormalIsKnownCorrect;
+            List<MeshManifoldDefect> defects = [];
+
+            foreach (var kvp in mesh.Edges)
+            {
+                if (defects.Count >= maxDefects)
+                    break;
+
+                int faceCount = kvp.Value.Faces.Count;
+                string kind;
+                if (faceCount == 0)
+                {
+                    kind = "isolated";
+                }
+                else if (faceCount == 1)
+                {
+                    if (kvp.Value is MorphMeshEdge morphEdge && morphEdge.Type == EdgeType.CONTOUR)
+                        continue;
+                    if (isForkGapBoundary is not null && isForkGapBoundary(kvp.Key))
+                        continue;
+                    if (isRibbonBoundary is not null && isRibbonBoundary(kvp.Key))
+                        continue;
+                    kind = "hole";
+                }
+                else if (faceCount > 2)
+                {
+                    kind = "nonManifold";
+                }
+                else
+                {
+                    IFace[] faces = [.. kvp.Value.Faces];
+                    if (TraversesForward(faces[0].iVerts, kvp.Key.A, kvp.Key.B) != TraversesForward(faces[1].iVerts, kvp.Key.A, kvp.Key.B))
+                        continue;
+                    kind = "inconsistent";
+                }
+
+                MorphMeshVertex a = mesh[kvp.Key.A];
+                MorphMeshVertex b = mesh[kvp.Key.B];
+                string edgeType = kvp.Value is MorphMeshEdge me ? me.Type.ToString() : "?";
+                //An anchored face (NormalIsKnownCorrect) is one the winding repair will not flip, so knowing which
+                //faces on an inconsistent edge are anchored says whether the repair could ever have fixed it.
+                string faceList = string.Join(" ", kvp.Value.Faces.Select(f =>
+                    $"[{string.Join(",", f.iVerts)}]{(isAnchored(f) ? "A" : "")}"));
+                defects.Add(new MeshManifoldDefect(kind, kvp.Key.A, kvp.Key.B, edgeType, faceCount,
+                    a.Position, b.Position, DescribeVertex(a), DescribeVertex(b), faceList));
+            }
+
+            return defects;
+        }
+
+        private static string DescribeVertex(MorphMeshVertex v)
+        {
+            if (v.ShapeIndex is not null)
+                return v.ShapeIndex.ToString();
+            if (v.MedialAxisIndex.HasValue)
+                return $"medial {v.MedialAxisIndex.Value}";
+            return "?";
         }
 
         /// <summary>

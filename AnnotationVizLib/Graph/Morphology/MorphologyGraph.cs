@@ -251,7 +251,7 @@ namespace AnnotationVizLib
         /// <summary>
         /// Unbranched 1-up-and-1-down shafts, each including the pinned branch/terminal endpoints used as Catmull-Rom anchors.
         /// Isolated blobs are omitted. A degree-2 node with both links at the same Z is a branch endpoint, not a process.
-        /// Called by <see cref="SmoothProcesses"/>; ToStickFigure still uses <see cref="GetProcessIDs"/> (edge count).
+        /// Called by <see cref="CurveFitProcesses"/>; ToStickFigure still uses <see cref="GetProcessIDs"/> (edge count).
         /// </summary>
         public List<ulong[]> Processes()
         {

@@ -281,13 +281,13 @@ namespace MorphologyMesh
         public delegate void OnMeshGeneratedEventHandler(Slice slice, BajajGeneratorMesh mesh, bool Success);
 
         /// <summary>
-        /// Smooth unbranched process centroids (unless <paramref name="smoothProcesses"/> is false), then slice and mesh.
-        /// Callers that already smoothed the graph should pass false. Correspondence requires identical XY after this pass.
+        /// Slice and mesh a morphology graph. Callers own registration correction (<c>--correction</c>); this
+        /// path does not run curvefit/neighbor. Correspondence requires identical XY after any prior correction.
         /// </summary>
-        public static async Task<List<BajajGeneratorMesh>> ConvertToMesh(MorphologyGraph graph, OnMeshGeneratedEventHandler OnMeshGenerated = null, bool smoothProcesses = true)
+        public static async Task<List<BajajGeneratorMesh>> ConvertToMesh(MorphologyGraph graph, OnMeshGeneratedEventHandler OnMeshGenerated = null, bool smoothProcesses = false)
         {
             if (smoothProcesses)
-                MorphologyGraph.SmoothProcesses(graph);
+                MorphologyGraph.CurveFitProcesses(graph);
 
             Trace.WriteLine("Begin Slice graph construction");
             SliceGraph sliceGraph = await SliceGraph.Create(graph, 2.0);
@@ -313,34 +313,51 @@ namespace MorphologyMesh
         */
 
         /// <summary>
-        /// Caps concurrent <see cref="GenerateFaces"/> work across all structures so nested pipelines cannot
-        /// oversubscribe the thread pool. Pipeline count remains bounded separately by MaxConcurrentMeshPipelines.
-        /// </summary>
-        static readonly SemaphoreSlim SliceFaceLimiter = new(Math.Max(1, Environment.ProcessorCount));
-
-        /// <summary>
         /// When true, face-generation workers emit Trace lines for routine per-slice progress. Failures always trace.
         /// </summary>
         public static bool VerboseLogging { get; set; }
 
-        /// Convert a morphology graph to an unprocessed mesh graph
+        /// <summary>
+        /// Convert every slice in <paramref name="sliceGraph"/> to a mesh. Topology must already be cached.
+        /// Workers are bounded by <see cref="MeshParallelism.DegreeOfParallelism"/> so the thread pool is never
+        /// parked behind a semaphore (the previous per-slice <c>Task.Run</c> + <c>Wait</c> injected thousands of
+        /// blocked threads on a large cell).
         /// </summary>
-        /// <param name="graph"></param>
-        /// <returns></returns>
-        public static async Task<List<BajajGeneratorMesh>> ConvertToMesh(SliceGraph sliceGraph, OnMeshGeneratedEventHandler OnMeshGenerated = null)
+        /// <param name="retainMeshes">
+        /// When true, return every generated mesh sorted by Z. Whole-cell live assembly only needs
+        /// <paramref name="OnMeshGenerated"/> and should leave this false so finished meshes are not pinned for
+        /// the duration of the run.
+        /// </param>
+        public static async Task<List<BajajGeneratorMesh>> ConvertToMesh(
+            SliceGraph sliceGraph,
+            OnMeshGeneratedEventHandler OnMeshGenerated = null,
+            bool retainMeshes = true)
         {
-            List<BajajGeneratorMesh> listBajajMeshGenerators = [];
-            object listLock = new();
-            List<Task> faceTasks = new(sliceGraph.Nodes.Count);
+            using var _wall = MeshPhaseTimings.Measure(MeshPhase.FaceGenerationWall, sliceGraph.Nodes.Count);
 
-            //Topology is already cached by SliceGraph.Create. Start GenerateFaces immediately per slice
-            //instead of a Phase-A barrier that only constructed empty generators.
-            foreach (Slice slice in sliceGraph.Nodes.Values)
+            List<BajajGeneratorMesh> listBajajMeshGenerators = retainMeshes ? new(sliceGraph.Nodes.Count) : null;
+            object listLock = retainMeshes ? new() : null;
+
+            ParallelOptions options = new()
             {
-                Slice capturedSlice = slice;
-                faceTasks.Add(Task.Run(() =>
+                //Allow more scheduled partitions than slots; FaceSlots caps the actual concurrent GenerateFaces work
+                //across every in-flight structure pipeline.
+                MaxDegreeOfParallelism = MeshParallelism.DegreeOfParallelism * 2
+            };
+
+            //Longest-job-first: expensive contour pairs claim FaceSlots first so the serial tail is short cheap work.
+            //Parallel.ForEachAsync drains the source in order into waiting workers; sort descending by topology verts.
+            List<Slice> slicesByComplexity = [.. sliceGraph.Nodes.Values
+                .OrderByDescending(s => EstimateSliceContourVertices(sliceGraph, s))];
+
+            await Parallel.ForEachAsync(slicesByComplexity, options, async (capturedSlice, ct) =>
+            {
+                BajajGeneratorMesh mesh = null;
+                bool success = false;
+                Exception error = null;
+
+                await MeshParallelism.RunWithFaceSlotAsync(_ =>
                 {
-                    SliceFaceLimiter.Wait();
                     try
                     {
                         SliceTopology topology = sliceGraph.GetTopology(capturedSlice);
@@ -348,34 +365,66 @@ namespace MorphologyMesh
                         {
                             string sectionText = sliceGraph.FormatSectionNumbers(capturedSlice);
                             Trace.WriteLine($"Slice {capturedSlice.Key} produced no mesh: topology initialisation failed ({sectionText}).");
-                            OnMeshGenerated?.Invoke(capturedSlice, null, false);
-                            return;
+                            return ValueTask.CompletedTask;
                         }
 
-                        BajajGeneratorMesh mesh = new(topology, capturedSlice);
-                        lock (listLock)
-                            listBajajMeshGenerators.Add(mesh);
+                        mesh = new(topology, capturedSlice);
+                        if (listBajajMeshGenerators is not null)
+                        {
+                            lock (listLock)
+                                listBajajMeshGenerators.Add(mesh);
+                        }
 
                         GenerateFaces(mesh);
-                        OnMeshGenerated?.Invoke(mesh.Slice, mesh, !mesh.GenerationHadErrors);
+                        success = !mesh.GenerationHadErrors;
                     }
                     catch (Exception e)
                     {
+                        error = e;
                         Trace.WriteLine($"Slice {capturedSlice} produced no mesh:\n{e}");
-                        OnMeshGenerated?.Invoke(capturedSlice, null, false);
+                        sliceGraph.RecordFaceGenerationError(capturedSlice.Key, e);
                     }
-                    finally
-                    {
-                        SliceFaceLimiter.Release();
-                    }
-                }));
-            }
 
-            await Task.WhenAll(faceTasks).ConfigureAwait(false);
+                    return ValueTask.CompletedTask;
+                }, ct).ConfigureAwait(false);
 
-            //Optional stable order for callers that inspect the returned list (live assembly uses OnMeshGenerated).
+                //Notify after releasing the face slot so assembly merges do not hold a generation permit.
+                if (error is not null || mesh is null)
+                    OnMeshGenerated?.Invoke(capturedSlice, null, false);
+                else
+                    OnMeshGenerated?.Invoke(mesh.Slice, mesh, success);
+            }).ConfigureAwait(false);
+
+            if (listBajajMeshGenerators is null)
+                return [];
+
             listBajajMeshGenerators.Sort(Comparer<BajajGeneratorMesh>.Create((a, b) => a.AverageZ.CompareTo(b.AverageZ)));
             return listBajajMeshGenerators;
+        }
+
+        /// <summary>
+        /// Contour-vertex estimate used to schedule face generation longest-job-first. Uses cached topology after
+        /// <see cref="SliceGraph.InitializeTopologyAsync"/>; invalid/missing topology sorts last (0).
+        /// </summary>
+        internal static int EstimateSliceContourVertices(SliceGraph sliceGraph, Slice slice)
+        {
+            SliceTopology topology = sliceGraph.GetTopology(slice);
+            if (!topology.IsValid || topology.Shapes is null)
+                return 0;
+
+            int total = 0;
+            foreach (IShape2D shape in topology.Shapes)
+            {
+                total += shape switch
+                {
+                    Polygon poly => poly.TotalUniqueVertices,
+                    Polyline line => line.NumUniqueVertices,
+                    IHasControlPoints pts => pts.ControlPoints.Count,
+                    _ => 0
+                };
+            }
+
+            return total;
         }
 
         /// <summary>
@@ -385,13 +434,22 @@ namespace MorphologyMesh
         /// </summary>
         public static void GenerateFaces(BajajGeneratorMesh mesh)
         {
+            long t0 = MeshPhaseTimings.Enabled ? Stopwatch.GetTimestamp() : 0;
+            int chordPassCalls = 0;
+            int chordsAdded = 0;
             using var _phase = MeshPhaseTimings.Measure(MeshPhase.FaceGeneration, mesh.Vertices.Count);
 
-            int singleTrianglePolylinePairs;
-            if (mesh.HasPolygonShapes)
+            int singleTrianglePolylinePairs = 0;
+            if (mesh.UpperShapeIndicies.Count == 0 || mesh.LowerShapeIndicies.Count == 0)
             {
-                GeneratePolygonFaces(mesh);
-                singleTrianglePolylinePairs = 0;
+                //An isolated annotation is split into a slice below it and a slice above it, each holding the one
+                //contour on a single band.  There is nothing to tile to, and running the polygon path anyway treated
+                //the lone contour as an untiled region and filled it flat at the contour Z, so a single circle came
+                //out as a zero-thickness disc with the two slices' fills lying back to back.  Only the cap applies.
+            }
+            else if (mesh.HasPolygonShapes)
+            {
+                GeneratePolygonFaces(mesh, out chordPassCalls, out chordsAdded);
             }
             else
             {
@@ -399,6 +457,24 @@ namespace MorphologyMesh
             }
 
             FinishSliceMesh(mesh, singleTrianglePolylinePairs);
+
+            if (t0 == 0)
+                return;
+
+            double seconds = (Stopwatch.GetTimestamp() - t0) / (double)Stopwatch.Frequency;
+            if (seconds < MeshPhaseTimings.SlowSliceThresholdSeconds)
+                return;
+
+            MeshPhaseTimings.RecordSlowSlice(
+                $"slow FaceGeneration {seconds:F1}s verts={mesh.Vertices.Count} faces={mesh.Faces.Count} chordPassCalls={chordPassCalls} chordsAdded={chordsAdded} {DescribeSlice(mesh)}");
+        }
+
+        static string DescribeSlice(BajajGeneratorMesh mesh)
+        {
+            if (mesh.Slice is null)
+                return "slice=(none)";
+
+            return $"key={mesh.Slice.Key} locations={string.Join(",", mesh.Slice.AllNodes)}";
         }
 
         /// <summary>
@@ -406,37 +482,55 @@ namespace MorphologyMesh
         /// the medial axis, then OTV slice chords and face generation in two passes.  Polylines never reach here as
         /// tileable shapes; SliceGraph keeps them correspondence-only when the slice has a polygon.
         /// </summary>
-        private static void GeneratePolygonFaces(BajajGeneratorMesh mesh)
+        private static void GeneratePolygonFaces(BajajGeneratorMesh mesh, out int chordPassCalls, out int chordsAdded)
         {
-            AddDelaunayEdges(mesh);
+            int vertCount = mesh.Vertices.Count;
+            chordPassCalls = 0;
+            chordsAdded = 0;
 
-            var RegionPairingGraph = GenerateRegionGraph(mesh);
+            using (MeshPhaseTimings.Measure(MeshPhase.Delaunay, vertCount))
+                AddDelaunayEdges(mesh);
 
-            mesh.RemoveInvalidEdges();
-
-            CompleteCorrespondingVertexFaces(mesh);
+            MorphMeshRegionGraph RegionPairingGraph;
+            using (MeshPhaseTimings.Measure(MeshPhase.RegionGraphBuild, vertCount))
+            {
+                RegionPairingGraph = GenerateRegionGraph(mesh);
+                mesh.RemoveInvalidEdges();
+                CompleteCorrespondingVertexFaces(mesh);
+            }
 
             SliceChordRTree rTree = mesh.CreateChordTree(mesh.ShapeZ);
-            List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(mesh, rTree);
+            using (MeshPhaseTimings.Measure(MeshPhase.RegionClosing, vertCount))
+            {
+                List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(mesh, rTree);
+            }
 
             var IncompleteVerticies = IdentifyIncompleteVerticies(mesh);
 
-            List<MorphMeshVertex> FirstPassIncompleteVerticies = FirstPassSliceChordGeneration(mesh, mesh.ShapeZ);
+            List<MorphMeshVertex> FirstPassIncompleteVerticies;
+            using (MeshPhaseTimings.Measure(MeshPhase.ChordGeneration, vertCount))
+                FirstPassIncompleteVerticies = FirstPassSliceChordGeneration(mesh, mesh.ShapeZ, out chordPassCalls, out chordsAdded);
 
-            BajajMeshGenerator.FirstPassFaceGeneration(mesh);
+            using (MeshPhaseTimings.Measure(MeshPhase.FaceClosing, vertCount))
+                BajajMeshGenerator.FirstPassFaceGeneration(mesh);
 
             try
             {
-                MorphMeshRegionGraph SecondPassRegions = MorphRenderMesh.SecondPassRegionDetection(mesh, FirstPassIncompleteVerticies);
-                SecondPassRegions.MergeAndCloseRegionsPass(mesh, rTree);
+                MorphMeshRegionGraph SecondPassRegions;
+                using (MeshPhaseTimings.Measure(MeshPhase.SecondPassRegionDetection, vertCount))
+                    SecondPassRegions = MorphRenderMesh.SecondPassRegionDetection(mesh, FirstPassIncompleteVerticies);
+
+                using (MeshPhaseTimings.Measure(MeshPhase.RegionClosing, vertCount))
+                    SecondPassRegions.MergeAndCloseRegionsPass(mesh, rTree);
             }
             catch (Exception e)
             {
-                mesh.GenerationHadErrors = true;
+                mesh.RecordGenerationError($"second pass region closing threw {e.GetType().Name}: {e.Message}");
                 Trace.WriteLine(string.Format("Exception building mesh {0}\n{1}", mesh.ToString(), e));
             }
 
-            BajajMeshGenerator.FirstPassFaceGeneration(mesh);
+            using (MeshPhaseTimings.Measure(MeshPhase.FaceClosing, vertCount))
+                BajajMeshGenerator.FirstPassFaceGeneration(mesh);
         }
 
         /// <summary>
@@ -462,12 +556,17 @@ namespace MorphologyMesh
 
             mesh.RecalculateNormals();
 
-            mesh.ManifoldReport = MeshManifoldValidator.Validate(mesh, mesh.IsForkGapBoundaryEdge, singleTrianglePolylinePairs, mesh.IsRibbonBoundaryEdge);
+            using (MeshPhaseTimings.Measure(MeshPhase.ManifoldValidate, mesh.Faces.Count))
+                mesh.ManifoldReport = MeshManifoldValidator.Validate(mesh, mesh.IsForkGapBoundaryEdge, singleTrianglePolylinePairs, mesh.IsRibbonBoundaryEdge);
 
             if (mesh.ManifoldReport.IsValidSliceSurface == false)
             {
+                //The report itself is the reason here; the assembly planner already prints it for the slice.
                 mesh.GenerationHadErrors = true;
-                Trace.WriteLine($"Mesh {mesh} is not a valid slice surface: {mesh.ManifoldReport}");
+                if (VerboseLogging)
+                    Trace.WriteLine($"Mesh {mesh} is not a valid slice surface: {mesh.ManifoldReport}");
+                else
+                    Trace.WriteLine($"Mesh slice {mesh.Slice?.Key} is not a valid slice surface: {mesh.ManifoldReport}");
             }
         }
 
@@ -568,14 +667,22 @@ namespace MorphologyMesh
             Dictionary<int, int> MeshToTriMesh = new(mesh.Vertices.Count);
             Dictionary<int, List<int>> TriMeshToMesh = new(mesh.Vertices.Count);
 
-            Vector2[] points = [.. pointToIndexMap.Keys];
+            int n = pointToIndexMap.Count;
+            Vector2[] points = new Vector2[n];
+            Vector2[] translated_points = new Vector2[n];
+            int iPoint = 0;
+            Vector2 sum = default;
+            foreach (Vector2 p in pointToIndexMap.Keys)
+            {
+                points[iPoint++] = p;
+                sum += p;
+            }
 
-            //Adjust the points to the average values to avoid floating point precision errors
-            Vector2 avg = points.Average();
-            Vector2[] translated_points = [.. points.Select(p => p - avg)];
+            Vector2 avg = n > 0 ? sum / n : default;
+            for (int i = 0; i < n; i++)
+                translated_points[i] = points[i] - avg;
 
-            var verts = points.Select((p, i) => new Vertex2D<List<int>>(translated_points[i], pointToIndexMap[p])).ToArray();
-            triMesh = Geometry.GenericDelaunayMeshGenerator2D<Vertex2D<List<int>>>.TriangulateToMesh(verts, OnProgress);
+            var verts = TriangulateSitesWithRetry(translated_points, points, pointToIndexMap, OnProgress, out triMesh);
 
             foreach (var v in verts)
             {
@@ -655,6 +762,67 @@ namespace MorphologyMesh
 
             mesh.ClassifyMeshEdges();
             //BajajGeneratorMesh.AddTriangulationEdgesToMesh(triMesh, mesh);
+        }
+
+        /// <summary>
+        /// Largest perturbation, in nm, applied to triangulation sites when the divide-and-conquer Delaunay pass
+        /// fails on degenerate input.  Far below annotation precision, so the returned connectivity is still a
+        /// valid triangulation of the real contour positions.
+        /// </summary>
+        private const double DelaunayRetryJitter = 1e-3;
+
+        private const int DelaunayRetryAttempts = 4;
+
+        /// <summary>
+        /// Triangulates the site set, retrying with a small deterministic offset on each site when the
+        /// divide-and-conquer merge fails.  Merge failures come from near-colinear triples that the contour
+        /// simplifier left behind (RPC1 365043/365415: three contour vertices within 0.005 nm of one line over a
+        /// 50 nm span), where the circumcircle test cannot separate the candidates.  Nudging the sites off that
+        /// line breaks the tie; the mesh keeps its unperturbed vertex positions because only face connectivity is
+        /// read back from the triangulation.
+        /// </summary>
+        private static Vertex2D<List<int>>[] TriangulateSitesWithRetry(Vector2[] translatedPoints, Vector2[] originalPoints,
+            Dictionary<Vector2, List<int>> pointToIndexMap, TriangulationMesh<Vertex2D<List<int>>>.ProgressUpdate OnProgress,
+            out TriangulationMesh<Vertex2D<List<int>>> triMesh)
+        {
+            int n = translatedPoints.Length;
+            Vertex2D<List<int>>[] verts = new Vertex2D<List<int>>[n];
+            Vector2[] jittered = null;
+            for (int attempt = 0; ; attempt++)
+            {
+                Vector2[] sites = translatedPoints;
+                if (attempt > 0)
+                {
+                    //The offset pattern is a function of index only so a slice meshes identically from run to run.
+                    jittered ??= new Vector2[n];
+                    double scale = DelaunayRetryJitter * attempt;
+                    for (int i = 0; i < n; i++)
+                    {
+                        double phase = (i * 0.6180339887498949) % 1.0 * Math.PI * 2.0;
+                        jittered[i] = translatedPoints[i] + new Vector2(Math.Cos(phase) * scale, Math.Sin(phase) * scale);
+                    }
+
+                    sites = jittered;
+                }
+
+                for (int i = 0; i < n; i++)
+                    verts[i] = new Vertex2D<List<int>>(sites[i], pointToIndexMap[originalPoints[i]]);
+                try
+                {
+                    triMesh = Geometry.GenericDelaunayMeshGenerator2D<Vertex2D<List<int>>>.TriangulateToMesh(verts, OnProgress);
+                    if (attempt > 0)
+                        Trace.WriteLine($"AddDelaunayEdges: triangulation succeeded on retry {attempt} after perturbing sites by {DelaunayRetryJitter * attempt:F4} nm");
+
+                    return verts;
+                }
+                //ArgumentException is the triangulator's own report of a degenerate flip ("Edge cannot flip unless it
+                //has two triangular faces", RPC1 133586/133601 in the full-cell run); it is the same near-colinear
+                //input as the typed exceptions and responds to the same nudge.
+                catch (Exception e) when (attempt < DelaunayRetryAttempts && (e is GeometryMeshExceptionBase || e is ArgumentException))
+                {
+                    Trace.WriteLine($"AddDelaunayEdges: triangulation attempt {attempt + 1} failed ({e.GetType().Name}: {e.Message}); retrying with perturbed sites");
+                }
+            }
         }
 
         /// <summary>
@@ -1078,11 +1246,59 @@ return;
         private static int TryAddCorrespondingNeighborFaces(MorphRenderMesh mesh, IShapeIndex origin, IShapeIndex corresponding, int iVA, int iVB)
         {
             int nFacesFound = 0;
+
+            //Two open polylines crossing in XY make a twisted sheet, not a union of interiors, so the polygon
+            //orientation test cannot pick the neighbours to join.  The ribbon pairs verticies by travel direction:
+            //when the lines run the same way at the crossing, the part before it on one line meets the part before
+            //it on the other; when they run opposite ways, before meets after.  Trying every combination here
+            //(which is what the polygon path does, relying on GetContourEdgeTypeWithOrientation to veto the wrong
+            //ones) joins before-to-after on both sides of the crossing, folding the ribbon back on itself.
+            if (origin is PolylineIndex && corresponding is PolylineIndex)
+            {
+                bool sameDirection = PolylinesRunSameDirection(mesh, origin, corresponding);
+                nFacesFound += TryAddCorrespondingNeighborPair(mesh, origin.Next, sameDirection ? corresponding.Next : corresponding.Previous, iVA, iVB);
+                nFacesFound += TryAddCorrespondingNeighborPair(mesh, origin.Previous, sameDirection ? corresponding.Previous : corresponding.Next, iVA, iVB);
+                return nFacesFound;
+            }
+
             nFacesFound += TryAddCorrespondingNeighborPair(mesh, origin.Next, corresponding.Next, iVA, iVB);
             nFacesFound += TryAddCorrespondingNeighborPair(mesh, origin.Next, corresponding.Previous, iVA, iVB);
             nFacesFound += TryAddCorrespondingNeighborPair(mesh, origin.Previous, corresponding.Previous, iVA, iVB);
             nFacesFound += TryAddCorrespondingNeighborPair(mesh, origin.Previous, corresponding.Next, iVA, iVB);
             return nFacesFound;
+        }
+
+        /// <summary>
+        /// True when the XY tangents of two polylines at the given verticies point the same way.  An endpoint uses
+        /// its single neighbour; a vertex with neither neighbour in the mesh counts as same-direction so the
+        /// caller still attempts the natural pairing.
+        /// </summary>
+        private static bool PolylinesRunSameDirection(MorphRenderMesh mesh, IShapeIndex a, IShapeIndex b)
+        {
+            Vector2? ta = TangentXY(mesh, a);
+            Vector2? tb = TangentXY(mesh, b);
+            if (ta is null || tb is null)
+                return true;
+
+            return Vector2.Dot(ta.Value, tb.Value) >= 0;
+        }
+
+        private static Vector2? TangentXY(MorphRenderMesh mesh, IShapeIndex index)
+        {
+            Vector2 here = mesh[index].Position.XY();
+            IShapeIndex next = index.Next;
+            IShapeIndex prev = index.Previous;
+            bool hasNext = next is not null && mesh.Contains(next);
+            bool hasPrev = prev is not null && mesh.Contains(prev);
+
+            if (hasNext && hasPrev)
+                return mesh[next].Position.XY() - mesh[prev].Position.XY();
+            if (hasNext)
+                return mesh[next].Position.XY() - here;
+            if (hasPrev)
+                return here - mesh[prev].Position.XY();
+
+            return null;
         }
 
         private static int TryAddCorrespondingNeighborPair(MorphRenderMesh mesh, IShapeIndex originNeighbor, IShapeIndex correspondingNeighbor, int iVA, int iVB)
@@ -1096,19 +1312,48 @@ return;
             if (type.IsValid() == false && type != EdgeType.FLIPPED_DIRECTION)
                 return 0;
 
-            int[] triFace = [mesh[originNeighbor].Index, iVA, iVB];
-            MorphMeshFace face = new(triFace);
-            mesh.AddFace(face);
+            MorphMeshFace first = new([mesh[originNeighbor].Index, iVA, iVB]);
+            MorphMeshFace second = new([mesh[correspondingNeighbor].Index, mesh[originNeighbor].Index, iVB]);
 
-            triFace = [mesh[correspondingNeighbor].Index, mesh[originNeighbor].Index, iVB];
-            face = new MorphMeshFace(triFace);
-            if (FaceContainsVerticies(mesh, face, out MorphMeshVertex[] contained_verts) == false)
+            //Every neighbour pairing used to commit the wedge triangle unconditionally, so a vertex whose quad
+            //was vetoed collected one wedge per pairing on the same CORRESPONDING edge.  Those 3-face edges and
+            //the holes beside them were the largest failure class in the glia slices.  The wedge is still allowed
+            //on its own - a fork whose partner contour crosses the trunk needs it, and the chord passes finish
+            //the quad later - but only while every edge it touches still has room for a face.
+            if (mesh.Contains(first) || FaceContainsVerticies(mesh, first, out _) || AnyEdgeAtFaceCapacity(mesh, first))
+                return 0;
+
+            mesh.AddFace(first);
+
+            if (mesh.Contains(second) == false
+                && FaceContainsVerticies(mesh, second, out _) == false
+                && AnyEdgeAtFaceCapacity(mesh, second) == false)
             {
-                mesh.AddFace(face);
-                return 1;
+                mesh.AddFace(second);
             }
 
-            return 0;
+            return 1;
+        }
+
+        /// <summary>
+        /// True when adding <paramref name="face"/> would push one of its edges past the face count a slice surface
+        /// allows: a contour edge is the seam with the adjacent slice and carries exactly one face here, any other
+        /// edge two.  Only edges already in the mesh are checked; a face may introduce a new chord.
+        /// </summary>
+        private static bool AnyEdgeAtFaceCapacity(MorphRenderMesh mesh, MorphMeshFace face)
+        {
+            foreach (IEdgeKey key in face.Edges)
+            {
+                if (!mesh.Contains(key))
+                    continue;
+
+                IEdge edge = mesh[key];
+                int capacity = edge is MorphMeshEdge morphEdge && morphEdge.Type == EdgeType.CONTOUR ? 1 : 2;
+                if (edge.Faces.Count >= capacity)
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -1270,12 +1515,16 @@ return;
         /// Generate slice chords for the remaining unknown chords.  Returns a list of incomplete verticies.
         /// </summary>
         /// <param name="mesh">The mesh, which may contain edges we cannot cross</param>
-        public static List<MorphMeshVertex> FirstPassSliceChordGeneration(BajajGeneratorMesh mesh, ICollection<double> ZLevels)
+        public static List<MorphMeshVertex> FirstPassSliceChordGeneration(BajajGeneratorMesh mesh, ICollection<double> ZLevels) =>
+            FirstPassSliceChordGeneration(mesh, ZLevels, out _, out _);
+
+        public static List<MorphMeshVertex> FirstPassSliceChordGeneration(BajajGeneratorMesh mesh, ICollection<double> ZLevels, out int chordPassCalls, out int chordsAdded)
         {
             SliceChordRTree rTree = mesh.CreateChordTree(ZLevels);
 
             mesh.CloseFaces();
             List<MorphMeshVertex> IncompleteVerticies = [.. mesh.MorphVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh))];
+            Dictionary<int, List<MorphMeshVertex>> incompleteByShape = GroupIncompleteVerticesByShape(IncompleteVerticies);
 
             //Each pass relaxes a geometric heuristic that the previous pass may have been too strict about.
             //ShapeLink is present in every pass because it is not a heuristic: a pair the annotator never joined
@@ -1295,86 +1544,88 @@ return;
             //Precalulate the quad treeWithUniqueValues data structures
             var VertexQuadTrees = mesh.CreateQuadTreesForContours();
 
+            chordPassCalls = 0;
+            chordsAdded = 0;
+
             //Run each set of increasingly loose criteria over the chords.
             foreach (SliceChordTestType passTestCriteria in PassCriteria)
             {
-                while (SliceChordGenerationPass(mesh, rTree, IncompleteVerticies, passTestCriteria, VertexQuadTrees) == true)
+                while (true)
                 {
+                    chordPassCalls++;
+                    int addedThisPass = SliceChordGenerationPass(mesh, rTree, incompleteByShape, passTestCriteria, VertexQuadTrees);
+                    chordsAdded += addedThisPass;
+                    if (addedThisPass == 0)
+                        break;
+
                     mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
-                    IncompleteVerticies = [.. IncompleteVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh))];
+                    RemoveCompletedIncompleteVertices(mesh, IncompleteVerticies, incompleteByShape);
                 }
             }
 
             mesh.SliceChordCandidateCache.Clear();
-            /*
-            while (SliceChordGenerationPass(mesh, rTree, IncompleteVerticies, FirstPassTests) == true)
-            {
-                //Try to remove any verticies we've completed the faces for from the search
-                mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
-                IncompleteVerticies = IncompleteVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh)).ToList();
-            }
-            */
-            /*
-             while (SliceChordGenerationPass(mesh, rTree, IncompleteVerticies, SecondPassTests) == true)
-            {
-                //Try to remove any verticies we've completed the faces for from the search
-                mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
-                IncompleteVerticies = IncompleteVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh)).ToList();
-            }
-            */
-            /*
-            
-            while (SliceChordGenerationPass(mesh, rTree, IncompleteVerticies, ThirdPassTests) == true)
-            {
-                //Try to remove any verticies we've completed the faces for from the search
-                mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
-                IncompleteVerticies = IncompleteVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh)).ToList();
-            }
-            */
 
             mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
-            IncompleteVerticies = [.. IncompleteVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh))];
+            RemoveCompletedIncompleteVertices(mesh, IncompleteVerticies, incompleteByShape);
             return IncompleteVerticies;
         }
 
+        static Dictionary<int, List<MorphMeshVertex>> GroupIncompleteVerticesByShape(List<MorphMeshVertex> verts)
+        {
+            Dictionary<int, List<MorphMeshVertex>> byShape = [];
+            foreach (MorphMeshVertex v in verts)
+            {
+                if (v.ShapeIndex is null)
+                    continue;
+
+                int iPoly = v.ShapeIndex.ShapeIndex;
+                if (!byShape.TryGetValue(iPoly, out List<MorphMeshVertex> list))
+                {
+                    list = [];
+                    byShape.Add(iPoly, list);
+                }
+
+                list.Add(v);
+            }
+
+            return byShape;
+        }
+
+        static void RemoveCompletedIncompleteVertices(BajajGeneratorMesh mesh, List<MorphMeshVertex> incomplete, Dictionary<int, List<MorphMeshVertex>> byShape)
+        {
+            incomplete.RemoveAll(v => v.IsFaceSurfaceComplete(mesh));
+            foreach (List<MorphMeshVertex> list in byShape.Values)
+                list.RemoveAll(v => v.IsFaceSurfaceComplete(mesh));
+        }
 
         /// <summary>
-        /// Generate slice chords for the remaining unknown chords, returns true if any chords were generated
+        /// Generate slice chords for the remaining unknown chords, returns the number of chords added this pass.
         /// </summary>
         /// <param name="mesh">The mesh, which may contain edges we cannot cross</param>
         /// <param name="LevelTree">An optional parameter containing quadtrees for verticies on the upper and lower polygon sets.  It can be calculated once and passed as this parameter or left null and the function will build it.</param>
-        private static bool SliceChordGenerationPass(BajajGeneratorMesh mesh, SliceChordRTree rTree, List<MorphMeshVertex> IncompleteVerticies, SliceChordTestType TestSuite, SliceTopologyQuadTrees<MorphMeshVertex>? LevelTree = null)
+        private static int SliceChordGenerationPass(BajajGeneratorMesh mesh, SliceChordRTree rTree, Dictionary<int, List<MorphMeshVertex>> incompleteByShape, SliceChordTestType TestSuite, SliceTopologyQuadTrees<MorphMeshVertex>? LevelTree = null)
         {
 
             if (LevelTree.HasValue == false)
                 LevelTree = mesh.CreateQuadTreesForContours();
 
-            BajajMeshGenerator.CreateOptimalTilingVertexTable(mesh, IncompleteVerticies,
+            BajajMeshGenerator.CreateOptimalTilingVertexTable(mesh, incompleteByShape,
                                                               LevelTree.Value, TestSuite,
-                                                              out ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex> OTVTable, ref rTree);
+                                                              out Dictionary<MorphMeshVertex, MorphMeshVertex> OTVTable, ref rTree);
 
             List<SliceChord> CandidateChords = CreateChordCandidateList(mesh, OTVTable);
 
             ///Starting with the shortest chord, add all of the slice chords that do not intersect an existing chord
-            //SliceChordRTree AddedChords = rTree;//new RTree.RTree<SliceChord>();
             CandidateChords = [.. CandidateChords.OrderBy(sc => sc.Line.Length)];
 
-            bool addedChord = false;
             int numAdded = 0;
             foreach (SliceChord sc in CandidateChords)
             {
-                bool addedThisChord = TryAddSliceChord(mesh, sc, rTree, TestSuite);
-                addedChord = addedChord || addedThisChord;
-                if (addedThisChord)
-                {
+                if (TryAddSliceChord(mesh, sc, rTree, TestSuite))
                     numAdded += 1;
-                    //Console.WriteLine(string.Format("Added {0} Remaining: {1}", sc, CandidateChords.Count));
-                }
             }
 
-            //Console.WriteLine(string.Format("*** Added {0} Chords this pass ***", numAdded));
-
-            return addedChord;
+            return numAdded;
         }
 
         /// <summary>
@@ -1391,6 +1642,7 @@ return;
                 incompleteVerts.RemoveAt(0);
 
                 List<int> face_path = mesh.IdentifyIncompleteFace(v, MaxFaceVerts: 4);
+                int facesBefore = mesh.Faces.Count;
                 if (face_path != null && face_path.Count <= 4)
                 {
                     MorphMeshFace face = new(face_path);
@@ -1464,8 +1716,10 @@ return;
                     continue; //Skip this vertex since we could not make a face
                 }
 
-                //Check to see if we can add another face if the vertex is not complete yet and we just added a face successfully
-                if (v.IsFaceSurfaceComplete(mesh) == false)
+                //Check to see if we can add another face if the vertex is not complete yet and we just added a face successfully.
+                //A face the mesh refused at edge capacity would be found again on the next pass, so the vertex is
+                //only revisited when the face count actually grew.
+                if (mesh.Faces.Count > facesBefore && v.IsFaceSurfaceComplete(mesh) == false)
                 {
                     incompleteVerts.Insert(0, v);
                 }
@@ -1517,12 +1771,12 @@ return;
         /// <param name="mesh"></param>
         /// <param name="OTVTable"></param>
         /// <returns></returns>
-        private static List<SliceChord> CreateChordCandidateList(MorphRenderMesh mesh, ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex> OTVTable)
+        private static List<SliceChord> CreateChordCandidateList(MorphRenderMesh mesh, Dictionary<MorphMeshVertex, MorphMeshVertex> OTVTable)
         {
             List<SliceChord> CandidateChords = [];
 
-            //Ordered by mesh vertex index because OTVTable is a ConcurrentDictionary: its enumeration order varies
-            //between runs, and this loop both builds the candidate list and adds CORRESPONDING edges as it goes.
+            //Ordered by mesh vertex index so acceptance (which refuses chords that cross one already placed)
+            //does not inherit dictionary enumeration order.
             foreach (MorphMeshVertex i1 in OTVTable.Keys.OrderBy(v => v.Index))
             {
                 if (OTVTable.TryGetValue(i1, out MorphMeshVertex i2))
@@ -1735,6 +1989,10 @@ return;
         /// <returns></returns>
         public static bool Theorem4(IShape2D shape, LineSegment line)
         {
+            //Chord vs shape AABB is cheap; most same-slice shapes never near the candidate chord.
+            if (!shape.BoundingBox.Intersects(line.BoundingBox))
+                return true;
+
             if (shape is Polygon poly)
                 return !line.Intersects(poly, true, out List<Vector2> intersections);
 
@@ -2275,39 +2533,45 @@ return;
         /// <param name="polygons"></param>
         /// <param name="PolyZ"></param>
         /// <param name="OTVTable"></param>
-        public static void CreateOptimalTilingVertexTable(this BajajGeneratorMesh mesh, IEnumerable<MorphMeshVertex> VerticiesToMap, SliceChordTestType TestsToRun, out ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex> OTVTable, ref SliceChordRTree chordTree)
+        public static void CreateOptimalTilingVertexTable(this BajajGeneratorMesh mesh, IEnumerable<MorphMeshVertex> VerticiesToMap, SliceChordTestType TestsToRun, out Dictionary<MorphMeshVertex, MorphMeshVertex> OTVTable, ref SliceChordRTree chordTree)
         {
             var LevelTree = mesh.CreateQuadTreesForContours();
 
             ////////////////////////////////////////////////////
-            CreateOptimalTilingVertexTable(mesh, VerticiesToMap, LevelTree, TestsToRun, out OTVTable, ref chordTree);
+            CreateOptimalTilingVertexTable(mesh, GroupIncompleteVerticesByShape([.. VerticiesToMap]), LevelTree, TestsToRun, out OTVTable, ref chordTree);
         }
 
         public static void CreateOptimalTilingVertexTable(this BajajGeneratorMesh mesh, IEnumerable<MorphMeshVertex> VerticiesToMap, SliceTopologyQuadTrees<MorphMeshVertex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
-                                                          out ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex> OTVTable, ref SliceChordRTree chordTree)
+                                                          out Dictionary<MorphMeshVertex, MorphMeshVertex> OTVTable, ref SliceChordRTree chordTree)
         {
-            OTVTable = new ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex>();
+            CreateOptimalTilingVertexTable(mesh, GroupIncompleteVerticesByShape([.. VerticiesToMap]), CandidateTreeByLevel, TestsToRun, out OTVTable, ref chordTree);
+        }
 
-            foreach (var polygroup in VerticiesToMap.GroupBy(v => v.ShapeIndex.ShapeIndex))
+        public static void CreateOptimalTilingVertexTable(this BajajGeneratorMesh mesh, Dictionary<int, List<MorphMeshVertex>> incompleteByShape, SliceTopologyQuadTrees<MorphMeshVertex> CandidateTreeByLevel, SliceChordTestType TestsToRun,
+                                                          out Dictionary<MorphMeshVertex, MorphMeshVertex> OTVTable, ref SliceChordRTree chordTree)
+        {
+            OTVTable = new Dictionary<MorphMeshVertex, MorphMeshVertex>();
+
+            foreach (KeyValuePair<int, List<MorphMeshVertex>> polygroup in incompleteByShape)
             {
-                int iPoly = polygroup.Key;
-                IShape2D shape = mesh.Shapes[iPoly];
+                if (polygroup.Value.Count == 0)
+                    continue;
 
+                int iPoly = polygroup.Key;
                 QuadTreeWithUniqueValues<MorphMeshVertex> treeWithUniqueValues = CandidateTreeByLevel.GetOppositeSide(iPoly);
 
                 bool IsUpperShape = mesh.UpperShapeIndicies.Contains(iPoly);
                 IShape2D[] SameLevelShapes = IsUpperShape ? mesh.UpperShapes : mesh.LowerShapes;
                 IShape2D[] AdjacentLevelShapes = IsUpperShape ? mesh.LowerShapes : mesh.UpperShapes;
 
-                foreach (MorphMeshVertex v in polygroup.Where(v => v.FacesAreComplete == false))
+                foreach (MorphMeshVertex v in polygroup.Value)
                 {
-                    IShapeIndex i = v.ShapeIndex;
-                    Vector2 p1 = v.Position.XY();
+                    if (v.FacesAreComplete)
+                        continue;
+
                     MorphMeshVertex NearestOnOtherLevel = mesh.FindOptimalTilingForVertexByDistance(v, SameLevelShapes, AdjacentLevelShapes, treeWithUniqueValues, chordTree, TestsToRun);
                     if (NearestOnOtherLevel != null)
-                    {
                         OTVTable.TryAdd(v, NearestOnOtherLevel);
-                    }
                 }
             }
         }

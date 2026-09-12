@@ -1,4 +1,4 @@
-﻿using AnnotationVizLib;
+using AnnotationVizLib;
 using Geometry;
 using GraphLib;
 using SqlGeometryUtils;
@@ -109,6 +109,19 @@ namespace MorphologyMesh
 
         internal void RecordTopologyFailure(ulong sliceKey, string sectionText) =>
             _failedTopologySlices[sliceKey] = sectionText;
+
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<ulong, string> _faceGenerationErrors = new();
+
+        /// <summary>
+        /// Slices whose face generation threw, mapped to the exception text (type, message and stack).
+        ///
+        /// The generation callback only reports a null mesh for these, so without this the failure report could
+        /// say no more than "see trace"; the exception itself would be buried in the full log.
+        /// </summary>
+        public IReadOnlyDictionary<ulong, string> FaceGenerationErrors => _faceGenerationErrors;
+
+        internal void RecordFaceGenerationError(ulong sliceKey, Exception e) =>
+            _faceGenerationErrors[sliceKey] = e?.ToString() ?? "unknown error";
 
         /// <summary>
         /// Placement origin for this structure's mesh (own locations, not child subgraphs).
@@ -306,7 +319,7 @@ namespace MorphologyMesh
             if (_topologyInitialized)
                 return;
 
-            using var _phase = MeshPhaseTimings.Measure(MeshPhase.SliceGraphCreate, Nodes.Count);
+            using var _phase = MeshPhaseTimings.Measure(MeshPhase.TopologyInit, Nodes.Count);
             await InitializeSliceTopology(_simplify, onSliceTopologyReady).ConfigureAwait(false);
             _topologyInitialized = true;
         }

@@ -93,7 +93,26 @@ namespace MonogameTestbed
         private readonly HashSet<TestMode> _initFailedModes = [];
 
         TestbedMenuBar _menuBar;
-        bool MenuEnabled => Program.options?.Quiet != true && Program.options?.Screenshots != true;
+        //Quiet (-q) means "quit when the run finishes"; it must not hide the interactive menu.  Screenshots still
+        //suppress it so capture PNGs are not stamped with File/Test/View/Help.
+        bool MenuEnabled => Program.options?.Screenshots != true;
+
+        /// <summary>
+        /// Viewport height at which screen-space HUD text and the menu bar draw at their base size. Taller
+        /// back buffers (maximised on a 4K display) scale up from here so the text stays legible.
+        /// </summary>
+        internal const float HudReferenceHeight = 1200f;
+
+        /// <summary>
+        /// Uniform factor for pixel-sized HUD elements; never shrinks below 1 so small windows keep the base size.
+        /// </summary>
+        internal static float HudSizeFactorFor(int viewportHeight) => Math.Max(1f, viewportHeight / HudReferenceHeight);
+
+        /// <summary>
+        /// Pixels the menu strip occupies along the top of the viewport, or 0 when the menu is disabled.
+        /// Tests that draw screen-space HUD text start below this so the menu does not cover their first line.
+        /// </summary>
+        internal int MenuBarHeight => MenuEnabled && _menuBar != null ? _menuBar.Height : 0;
 
         LabelView testLabel = null;
 
@@ -640,7 +659,7 @@ namespace MonogameTestbed
 
             // Arial.spritefont is 56pt. 0.125 ≈ 7pt on a 1200px-tall window.
             const float BaseHudScale = 0.125f;
-            const float ReferenceHeight = 1200f;
+            const float ReferenceHeight = HudReferenceHeight;
 
             //Screenshots are captured borderless-fullscreen at the monitor's native resolution, so a fixed pixel
             //scale keeps the same absolute text height and shrinks to an unreadable fraction of a large frame.
@@ -721,7 +740,7 @@ namespace MonogameTestbed
             spriteBatch.Begin();
             try
             {
-                float y = Margin;
+                float y = MenuBarHeight + Margin;
                 if (descriptionLines.Count > 0)
                     DrawTextSection(descriptionLines, ref y);
 

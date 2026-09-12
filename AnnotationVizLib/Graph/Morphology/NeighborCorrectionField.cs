@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AnnotationVizLib
@@ -265,23 +266,47 @@ namespace AnnotationVizLib
         }
     }
 
-    public partial class MorphologyGraph
+    /// <summary>
+    /// Outcome of <see cref="MorphologyGraph.ApplyNeighborCorrection"/>: which Location IDs had a successful
+    /// field sample (including a true zero residual).
+    /// </summary>
+    public sealed class NeighborCorrectionResult
+    {
+        public static NeighborCorrectionResult Skipped { get; } = new(false, []);
+
+        public NeighborCorrectionResult(bool applied, HashSet<ulong> handledLocationIds)
+        {
+            Applied = applied;
+            HandledLocationIds = handledLocationIds ?? [];
+        }
+
+        /// <summary>False when the hop corpus was too small and no sampling ran.</summary>
+        public bool Applied { get; }
+
+        /// <summary>Location IDs where <c>Sample</c> succeeded (zero residual still counts as handled).</summary>
+        public HashSet<ulong> HandledLocationIds { get; }
+    }
+
+    partial class MorphologyGraph
     {
         /// <summary>
         /// Apply a leave-one-out neighbor hop correction to each top-level cell under this factory root.
-        /// Rigid XY translate of unbranched process nodes only; co-moves attached child subgraphs.
-        /// Call after optional <see cref="SmoothProcesses"/> and before SliceGraph.Create.
+        /// Rigid XY translate of every cell annotation (processes, branches, and terminals) sampled at its
+        /// centroid; co-moves child subgraphs attached to that location.
+        /// Call before SliceGraph.Create (and before or as part of a curvefit pipeline).
         /// </summary>
         /// <param name="root">Factory root whose subgraphs are the correction targets (and hop sources).</param>
         /// <param name="additionalHopSources">
         /// Optional neighbor cells (e.g. auto-loaded within a distance). Used only for hop consensus; not meshed.
         /// </param>
-        public static void ApplyNeighborCorrection(
+        /// <param name="maxOffsetNm">When set, cap each translation magnitude; omitted means no magnitude clamp.</param>
+        public static NeighborCorrectionResult ApplyNeighborCorrection(
             MorphologyGraph root,
-            IEnumerable<MorphologyGraph> additionalHopSources = null)
+            IEnumerable<MorphologyGraph> additionalHopSources = null,
+            double? maxOffsetNm = null)
         {
             if (root is null)
-                return;
+                return NeighborCorrectionResult.Skipped;
 
             List<MorphologyGraph> targets = [.. root.Subgraphs.Values.Where(sg => sg.StructureID != 0)];
             if (targets.Count == 0 && root.StructureID != 0 && root.Nodes.Count > 0)
@@ -290,7 +315,7 @@ namespace AnnotationVizLib
             if (targets.Count == 0)
             {
                 Console.WriteLine("Neighbor correction: no target cells; skipping.");
-                return;
+                return NeighborCorrectionResult.Skipped;
             }
 
             List<MorphologyGraph> hopSources = [.. targets];
@@ -310,7 +335,7 @@ namespace AnnotationVizLib
             if (hopSources.Count < 2)
             {
                 Console.WriteLine("Neighbor correction: need at least two cells in the hop corpus (targets + neighbors); skipping.");
-                return;
+                return NeighborCorrectionResult.Skipped;
             }
 
             List<NeighborHopField.HopSample> hops = NeighborHopField.CollectHops(hopSources);
@@ -320,53 +345,54 @@ namespace AnnotationVizLib
             foreach (string line in overview.DescribeSections())
                 Console.WriteLine($"  field {line}");
 
-            int nodesMoved = 0;
-            object moveLock = new();
+            ConcurrentBag<ulong> handled = [];
+            int nodesTranslated = 0;
 
             Parallel.ForEach(targets, cell =>
             {
                 NeighborHopField field = NeighborHopField.Build(hops, excludeStructureId: cell.StructureID);
-                int moved = ApplyNeighborCorrectionToCell(cell, field);
-                lock (moveLock)
-                    nodesMoved += moved;
+                int translated = ApplyNeighborCorrectionToCell(cell, field, maxOffsetNm, handled);
+                Interlocked.Add(ref nodesTranslated, translated);
             });
 
             root._RTree = null;
             root.ResetCachedMeasurements();
-            Console.WriteLine($"Neighbor correction: translated {nodesMoved} process nodes");
+            Console.WriteLine($"Neighbor correction: handled {handled.Count} annotations ({nodesTranslated} translated)");
+            return new NeighborCorrectionResult(true, [.. handled]);
         }
 
-        static int ApplyNeighborCorrectionToCell(MorphologyGraph cell, NeighborHopField field)
+        /// <summary>
+        /// Sample the cumulative registration field at each cell location centroid and rigidly translate
+        /// that annotation plus child subgraphs whose nearest parent location is that node.
+        /// Adds every successfully sampled Location ID to <paramref name="handled"/> (including zero residual).
+        /// </summary>
+        static int ApplyNeighborCorrectionToCell(
+            MorphologyGraph cell,
+            NeighborHopField field,
+            double? maxOffsetNm,
+            ConcurrentBag<ulong> handled)
         {
-            int moved = 0;
-            foreach (ulong[] process in cell.Processes())
+            int translated = 0;
+            foreach (MorphologyNode node in cell.Nodes.Values)
             {
-                if (process.Length < 3)
+                int sectionZ = (int)Math.Round(node.UnscaledZ);
+                Vector2? registration = field.Sample(node.Center.XY(), sectionZ);
+                if (registration is null)
                     continue;
 
-                foreach (ulong id in process)
-                {
-                    MorphologyNode node = cell.Nodes[id];
-                    if (!node.IsUnbranchedProcess(cell))
-                        continue;
+                handled.Add(node.Key);
 
-                    int sectionZ = (int)Math.Round(node.UnscaledZ);
-                    Vector2? registration = field.Sample(node.Center.XY(), sectionZ);
-                    if (registration is null)
-                        continue;
+                Vector2 offset = ClampProcessOffset(node, -registration.Value, maxOffsetNm);
+                if (offset.Magnitude <= Tolerance.Epsilon)
+                    continue;
 
-                    Vector2 offset = ClampProcessOffset(node, -registration.Value);
-                    if (offset.Magnitude <= Tolerance.Epsilon)
-                        continue;
-
-                    TranslateNodeAndAttachedSubgraphs(cell, node, offset);
-                    moved++;
-                }
+                TranslateNodeAndAttachedSubgraphs(cell, node, offset);
+                translated++;
             }
 
             cell._RTree = null;
             cell.ResetCachedMeasurements();
-            return moved;
+            return translated;
         }
     }
 }

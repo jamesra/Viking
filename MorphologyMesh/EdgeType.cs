@@ -444,6 +444,11 @@ namespace MorphologyMesh
                 if (lineIntersectsAnyOtherShape)
                     return EdgeType.INVALID;
 
+                //Two polylines that cross in XY are tiled span by span between the crossings; a chord joining
+                //different spans would run through the twist.  See PolylineSpanPairing.
+                if (PolylineSpanPairing.ChordStaysInSpan(A, ALine.VertexIndex, B, BLine.VertexIndex) == false)
+                    return EdgeType.INVALID;
+
                 return EdgeType.SURFACE;
             }
             else if (ALine.ShapeIndex == BLine.ShapeIndex)

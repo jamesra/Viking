@@ -72,6 +72,22 @@ namespace VikingXNAGraphics
             }
         }
 
+        /// <summary>
+        /// Optional per-point colour.  When set, markers and labels use the colour at their index instead of the
+        /// uniform <see cref="Color"/> / <see cref="LabelColor"/>.  Survives <see cref="UpdateViews"/> so a later
+        /// radius change does not flatten a upper/lower contour colouring.
+        /// </summary>
+        private Color[] _PointColors;
+
+        public Color[] PointColors
+        {
+            get => _PointColors;
+            set
+            {
+                _PointColors = value;
+                UpdateViews();
+            }
+        }
 
         public double PointRadius
         {
@@ -82,6 +98,16 @@ namespace VikingXNAGraphics
                 UpdateViews();
             }
         }
+
+        private Color ColorForPoint(int index) =>
+            _PointColors is { Length: > 0 } && index >= 0 && index < _PointColors.Length
+                ? _PointColors[index]
+                : Color;
+
+        private Color ColorForLabel(int index) =>
+            _PointColors is { Length: > 0 } && index >= 0 && index < _PointColors.Length
+                ? _PointColors[index]
+                : LabelColor;
 
         public PointSetView(double defaultRadius = 1.0) : this(Color.Gold, defaultRadius)
         {
@@ -102,8 +128,8 @@ namespace VikingXNAGraphics
                 return;
             }
 
-            PointViews = [.. Points.Select(p => new CircleView(new Circle(p, PointRadius), Color))];
             Geometry.Vector2[] point_array = [.. Points];
+            PointViews = [.. point_array.Select((p, i) => new CircleView(new Circle(p, PointRadius), ColorForPoint(i)))];
 
             if (!LabelIndex && !LabelPosition)
             {
@@ -153,7 +179,7 @@ namespace VikingXNAGraphics
                 {
                     LabelView label = LabelViews[i];
                     label.FontSize = this.PointRadius * 2.0;
-                    label.Color = this.LabelColor;
+                    label.Color = ColorForLabel(i);
 
                     if (DuplicatePointsAddedCount.TryGetValue(point_array[i], out var count))
                     {
