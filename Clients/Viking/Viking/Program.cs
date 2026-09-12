@@ -22,6 +22,7 @@ using System.Xml.Linq;
 using Viking.UI.WPF;
 using Viking.Services;
 using Velopack;
+using Newtonsoft.Json.Linq;
 
 
 namespace Viking
@@ -112,33 +113,33 @@ namespace Viking
 
             ApplicationSettings? appSettings = null;
 
-            // Handle viking://open?code=...&volume=... protocol (one-use launch code)
+            // Handle viking://open?code=...&volume=...&location=... protocol (one-use launch code)
             if (TryHandleVikingOpenUrl(args, out appSettings))
             {
                 // appSettings set by TryHandleVikingOpenUrl; continue to volume load below
             }
             else
             {
-            var options = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
+                var options = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
 
-            options.WithParsed(o => appSettings = TryBypassSplash(o)).WithNotParsed(errors =>
-            {
-                // Create a new help text with error information
-                HelpText errorHelpText = HelpText.AutoBuild(options);
-                errorHelpText.AddPreOptionsLine("ERROR: Unable to parse command line arguments.");
-                errorHelpText.AddPreOptionsLine("The following errors occurred:");
-
-                foreach (var error in errors)
+                options.WithParsed(o => appSettings = TryBypassSplash(o)).WithNotParsed(errors =>
                 {
-                    errorHelpText.AddPreOptionsLine($"  {error}");
-                }
+                    // Create a new help text with error information
+                    HelpText errorHelpText = HelpText.AutoBuild(options);
+                    errorHelpText.AddPreOptionsLine("ERROR: Unable to parse command line arguments.");
+                    errorHelpText.AddPreOptionsLine("The following errors occurred:");
 
-                errorHelpText.AddPreOptionsLine("");
-                Console.WriteLine(errorHelpText);
+                    foreach (var error in errors)
+                    {
+                        errorHelpText.AddPreOptionsLine($"  {error}");
+                    }
 
-                // Show login window as fallback
-                appSettings = ShowLoginWindow(null, null, null);
-            });
+                    errorHelpText.AddPreOptionsLine("");
+                    Console.WriteLine(errorHelpText);
+
+                    // Show login window as fallback
+                    appSettings = ShowLoginWindow(null, null, null);
+                });
             }
 
             //Close the program if no settings were provided or the volume is missing
@@ -159,8 +160,7 @@ namespace Viking
             VikingApplicationContext context = new(appSettings);
             context.Initialize();
             Application.Run(context);
-
-
+             
             // Shutdown WPF Application instance if it exists
             System.Windows.Application.Current?.Shutdown();
 
@@ -184,6 +184,155 @@ namespace Viking
             return ShowLoginWindow(options.VolumeURL, options.Username, options.Password);
         }
 
+        /// <summary>
+        /// Handles viking://open?code=...&volume=...&location=... protocol.
+        /// Returns true if args contained a viking:// URL and it was handled (appSettings may be null if user cancelled).
+        /// </summary>
+        private static bool TryHandleVikingOpenUrl(string[] args, out ApplicationSettings? appSettings)
+        {
+            appSettings = null;
+            string? vikingUrl = args?.FirstOrDefault(a => a?.StartsWith("viking://", StringComparison.OrdinalIgnoreCase) == true);
+            if (string.IsNullOrEmpty(vikingUrl))
+                return false;
+
+            if (!Uri.TryCreate(vikingUrl, UriKind.Absolute, out Uri? uri) || string.IsNullOrEmpty(uri?.Query))
+                return false;
+
+            var query = ParseQueryString(uri.Query);
+            ApplyStartupPlaceArguments(query);
+
+            string? code = query.TryGetValue("code", out var c) ? c?.Trim() : null;
+            string? volume = query.TryGetValue("volume", out var v) ? v?.Trim() : null;
+
+            if (!string.IsNullOrEmpty(code))
+            {
+                string baseUrl = Viking.Properties.Settings.Default.LaunchExchangeBaseUrl?.Trim() ?? "";
+                if (string.IsNullOrEmpty(baseUrl))
+                {
+                    Trace.WriteLine("[Viking] viking://open with code ignored: LaunchExchangeBaseUrl not configured.", "Viking");
+                    return false;
+                }
+
+                var exchangeUrl = baseUrl.TrimEnd('/') + "/api/viking/launch-exchange";
+                (string? accessToken, string? identityServerUrl, string? volumeUrl, string? volumeName) = ExchangeLaunchCodeAsync(exchangeUrl, code).GetAwaiter().GetResult();
+                if (accessToken == null)
+                {
+                    Trace.WriteLine("[Viking] Launch code exchange failed or returned no token.", "Viking");
+                    appSettings = ShowLoginWindow(volume, null, null);
+                    return true;
+                }
+                string? initialVolume = !string.IsNullOrEmpty(volumeUrl) ? volumeUrl : volume;
+                appSettings = ShowLoginWindowWithLaunchResult(accessToken, identityServerUrl ?? "", initialVolume, volumeName);
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(volume))
+            {
+                appSettings = ShowLoginWindow(volume, null, null);
+                return true;
+            }
+
+            appSettings = ShowLoginWindow(null, null, null);
+            return true;
+        }
+
+        /// <summary>
+        /// Copies location / coordinate query params into StartupArguments for post-load navigation.
+        /// Location ID wins over coordinates when both are present.
+        /// </summary>
+        private static void ApplyStartupPlaceArguments(Dictionary<string, string> query)
+        {
+            UI.State.StartupArguments = [];
+
+            if (query.TryGetValue("location", out string? locationRaw) && !string.IsNullOrWhiteSpace(locationRaw))
+            {
+                locationRaw = locationRaw.Trim();
+                if (long.TryParse(locationRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out long locationId))
+                {
+                    UI.State.StartupArguments["Location"] = locationId.ToString(CultureInfo.InvariantCulture);
+                    return;
+                }
+
+                // Comma-separated x,y,z[,downsample] from SBFSEM-tools pick readout
+                string[] parts = locationRaw.Split(',');
+                if (parts.Length >= 3)
+                {
+                    UI.State.StartupArguments["X"] = parts[0].Trim();
+                    UI.State.StartupArguments["Y"] = parts[1].Trim();
+                    UI.State.StartupArguments["Z"] = parts[2].Trim();
+                    if (parts.Length >= 4)
+                        UI.State.StartupArguments["DS"] = parts[3].Trim();
+                    return;
+                }
+            }
+
+            CopyQueryKey(query, "x", "X");
+            CopyQueryKey(query, "y", "Y");
+            CopyQueryKey(query, "z", "Z");
+            CopyQueryKey(query, "ds", "DS");
+        }
+
+        private static void CopyQueryKey(Dictionary<string, string> query, string queryKey, string startupKey)
+        {
+            if (query.TryGetValue(queryKey, out string? value) && !string.IsNullOrWhiteSpace(value))
+                UI.State.StartupArguments[startupKey] = value.Trim();
+        }
+
+        private static Dictionary<string, string> ParseQueryString(string query)
+        {
+            var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(query) || query[0] != '?')
+                return dict;
+            foreach (var pair in query.Substring(1).Split('&'))
+            {
+                var eq = pair.IndexOf('=');
+                if (eq < 0)
+                    continue;
+                var key = Uri.UnescapeDataString(pair.Substring(0, eq).Replace('+', ' '));
+                var value = Uri.UnescapeDataString(pair.Substring(eq + 1).Replace('+', ' '));
+                dict[key] = value;
+            }
+            return dict;
+        }
+
+        private static async Task<(string? accessToken, string? identityServerUrl, string? volumeUrl, string? volumeName)> ExchangeLaunchCodeAsync(string exchangeUrl, string code)
+        {
+            try
+            {
+                using var client = new HttpClient();
+                client.Timeout = TimeSpan.FromSeconds(15);
+                var body = new { code };
+                var json = JsonConvert.SerializeObject(body);
+                using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                using var response = await client.PostAsync(exchangeUrl, content).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                    return (null, null, null, null);
+                var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var obj = JsonConvert.DeserializeObject<JObject>(responseJson);
+                if (obj == null)
+                    return (null, null, null, null);
+                return (
+                    obj["access_token"]?.ToString(),
+                    obj["identity_server_url"]?.ToString(),
+                    obj["volume_url"]?.ToString(),
+                    obj["volume_name"]?.ToString());
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[Viking] Launch code exchange error: {ex.Message}", "Viking");
+                return (null, null, null, null);
+            }
+        }
+
+        private static ApplicationSettings? ShowLoginWindowWithLaunchResult(string initialApiToken, string initialIdentityServerUrl, string? initialVolumeUrl, string? initialVolumeName = null)
+        {
+            LoginWindow wpfLoginWindow = new();
+            wpfLoginWindow.InitialApiToken = initialApiToken;
+            wpfLoginWindow.InitialIdentityServerUrl = string.IsNullOrWhiteSpace(initialIdentityServerUrl) ? null : initialIdentityServerUrl;
+            wpfLoginWindow.InitialVolumeUrl = string.IsNullOrWhiteSpace(initialVolumeUrl) ? null : initialVolumeUrl;
+            wpfLoginWindow.InitialVolumeName = string.IsNullOrWhiteSpace(initialVolumeName) ? null : initialVolumeName;
+            return ShowLoginWindowFromDialog(wpfLoginWindow);
+        }
 
         /// <summary>
         /// Initialize the Mathnet Numerics lib
@@ -204,105 +353,6 @@ namespace Viking
             }
         }
 
-        /// <summary>
-        /// Handles viking://open?code=...&volume=... protocol. Returns true if args contained a viking:// URL and it was handled (appSettings may be null if user cancelled).
-        /// </summary>
-        private static bool TryHandleVikingOpenUrl(string[] args, out ApplicationSettings? appSettings)
-        {
-            appSettings = null;
-            string? vikingUrl = args?.FirstOrDefault(a => a?.StartsWith("viking://", StringComparison.OrdinalIgnoreCase) == true);
-            if (string.IsNullOrEmpty(vikingUrl))
-                return false;
-
-            if (!Uri.TryCreate(vikingUrl, UriKind.Absolute, out Uri? uri) || string.IsNullOrEmpty(uri?.Query))
-                return false;
-
-            var query = ParseQueryString(uri.Query);
-            string? code = query.TryGetValue("code", out var c) ? c?.Trim() : null;
-            string? volume = query.TryGetValue("volume", out var v) ? v?.Trim() : null;
-
-            if (!string.IsNullOrEmpty(code))
-            {
-                string baseUrl = Viking.Properties.Settings.Default.LaunchExchangeBaseUrl?.Trim() ?? "";
-                if (string.IsNullOrEmpty(baseUrl))
-                {
-                    Trace.WriteLine("[Viking] viking://open with code ignored: LaunchExchangeBaseUrl not configured.", "Viking");
-                    return false;
-                }
-
-                var exchangeUrl = baseUrl.TrimEnd('/') + "/api/viking/launch-exchange";
-                (string? accessToken, string? identityServerUrl, string? volumeUrl) = ExchangeLaunchCodeAsync(exchangeUrl, code).GetAwaiter().GetResult();
-                if (accessToken == null)
-                {
-                    Trace.WriteLine("[Viking] Launch code exchange failed or returned no token.", "Viking");
-                    appSettings = ShowLoginWindow(null, null, null);
-                    return true;
-                }
-                string? initialVolume = !string.IsNullOrEmpty(volumeUrl) ? volumeUrl : volume;
-                appSettings = ShowLoginWindowWithLaunchResult(accessToken, identityServerUrl ?? "", initialVolume);
-                return true;
-            }
-
-            if (!string.IsNullOrEmpty(volume))
-            {
-                appSettings = ShowLoginWindow(volume, null, null);
-                return true;
-            }
-
-            appSettings = ShowLoginWindow(null, null, null);
-            return true;
-        }
-
-        private static Dictionary<string, string> ParseQueryString(string query)
-        {
-            var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (string.IsNullOrEmpty(query) || query[0] != '?')
-                return dict;
-            foreach (var pair in query.Substring(1).Split('&'))
-            {
-                var eq = pair.IndexOf('=');
-                if (eq < 0)
-                    continue;
-                var key = Uri.UnescapeDataString(pair.Substring(0, eq).Replace('+', ' '));
-                var value = Uri.UnescapeDataString(pair.Substring(eq + 1).Replace('+', ' '));
-                dict[key] = value;
-            }
-            return dict;
-        }
-
-        private static async Task<(string? accessToken, string? identityServerUrl, string? volumeUrl)> ExchangeLaunchCodeAsync(string exchangeUrl, string code)
-        {
-            try
-            {
-                using var client = new HttpClient();
-                client.Timeout = TimeSpan.FromSeconds(15);
-                var body = new { code };
-                var json = JsonConvert.SerializeObject(body);
-                using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-                using var response = await client.PostAsync(exchangeUrl, content).ConfigureAwait(false);
-                if (!response.IsSuccessStatusCode)
-                    return (null, null, null);
-                var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                var obj = JsonConvert.DeserializeObject<Newtonsoft.Json.Linq.JObject>(responseJson);
-                if (obj == null)
-                    return (null, null, null);
-                return (obj["access_token"]?.ToString(), obj["identity_server_url"]?.ToString(), obj["volume_url"]?.ToString());
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine($"[Viking] Launch code exchange error: {ex.Message}", "Viking");
-                return (null, null, null);
-            }
-        }
-
-        private static ApplicationSettings? ShowLoginWindowWithLaunchResult(string initialApiToken, string initialIdentityServerUrl, string? initialVolumeUrl)
-        {
-            LoginWindow wpfLoginWindow = new();
-            wpfLoginWindow.InitialApiToken = initialApiToken;
-            wpfLoginWindow.InitialIdentityServerUrl = string.IsNullOrWhiteSpace(initialIdentityServerUrl) ? null : initialIdentityServerUrl;
-            wpfLoginWindow.InitialVolumeUrl = string.IsNullOrWhiteSpace(initialVolumeUrl) ? null : initialVolumeUrl;
-            return ShowLoginWindowFromDialog(wpfLoginWindow);
-        }
 
         private static ApplicationSettings? ShowLoginWindow(string? volumePath, string? username = null, string? password = null)
         {
@@ -332,6 +382,15 @@ namespace Viking
 
             UI.State.UserBearerToken = wpfLoginWindow.BearerToken;
             UI.State.UserCredentials = wpfLoginWindow.Credentials;
+            UI.State.IdentityVolumeName = string.IsNullOrWhiteSpace(wpfLoginWindow.VolumeName)
+                ? null
+                : wpfLoginWindow.VolumeName;
+            UI.State.SbfsemToolsOpenUrl = string.IsNullOrWhiteSpace(settings.SbfsemToolsOpenUrl)
+                ? "https://sbfsem-tools.com/open"
+                : settings.SbfsemToolsOpenUrl;
+            UI.State.SbfsemToolsIdentityBounceUrl = string.IsNullOrWhiteSpace(settings.SbfsemToolsIdentityBounceUrl)
+                ? "https://identity.codepharm.net:4001/SbfsemOpen/Redirect"
+                : settings.SbfsemToolsIdentityBounceUrl;
 
             if (wpfLoginWindow.BearerToken != null)
             {

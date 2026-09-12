@@ -11,6 +11,7 @@ Developer Documentation
    Database <SQL/database>
    Identity Server <Identity/identity.rst>
    sbfsem-tools Integration <Identity/sbfsem-tools.rst>
+   SBFSEM-tools deep links <Identity/sbfsem-viking-deeplinks.rst>
    Webservices <IIS/webservices.rst>
    VikingXML <viking_volume_xml>
    Troubleshooting <troubleshooting.rst>

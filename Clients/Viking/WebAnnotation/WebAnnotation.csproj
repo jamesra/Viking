@@ -200,6 +200,7 @@
 		<Compile Remove="UI\StructureTypeStructuresPage.cs" />
 		<Compile Remove="UI\StructureTypeStructuresPage.Designer.cs" />
 		<Compile Remove="View\*ContextMenuView.cs" />
+		<Compile Remove="SbfsemToolsLauncher.cs" />
 		<Compile Remove="ViewModel\Location_ViewModelBase.cs" />
 		<Compile Remove="ViewModel\Location_CanvasViewModel.cs" />
 		<Compile Remove="ViewModel\LocationLinksViewModel.cs" />

@@ -299,6 +299,15 @@ namespace WebAnnotation.ViewModel
             return menu;
         }
 
+        protected ContextMenuStrip _AddOpenInSbfsemToolsMenu(ContextMenuStrip menu)
+        {
+            long? cellId = SbfsemToolsLauncher.GetRootStructureIdForLocation(modelObj);
+            if (cellId.HasValue)
+                SbfsemToolsLauncher.AddOpenMenuItem(menu, cellId.Value, ID);
+
+            return menu;
+        }
+
         protected void _AddConvertShapeMenus(ContextMenuStrip menu)
         {
             ToolStripMenuItem menuShape = new("Change Shape");
@@ -380,6 +389,7 @@ namespace WebAnnotation.ViewModel
                 menu.Items.Add(propertiesItem);
 
                 _AddCopyLocationIDMenu(menu);
+                _AddOpenInSbfsemToolsMenu(menu);
                 _AddTerminalOffEdgeMenus(menu);
                 _AddConvertShapeMenus(menu);
                 _AddSimplifyPolygonMenus(menu);

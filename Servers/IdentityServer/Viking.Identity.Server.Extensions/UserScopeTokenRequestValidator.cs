@@ -35,7 +35,7 @@ namespace Viking.Identity.Server.Extensions
                 if (resource == null || (resource.ResourceTypeId != nameof(Volume) && resource.ResourceTypeId != nameof(SegmentationService)))
                     continue;
 
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == context.Result.ValidatedRequest.UserName);
+                var user = await ResolveUserAsync(context);
                 if (user == null)
                 {
                     context.Result.IsError = true;
@@ -51,6 +51,25 @@ namespace Viking.Identity.Server.Extensions
                     return;
                 }
             }
+        }
+
+        /// <summary>
+        /// ROPC sets UserName; viking_user_token extension grant only sets Subject (user id).
+        /// </summary>
+        private async Task<ApplicationUser> ResolveUserAsync(CustomTokenRequestValidationContext context)
+        {
+            var request = context.Result.ValidatedRequest;
+            if (!string.IsNullOrEmpty(request.UserName))
+            {
+                return await _context.Users.FirstOrDefaultAsync(u => u.UserName == request.UserName);
+            }
+
+            var subject = request.Subject?.FindFirst("sub")?.Value
+                ?? request.Subject?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(subject))
+                return null;
+
+            return await _context.Users.FirstOrDefaultAsync(u => u.Id == subject);
         }
     }
 }

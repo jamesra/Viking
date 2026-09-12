@@ -9,6 +9,7 @@ namespace Viking.Identity.Server
     /// Extension grant validator for "viking_user_token".
     /// Used by the WebApi launch-exchange endpoint to obtain an API token for a user by user_id.
     /// Only the "api" client (client credentials) should be configured to use this grant.
+    /// The Viking client may also use it when launch-exchange mints volume-scoped tokens.
     /// </summary>
     public class VikingUserTokenGrantValidator : IExtensionGrantValidator
     {

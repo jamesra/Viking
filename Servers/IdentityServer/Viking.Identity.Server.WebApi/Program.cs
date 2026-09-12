@@ -173,6 +173,9 @@ public class Program
 
             var vikingConfig = builder.Configuration.GetSection("VikingIdentityServerOptions").Get<VikingIdentityServerOptions>();
 
+            builder.Services.Configure<VikingIdentityServerOptions>(
+                builder.Configuration.GetSection(nameof(VikingIdentityServerOptions)));
+
             // Configure Authentication
             builder.Services.AddAuthentication(OAuth2IntrospectionDefaults.AuthenticationScheme)
                 .AddOAuth2Introspection(options =>

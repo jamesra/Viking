@@ -34,6 +34,7 @@ namespace WebAnnotation.View
 
                 _AddExportMenus(menu);
                 _AddCopyLocationIDMenu(menu);
+                _AddOpenInSbfsemToolsMenu(menu);
                 _AddTerminalOffEdgeMenus(menu);
                 Parent.ContextMenu_AddUnverifiedBranchTerminals(menu);
                 _AddConvertShapeMenus(menu);

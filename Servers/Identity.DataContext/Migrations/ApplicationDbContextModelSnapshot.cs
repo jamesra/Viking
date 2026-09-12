@@ -473,6 +473,10 @@ namespace Viking.Identity.Data.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("VolumeName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.Property<string>("VolumeUrl")
                         .HasMaxLength(2048)
                         .HasColumnType("nvarchar(2048)");

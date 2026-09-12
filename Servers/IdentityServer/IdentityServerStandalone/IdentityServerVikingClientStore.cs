@@ -134,7 +134,7 @@ namespace Viking.Identity
                 return new Client
                 {
                     ClientId = clientId,
-                    AllowedGrantTypes = new[] { GrantType.AuthorizationCode, GrantType.ResourceOwnerPassword, GrantType.ClientCredentials },
+                    AllowedGrantTypes = new[] { GrantType.AuthorizationCode, GrantType.ResourceOwnerPassword, GrantType.ClientCredentials, VikingUserTokenGrantValidator.VikingUserTokenGrantType },
                     ClientSecrets = { _clientSecret },
                     RedirectUris = { new Uri(_redirectUri, "signin-oidc").ToString() },
                     FrontChannelLogoutUri = new Uri(_redirectUri,"signout-oidc").ToString(),

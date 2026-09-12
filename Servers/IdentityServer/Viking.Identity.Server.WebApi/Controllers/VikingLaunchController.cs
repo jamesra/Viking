@@ -17,7 +17,8 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
 {
     /// <summary>
     /// One-use launch code exchange for the viking://open protocol.
-    /// Viking calls POST /api/viking/launch-exchange with the code and receives access_token + identity_server_url + volume_url.
+    /// Viking calls POST /api/viking/launch-exchange with the code and receives a volume-scoped
+    /// access_token + identity_server_url + volume_url (+ volume_name when known).
     /// </summary>
     [ApiController]
     [Route("api/viking")]
@@ -54,13 +55,21 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
         /// </summary>
         public class LaunchExchangeResponse
         {
+            [System.Text.Json.Serialization.JsonPropertyName("access_token")]
             public string AccessToken { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("identity_server_url")]
             public string IdentityServerUrl { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("volume_url")]
             public string VolumeUrl { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("volume_name")]
+            public string VolumeName { get; set; }
         }
 
         /// <summary>
-        /// Exchanges a one-use launch code for an API token and optional volume URL.
+        /// Exchanges a one-use launch code for a volume-scoped API token and optional volume URL.
         /// No bearer auth required. Code is invalidated after first successful use.
         /// </summary>
         [AllowAnonymous]
@@ -110,23 +119,18 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
 
             var authority = _identityOptions.Authority?.TrimEnd('/') ?? "";
             var tokenEndpoint = authority + "/connect/token";
-            var scopes = "openid profile " + _identityOptions.ApiScopeNames;
+            var volumeName = await ResolveVolumeNameAsync(launchCode);
 
-            var form = new Dictionary<string, string>
-            {
-                ["grant_type"] = "viking_user_token",
-                ["user_id"] = launchCode.UserId,
-                ["client_id"] = "api",
-                ["client_secret"] = _identityOptions.Secret ?? "",
-                ["scope"] = scopes
-            };
-
-            using var httpClient = _httpClientFactory.CreateClient();
-            using var content = new FormUrlEncodedContent(form);
-            HttpResponseMessage tokenResponse;
+            string accessToken;
             try
             {
-                tokenResponse = await httpClient.PostAsync(tokenEndpoint, content);
+                accessToken = await MintAccessTokenAsync(httpClient: null, tokenEndpoint, launchCode, volumeName);
+            }
+            catch (LaunchTokenException ex)
+            {
+                await ReleaseLaunchCodeAsync(code, now);
+                _logger.LogWarning("Launch exchange token mint failed: {Error}", ex.Message);
+                return StatusCode(ex.StatusCode, new { error = ex.Message });
             }
             catch (Exception ex)
             {
@@ -135,33 +139,115 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
                 return StatusCode(503, new { error = "identity service unavailable" });
             }
 
+            return Ok(new LaunchExchangeResponse
+            {
+                AccessToken = accessToken,
+                IdentityServerUrl = authority,
+                VolumeUrl = launchCode.VolumeUrl ?? "",
+                VolumeName = volumeName ?? ""
+            });
+        }
+
+        private async Task<string> ResolveVolumeNameAsync(VikingLaunchCode launchCode)
+        {
+            if (!string.IsNullOrWhiteSpace(launchCode.VolumeName))
+                return launchCode.VolumeName.Trim();
+
+            if (string.IsNullOrWhiteSpace(launchCode.VolumeUrl))
+                return null;
+
+            var url = launchCode.VolumeUrl.Trim().TrimEnd('/');
+            var volumes = await _context.Volume.AsNoTracking().ToListAsync();
+            foreach (var v in volumes)
+            {
+                if (v.Endpoint == null)
+                    continue;
+                if (string.Equals(v.Endpoint.ToString().TrimEnd('/'), url, StringComparison.OrdinalIgnoreCase))
+                    return v.Name;
+            }
+
+            return null;
+        }
+
+        private async Task<string> MintAccessTokenAsync(HttpClient httpClient, string tokenEndpoint, VikingLaunchCode launchCode, string volumeName)
+        {
+            using var ownedClient = httpClient == null ? _httpClientFactory.CreateClient() : null;
+            var client = httpClient ?? ownedClient;
+
+            // Prefer a Viking client token with volume scopes when we know the volume.
+            if (!string.IsNullOrWhiteSpace(volumeName))
+            {
+                var resource = await _context.Resource
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(r => r.Name == volumeName);
+
+                if (resource != null)
+                {
+                    var permissionsQuery = await _context.UserResourcePermissions(launchCode.UserId, resource.Id);
+                    var permissions = await permissionsQuery.ToListAsync();
+                    if (permissions != null && permissions.Count > 0)
+                    {
+                        var scopeParts = new List<string>
+                        {
+                            "openid",
+                            "profile",
+                            "Viking.Annotation"
+                        };
+                        foreach (var p in permissions)
+                            scopeParts.Add(ResourceScopeNames.ToScope(volumeName, p));
+
+                        var volumeToken = await RequestTokenAsync(client, tokenEndpoint, new Dictionary<string, string>
+                        {
+                            ["grant_type"] = "viking_user_token",
+                            ["user_id"] = launchCode.UserId,
+                            ["client_id"] = "Viking",
+                            ["client_secret"] = _identityOptions.Secret ?? "",
+                            ["scope"] = string.Join(" ", scopeParts)
+                        });
+
+                        if (!string.IsNullOrEmpty(volumeToken))
+                            return volumeToken;
+
+                        _logger.LogWarning("Launch exchange: Viking volume-scoped token request failed; falling back to api token");
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Launch exchange: user {UserId} has no permissions on volume {VolumeName}", launchCode.UserId, volumeName);
+                    }
+                }
+            }
+
+            // Fallback: api client token (openid/profile + configured API scopes).
+            var apiScopes = "openid profile " + _identityOptions.ApiScopeNames;
+            var apiToken = await RequestTokenAsync(client, tokenEndpoint, new Dictionary<string, string>
+            {
+                ["grant_type"] = "viking_user_token",
+                ["user_id"] = launchCode.UserId,
+                ["client_id"] = "api",
+                ["client_secret"] = _identityOptions.Secret ?? "",
+                ["scope"] = apiScopes
+            });
+
+            if (string.IsNullOrEmpty(apiToken))
+                throw new LaunchTokenException(502, "invalid token response");
+
+            return apiToken;
+        }
+
+        private async Task<string> RequestTokenAsync(HttpClient httpClient, string tokenEndpoint, Dictionary<string, string> form)
+        {
+            using var content = new FormUrlEncodedContent(form);
+            using var tokenResponse = await httpClient.PostAsync(tokenEndpoint, content);
             if (!tokenResponse.IsSuccessStatusCode)
             {
-                await ReleaseLaunchCodeAsync(code, now);
                 var body = await tokenResponse.Content.ReadAsStringAsync();
                 _logger.LogWarning("Launch exchange: token request failed {StatusCode} {Body}", tokenResponse.StatusCode, body);
-                return Unauthorized(new { error = "token request failed" });
+                return null;
             }
 
             var tokenJson = await tokenResponse.Content.ReadAsStringAsync();
             using var doc = System.Text.Json.JsonDocument.Parse(tokenJson);
-            var root = doc.RootElement;
-            var accessToken = root.TryGetProperty("access_token", out var at) ? at.GetString() : null;
-            if (string.IsNullOrEmpty(accessToken))
-            {
-                await ReleaseLaunchCodeAsync(code, now);
-                _logger.LogWarning("Launch exchange: no access_token in response");
-                return StatusCode(502, new { error = "invalid token response" });
-            }
-
-            var response = new LaunchExchangeResponse
-            {
-                AccessToken = accessToken,
-                IdentityServerUrl = authority,
-                VolumeUrl = launchCode.VolumeUrl ?? ""
-            };
-
-            return Ok(response);
+            return doc.RootElement.TryGetProperty("access_token", out var at) ? at.GetString() : null;
         }
 
         private async Task ReleaseLaunchCodeAsync(string code, DateTime claimedAtUtc)
@@ -169,6 +255,12 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             await _context.VikingLaunchCodes
                 .Where(c => c.Code == code && c.UsedAtUtc == claimedAtUtc)
                 .ExecuteUpdateAsync(s => s.SetProperty(c => c.UsedAtUtc, (DateTime?)null));
+        }
+
+        private sealed class LaunchTokenException : Exception
+        {
+            public int StatusCode { get; }
+            public LaunchTokenException(int statusCode, string message) : base(message) => StatusCode = statusCode;
         }
     }
 }
