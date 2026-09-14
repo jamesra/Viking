@@ -82,6 +82,8 @@ function Read-Cases {
     $cases = @()
     foreach ($c in $file.cases) {
         if (-not $c.volume -or -not $c.locations) { continue }
+        # Open = tracked BajajMultiTest failure not yet fixed; no accepted baseline to compare against.
+        if ($c.open -eq $true) { continue }
         $ids = @($c.locations | ForEach-Object { [string]$_ })
         $cams = if ($c.cameras) { @($c.cameras) } else { $defaultCameras }
         $desc = if ($c.fix) { "$($c.problem) Fix: $($c.fix)" } else { [string]$c.problem }

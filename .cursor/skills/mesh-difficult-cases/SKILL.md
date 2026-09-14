@@ -34,11 +34,51 @@ surface?) and as a picture (does it still look right?).
   folds, `below` for caps, `oblique-back` for stacked faces on a corresponding edge. A case with no `cameras`
   gets `oblique` + `side`.
 - `shots2D` (optional) are extra 2D zooms for the case.
+- `open` (optional, default false): when `true`, the case is **tracked but not regression-gated**.
+  `DifficultCaseRegressionTests` and `Compare-DifficultCases.ps1` skip it. Use this for unfixed
+  BajajMultiTest failures you want on the list before a fix lands.
+- `failureKind` (optional): `SliceFailureKind` name from the failed-slices header
+  (`Topology`, `FaceGenerationException`, `InvalidSurface`, `UntiledLinkedPair`). Set by
+  `Import-FailedSlices.ps1`; ignored by tests.
 
 **Append when you fix a case. Never delete a case because it started failing.** A synthetic unit test with the
 copied coordinates is still worth writing (it runs offline and pins the exact geometry); the list entry is in
 addition, so the live annotations keep being checked. `DifficultCaseList.Load()` parses the file for the tests;
 `Compare-DifficultCases.ps1` reads the same file.
+
+### Failure kinds (failed_slices `[Kind]` header)
+
+| Kind | Meaning |
+|---|---|
+| `Topology` | SliceGraph could not build topology |
+| `FaceGenerationException` | GenerateFaces threw |
+| `InvalidSurface` | Mesh exists but manifold report rejects it (holes, non-manifold, winding) |
+| `UntiledLinkedPair` | LocationLinked cross-band pair has no spanning face (even if manifold looks clean) |
+
+When recording `problem`, keep the `[Kind]` from the failed_slices comment so imports stay filterable.
+
+## Tracking failures (open) vs regressions (closed)
+
+- `open: true` → tracked from BajajMultiTest; unit tests + Compare skip it; no baselines required yet.
+- omit `open` / `open: false` → must mesh complete (raw + curvefit) and have baselines under `baselines/`.
+
+### Promote failed_slices → difficult-cases (open)
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .cursor\skills\mesh-difficult-cases\scripts\Import-FailedSlices.ps1 `
+  -FailedSlicesPath C:\Temp\Perf\...\bajajmultitest_failed_slices.txt `
+  -Volume RPC1 `
+  -Kind UntiledLinkedPair   # optional filter
+```
+
+Dedupe is by case key (`VOLUME-id-id-…`). Do **not** run Compare/`-Accept` on open cases.
+
+### Close an open case (after fix)
+
+1. Confirm with BajajTest `--repro-locations …` (and optionally `--correction none` vs default).
+2. Set `open` to false (or remove it); rewrite `problem` (stage + defect) and `fix` (code change).
+3. Run DifficultCases unit filter + Compare; `-Accept` baselines for that Case.
+4. Commit json + baselines + code together.
 
 Baselines for each case live in `MorphologyMeshTest/DifficultCases/baselines/<VOLUME>-<ids>/`: `Final-mesh-2d.png`,
 one `Final-mesh-3d-<camera>.png` per listed camera, and `manifold.txt` (the `MeshManifoldReport` of the accepted
@@ -138,14 +178,18 @@ with the code change that made them true.
 
 ## Adding a case (checklist)
 
+**Closed (fixed) case:**
+
 ```text
 - [ ] Case fixed; synthetic unit test added where the geometry could be copied
 - [ ] Step 1 and Step 2 run BEFORE the fix's line is added: all past cases unchanged or judged improved
-- [ ] Case object appended to difficult-cases.json with volume, locations, problem, fix, and cameras
+- [ ] Case object appended to difficult-cases.json with volume, locations, problem, fix, and cameras (open omitted/false)
 - [ ] Compare-DifficultCases.ps1 -Case <ids> -Accept  → baselines/<VOLUME>-<ids>/ created
 - [ ] dotnet test --filter TestCategory=DifficultCases green
 - [ ] difficult-cases.json, baselines/, and the code change go in the same commit
 ```
+
+**Open (unfixed) case:** use `Import-FailedSlices.ps1` or append manually with `open: true`; do not accept baselines until closed.
 
 ## Files
 
@@ -153,9 +197,10 @@ with the code change that made them true.
 |---|---|
 | `MorphologyMeshTest/DifficultCases/difficult-cases.json` | The list |
 | `MorphologyMeshTest/DifficultCases/DifficultCaseList.cs` | Parser shared by the test |
-| `MorphologyMeshTest/DifficultCases/DifficultCaseRegressionTests.cs` | Raw + smoothed complete-surface test per line |
+| `MorphologyMeshTest/DifficultCases/DifficultCaseRegressionTests.cs` | Raw + smoothed complete-surface test per line (skips `open`) |
 | `MorphologyMeshTest/DifficultCases/baselines/<case>/` | Accepted PNGs and `manifold.txt` |
-| `scripts/Compare-DifficultCases.ps1` | Capture, diff, `review.html`, `-Accept` |
+| `scripts/Compare-DifficultCases.ps1` | Capture, diff, `review.html`, `-Accept` (skips `open`) |
+| `scripts/Import-FailedSlices.ps1` | Promote failed_slices → open cases |
 | `scripts/ImageDiff.cs` | Pixel diff and downscale, compiled by the script via `Add-Type` |
 | `scripts/review-template.html` | Static page the script fills with `{{SUMMARY}}` and `{{CASES}}` |
 

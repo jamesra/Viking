@@ -58,6 +58,19 @@ namespace MorphologyMeshTest.DifficultCases
         /// <summary>The code change that made the slice right.</summary>
         public string Fix { get; set; }
 
+        /// <summary>
+        /// When true the slice is tracked from a BajajMultiTest failure list but is not yet required to mesh
+        /// cleanly.  Regression tests and Compare-DifficultCases skip open cases until a fix lands and
+        /// <c>open</c> is cleared (with baselines accepted).
+        /// </summary>
+        public bool Open { get; set; }
+
+        /// <summary>
+        /// Optional <c>SliceFailureKind</c> name from the failed-slices header (Topology, InvalidSurface,
+        /// UntiledLinkedPair, …).  Informational for open imports; ignored by regression tests.
+        /// </summary>
+        public string FailureKind { get; set; }
+
         public List<DifficultCaseCamera> Cameras { get; set; } = [];
 
         public List<DifficultCaseShot2D> Shots2D { get; set; } = [];

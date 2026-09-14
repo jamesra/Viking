@@ -6,7 +6,8 @@
     "cameras: 3D placements worth capturing for this case (preset: top, oblique, oblique-back, side, front, below; or azimuth/elevation/distance).",
     "shots2D (optional): extra 2D zooms, {stage, lookAt:[x,y], downsample} in the slice XY frame.",
     "Every case is meshed raw and smoothed by DifficultCaseRegressionTests; its Final-mesh PNGs are compared against",
-    "baselines/<VOLUME>-<ids>/ by the mesh-difficult-cases skill scripts.  Append new cases; never remove one because it started failing."
+    "baselines/<VOLUME>-<ids>/ by the mesh-difficult-cases skill scripts.  Append new cases; never remove one because it started failing.",
+    "open: true marks a BajajMultiTest failure that is tracked but not yet required to pass (tests and Compare skip it until fixed)."
   ],
   "cases": [
     {
@@ -128,6 +129,1270 @@
       "problem": "Meshes clean from the raw annotations but with CurveFitProcesses the two same-section contours were translated into each other (same-section shapes 0 and 1 intersect; inconsistent:3).  Curvefit can move process/terminal contours and two processes of one cell can run close enough to collide.",
       "fix": "MorphologyGraph.CurveFitProcesses halves a node's translation until the moved contour no longer intersects a same-section contour it did not already touch (LimitOffsetToAvoidSameSectionOverlap).",
       "cameras": [ { "preset": "top" }, { "preset": "oblique" } ]
+    },
+    {
+      "volume": "RC1",
+      "locations": [1430428, 1430429],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:104 manifold:103 nonManifold:0 inconsistent:0 contourSeam:103 holes:3 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [175855, 175856],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:700 manifold:819 nonManifold:0 inconsistent:0 contourSeam:461 holes:1 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [175901, 175903, 1421871],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:50 manifold:51 nonManifold:0 inconsistent:0 contourSeam:39 holes:9 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [175904, 175905, 199679],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:45 manifold:46 nonManifold:0 inconsistent:0 contourSeam:37 holes:6 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [175917, 175919, 175920],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:130 manifold:137 nonManifold:0 inconsistent:0 contourSeam:90 holes:26 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [175947, 175948, 1421881],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:72 manifold:85 nonManifold:0 inconsistent:3 contourSeam:46 holes:0 isolated:2 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [175999, 176000, 1421902],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:44 manifold:37 nonManifold:0 inconsistent:0 contourSeam:41 holes:17 isolated:7 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [176019, 176021, 1421851],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:169 manifold:161 nonManifold:0 inconsistent:0 contourSeam:139 holes:46 isolated:13 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [176023, 176025, 176026],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:154 manifold:158 nonManifold:0 inconsistent:1 contourSeam:124 holes:22 isolated:8 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 34,131,54 3 UNTILED: perimeter edge 132-133 CONTOUR already at face capacity | 1 of 3 untiled region(s) could not be closed | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [176038, 176039, 176040],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:136 manifold:142 nonManifold:0 inconsistent:0 contourSeam:100 holes:24 isolated:6 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [176073, 176074, 176075],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:127 manifold:136 nonManifold:0 inconsistent:0 contourSeam:90 holes:19 isolated:5 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [18575],
+      "open": true,
+      "problem": "structure=410 [Topology] topology initialisation failed | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [198285, 198287, 1425992],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:97 manifold:138 nonManifold:0 inconsistent:8 contourSeam:15 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [198327, 198328],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:41 manifold:43 nonManifold:0 inconsistent:0 contourSeam:34 holes:3 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [198865, 198867],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:66 manifold:66 nonManifold:0 inconsistent:0 contourSeam:64 holes:2 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [198892, 198894, 198895, 198898],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:1309 manifold:1553 nonManifold:0 inconsistent:4 contourSeam:793 holes:28 isolated:17 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 840,148,513 8 UNTILED: perimeter edge 512-513 CONTOUR already at face capacity | 1 of 3 untiled region(s) could not be closed | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [198892, 198894, 198895, 198898, 198900],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:1492 manifold:1819 nonManifold:0 inconsistent:6 contourSeam:781 holes:57 isolated:136 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 406,174,946 3 UNTILED: perimeter edge 945-946 CONTOUR already at face capacity | region Reg: 294,806,295 8 UNTILED: perimeter edge 299-300 CONTOUR already at face capacity | region Reg: 1008,608,1009 1 UNTILED: perimeter edge 1008-1009 CONTOUR already at face capacity | 3 of 5 untiled region(s) could not be closed | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [198895, 198897, 198901, 322824, 1456820],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:531 manifold:631 nonManifold:0 inconsistent:0 contourSeam:306 holes:25 isolated:6 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 4,274,71 3 UNTILED: perimeter edge 71-72 CONTOUR already at face capacity | 1 of 1 untiled region(s) could not be closed | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [199101, 199102, 1417594],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:777 manifold:936 nonManifold:0 inconsistent:0 contourSeam:455 holes:4 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 145,347,429 2 UNTILED: perimeter edge 429-454 UNKNOWN already at face capacity | 1 of 3 untiled region(s) could not be closed | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [199775, 199776, 1430415],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:532 manifold:540 nonManifold:0 inconsistent:0 contourSeam:508 holes:8 isolated:4 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [200001, 200005, 201520],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:155 manifold:163 nonManifold:0 inconsistent:3 contourSeam:139 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [200638, 201465, 383870],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:1201 manifold:1396 nonManifold:0 inconsistent:1 contourSeam:808 holes:3 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 155,613,802 2 UNTILED: perimeter edge 155-802 SURFACE already at face capacity | 1 of 6 untiled region(s) could not be closed | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [201474, 201475, 1420214],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:322 manifold:380 nonManifold:0 inconsistent:6 contourSeam:206 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [201493, 201495, 201496, 201497],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:772 manifold:837 nonManifold:0 inconsistent:2 contourSeam:626 holes:16 isolated:2 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 341,340,630 2 UNTILED: perimeter edge 340-341 CONTOUR already at face capacity | 1 of 4 untiled region(s) could not be closed | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [201796, 201799],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:25 manifold:25 nonManifold:0 inconsistent:0 contourSeam:23 holes:2 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [304975, 304976, 304977],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:377 manifold:389 nonManifold:0 inconsistent:0 contourSeam:321 holes:32 isolated:33 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 298,77,299 1 UNTILED: perimeter edge 298-299 CONTOUR already at face capacity | region Reg: 87,86,302 6 UNTILED: perimeter edge 86-87 CONTOUR already at face capacity | region Reg: 130,129,314 3 UNTILED: perimeter edge 314-315 CONTOUR already at face capacity | 3 of 4 untiled region(s) could not be closed | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [315853, 315854, 315880],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:378 manifold:387 nonManifold:0 inconsistent:0 contourSeam:356 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 5,176,48 1 UNTILED: perimeter edge 5-48 UNKNOWN already at face capacity | 1 of 2 untiled region(s) could not be closed | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [316028, 316029, 1422509],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:150 manifold:161 nonManifold:0 inconsistent:2 contourSeam:107 holes:21 isolated:7 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [320618, 320619, 320620],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:136 manifold:138 nonManifold:0 inconsistent:0 contourSeam:110 holes:22 isolated:6 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [320637, 320638, 320639, 1418701],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:1349 manifold:1920 nonManifold:0 inconsistent:64 contourSeam:48 holes:159 isolated:18 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 234,43,42 1 UNTILED: perimeter edge 42-43 CONTOUR already at face capacity | region Reg: 72,250,73 3 UNTILED: perimeter edge 249-250 CONTOUR already at face capacity | 2 of 4 untiled region(s) could not be closed | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [332159, 332161, 1422542],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:47 manifold:47 nonManifold:0 inconsistent:0 contourSeam:38 holes:9 isolated:4 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [360827, 360831, 360880],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:150 manifold:160 nonManifold:0 inconsistent:0 contourSeam:126 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | 1 of 2 untiled region(s) could not be closed | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [360982, 360983, 1425934],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:69 manifold:80 nonManifold:0 inconsistent:4 contourSeam:43 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [383879, 383880, 1420263],
+      "open": true,
+      "problem": "structure=410 [InvalidSurface] faces:1195 manifold:1385 nonManifold:0 inconsistent:4 contourSeam:749 holes:66 isolated:13 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 180,523,716 2 UNTILED: perimeter edge 716-717 CONTOUR already at face capacity | region Reg: 344,838,354 2 UNTILED: perimeter edge 838-839 CONTOUR already at face capacity | region Reg: 935,430,429 1 UNTILED: perimeter edge 429-430 CONTOUR already at face capacity | 3 of 5 untiled region(s) could not be closed | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [176018, 176020, 1381929],
+      "open": true,
+      "problem": "structure=8355 [InvalidSurface] faces:12 manifold:12 nonManifold:0 inconsistent:0 contourSeam:8 holes:2 isolated:2 forkGap:1 ribbonEdge:1 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [176190, 1321409, 1326464],
+      "open": true,
+      "problem": "structure=8366 [InvalidSurface] faces:21 manifold:19 nonManifold:0 inconsistent:0 contourSeam:5 holes:7 isolated:3 forkGap:1 ribbonEdge:12 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [176218, 176223, 1381934],
+      "open": true,
+      "problem": "structure=8370 [InvalidSurface] faces:22 manifold:20 nonManifold:0 inconsistent:0 contourSeam:22 holes:1 isolated:3 forkGap:2 ribbonEdge:1 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [198809, 359340, 1433844],
+      "open": true,
+      "problem": "structure=9197 [InvalidSurface] faces:23 manifold:30 nonManifold:0 inconsistent:0 contourSeam:6 holes:1 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [317230, 317233, 1421189],
+      "open": true,
+      "problem": "structure=17791 [InvalidSurface] faces:34 manifold:38 nonManifold:0 inconsistent:0 contourSeam:6 holes:4 isolated:1 forkGap:0 ribbonEdge:16 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [320624, 320628, 1434256],
+      "open": true,
+      "problem": "structure=18162 [InvalidSurface] faces:7 manifold:5 nonManifold:0 inconsistent:0 contourSeam:7 holes:4 isolated:6 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [320628, 320630, 1434258],
+      "open": true,
+      "problem": "structure=18162 [InvalidSurface] faces:40 manifold:56 nonManifold:0 inconsistent:0 contourSeam:6 holes:1 isolated:2 forkGap:0 ribbonEdge:1 singleTriPolyline:1 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [354870, 1429133, 1429134],
+      "open": true,
+      "problem": "structure=20948 [InvalidSurface] faces:11 manifold:11 nonManifold:0 inconsistent:0 contourSeam:7 holes:2 isolated:4 forkGap:1 ribbonEdge:1 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [804891, 1429133, 1429134],
+      "open": true,
+      "problem": "structure=20948 [InvalidSurface] faces:17 manifold:16 nonManifold:0 inconsistent:0 contourSeam:9 holes:2 isolated:0 forkGap:1 ribbonEdge:7 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [359398, 359400, 889765, 1418052, 1418055],
+      "open": true,
+      "problem": "structure=21353 [InvalidSurface] faces:27 manifold:31 nonManifold:0 inconsistent:0 contourSeam:9 holes:8 isolated:3 forkGap:0 ribbonEdge:2 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [889765, 1418052, 1418053],
+      "open": true,
+      "problem": "structure=21353 [InvalidSurface] faces:13 manifold:11 nonManifold:0 inconsistent:0 contourSeam:11 holes:3 isolated:2 forkGap:1 ribbonEdge:2 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [359342, 1418778],
+      "open": true,
+      "problem": "structure=21358 [InvalidSurface] faces:57 manifold:73 nonManifold:0 inconsistent:2 contourSeam:0 holes:0 isolated:0 forkGap:0 ribbonEdge:25 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [359401, 359402, 1417998, 1425976],
+      "open": true,
+      "problem": "structure=21370 [InvalidSurface] faces:17 manifold:17 nonManifold:0 inconsistent:0 contourSeam:10 holes:2 isolated:3 forkGap:2 ribbonEdge:3 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [359421, 359424, 1433454],
+      "open": true,
+      "problem": "structure=21375 [InvalidSurface] faces:25 manifold:26 nonManifold:0 inconsistent:0 contourSeam:3 holes:7 isolated:1 forkGap:0 ribbonEdge:13 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [360473, 360475, 1433891],
+      "open": true,
+      "problem": "structure=21472 [InvalidSurface] faces:9 manifold:7 nonManifold:0 inconsistent:0 contourSeam:9 holes:1 isolated:5 forkGap:2 ribbonEdge:1 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [361013, 1425943, 1430780],
+      "open": true,
+      "problem": "structure=21555 [InvalidSurface] faces:19 manifold:24 nonManifold:0 inconsistent:0 contourSeam:4 holes:3 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [375479, 1424492],
+      "open": true,
+      "problem": "structure=22687 [InvalidSurface] faces:21 manifold:25 nonManifold:0 inconsistent:2 contourSeam:0 holes:0 isolated:0 forkGap:0 ribbonEdge:13 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [1416122, 1416124, 1416127],
+      "open": true,
+      "problem": "structure=165422 [InvalidSurface] faces:66 manifold:79 nonManifold:0 inconsistent:6 contourSeam:3 holes:7 isolated:1 forkGap:1 ribbonEdge:29 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [1417570, 1417571, 1417572],
+      "open": true,
+      "problem": "structure=165826 [InvalidSurface] faces:29 manifold:32 nonManifold:0 inconsistent:0 contourSeam:0 holes:5 isolated:0 forkGap:0 ribbonEdge:18 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [1425165, 1425169],
+      "open": true,
+      "problem": "structure=167837 [InvalidSurface] faces:45 manifold:57 nonManifold:0 inconsistent:2 contourSeam:0 holes:0 isolated:0 forkGap:0 ribbonEdge:21 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [1425223, 1425224, 1425225, 1431081],
+      "open": true,
+      "problem": "structure=167856 [InvalidSurface] faces:28 manifold:33 nonManifold:0 inconsistent:0 contourSeam:3 holes:3 isolated:0 forkGap:0 ribbonEdge:12 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [1425954, 1425955, 1433696],
+      "open": true,
+      "problem": "structure=168069 [InvalidSurface] faces:7 manifold:5 nonManifold:0 inconsistent:0 contourSeam:7 holes:3 isolated:7 forkGap:1 ribbonEdge:0 singleTriPolyline:1 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [1430452, 1430454, 1430914],
+      "open": true,
+      "problem": "structure=168843 [InvalidSurface] faces:10 manifold:6 nonManifold:0 inconsistent:0 contourSeam:8 holes:5 isolated:2 forkGap:4 ribbonEdge:1 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [1430455, 1434579, 1434581],
+      "open": true,
+      "problem": "structure=168843 [InvalidSurface] faces:27 manifold:31 nonManifold:0 inconsistent:0 contourSeam:3 holes:1 isolated:2 forkGap:2 ribbonEdge:13 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [1454725, 1454728, 1454747],
+      "open": true,
+      "problem": "structure=171904 [InvalidSurface] faces:16 manifold:16 nonManifold:0 inconsistent:0 contourSeam:12 holes:2 isolated:4 forkGap:1 ribbonEdge:1 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [1454728, 1454730, 1454748],
+      "open": true,
+      "problem": "structure=171904 [InvalidSurface] faces:19 manifold:18 nonManifold:0 inconsistent:0 contourSeam:17 holes:2 isolated:2 forkGap:1 ribbonEdge:1 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RC1",
+      "locations": [1454730, 1454731, 1454752],
+      "open": true,
+      "problem": "structure=171904 [InvalidSurface] faces:18 manifold:13 nonManifold:0 inconsistent:0 contourSeam:18 holes:7 isolated:5 forkGap:2 ribbonEdge:1 singleTriPolyline:0 | Tracked from RC1 structure 410 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RC1_410_ws1_after, 2026-09-12).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [102434, 102614, 364316, 364317, 364318, 364384],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:840 manifold:996 nonManifold:0 inconsistent:19 contourSeam:485 holes:43 isolated:52 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 45,176,175 2 UNTILED: perimeter edge 175-176 CONTOUR already at face capacity | region Reg: 331,330,479 8 UNTILED: perimeter edge 335-336 CONTOUR already at face capacity | 2 of 6 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [102803, 145352, 145359, 145362, 364714],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:579 manifold:606 nonManifold:0 inconsistent:0 contourSeam:525 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 48,66,49 10 UNTILED: perimeter edge 51-52 CONTOUR already at face capacity | 1 of 1 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [102819, 145610, 364592],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:225 manifold:223 nonManifold:0 inconsistent:0 contourSeam:223 holes:6 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [105837, 105877, 105879, 365896, 367181],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:970 manifold:1061 nonManifold:0 inconsistent:0 contourSeam:786 holes:2 isolated:2 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [108596, 108598, 108605],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:253 manifold:284 nonManifold:0 inconsistent:1 contourSeam:173 holes:18 isolated:2 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 14,111,41 2 UNTILED: perimeter edge 110-111 CONTOUR already at face capacity | 1 of 5 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [109167, 109171],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:627 manifold:626 nonManifold:0 inconsistent:0 contourSeam:627 holes:2 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 160,162,161 3 UNTILED: medial axis produced no interior points | 1 of 1 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [110239, 112778, 112796],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:1139 manifold:1217 nonManifold:0 inconsistent:2 contourSeam:968 holes:15 isolated:8 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [113026, 113894],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:245 manifold:259 nonManifold:0 inconsistent:0 contourSeam:212 holes:5 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [133816, 133820],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:508 manifold:538 nonManifold:0 inconsistent:0 contourSeam:442 holes:6 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [145421, 145422, 145423, 364304],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:461 manifold:521 nonManifold:0 inconsistent:0 contourSeam:339 holes:2 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [145472, 145473],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:227 manifold:243 nonManifold:0 inconsistent:0 contourSeam:194 holes:1 isolated:58 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 39,61,40 52 UNTILED: triangulation failed (ConstrainedTriangulationException: Constrained triangulation did not honour its ring: 152 faces; missing ring edges 16-17) | 1 of 3 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [145474, 145475],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:60 manifold:62 nonManifold:0 inconsistent:0 contourSeam:53 holes:3 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [145741, 145755, 146044, 146089],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:2611 manifold:2848 nonManifold:0 inconsistent:0 contourSeam:2131 holes:6 isolated:4 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [146117, 274054, 365069],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:1294 manifold:1346 nonManifold:0 inconsistent:5 contourSeam:1190 holes:0 isolated:5 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [263485, 263486, 332796],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:338 manifold:353 nonManifold:0 inconsistent:5 contourSeam:308 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [364549, 364550],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:162 manifold:163 nonManifold:0 inconsistent:0 contourSeam:155 holes:5 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [364728, 364729, 364761],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:159 manifold:169 nonManifold:0 inconsistent:2 contourSeam:117 holes:22 isolated:9 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [365104, 365105],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:655 manifold:694 nonManifold:0 inconsistent:1 contourSeam:573 holes:4 isolated:2 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [365269, 365270],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:112 manifold:145 nonManifold:0 inconsistent:0 contourSeam:40 holes:6 isolated:2 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 54,23,44 3 UNTILED: perimeter edge 44-45 CONTOUR already at face capacity | region Reg: 23,44,45 4 UNTILED: perimeter edge 23-44 SURFACE already at face capacity | 2 of 4 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [365640, 365641],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:121 manifold:127 nonManifold:0 inconsistent:0 contourSeam:105 holes:4 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [365665, 365666, 365667],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:145 manifold:145 nonManifold:0 inconsistent:0 contourSeam:140 holes:5 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 138,40,109 2 UNTILED: perimeter edge 40-41 CONTOUR already at face capacity | 1 of 3 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [365930, 365948, 365949],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:232 manifold:242 nonManifold:0 inconsistent:0 contourSeam:187 holes:25 isolated:15 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [366338, 366341],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:97 manifold:104 nonManifold:0 inconsistent:0 contourSeam:79 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | 1 of 3 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [366463, 366464],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:107 manifold:114 nonManifold:0 inconsistent:0 contourSeam:87 holes:6 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 78,27,77 1 UNTILED: perimeter edge 77-78 CONTOUR already at face capacity | 1 of 3 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [366486, 366489],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:40 manifold:56 nonManifold:0 inconsistent:8 contourSeam:8 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [366755, 366756],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:25 manifold:24 nonManifold:0 inconsistent:0 contourSeam:25 holes:2 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [82611, 82613, 383698],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:190 manifold:215 nonManifold:0 inconsistent:6 contourSeam:130 holes:10 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [82622, 82684],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:160 manifold:167 nonManifold:0 inconsistent:0 contourSeam:142 holes:4 isolated:2 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [82920, 82931],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:507 manifold:611 nonManifold:0 inconsistent:3 contourSeam:299 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [82941, 82953],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:292 manifold:280 nonManifold:0 inconsistent:0 contourSeam:295 holes:21 isolated:35 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 21,19,23 4 UNTILED: medial axis produced no interior points | 1 of 6 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [82953, 82958, 82959],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:398 manifold:419 nonManifold:0 inconsistent:0 contourSeam:352 holes:4 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [83289, 83290],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:141 manifold:158 nonManifold:0 inconsistent:0 contourSeam:101 holes:6 isolated:7 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 60,59,105 3 UNTILED: triangulation failed (ConstrainedTriangulationException: Constrained triangulation did not honour its ring: 3 faces; missing ring edges 1-2) | 1 of 8 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [83290, 83292, 83293],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:101 manifold:103 nonManifold:0 inconsistent:0 contourSeam:91 holes:6 isolated:12 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [83312, 83315, 83316, 83317, 83709],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:2271 manifold:2406 nonManifold:0 inconsistent:0 contourSeam:1996 holes:5 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 1757,1960,1560 2 UNTILED: perimeter edge 1561-1757 CORRESPONDING already at face capacity | 1 of 13 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [83509, 83711],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:72 manifold:69 nonManifold:0 inconsistent:0 contourSeam:73 holes:5 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 65,63,19 2 UNTILED: perimeter edge 20-65 CORRESPONDING already at face capacity | 1 of 2 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [83737, 83927],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:1258 manifold:1555 nonManifold:0 inconsistent:0 contourSeam:661 holes:3 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [99701, 99702],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:2391 manifold:2520 nonManifold:0 inconsistent:0 contourSeam:2125 holes:8 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [368341, 368342, 368344],
+      "open": true,
+      "problem": "structure=52535 [InvalidSurface] faces:19 manifold:23 nonManifold:0 inconsistent:0 contourSeam:8 holes:1 isolated:0 forkGap:0 ribbonEdge:2 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (C:\\\\Temp\\\\Perf\\\\RPC1_2628_FaceGenOpt, 2026-09-11).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [101053, 364630],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:1621 manifold:2076 nonManifold:0 inconsistent:0 contourSeam:710 holes:1 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [102821, 364771, 364777],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:1402 manifold:1617 nonManifold:0 inconsistent:0 contourSeam:968 holes:4 isolated:2 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [103259, 103264, 103275],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:1416 manifold:1616 nonManifold:0 inconsistent:1 contourSeam:1012 holes:4 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [103348, 103375, 103379],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:1075 manifold:1124 nonManifold:0 inconsistent:0 contourSeam:973 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | 1 of 7 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [105714, 105721, 365890, 365961],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:755 manifold:775 nonManifold:0 inconsistent:0 contourSeam:712 holes:3 isolated:4 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [105923, 105957, 365817, 365828],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:734 manifold:809 nonManifold:0 inconsistent:0 contourSeam:579 holes:5 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [105962, 105963],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:441 manifold:462 nonManifold:0 inconsistent:0 contourSeam:396 holes:3 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [107482, 107484],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:739 manifold:781 nonManifold:0 inconsistent:0 contourSeam:652 holes:3 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [108112, 108210, 108211],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:755 manifold:780 nonManifold:0 inconsistent:5 contourSeam:705 holes:0 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [108233, 108238],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:426 manifold:499 nonManifold:0 inconsistent:0 contourSeam:276 holes:4 isolated:17 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [108343, 108482, 108483],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:661 manifold:674 nonManifold:0 inconsistent:0 contourSeam:630 holes:5 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [108499, 108511, 108512, 108514],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:603 manifold:636 nonManifold:0 inconsistent:0 contourSeam:534 holes:3 isolated:2 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [108524, 108531, 108595, 108598],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:2347 manifold:2493 nonManifold:0 inconsistent:0 contourSeam:2053 holes:2 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [108914, 109159, 109160, 109161],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:809 manifold:955 nonManifold:0 inconsistent:0 contourSeam:513 holes:4 isolated:2 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 217,317,219 2 UNTILED: perimeter edge 217-219 UNKNOWN already at face capacity | 1 of 13 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [110222, 110225, 110232, 110233],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:441 manifold:450 nonManifold:0 inconsistent:0 contourSeam:421 holes:2 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [112772, 112773],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:617 manifold:717 nonManifold:0 inconsistent:0 contourSeam:413 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [112799, 112827],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:593 manifold:618 nonManifold:0 inconsistent:0 contourSeam:540 holes:3 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [113035, 113091, 113092],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:175 manifold:193 nonManifold:0 inconsistent:0 contourSeam:134 holes:5 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 26,29,64 4 UNTILED: triangulation failed (ConstrainedTriangulationException: Constrained triangulation did not honour its ring: 6 faces; missing ring edges 0-1; ring edges with face count != 1 3-4x2) | 1 of 5 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [113933, 132494],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:305 manifold:309 nonManifold:0 inconsistent:0 contourSeam:294 holes:3 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [133586, 133601],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:1504 manifold:1628 nonManifold:0 inconsistent:0 contourSeam:1255 holes:1 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [133806, 133810],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:143 manifold:142 nonManifold:0 inconsistent:0 contourSeam:142 holes:3 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [133811, 133815],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:346 manifold:346 nonManifold:0 inconsistent:0 contourSeam:341 holes:5 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [133890, 133896],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:559 manifold:566 nonManifold:0 inconsistent:0 contourSeam:542 holes:3 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [144402, 144403],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:533 manifold:532 nonManifold:0 inconsistent:0 contourSeam:533 holes:2 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 173,421,174 3 UNTILED: medial axis produced no interior points | 1 of 1 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [145413, 145414, 145415, 364408, 364409, 364410, 364481, 364627],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:312 manifold:330 nonManifold:0 inconsistent:3 contourSeam:276 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [145562, 145563],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:85 manifold:94 nonManifold:0 inconsistent:0 contourSeam:64 holes:3 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [145583, 376261, 384228],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:286 manifold:303 nonManifold:0 inconsistent:4 contourSeam:250 holes:2 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [145687, 145688, 365534, 365622],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:655 manifold:719 nonManifold:0 inconsistent:0 contourSeam:521 holes:6 isolated:2 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 454,453,11 1 UNTILED: perimeter edge 11-453 SURFACE already at face capacity | 1 of 4 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [145755, 145768, 146031, 365381, 365385],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:3084 manifold:3254 nonManifold:0 inconsistent:0 contourSeam:2741 holes:3 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [363980, 363981],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:63 manifold:61 nonManifold:0 inconsistent:0 contourSeam:63 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | 1 of 1 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [363986, 363987],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:72 manifold:73 nonManifold:0 inconsistent:0 contourSeam:66 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | 1 of 2 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [364431, 364432, 364433],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:69 manifold:72 nonManifold:0 inconsistent:0 contourSeam:59 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 11,29,57 1 UNTILED: perimeter edge 29-57 UNKNOWN already at face capacity | 1 of 2 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [364538, 364539],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:47 manifold:45 nonManifold:0 inconsistent:0 contourSeam:47 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | 1 of 1 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [364600, 364601],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:61 manifold:58 nonManifold:0 inconsistent:0 contourSeam:62 holes:5 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [364807, 364808],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:164 manifold:168 nonManifold:0 inconsistent:0 contourSeam:152 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [364809, 364810],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:145 manifold:155 nonManifold:0 inconsistent:0 contourSeam:121 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | 1 of 2 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [364815, 364816, 366759],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:150 manifold:171 nonManifold:0 inconsistent:0 contourSeam:106 holes:2 isolated:6 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 41,3,38 5 UNTILED: perimeter edge 3-38 UNKNOWN already at face capacity | region Reg: 3,41,38 3 UNTILED: perimeter edge 3-38 UNKNOWN already at face capacity | 2 of 7 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [365115, 365116, 365117],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:122 manifold:134 nonManifold:0 inconsistent:5 contourSeam:98 holes:0 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [365167, 365200, 365626, 365628],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:171 manifold:183 nonManifold:0 inconsistent:0 contourSeam:143 holes:4 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 88,118,2 2 UNTILED: perimeter edge 88-118 UNKNOWN already at face capacity | 1 of 3 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [365391, 365392],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:69 manifold:70 nonManifold:0 inconsistent:0 contourSeam:64 holes:3 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [365434, 365437, 365442],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:181 manifold:191 nonManifold:0 inconsistent:0 contourSeam:156 holes:5 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 43,42,94 2 UNTILED: perimeter edge 42-43 CONTOUR already at face capacity | 1 of 6 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [365703, 365704],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:36 manifold:34 nonManifold:0 inconsistent:0 contourSeam:36 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | 1 of 1 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [365907, 365910],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:58 manifold:75 nonManifold:0 inconsistent:1 contourSeam:21 holes:3 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [366295, 366296, 366307],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:156 manifold:162 nonManifold:0 inconsistent:0 contourSeam:141 holes:3 isolated:2 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [366301, 366303],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:64 manifold:64 nonManifold:0 inconsistent:0 contourSeam:62 holes:2 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [366434, 366435],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:109 manifold:107 nonManifold:0 inconsistent:0 contourSeam:109 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | 1 of 1 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [366457, 366458],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:75 manifold:76 nonManifold:0 inconsistent:0 contourSeam:70 holes:3 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [366756, 366757],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:32 manifold:42 nonManifold:0 inconsistent:0 contourSeam:10 holes:2 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [58714, 58717, 82579],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:1309 manifold:1488 nonManifold:0 inconsistent:1 contourSeam:948 holes:3 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [82612, 82617, 82647],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:478 manifold:492 nonManifold:0 inconsistent:0 contourSeam:446 holes:4 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 185,3,186 2 UNTILED: perimeter edge 3-368 SURFACE already at face capacity | 1 of 4 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [82697, 82700],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:3032 manifold:3343 nonManifold:0 inconsistent:0 contourSeam:2406 holes:4 isolated:31 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [83012, 83018, 83297, 83298],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:730 manifold:764 nonManifold:0 inconsistent:4 contourSeam:662 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [83317, 83510, 83712],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:544 manifold:571 nonManifold:0 inconsistent:0 contourSeam:487 holes:3 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [83510, 83713],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:424 manifold:431 nonManifold:0 inconsistent:0 contourSeam:406 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | 1 of 2 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [83732, 83738],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:156 manifold:218 nonManifold:0 inconsistent:0 contourSeam:28 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | 1 of 2 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [83925, 83948],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:707 manifold:782 nonManifold:0 inconsistent:0 contourSeam:553 holes:4 isolated:28 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 182,286,183 30 UNTILED: triangulation failed (ConstrainedTriangulationException: Constrained triangulation did not honour its ring: 81 faces; ring edges with face count != 1 0-29x2) | 1 of 6 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [83948, 83967, 83971],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:720 manifold:811 nonManifold:0 inconsistent:0 contourSeam:517 holes:21 isolated:9 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 228,118,464 16 UNTILED: perimeter edge 451-452 CONTOUR already at face capacity | 1 of 3 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [99025, 100971, 207946],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:2191 manifold:2247 nonManifold:0 inconsistent:0 contourSeam:2074 holes:5 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [99031, 99032],
+      "open": true,
+      "problem": "structure=2628 [FaceGenerationException] Geometry.Meshing.NonconformingTriangulationException: Somehow an edge intersection test found an edge with only one face when testing vertex to vertex edge intersection. | Tested Edge: 9-69 Last Intersected Edge/Face: 21-438 / 18,438,21 | at Geometry.Meshing.TriangulationMesh`1.FindIntersectingFaceEdges(ITriangleFace previous_intersected_face, IEdgeKey constrained_edge, LineSegment constrained_seg, IEdge previous_intersected_edge, List`1& intersected_edges) in D:\\src\\git\\VikingLegacy\\Geometry\\Meshing\\TriangulationMesh.cs:line 1021 | at Geometry.Meshing.TriangulationMesh`1.FindIntersectingFaceEdges(IEdgeKey e) in D:\\src\\git\\VikingLegacy\\Geometry\\Meshing\\TriangulationMesh.cs:line 1002 | at Geometry.GenericDelaunayMeshGenerator2D`1.TryGetNextCandidate(TriangulationMesh`1 mesh, List`1& sortedCandidates, Baseline& baseline, Boolean Clockwise, Double& angle, Nullable`1& circle) in D:\\src\\git\\VikingLegacy\\Geometry\\Algorithms\\DelaunayMesh.cs:line 1108 | at Geometry.GenericDelaunayMeshGenerator2D`1.RecursiveDivideAndConquerDelaunay(TriangulationMesh`1 mesh, MeshCut VertSet, IVertex2D[] verts, ProgressUpdate ReportProgress) in D:\\src\\git\\VikingLegacy\\Geometry\\Algorithms\\DelaunayMesh.cs:line 269 | at Geometry.GenericDelaunayMeshGenerator2D`1.RecursiveDivideAndConquerDelaunay(TriangulationMesh`1 mesh, MeshCut VertSet, IVertex2D[] verts, ProgressUpdate ReportProgress) in D:\\src\\git\\VikingLegacy\\Geometry\\Algorithms\\DelaunayMesh.cs:line 208 | at Geometry.GenericDelaunayMeshGenerator2D`1.TriangulateToMesh(VERTEX[] verts, ProgressUpdate ReportProgress) in D:\\src\\git\\VikingLegacy\\Geometry\\Algorithms\\DelaunayMesh.cs:line 81 | at MorphologyMesh.BajajMeshGenerator.TriangulateSitesWithRetry(Vector2[] translatedPoints, Vector2[] originalPoints, Dictionary`2 pointToIndexMap, ProgressUpdate OnProgress, TriangulationMesh`1& triMesh) in D:\\src\\git\\VikingLegacy\\MorphologyMesh\\Generators\\BajajMeshGenerator.cs:line 896 | at MorphologyMesh.BajajMeshGenerator.AddDelaunayEdges(BajajGeneratorMesh mesh, ProgressUpdate OnProgress) in D:\\src\\git\\VikingLegacy\\MorphologyMesh\\Generators\\BajajMeshGenerator.cs:line 769 | at MorphologyMesh.BajajMeshGenerator.GeneratePolygonFaces(BajajGeneratorMesh mesh, Int32& chordPassCalls, Int32& chordsAdded) in D:\\src\\git\\VikingLegacy\\MorphologyMesh\\Generators\\BajajMeshGenerator.cs:line 576 | at MorphologyMesh.BajajMeshGenerator.GenerateFaces(BajajGeneratorMesh mesh) in D:\\src\\git\\VikingLegacy\\MorphologyMesh\\Generators\\BajajMeshGenerator.cs:line 535 | at MorphologyMesh.BajajMeshGenerator.<>c__DisplayClass7_1.<ConvertToMesh>b__3(CancellationToken _) in D:\\src\\git\\VikingLegacy\\MorphologyMesh\\Generators\\BajajMeshGenerator.cs:line 461 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
     }
   ]
 }
