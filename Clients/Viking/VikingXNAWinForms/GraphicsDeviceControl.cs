@@ -160,6 +160,11 @@ namespace VikingXNAWinForms
                     EndDraw();
 #if !DEBUG
                 }
+                catch (Exception except) when (GpuDeviceRemovedDiagnostics.IsDeviceRemovedError(except))
+                {
+                    GpuDeviceRemovedDialog.LogAndShowOnce(except, Device);
+                    PaintUsingSystemDrawing(e.Graphics, GpuDeviceRemovedDiagnostics.FormatOverlayMessage(Device, except));
+                }
                 catch (Exception except)
                 {
                     throw;
@@ -252,6 +257,10 @@ namespace VikingXNAWinForms
                     Device.Present(); //(sourceRectangle, null, this.Handle);
 #if !DEBUG
             }
+            catch (Exception ex) when (GpuDeviceRemovedDiagnostics.IsDeviceRemovedError(ex))
+            {
+                GpuDeviceRemovedDialog.LogAndShowOnce(ex, Device);
+            }
             catch
             {
                 // Present might throw if the device became lost while we were
@@ -279,6 +288,14 @@ namespace VikingXNAWinForms
             {
                 case GraphicsDeviceStatus.Lost:
                     // If the graphics device is lost, we cannot use it at all.
+                    if (GpuDeviceRemovedDiagnostics.TryGetDeviceRemovedReason(Device, out int lostReason))
+                    {
+                        return "Graphics device lost\n\nGetDeviceRemovedReason: "
+                            + GpuDeviceRemovedDiagnostics.NameForHResult(lostReason)
+                            + $" (0x{lostReason:X8})\n"
+                            + GpuDeviceRemovedDiagnostics.DescribeHResult(lostReason);
+                    }
+
                     return "Graphics device lost";
 
                 case GraphicsDeviceStatus.NotReset:
@@ -308,6 +325,12 @@ namespace VikingXNAWinForms
                 }
                 catch (Exception e)
                 {
+                    if (GpuDeviceRemovedDiagnostics.IsDeviceRemovedError(e))
+                    {
+                        GpuDeviceRemovedDialog.LogAndShowOnce(e, Device);
+                        return GpuDeviceRemovedDiagnostics.FormatOverlayMessage(Device, e);
+                    }
+
                     return "Graphics device reset failed\n\n" + e;
                 }
             }

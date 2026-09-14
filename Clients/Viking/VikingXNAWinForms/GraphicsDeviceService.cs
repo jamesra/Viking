@@ -12,6 +12,7 @@ using Microsoft.Xna.Framework.Graphics;
 using RoundCurve;
 using RoundLineCode;
 using System;
+using System.Diagnostics;
 using System.Threading;
 using VikingXNAGraphics;
 using ServiceContainer = System.ComponentModel.Design.ServiceContainer;
@@ -111,6 +112,10 @@ namespace VikingXNAWinForms
         /// <summary>
         /// Gets a reference to the singleton instance.
         /// </summary>
+        public static GraphicsDeviceService? Current => singletonInstance;
+
+        public static GraphicsDevice? CurrentDevice => singletonInstance?.graphicsDevice;
+
         public static GraphicsDeviceService? AddRef(IntPtr windowHandle,
                                                    int width, int height)
         {
@@ -187,9 +192,9 @@ namespace VikingXNAWinForms
             {
                 graphicsDevice.Reset(parameters);
             }
-            catch (Exception ex) when (IsDeviceRemovedError(ex))
+            catch (Exception ex) when (GpuDeviceRemovedDiagnostics.IsDeviceRemovedError(ex))
             {
-                System.Diagnostics.Trace.WriteLine($"GPU device removed during reset: {ex.Message}");
+                GpuDeviceRemovedDialog.LogAndShowOnce(ex, graphicsDevice);
                 return;
             }
 
@@ -197,17 +202,6 @@ namespace VikingXNAWinForms
             LoadGlobalPrimitivesTextures();
 
             DeviceReset?.Invoke(this, EventArgs.Empty);
-        }
-
-        /// <summary>
-        /// Returns true if the exception represents a GPU device-removed or device-reset error
-        /// (DXGI_ERROR_DEVICE_REMOVED 0x887A0005 or DXGI_ERROR_DEVICE_RESET 0x887A0007).
-        /// </summary>
-        private static bool IsDeviceRemovedError(Exception ex)
-        {
-            const int DXGI_ERROR_DEVICE_REMOVED = unchecked((int)0x887A0005);
-            const int DXGI_ERROR_DEVICE_RESET = unchecked((int)0x887A0007);
-            return ex.HResult == DXGI_ERROR_DEVICE_REMOVED || ex.HResult == DXGI_ERROR_DEVICE_RESET;
         }
 
         /// <summary>

@@ -112,6 +112,7 @@ namespace Viking
             Trace.Listeners.Clear();
 #endif
             CreateDebugListener();
+            Viking.UI.GpuExceptionHandling.Register();
 
             Trace.WriteLine("Arguments: " + args.ToString(), "Viking");
             Trace.WriteLine("Current Directory: " + System.Environment.CurrentDirectory, "Viking");
