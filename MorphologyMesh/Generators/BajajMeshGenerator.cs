@@ -17,7 +17,90 @@ namespace MorphologyMesh
 {
     public class SliceChordRTree : RTree.RTree<MorphologyMesh.ISliceChord>
     {
+        /// <summary>
+        /// Advances each time a chord is inserted. Used to skip re-validating pairs that were already
+        /// accepted under the same geometric tests while the tree was unchanged.
+        /// </summary>
+        public int Generation { get; private set; }
 
+        public new void Add(RTree.Rectangle r, ISliceChord item)
+        {
+            base.Add(r, item);
+            Generation++;
+        }
+    }
+
+    /// <summary>
+    /// Remembers the last successful <see cref="BajajMeshGenerator.IsSliceChordValid"/> result for a pair
+    /// so <c>TryAddSliceChord</c> can avoid repeating permanent tests when only the RTree may have grown.
+    /// </summary>
+    sealed class LastValidChordCache
+    {
+        readonly Dictionary<(int Origin, int Target), (SliceChordTestType Tests, int Generation)> _valid = [];
+
+        public void Record(int origin, int target, SliceChordTestType tests, int generation) =>
+            _valid[(origin, target)] = (tests, generation);
+
+        public bool TryGet(int origin, int target, out SliceChordTestType tests, out int generation)
+        {
+            if (_valid.TryGetValue((origin, target), out var entry))
+            {
+                tests = entry.Tests;
+                generation = entry.Generation;
+                return true;
+            }
+
+            tests = SliceChordTestType.None;
+            generation = -1;
+            return false;
+        }
+
+        public void Clear() => _valid.Clear();
+    }
+
+    /// <summary>
+    /// Per-origin expanding k-NN ranking so OTV search can resume past known-bad targets instead of
+    /// restarting at batch size 1 on every pass.
+    /// </summary>
+    sealed class NearestRankingCache
+    {
+        public sealed class Entry
+        {
+            public List<DistanceToPoint<MorphMeshVertex>> List;
+            public int NextIndex;
+            public int BatchSize;
+            public int OppositeTreeCount;
+            public int RTreeGeneration;
+        }
+
+        readonly Dictionary<int, Entry> _byOrigin = [];
+
+        public bool TryGet(int originIndex, int oppositeCount, int rTreeGeneration, out Entry entry)
+        {
+            if (_byOrigin.TryGetValue(originIndex, out entry)
+                && entry.OppositeTreeCount == oppositeCount
+                && entry.RTreeGeneration == rTreeGeneration
+                && entry.List is not null)
+                return true;
+
+            entry = null;
+            return false;
+        }
+
+        public Entry GetOrCreate(int originIndex) 
+        {
+            if (!_byOrigin.TryGetValue(originIndex, out Entry entry))
+            {
+                entry = new Entry();
+                _byOrigin[originIndex] = entry;
+            }
+
+            return entry;
+        }
+
+        public void InvalidateAll() => _byOrigin.Clear();
+
+        public void InvalidateOrigin(int originIndex) => _byOrigin.Remove(originIndex);
     }
 
     /// <summary>
@@ -465,8 +548,9 @@ namespace MorphologyMesh
             if (seconds < MeshPhaseTimings.SlowSliceThresholdSeconds)
                 return;
 
+            string chordStats = ChordGenStats.Enabled ? $" {ChordGenStats.Format()}" : "";
             MeshPhaseTimings.RecordSlowSlice(
-                $"slow FaceGeneration {seconds:F1}s verts={mesh.Vertices.Count} faces={mesh.Faces.Count} chordPassCalls={chordPassCalls} chordsAdded={chordsAdded} {DescribeSlice(mesh)}");
+                $"slow FaceGeneration {seconds:F1}s verts={mesh.Vertices.Count} faces={mesh.Faces.Count} chordPassCalls={chordPassCalls} chordsAdded={chordsAdded} {DescribeSlice(mesh)}{chordStats}");
         }
 
         static string DescribeSlice(BajajGeneratorMesh mesh)
@@ -509,7 +593,7 @@ namespace MorphologyMesh
 
             List<MorphMeshVertex> FirstPassIncompleteVerticies;
             using (MeshPhaseTimings.Measure(MeshPhase.ChordGeneration, vertCount))
-                FirstPassIncompleteVerticies = FirstPassSliceChordGeneration(mesh, mesh.ShapeZ, out chordPassCalls, out chordsAdded);
+                FirstPassIncompleteVerticies = FirstPassSliceChordGeneration(mesh, mesh.ShapeZ, out chordPassCalls, out chordsAdded, rTree);
 
             using (MeshPhaseTimings.Measure(MeshPhase.FaceClosing, vertCount))
                 BajajMeshGenerator.FirstPassFaceGeneration(mesh);
@@ -567,6 +651,16 @@ namespace MorphologyMesh
                     Trace.WriteLine($"Mesh {mesh} is not a valid slice surface: {mesh.ManifoldReport}");
                 else
                     Trace.WriteLine($"Mesh slice {mesh.Slice?.Key} is not a valid slice surface: {mesh.ManifoldReport}");
+            }
+
+            //LocationLinked cross-band pairs with no spanning face are a failure even when the manifold report is clean.
+            mesh.CheckLinkedPairsHaveFaces();
+            if (mesh.HasUntiledLinkedPairs)
+            {
+                if (VerboseLogging)
+                    Trace.WriteLine($"Mesh {mesh} has untiled linked pair(s): {string.Join("; ", mesh.GenerationErrors.Where(e => e.StartsWith("untiled linked")))}");
+                else
+                    Trace.WriteLine($"Mesh slice {mesh.Slice?.Key} has untiled linked pair(s).");
             }
         }
 
@@ -1476,39 +1570,74 @@ return;
         /// <param name="sc"></param>
         /// <param name="ChordRTree"></param>
         /// <returns></returns>
-        private static bool TryAddSliceChord(BajajGeneratorMesh mesh, SliceChord sc, SliceChordRTree ChordRTree, SliceChordTestType Tests)
+        private static bool TryAddSliceChord(BajajGeneratorMesh mesh, SliceChord sc, SliceChordRTree ChordRTree, SliceChordTestType Tests,
+                                             LastValidChordCache lastValid)
         {
-            if (BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Shapes, mesh.GetSameLevelShapes(sc), mesh.GetAdjacentLevelShapes(sc), sc.Target, ChordRTree, Tests, out SliceChordTestType failures,
-                                                    mesh.ShapeLinkPredicate, mesh.ForkPartition))
+            int originIdx = mesh[sc.Origin].Index;
+            int targetIdx = mesh[sc.Target].Index;
+            SliceChordTestType failures;
+
+            bool alreadyValid = false;
+            if (lastValid is not null && lastValid.TryGet(originIdx, targetIdx, out SliceChordTestType cachedTests, out int cachedGen)
+                && (cachedTests & Tests) == Tests)
             {
+                if (cachedGen == ChordRTree.Generation)
+                {
+                    alreadyValid = true;
+                    ChordGenStats.IncTryAddSkippedValid();
+                }
+                else
+                {
+                    // Permanent tests already passed; only ChordIntersection can flip when the tree grows.
+                    SliceChordTestType intersectionOnly = Tests & SliceChordTestType.ChordIntersection;
+                    if (intersectionOnly == SliceChordTestType.None
+                        || IsSliceChordValid(sc.Origin, mesh.Shapes, mesh.GetSameLevelShapes(sc), mesh.GetAdjacentLevelShapes(sc), sc.Target, ChordRTree, intersectionOnly, out failures,
+                                             mesh.ShapeLinkPredicate, mesh.ForkPartition))
+                    {
+                        alreadyValid = true;
+                        lastValid.Record(originIdx, targetIdx, Tests, ChordRTree.Generation);
+                        ChordGenStats.IncTryAddSkippedValid();
+                    }
+                    else
+                    {
+                        mesh.SliceChordCandidateCache.RecordFailure(originIdx, targetIdx, failures);
+                        return false;
+                    }
+                }
+            }
 
-                //The shape-only GetEdgeType overload cannot type a chord touching a polyline: given two shapes and a
-                //midpoint it has no vertex indices, so it can neither rebuild the chord nor test whether the chord
-                //crosses a third shape, and a midpoint test is meaningless against a shape with no interior.  It used
-                //to answer FLYING, a type outside IsValid()'s mask, disagreeing with the SURFACE that IsSliceChordValid
-                //had just accepted the chord on.  Route polyline chords through the same index-aware overload as the
-                //gate so the label cannot contradict the decision.  Polygon pairs keep the midpoint overload: the
-                //index-aware overload also reports INTERNAL / UNTILED / INVAGINATION / HOLE / FLAT, which drive region
-                //classification, so switching them is a behaviour change well beyond naming an accepted chord.
-                EdgeType chordType = sc.Origin is PolylineIndex || sc.Target is PolylineIndex
-                    ? EdgeTypeExtensions.GetEdgeType(sc.Origin, sc.Target, mesh.Shapes, sc.Line.PointAlongLine(0.5))
-                    : EdgeTypeExtensions.GetEdgeType(sc.Line, mesh.Shapes[sc.Origin.ShapeIndex], mesh.Shapes[sc.Target.ShapeIndex]);
-
-                MorphMeshEdge edge = new(chordType, mesh[sc.Origin].Index, mesh[sc.Target].Index);
-                if (mesh.Contains(edge))
+            if (!alreadyValid)
+            {
+                if (!BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Shapes, mesh.GetSameLevelShapes(sc), mesh.GetAdjacentLevelShapes(sc), sc.Target, ChordRTree, Tests, out failures,
+                                                        mesh.ShapeLinkPredicate, mesh.ForkPartition))
+                {
+                    mesh.SliceChordCandidateCache.RecordFailure(originIdx, targetIdx, failures);
                     return false;
+                }
 
-                mesh.AddEdge(edge);
-                ChordRTree.Add(sc.Line.BoundingBox.ToRTreeRect(0), sc);
-
-                return true;
-            }
-            else
-            {
-                mesh.SliceChordCandidateCache.RecordFailure(mesh[sc.Origin].Index, mesh[sc.Target].Index, failures);
+                lastValid?.Record(originIdx, targetIdx, Tests, ChordRTree.Generation);
             }
 
-            return false;
+            //The shape-only GetEdgeType overload cannot type a chord touching a polyline: given two shapes and a
+            //midpoint it has no vertex indices, so it can neither rebuild the chord nor test whether the chord
+            //crosses a third shape, and a midpoint test is meaningless against a shape with no interior.  It used
+            //to answer FLYING, a type outside IsValid()'s mask, disagreeing with the SURFACE that IsSliceChordValid
+            //had just accepted the chord on.  Route polyline chords through the same index-aware overload as the
+            //gate so the label cannot contradict the decision.  Polygon pairs keep the midpoint overload: the
+            //index-aware overload also reports INTERNAL / UNTILED / INVAGINATION / HOLE / FLAT, which drive region
+            //classification, so switching them is a behaviour change well beyond naming an accepted chord.
+            EdgeType chordType = sc.Origin is PolylineIndex || sc.Target is PolylineIndex
+                ? EdgeTypeExtensions.GetEdgeType(sc.Origin, sc.Target, mesh.Shapes, sc.Line.PointAlongLine(0.5))
+                : EdgeTypeExtensions.GetEdgeType(sc.Line, mesh.Shapes[sc.Origin.ShapeIndex], mesh.Shapes[sc.Target.ShapeIndex]);
+
+            MorphMeshEdge edge = new(chordType, originIdx, targetIdx);
+            if (mesh.Contains(edge))
+                return false;
+
+            mesh.AddEdge(edge);
+            ChordRTree.Add(sc.Line.BoundingBox.ToRTreeRect(0), sc);
+
+            return true;
         }
 
         /// <summary>
@@ -1516,11 +1645,16 @@ return;
         /// </summary>
         /// <param name="mesh">The mesh, which may contain edges we cannot cross</param>
         public static List<MorphMeshVertex> FirstPassSliceChordGeneration(BajajGeneratorMesh mesh, ICollection<double> ZLevels) =>
-            FirstPassSliceChordGeneration(mesh, ZLevels, out _, out _);
+            FirstPassSliceChordGeneration(mesh, ZLevels, out _, out _, existingChordTree: null);
 
-        public static List<MorphMeshVertex> FirstPassSliceChordGeneration(BajajGeneratorMesh mesh, ICollection<double> ZLevels, out int chordPassCalls, out int chordsAdded)
+        public static List<MorphMeshVertex> FirstPassSliceChordGeneration(BajajGeneratorMesh mesh, ICollection<double> ZLevels, out int chordPassCalls, out int chordsAdded) =>
+            FirstPassSliceChordGeneration(mesh, ZLevels, out chordPassCalls, out chordsAdded, existingChordTree: null);
+
+        public static List<MorphMeshVertex> FirstPassSliceChordGeneration(BajajGeneratorMesh mesh, ICollection<double> ZLevels, out int chordPassCalls, out int chordsAdded, SliceChordRTree existingChordTree)
         {
-            SliceChordRTree rTree = mesh.CreateChordTree(ZLevels);
+            // Reuse the region-closing RTree when the caller still holds it: CreateChordTree is O(edges) and the
+            // closing pass already inserted every chord we must not cross.
+            SliceChordRTree rTree = existingChordTree ?? mesh.CreateChordTree(ZLevels);
 
             mesh.CloseFaces();
             List<MorphMeshVertex> IncompleteVerticies = [.. mesh.MorphVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh))];
@@ -1541,32 +1675,42 @@ return;
                 AlwaysApplied,
             ];
 
-            //Precalulate the quad treeWithUniqueValues data structures
             var VertexQuadTrees = mesh.CreateQuadTreesForContours();
+            LastValidChordCache lastValid = new();
+            NearestRankingCache nearestRanking = new();
+            Dictionary<MorphMeshVertex, MorphMeshVertex> previousOtv = null;
+            HashSet<MorphMeshVertex> dirtySeed = null;
 
             chordPassCalls = 0;
             chordsAdded = 0;
 
-            //Run each set of increasingly loose criteria over the chords.
             foreach (SliceChordTestType passTestCriteria in PassCriteria)
             {
+                // Looser criteria can only accept more partners; keep sticky OTV. Nearest rankings may need to
+                // resume past targets that failed only on bits that are no longer requested.
+                nearestRanking.InvalidateAll();
+
                 while (true)
                 {
                     chordPassCalls++;
-                    int addedThisPass = SliceChordGenerationPass(mesh, rTree, incompleteByShape, passTestCriteria, VertexQuadTrees);
+                    ChordGenStats.IncChordPassCalls();
+                    int addedThisPass = SliceChordGenerationPass(mesh, rTree, incompleteByShape, passTestCriteria, VertexQuadTrees, lastValid, nearestRanking, ref previousOtv, ref dirtySeed);
                     chordsAdded += addedThisPass;
+                    ChordGenStats.AddChords(addedThisPass);
                     if (addedThisPass == 0)
                         break;
 
                     mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
-                    RemoveCompletedIncompleteVertices(mesh, IncompleteVerticies, incompleteByShape);
+                    RemoveCompletedIncompleteVertices(mesh, IncompleteVerticies, incompleteByShape, VertexQuadTrees);
+                    nearestRanking.InvalidateAll();
                 }
             }
 
             mesh.SliceChordCandidateCache.Clear();
+            lastValid.Clear();
 
             mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
-            RemoveCompletedIncompleteVertices(mesh, IncompleteVerticies, incompleteByShape);
+            RemoveCompletedIncompleteVertices(mesh, IncompleteVerticies, incompleteByShape, VertexQuadTrees);
             return IncompleteVerticies;
         }
 
@@ -1591,11 +1735,39 @@ return;
             return byShape;
         }
 
-        static void RemoveCompletedIncompleteVertices(BajajGeneratorMesh mesh, List<MorphMeshVertex> incomplete, Dictionary<int, List<MorphMeshVertex>> byShape)
+        static void RemoveCompletedIncompleteVertices(BajajGeneratorMesh mesh, List<MorphMeshVertex> incomplete, Dictionary<int, List<MorphMeshVertex>> byShape,
+                                                      SliceTopologyQuadTrees<MorphMeshVertex>? levelTrees = null)
         {
+            List<MorphMeshVertex> completed = null;
+            if (levelTrees.HasValue)
+            {
+                completed = [];
+                foreach (MorphMeshVertex v in incomplete)
+                {
+                    if (v.IsFaceSurfaceComplete(mesh))
+                        completed.Add(v);
+                }
+            }
+
             incomplete.RemoveAll(v => v.IsFaceSurfaceComplete(mesh));
             foreach (List<MorphMeshVertex> list in byShape.Values)
                 list.RemoveAll(v => v.IsFaceSurfaceComplete(mesh));
+
+            if (completed is null || completed.Count == 0)
+                return;
+
+            int evicted = 0;
+            SliceTopologyQuadTrees<MorphMeshVertex> trees = levelTrees.Value;
+            foreach (MorphMeshVertex v in completed)
+            {
+                mesh.SliceChordCandidateCache.Remove(v.Index);
+                if (trees.Above.TryRemove(v, out _))
+                    evicted++;
+                if (trees.Below.TryRemove(v, out _))
+                    evicted++;
+            }
+
+            ChordGenStats.AddCompletedVertsEvicted(evicted);
         }
 
         /// <summary>
@@ -1603,15 +1775,12 @@ return;
         /// </summary>
         /// <param name="mesh">The mesh, which may contain edges we cannot cross</param>
         /// <param name="LevelTree">An optional parameter containing quadtrees for verticies on the upper and lower polygon sets.  It can be calculated once and passed as this parameter or left null and the function will build it.</param>
-        private static int SliceChordGenerationPass(BajajGeneratorMesh mesh, SliceChordRTree rTree, Dictionary<int, List<MorphMeshVertex>> incompleteByShape, SliceChordTestType TestSuite, SliceTopologyQuadTrees<MorphMeshVertex>? LevelTree = null)
+        private static int SliceChordGenerationPass(BajajGeneratorMesh mesh, SliceChordRTree rTree, Dictionary<int, List<MorphMeshVertex>> incompleteByShape, SliceChordTestType TestSuite,
+                                                    SliceTopologyQuadTrees<MorphMeshVertex> LevelTree, LastValidChordCache lastValid, NearestRankingCache nearestRanking,
+                                                    ref Dictionary<MorphMeshVertex, MorphMeshVertex> previousOtv, ref HashSet<MorphMeshVertex> dirtySeed)
         {
-
-            if (LevelTree.HasValue == false)
-                LevelTree = mesh.CreateQuadTreesForContours();
-
-            BajajMeshGenerator.CreateOptimalTilingVertexTable(mesh, incompleteByShape,
-                                                              LevelTree.Value, TestSuite,
-                                                              out Dictionary<MorphMeshVertex, MorphMeshVertex> OTVTable, ref rTree);
+            Dictionary<MorphMeshVertex, MorphMeshVertex> OTVTable;
+            CreateOptimalTilingVertexTableIncremental(mesh, incompleteByShape, LevelTree, TestSuite, rTree, lastValid, nearestRanking, ref previousOtv, ref dirtySeed, out OTVTable);
 
             List<SliceChord> CandidateChords = CreateChordCandidateList(mesh, OTVTable);
 
@@ -1619,12 +1788,28 @@ return;
             CandidateChords = [.. CandidateChords.OrderBy(sc => sc.Line.Length)];
 
             int numAdded = 0;
+            HashSet<MorphMeshVertex> addedEndpoints = [];
             foreach (SliceChord sc in CandidateChords)
             {
-                if (TryAddSliceChord(mesh, sc, rTree, TestSuite))
+                if (TryAddSliceChord(mesh, sc, rTree, TestSuite, lastValid))
+                {
                     numAdded += 1;
+                    addedEndpoints.Add(mesh[sc.Origin]);
+                    addedEndpoints.Add(mesh[sc.Target]);
+                }
             }
 
+            if (numAdded > 0 && previousOtv is not null)
+            {
+                foreach (KeyValuePair<MorphMeshVertex, MorphMeshVertex> kv in previousOtv)
+                {
+                    if (addedEndpoints.Contains(kv.Value))
+                        addedEndpoints.Add(kv.Key);
+                }
+            }
+
+            dirtySeed = numAdded > 0 ? addedEndpoints : null;
+            previousOtv = OTVTable;
             return numAdded;
         }
 
@@ -1841,7 +2026,7 @@ return;
             foreach (SliceChord sc in CandidateChords)
             {
                 //TODO: Probably need to check that the chords are all created
-                count += TryAddSliceChord(mesh, sc, rTree, Tests) ? 1 : 0;
+                count += TryAddSliceChord(mesh, sc, rTree, Tests, lastValid: null) ? 1 : 0;
             }
 
             return count;
@@ -2023,6 +2208,7 @@ return;
                                                        IShapeIndex candidate, SliceChordRTree chordTree, SliceChordTestType TestsToRun, out SliceChordTestType results,
                                                        Func<int, int, bool> isLinked = null, PolylineForkPartition forkPartition = null)
         {
+            ChordGenStats.IncIsSliceChordValid();
             results = SliceChordTestType.None;
 
             //Checked before the geometry because it is a dictionary lookup and it rejects the pairs whose geometry
@@ -2266,7 +2452,8 @@ return;
                 return NearestPoint;
             }
 
-            //OK, the closest point is not a match.  Expand the search.
+            //OK, the closest point is not a match.  Expand the search. Multiply before the query so the first
+            //expand is 10 (avoid a wasted FindNearestPoints(1) that duplicates TryFindNearest).
             int iNextTest = 1;
             int BatchSize = 1;
             int BatchMultiple = 10;
@@ -2280,6 +2467,7 @@ return;
                 if ((NearestList is null || iNextTest >= NearestList.Count))
                 {
                     BatchSize *= BatchMultiple;
+                    ChordGenStats.IncFindNearest();
                     NearestList = oppositeVertexTreeWithUniqueValues.FindNearestPoints(p, BatchSize);
 
                     if (NearestList.Count < BatchSize && iNextTest >= NearestList.Count)
@@ -2311,76 +2499,264 @@ return;
         /// <param name="chordTree">Lookup data structure for existing slice chords</param>
         /// <returns></returns>
         private static MorphMeshVertex FindOptimalTilingForVertexByDistance(this MorphRenderMesh mesh, MorphMeshVertex vertex, IReadOnlyList<IShape2D> SameLevelShapes, IReadOnlyList<IShape2D> AdjacentLevelShapes,
-                                                              QuadTreeWithUniqueValues<MorphMeshVertex> oppositeVertexTreeWithUniqueValues, SliceChordRTree chordTree, SliceChordTestType TestsToRun)
+                                                              QuadTreeWithUniqueValues<MorphMeshVertex> oppositeVertexTreeWithUniqueValues, SliceChordRTree chordTree, SliceChordTestType TestsToRun,
+                                                              LastValidChordCache lastValid = null, NearestRankingCache nearestRanking = null)
         {
             Vector2 p = vertex.Position.XY();
-            if (false == oppositeVertexTreeWithUniqueValues.TryFindNearest(p, out var NearestPoint, out double distance))
-                return null;
-
             BajajGeneratorMesh bajajMesh = mesh as BajajGeneratorMesh;
             SliceChordOriginTestResultsCache KnownCandidateFailures = bajajMesh?.SliceChordCandidateCache.GetFailuresForOrigin(vertex.Index);
             SliceChordTestType failures;
 
-            if (NearestPoint.FacesAreComplete == false) //An optimization from profiling. 
+            bool TryAccept(MorphMeshVertex candidate)
             {
-                if (IsSliceChordValid(mesh, vertex, SameLevelShapes, AdjacentLevelShapes, NearestPoint, chordTree, TestsToRun, out failures))
+                if (candidate is null || candidate.FacesAreComplete)
+                    return false;
+
+                if (KnownCandidateFailures != null)
                 {
+                    SliceChordTestType known = KnownCandidateFailures.GetFailures(candidate.Index, TestsToRun);
+                    if ((known & ChordGenStats.PermanentFailureMask) != SliceChordTestType.None)
+                    {
+                        ChordGenStats.IncPermanentCacheHit();
+                        return false;
+                    }
+
+                    // ChordIntersection failures stay sticky: more chords cannot un-cross a pair.
+                    if ((known & SliceChordTestType.ChordIntersection) != SliceChordTestType.None
+                        && (TestsToRun & SliceChordTestType.ChordIntersection) != SliceChordTestType.None)
+                    {
+                        ChordGenStats.IncPermanentCacheHit();
+                        return false;
+                    }
+
+                    if (known != SliceChordTestType.None)
+                        return false;
+                }
+
+                if (IsSliceChordValid(mesh, vertex, SameLevelShapes, AdjacentLevelShapes, candidate, chordTree, TestsToRun, out failures))
+                {
+                    lastValid?.Record(vertex.Index, candidate.Index, TestsToRun, chordTree.Generation);
+                    return true;
+                }
+
+                KnownCandidateFailures?.RecordFailure(candidate.Index, failures);
+                return false;
+            }
+
+            NearestRankingCache.Entry ranking = null;
+            int oppositeCount = oppositeVertexTreeWithUniqueValues.Count;
+            int rTreeGen = chordTree.Generation;
+            if (nearestRanking is not null && nearestRanking.TryGet(vertex.Index, oppositeCount, rTreeGen, out ranking)
+                && ranking.List is not null)
+            {
+                while (ranking.NextIndex < ranking.List.Count)
+                {
+                    MorphMeshVertex resumeCandidate = ranking.List[ranking.NextIndex].Value;
+                    ranking.NextIndex++;
+                    if (TryAccept(resumeCandidate))
+                        return resumeCandidate;
+                }
+            }
+            else
+            {
+                if (false == oppositeVertexTreeWithUniqueValues.TryFindNearest(p, out var NearestPoint, out double distance))
+                    return null;
+
+                if (TryAccept(NearestPoint))
                     return NearestPoint;
+
+                ranking = nearestRanking?.GetOrCreate(vertex.Index) ?? new NearestRankingCache.Entry();
+                ranking.List = null;
+                ranking.NextIndex = 1;
+                ranking.BatchSize = 1;
+                ranking.OppositeTreeCount = oppositeCount;
+                ranking.RTreeGeneration = rTreeGen;
+            }
+
+            // Expand the search. Multiply batch size before the query so the first expand is 10 (not a wasted
+            // FindNearestPoints(1) that duplicates TryFindNearest).
+            const int BatchMultiple = 10;
+            while (true)
+            {
+                if (ranking.NextIndex >= oppositeVertexTreeWithUniqueValues.Count)
+                    return null;
+
+                if (ranking.List is null || ranking.NextIndex >= ranking.List.Count)
+                {
+                    ranking.BatchSize = ranking.BatchSize <= 1 ? BatchMultiple : ranking.BatchSize * BatchMultiple;
+                    ChordGenStats.IncFindNearest();
+                    ranking.List = oppositeVertexTreeWithUniqueValues.FindNearestPoints(p, ranking.BatchSize);
+                    ranking.OppositeTreeCount = oppositeCount;
+                    ranking.RTreeGeneration = rTreeGen;
+
+                    if (ranking.List.Count < ranking.BatchSize && ranking.NextIndex >= ranking.List.Count)
+                        return null;
+                }
+
+                if (ranking.NextIndex < ranking.List.Count)
+                {
+                    MorphMeshVertex testPoint = ranking.List[ranking.NextIndex].Value;
+                    ranking.NextIndex++;
+                    if (TryAccept(testPoint))
+                        return testPoint;
                 }
                 else
                 {
-                    KnownCandidateFailures?.RecordFailure(NearestPoint.Index, failures);
+                    ranking.NextIndex++;
+                }
+            }
+        }
+
+        private static void CreateOptimalTilingVertexTableIncremental(
+            BajajGeneratorMesh mesh,
+            Dictionary<int, List<MorphMeshVertex>> incompleteByShape,
+            SliceTopologyQuadTrees<MorphMeshVertex> CandidateTreeByLevel,
+            SliceChordTestType TestsToRun,
+            SliceChordRTree chordTree,
+            LastValidChordCache lastValid,
+            NearestRankingCache nearestRanking,
+            ref Dictionary<MorphMeshVertex, MorphMeshVertex> previousOtv,
+            ref HashSet<MorphMeshVertex> dirtySeed,
+            out Dictionary<MorphMeshVertex, MorphMeshVertex> OTVTable)
+        {
+            ChordGenStats.IncOtvRebuild();
+            OTVTable = new Dictionary<MorphMeshVertex, MorphMeshVertex>();
+
+            int incompleteCount = 0;
+            foreach (List<MorphMeshVertex> list in incompleteByShape.Values)
+                incompleteCount += list.Count;
+
+            if (previousOtv is null || incompleteCount == 0)
+            {
+                ChordGenStats.IncOtvFullRebuild();
+                FillOtvTable(mesh, incompleteByShape, CandidateTreeByLevel, TestsToRun, chordTree, lastValid, nearestRanking, sticky: null, dirtyFilter: null, OTVTable);
+                previousOtv = new Dictionary<MorphMeshVertex, MorphMeshVertex>(OTVTable);
+                dirtySeed = null;
+                return;
+            }
+
+            HashSet<MorphMeshVertex> dirty = dirtySeed is null ? [] : [.. dirtySeed];
+            foreach (KeyValuePair<int, List<MorphMeshVertex>> polygroup in incompleteByShape)
+            {
+                foreach (MorphMeshVertex v in polygroup.Value)
+                {
+                    if (v.FacesAreComplete)
+                        continue;
+                    if (!previousOtv.TryGetValue(v, out MorphMeshVertex partner) || partner.FacesAreComplete)
+                        dirty.Add(v);
                 }
             }
 
-            //OK, the closest point is not a match.  Expand the search.
-            int iNextTest = 1;
-            int BatchSize = 1;
-            const int BatchMultiple = 10;
-            List<DistanceToPoint<MorphMeshVertex>> NearestList = null;
-
-            while (true)
+            if (dirty.Count >= incompleteCount)
             {
-                if (iNextTest >= oppositeVertexTreeWithUniqueValues.Count)
-                    return null;
+                ChordGenStats.IncOtvFullRebuild();
+                FillOtvTable(mesh, incompleteByShape, CandidateTreeByLevel, TestsToRun, chordTree, lastValid, nearestRanking, sticky: previousOtv, dirtyFilter: null, OTVTable);
+                previousOtv = new Dictionary<MorphMeshVertex, MorphMeshVertex>(OTVTable);
+                dirtySeed = null;
+                return;
+            }
 
-                if ((NearestList is null || iNextTest >= NearestList.Count))
+            ChordGenStats.IncOtvDirtyRebuild();
+            int unchanged = 0;
+            HashSet<MorphMeshVertex> mustRecompute = [.. dirty];
+            foreach (KeyValuePair<int, List<MorphMeshVertex>> polygroup in incompleteByShape)
+            {
+                int iPoly = polygroup.Key;
+                bool IsUpperShape = mesh.UpperShapeIndicies.Contains(iPoly);
+                IShape2D[] SameLevelShapes = IsUpperShape ? mesh.UpperShapes : mesh.LowerShapes;
+                IShape2D[] AdjacentLevelShapes = IsUpperShape ? mesh.LowerShapes : mesh.UpperShapes;
+
+                foreach (MorphMeshVertex v in polygroup.Value)
                 {
-                    NearestList = oppositeVertexTreeWithUniqueValues.FindNearestPoints(p, BatchSize);
-
-                    if (NearestList.Count < BatchSize && iNextTest >= NearestList.Count)
+                    if (v.FacesAreComplete || mustRecompute.Contains(v))
+                        continue;
+                    if (!previousOtv.TryGetValue(v, out MorphMeshVertex partner))
                     {
-                        return null;
+                        mustRecompute.Add(v);
+                        continue;
                     }
 
-                    BatchSize *= BatchMultiple;
-                }
-
-                if (iNextTest < NearestList.Count)
-                {
-                    MorphMeshVertex testPoint = NearestList[iNextTest].Value;
-
-                    if (testPoint.FacesAreComplete == false) //An optimization from profiling. 
+                    // After chords were inserted, only ChordIntersection can invalidate a previously sticky partner.
+                    if (dirtySeed is not null
+                        && !IsSliceChordValid(mesh, v, SameLevelShapes, AdjacentLevelShapes, partner, chordTree, SliceChordTestType.ChordIntersection, out _))
                     {
-                        if (KnownCandidateFailures != null)
-                        {
-                            if (KnownCandidateFailures.GetFailures(testPoint.Index, TestsToRun) != SliceChordTestType.None) //Check if another pass checked any of these test conditions and already failed
-                            {
-                                iNextTest++;
-                                continue;
-                            }
-                        }
-
-                        if (IsSliceChordValid(mesh, vertex, SameLevelShapes, AdjacentLevelShapes, testPoint, chordTree, TestsToRun, out failures))
-                            return testPoint;
-                        else
-                        {
-                            KnownCandidateFailures?.RecordFailure(testPoint.Index, failures); //Record the failure for any future passes
-                        }
+                        mustRecompute.Add(v);
+                        continue;
                     }
-                }
 
-                iNextTest++;
+                    OTVTable[v] = partner;
+                    unchanged++;
+                    ChordGenStats.IncOtvStickyHit();
+                    lastValid?.Record(v.Index, partner.Index, TestsToRun, chordTree.Generation);
+                }
+            }
+
+            ChordGenStats.AddUnchangedOtvEntries(unchanged);
+            if (mustRecompute.Count >= incompleteCount)
+            {
+                ChordGenStats.IncOtvFullRebuild();
+                OTVTable.Clear();
+                FillOtvTable(mesh, incompleteByShape, CandidateTreeByLevel, TestsToRun, chordTree, lastValid, nearestRanking, sticky: previousOtv, dirtyFilter: null, OTVTable);
+            }
+            else
+            {
+                FillOtvTable(mesh, incompleteByShape, CandidateTreeByLevel, TestsToRun, chordTree, lastValid, nearestRanking, sticky: previousOtv, dirtyFilter: mustRecompute, OTVTable);
+            }
+
+            previousOtv = new Dictionary<MorphMeshVertex, MorphMeshVertex>(OTVTable);
+            dirtySeed = null;
+        }
+
+        static void FillOtvTable(
+            BajajGeneratorMesh mesh,
+            Dictionary<int, List<MorphMeshVertex>> incompleteByShape,
+            SliceTopologyQuadTrees<MorphMeshVertex> CandidateTreeByLevel,
+            SliceChordTestType TestsToRun,
+            SliceChordRTree chordTree,
+            LastValidChordCache lastValid,
+            NearestRankingCache nearestRanking,
+            Dictionary<MorphMeshVertex, MorphMeshVertex> sticky,
+            HashSet<MorphMeshVertex> dirtyFilter,
+            Dictionary<MorphMeshVertex, MorphMeshVertex> OTVTable)
+        {
+            foreach (KeyValuePair<int, List<MorphMeshVertex>> polygroup in incompleteByShape)
+            {
+                if (polygroup.Value.Count == 0)
+                    continue;
+
+                int iPoly = polygroup.Key;
+                QuadTreeWithUniqueValues<MorphMeshVertex> treeWithUniqueValues = CandidateTreeByLevel.GetOppositeSide(iPoly);
+
+                bool IsUpperShape = mesh.UpperShapeIndicies.Contains(iPoly);
+                IShape2D[] SameLevelShapes = IsUpperShape ? mesh.UpperShapes : mesh.LowerShapes;
+                IShape2D[] AdjacentLevelShapes = IsUpperShape ? mesh.LowerShapes : mesh.UpperShapes;
+
+                foreach (MorphMeshVertex v in polygroup.Value)
+                {
+                    if (v.FacesAreComplete)
+                        continue;
+                    if (dirtyFilter is not null && !dirtyFilter.Contains(v))
+                        continue;
+                    if (OTVTable.ContainsKey(v))
+                        continue;
+
+                    ChordGenStats.IncOtvVertexEval();
+
+                    if (sticky is not null
+                        && sticky.TryGetValue(v, out MorphMeshVertex stickyPartner)
+                        && !stickyPartner.FacesAreComplete
+                        && IsSliceChordValid(mesh, v, SameLevelShapes, AdjacentLevelShapes, stickyPartner, chordTree, TestsToRun, out _))
+                    {
+                        OTVTable.TryAdd(v, stickyPartner);
+                        lastValid?.Record(v.Index, stickyPartner.Index, TestsToRun, chordTree.Generation);
+                        ChordGenStats.IncOtvStickyHit();
+                        continue;
+                    }
+
+                    MorphMeshVertex NearestOnOtherLevel = mesh.FindOptimalTilingForVertexByDistance(v, SameLevelShapes, AdjacentLevelShapes, treeWithUniqueValues, chordTree, TestsToRun, lastValid, nearestRanking);
+                    if (NearestOnOtherLevel != null)
+                        OTVTable.TryAdd(v, NearestOnOtherLevel);
+                }
             }
         }
 

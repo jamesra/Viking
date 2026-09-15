@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -505,6 +506,8 @@ namespace MorphologyMesh
 
             sb.AppendLine($"run wall={runWallSeconds:F1}s  peak threads={peakThreads}  peak WS={peakWs / (1024.0 * 1024.0):F0} MB  GC gen0/1/2={gc0}/{gc1}/{gc2}  GC pause={gcPause.TotalSeconds:F2}s  " +
                           $"faceSlots={MeshParallelism.DegreeOfParallelism}  peakSlicesQueuedForSlot={MeshParallelism.PeakWaitingCount}");
+            //Workstation vs Server GC changes wall clock and coresUsed by 2x on RC1 410; never compare across modes.
+            sb.AppendLine($"GC mode={(GCSettings.IsServerGC ? "Server" : "Workstation")}  (only compare runs with the same GC mode and similar free RAM)");
 
             long sysFreeAtReset = Interlocked.Read(ref _systemFreeMemoryAtResetBytes);
             long sysFreeMin = Interlocked.Read(ref _minSystemFreeMemoryBytes);

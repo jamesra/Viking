@@ -49,9 +49,35 @@ namespace AnnotationVizLib.OData
         /// its whole duration.  Fanning out one task per ID lets a structure with hundreds of children queue more
         /// requests than the pool has threads; they then sit unstarted until the transport timeout cancels them,
         /// which surfaces as TaskCanceledException even though the server is answering in well under a second.
-        /// Keep this low: openresty in front of RPC1 returns 502 when too many expands / link queries pile up.
+        /// Keep the default low: openresty in front of RPC1 returns 502 when too many expands / link queries pile up.
+        /// Override via <see cref="MaxConcurrentRequests"/>, CLI <c>--odata-concurrent</c>, or env
+        /// <c>VIKING_ODATA_MAX_CONCURRENT</c>.
         /// </summary>
-        private const int MaxConcurrentRequests = 4;
+        const int DefaultMaxConcurrentRequests = 4;
+
+        static int _maxConcurrentRequests = ResolveDefaultMaxConcurrentRequests();
+
+        /// <summary>
+        /// Max OData queries in flight for throttled helpers (structure loads, neighbor discover Z queries, etc.).
+        /// </summary>
+        public static int MaxConcurrentRequests
+        {
+            get => Volatile.Read(ref _maxConcurrentRequests);
+            set => Volatile.Write(ref _maxConcurrentRequests, Math.Max(1, value));
+        }
+
+        static int ResolveDefaultMaxConcurrentRequests()
+        {
+            string env = Environment.GetEnvironmentVariable("VIKING_ODATA_MAX_CONCURRENT");
+            if (int.TryParse(env, out int parsed) && parsed >= 1)
+                return parsed;
+            return DefaultMaxConcurrentRequests;
+        }
+
+        /// <summary>
+        /// Abort neighbor section discovery after this many failures with zero successes (broken endpoint / filter).
+        /// </summary>
+        public static int NeighborDiscoverFailFastThreshold { get; set; } = 3;
 
         /// <summary>
         /// Run <paramref name="query"/> over every item with at most <see cref="MaxConcurrentRequests"/> in flight.
@@ -460,7 +486,7 @@ namespace AnnotationVizLib.OData
                 return [];
 
             int[] sections = SubsampleSections(allSections, MaxNeighborSectionQueries);
-            Console.WriteLine($"Neighbor discover: querying {sections.Length}/{allSections.Length} sections in padded AABB");
+            Console.WriteLine($"Neighbor discover: querying {sections.Length}/{allSections.Length} sections in padded AABB (maxConcurrent={MaxConcurrentRequests})");
 
             Container container = new(endpoint)
             {
@@ -468,34 +494,89 @@ namespace AnnotationVizLib.OData
             };
 
             ConcurrentDictionary<long, byte> parentIds = new();
+            int failCount = 0;
+            int okCount = 0;
+            string firstError = null;
+            int failFast = Math.Max(1, NeighborDiscoverFailFastThreshold);
 
-            // Throttle: unbounded Task.WhenAll over a Muller Z-stack 502s openresty.
-            await RunThrottledAsync(sections, z =>
+            using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            CancellationToken ct = linkedCts.Token;
+            using SemaphoreSlim throttle = new(MaxConcurrentRequests);
+
+            // Throttle section queries; abort early when the endpoint is broken so we do not walk all Z samples.
+            Task[] sectionTasks = [.. sections.Select(async z =>
             {
-                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                    long sectionZ = z;
-                    DataServiceQuery<Location> query = (DataServiceQuery<Location>)container.Locations
-                        .Where(l => l.Z == sectionZ
-                            && l.VolumeX >= minX && l.VolumeX <= maxX
-                            && l.VolumeY >= minY && l.VolumeY <= maxY);
+                    await throttle.WaitAsync(ct).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
 
-                    List<Location> locs = ExecuteAllPagesWithRetry(container, query, cancellationToken);
-                    foreach (Location loc in locs)
+                try
+                {
+                    if (ct.IsCancellationRequested)
+                        return;
+
+                    try
                     {
-                        if (excludeIds.Contains((ulong)loc.ParentID))
-                            continue;
-                        parentIds.TryAdd(loc.ParentID, 0);
+                        long sectionZ = z;
+                        DataServiceQuery<Location> query = (DataServiceQuery<Location>)container.Locations
+                            .Where(l => l.Z == sectionZ
+                                && l.VolumeX >= minX && l.VolumeX <= maxX
+                                && l.VolumeY >= minY && l.VolumeY <= maxY);
+
+                        List<Location> locs = await Task.Run(
+                            () => ExecuteAllPagesWithRetry(container, query, ct),
+                            ct).ConfigureAwait(false);
+
+                        foreach (Location loc in locs)
+                        {
+                            if (excludeIds.Contains((ulong)loc.ParentID))
+                                continue;
+                            parentIds.TryAdd(loc.ParentID, 0);
+                        }
+
+                        Interlocked.Increment(ref okCount);
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        int failures = Interlocked.Increment(ref failCount);
+                        Interlocked.CompareExchange(ref firstError, ex.Message, null);
+                        if (Volatile.Read(ref okCount) == 0 && failures >= failFast)
+                            linkedCts.Cancel();
                     }
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                finally
                 {
-                    Console.WriteLine($"Neighbor discover Z={z}: {ex.Message}");
+                    throttle.Release();
                 }
+            })];
 
-                return 0;
-            }, cancellationToken);
+            try
+            {
+                await Task.WhenAll(sectionTasks).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                //Fail-fast cancel only — caller token was not requested.
+            }
+            catch (AggregateException ae) when (!cancellationToken.IsCancellationRequested
+                && ae.Flatten().InnerExceptions.All(e => e is OperationCanceledException))
+            {
+                //Workers cancelled by fail-fast; swallow.
+            }
+
+            if (failCount > 0)
+            {
+                bool aborted = okCount == 0 && failCount >= failFast;
+                Console.WriteLine(
+                    $"Neighbor discover: {failCount} section quer{(failCount == 1 ? "y" : "ies")} failed" +
+                    (aborted ? $" (stopped after {failFast} failures with no successes)" : $" of {sections.Length}") +
+                    (string.IsNullOrEmpty(firstError) ? "" : $": {firstError}"));
+            }
 
             if (parentIds.IsEmpty)
                 return [];

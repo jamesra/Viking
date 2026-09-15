@@ -14,5 +14,7 @@ namespace MonogameTestbed
         bool ShowWarningSliceStatus { get; set; }
 
         bool ShowCriticalSliceStatus { get; set; }
+
+        bool ShowUntiledLinkedPairStatus { get; set; }
     }
 }

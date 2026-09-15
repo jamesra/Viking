@@ -13,7 +13,11 @@ For algorithm/paper context see [contours-to-mesh](../contours-to-mesh/SKILL.md)
 
 ### Whole-cell performance benchmark (BAJAJMULTITEST)
 
-Prefer a **Release** x64 build for timing (`bin/x64/Release/net9.0-windows`). Structure **410** on RC1 (GAC Aii, ~3000 locations with polygons) is the standard benchmark; 476 is mostly circles and is a poor mesh-load stand-in. The Release `MonogameTestbed` project uses **Server GC** (`ServerGarbageCollection=true`); that setting is part of the measured configuration, not an optional extra.
+Prefer a **Release** x64 build for timing (`bin/x64/Release/net9.0-windows`). Structure **410** on RC1 (GAC Aii, ~3000 locations with polygons) is the standard benchmark; 476 is mostly circles and is a poor mesh-load stand-in. The `MonogameTestbed` project uses **Server GC** (`ServerGarbageCollection=true`); that setting is part of the measured configuration, not an optional extra. `--timings` **aborts** if `GCSettings.IsServerGC` is false so Workstation GC runs cannot be mistaken for parallelism bugs (on RC1 410, Workstation GC roughly doubles wall clock and collapses avg `coresUsed`).
+
+**Comparable runs only when:** same GC mode (Server), similar free RAM at start (see report `system RAM` line), and Release without `-v`. Do not compare a memory-starved or Workstation-GC run to a clean Server GC baseline.
+
+Neighbor discover (`--correction neighbor|all`) fail-fasts after repeated section-query failures (default 3 with no successes) and logs one summary line instead of per-Z spam. OData concurrency defaults to 4; override with `--odata-concurrent N` or env `VIKING_ODATA_MAX_CONCURRENT` only when the host can take it.
 
 ```text
 dotnet build Clients\MonogameTestbed\MonogameTestbed.csproj -c Release -p:Platform=x64
@@ -21,14 +25,16 @@ cd Clients\MonogameTestbed\bin\x64\Release\net9.0-windows
 dotnet exec .\MonogameTestbed.dll --mode BajajMultiTest -s 410 -e http://websvc.codepharm.net/RC1/OData -o C:\Temp\Perf\RC1_410 -q -l --invert-z --timings
 ```
 
+Launch config: **MonogameTestbed (RC1 Poly AII) Release timings** in `.vscode/launch.json` (Release preLaunchTask + `--timings`).
+
 `--timings` prints:
 
 - Per-phase seconds, call counts, us/call, us/item, **max(s)** (longest single call — a long-pole slice), and **x-wall** (phase-seconds ÷ run wall clock). `x-wall` keeps counting through GC pauses; for core utilization trust the 5-second process sampler, not x-wall.
 - Face-generation sub-phases: `Delaunay`, `RegionGraphBuild`, `RegionClosing`, `ChordGeneration`, `FaceClosing`, `SecondPassRegionDetection`, plus `FaceSlotWait` (time parked for a generation permit) and `peakSlicesQueuedForSlot`.
-- Process peaks: threads, working set, GC gen0/1/2 counts, GC pause.
+- Process peaks: threads, working set, GC gen0/1/2 counts, GC pause, and **GC mode** (Server vs Workstation).
 - **System RAM**: total, free at start, min free during the run. Two runs of identical code are not comparable if one was memory-starved.
 - **System CPU busy %** at `pre-OData`, `post-OData`, `mesh complete`, and `end` (whole machine, to catch a Nornir build or similar competing for cores).
-- **Process core usage** sampled every 5s from OData-complete through mesh-complete (`coresUsed`, system free MB, process working set). The last ~20s collapsing to 1–3 cores is the long-pole slice, not a missing parallelism budget.
+- **Process core usage** sampled every 5s from OData-complete through mesh-complete (`coresUsed`, system free MB, process working set). The last ~20s collapsing to 1–3 cores is the long-pole slice, not a missing parallelism budget. Sustained low `coresUsed` under Workstation GC is GC pause time, not idle FaceSlots.
 - **slow FaceGeneration** lines (`>10s`) with slice key, location IDs, vertex/face counts, and chord-pass stats. Replay those IDs with `--repro-locations`.
   The slices that own the run's serial tail are large contours (RC1 410: `200625,200626,201467,1420185`, ~2500 verts / ~50s; RPC1 2628: `98942,98943,101061,101147,101150,101220,101221`, ~4700 verts / ~5 min), not degenerate Delaunay retries. `chordPassCalls` in the teens–thirties is normal; a pass count in the hundreds would mean the while-loop is stuck adding one chord at a time. The next algorithmic lever is incremental OTV (`FindOptimalTilingForVertexByDistance` / `FindNearestPoints`), not more `faceSlots`.
 
@@ -76,6 +82,15 @@ Capture goes borderless fullscreen, which takes over a whole monitor, so it pick
 A diagnostic that reports a bad slice prints its LocationIDs; feed them straight in. No code edit, no rebuild.
 
 BAJAJMULTITEST writes its failures into the `-o` folder as `bajajmultitest_failed_slices_<MM.dd.yyyy_HH.mm.ss>.txt` (same stamp as the `Logs/*.log` for that run), appending each slice as it fails so a session stopped mid-run still leaves a list. On completion it also writes a sorted `bajajmultitest_failed_slices.txt`; diff two of those to see whether a change added or removed failures. Either file goes straight to `--repro-locations-file`.
+
+Kinds in the `# … — [Kind] …` header: `Topology`, `FaceGenerationException`, `InvalidSurface`, `UntiledLinkedPair` (LocationLinked pair with no spanning face). Magenta contour tint in MultiTest marks only the annotations in an untiled linked pair (View → Slice Status → Untiled linked contours).
+
+### Expanding DifficultCases from a failure list
+
+- Replay for diagnosis: `--repro-locations-file` or one line at a time with `--repro-locations`.
+- Track unfixed slices: promote into `difficult-cases.json` with `open: true` via
+  `.cursor/skills/mesh-difficult-cases/scripts/Import-FailedSlices.ps1` (see [mesh-difficult-cases](../mesh-difficult-cases/SKILL.md)).
+- After a fix: clear `open`, accept baselines, run DifficultCases regression — do not only re-run MultiTest.
 
 ```text
 dotnet exec MonogameTestbed.dll --mode BajajTest --screenshots --repro-locations 8614,8616 -e RC1 -o C:\Temp\BajajTestScreenshots -q -v

@@ -58,14 +58,14 @@ if (-not $json.cases) {
     $json | Add-Member -NotePropertyName cases -NotePropertyValue @() -Force
 }
 
-function Get-CaseKey([string] $vol, [ulong[]] $ids) {
+function Get-CaseKey([string] $vol, [uint64[]] $ids) {
     $sorted = $ids | Sort-Object
     return ($vol.ToUpperInvariant() + '-' + ($sorted -join '-'))
 }
 
 $existing = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 foreach ($c in $json.cases) {
-    $loc = @($c.locations | ForEach-Object { [ulong]$_ })
+    $loc = @($c.locations | ForEach-Object { [uint64]$_ })
     [void]$existing.Add((Get-CaseKey $c.volume $loc))
 }
 
@@ -105,7 +105,7 @@ Get-Content -LiteralPath $FailedSlicesPath -Encoding UTF8 | ForEach-Object {
         return
     }
 
-    $ids = @($line.Trim() -split '\s+' | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [ulong]$_ })
+    $ids = @($line.Trim() -split '\s+' | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [uint64]$_ })
     if ($ids.Count -eq 0) {
         $pendingHeader = $null
         $pendingKind = $null

@@ -144,10 +144,12 @@ namespace MonogameTestbed
         bool _showMinorIssueSliceStatus = true;
         bool _showWarningSliceStatus = true;
         bool _showCriticalSliceStatus = true;
+        bool _showUntiledLinkedPairStatus = true;
 #else
         bool _showMinorIssueSliceStatus = false;
         bool _showWarningSliceStatus = false;
         bool _showCriticalSliceStatus = false;
+        bool _showUntiledLinkedPairStatus = true;
 #endif
 
         public bool ShowInProgressSliceStatus
@@ -205,6 +207,17 @@ namespace MonogameTestbed
             }
         }
 
+        public bool ShowUntiledLinkedPairStatus
+        {
+            get => meshIncompleteView?.ShowUntiledLinkedPairStatus ?? _showUntiledLinkedPairStatus;
+            set
+            {
+                _showUntiledLinkedPairStatus = value;
+                if (meshIncompleteView != null)
+                    meshIncompleteView.ShowUntiledLinkedPairStatus = value;
+            }
+        }
+
         /// <summary>Alias for <see cref="ShowCriticalSliceStatus"/>.</summary>
         public bool ShowFailedBoundingBoxes
         {
@@ -221,6 +234,7 @@ namespace MonogameTestbed
             meshIncompleteView.ShowMinorIssueSliceStatus = _showMinorIssueSliceStatus;
             meshIncompleteView.ShowWarningSliceStatus = _showWarningSliceStatus;
             meshIncompleteView.ShowCriticalSliceStatus = _showCriticalSliceStatus;
+            meshIncompleteView.ShowUntiledLinkedPairStatus = _showUntiledLinkedPairStatus;
         }
 
         public IndexLabelType VertexLabelType
@@ -482,7 +496,10 @@ namespace MonogameTestbed
                     : null;
                 meshIncompleteView = incompleteView;
                 if (incompleteView is not null)
+                {
                     ApplySliceStatusFiltersToIncompleteView();
+                    plan.UntiledLinkedOverlay += incompleteView.ApplyUntiledLinkedOverlay;
+                }
                 meshCompletedView = new MeshAssemblyPlannerCompletedView(meshAssemblyPlan)
                 {
                     Color = ColorForGraph(Graph)
@@ -1236,6 +1253,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
         view.ShowMinorIssueSliceStatus = _showMinorIssueSliceStatus;
         view.ShowWarningSliceStatus = _showWarningSliceStatus;
         view.ShowCriticalSliceStatus = _showCriticalSliceStatus;
+        view.ShowUntiledLinkedPairStatus = _showUntiledLinkedPairStatus;
         _wrapViews.Add(view);
         _cachedLegendEntries = null;
         _legendCacheWrapCount = -1;
@@ -1299,6 +1317,7 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
     bool _showMinorIssueSliceStatus = true;
     bool _showWarningSliceStatus = true;
     bool _showCriticalSliceStatus = true;
+    bool _showUntiledLinkedPairStatus = true;
 
     public bool ShowInProgressSliceStatus
     {
@@ -1352,6 +1371,17 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
             _showCriticalSliceStatus = value;
             foreach (var wrapView in WrapViews)
                 wrapView.ShowCriticalSliceStatus = value;
+        }
+    }
+
+    public bool ShowUntiledLinkedPairStatus
+    {
+        get => _showUntiledLinkedPairStatus;
+        set
+        {
+            _showUntiledLinkedPairStatus = value;
+            foreach (var wrapView in WrapViews)
+                wrapView.ShowUntiledLinkedPairStatus = value;
         }
     }
 
@@ -1915,18 +1945,14 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
         }
 
         Task<MorphologyGraph> boundary_graph_task = null;
+        Task<MorphologyGraph> structure_graph_task = null;
         using (MeshPhaseTimings.Measure(MeshPhase.ODataFetch))
         {
         if (Program.options.BoundaryIDs.Any() && Program.options.EndpointUri != null)
         {
             Uri endpoint = Program.options.EndpointUri;
-            boundary_graph_task = AnnotationVizLib.OData.ODataMorphologyFactory.FromODataByTypeIDsAsync([.. Program.options.BoundaryIDs.Select(id => (long)id)], endpoint, false);
-            var boundary_graph = await boundary_graph_task;
-            this.boundaryViewModels = BoundarySurfaceViewModel.CreateBoundarySurfaces(boundary_graph);
-
-            this.boundaryView = CreateViewsForBoundaries(this.boundaryViewModels);
-
-            Console.WriteLine(" Boundary view created");
+            boundary_graph_task = AnnotationVizLib.OData.ODataMorphologyFactory.FromODataByTypeIDsAsync(
+                [.. Program.options.BoundaryIDs.Select(id => (long)id)], endpoint, false);
         }
 
         if (Program.options.StructureIDs.Any() && Program.options.EndpointUri != null)
@@ -1934,7 +1960,8 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
             Console.WriteLine(" From command line parameters");
 
             Uri endpoint = Program.options.EndpointUri;
-            graph = await Task.Run(() => AnnotationVizLib.OData.ODataMorphologyFactory.FromOData([.. Program.options.StructureIDs.Select(id => (long)id)], Program.options.IncludeChildren, endpoint));
+            structure_graph_task = Task.Run(() => AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(
+                [.. Program.options.StructureIDs.Select(id => (long)id)], Program.options.IncludeChildren, endpoint));
         }
         else
         {
@@ -1943,7 +1970,23 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
             //Endpoint.TEST (webdev.codepharm.net) has no DNS address record any more, so the previous default of
             //structure 476 there could not load at all. Structure 180 on RC1 is the whole-cell case this mode is
             //usually exercised against, and it is reachable.
-            graph = await Task.Run(() => AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { 180 }, Program.options.IncludeChildren, DataSource.EndpointMap[Endpoint.RC1]));
+            structure_graph_task = Task.Run(() => AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(
+                new long[] { 180 }, Program.options.IncludeChildren, DataSource.EndpointMap[Endpoint.RC1]));
+        }
+
+        //Overlap boundary and structure fetches when both are requested.
+        if (boundary_graph_task is not null)
+        {
+            await Task.WhenAll(boundary_graph_task, structure_graph_task);
+            MorphologyGraph boundary_graph = await boundary_graph_task;
+            this.boundaryViewModels = BoundarySurfaceViewModel.CreateBoundarySurfaces(boundary_graph);
+            this.boundaryView = CreateViewsForBoundaries(this.boundaryViewModels);
+            Console.WriteLine(" Boundary view created");
+            graph = await structure_graph_task;
+        }
+        else
+        {
+            graph = await structure_graph_task;
         }
 
         Console.WriteLine("End OData fetch");
@@ -2439,26 +2482,28 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
     /// <summary>
     /// Per-kind failed slice counts across every structure.  Before a plan exists only topology failures are known.
     /// </summary>
-    readonly record struct SliceFailureCounts(int Topology, int FaceGenerationException, int InvalidSurface)
+    readonly record struct SliceFailureCounts(int Topology, int FaceGenerationException, int InvalidSurface, int UntiledLinkedPair)
     {
-        public int Total => Topology + FaceGenerationException + InvalidSurface;
+        public int Total => Topology + FaceGenerationException + InvalidSurface + UntiledLinkedPair;
 
         public override string ToString()
         {
-            List<string> parts = new(3);
+            List<string> parts = new(4);
             if (Topology > 0)
                 parts.Add($"{Topology} no topology");
             if (FaceGenerationException > 0)
                 parts.Add($"{FaceGenerationException} face-gen threw");
             if (InvalidSurface > 0)
                 parts.Add($"{InvalidSurface} invalid surface");
+            if (UntiledLinkedPair > 0)
+                parts.Add($"{UntiledLinkedPair} untiled linked");
             return string.Join(", ", parts);
         }
     }
 
     SliceFailureCounts CountFailedSlices()
     {
-        int topology = 0, threw = 0, invalid = 0;
+        int topology = 0, threw = 0, invalid = 0, untiled = 0;
         foreach (var wrapView in WrapViews)
         {
             var plan = wrapView.meshAssemblyPlan;
@@ -2474,12 +2519,13 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
                 {
                     case SliceFailureKind.Topology: topology++; break;
                     case SliceFailureKind.FaceGenerationException: threw++; break;
+                    case SliceFailureKind.UntiledLinkedPair: untiled++; break;
                     default: invalid++; break;
                 }
             }
         }
 
-        return new SliceFailureCounts(topology, threw, invalid);
+        return new SliceFailureCounts(topology, threw, invalid, untiled);
     }
 
     /// <summary>
@@ -2687,7 +2733,8 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
             {
                 var mesh = view.meshAssemblyPlan.Root.MeshModel.composite;
                 StructureModel rootModel = new(structure_id, mesh,
-                new MaterialLighting(MaterialKey(view.Graph), RgbaColor.CornflowerBlue))
+                new MaterialLighting(MaterialKey(view.Graph), ColladaColorForGraph(view.Graph)),
+                StructureDisplayName(view.Graph))
                 {
                     Translation = PlacementTranslation(view) * 0.001
                 };
@@ -2723,13 +2770,32 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
     static Geometry.Vector3 PlacementTranslation(BajajMultiOTVAssignmentView view) => view.VolumePlacementCenter;
 
     /// <summary>
-    /// Collada material key for a structure mesh. Nested children are not in the dummy root's
-    /// <see cref="MorphologyGraph.Subgraphs"/> map, so this uses the graph already attached to the view.
+    /// Collada material key: one shared material per structure type so Blender can select-linked-by-material.
     /// </summary>
-    static string MaterialKey(MorphologyGraph structureGraph) =>
-        structureGraph.structure != null
-            ? MaterialLighting.CreateKey(COLORSOURCE.STRUCTURE, structureGraph.structure)
-            : MaterialLighting.CreateKey(COLORSOURCE.STRUCTURE, structureGraph.StructureID);
+    static string MaterialKey(MorphologyGraph structureGraph)
+    {
+        var type = structureGraph?.structure?.Type;
+        if (type != null)
+            return MaterialLighting.CreateKey(COLORSOURCE.STRUCTURETYPE, type.ID);
+        return MaterialLighting.CreateKey(COLORSOURCE.STRUCTURE, structureGraph.StructureID);
+    }
+
+    /// <summary>Diffuse color matching the live BajajMultiTest view (<see cref="BajajMultiOTVAssignmentView.ColorForGraph"/>).</summary>
+    static RgbaColor ColladaColorForGraph(MorphologyGraph structureGraph)
+    {
+        Color c = BajajMultiOTVAssignmentView.ColorForGraph(structureGraph);
+        return RgbaColor.FromArgb(c.A, c.R, c.G, c.B);
+    }
+
+    /// <summary>Outliner-friendly name: TypeName-StructureID when type is known.</summary>
+    static string StructureDisplayName(MorphologyGraph structureGraph)
+    {
+        ulong id = structureGraph.StructureID;
+        string typeName = structureGraph?.structure?.Type?.Name;
+        if (string.IsNullOrWhiteSpace(typeName))
+            return $"Struct-{id}";
+        return $"{typeName}-{id}";
+    }
 
     public void SaveMesh(IReadOnlyMesh3D<IVertex3D> mesh, Geometry.Vector3 Position, MorphologyGraph structureGraph, string outputDir = null)
     {
@@ -2742,7 +2808,8 @@ class BajajMultiAssignmentTest : IGraphicsTest, ITestLegend, ITestHotkeyHelp, IV
         };
 
         StructureModel rootModel = new(structure_id, mesh,
-            new MaterialLighting(MaterialKey(structureGraph), RgbaColor.CornflowerBlue))
+            new MaterialLighting(MaterialKey(structureGraph), ColladaColorForGraph(structureGraph)),
+            StructureDisplayName(structureGraph))
         {
             Translation = Position * 0.001
         };

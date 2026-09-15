@@ -186,6 +186,13 @@ namespace MonogameTestbed
             public int CorrectionCurveFitWindow { get; set; }
 
             /// <summary>
+            /// 0 = use env <c>VIKING_ODATA_MAX_CONCURRENT</c> or factory default (4).
+            /// </summary>
+            [Option("odata-concurrent", Default = 0,
+                HelpText = "Max concurrent OData requests (default 4, or env VIKING_ODATA_MAX_CONCURRENT). Raise only when the host can take it.")]
+            public int ODataConcurrent { get; set; }
+
+            /// <summary>
             /// Max density-gate spacing (nm/vert) for closed polygons; with hull-adaptive mode this is the
             /// nearly-convex end (ratio ≥ 0.95). Convoluted rings lerp down to 20 nm. Default 50. Set &lt;= 0 to disable.
             /// </summary>
@@ -238,9 +245,10 @@ namespace MonogameTestbed
 
             /// <summary>
             /// Off by default so the timing hooks cost nothing in a normal run.
+            /// Requires Server GC (MonogameTestbed sets ServerGarbageCollection=true); aborts otherwise.
             /// </summary>
             [Option("timings", Required = false,
-                HelpText = "Accumulate and print mesh generation phase timings when the run finishes", Default = false)]
+                HelpText = "Accumulate and print mesh generation phase timings when the run finishes (requires Server GC)", Default = false)]
             public bool Timings { get; set; }
 
             /// <summary>
@@ -427,6 +435,19 @@ namespace MonogameTestbed
                 LoadCaptureRequest();
                 ApplyCameraPresets();
                 MorphologyMesh.MeshPhaseTimings.Enabled = Timings;
+                MorphologyMesh.ChordGenStats.Enabled = Timings;
+                if (Timings)
+                    MorphologyMesh.ChordGenStats.Reset();
+                if (Timings && !System.Runtime.GCSettings.IsServerGC)
+                {
+                    throw new ArgumentException(
+                        "--timings requires Server GC. Build MonogameTestbed with <ServerGarbageCollection>true</ServerGarbageCollection> " +
+                        "(Release x64 is the supported benchmark config). Workstation GC pauses dominate wall clock and look like " +
+                        "low CPU utilization; those runs are not comparable to Server GC timings.");
+                }
+
+                if (ODataConcurrent > 0)
+                    AnnotationVizLib.OData.ODataMorphologyFactory.MaxConcurrentRequests = ODataConcurrent;
             }
 
             private void ParseCorrection()
@@ -771,6 +792,8 @@ namespace MonogameTestbed
             if (!logToFile && !logToConsole)
                 return;
 
+            // Trace.AutoFlush forces a flush after every WriteLine under Trace's global lock. That is only
+            // useful for live console debugging (-v); for -l alone it turns every log line into a sync disk write.
             Trace.AutoFlush = logToConsole;
 
             if (logToFile)
@@ -783,9 +806,9 @@ namespace MonogameTestbed
                     Directory.CreateDirectory(LogPath);
 
                 DebugLogFile = File.CreateText(LogFullPath);
-                //File AutoFlush is enough for -l alone; Trace.AutoFlush with only a file listener made every
-                //Trace.WriteLine a synchronous disk flush under Trace's global lock.
-                DebugLogFile.AutoFlush = true;
+                // Buffer to the OS; StopDiagnostics flushes/closes. Much faster than per-line AutoFlush under
+                // parallel face generation (and still far cheaper than console I/O).
+                DebugLogFile.AutoFlush = false;
 
                 SynchronizedLogWriter = TextWriter.Synchronized(DebugLogFile);
                 LogListener = new TextWriterTraceListener(SynchronizedLogWriter, "MonogameTestbedLog");
@@ -829,9 +852,13 @@ namespace MonogameTestbed
             {
                 Trace.Listeners.Remove(LogListener);
                 LogListener.Flush();
+                // Dispose closes the underlying TextWriter (SynchronizedLogWriter / DebugLogFile).
                 LogListener.Dispose();
                 LogListener = null;
             }
+
+            SynchronizedLogWriter = null;
+            DebugLogFile = null;
 
             if (LoggerFactory != null)
             {
@@ -839,10 +866,6 @@ namespace MonogameTestbed
                 LoggerFactory = null;
                 Logger = null;
             }
-
-            SynchronizedLogWriter?.Close();
-            SynchronizedLogWriter = null;
-            DebugLogFile = null;
         }
 
 

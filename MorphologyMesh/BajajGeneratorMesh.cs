@@ -224,10 +224,104 @@ namespace MorphologyMesh
         }
 
         /// <summary>
+        /// True when at least one LocationLinked cross-band shape pair has no spanning face after generation.
+        /// Distinct from a manifold hole: the surface can look valid while a link was never meshed.
+        /// </summary>
+        public bool HasUntiledLinkedPairs { get; private set; }
+
+        /// <summary>
+        /// Shape indices (topology lockstep) that belong to an untiled linked pair.  Used to tint only those
+        /// contours in the incomplete overlay; empty when <see cref="HasUntiledLinkedPairs"/> is false.
+        /// </summary>
+        public IReadOnlyList<int> UntiledLinkedShapeIndices { get; private set; } = [];
+
+        /// <summary>
         /// The manifold state measured at the end of face generation.  Lets callers and tests inspect why a
         /// slice was flagged rather than only knowing that something went wrong.
         /// </summary>
         public MeshManifoldReport ManifoldReport { get; set; }
+
+        /// <summary>
+        /// After faces exist, require every LocationLinked cross-band pair to share at least one face.
+        /// Same-band pairs are ignored (LocationLinks only speak to tiling across the slice).  Skipped when
+        /// the topology has no link matrix so "unknown" is not treated as "every pair must tile".
+        /// </summary>
+        public void CheckLinkedPairsHaveFaces()
+        {
+            HasUntiledLinkedPairs = false;
+            UntiledLinkedShapeIndices = [];
+
+            if (Topology.HasLinkData == false || Topology.Shapes is null || Topology.Shapes.Length < 2)
+                return;
+
+            bool[] isUpper = Topology.IsUpper;
+            int n = Topology.Shapes.Length;
+            List<(int a, int b)> missing = [];
+            HashSet<int> shapes = [];
+
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = i + 1; j < n; j++)
+                {
+                    if (isUpper[i] == isUpper[j])
+                        continue;
+                    if (Topology.MayTile(i, j) == false)
+                        continue;
+                    if (CountFacesSpanning(i, j) > 0)
+                        continue;
+
+                    missing.Add((i, j));
+                    shapes.Add(i);
+                    shapes.Add(j);
+                }
+            }
+
+            if (missing.Count == 0)
+                return;
+
+            HasUntiledLinkedPairs = true;
+            UntiledLinkedShapeIndices = [.. shapes.OrderBy(s => s)];
+
+            string[] pairText = [.. missing.Select(p => DescribeLinkedPair(p.a, p.b))];
+            RecordGenerationError($"untiled linked pair(s): {string.Join(", ", pairText)}");
+        }
+
+        /// <summary>Faces whose vertices touch both shape indices (caps / medial verts with null ShapeIndex ignored).</summary>
+        public int CountFacesSpanning(int iShapeA, int iShapeB)
+        {
+            int count = 0;
+            foreach (IFace face in Faces)
+            {
+                bool touchesA = false;
+                bool touchesB = false;
+                foreach (int iVert in face.iVerts)
+                {
+                    IShapeIndex index = this[iVert].ShapeIndex;
+                    if (index is null)
+                        continue;
+                    if (index.ShapeIndex == iShapeA)
+                        touchesA = true;
+                    if (index.ShapeIndex == iShapeB)
+                        touchesB = true;
+                }
+
+                if (touchesA && touchesB)
+                    count++;
+            }
+
+            return count;
+        }
+
+        private string DescribeLinkedPair(int iShapeA, int iShapeB)
+        {
+            ulong[] morph = Topology.ShapeIndexToMorphNodeIndex;
+            if (morph is not null
+                && iShapeA >= 0 && iShapeA < morph.Length
+                && iShapeB >= 0 && iShapeB < morph.Length)
+                return $"{morph[iShapeA]}/{morph[iShapeB]}";
+
+            return $"shapes {iShapeA}/{iShapeB}";
+        }
 
         public override string ToString()
         {

@@ -19,7 +19,7 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 namespace MonogameTestbed
 {
     /// <summary>
-    /// Why a slice ended up in <see cref="MeshAssemblyPlanner.FailedSlicesForRepro"/>.  The three cases need
+    /// Why a slice ended up in <see cref="MeshAssemblyPlanner.FailedSlicesForRepro"/>.  The cases need
     /// different fixes, so they must not be lumped together as "dropped" on the HUD.
     /// </summary>
     enum SliceFailureKind
@@ -32,6 +32,12 @@ namespace MonogameTestbed
 
         /// <summary>A mesh exists but the manifold report rejects it (holes, non-manifold, winding).</summary>
         InvalidSurface,
+
+        /// <summary>
+        /// LocationLinked cross-band annotations have no spanning face.  May coexist with a valid manifold
+        /// report when virtual overlap declined or tiling left a silent gap.
+        /// </summary>
+        UntiledLinkedPair,
     }
 
     /// <summary>
@@ -86,6 +92,12 @@ namespace MonogameTestbed
         /// so the failure can be logged while the run is still going rather than only after it ends.
         /// </summary>
         public event Action<FailedSliceReproRecord> FailedSliceRecorded;
+
+        /// <summary>
+        /// Raised when a completed mesh has LocationLinked pairs with no spanning faces, so the incomplete
+        /// overlay can tint only those contours magenta.
+        /// </summary>
+        public event Action<ulong, BajajGeneratorMesh> UntiledLinkedOverlay;
 
         /// <summary>Source morphology grouping; used when recording failed-slice location IDs.</summary>
         public SliceGraph SliceGraph { get; private set; }
@@ -237,6 +249,15 @@ namespace MonogameTestbed
                         ? "topology initialisation failed"
                         : error ?? "face generation threw (see trace)";
                 }
+                else if (mesh.HasUntiledLinkedPairs)
+                {
+                    kind = SliceFailureKind.UntiledLinkedPair;
+                    reason = mesh.GenerationErrors.Count == 0
+                        ? mesh.ManifoldReport.ToString()
+                        : string.Join("\n", mesh.GenerationErrors);
+                    if (mesh.ManifoldReport.IsValidSliceSurface == false)
+                        reason = $"{reason}\n{mesh.ManifoldReport}";
+                }
                 else
                 {
                     kind = SliceFailureKind.InvalidSurface;
@@ -258,6 +279,11 @@ namespace MonogameTestbed
             }
 
             leaf.OnMeshCompletion(mesh, MeshColor);
+
+            //Tint before OnNodeCompleted so that path does not blanket-recolor the rebuilt magenta contours.
+            if (mesh is not null && mesh.HasUntiledLinkedPairs)
+                UntiledLinkedOverlay?.Invoke(slice.Key, mesh);
+
             OnNodeCompleted?.Invoke(leaf, Success, mesh?.ManifoldReport);
 
             if (MeshPhaseTimings.Enabled)
@@ -656,7 +682,9 @@ namespace MonogameTestbed
         /// <summary>Holes or inconsistent winding — drawn orange.</summary>
         Warning,
         /// <summary>Softer issues such as isolated edges — drawn yellow.</summary>
-        Minor
+        Minor,
+        /// <summary>Linked annotations with no spanning face — per-shape magenta contours.</summary>
+        UntiledLinked,
     }
 
     /// <summary>
@@ -678,6 +706,14 @@ namespace MonogameTestbed
         private readonly SortedSet<ulong> NodesThatFailedMeshing = [];
         private readonly Dictionary<ulong, MeshManifoldReport> NodeFailureReports = [];
         private readonly Dictionary<ulong, AssemblyBoxFailureSeverity> NodeFailureSeverity = [];
+        /// <summary>Shape indices to magenta-tint per failed leaf; only those contours, not the whole slice.</summary>
+        private readonly Dictionary<ulong, int[]> NodeUntiledLinkedShapes = [];
+
+        /// <summary>Magenta used for contours that are LocationLinked but have no spanning face.</summary>
+        internal static readonly Color UntiledLinkedContourColor = Color.Magenta.SetAlpha(0.9f);
+
+        /// <summary>Normal in-progress contour color.</summary>
+        internal static readonly Color DefaultLeafContourColor = Color.LightGray.SetAlpha(0.75f);
 
         /// <summary>
         /// When false, hides red (critical / non-manifold) error overlays. Prefer the View menu Slice Status
@@ -695,10 +731,12 @@ namespace MonogameTestbed
         private bool _showMinorIssueSliceStatus = true;
         private bool _showWarningSliceStatus = true;
         private bool _showCriticalSliceStatus = true;
+        private bool _showUntiledLinkedPairStatus = true;
 #else
         private bool _showMinorIssueSliceStatus = false;
         private bool _showWarningSliceStatus = false;
         private bool _showCriticalSliceStatus = false;
+        private bool _showUntiledLinkedPairStatus = true;
 #endif
 
         /// <summary>In-progress leaf contour overlays (gray).</summary>
@@ -762,6 +800,23 @@ namespace MonogameTestbed
                 if (_showCriticalSliceStatus == value)
                     return;
                 _showCriticalSliceStatus = value;
+                RequestVisibleListRebuild();
+            }
+        }
+
+        /// <summary>
+        /// Magenta tint on contours that are LocationLinked but have no spanning face.  When off, those
+        /// shapes draw LightGray again; other failure overlays are unchanged.
+        /// </summary>
+        public bool ShowUntiledLinkedPairStatus
+        {
+            get => _showUntiledLinkedPairStatus;
+            set
+            {
+                if (_showUntiledLinkedPairStatus == value)
+                    return;
+                _showUntiledLinkedPairStatus = value;
+                RefreshUntiledLinkedContourColors();
                 RequestVisibleListRebuild();
             }
         }
@@ -932,6 +987,7 @@ namespace MonogameTestbed
                     {
                         AssemblyBoxFailureSeverity.Critical => ShowCriticalSliceStatus,
                         AssemblyBoxFailureSeverity.Warning => ShowWarningSliceStatus,
+                        AssemblyBoxFailureSeverity.UntiledLinked => true, // tint toggles magenta vs gray; overlay stays
                         _ => ShowMinorIssueSliceStatus
                     };
                     if (!show)
@@ -1198,6 +1254,15 @@ namespace MonogameTestbed
                     NodesThatFailedMeshing.Remove(node.Key);
                     NodeFailureReports.Remove(node.Key);
                     NodeFailureSeverity.Remove(node.Key);
+                    NodeUntiledLinkedShapes.Remove(node.Key);
+                }
+                else if (NodeUntiledLinkedShapes.ContainsKey(node.Key))
+                {
+                    //ApplyUntiledLinkedOverlay already rebuilt per-shape magenta; do not blanket SetColor.
+                    NodesThatFailedMeshing.Add(node.Key);
+                    NodeFailureSeverity[node.Key] = AssemblyBoxFailureSeverity.UntiledLinked;
+                    if (report.HasValue)
+                        NodeFailureReports[node.Key] = report.Value;
                 }
                 else if (BoundingBoxModels.TryGetValue(node.Key, out MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor> model))
                 {
@@ -1216,6 +1281,90 @@ namespace MonogameTestbed
 
             //Keep the last published snapshot for Draw; rebuild coalesces on a background task.
             RequestVisibleListRebuild();
+        }
+
+        /// <summary>
+        /// Rebuild the leaf contour overlay so only shapes in untiled linked pairs are magenta; other
+        /// annotations on the slice stay LightGray.
+        /// </summary>
+        public void ApplyUntiledLinkedOverlay(ulong sliceKey, BajajGeneratorMesh mesh)
+        {
+            if (mesh?.Topology is null || mesh.UntiledLinkedShapeIndices is null || mesh.UntiledLinkedShapeIndices.Count == 0)
+                return;
+
+            int[] shapes = [.. mesh.UntiledLinkedShapeIndices];
+            MeshModel<VertexPositionColor> model = GenerateLeafContourMesh(
+                mesh.Topology,
+                i => shapes.Contains(i) && ShowUntiledLinkedPairStatus
+                    ? UntiledLinkedContourColor
+                    : DefaultLeafContourColor);
+            if (model is null)
+                return;
+
+            try
+            {
+                ReadyModelLock.EnterWriteLock();
+                NodeUntiledLinkedShapes[sliceKey] = shapes;
+                NodesThatFailedMeshing.Add(sliceKey);
+                NodeFailureSeverity[sliceKey] = AssemblyBoxFailureSeverity.UntiledLinked;
+                InsertOverlayModelUnlocked(sliceKey, model);
+            }
+            finally
+            {
+                ReadyModelLock.ExitWriteLock();
+            }
+
+            RequestVisibleListRebuild();
+        }
+
+        /// <summary>Rebuild magenta vs gray for every leaf that recorded untiled linked shapes.</summary>
+        private void RefreshUntiledLinkedContourColors()
+        {
+            KeyValuePair<ulong, int[]>[] entries;
+            try
+            {
+                ReadyModelLock.EnterReadLock();
+                entries = [.. NodeUntiledLinkedShapes];
+            }
+            finally
+            {
+                ReadyModelLock.ExitReadLock();
+            }
+
+            if (entries.Length == 0)
+                return;
+
+            foreach (KeyValuePair<ulong, int[]> entry in entries)
+            {
+                SliceTopology topology;
+                try
+                {
+                    topology = _sliceGraph.GetTopology(entry.Key);
+                }
+                catch
+                {
+                    continue;
+                }
+
+                int[] shapes = entry.Value;
+                MeshModel<VertexPositionColor> model = GenerateLeafContourMesh(
+                    topology,
+                    i => shapes.Contains(i) && ShowUntiledLinkedPairStatus
+                        ? UntiledLinkedContourColor
+                        : DefaultLeafContourColor);
+                if (model is null)
+                    continue;
+
+                try
+                {
+                    ReadyModelLock.EnterWriteLock();
+                    InsertOverlayModelUnlocked(entry.Key, model);
+                }
+                finally
+                {
+                    ReadyModelLock.ExitWriteLock();
+                }
+            }
         }
 
         /// <summary>
@@ -1254,18 +1403,26 @@ namespace MonogameTestbed
         /// Line segments along each contour vertex ring (and polyline edges) in the slice's centered XY frame.
         /// </summary>
         private static MeshModel<VertexPositionColor> GenerateLeafContourMesh(SliceTopology topology)
+            => GenerateLeafContourMesh(topology, _ => DefaultLeafContourColor);
+
+        /// <summary>
+        /// Same as <see cref="GenerateLeafContourMesh(SliceTopology)"/> with a per-shape color (used to magenta-tint
+        /// only untiled linked annotations).
+        /// </summary>
+        private static MeshModel<VertexPositionColor> GenerateLeafContourMesh(
+            SliceTopology topology,
+            Func<int, Color> colorForShape)
         {
             if (!topology.IsValid || topology.Shapes is null || topology.Shapes.Length == 0)
                 return null;
 
-            Color color = Color.LightGray.SetAlpha(0.75f);
             List<VertexPositionColor> verts = new(256);
             List<int> edges = new(512);
 
             for (int i = 0; i < topology.Shapes.Length; i++)
             {
                 double z = topology.ShapeZ[i];
-                AppendShapeContour(topology.Shapes[i], z, color, verts, edges);
+                AppendShapeContour(topology.Shapes[i], z, colorForShape(i), verts, edges);
             }
 
             if (edges.Count == 0)

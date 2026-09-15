@@ -49,7 +49,8 @@ namespace MonogameTestbed
             SectionReady,
             Minor,
             Warning,
-            Critical
+            Critical,
+            UntiledLinked
         }
 
         private readonly MonoTestbed _game;
@@ -259,6 +260,9 @@ namespace MonogameTestbed
                 case SliceStatusItemId.Critical:
                     target.ShowCriticalSliceStatus = !target.ShowCriticalSliceStatus;
                     break;
+                case SliceStatusItemId.UntiledLinked:
+                    target.ShowUntiledLinkedPairStatus = !target.ShowUntiledLinkedPairStatus;
+                    break;
             }
         }
 
@@ -269,6 +273,7 @@ namespace MonogameTestbed
             SliceStatusItemId.Minor => target.ShowMinorIssueSliceStatus,
             SliceStatusItemId.Warning => target.ShowWarningSliceStatus,
             SliceStatusItemId.Critical => target.ShowCriticalSliceStatus,
+            SliceStatusItemId.UntiledLinked => target.ShowUntiledLinkedPairStatus,
             _ => false
         };
 
@@ -350,6 +355,7 @@ namespace MonogameTestbed
                         SliceStatusItemId.Minor => "Minor Issues (yellow)",
                         SliceStatusItemId.Warning => "Holes / Winding (orange)",
                         SliceStatusItemId.Critical => "Non-manifold (red)",
+                        SliceStatusItemId.UntiledLinked => "Untiled linked contours (magenta)",
                         _ => item.Id.ToString()
                     };
                     string text = $"{CheckMark(IsSliceStatusChecked(viewTarget, item.Id))} {label}";
@@ -406,7 +412,8 @@ namespace MonogameTestbed
                 SliceStatusItemId.SectionReady,
                 SliceStatusItemId.Minor,
                 SliceStatusItemId.Warning,
-                SliceStatusItemId.Critical
+                SliceStatusItemId.Critical,
+                SliceStatusItemId.UntiledLinked
             ];
             foreach (SliceStatusItemId id in sliceIds)
             {

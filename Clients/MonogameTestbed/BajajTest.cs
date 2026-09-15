@@ -377,9 +377,21 @@ namespace MonogameTestbed
             AddLineView(FirstPassTriangulation, "Final mesh");
             RecordFinalReport(FirstPassTriangulation, anchoredBeforeRepair);
 
+            FirstPassTriangulation.CheckLinkedPairsHaveFaces();
+            if (FirstPassTriangulation.HasUntiledLinkedPairs)
+                Trace.WriteLine($"Untiled linked pair(s): {string.Join("; ", FirstPassTriangulation.GenerationErrors)}");
+
             lock (ViewsLock)
             {
                 this.MeshVertsView = CreateMeshVertexView(FirstPassTriangulation);
+                //Retint contours so only annotations in untiled linked pairs are magenta.
+                PolyViews = new PolygonSetView(
+                    Shapes.Select(s => s as Polygon),
+                    ContourShapeColors(FirstPassTriangulation.IsUpperShape, FirstPassTriangulation.UntiledLinkedShapeIndices),
+                    2)
+                {
+                    PointLabelType = IndexLabelType.MESH
+                };
             }
 
             InvalidateAnnotationScale();
@@ -989,8 +1001,17 @@ namespace MonogameTestbed
             return psv;
         }
 
-        private static Color[] ContourShapeColors(bool[] isUpper) =>
-            [.. isUpper.Select(upper => upper ? UpperContourColor : LowerContourColor)];
+        private static Color[] ContourShapeColors(bool[] isUpper, IReadOnlyList<int> untiledLinkedShapes = null)
+        {
+            System.Collections.Generic.HashSet<int> tint = untiledLinkedShapes is { Count: > 0 }
+                ? [.. untiledLinkedShapes]
+                : null;
+
+            return [.. isUpper.Select((upper, i) =>
+                tint is not null && tint.Contains(i)
+                    ? MeshAssemblyPlannerIncompleteView.UntiledLinkedContourColor
+                    : upper ? UpperContourColor : LowerContourColor)];
+        }
 
         /*
         public void UpdatePolyViews()

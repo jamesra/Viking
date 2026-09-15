@@ -165,7 +165,7 @@ namespace ColladaIO
             node_type node = new()
             {
                 id = model.NodeName,
-                name = model.NodeName
+                name = model.Name
             };
 
             List<object> NodeItems = [];

@@ -631,16 +631,29 @@ namespace AnnotationVizLib
                 return offset;
 
             Vector2 candidate = offset;
+            List<ulong> blockers = null;
             for (int attempt = 0; attempt < 4; attempt++)
             {
                 SqlGeometry moved = node.Geometry.Translate(candidate);
-                if (neighbours.All(other => !moved.STIntersects(other.Geometry).IsTrue))
+                blockers = null;
+                foreach (MorphologyNode other in neighbours)
+                {
+                    if (!moved.STIntersects(other.Geometry).IsTrue)
+                        continue;
+                    blockers ??= [];
+                    blockers.Add(other.Key);
+                }
+
+                if (blockers is null)
                     return candidate;
 
                 candidate *= 0.5;
             }
 
-            Trace.WriteLine($"CurveFitProcesses: location {node.Key} left in place; every translation toward the fit overlaps a same-section neighbour.");
+            // blockers are from the last (smallest) attempted offset — 1/8 of the proposed move.
+            Trace.WriteLine(
+                $"CurveFitProcesses: location {node.Key} left in place on section {section}; " +
+                $"even 1/8 of the proposed offset ({offset.Magnitude:G4}) overlaps same-section neighbour(s) [{string.Join(", ", blockers)}].");
             return Vector2.Zero;
         }
 

@@ -75,11 +75,20 @@ namespace MorphologyMesh
         public string FXName => Key + "-fx";
     }
 
-    public class StructureModel(ulong id, IReadOnlyMesh3D<IVertex3D> mesh, MaterialLighting mat)
+    public class StructureModel
     {
-        public readonly ulong ID = id;
+        public StructureModel(ulong id, IReadOnlyMesh3D<IVertex3D> mesh, MaterialLighting mat, string displayName = null)
+        {
+            ID = id;
+            Mesh = mesh;
+            Material = mat;
+            Name = string.IsNullOrWhiteSpace(displayName) ? $"Struct-{id}" : displayName;
+        }
 
-        public string Name => $"Struct-{ID}";
+        public readonly ulong ID;
+
+        /// <summary>Outliner / node display name (e.g. PSD-12345). Uniqueness stays on <see cref="NodeName"/>.</summary>
+        public string Name { get; set; }
 
         public string NodeName => $"NodeID-{ID}";
 
@@ -94,9 +103,9 @@ namespace MorphologyMesh
         public string InstanceURL => GeometryURL is null ? "#" + NodeName : string.Format("{0}#{1}", GeometryURL, NodeName);
 
 
-        public readonly IReadOnlyMesh3D<IVertex3D> Mesh = mesh;
+        public readonly IReadOnlyMesh3D<IVertex3D> Mesh;
 
-        public readonly MaterialLighting Material = mat;
+        public readonly MaterialLighting Material;
 
         private readonly SortedList<ulong, StructureModel> _ChildStructures = [];
 
@@ -120,7 +129,6 @@ namespace MorphologyMesh
         public void AddChild(StructureModel child)
         {
             child.Translation -= this.Translation;
-            //child.Translation = child.Translation;
             _ChildStructures.Add(child.ID, child);
         }
 
@@ -225,17 +233,14 @@ namespace MorphologyMesh
         /// <summary>
         /// Add a structure, and all of its children, to the scene
         /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
         private void AddModel(StructureModel model)
         {
             StructureModels[model.ID] = model;
-
             GetOrAddMaterial(model.Material);
 
             foreach (var child in model.ChildStructures.Values)
             {
-                StructureModels[child.ID] = child;
+                AddModel(child);
             }
         }
 

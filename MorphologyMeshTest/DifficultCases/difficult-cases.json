@@ -1393,6 +1393,420 @@
       "problem": "structure=2628 [FaceGenerationException] Geometry.Meshing.NonconformingTriangulationException: Somehow an edge intersection test found an edge with only one face when testing vertex to vertex edge intersection. | Tested Edge: 9-69 Last Intersected Edge/Face: 21-438 / 18,438,21 | at Geometry.Meshing.TriangulationMesh`1.FindIntersectingFaceEdges(ITriangleFace previous_intersected_face, IEdgeKey constrained_edge, LineSegment constrained_seg, IEdge previous_intersected_edge, List`1& intersected_edges) in D:\\src\\git\\VikingLegacy\\Geometry\\Meshing\\TriangulationMesh.cs:line 1021 | at Geometry.Meshing.TriangulationMesh`1.FindIntersectingFaceEdges(IEdgeKey e) in D:\\src\\git\\VikingLegacy\\Geometry\\Meshing\\TriangulationMesh.cs:line 1002 | at Geometry.GenericDelaunayMeshGenerator2D`1.TryGetNextCandidate(TriangulationMesh`1 mesh, List`1& sortedCandidates, Baseline& baseline, Boolean Clockwise, Double& angle, Nullable`1& circle) in D:\\src\\git\\VikingLegacy\\Geometry\\Algorithms\\DelaunayMesh.cs:line 1108 | at Geometry.GenericDelaunayMeshGenerator2D`1.RecursiveDivideAndConquerDelaunay(TriangulationMesh`1 mesh, MeshCut VertSet, IVertex2D[] verts, ProgressUpdate ReportProgress) in D:\\src\\git\\VikingLegacy\\Geometry\\Algorithms\\DelaunayMesh.cs:line 269 | at Geometry.GenericDelaunayMeshGenerator2D`1.RecursiveDivideAndConquerDelaunay(TriangulationMesh`1 mesh, MeshCut VertSet, IVertex2D[] verts, ProgressUpdate ReportProgress) in D:\\src\\git\\VikingLegacy\\Geometry\\Algorithms\\DelaunayMesh.cs:line 208 | at Geometry.GenericDelaunayMeshGenerator2D`1.TriangulateToMesh(VERTEX[] verts, ProgressUpdate ReportProgress) in D:\\src\\git\\VikingLegacy\\Geometry\\Algorithms\\DelaunayMesh.cs:line 81 | at MorphologyMesh.BajajMeshGenerator.TriangulateSitesWithRetry(Vector2[] translatedPoints, Vector2[] originalPoints, Dictionary`2 pointToIndexMap, ProgressUpdate OnProgress, TriangulationMesh`1& triMesh) in D:\\src\\git\\VikingLegacy\\MorphologyMesh\\Generators\\BajajMeshGenerator.cs:line 896 | at MorphologyMesh.BajajMeshGenerator.AddDelaunayEdges(BajajGeneratorMesh mesh, ProgressUpdate OnProgress) in D:\\src\\git\\VikingLegacy\\MorphologyMesh\\Generators\\BajajMeshGenerator.cs:line 769 | at MorphologyMesh.BajajMeshGenerator.GeneratePolygonFaces(BajajGeneratorMesh mesh, Int32& chordPassCalls, Int32& chordsAdded) in D:\\src\\git\\VikingLegacy\\MorphologyMesh\\Generators\\BajajMeshGenerator.cs:line 576 | at MorphologyMesh.BajajMeshGenerator.GenerateFaces(BajajGeneratorMesh mesh) in D:\\src\\git\\VikingLegacy\\MorphologyMesh\\Generators\\BajajMeshGenerator.cs:line 535 | at MorphologyMesh.BajajMeshGenerator.<>c__DisplayClass7_1.<ConvertToMesh>b__3(CancellationToken _) in D:\\src\\git\\VikingLegacy\\MorphologyMesh\\Generators\\BajajMeshGenerator.cs:line 461 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells, 2026-09-14).",
       "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
       "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [101221, 101247, 364255, 364257, 364258],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 101247/364255 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [102410, 102557, 102564, 263477],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:2405 manifold:2556 nonManifold:0 inconsistent:1 contourSeam:2100 holes:3 isolated:2 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "InvalidSurface",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [102557, 102612, 364393],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 364393/102557 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [102809, 145443, 364522],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 364522/102809 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [103555, 103557, 365933, 365979],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:1227 manifold:1325 nonManifold:0 inconsistent:1 contourSeam:1028 holes:3 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | region Reg: 166,898,977 2 UNTILED: perimeter edge 166-977 SURFACE already at face capacity | 1 of 9 untiled region(s) could not be closed | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "InvalidSurface",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [104680, 105707, 365867, 365926],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 105707/365926 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [105961, 105962, 367192],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 367192/105961 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [107698, 107731, 107734, 107735],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 107734/107698 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [107721, 107735, 108104],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 108104/107735 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [107737, 108108, 108109],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 108109/107737 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [108295, 108300, 108319],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 108319/108300 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [108512, 108518, 108523, 108524, 108531],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:2715 manifold:2972 nonManifold:0 inconsistent:0 contourSeam:2197 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "InvalidSurface",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [108515, 108516, 108528],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 108528/108516 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [112827, 112875, 112900, 112901, 365138],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 365138/112827 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [112875, 112904],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:3920 manifold:4028 nonManifold:0 inconsistent:0 contourSeam:3700 holes:4 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "InvalidSurface",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [113904, 113910, 365563],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 365563/113904 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [132494, 132498],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:1058 manifold:1149 nonManifold:0 inconsistent:0 contourSeam:873 holes:3 isolated:1 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "InvalidSurface",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [133588, 133594, 133595],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 133595/133588 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [139752, 139753],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:563 manifold:785 nonManifold:0 inconsistent:0 contourSeam:117 holes:2 isolated:3 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "InvalidSurface",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [140243, 140244, 368437],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 140244/368437 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [140324, 140325, 140326],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 140326/140324 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [144419, 144420, 144422, 144423],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 144419/144422 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [144425, 144426, 144427],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 144425/144427 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [144465, 144466, 365378],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 144465/365378 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [145724, 145729, 365608],
+      "open": true,
+      "problem": "structure=2628 [InvalidSurface] faces:1755 manifold:1890 nonManifold:0 inconsistent:1 contourSeam:1483 holes:2 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "InvalidSurface",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [364482, 364483, 364495, 364496],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 364482/364495 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [364486, 364487, 364628],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 364486/364487 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [364779, 364780, 366888],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 366888/364779 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [365562, 365587, 365588],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 365587/365562 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [365941, 366486],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 365941/366486 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [58703, 58704, 366264],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 366264/58703 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [58710, 58713, 366711],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 366711/58710 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [82583, 82585, 367068],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 367068/82583 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [82597, 82599, 366634],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 82599/366634 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [82617, 82620, 82647, 82679],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 82620/82647 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [82664, 82665, 102820, 102821],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 82664/102820 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [82870, 82884, 82899],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 82899/82870 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [82964, 82968, 82971],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 82971/82964 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [82999, 83008, 83012],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 83012/83008 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [83280, 83282, 83291, 83311],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 83282/83280 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [83284, 83299, 83300, 83301],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 83301/83299 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [83293, 83295, 83296],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 83293/83295 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [83728, 83736, 83922],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 83922/83728 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [98942, 98943, 101061, 101147, 101150, 101220, 101221],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 101150/98943, 101221/98943 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [99523, 99583, 99584],
+      "open": true,
+      "problem": "structure=2628 [UntiledLinkedPair] untiled linked pair(s): 99523/99584 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
+    },
+    {
+      "volume": "RPC1",
+      "locations": [367434, 367436],
+      "open": true,
+      "problem": "structure=51724 [UntiledLinkedPair] untiled linked pair(s): 367436/367434 | Tracked from RPC1 structure 2628 BajajMultiTest (E:\\\\Documents\\\\Cell_DAEs\\\\VikingMeshFiles\\\\RPC1\\\\MullerCells-20-10, 2026-09-14, contour-simplify 20/10).",
+      "fix": "Open — not yet fixed. Clear open and accept baselines when this slice meshes to a complete surface.",
+      "failureKind": "UntiledLinkedPair",
+      "cameras": [ { "preset": "side" }, { "preset": "oblique" }]
     }
   ]
 }
