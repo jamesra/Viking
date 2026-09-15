@@ -704,20 +704,20 @@ namespace MorphologyMesh
 
             int[] forks = [.. Enumerable.Range(0, shapes.Length).Where(i => partners[i].Count >= 2)];
 
-            //A shape that forks and is itself a partner of another fork has no fixed frame to be measured against:
-            //moving it invalidates the offsets computed for the other fork's partners.  Pinning the fork centres
-            //instead of declining was tried and is worse: in a polyline chain it leaves the middle shape tiling to
-            //neither of its linked partners (PolylineForkTests.WSequence_LinkedPairsStillTile).
-            for (int a = 0; a < forks.Length; a++)
+            //A shape that forks and is itself a partner of another fork has no fixed frame for the *whole-slice*
+            //fork translation: moving it invalidates the other fork's partner offsets.  Pinning fork centres was
+            //tried and broke polyline W-chains (PolylineForkTests.WSequence_LinkedPairsStillTile).  For polygon
+            //slices (Muller-cell mutual forks), place leaf↔fork pairs locally instead of abandoning the slice.
+            //All-polyline mutual forks still decline: pair-local leaf moves on the W fixture steal the only
+            //successful tiles and leave the middle contour untiled.
+            if (HasMutualLinkedForks(forks, partners))
             {
-                for (int b = a + 1; b < forks.Length; b++)
-                {
-                    if (partners[forks[a]].Contains(forks[b]) == false)
-                        continue;
+                if (shapes.Any(s => s is Polygon))
+                    return TryPairLocalVirtualOverlap(shapes, isUpper, partners);
 
-                    System.Diagnostics.Trace.WriteLine($"Virtual overlap declined: shapes {forks[a]} and {forks[b]} both fork and are linked to each other.");
-                    return null;
-                }
+                System.Diagnostics.Trace.WriteLine(
+                    $"Virtual overlap declined: shapes {DescribeMutualForkPair(forks, partners)} both fork and are linked to each other.");
+                return null;
             }
 
             IShape2D[] working = [.. shapes];
@@ -744,6 +744,289 @@ namespace MorphologyMesh
 
             System.Diagnostics.Trace.WriteLine($"Virtual overlap: translated {offsets.Count(o => o != Vector2.Zero)} non-overlapping shape(s) so Bajaj can tile, then restore after faces.");
             return offsets;
+        }
+
+        /// <summary>
+        /// True when two shapes that each link to ≥2 cross-band partners are also linked to each other.
+        /// </summary>
+        private static bool HasMutualLinkedForks(int[] forks, List<int>[] partners)
+        {
+            for (int a = 0; a < forks.Length; a++)
+            {
+                for (int b = a + 1; b < forks.Length; b++)
+                {
+                    if (partners[forks[a]].Contains(forks[b]))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static string DescribeMutualForkPair(int[] forks, List<int>[] partners)
+        {
+            for (int a = 0; a < forks.Length; a++)
+            {
+                for (int b = a + 1; b < forks.Length; b++)
+                {
+                    if (partners[forks[a]].Contains(forks[b]))
+                        return $"{forks[a]} and {forks[b]}";
+                }
+            }
+
+            return "?";
+        }
+
+        /// <summary>
+        /// After a mutual-fork decline of whole-slice VO: create tileable overlap for still-disjoint linked pairs.
+        /// Leaf↔fork pairs are placed first (leaves move).  Fork↔fork pairs then pin the lower index and move the
+        /// other (polygon-only path).  A partner already moved is not reassigned.  Sibling collisions skip that
+        /// pair rather than aborting the whole slice.
+        /// </summary>
+        private static Vector2[] TryPairLocalVirtualOverlap(IShape2D[] shapes, bool[] isUpper, List<int>[] partners)
+        {
+            IShape2D[] working = [.. shapes];
+            Vector2[] offsets = new Vector2[shapes.Length];
+            int pairsPlaced = 0;
+            int pairsSkipped = 0;
+
+            List<(int i, int j)> leafForkPairs = [];
+            List<(int i, int j)> forkForkPairs = [];
+            List<(int i, int j)> neitherForkPairs = [];
+
+            for (int i = 0; i < shapes.Length; i++)
+            {
+                for (int j = i + 1; j < shapes.Length; j++)
+                {
+                    if (isUpper[i] == isUpper[j])
+                        continue;
+                    if (partners[i].Contains(j) == false)
+                        continue;
+                    if (OverlapsForVirtualPlacement(working[i], working[j]))
+                        continue;
+
+                    bool iFork = partners[i].Count >= 2;
+                    bool jFork = partners[j].Count >= 2;
+                    if (iFork && jFork)
+                        forkForkPairs.Add((i, j));
+                    else if (!iFork && !jFork)
+                        neitherForkPairs.Add((i, j));
+                    else
+                        leafForkPairs.Add((i, j));
+                }
+            }
+
+            foreach ((int i, int j) in leafForkPairs.Concat(neitherForkPairs).Concat(forkForkPairs))
+            {
+                if (OverlapsForVirtualPlacement(working[i], working[j]))
+                    continue;
+
+                bool iFork = partners[i].Count >= 2;
+                bool jFork = partners[j].Count >= 2;
+
+                int moving;
+                int fixedShape;
+                if (iFork && jFork)
+                {
+                    fixedShape = i;
+                    moving = j;
+                }
+                else if (iFork)
+                {
+                    fixedShape = i;
+                    moving = j;
+                }
+                else if (jFork)
+                {
+                    fixedShape = j;
+                    moving = i;
+                }
+                else
+                {
+                    fixedShape = isUpper[i] ? i : j;
+                    moving = isUpper[i] ? j : i;
+                }
+
+                if (offsets[moving] != Vector2.Zero)
+                {
+                    pairsSkipped++;
+                    System.Diagnostics.Trace.WriteLine(
+                        $"Virtual overlap (pair-local): skip {moving}->{fixedShape}: already moved.");
+                    continue;
+                }
+
+                Vector2 centerPoint = ShapeCenter(working[fixedShape]);
+                if (TryPlaceOverlapping(working[moving], working[fixedShape], centerPoint, moveToCentroid: false,
+                        out Vector2 offset, out double depth) == false
+                    || offset == Vector2.Zero)
+                {
+                    if (TryPlaceOverlapping(working[moving], working[fixedShape], centerPoint, moveToCentroid: true,
+                            out offset, out depth) == false
+                        || offset == Vector2.Zero)
+                    {
+                        pairsSkipped++;
+                        System.Diagnostics.Trace.WriteLine(
+                            $"Virtual overlap (pair-local): skip {moving}->{fixedShape}: cannot place.");
+                        continue;
+                    }
+                }
+
+                if (TryCommitPairLocalOffset(moving, fixedShape, offset, depth, shapes, working, offsets, partners))
+                {
+                    pairsPlaced++;
+                    continue;
+                }
+
+                //Preferred mover hits another partner of the fixed shape.  Try the reverse translation when
+                //the fixed shape is still free — a leaf's partner list is often singleton, so the hub can
+                //step toward the leaf without the sibling conflict that blocked the leaf.
+                if (offsets[fixedShape] == Vector2.Zero)
+                {
+                    bool reversePlaced =
+                        TryPlaceOverlapping(working[fixedShape], working[moving], ShapeCenter(working[moving]),
+                            moveToCentroid: false, out offset, out depth)
+                        && offset != Vector2.Zero;
+                    if (reversePlaced == false)
+                    {
+                        reversePlaced =
+                            TryPlaceOverlapping(working[fixedShape], working[moving], ShapeCenter(working[moving]),
+                                moveToCentroid: true, out offset, out depth)
+                            && offset != Vector2.Zero;
+                    }
+
+                    if (reversePlaced
+                        && TryCommitPairLocalOffset(fixedShape, moving, offset, depth, shapes, working, offsets, partners))
+                    {
+                        pairsPlaced++;
+                        continue;
+                    }
+                }
+
+                //Mutual fork↔fork: both hubs are crowded with partners, so every tileable offset invents
+                //sibling contact.  Force the minimal AABB/centroid placement anyway — leaving the linked
+                //pair untiled is worse, and leaf pairs were already handled above.
+                if (iFork && jFork && offsets[moving] == Vector2.Zero
+                    && TryPlaceOverlapping(working[moving], working[fixedShape], ShapeCenter(working[fixedShape]),
+                        moveToCentroid: false, out offset, out _)
+                    && offset != Vector2.Zero)
+                {
+                    working[moving] = working[moving].Translate(offset);
+                    offsets[moving] = offset;
+                    pairsPlaced++;
+                    System.Diagnostics.Trace.WriteLine(
+                        $"Virtual overlap (pair-local): forced fork↔fork {moving}->{fixedShape} despite sibling contact.");
+                    continue;
+                }
+
+                pairsSkipped++;
+                System.Diagnostics.Trace.WriteLine(
+                    $"Virtual overlap (pair-local): skip {moving}->{fixedShape}: sibling collision after depth reduce.");
+            }
+
+            if (pairsPlaced == 0)
+            {
+                System.Diagnostics.Trace.WriteLine(
+                    "Virtual overlap declined: mutual linked forks and no pair-local placement succeeded.");
+                return null;
+            }
+
+            for (int i = 0; i < shapes.Length; i++)
+                shapes[i] = working[i];
+
+            System.Diagnostics.Trace.WriteLine(
+                $"Virtual overlap (pair-local): placed {pairsPlaced} linked pair(s), skipped {pairsSkipped}; " +
+                $"translated {offsets.Count(o => o != Vector2.Zero)} shape(s) so Bajaj can tile, then restore after faces.");
+            return offsets;
+        }
+
+        /// <summary>
+        /// Apply <paramref name="offset"/>, or a shallower AABB depth / scaled offset that still overlaps the
+        /// fixed shape without inventing contact among that shape's other linked partners (same rule as
+        /// whole-slice <see cref="ReduceDepthUntilSiblingsClear"/>).
+        /// </summary>
+        private static bool TryCommitPairLocalOffset(
+            int moving,
+            int fixedShape,
+            Vector2 offset,
+            double depth,
+            IShape2D[] original,
+            IShape2D[] working,
+            Vector2[] offsets,
+            List<int>[] partners)
+        {
+            IShape2D candidate = working[moving].Translate(offset);
+            if (PairLocalWouldHitForkSibling(moving, fixedShape, candidate, original, working, partners) == false)
+            {
+                working[moving] = candidate;
+                offsets[moving] = offset;
+                return true;
+            }
+
+            //Same idea as ReduceDepthUntilSiblingsClear: keep the AABB direction, give up penetration.
+            if (double.IsNaN(depth) == false && depth > 0)
+            {
+                for (int step = VirtualOverlapDepthSteps - 1; step >= 1; step--)
+                {
+                    double tryDepth = depth * step / VirtualOverlapDepthSteps;
+                    Vector2 candidateOffset = AabbOverlapTranslation(original[moving], working[fixedShape], tryDepth);
+                    if (candidateOffset == Vector2.Zero)
+                        continue;
+
+                    IShape2D shallower = original[moving].Translate(candidateOffset);
+                    if (OverlapsForVirtualPlacement(shallower, working[fixedShape]) == false)
+                        continue;
+                    if (PairLocalWouldHitForkSibling(moving, fixedShape, shallower, original, working, partners))
+                        continue;
+
+                    working[moving] = shallower;
+                    offsets[moving] = candidateOffset;
+                    return true;
+                }
+            }
+            else
+            {
+                //Centroid placements have no box depth; shrink the offset vector instead.
+                for (int step = VirtualOverlapDepthSteps - 1; step >= 1; step--)
+                {
+                    Vector2 candidateOffset = offset * (step / (double)VirtualOverlapDepthSteps);
+                    IShape2D shallower = original[moving].Translate(candidateOffset);
+                    if (OverlapsForVirtualPlacement(shallower, working[fixedShape]) == false)
+                        continue;
+                    if (PairLocalWouldHitForkSibling(moving, fixedShape, shallower, original, working, partners))
+                        continue;
+
+                    working[moving] = shallower;
+                    offsets[moving] = candidateOffset;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// True when translating <paramref name="moving"/> toward <paramref name="fixedShape"/> would newly
+        /// intersect another linked partner of that fixed shape (invented same-band sibling overlap).
+        /// </summary>
+        private static bool PairLocalWouldHitForkSibling(
+            int moving,
+            int fixedShape,
+            IShape2D candidate,
+            IShape2D[] original,
+            IShape2D[] working,
+            List<int>[] partners)
+        {
+            foreach (int sibling in partners[fixedShape])
+            {
+                if (sibling == moving)
+                    continue;
+                if (original[moving].Intersects(original[sibling]))
+                    continue;
+                if (OverlapsInterior(candidate, working[sibling]))
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>

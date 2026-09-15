@@ -217,6 +217,76 @@ namespace MorphologyMeshTest
         }
 
         /// <summary>
+        /// Two fork centres linked to each other used to abort VO for the whole slice.  Pair-local placement must
+        /// still bring each fork's leaf partner into overlap so those links can tile (Theme A / UntiledLinkedPair).
+        /// </summary>
+        [TestMethod]
+        public void MutualLinkedForks_PairLocalMovesLeafPartners()
+        {
+            //A (lower) forks to B and C; B (upper) forks to A and D.  A↔B are mutual linked forks.
+            const int forkA = 0, forkB = 1, leafC = 2, leafD = 3;
+            Polygon shapeA = Circle(20, new Vector2(0, 0));
+            Polygon shapeB = Circle(20, new Vector2(100, 0));
+            Polygon shapeC = Circle(6, new Vector2(50, 40));
+            Polygon shapeD = Circle(6, new Vector2(150, 40));
+
+            Assert.IsFalse(shapeA.Intersects(shapeB));
+            Assert.IsFalse(shapeA.Intersects(shapeC));
+            Assert.IsFalse(shapeB.Intersects(shapeD));
+
+            IShape2D[] shapes = [shapeA, shapeB, shapeC, shapeD];
+            bool[] isUpper = [false, true, true, false];
+            bool[,] links = LinkMatrix(4, (forkA, forkB), (forkA, leafC), (forkB, leafD));
+
+            Vector2[] offsets = SliceTopology.TryTranslateNonOverlappingShapes(shapes, isUpper, links);
+
+            Assert.IsNotNull(offsets, "Pair-local VO must not abandon the slice for mutual linked forks.");
+            Assert.AreEqual(Vector2.Zero, offsets[forkA], "Lower-index fork stays the pinned frame.");
+            Assert.AreNotEqual(Vector2.Zero, offsets[leafC], "Leaf C must move onto fork A.");
+            Assert.AreNotEqual(Vector2.Zero, offsets[leafD], "Leaf D must move onto fork B (or B toward A then D toward B).");
+            Assert.IsTrue(shapes[leafC].Intersects(shapes[forkA]));
+            Assert.IsTrue(shapes[leafD].Intersects(shapes[forkB]) || shapes[forkB].Intersects(shapes[forkA]),
+                "Either D overlaps B, or B was moved onto A (fork↔fork) with D still placeable.");
+        }
+
+        [TestMethod]
+        public void MutualLinkedForks_LeafLinksTileAfterFaces()
+        {
+            const int forkA = 0, forkB = 1, leafC = 2, leafD = 3;
+            Polygon shapeA = Circle(20, new Vector2(0, 0));
+            Polygon shapeB = Circle(20, new Vector2(100, 0));
+            Polygon shapeC = Circle(6, new Vector2(50, 40));
+            Polygon shapeD = Circle(6, new Vector2(150, 40));
+
+            IShape2D[] shapes = [shapeA, shapeB, shapeC, shapeD];
+            bool[] isUpper = [false, true, true, false];
+            bool[,] links = LinkMatrix(4, (forkA, forkB), (forkA, leafC), (forkB, leafD));
+
+            Vector2[] offsets = SliceTopology.TryTranslateNonOverlappingShapes(shapes, isUpper, links);
+            Assert.IsNotNull(offsets);
+
+            System.Collections.Generic.List<IShape2D> shapeList = [.. shapes];
+            var corresponding = shapeList.AddCorrespondingVertices();
+            SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies([.. shapeList.OfType<Polygon>()], corresponding);
+
+            SliceTopology topology = new(
+                shapeList,
+                isUpper,
+                [LowerZ, UpperZ, UpperZ, LowerZ],
+                shapeIndexToMorphNodeIndex: null,
+                sliceThickness: UpperZ - LowerZ,
+                virtualOverlapOffsets: offsets,
+                shapesAreLinked: links);
+
+            BajajGeneratorMesh mesh = new(topology);
+            BajajMeshGenerator.GenerateFaces(mesh);
+
+            Assert.IsTrue(mesh.CountFacesSpanning(forkA, leafC) > 0, "A–C must have spanning faces.");
+            Assert.IsTrue(mesh.CountFacesSpanning(forkB, leafD) > 0 || mesh.CountFacesSpanning(forkA, forkB) > 0,
+                "B–D or A–B must tile after pair-local VO.");
+        }
+
+        /// <summary>
         /// Every contour vertex of a restored shape has to sit on the circle the annotator drew.  An average would
         /// hide a restore that moved the contour and let correspondence verticies bunch up to compensate.
         /// </summary>
