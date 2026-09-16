@@ -46,7 +46,8 @@ namespace MorphologyMesh
 
         /// <summary>
         /// Volume-space circle for each shape when <see cref="ShapeLocationTypes"/> is <see cref="LocationType.CIRCLE"/>,
-        /// in the same translated XY frame as <see cref="Shapes"/>. Null when no circle metadata was supplied.
+        /// in annotation XY. Caps run after virtual-overlap restore so contour verts share this frame.
+        /// Null when no circle metadata was supplied.
         /// </summary>
         public readonly Circle[] ShapeCircles;
 
@@ -179,6 +180,35 @@ namespace MorphologyMesh
             return ShapesAreLinked[iA, iB];
         }
 
+        /// <summary>
+        /// True when the slice is exactly two linked CIRCLE annotations on opposite bands.
+        /// Those pairs loft by walking their ordered rings; virtual overlap and correspondence densify must not run on them.
+        /// </summary>
+        internal static bool IsExclusiveCirclePair(SliceTopology topology)
+        {
+            if (topology.Shapes is null || topology.IsUpper is null)
+                return false;
+
+            return IsExclusiveCirclePair(topology.Shapes.Length, topology.IsUpper, topology.ShapeLocationTypes, topology.ShapesAreLinked);
+        }
+
+        internal static bool IsExclusiveCirclePair(int count, bool[] isUpper, LocationType[] locationTypes, bool[,] shapesAreLinked)
+        {
+            if (count != 2 || isUpper is null || isUpper.Length != 2)
+                return false;
+
+            if (locationTypes is null || locationTypes.Length != 2)
+                return false;
+
+            if (locationTypes[0] != LocationType.CIRCLE || locationTypes[1] != LocationType.CIRCLE)
+                return false;
+
+            if (isUpper[0] == isUpper[1])
+                return false;
+
+            return shapesAreLinked is null || shapesAreLinked[0, 1];
+        }
+
         /// <param name="virtualOverlapOffsets">
         /// Per-shape virtual overlap translations already applied to <paramref name="shapes"/>, indexed in lockstep
         /// with them, or null to let the constructor compute them.
@@ -240,7 +270,7 @@ namespace MorphologyMesh
             if (virtualOverlapOffsets is not null && virtualOverlapOffsets.Length != Shapes.Length)
                 throw new ArgumentException($"virtualOverlapOffsets has {virtualOverlapOffsets.Length} entries for {Shapes.Length} shapes.  These must be indexed in lockstep.", nameof(virtualOverlapOffsets));
 
-            VirtualOverlapOffsets = virtualOverlapOffsets ?? TryTranslateNonOverlappingShapes(Shapes, IsUpper, shapesAreLinked);
+            VirtualOverlapOffsets = virtualOverlapOffsets ?? TryTranslateNonOverlappingShapes(Shapes, IsUpper, shapesAreLinked, ShapeLocationTypes);
 
             //Assign polys to sets for convenience later
             CalculateUpperAndLowerPolygons(IsUpper, Shapes, out UpperShapes, out UpperShapeIndicies, out LowerShapes, out LowerShapeIndicies);
@@ -690,8 +720,9 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="shapes">Translated in place.  Untouched when the routine declines.</param>
         /// <param name="shapesAreLinked">LocationLink matrix, or null to treat every cross-band pair as linked.</param>
+        /// <param name="locationTypes">Per-shape <see cref="LocationType"/>, or null when the caller has no annotation types.</param>
         /// <returns>Per-shape offsets indexed in lockstep with <paramref name="shapes"/>, or null when nothing moved.</returns>
-        internal static Vector2[] TryTranslateNonOverlappingShapes(IShape2D[] shapes, bool[] isUpper, bool[,] shapesAreLinked = null)
+        internal static Vector2[] TryTranslateNonOverlappingShapes(IShape2D[] shapes, bool[] isUpper, bool[,] shapesAreLinked = null, LocationType[] locationTypes = null)
         {
             if (shapes is null || isUpper is null || shapes.Length != isUpper.Length || shapes.Length < 2)
                 return null;
@@ -701,6 +732,10 @@ namespace MorphologyMesh
                 return null;
 
             List<int>[] partners = LinkedPartnersByShape(shapes.Length, isUpper, shapesAreLinked);
+
+            //Two linked CIRCLE annotations loft by walking their ordered rings; centroid-snap would stack their XY and collapse a cap.
+            if (IsExclusiveCirclePair(shapes.Length, isUpper, locationTypes, shapesAreLinked))
+                return null;
 
             int[] forks = [.. Enumerable.Range(0, shapes.Length).Where(i => partners[i].Count >= 2)];
 

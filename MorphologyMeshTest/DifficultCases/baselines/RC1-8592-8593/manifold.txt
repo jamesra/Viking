@@ -1,0 +1,8 @@
+locations: 8592,8593
+final: faces:32 manifold:32 nonManifold:0 inconsistent:0 contourSeam:32 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0
+firstInvalidStage: (none)
+stages:
+  Circle pair loft: faces:32 manifold:32 nonManifold:0 inconsistent:0 contourSeam:32 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0
+  Final mesh: faces:32 manifold:32 nonManifold:0 inconsistent:0 contourSeam:32 holes:0 isolated:0 forkGap:0 ribbonEdge:0 singleTriPolyline:0
+defects:
+notes:

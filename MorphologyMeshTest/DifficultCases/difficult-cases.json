@@ -4199,8 +4199,8 @@
         367434,
         367436
       ],
-      "problem": "Was UntiledLinkedPair (linked cross-band contours with no spanning faces) on mutual-fork / multi-shape slices after virtual overlap declined.",
-      "fix": "Pair-local virtual overlap in SliceTopology.TryTranslateNonOverlappingShapes: after mutual-fork whole-slice decline, place still-disjoint MayTile pairs (leaf then fork-fork, with depth-reduce / forced fork-fork when siblings block).",
+      "problem": "Final mesh showed one circle as a tiny point: centroid-snap virtual overlap stacked two same-radius CIRCLE 8-gons, then CapCircleEnd rayed from the untranslated centre through that stack.",
+      "fix": "CirclePairMeshGenerator zippers exclusive linked CIRCLE pairs by ordered ring traversal (no centroid snap or correspondence densify); FinishSliceMesh restores virtual overlap before caps.",
       "failureKind": "UntiledLinkedPair",
       "cameras": [
         {
@@ -4208,6 +4208,23 @@
         },
         {
           "preset": "oblique"
+        }
+      ]
+    },
+    {
+      "volume": "RC1",
+      "locations": [
+        8592,
+        8593
+      ],
+      "problem": "Circle-pair loft rotated one section's sampled ring by half a sector, producing alternating thin and large twisted triangles.",
+      "fix": "Use stable circle samples and zipper the ordered rings with the shorter next cross-ring edge until both rings close.",
+      "cameras": [
+        {
+          "preset": "oblique"
+        },
+        {
+          "preset": "side"
         }
       ]
     }

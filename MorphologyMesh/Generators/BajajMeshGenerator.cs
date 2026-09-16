@@ -511,9 +511,9 @@ namespace MorphologyMesh
         }
 
         /// <summary>
-        /// Tile one slice.  A slice with any polygon takes the Bajaj polygon path (regions, medial-axis closing);
-        /// a polyline-only slice is a ruled ribbon and goes to <see cref="PolylineRibbonMeshGenerator"/>.  Both end
-        /// in <see cref="FinishSliceMesh"/> for caps, virtual-overlap restore, normals, and validation.
+        /// Tile one slice.  An exclusive linked CIRCLE pair lofts matching samples; a slice with any other polygon
+        /// takes the Bajaj polygon path (regions, medial-axis closing); a polyline-only slice is a ruled ribbon.
+        /// All three end in <see cref="FinishSliceMesh"/> for virtual-overlap restore, caps, normals, and validation.
         /// </summary>
         public static void GenerateFaces(BajajGeneratorMesh mesh)
         {
@@ -529,6 +529,9 @@ namespace MorphologyMesh
                 //contour on a single band.  There is nothing to tile to, and running the polygon path anyway treated
                 //the lone contour as an untiled region and filled it flat at the contour Z, so a single circle came
                 //out as a zero-thickness disc with the two slices' fills lying back to back.  Only the cap applies.
+            }
+            else if (CirclePairMeshGenerator.TryGenerateFaces(mesh))
+            {
             }
             else if (mesh.HasPolygonShapes)
             {
@@ -618,11 +621,15 @@ namespace MorphologyMesh
         }
 
         /// <summary>
-        /// Steps shared by the polygon and polyline paths once the band between sections has faces.
+        /// Steps shared by the polygon, polyline, and circle-pair paths once the band between sections has faces.
+        /// Virtual overlap is undone before caps so <c>CapCircleEnd</c> rays from the annotation-space centre through
+        /// contour verts that already sit there, rather than through a stacked tiling frame.
         /// </summary>
-        /// <param name="singleTrianglePolylinePairs">Sliver count from the ribbon path; zero for polygons.</param>
+        /// <param name="singleTrianglePolylinePairs">Sliver count from the ribbon path; zero for polygons and circle pairs.</param>
         internal static void FinishSliceMesh(BajajGeneratorMesh mesh, int singleTrianglePolylinePairs)
         {
+            mesh.RestoreVirtualOverlapTranslation();
+
             if (mesh.Slice != null)
             {
 
@@ -633,8 +640,6 @@ namespace MorphologyMesh
                     mesh.CapMeshEnd(false);
 
             }
-
-            mesh.RestoreVirtualOverlapTranslation();
 
             mesh.EnsureFacesHaveExternalNormals();
 

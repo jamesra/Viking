@@ -600,9 +600,10 @@ namespace MorphologyMesh
 
         /// <summary>
         /// After tiling in the overlapped XY frame, move the verticies of every translated shape back so the mesh
-        /// spans the annotators' original positions instead of the frame Bajaj needed.
+        /// spans the annotators' original positions instead of the frame Bajaj needed.  Caps must run after this
+        /// so circle poles sit at the annotation-space centres.
         /// </summary>
-        internal void RestoreVirtualOverlapTranslation()
+        public void RestoreVirtualOverlapTranslation()
         {
             Vector2[] offsets = Topology.VirtualOverlapOffsets;
             if (offsets is null)

@@ -713,7 +713,11 @@ namespace MorphologyMesh
             //Virtual overlap is measured over every shape in the slice, before tileability filtering, so a fork is
             //recognised from the annotator's links rather than from whatever survived the filter.
             bool[,] sliceLinks = BuildShapeLinkMatrix(group, sliceShapes, reportUnlinked: false);
-            Vector2[] virtualOverlapOffsets = SliceTopology.TryTranslateNonOverlappingShapes(workingShapes, sliceIsUpper, sliceLinks);
+            LocationType[] sliceTypes = [.. sliceShapes.Select(s => s.LocationType)];
+            bool exclusiveCirclePair = SliceTopology.IsExclusiveCirclePair(sliceShapes.Count, sliceIsUpper, sliceTypes, sliceLinks);
+            Vector2[] virtualOverlapOffsets = exclusiveCirclePair
+                ? null
+                : SliceTopology.TryTranslateNonOverlappingShapes(workingShapes, sliceIsUpper, sliceLinks, sliceTypes);
             if (virtualOverlapOffsets is not null)
             {
                 for (int i = 0; i < sliceShapes.Count; i++)
@@ -721,15 +725,22 @@ namespace MorphologyMesh
                 ShapeList = [.. workingShapes];
             }
 
-            var correspondingPoints = ShapeList.AddCorrespondingVertices();
+            //Circle pairs loft by walking their ordered rings. Intersection verts would alter that ordering, and
+            //centroid-snap (skipped above) is what used to make those intersections exist in the first place.
+            if (exclusiveCirclePair == false)
+            {
+                var correspondingPoints = ShapeList.AddCorrespondingVertices();
 
-            Polygon[] Polygons = [.. ShapeList.OfType<Polygon>()];
-            SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(Polygons, correspondingPoints);
+                Polygon[] correspondPolygons = [.. ShapeList.OfType<Polygon>()];
+                SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(correspondPolygons, correspondingPoints);
 
-            Polyline[] Polylines = [.. ShapeList.OfType<Polyline>()];
-            SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(Polylines, correspondingPoints);
+                Polyline[] correspondPolylines = [.. ShapeList.OfType<Polyline>()];
+                SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(correspondPolylines, correspondingPoints);
+            }
 
             ShareCorrespondenceWithCachedShapes(sliceShapes, virtualOverlapOffsets, polyLookup);
+
+            Polygon[] Polygons = [.. ShapeList.OfType<Polygon>()];
 
             //Polygons always tile. Polylines tile only when this slice has no polygon (gap-junction / raft
             //ribbon). A polyline on a polygon slice stays correspondence-only after the intersection verts above.

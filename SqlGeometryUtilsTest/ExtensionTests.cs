@@ -2,6 +2,7 @@ using Geometry;
 using Microsoft.SqlServer.Types;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SqlGeometryUtils;
+using System;
 
 namespace SqlGeometryUtilsTest
 {
@@ -108,6 +109,17 @@ namespace SqlGeometryUtilsTest
             Vector2 point = new(0, 0);
             SqlGeometry p = point.ToSqlGeometry();
             TestTranslateMoveGeometry(p);
+        }
+
+        [TestMethod]
+        public void CurvePolygon_UsesStableCardinalSamples()
+        {
+            SqlGeometry circle = Extensions.ToCircle(10, 20, 0, 100);
+            Vector2[] samples = circle.ToPoints();
+
+            Assert.AreEqual(Extensions.CircleCardinalPointCount + 1, samples.Length);
+            AssertPosition(samples[0], new Vector2(110, 20));
+            AssertPosition(samples[0], samples[samples.Length - 1]);
         }
 
         public void TestTranslateMoveGeometry(SqlGeometry geometry)

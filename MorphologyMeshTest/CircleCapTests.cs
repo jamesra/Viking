@@ -143,5 +143,142 @@ namespace MorphologyMeshTest
             Assert.AreEqual(0, report.UnexpectedBoundaryEdges, $"Both circle caps must close.  {report}");
             Assert.AreEqual(0, report.ContourBoundaryEdges, $"Every contour edge has a band face and a cap face.  {report}");
         }
+
+        /// <summary>
+        /// Two same-radius CIRCLE annotations that do not overlap in XY must loft in annotation space.  Centroid-snap
+        /// virtual overlap used to stack them, and CapCircleEnd then collapsed one dome to a point.
+        /// </summary>
+        [TestMethod]
+        public void GenerateFaces_DisjointEqualCircles_LoftsWithoutCentroidSnap()
+        {
+            Circle lowerCircle = new(0, 0, 10);
+            Circle upperCircle = new(80, 0, 10);
+            Polygon lower = CirclePolygon(lowerCircle, 8);
+            Polygon upper = CirclePolygon(upperCircle, 8);
+            Assert.IsFalse(lower.Intersects(upper), "Fixture requires no XY overlap so centroid-snap would have stacked them.");
+
+            bool[,] links = new bool[2, 2];
+            links[0, 0] = links[1, 1] = links[0, 1] = links[1, 0] = true;
+
+            IShape2D[] copies = [CirclePolygon(lowerCircle, 8), CirclePolygon(upperCircle, 8)];
+            Assert.IsNull(
+                SliceTopology.TryTranslateNonOverlappingShapes(copies, [false, true], links, [LocationType.CIRCLE, LocationType.CIRCLE]),
+                "Exclusive CIRCLE pairs must not be centroid-snapped.");
+
+            SliceTopology topology = new(
+                [lower, upper],
+                [false, true],
+                [0.0, 70.0],
+                shapeLocationTypes: [LocationType.CIRCLE, LocationType.CIRCLE],
+                shapeCircles: [lowerCircle, upperCircle],
+                sliceThickness: 70.0,
+                shapesAreLinked: links);
+
+            BajajGeneratorMesh mesh = new(topology);
+            BajajMeshGenerator.GenerateFaces(mesh);
+
+            double lowerX = mesh.MorphVerticies
+                .Where(v => v.ShapeIndex is PolygonIndex pi && pi.ShapeIndex == 0)
+                .Average(v => v.Position.X);
+            double upperX = mesh.MorphVerticies
+                .Where(v => v.ShapeIndex is PolygonIndex pi && pi.ShapeIndex == 1)
+                .Average(v => v.Position.X);
+            Assert.AreEqual(0.0, lowerX, 1.0, "Lower ring must stay at its annotation centre.");
+            Assert.AreEqual(80.0, upperX, 1.0, "Upper ring must stay at its annotation centre, not snap onto the lower.");
+            Assert.IsTrue(mesh.Faces.Count >= 16, "An 8-sample pair should loft at least 16 triangles.");
+            Assert.IsFalse(mesh.HasUntiledLinkedPairs, string.Join("; ", mesh.GenerationErrors));
+
+            mesh.CapMeshEnd(true);
+            mesh.CapMeshEnd(false);
+
+            Assert.AreEqual(1, CountPolesAt(mesh, upperCircle.Center, 70.0 + 35.0), "Upper cap pole stays at the annotation centre.");
+            Assert.AreEqual(1, CountPolesAt(mesh, lowerCircle.Center, 0.0 - 35.0), "Lower cap pole stays at the annotation centre.");
+
+            MeshManifoldReport report = MeshManifoldValidator.Validate(mesh);
+            Assert.AreEqual(0, report.NonManifoldEdges, report.ToString());
+            Assert.AreEqual(0, report.UnexpectedBoundaryEdges, report.ToString());
+            Assert.AreEqual(0, report.ContourBoundaryEdges, report.ToString());
+        }
+
+        [TestMethod]
+        public void GenerateFaces_UnequalCircleSamples_ZipperClosesRing()
+        {
+            Circle lowerCircle = new(0, 0, 10);
+            Circle upperCircle = new(1, 2, 12);
+            Polygon lower = SampledCircle(lowerCircle, 8);
+            Polygon upper = SampledCircle(upperCircle, 10);
+
+            SliceTopology topology = new(
+                [lower, upper],
+                [false, true],
+                [0.0, 1.0],
+                shapeLocationTypes: [LocationType.CIRCLE, LocationType.CIRCLE],
+                shapeCircles: [lowerCircle, upperCircle],
+                sliceThickness: 1.0);
+
+            BajajGeneratorMesh mesh = new(topology);
+            BajajMeshGenerator.GenerateFaces(mesh);
+
+            Assert.AreEqual(18, mesh.Faces.Count, "The zipper adds one face for every edge in both rings.");
+            MeshManifoldReport report = MeshManifoldValidator.Validate(mesh);
+            Assert.AreEqual(0, report.NonManifoldEdges, report.ToString());
+            Assert.AreEqual(0, report.UnexpectedBoundaryEdges, report.ToString());
+        }
+
+        [TestMethod]
+        public void GenerateFaces_AlignedUnequalCircles_AvoidsThinTwistedPairs()
+        {
+            const int n = 16;
+            Circle lowerCircle = new(40, 9, 5500);
+            Circle upperCircle = new(60, -16, 5972);
+            Polygon lower = SampledCircle(lowerCircle, n);
+            Polygon upper = SampledCircle(upperCircle, n);
+
+            SliceTopology topology = new(
+                [lower, upper],
+                [false, true],
+                [0.0, 70.0],
+                shapeLocationTypes: [LocationType.CIRCLE, LocationType.CIRCLE],
+                shapeCircles: [lowerCircle, upperCircle],
+                sliceThickness: 70.0);
+
+            BajajGeneratorMesh mesh = new(topology);
+            BajajMeshGenerator.GenerateFaces(mesh);
+
+            double minimumAngle = mesh.Faces
+                .Cast<IFace>()
+                .Min(face => MinimumTriangleAngle(
+                    mesh[face.iVerts[0]].Position,
+                    mesh[face.iVerts[1]].Position,
+                    mesh[face.iVerts[2]].Position));
+
+            Assert.IsTrue(minimumAngle > 0.15,
+                $"Aligned samples and zipper traversal should avoid thin twisted triangles; minimum angle was {minimumAngle * 180.0 / Math.PI:F2} degrees.");
+        }
+
+        private static Polygon SampledCircle(Circle circle, int segments)
+        {
+            Vector2[] ring = new Vector2[segments + 1];
+            for (int i = 0; i <= segments; i++)
+            {
+                double angle = (2.0 * Math.PI * i) / segments;
+                ring[i] = circle.Center + new Vector2(Math.Cos(angle), Math.Sin(angle)) * circle.Radius;
+            }
+
+            return new Polygon(ring);
+        }
+
+        private static int CountPolesAt(BajajGeneratorMesh mesh, Vector2 center, double z) =>
+            mesh.Vertices.Count(v => Math.Abs(v.Position.Z - z) < 1e-6 && Vector2.Distance(v.Position.XY(), center) < 0.05);
+
+        private static double MinimumTriangleAngle(Vector3 a, Vector3 b, Vector3 c)
+        {
+            double ab = Vector3.Distance(a, b);
+            double bc = Vector3.Distance(b, c);
+            double ca = Vector3.Distance(c, a);
+            double angleA = Math.Acos(Math.Clamp(((ab * ab) + (ca * ca) - (bc * bc)) / (2.0 * ab * ca), -1.0, 1.0));
+            double angleB = Math.Acos(Math.Clamp(((ab * ab) + (bc * bc) - (ca * ca)) / (2.0 * ab * bc), -1.0, 1.0));
+            return Math.Min(angleA, Math.Min(angleB, Math.PI - angleA - angleB));
+        }
     }
 }

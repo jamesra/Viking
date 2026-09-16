@@ -184,7 +184,11 @@ namespace SqlGeometryUtils
     {
         private static readonly int RoundingDigits = 2;
 
-        private const int nCircleCardinalPoints = 8;
+        /// <summary>
+        /// Samples used when a SQL CURVEPOLYGON (always a circle in Viking) is turned into a polygon ring.
+        /// </summary>
+        public const int CircleCardinalPointCount = 16;
+
         /// <summary>
         /// A unit circle with points along the East, North, points...
         /// </summary>
@@ -192,7 +196,7 @@ namespace SqlGeometryUtils
 
         static Extensions()
         {
-            circleCardinalPoints = CalculateCircleCardinalPoints(nCircleCardinalPoints);
+            circleCardinalPoints = CalculateCircleCardinalPoints(CircleCardinalPointCount);
         }
 
         public static SupportedGeometryType GeometryType(this SqlGeometry geometry)
@@ -662,10 +666,8 @@ namespace SqlGeometryUtils
                 }
                 else if (type == SupportedGeometryType.CURVEPOLYGON)
                 {
-                    Vector2[] points = new Vector2[nCircleCardinalPoints];
                     Circle circle = geometry.ToCircle();
-
-                    return [.. circleCardinalPoints.Select(p => (p * circle.Radius) + circle.Center)];
+                    return SampleCirclePolygonRing(circle);
                 }
 
                 throw new NotImplementedException("Unexpected geometry type passed to Points");
@@ -674,6 +676,17 @@ namespace SqlGeometryUtils
             {
                 return geometry.STExteriorRing().ToPoints();
             }
+        }
+
+        /// <summary>
+        /// Closed N-gon on <paramref name="circle"/>.
+        /// </summary>
+        internal static Vector2[] SampleCirclePolygonRing(Circle circle)
+        {
+            Vector2[] ring = new Vector2[circleCardinalPoints.Length];
+            for (int i = 0; i < circleCardinalPoints.Length; i++)
+                ring[i] = (circleCardinalPoints[i] * circle.Radius) + circle.Center;
+            return ring;
         }
 
         /// <summary>

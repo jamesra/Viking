@@ -342,14 +342,24 @@ namespace MonogameTestbed
             Trace.WriteLine(temp);
 
             //Mirror BajajMeshGenerator.GenerateFaces: a single-band slice (isolated annotation) has nothing to tile,
-            //a polyline-only slice is a ribbon, anything with a polygon takes the Bajaj region path.
+            //an exclusive linked CIRCLE pair lofts matching samples, a polyline-only slice is a ribbon, anything
+            //else with a polygon takes the Bajaj region path.
             bool singleBand = FirstPassTriangulation.UpperShapeIndicies.Count == 0 || FirstPassTriangulation.LowerShapeIndicies.Count == 0;
             if (singleBand)
                 Trace.WriteLine("Single-band slice: no tiling stages, cap only.");
+            else if (CirclePairMeshGenerator.TryGenerateFaces(FirstPassTriangulation))
+            {
+                AddMeshView(FirstPassTriangulation, "Circle pair loft");
+                AddLineView(FirstPassTriangulation, "Circle pair loft");
+            }
             else if (FirstPassTriangulation.HasPolygonShapes)
                 RunPolygonStages(FirstPassTriangulation);
             else
                 RunRibbonStages(FirstPassTriangulation);
+
+            // Match BajajMeshGenerator.FinishSliceMesh: restore the virtual-overlap tiling frame before caps so
+            // circle poles are placed in annotation XY rather than through stacked contour verts.
+            FirstPassTriangulation.RestoreVirtualOverlapTranslation();
 
             // Match BajajMeshGenerator.GenerateFaces: only cap open stack ends, not interior slice pairs.
             if (FirstPassTriangulation.Slice?.HasSliceAbove == false)
